@@ -346,6 +346,21 @@ class ThingBulkCreateView(APIView):
             return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
+            # Re-check under a row lock. The count above was read outside the
+            # transaction, so two batches arriving together could each have seen
+            # room for themselves and landed 200 rows through a ceiling of 100 —
+            # the one place the drift is worth paying for, since a single request
+            # here carries up to MAX_ROWS. Locking the collection row serialises
+            # the two, and the loser re-counts with the winner's rows included.
+            # The single-add paths accept a drift of at most one row per racing
+            # request and take no lock; a ceiling this coarse doesn't earn
+            # serialising every add to a busy COMMUNITY collection. None of it
+            # runs when no ceiling is set — the standalone default.
+            if collection.capacity_ceiling("things"):
+                locked = Collection.objects.select_for_update().get(code=collection.code)
+                full = locked.capacity_violation("things", adding=len(validated))
+                if full:
+                    return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
             created = [Thing.objects.create(owner=request.user, **data) for data in validated]
             collection.things.add(*created)
             for thing in created:

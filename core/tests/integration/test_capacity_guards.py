@@ -396,3 +396,57 @@ def test_a_no_op_batch_is_not_refused_by_a_ceiling_already_crossed(
         format="json",
     )
     assert refused.status_code == 400
+
+
+# ── Fire-once holds under concurrency ────────────────────────────────────────
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_THINGS_ALARM=1)
+@patch("core.models.collection.Collection.objects")
+def test_the_alarm_is_claimed_by_exactly_one_racing_request(mock_manager, collection, user):
+    """Two requests that both read `things_alarm_sent=False` must send ONE email.
+
+    The claim is a conditional UPDATE, so the loser's `.update()` matches no row
+    and it must return without sending — simulated here by a manager whose
+    filtered update reports 0 rows affected (what a DB gives the loser).
+    """
+    _fill_things(collection, user, 1)
+    mock_manager.filter.return_value.update.return_value = 0
+
+    with patch("core.services.email_service.send_collection_capacity_alarm") as mock_alarm:
+        collection.note_capacity("things")
+
+    assert mock_alarm.call_count == 0
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_THINGS_BLOCK=5)
+def test_the_locked_recheck_refuses_the_loser_of_a_race(authenticated_client, collection, user):
+    """A batch that passed the unlocked check is still refused under the lock.
+
+    The count before the transaction is read outside it, so two bulk imports
+    arriving together can each see room for themselves — the drift the row lock
+    exists to close. Here the "other" request commits its rows in the window
+    between the two checks; the loser must re-count with them included and
+    refuse, all-or-nothing, rather than land its own on top.
+    """
+    real = Collection.capacity_violation
+    calls = []
+
+    def racing(self, counter="things", adding=1):
+        calls.append(counter)
+        if len(calls) == 1:
+            return None  # the unlocked check: room for us
+        _fill_things(collection, user, 5)  # the winner commits, filling it
+        return real(self, counter, adding)
+
+    with patch.object(Collection, "capacity_violation", racing):
+        res = authenticated_client.post(
+            BULK_THINGS_URL.format(code=collection.code),
+            {"rows": [{"headline": f"Row {i}"} for i in range(3)]},
+            format="json",
+        )
+
+    assert res.status_code == 400
+    assert not Thing.objects.filter(headline__startswith="Row").exists()

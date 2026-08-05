@@ -903,6 +903,8 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 
 **The ceiling counts what would land, not what was typed.** `adding` is the number of rows that genuinely move the counter, so both invite endpoints check *after* validation and dedup and exclude addresses that are **already members** — those sit inside the count the ceiling measures, and counting them again refused batches that added nobody (a re-invite at the ceiling now falls through to the accurate "already invited" 400). The thing paths count `len(validated)` for the same reason. All of it is gated on `Collection.capacity_ceiling()`, so a deployment with no thresholds runs no extra query.
 
+**Concurrency.** `ThingBulkCreateView` re-checks under a `select_for_update()` on the collection row inside its transaction — one request there can carry up to `MAX_ROWS`, so two arriving together could otherwise land 200 rows through a ceiling of 100. The single-add paths accept a drift of at most one row per racing request and take no lock: a ceiling this coarse doesn't earn serialising every add to a busy COMMUNITY collection. The **invite** paths need no lock at all — they send invitations, they don't add members, so the count they read only moves when someone accepts, which is deliberately never refused.
+
 ### Rate Limiting
 
 - `/auth/request-link/` — 5 requests per minute per IP **and** 5 per hour per account (email)

@@ -302,10 +302,19 @@ class Collection(models.Model):
         count = self._capacity_count(counter)
         if count < threshold:
             return
-        # Flag first: a send that raises must not leave the alarm armed to
+        # Claim the alarm with a conditional UPDATE: the `flag=False` in the
+        # WHERE is what makes "fire once" hold under concurrency. Two requests
+        # crossing the line together both read False above, but only one gets a
+        # matched row back — the loser returns without sending, so the operator
+        # gets one email rather than one per racing request. Claiming BEFORE the
+        # send also means a send that raises can't leave the alarm armed to
         # re-fire on every subsequent add.
-        Collection.objects.filter(code=self.code).update(**{spec["flag"]: True})
+        claimed = Collection.objects.filter(code=self.code, **{spec["flag"]: False}).update(
+            **{spec["flag"]: True}
+        )
         setattr(self, spec["flag"], True)
+        if not claimed:
+            return
         try:
             from core.services.email_service import send_collection_capacity_alarm
 
