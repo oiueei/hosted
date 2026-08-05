@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { TextInput, Button, Notification } from 'hds-react';
-import { getCsrfToken } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
+import usePopIn from '../hooks/usePopIn';
 
 /**
  * "Log in to act" body rendered by JoinPage for an anonymous visitor on a PUBLIC
@@ -13,50 +12,18 @@ import useTheeeme from '../hooks/useTheeeme';
  * a member and can reserve, ask and contribute. No account or prior invitation
  * is needed — and the code only ever joins a PUBLIC collection (the backend
  * silently ignores it otherwise).
+ *
+ * The request itself lives in `usePopIn`, shared with `MagicLinkJoinPage`
+ * (`/popin`, `/share/:token`); only the presentation differs.
  */
 export default function JoinToAct({ collectionCode, collectionHeadline }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { btnStyle } = useTheeeme();
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(null); // 'success' | 'error'
-  const [message, setMessage] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (loading) return;
-    setStatus(null);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/v1/auth/pop-in/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        // `language` is stored on a brand-new user, so their very first magic link
-        // already speaks the language they're reading this page in.
-        body: JSON.stringify({
-          email,
-          collection_code: collectionCode,
-          language: i18n.resolvedLanguage || i18n.language,
-        }),
-      });
-      if (res.ok) {
-        localStorage.removeItem('seenWelcome');
-        setStatus('success');
-        setMessage(t('joinToAct.sentBody'));
-      } else if (res.status === 429) {
-        setStatus('error');
-        setMessage(t('common.tooManyAttempts'));
-      } else {
-        setStatus('error');
-        setMessage(t('joinToAct.error'));
-      }
-    } catch {
-      setStatus('error');
-      setMessage(t('common.connectionError'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { email, setEmail, loading, status, message, submit } = usePopIn({
+    sentMessageKey: 'joinToAct.sentBody',
+    errorMessageKey: 'joinToAct.error',
+    extraBody: { collection_code: collectionCode },
+  });
 
   if (status === 'success') {
     return (
@@ -76,7 +43,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
           ? t('joinToAct.bodyNamed', { collection: collectionHeadline })
           : t('joinToAct.body')}
       </p>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={submit}>
         <TextInput
           id="join-to-act-email"
           label={t('joinToAct.emailLabel')}
@@ -101,7 +68,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
       {/* Third door that mints an account from a typed email (see
           MagicLinkJoinPage) — the privacy information travels with it. */}
       <p style={{ marginBottom: 'var(--spacing-2-xs)' }}>
-        <Link to="/legal" style={{ color: 'var(--color-black-60)', textDecoration: 'underline', fontSize: 'var(--fontsize-body-s)' }}>
+        <Link to="/legal" className="legal-link">
           {t('login.legalLink')}
         </Link>
       </p>

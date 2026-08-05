@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import MagicLinkJoinPage from './MagicLinkJoinPage';
@@ -87,6 +87,41 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     expect(await screen.findByText('Error sending link.')).toBeInTheDocument();
     expect(screen.queryByText(/You can close this tab now/)).not.toBeInTheDocument();
     expect(localStorage.getItem('seenWelcome')).toBe('true');
+  });
+
+  test('two submits in the same tick send only one magic link', async () => {
+    // Every accepted pop-in emails a magic link, so a double submit mails a
+    // stranger twice. `disabled={loading}` handles the ordinary double-click —
+    // React flushes discrete events synchronously, so the button is already
+    // disabled by the second one. What it cannot catch is two submit events
+    // dispatched before any re-render: both run the same closure, where the
+    // `loading` state is still false. Only usePopIn's ref guard sees the first
+    // one, which is why it is a ref and not the state.
+    let resolveFirst;
+    globalThis.fetch = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveFirst = () => resolve({ ok: true, status: 200, json: async () => ({}) });
+      })
+    );
+    const { container } = renderShareVariant();
+
+    fireEvent.change(screen.getByLabelText(/Email/), {
+      target: { value: 'newcomer@example.com' },
+    });
+    const form = container.querySelector('form');
+    // Dispatched directly on the form, twice, inside one act() — the button's
+    // disabled attribute is bypassed, reproducing the stale-closure window.
+    await act(async () => {
+      const evt = () => new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(evt());
+      form.dispatchEvent(evt());
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    resolveFirst();
+    await screen.findByText(/Magic link sent! Check your inbox/);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   test('a rate-limited join says "wait", not "broken"', async () => {

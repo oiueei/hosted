@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { TextInput, Button, Notification } from 'hds-react';
-import { getCsrfToken } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
+import usePopIn from '../hooks/usePopIn';
 import PageLayout from './PageLayout';
 
 /**
@@ -11,7 +11,8 @@ import PageLayout from './PageLayout';
  * swaps into a sent/error Notification. `PopInPage` and `SharePage` are this
  * page with different copy and payload (`extraBody` carries SharePage's
  * `share_token`). JoinPage's variant (`JoinToAct`) stays separate on purpose —
- * it renders unboxed inside another page's hero and reports errors inline.
+ * it renders unboxed inside another page's hero and reports errors inline —
+ * but the request itself is shared: both call `usePopIn`.
  *
  * Props:
  * - `ns`: i18n namespace ('popin' | 'share') for the form strings
@@ -22,52 +23,19 @@ import PageLayout from './PageLayout';
  * - `extraBody`: extra fields merged into the POST body.
  */
 export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descriptionKey, extraBody }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   useEffect(() => { document.title = t(docTitleKey); }, [t, docTitleKey]);
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(null); // 'success' | 'error'
-  const [message, setMessage] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setStatus(null);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/v1/auth/pop-in/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken(),
-        },
-        // `language` is stored on a brand-new user, so their very first magic link
-        // already speaks the language they're reading this page in.
-        body: JSON.stringify({ email, language: i18n.resolvedLanguage || i18n.language, ...extraBody }),
-      });
-      if (res.ok) {
-        localStorage.removeItem('seenWelcome');
-        setStatus('success');
-        setMessage(t(`${ns}.magicLinkSent`));
-      } else if (res.status === 429) {
-        setStatus('error');
-        setMessage(t('common.tooManyAttempts'));
-      } else {
-        setStatus('error');
-        setMessage(t(`${ns}.errorSendingLink`));
-      }
-    } catch {
-      setStatus('error');
-      setMessage(t('common.connectionError'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { email, setEmail, loading, status, message, submit } = usePopIn({
+    sentMessageKey: `${ns}.magicLinkSent`,
+    errorMessageKey: `${ns}.errorSendingLink`,
+    extraBody,
+  });
 
   const { btnStyle } = useTheeeme();
 
   return (
     <PageLayout title={t(titleKey)}>
-      <p className="section-mt" style={{ maxWidth: '400px' }}>{t(descriptionKey)}</p>
+      <p className="section-mt measure">{t(descriptionKey)}</p>
       {status ? (
         <>
           <Notification
@@ -82,7 +50,7 @@ export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descripti
           )}
         </>
       ) : (
-        <form onSubmit={handleSubmit} style={{ maxWidth: '400px' }}>
+        <form onSubmit={submit} className="measure">
           <TextInput
             id={`${ns}-email`}
             label={t(`${ns}.emailLabel`)}
@@ -104,12 +72,12 @@ export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descripti
           account from the typed email, so the privacy information has to be
           reachable *here* — at the moment data is collected — not only on
           /login. Reuses login.legalLink: same destination, same words. */}
-      <p style={{ marginTop: 'var(--spacing-s)', maxWidth: '400px' }}>
-        <Link to="/legal" style={{ color: 'var(--color-black-60)', textDecoration: 'underline', fontSize: 'var(--fontsize-body-s)' }}>
+      <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
+        <Link to="/legal" className="legal-link">
           {t('login.legalLink')}
         </Link>
       </p>
-      <p style={{ marginTop: 'var(--spacing-m)', maxWidth: '400px' }}>
+      <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
         <Link to="/login">{t(`${ns}.alreadyHaveAccount`)}</Link>
       </p>
     </PageLayout>
