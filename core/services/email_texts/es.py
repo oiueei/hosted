@@ -13,8 +13,7 @@ TEXTS = {
     # es "solicitud de compra", una LEND "solicitud de préstamo", etc. SWAP
     # tiene sus propias plantillas de solicitud/confirmación, pero el correo de
     # decisión (send_booking_decision_email) es compartido e interpola {action}
-    # también para los intercambios, así que SWAP necesita su sustantivo. WISH
-    # nunca reserva.
+    # también para los intercambios, así que SWAP necesita su sustantivo.
     "action_noun_GIFT_THING": "regalo",
     "action_noun_SELL_THING": "compra",
     "action_noun_LEND_THING": "préstamo",
@@ -171,26 +170,6 @@ TEXTS = {
     "broadcast_plain": "Mensaje de {owner} ({collection}):\n\n{message}\n\n¡Puedo ayudar! {url}",
     "broadcast_intro": "{owner} ha enviado un mensaje a {collection}:",
     "broadcast_help_cta": "¡Puedo ayudar!",
-    # Wish posted (to group)
-    "wish_posted_subject": "Alguien de tu grupo busca algo",
-    "wish_posted_plain": (
-        "{creator} ha publicado un nuevo pedido: '{wish}'. ¿Puedes ayudar? Míralo: {url}"
-    ),
-    "wish_posted_intro": "{creator} ha publicado un nuevo pedido:",
-    "wish_posted_cta": "Mira si puedes ayudar",
-    # Wish answered (to creator)
-    "wish_response_subject": "Alguien ha contestado tu pedido",
-    "wish_response_plain": "{responder} ha contestado tu pedido '{wish}'. Ver la respuesta: {url}",
-    "wish_response_intro": "{responder} ha contestado tu pedido:",
-    "wish_response_cta": "Ver la respuesta",
-    # Wish resolved — thanks (to accepted responder)
-    "wish_thanks_subject": "Gracias por tu ayuda",
-    "wish_thanks_plain": (
-        "{creator} ha marcado el pedido '{wish}' como resuelto "
-        "y quería darte las gracias por tu ayuda."
-    ),
-    "wish_thanks_intro": "{creator} ha marcado este pedido como resuelto:",
-    "wish_thanks_outro": "¡Gracias por echar una mano!",
     # Return reminder (to owner)
     "reminder_subject": "Recordatorio: una reserva termina mañana",
     "reminder_plain": "Recordatorio: la reserva de {requester} sobre '{thing}' termina el {end}.",

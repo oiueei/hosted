@@ -6,7 +6,7 @@ import { Button } from 'hds-react';
  * Inline consequence-confirm (DESIGN §3): a trigger Button whose `aria-expanded`
  * toggles a confirm box directly beneath it — no modal. The canonical pattern for
  * irreversible or "touches another person" actions (report a listing, resolve /
- * accept a wish, accept an ownership-transferring hold).
+ * accept an ownership-transferring hold).
  *
  * Two modes:
  *  - Controlled (pass `open`): the parent owns the open state, so a list of rows

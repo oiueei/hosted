@@ -6,13 +6,11 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InlineConfirm from '../components/InlineConfirm';
-import RespondMenu from '../components/RespondMenu';
 import ThingTags from '../components/ThingTags';
 import ThingInfoRows from '../components/ThingInfoRows';
 import OwnerBookingsList from '../components/OwnerBookingsList';
 import ThingReportFooter from '../components/ThingReportFooter';
 import ThingFaqSection from '../components/ThingFaqSection';
-import WishResponsesList from '../components/WishResponsesList';
 import Toast from '../components/Toast';
 import MarkdownText from '../components/MarkdownText';
 import ImageCarousel from '../components/ImageCarousel';
@@ -58,7 +56,6 @@ export default function ThingPage() {
     handleBookingAction,
     isOwner,
     isCollectionOwner,
-    isWish,
     isSwap,
     isDateBased,
     needsPage,
@@ -271,27 +268,9 @@ export default function ThingPage() {
           </div>
         )}
 
-        {/* Answer ("Contestar") menu for wishes */}
-        {showButton && isWish && (
-          loginToAct ? (
-            <Button fullWidth style={btnStyle} onClick={goJoin}>{t('wishes.respond')}</Button>
-          ) : thing.my_response ? (
-            <p className="thing-card-meta">
-              {t('wishes.yourAnswer')} · {t('wishes.status.' + thing.my_response.status)}
-            </p>
-          ) : (
-            <RespondMenu
-              thingCode={thing.code}
-              collectionCode={collectionCode}
-              backPath={code ? `/collections/${code}/things/${thing.code}` : `/things/${thing.code}`}
-              backLabel={headline}
-            />
-          )
-        )}
-
-        {/* Reservation button for non-wish invited users. For an anonymous
-            visitor (loginToAct) the click routes to the collection's join page. */}
-        {showButton && !isWish && (
+        {/* Reservation button for invited users. For an anonymous visitor
+            (loginToAct) the click routes to the collection's join page. */}
+        {showButton && (
           <Button
             fullWidth
             disabled={loginToAct ? loginButtonDisabled : buttonDisabled}
@@ -324,19 +303,6 @@ export default function ThingPage() {
           </div>
         )}
 
-
-        {/* Responses section for wishes (creator sees all; responder sees own) */}
-        {isWish && (isOwner || thing.my_response) && (
-          <WishResponsesList
-            thing={thing}
-            isOwner={isOwner}
-            code={code}
-            btnStyle={btnStyle}
-            btnSecondaryStyle={btnSecondaryStyle}
-            onToast={setToast}
-            onResolved={() => setThing((prev) => ({ ...prev, status: 'INACTIVE' }))}
-          />
-        )}
 
         {/* FAQs Section */}
         <ThingFaqSection

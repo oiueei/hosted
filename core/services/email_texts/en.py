@@ -15,7 +15,7 @@ TEXTS = {
     # request", a LEND request "loan request", etc. SWAP's request/confirmation
     # emails have their own dedicated templates, but the decision email
     # (send_booking_decision_email) is shared and interpolates {action} for
-    # swaps too, so SWAP needs a noun as well. WISH never books.
+    # swaps too, so SWAP needs a noun as well.
     "action_noun_GIFT_THING": "gift",
     "action_noun_SELL_THING": "purchase",
     "action_noun_LEND_THING": "loan",
@@ -169,23 +169,6 @@ TEXTS = {
     "broadcast_plain": "Message from {owner} ({collection}):\n\n{message}\n\nI can help! {url}",
     "broadcast_intro": "{owner} sent a message to {collection}:",
     "broadcast_help_cta": "I can help!",
-    # Wish posted (to group)
-    "wish_posted_subject": "A neighbour is looking for something",
-    "wish_posted_plain": "{creator} posted a new wish: '{wish}'. Can you help? View it: {url}",
-    "wish_posted_intro": "{creator} posted a new wish:",
-    "wish_posted_cta": "See if you can help",
-    # Wish answered (to creator)
-    "wish_response_subject": "Someone answered your wish",
-    "wish_response_plain": "{responder} answered your wish '{wish}'. View the answer: {url}",
-    "wish_response_intro": "{responder} answered your wish:",
-    "wish_response_cta": "View the answer",
-    # Wish resolved — thanks (to accepted responder)
-    "wish_thanks_subject": "Thanks for your help",
-    "wish_thanks_plain": (
-        "{creator} marked the wish '{wish}' as resolved and wanted to thank you for your help."
-    ),
-    "wish_thanks_intro": "{creator} marked this wish as resolved:",
-    "wish_thanks_outro": "Thanks for helping out!",
     # Return reminder (to owner)
     "reminder_subject": "Reminder: a hold ends tomorrow",
     "reminder_plain": "Reminder: {requester}'s hold on '{thing}' ends {end}.",

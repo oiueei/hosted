@@ -68,9 +68,8 @@ class TestListEndpointQueryBudgets:
         """Non-owner viewers (including anonymous ones) take the Python-side
         INACTIVE filter in get_things(). A regression to .exclude() there
         discards the collection's Prefetch("things", ...) cache — it doesn't
-        scale with N, but it does re-fire the things query plus its 5 nested
-        prefetches (faq_set/responses/deal/2x bookings), doubling 8 queries
-        to 14."""
+        scale with N, but it does re-fire the things query plus its 4 nested
+        prefetches (faq_set/deal/2x bookings), doubling 7 queries to 12."""
         coll = CollectionFactory(owner=user, visibility=Collection.Visibility.PUBLIC)
         _make_things(user, coll, 2)
         with CaptureQueriesContext(connection) as small:
@@ -86,8 +85,8 @@ class TestListEndpointQueryBudgets:
         assert len(big) == len(small), (
             f"N+1 on anon collection detail: {len(small)} queries for 2 things, {len(big)} for 6"
         )
-        assert len(small) == 8, (
-            f"expected the collection's things Prefetch to be reused (8 queries), "
+        assert len(small) == 7, (
+            f"expected the collection's things Prefetch to be reused (7 queries), "
             f"got {len(small)} — an .exclude() on obj.things would discard it"
         )
 

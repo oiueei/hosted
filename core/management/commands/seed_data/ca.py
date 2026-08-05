@@ -2,7 +2,7 @@
 Catalan demo-data text. Merged onto the structural skeleton in common.py by
 `seed_demo.load_seed_data`. Collection/thing text is always seeded in every
 language at once (localized {lang: text} maps — O6); `--lang=ca` selects this
-file for the NON-localizable rest: user bios, FAQs and wish responses.
+file for the NON-localizable rest: user bios and FAQs.
 
 Text lengths respect model max_length (headline=64, description=256,
 question=64, answer=256) — per language.
@@ -321,12 +321,5 @@ FAQS = [
         "thing_code": "La1a05",
         "question": "Puc recollir-ho a final de mes?",
         "answer": "És clar que sí, maco!",
-    },
-]
-
-WISH_RESPONSES = [
-    {
-        "wish_code": "La1a00",
-        "message": "Al traster del costat de l'aparcabicis hi ha una escaleta plegable. Demana-li la clau a en Lolo!",
     },
 ]

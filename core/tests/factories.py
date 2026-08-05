@@ -19,7 +19,6 @@ from factory.django import DjangoModelFactory
 from core.models import FAQ, RSVP, Collection, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.transfer import ThingTransfer
-from core.models.wish import WishResponse
 
 
 class UserFactory(DjangoModelFactory):
@@ -78,18 +77,6 @@ class FAQFactory(DjangoModelFactory):
     thing = factory.SubFactory(ThingFactory)
     questioner = factory.SubFactory(UserFactory)
     question = factory.Sequence(lambda n: f"Question {n}?")
-
-
-class WishResponseFactory(DjangoModelFactory):
-    """A KNOW_WHERE answer to a wish by default (carries the required message)."""
-
-    class Meta:
-        model = WishResponse
-
-    wish = factory.SubFactory(ThingFactory, type=Thing.Type.WISH_THING)
-    responder = factory.SubFactory(UserFactory)
-    kind = WishResponse.Kind.KNOW_WHERE
-    message = factory.Sequence(lambda n: f"I know where to find item {n}")
 
 
 class ThingTransferFactory(DjangoModelFactory):

@@ -141,8 +141,7 @@ class TestCatalogueParity:
         # the ownership transfer already committed.
         from core.models import Thing
 
-        bookable = [t for t in Thing.Type.values if t != Thing.Type.WISH_THING]
-        missing = [t for t in bookable if f"action_noun_{t}" not in en.TEXTS]
+        missing = [t for t in Thing.Type.values if f"action_noun_{t}" not in en.TEXTS]
         assert missing == []
 
     @pytest.mark.parametrize("catalogue", OTHER_CATALOGUES, ids=["es", "ca"])

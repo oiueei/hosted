@@ -11,7 +11,6 @@ from .theeemes import TheeemeListView
 from .things import InvitedThingsView, ThingViewSet
 from .transfers import ThingTransferView
 from .users import UserDetailView
-from .wishes import ThingWishResponseView, WishResolveView, WishResponseAcceptView
 
 __all__ = [
     "RequestLinkView",
@@ -33,7 +32,4 @@ __all__ = [
     "OwnerBookingsView",
     "TheeemeListView",
     "ThingTransferView",
-    "ThingWishResponseView",
-    "WishResponseAcceptView",
-    "WishResolveView",
 ]

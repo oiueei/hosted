@@ -16,9 +16,9 @@ from core.validators import (
     SafeTextField,
 )
 
-# Thing types valid for proprietary collections (excludes COMMUNITY-only types
-# WISH_THING, SHARE_THING and the SWAP_THING which is gated by
-# is_swap on COMMUNITY collections).
+# Thing types valid for proprietary collections (excludes COMMUNITY-only
+# SHARE_THING and the SWAP_THING which is gated by is_swap on COMMUNITY
+# collections).
 PROPRIETARY_THING_TYPES = (
     Thing.Type.GIFT_THING,
     Thing.Type.SELL_THING,
@@ -34,7 +34,6 @@ COMMUNITY_THING_TYPES = (
     Thing.Type.RENT_THING,
     Thing.Type.LEND_THING,
     Thing.Type.SHARE_THING,
-    Thing.Type.WISH_THING,
 )
 
 
@@ -70,8 +69,6 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
             "my_pending_booking",
             "pending_questions",
             "transfer_count",
-            "response_count",
-            "my_response",
             "collection_swap_minimum_items",
             "my_swap_count_in_collection",
             "deal",
@@ -380,8 +377,8 @@ def _validate_allowed_thing_types(mode, is_swap, is_share, allowed_thing_types):
       [Thing.Type.SWAP_THING]. Anything else is rejected so the form and the data
       cannot disagree.
     - is_share is the same with [Thing.Type.SHARE_THING].
-    - PROPRIETARY excludes COMMUNITY-only types (WISH/SHARE/ASSET/SWAP).
-    - COMMUNITY (no flags) accepts the 7-type COMMUNITY set (all except SWAP,
+    - PROPRIETARY excludes COMMUNITY-only types (SHARE/SWAP).
+    - COMMUNITY (no flags) accepts the 5-type COMMUNITY set (all except SWAP,
       which requires is_swap).
     """
     if not allowed_thing_types:

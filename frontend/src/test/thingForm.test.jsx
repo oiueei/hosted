@@ -92,22 +92,22 @@ describe('AddThingPage — field visibility', () => {
     expect(container.querySelector('#add-thing-location')).toBeTruthy();
   });
 
-  test('swap collection: shows the type selector (SWAP + wish), defaults to SWAP', async () => {
+  test('swap collection: shows the type selector, forced to SWAP', async () => {
     const { container } = renderAdd({ collection: { mode: 'COMMUNITY', is_swap: true } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // Swap-only collections now also accept wishes, so the type Select is shown.
+    // The Select is shown even though the flag forces the single option.
     expect(screen.getByText('Type')).toBeInTheDocument();
     // Default stays SWAP (neither a FEE_TYPE nor a DETAIL_TYPE), so those stay hidden.
     expect(container.querySelector('#add-thing-fee')).toBeNull();
     expect(screen.queryByText('Availability')).toBeNull();
   });
 
-  test('share collection: shows the type selector (SHARE + wish), defaults to SHARE', async () => {
+  test('share collection: shows the type selector, forced to SHARE', async () => {
     const { container } = renderAdd({ collection: { mode: 'COMMUNITY', is_share: true } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // Share-only collections now also accept wishes, so the type Select is shown.
+    // The Select is shown even though the flag forces the single option.
     expect(screen.getByText('Type')).toBeInTheDocument();
     // Default stays SHARE (a DETAIL_TYPE, not a FEE_TYPE): availability shows, fee hidden.
     expect(container.querySelector('#add-thing-fee')).toBeNull();
@@ -136,7 +136,7 @@ describe('AddThingPage — type explainer popover', () => {
 
   // The panel is built from the already-filtered typeOptions, so a type the
   // collection can't hold is never explained. A swap-only collection offers only
-  // SWAP + WISH: GIFT/SHARE must be absent.
+  // SWAP: GIFT/SHARE must be absent.
   test('does not list a type the collection filtered out', async () => {
     renderAdd({ collection: { mode: 'COMMUNITY', is_swap: true } });
 

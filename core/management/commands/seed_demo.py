@@ -9,8 +9,8 @@ headline/description is stored as a localized ``{"es": …, "ca": …, "en": …
 map built from all the language files, so every reader sees the demo in their
 own language — one seeding serves every deployment. Tag labels are localized
 too (as constants in ``common.py``). The ``--lang`` flag only chooses the
-language of the **non-localizable** text: user bios, FAQ questions/answers,
-wish-response messages and locations (plain columns).
+language of the **non-localizable** text: user bios, FAQ questions/answers
+and locations (plain columns).
 
 Usage:
     python manage.py seed_demo                     # non-localizable text in English
@@ -29,7 +29,7 @@ from types import SimpleNamespace
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from core.models import FAQ, Collection, Thing, User, WishResponse
+from core.models import FAQ, Collection, Thing, User
 from core.models.transfer import ThingTransfer
 
 from .seed_data import common
@@ -37,8 +37,8 @@ from .seed_data import common
 SUPPORTED_LANGS = ["en", "es", "ca"]
 
 # Entities whose text every reader should get in their own language, and the
-# fields the {lang: text} maps are built for. Everything else (user bios, FAQs,
-# wish responses) is plain-column text and follows --lang.
+# fields the {lang: text} maps are built for. Everything else (user bios, FAQs)
+# is plain-column text and follows --lang.
 _LOCALIZED_ENTITIES = ("COLLECTIONS", "THINGS")
 _LOCALIZED_FIELDS = ("headline", "description")
 
@@ -66,7 +66,6 @@ _MERGE_KEYS = {
     "COLLECTIONS": "code",
     "THINGS": "code",
     "FAQS": "thing_code",
-    "WISH_RESPONSES": "wish_code",
 }
 
 
@@ -149,7 +148,6 @@ class Command(BaseCommand):
         self._seed_collections(data.COLLECTIONS)
         self._seed_things(data.THINGS)
         self._seed_faqs(data.FAQS)
-        self._seed_wish_responses(data.WISH_RESPONSES)
         self._seed_transfers(common.TRANSFERS)
 
         self.stdout.write(
@@ -242,19 +240,6 @@ class Command(BaseCommand):
                 questioner=User.objects.get(code=data["questioner_code"]),
                 question=data["question"],
                 defaults={"answer": data["answer"], "is_visible": True},
-            )
-
-    def _seed_wish_responses(self, responses):
-        for data in responses:
-            WishResponse.objects.update_or_create(
-                wish=Thing.objects.get(code=data["wish_code"]),
-                responder=User.objects.get(code=data["responder_code"]),
-                kind=data["kind"],
-                defaults={
-                    "message": data.get("message", ""),
-                    "url": data.get("url", ""),
-                    "fee": data.get("fee"),
-                },
             )
 
     def _seed_transfers(self, transfers):

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES, WISH_TYPE, SHARE_TYPE, SWAP_TYPE } from '../constants/things';
+import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES, SHARE_TYPE, SWAP_TYPE } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -18,9 +18,6 @@ export default function AddThingPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const routerLocation = useLocation();
-  // When set, this Add flow is answering a wish ("Tengo esto"): on save we link
-  // the new listing back to the wish as a HAVE_THIS response.
-  const respondWishCode = routerLocation.state?.respondWishCode;
 
   const userCode = localStorage.getItem('userCode');
   useEffect(() => { document.title = t('titles.addThing'); }, [t]);
@@ -45,7 +42,6 @@ export default function AddThingPage() {
   const [location, setLocation] = useState('');
   const [condition, setCondition] = useState('');
   const [isEndless, setIsEndless] = useState(false);
-  const [notifyGroup, setNotifyGroup] = useState(true);
   const [gallery, setGallery] = useState([]);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -128,31 +124,13 @@ export default function AddThingPage() {
     if (['GIFT_THING', 'SELL_THING'].includes(type) && isEndless) {
       body.is_endless = true;
     }
-    if (type === WISH_TYPE && !respondWishCode) {
-      body.notify_group = notifyGroup;
-    }
-
     try {
       const res = await apiFetch('/api/v1/things/', {
         method: 'POST',
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        if (respondWishCode) {
-          // Link the new listing to the wish as a "Tengo esto" answer.
-          const created = await res.json();
-          const linkRes = await apiFetch(`/api/v1/things/${respondWishCode}/responses/`, {
-            method: 'POST',
-            body: JSON.stringify({ kind: 'HAVE_THIS', thing_code: created.code }),
-          });
-          if (!linkRes.ok) {
-            setToast({ type: 'error', message: t('wishes.errorResponding') });
-            return;
-          }
-          navigate(routerLocation.state?.backPath || `/collections/${code}`);
-        } else {
-          navigate(`/collections/${code}`);
-        }
+        navigate(`/collections/${code}`);
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
@@ -170,16 +148,12 @@ export default function AddThingPage() {
   const { tc, btnStyle } = useTheeeme();
 
   const typeOptions = (() => {
-    // Swap-only / share-only collections accept their forced offer type plus
-    // wishes (a wish coexists with the offer pool). Offer both so a member can
-    // post either — except in respond mode, where a wish can't answer a wish.
-    if (isSwapCollection) return respondWishCode ? [SWAP_TYPE] : [SWAP_TYPE, WISH_TYPE];
-    if (isShareCollection) return respondWishCode ? [SHARE_TYPE] : [SHARE_TYPE, WISH_TYPE];
+    // Swap-only / share-only collections force their single offer type.
+    if (isSwapCollection) return [SWAP_TYPE];
+    if (isShareCollection) return [SHARE_TYPE];
     return TYPE_VALUES.filter((v) => {
       if (v === SWAP_TYPE) return false;
-      // Cannot answer a wish by offering another wish.
-      if (respondWishCode && v === WISH_TYPE) return false;
-      if ((v === WISH_TYPE || v === SHARE_TYPE) && collectionMode !== 'COMMUNITY') return false;
+      if (v === SHARE_TYPE && collectionMode !== 'COMMUNITY') return false;
       // Per-collection allowlist (set on Create/Edit). Empty = no restriction.
       if (collectionAllowedTypes.length > 0 && !collectionAllowedTypes.includes(v)) return false;
       return true;
@@ -192,25 +166,17 @@ export default function AddThingPage() {
       backLabel={L(collectionHeadline) || t('common.collection')}
     >
         <h1 className="page-title-xl">{t('addThing.pageTitle')}</h1>
-        {respondWishCode && (
-          <Notification type="info" label={t('wishes.kind.haveThis')} style={{ marginBottom: 'var(--spacing-m)' }}>
-            {t('wishes.respondingWithListing')}
-          </Notification>
-        )}
       <div className="form-grid">
           <ThingForm
             idPrefix="add-thing"
             theeemeColor01={tc.color_01}
             errors={errors}
             typeOptions={typeOptions}
-            showTypeSelector={!((isSwapCollection || isShareCollection) && respondWishCode)}
+            showTypeSelector
             type={type}
             setType={setType}
             isEndless={isEndless}
             setIsEndless={setIsEndless}
-            showNotifyGroup={type === WISH_TYPE && !respondWishCode}
-            notifyGroup={notifyGroup}
-            setNotifyGroup={setNotifyGroup}
             headline={headline}
             setHeadline={setHeadline}
             description={description}
@@ -240,12 +206,10 @@ export default function AddThingPage() {
         </Button>
       </div>
 
-      {!respondWishCode && (
-        <section id="bulk-add" className="bulk-add-section">
-          <h2>{t('bulkAdd.heading')}</h2>
-          <BulkAddCsv collectionCode={code} onImported={() => navigate(`/collections/${code}`)} />
-        </section>
-      )}
+      <section id="bulk-add" className="bulk-add-section">
+        <h2>{t('bulkAdd.heading')}</h2>
+        <BulkAddCsv collectionCode={code} onImported={() => navigate(`/collections/${code}`)} />
+      </section>
 
       <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>

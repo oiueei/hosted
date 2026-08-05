@@ -64,13 +64,6 @@ class ThingRequestView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # WISH_THING bypasses BookingPeriod — answer it via the responses endpoint
-        if thing.type == Thing.Type.WISH_THING:
-            return Response(
-                {"error": "This thing type does not support reservations"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         # Check if thing is available
         if thing.status != Thing.Status.ACTIVE:
             return Response(

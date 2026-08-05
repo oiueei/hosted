@@ -321,10 +321,3 @@ FAQS = [
         "answer": "¡Claro que sí, majo!",
     },
 ]
-
-WISH_RESPONSES = [
-    {
-        "wish_code": "La1a00",
-        "message": "En el trastero junto al aparcabicis hay una escalerilla plegable. ¡Pídele la llave a Lolo!",
-    },
-]

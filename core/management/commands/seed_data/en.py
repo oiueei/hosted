@@ -318,10 +318,3 @@ FAQS = [
         "answer": "Abso-bloody-lutely!",
     },
 ]
-
-WISH_RESPONSES = [
-    {
-        "wish_code": "La1a00",
-        "message": "The shed by the bike racks has a folding step ladder — ask Lolo for the key!",
-    },
-]

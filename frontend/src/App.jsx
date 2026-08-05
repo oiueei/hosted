@@ -32,7 +32,6 @@ const ManageInvitesPage = lazy(() => import('./pages/ManageInvitesPage'));
 const LogoutPage = lazy(() => import('./pages/LogoutPage'));
 const UserPage = lazy(() => import('./pages/UserPage'));
 const RequestThingPage = lazy(() => import('./pages/RequestThingPage'));
-const RespondWishPage = lazy(() => import('./pages/RespondWishPage'));
 const DeleteThingPage = lazy(() => import('./pages/DeleteThingPage'));
 const DeleteCollectionPage = lazy(() => import('./pages/DeleteCollectionPage'));
 const RemoveGuestPage = lazy(() => import('./pages/RemoveGuestPage'));
@@ -135,17 +134,12 @@ function App() {
             element={<RequestThingPage />}
           />
           <Route
-            path="/collections/:code/things/:thingCode/respond/:kind"
-            element={<RespondWishPage />}
-          />
-          <Route
             path="/collections/:code/things/:thingCode/delete"
             element={<DeleteThingPage />}
           />
           <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
           <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
           <Route path="/things/:thingCode/request" element={<RequestThingPage />} />
-          <Route path="/things/:thingCode/respond/:kind" element={<RespondWishPage />} />
           <Route path="/things/:thingCode/delete" element={<DeleteThingPage />} />
           <Route path="/my-bookings" element={<MyBookingsPage />} />
           <Route path="/:userCode" element={<UserPage />} />

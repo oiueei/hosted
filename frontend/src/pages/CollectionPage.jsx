@@ -252,7 +252,7 @@ export default function CollectionPage() {
       <div className="page-container">
       {/* The owner's notifications for this collection — a hold request is answered
           on the thing, so it should reach them where the things are, not only on
-          Home. A member's own notifications (wish answers, FAQs) stay on Home. */}
+          Home. A member's own notifications (FAQs) stay on Home. */}
       {isOwner && <InboxNotifications collection={code} />}
       {isOwner && collection.status === 'INACTIVE' && (
         <Notification label={t('common.notice')} type="info" style={{ marginBottom: 'var(--spacing-m)' }}>

@@ -207,13 +207,6 @@
     "faqHiddenBody": "{{owner_name}} ha ocultado tu pregunta sobre {{thing_headline}}.",
     "inviteRejectedLabel": "Invitación rechazada",
     "inviteRejectedBody": "{{invitee_name}} ha rechazado la invitación a {{collection_headline}}.",
-    "wishPostedLabel": "Nuevo pedido",
-    "wishPostedBody": "{{creator_name}} ha publicado un pedido: {{wish_headline}}.",
-    "wishResponseLabel": "Nueva respuesta",
-    "wishResponseBody": "{{responder_name}} ha contestado a tu pedido {{wish_headline}}.",
-    "wishAcceptedLabel": "Respuesta aceptada",
-    "wishAcceptedBody": "{{owner_name}} ha aceptado tu respuesta a {{wish_headline}}.",
-    "viewWish": "Ver pedido",
     "viewCollection": "¡Puedo ayudar!",
     "reportedLabel": "Han denunciado una publicación",
     "reportedBody": "Alguien ha denunciado «{{thing_headline}}». Échale un vistazo.",
@@ -319,8 +312,7 @@
       "RENT_THING": "Alquilar",
       "LEND_THING": "Tomar prestado",
       "SHARE_THING": "Quedármelo",
-      "SWAP_THING": "Intercambiar",
-      "WISH_THING": "Contestar"
+      "SWAP_THING": "Intercambiar"
     }
   },
   "thingTags": {
@@ -580,7 +572,6 @@
     "RENT_THING": "Alquiler",
     "LEND_THING": "Préstamo",
     "SHARE_THING": "Compartir",
-    "WISH_THING": "Pedido",
     "SWAP_THING": "Intercambio"
   },
   "typeInfo": {
@@ -590,7 +581,6 @@
     "RENT_THING": "Se alquila por días, con precio.",
     "LEND_THING": "Se presta unos días y vuelve.",
     "SHARE_THING": "Al aceptar una petición pasa a ser de quien lo pidió — y sigue circulando en el grupo.",
-    "WISH_THING": "No es un objeto: es una petición al grupo. Los demás contestan cómo ayudar.",
     "SWAP_THING": "Se intercambia por cosas de otro miembro — al aceptar, la propiedad cambia en ambos sentidos."
   },
   "availability": {
@@ -637,47 +627,6 @@
     "shareCount_other": "{{count}} veces compartido",
     "swapCount_one": "{{count}} intercambio",
     "swapCount_other": "{{count}} intercambios"
-  },
-  "wishes": {
-    "respond": "Contestar",
-    "respondPlaceholder": "Elige cómo ayudar",
-    "kind": {
-      "haveThis": "Tengo esto",
-      "knowWhere": "Sé dónde",
-      "canMake": "Puedo hacértelo"
-    },
-    "responseCount_one": "{{count}} respuesta",
-    "responseCount_other": "{{count}} respuestas",
-    "responsesHeading": "Respuestas",
-    "noResponses": "Aún no hay respuestas.",
-    "yourAnswer": "Ya has contestado",
-    "status": {
-      "PENDING": "Pendiente",
-      "ACCEPTED": "Aceptada"
-    },
-    "accept": "Aceptar",
-    "resolve": "Marcar como resuelto",
-    "notifyGroup": "Avisar al grupo",
-    "respondingWithListing": "Estás publicando un artículo para contestar a un pedido.",
-    "messageLabel": "Mensaje",
-    "messageRequired": "Escribe un mensaje.",
-    "urlLabel": "Enlace (opcional)",
-    "feeLabel": "Oferta o precio (opcional)",
-    "knowWhereTitle": "Sé dónde",
-    "canMakeTitle": "Puedo hacértelo",
-    "submit": "Enviar respuesta",
-    "responseSent": "Respuesta enviada.",
-    "errorResponding": "No se pudo enviar la respuesta.",
-    "acceptedToast": "Respuesta aceptada.",
-    "errorAccepting": "No se pudo aceptar la respuesta.",
-    "resolvedToast": "Pedido marcado como resuelto.",
-    "errorResolving": "No se pudo marcar como resuelto.",
-    "acceptConfirmTitle": "¿Aceptar esta respuesta?",
-    "acceptConfirmBody": "Avisaremos a quien respondió de que aceptaste su ofrecimiento. Las demás respuestas siguen abiertas.",
-    "acceptConfirm": "Aceptar respuesta",
-    "resolveConfirmTitle": "¿Marcar este deseo como resuelto?",
-    "resolveConfirmBody": "Saldrá del tablón activo (puedes reabrirlo más tarde). Si aceptaste una respuesta, esa persona recibe un agradecimiento.",
-    "resolveConfirm": "Marcar resuelto"
   },
   "swap": {
     "offerItems": "Seleccionar artículos a ofrecer",

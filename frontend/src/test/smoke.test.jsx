@@ -141,7 +141,6 @@ import CollectionPage from '../pages/CollectionPage';
 import ThingPage from '../pages/ThingPage';
 import EditThingPage from '../pages/EditThingPage';
 import RequestThingPage from '../pages/RequestThingPage';
-import RespondWishPage from '../pages/RespondWishPage';
 import UserPage from '../pages/UserPage';
 import SharePage from '../pages/SharePage';
 import PopInPage from '../pages/PopInPage';
@@ -243,16 +242,6 @@ smokeAndAxe('DeleteThingPage', DeleteThingPage, {
 smokeAndAxe('RequestThingPage', RequestThingPage, {
   path: '/things/:thingCode/request',
   entry: '/things/THG001/request',
-});
-
-smokeAndAxe('RespondWishPage (know-where)', RespondWishPage, {
-  path: '/things/:thingCode/respond/:kind',
-  entry: '/things/THG001/respond/know-where',
-});
-
-smokeAndAxe('RespondWishPage (can-make)', RespondWishPage, {
-  path: '/things/:thingCode/respond/:kind',
-  entry: '/things/THG001/respond/can-make',
 });
 
 smokeAndAxe('UserPage', UserPage, {

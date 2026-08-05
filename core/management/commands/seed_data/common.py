@@ -501,12 +501,6 @@ THINGS = [
         "is_endless": True,
     },
     {
-        "code": "La1a00",
-        "type": "WISH_THING",
-        "owner_code": "La1aN1",
-        "collections": ["1u1uC1"],
-    },
-    {
         "code": "L3L301",
         "type": "SWAP_THING",
         "owner_code": "La1aN1",
@@ -592,14 +586,6 @@ FAQS = [
     {
         "thing_code": "La1a05",
         "questioner_code": "L3L3oo",
-    },
-]
-
-WISH_RESPONSES = [
-    {
-        "wish_code": "La1a00",
-        "responder_code": "L3L3oo",
-        "kind": "KNOW_WHERE",
     },
 ]
 

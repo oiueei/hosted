@@ -5,7 +5,6 @@ import { Button, Notification, IconSpeechbubbleText, IconSwapUser } from 'hds-re
 import { SHARE_TYPE } from '../constants/things';
 import MarkdownText from './MarkdownText';
 import InlineConfirm from './InlineConfirm';
-import RespondMenu from './RespondMenu';
 import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ThingTags from './ThingTags';
@@ -43,7 +42,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
     handleBookingAction,
     isOwner,
     isCollectionOwner,
-    isWish,
     isDateBased,
     needsPage,
     canDelete,
@@ -128,12 +126,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
         )}
         <ThingTags thing={thing} isOwner={isOwner} showType={false} />
         <ThingInfoRows thing={thing} isDateBased={isDateBased} hideType={hideType}>
-          {isWish && thing.response_count > 0 && (
-            <div className="thing-card-info-row">
-              <IconSpeechbubbleText size="m" aria-hidden="true" />
-              <span>{t('wishes.responseCount', { count: thing.response_count })}</span>
-            </div>
-          )}
           {thing.transfer_count > 0 && (
             <div className="thing-card-info-row">
               <IconSwapUser size="m" aria-hidden="true" />
@@ -234,23 +226,7 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
               )}
             </>
           )}
-          {showButton && isWish && (
-            loginToAct ? (
-              <Button fullWidth style={btnStyle} onClick={goJoin}>{t('wishes.respond')}</Button>
-            ) : thing.my_response ? (
-              <p className="thing-card-meta">
-                {t('wishes.yourAnswer')} · {t('wishes.status.' + thing.my_response.status)}
-              </p>
-            ) : (
-              <RespondMenu
-                thingCode={thing.code}
-                collectionCode={collectionCode || thing.collection_code}
-                backPath={collectionCode ? `/collections/${collectionCode}` : '/'}
-                backLabel={collectionCode ? (collectionHeadline || t('common.collection')) : t('common.home')}
-              />
-            )
-          )}
-          {showButton && !isWish && (
+          {showButton && (
             <Button
               fullWidth
               disabled={loginToAct ? loginButtonDisabled : buttonDisabled}

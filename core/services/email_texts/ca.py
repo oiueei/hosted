@@ -13,8 +13,7 @@ TEXTS = {
     # de compra", una LEND "sol·licitud de préstec", etc. SWAP té les seves
     # plantilles de sol·licitud/confirmació, però el correu de decisió
     # (send_booking_decision_email) és compartit i interpola {action} també per
-    # als intercanvis, així que SWAP necessita el seu substantiu. WISH mai
-    # reserva.
+    # als intercanvis, així que SWAP necessita el seu substantiu.
     #
     # A DIFERÈNCIA d'en/es, aquí els valors porten la preposició ("de compra",
     # "d'intercanvi") i les plantilles diuen "sol·licitud {action}" — el català
@@ -176,28 +175,6 @@ TEXTS = {
     "broadcast_plain": "Missatge de {owner} ({collection}):\n\n{message}\n\nPuc ajudar! {url}",
     "broadcast_intro": "{owner} ha enviat un missatge a {collection}:",
     "broadcast_help_cta": "Puc ajudar!",
-    # Wish posted (to group)
-    "wish_posted_subject": "Algú del teu grup busca alguna cosa",
-    "wish_posted_plain": (
-        "{creator} ha publicat una nova petició: '{wish}'. Pots ajudar? Mira-ho: {url}"
-    ),
-    "wish_posted_intro": "{creator} ha publicat una nova petició:",
-    "wish_posted_cta": "Mira si pots ajudar",
-    # Wish answered (to creator)
-    "wish_response_subject": "Algú ha contestat la teva petició",
-    "wish_response_plain": (
-        "{responder} ha contestat la teva petició '{wish}'. Veure la resposta: {url}"
-    ),
-    "wish_response_intro": "{responder} ha contestat la teva petició:",
-    "wish_response_cta": "Veure la resposta",
-    # Wish resolved — thanks (to accepted responder)
-    "wish_thanks_subject": "Gràcies per la teva ajuda",
-    "wish_thanks_plain": (
-        "{creator} ha marcat la petició '{wish}' com a resolta "
-        "i et volia donar les gràcies per la teva ajuda."
-    ),
-    "wish_thanks_intro": "{creator} ha marcat aquesta petició com a resolta:",
-    "wish_thanks_outro": "Gràcies per donar un cop de mà!",
     # Return reminder (to owner)
     "reminder_subject": "Recordatori: una reserva acaba demà",
     "reminder_plain": "Recordatori: la reserva de {requester} sobre '{thing}' acaba el {end}.",

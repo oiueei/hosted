@@ -257,7 +257,7 @@ describe('reconcileAllowedTypes', () => {
 
   test('COMMUNITY → PROPRIETARY drops the COMMUNITY-only types', () => {
     expect(reconcileAllowedTypes(
-      ['GIFT_THING', 'SHARE_THING', 'WISH_THING'],
+      ['GIFT_THING', 'SHARE_THING'],
       { mode: 'PROPRIETARY', isSwap: false, isShare: false },
     )).toEqual(['GIFT_THING']);
   });

@@ -17,7 +17,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from core.models import Collection, Thing
 from core.models.event import Event
-from core.models.notification import InAppNotification
 from core.pagination import StandardResultsPagination
 from core.permissions import IsThingOwner
 from core.serializers import (
@@ -27,7 +26,6 @@ from core.serializers import (
     ThingUpdateSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
-from core.services.email_service import send_wish_posted_email
 from core.utils import parse_localized
 from core.views._helpers import type_validity_error, viewer_code
 
@@ -161,7 +159,7 @@ class ThingViewSet(ModelViewSet):
             if err:
                 raise ValidationError({"type": err})
         else:
-            # No collection: WISH/SHARE/SWAP require a specific collection.
+            # No collection: SHARE/SWAP require a specific collection.
             err = type_validity_error(thing_type, None)
             if err:
                 raise ValidationError({"type": err})
@@ -183,8 +181,6 @@ class ThingViewSet(ModelViewSet):
 
         if collection:
             collection.things.add(thing)
-            if thing.type == Thing.Type.WISH_THING and self._wants_group_notice():
-                self._broadcast_new_wish(thing, collection)
 
         Event.log(
             Event.Kind.THING_ADDED,
@@ -220,42 +216,6 @@ class ThingViewSet(ModelViewSet):
                 if err:
                     raise ValidationError({"type": err})
         serializer.save()
-
-    def _wants_group_notice(self):
-        """Whether to broadcast a new wish to the group ('Avisar al grupo')."""
-        raw = self.request.data.get("notify_group", True)
-        if isinstance(raw, bool):
-            return raw
-        return str(raw).lower() not in ("false", "0", "")
-
-    def _broadcast_new_wish(self, wish, collection):
-        """Notify every group member (except the creator) about a new wish."""
-        # Dedupe by code: the owner may also appear in the invites M2M.
-        by_code = {m.code: m for m in collection.invites.all()}
-        by_code[collection.owner_id] = collection.owner
-        members = [m for code, m in by_code.items() if code != self.request.user.code]
-        if not members:
-            return
-
-        creator_name = self.request.user.display_name
-        send_wish_posted_email(
-            creator_name, wish, [m.email for m in members], collection=collection
-        )
-        InAppNotification.objects.bulk_create(
-            [
-                InAppNotification(
-                    user=member,
-                    type=InAppNotification.Type.WISH_POSTED,
-                    payload={
-                        "wish_headline": wish.headline,
-                        "creator_name": creator_name,
-                        "wish_code": wish.code,
-                        "collection_code": collection.code,
-                    },
-                )
-                for member in members
-            ]
-        )
 
     # Single-thing create is the one-by-one equivalent of the 10/h bulk endpoint;
     # cap it too so the bulk limit can't be bypassed into unbounded rows. Generous

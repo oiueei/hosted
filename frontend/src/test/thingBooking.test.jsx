@@ -24,7 +24,7 @@ function mockResponse(data, ok = true, status = ok ? 200 : 400) {
 }
 
 // Route apiFetch by URL. `thing` feeds the ThingPage detail fetch; `calendar`
-// feeds the owner bookings fetch; `responses` feeds the wish answers fetch.
+// feeds the owner bookings fetch.
 // `request`/`activate`/`booking` override a single route outright, for the
 // failure branches that need a status code or a throw.
 function setApi({
@@ -45,7 +45,6 @@ function setApi({
     if (/\/things\/[^/]+\/faq\//.test(url)) return Promise.resolve(mockResponse({ results: [] }));
     if (/\/things\/[^/]+\/transfers\//.test(url)) return Promise.resolve(mockResponse({ total_transfers: 0, transfers: [] }));
     if (/\/things\/[^/]+\/responses\//.test(url)) return Promise.resolve(mockResponse({ results: responses }));
-    if (/\/wish-responses\/[^/]+\/accept\//.test(url)) return Promise.resolve(mockResponse({ status: 'ACCEPTED' }));
     if (/\/things\/[^/]+\/resolve\//.test(url)) return Promise.resolve(mockResponse({}));
     if (/\/things\/[^/]+\//.test(url)) return Promise.resolve(mockResponse(thing));
     return Promise.resolve(mockResponse({}));
@@ -362,32 +361,6 @@ describe('ThingPage — owner button matrix', () => {
   });
 });
 
-describe('ThingPage — wish branch', () => {
-  test('non-owner sees the answer menu and no reservation button', async () => {
-    localStorage.setItem('userCode', 'GUEST1');
-    setApi({ thing: makeThing({ type: 'WISH_THING', owner: 'OWNER1' }) });
-    renderThingPage();
-
-    // The RespondMenu ("Contestar") one-shot Select renders its placeholder.
-    expect(await screen.findByText('Choose how to help')).toBeInTheDocument();
-    // No Hold/action reservation button for a wish.
-    expect(screen.queryByRole('button', { name: 'Claim' })).toBeNull();
-  });
-
-  test('creator sees the answers section, an accept control, and resolve', async () => {
-    localStorage.setItem('userCode', 'OWNER1');
-    setApi({
-      thing: makeThing({ type: 'WISH_THING', owner: 'OWNER1', status: 'ACTIVE' }),
-      responses: [{ code: 'RSP001', responder_name: 'Bob', kind: 'KNOW_WHERE', status: 'PENDING', message: 'I know where' }],
-    });
-    renderThingPage();
-
-    expect(await screen.findByText('Answers')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Accept' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mark as resolved' })).toBeInTheDocument();
-  });
-});
-
 // ════════════════════════════════════════════════════════════════════════
 // ThingPage — anonymous visitor (login-to-act, JoinPage pattern)
 // An anonymous visitor on a PUBLIC collection sees the action buttons (like
@@ -395,7 +368,7 @@ describe('ThingPage — wish branch', () => {
 // instead of showing the old inline JoinToAct email box.
 // ════════════════════════════════════════════════════════════════════════
 describe('ThingPage — anonymous login-to-act', () => {
-  test('non-wish shows the reserve button and routes the click to the join page', async () => {
+  test('shows the reserve button and routes the click to the join page', async () => {
     localStorage.removeItem('userCode');
     setApi({ thing: makeThing({ type: 'GIFT_THING', owner: 'OWNER1', collection_code: 'PUB001' }) });
     renderThingPage();
@@ -412,15 +385,6 @@ describe('ThingPage — anonymous login-to-act', () => {
     expect(screen.queryByText('Join to take part')).toBeNull();
   });
 
-  test('wish shows an Answer button that routes to the join page', async () => {
-    localStorage.removeItem('userCode');
-    setApi({ thing: makeThing({ type: 'WISH_THING', owner: 'OWNER1', collection_code: 'PUB001' }) });
-    renderThingPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Answer' }));
-
-    await waitFor(() => expect(screen.getByTestId('navigated')).toBeInTheDocument());
-  });
 });
 
 // ════════════════════════════════════════════════════════════════════════

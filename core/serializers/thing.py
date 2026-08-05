@@ -26,7 +26,7 @@ def optimise_thing_queryset(queryset, *, with_collections=False):
     queryset is already nested inside a collection's own ``Prefetch("things", ...)``
     (avoids a redundant/circular fetch).
     """
-    related = ["faq_set", "responses", "deal"]
+    related = ["faq_set", "deal"]
     if with_collections:
         related.insert(0, "collections")
     return (
@@ -58,7 +58,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     CollectionThingSummarySerializer.
 
     Every getter here is prefetch-aware — it reuses the ``_pending_bookings``,
-    ``_transfer_count``, ``faq_set``, ``responses`` and ``_blocked_periods``
+    ``_transfer_count``, ``faq_set`` and ``_blocked_periods``
     caches set by the views — so serialising a list of things stays free of N+1
     queries. Fields whose logic genuinely differs between the two serializers
     (``thumbnail_url`` and the two swap-gate fields) deliberately stay on each
@@ -71,8 +71,6 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     my_pending_booking = serializers.SerializerMethodField()
     pending_questions = serializers.SerializerMethodField()
     transfer_count = serializers.SerializerMethodField()
-    response_count = serializers.SerializerMethodField()
-    my_response = serializers.SerializerMethodField()
     available_today = serializers.SerializerMethodField()
     next_available = serializers.SerializerMethodField()
 
@@ -137,28 +135,6 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         if hasattr(obj, "_transfer_count"):
             return obj._transfer_count
         return obj.transfers.count()
-
-    def get_response_count(self, obj):
-        """Number of answers to a wish (WISH_THING only, null otherwise)."""
-        if obj.type != Thing.Type.WISH_THING:
-            return None
-        return len(obj.responses.all())
-
-    def get_my_response(self, obj):
-        """The requesting user's own answer to a wish: {code, kind, status} or null."""
-        if obj.type != Thing.Type.WISH_THING:
-            return None
-        request = self.context.get("request")
-        if not request or not request.user.is_authenticated:
-            return None
-        for response in obj.responses.all():
-            if response.responder_id == request.user.code:
-                return {
-                    "code": response.code,
-                    "kind": response.kind,
-                    "status": response.status,
-                }
-        return None
 
     def _availability_window(self, obj):
         # The collection grid nests things inside a collection's own Prefetch, so it
@@ -230,8 +206,6 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "transfer_count",
-            "response_count",
-            "my_response",
             "is_endless",
         ]
         read_only_fields = [
@@ -489,15 +463,6 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
             "thumbnail",
             "is_endless",
         ]
-
-    def validate_type(self, value):
-        # Wishes notify the whole group when posted; bulk-importing them silently
-        # would skip that, so they must be added individually.
-        if value == Thing.Type.WISH_THING:
-            raise serializers.ValidationError(
-                "Wishes can't be bulk-imported — add them individually so the group is notified."
-            )
-        return value
 
     def validate_headline(self, value):
         return reject_spreadsheet_formula(value)

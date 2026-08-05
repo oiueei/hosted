@@ -198,7 +198,7 @@ def _filter_recipients(emails, category):
 
 
 def _send_per_language(emails, category, compose, collection=None, reply_to=None):
-    """Send one bulk email (digest, newsletter, broadcast, wish-posted) to a list of
+    """Send one bulk email (digest, newsletter, broadcast) to a list of
     recipients, **each in their own language**.
 
     A group can be bilingual, so the body can't be composed once up front:
@@ -452,7 +452,7 @@ def _action_noun(thing, lang=None):
     carries a noun — including SWAP: its request/confirmation emails have their
     own dedicated templates, but ``send_booking_decision_email`` is shared with
     swaps (``finalize_booking_decision`` runs for every booking type), so a
-    missing noun would be a KeyError mid-decision. Only WISH never books.
+    missing noun would be a KeyError mid-decision.
     """
     return T(f"action_noun_{thing.type}", lang)
 
@@ -891,68 +891,6 @@ def send_broadcast_email(
     _send_per_language(
         emails, CATEGORY_ACTIVITY, compose, collection=collection, reply_to=[owner_email]
     )
-
-
-def send_wish_posted_email(creator_name, wish, emails, collection=None):
-    """Notify a community that a member posted a new wish (pedido).
-
-    ``emails`` is the list of group members. Respects each recipient's activity
-    opt-out, and each one reads it in their own language.
-    """
-    wish_url = _thing_url(wish)
-
-    def compose(lang):
-        T, L = _texts(lang), _local(lang)
-        headline = L(wish.headline)
-        return (
-            T("wish_posted_subject"),
-            T("wish_posted_plain").format(creator=creator_name, wish=headline, url=wish_url),
-            _render_email(
-                [
-                    _para(T("wish_posted_intro").format(creator=creator_name)),
-                    _strong(headline),
-                    _links((wish_url, T("wish_posted_cta"))),
-                ]
-            ),
-        )
-
-    _send_per_language(emails, CATEGORY_ACTIVITY, compose, collection=collection)
-
-
-def send_wish_response_email(responder_name, wish, creator_email):
-    """Notify a wish creator that someone answered their pedido."""
-    user, lang = _recipient(creator_email)
-    T, L = _texts(lang), _local(lang)
-    wish_url = _thing_url(wish)
-    headline = L(wish.headline)
-
-    subject = T("wish_response_subject")
-    plain = T("wish_response_plain").format(responder=responder_name, wish=headline, url=wish_url)
-    html = _render_email(
-        [
-            _para(T("wish_response_intro").format(responder=responder_name)),
-            _strong(headline),
-            _links((wish_url, T("wish_response_cta"))),
-        ]
-    )
-    _send(creator_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
-
-
-def send_wish_thanks_email(creator_name, wish, responder_email):
-    """Thank the accepted responder when the wish creator marks it resolved."""
-    user, lang = _recipient(responder_email)
-    T, L = _texts(lang), _local(lang)
-    headline = L(wish.headline)
-    subject = T("wish_thanks_subject")
-    plain = T("wish_thanks_plain").format(creator=creator_name, wish=headline)
-    html = _render_email(
-        [
-            _para(T("wish_thanks_intro").format(creator=creator_name)),
-            _strong(headline),
-            _para(T("wish_thanks_outro")),
-        ]
-    )
-    _send(responder_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
 def send_return_reminder_email(requester_name, thing_headline, end_date, owner_email):

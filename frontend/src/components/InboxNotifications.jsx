@@ -73,7 +73,6 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     ...payload,
     collection_headline: L(payload.collection_headline),
     thing_headline: L(payload.thing_headline),
-    wish_headline: L(payload.wish_headline),
   });
 
   const notificationLabel = (n) => {
@@ -91,9 +90,6 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'FAQ_HIDDEN': return t('home.faqHiddenLabel');
       case 'INVITE_REJECTED': return t('home.inviteRejectedLabel');
       case 'THING_REPORTED': return t('home.reportedLabel');
-      case 'WISH_POSTED': return t('home.wishPostedLabel');
-      case 'WISH_RESPONSE': return t('home.wishResponseLabel');
-      case 'WISH_ACCEPTED': return t('home.wishAcceptedLabel');
       default: return t('home.broadcastLabel', { owner_name: p.owner_name, collection_headline: p.collection_headline });
     }
   };
@@ -113,25 +109,15 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'FAQ_HIDDEN': return t('home.faqHiddenBody', { thing_headline: p.thing_headline, owner_name: p.owner_name });
       case 'INVITE_REJECTED': return t('home.inviteRejectedBody', { collection_headline: p.collection_headline, invitee_name: p.invitee_name });
       case 'THING_REPORTED': return t('home.reportedBody', { thing_headline: p.thing_headline });
-      case 'WISH_POSTED': return t('home.wishPostedBody', { creator_name: p.creator_name, wish_headline: p.wish_headline });
-      case 'WISH_RESPONSE': return t('home.wishResponseBody', { responder_name: p.responder_name, wish_headline: p.wish_headline });
-      case 'WISH_ACCEPTED': return t('home.wishAcceptedBody', { owner_name: p.owner_name, wish_headline: p.wish_headline });
       default: return t('home.broadcastBody', { message: p.message });
     }
   };
 
-  // Deep link to the object that originated a notification: the wish page for wish
-  // notifications, the collection for a broadcast, otherwise the thing it is about —
-  // a hold request is answered on the thing, so the owner should land there in one
-  // click. Returns {to, label} or null.
+  // Deep link to the object that originated a notification: the collection for a
+  // broadcast, otherwise the thing it is about — a hold request is answered on the
+  // thing, so the owner should land there in one click. Returns {to, label} or null.
   const notificationLink = (n) => {
     const p = n.payload || {};
-    if (p.wish_code) {
-      const to = p.collection_code
-        ? `/collections/${p.collection_code}/things/${p.wish_code}`
-        : `/things/${p.wish_code}`;
-      return { to, label: t('home.viewWish') };
-    }
     if (n.type === 'BROADCAST' && p.collection_code) {
       return { to: `/collections/${p.collection_code}`, label: t('home.viewCollection') };
     }

@@ -79,10 +79,10 @@ class TestBulkCreate:
         assert collection.things.count() == 0
 
     def test_rejects_type_invalid_for_collection(self, auth_client, collection):
-        # WISH_THING is community-only; this collection is proprietary.
+        # SHARE_THING is community-only; this collection is proprietary.
         res = auth_client.post(
             URL.format(code=collection.code),
-            {"rows": [{"type": "WISH_THING", "headline": "I wish"}]},
+            {"rows": [{"type": "SHARE_THING", "headline": "A shelf item"}]},
             format="json",
         )
         assert res.status_code == 400
@@ -126,21 +126,6 @@ class TestBulkCreate:
         )
         assert res.status_code == 400
         assert collection.things.count() == 0
-
-    def test_wish_things_cannot_be_bulk_imported(self, auth_client, user):
-        from core.models import Collection
-
-        community = Collection.objects.create(
-            code="COMM01", owner=user, headline="Community", mode="COMMUNITY"
-        )
-        res = auth_client.post(
-            URL.format(code=community.code),
-            {"rows": [{"type": "WISH_THING", "headline": "I wish for peace"}]},
-            format="json",
-        )
-        assert res.status_code == 400
-        assert "type" in res.data["errors"][0]["errors"]
-        assert community.things.count() == 0
 
     def test_imports_tags_from_collection_vocabulary(self, auth_client, collection):
         collection.tags = ["Books", "Toys"]

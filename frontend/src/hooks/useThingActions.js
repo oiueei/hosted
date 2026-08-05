@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { DATE_TYPES, WISH_TYPE, SHARE_TYPE, SWAP_TYPE } from '../constants/things';
+import { DATE_TYPES, SHARE_TYPE, SWAP_TYPE } from '../constants/things';
 import useThingBooking from './useThingBooking';
 
 /**
@@ -28,7 +28,7 @@ import useThingBooking from './useThingBooking';
  * both views) so callers don't repeat it.
  *
  * Returns everything {@link useThingBooking} returns, plus: `isOwner`,
- * `isCollectionOwner`, `isWish`, `isShare`, `isSwap`, `isDateBased`, `needsPage`,
+ * `isCollectionOwner`, `isShare`, `isSwap`, `isDateBased`, `needsPage`,
  * `canDelete`, `hasPendingBookings`, `showButton`, `swapMinimum`, `swapOwnCount`,
  * `swapMinimumNotMet`, `swapItemsMissing`, `isMine`, `buttonDisabled`,
  * `loginButtonDisabled`, `buttonLabel`.
@@ -49,7 +49,6 @@ export default function useThingActions(thing, userCode, {
   const { t } = useTranslation();
 
   const isOwner = thing?.owner === userCode;
-  const isWish = thing?.type === WISH_TYPE;
   const isShare = thing?.type === SHARE_TYPE;
   const isSwap = thing?.type === SWAP_TYPE;
   const isDateBased = DATE_TYPES.includes(thing?.type);
@@ -116,7 +115,6 @@ export default function useThingActions(thing, userCode, {
     ...booking,
     isOwner,
     isCollectionOwner,
-    isWish,
     isShare,
     isSwap,
     isDateBased,

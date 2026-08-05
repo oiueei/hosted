@@ -29,9 +29,6 @@ export default function ThingForm({
   setType,
   isEndless,
   setIsEndless,
-  showNotifyGroup = false,
-  notifyGroup,
-  setNotifyGroup,
   headline,
   setHeadline,
   description,
@@ -83,9 +80,9 @@ export default function ThingForm({
             }}
           />
           {/* One-word type names don't tell a first-timer that a "Share" transfers
-              ownership or a "Wish" isn't an object. The (i) explains each type the
-              collection actually offers — built from typeOptions, already filtered,
-              so it never lists one the owner can't pick (O2). */}
+              ownership on accept. The (i) explains each type the collection actually
+              offers — built from typeOptions, already filtered, so it never lists
+              one the owner can't pick (O2). */}
           <div className="info-popover-row info-popover-row--end">
             <InfoPopover id={`${idPrefix}-type-info`} title={t('typeInfo.title')}>
               {typeOptions.map(({ label, value }) => (
@@ -102,18 +99,6 @@ export default function ThingForm({
             label={t('endless.label')}
             checked={isEndless}
             onChange={(val) => setIsEndless(!val)}
-            variant="inline"
-            theme={toggleTheme}
-          />
-        </div>
-      )}
-      {showNotifyGroup && (
-        <div className="toggle-left">
-          <ToggleButton
-            id={`${idPrefix}-notify-group`}
-            label={t('wishes.notifyGroup')}
-            checked={notifyGroup}
-            onChange={(val) => setNotifyGroup(!val)}
             variant="inline"
             theme={toggleTheme}
           />

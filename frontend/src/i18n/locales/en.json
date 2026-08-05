@@ -225,13 +225,6 @@
     "faqHiddenBody": "{{owner_name}} hid your question about {{thing_headline}}.",
     "inviteRejectedLabel": "Invitation declined",
     "inviteRejectedBody": "{{invitee_name}} declined the invitation to {{collection_headline}}.",
-    "wishPostedLabel": "New wish",
-    "wishPostedBody": "{{creator_name}} posted a wish: {{wish_headline}}.",
-    "wishResponseLabel": "New answer",
-    "wishResponseBody": "{{responder_name}} answered your wish {{wish_headline}}.",
-    "wishAcceptedLabel": "Answer accepted",
-    "wishAcceptedBody": "{{owner_name}} accepted your answer to {{wish_headline}}.",
-    "viewWish": "View wish",
     "viewCollection": "I can help!",
     "reportedLabel": "A listing was reported",
     "reportedBody": "Someone reported “{{thing_headline}}”. Please take a look.",
@@ -337,8 +330,7 @@
       "RENT_THING": "Rent",
       "LEND_THING": "Borrow",
       "SHARE_THING": "Take",
-      "SWAP_THING": "Swap",
-      "WISH_THING": "Answer"
+      "SWAP_THING": "Swap"
     }
   },
   "thingTags": {
@@ -598,7 +590,6 @@
     "RENT_THING": "Rental",
     "LEND_THING": "Lend",
     "SHARE_THING": "Share",
-    "WISH_THING": "Wish",
     "SWAP_THING": "Swap"
   },
   "typeInfo": {
@@ -608,7 +599,6 @@
     "RENT_THING": "Rented out for a fee, by dates.",
     "LEND_THING": "Borrowed for a few days, then returned.",
     "SHARE_THING": "Accepting a request gives it to the requester — it keeps circulating in the group.",
-    "WISH_THING": "Not an object: a request to the group. Others answer how they can help.",
     "SWAP_THING": "Traded for another member's things — accepting exchanges ownership both ways."
   },
   "availability": {
@@ -655,47 +645,6 @@
     "shareCount_other": "{{count}} shares",
     "swapCount_one": "{{count}} swap",
     "swapCount_other": "{{count}} swaps"
-  },
-  "wishes": {
-    "respond": "Answer",
-    "respondPlaceholder": "Choose how to help",
-    "kind": {
-      "haveThis": "I have this",
-      "knowWhere": "I know where",
-      "canMake": "I can make it"
-    },
-    "responseCount_one": "{{count}} answer",
-    "responseCount_other": "{{count}} answers",
-    "responsesHeading": "Answers",
-    "noResponses": "No answers yet.",
-    "yourAnswer": "You've answered",
-    "status": {
-      "PENDING": "Pending",
-      "ACCEPTED": "Accepted"
-    },
-    "accept": "Accept",
-    "resolve": "Mark as resolved",
-    "notifyGroup": "Notify the group",
-    "respondingWithListing": "You're posting a listing to answer a wish.",
-    "messageLabel": "Message",
-    "messageRequired": "Write a message.",
-    "urlLabel": "Link (optional)",
-    "feeLabel": "Offer or price (optional)",
-    "knowWhereTitle": "I know where",
-    "canMakeTitle": "I can make it",
-    "submit": "Send answer",
-    "responseSent": "Answer sent.",
-    "errorResponding": "Couldn't send your answer.",
-    "acceptedToast": "Answer accepted.",
-    "errorAccepting": "Couldn't accept the answer.",
-    "resolvedToast": "Wish marked as resolved.",
-    "errorResolving": "Couldn't mark as resolved.",
-    "acceptConfirmTitle": "Accept this answer?",
-    "acceptConfirmBody": "The person who answered will be told you accepted their offer. Other answers stay open.",
-    "acceptConfirm": "Accept answer",
-    "resolveConfirmTitle": "Mark this wish as resolved?",
-    "resolveConfirmBody": "It leaves the active board (you can reopen it later). If you accepted an answer, that person gets a thank-you.",
-    "resolveConfirm": "Mark resolved"
   },
   "swap": {
     "offerItems": "Select items to offer",

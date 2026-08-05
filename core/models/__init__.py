@@ -11,7 +11,6 @@ from .theeeme import Theeeme
 from .thing import Thing
 from .transfer import ThingTransfer
 from .user import User
-from .wish import WishResponse
 
 __all__ = [
     "User",
@@ -25,7 +24,6 @@ __all__ = [
     "ThingTransfer",
     "InAppNotification",
     "Report",
-    "WishResponse",
     "Event",
     "DailyActivity",
 ]

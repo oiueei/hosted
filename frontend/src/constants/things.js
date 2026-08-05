@@ -4,22 +4,11 @@
  */
 
 export const TYPE_VALUES = [
-  'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING', 'SHARE_THING', 'WISH_THING', 'SWAP_THING',
+  'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING', 'SHARE_THING', 'SWAP_THING',
 ];
 
 export const SHARE_TYPE = 'SHARE_THING';
 export const SWAP_TYPE = 'SWAP_THING';
-export const WISH_TYPE = 'WISH_THING';
-
-// Wish "Contestar" answer kinds. HAVE_THIS reuses the publish-listing flow;
-// KNOW_WHERE / CAN_MAKE open a short form (RespondWishPage), keyed by slug.
-export const WISH_KIND_SLUGS = { KNOW_WHERE: 'know-where', CAN_MAKE: 'can-make' };
-export const WISH_KIND_BY_SLUG = { 'know-where': 'KNOW_WHERE', 'can-make': 'CAN_MAKE' };
-export const WISH_KIND_I18N = {
-  HAVE_THIS: 'haveThis',
-  KNOW_WHERE: 'knowWhere',
-  CAN_MAKE: 'canMake',
-};
 
 export const DATE_TYPES = ['LEND_THING', 'RENT_THING'];
 export const FEE_TYPES = ['SELL_THING', 'RENT_THING'];
@@ -37,8 +26,7 @@ export const PROPRIETARY_TYPES = [
   'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING',
 ];
 export const COMMUNITY_TYPES = [
-  'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING',
-  'SHARE_THING', 'WISH_THING',
+  'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING', 'SHARE_THING',
 ];
 
 // is_swap and is_share each force a single allowed type via their flag — the

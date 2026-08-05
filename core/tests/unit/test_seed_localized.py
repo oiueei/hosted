@@ -2,8 +2,8 @@
 
 Collection/thing headlines, descriptions and tag labels are seeded as localized
 ``{"es": …, "ca": …, "en": …}`` maps built from ALL the language files;
-``--lang`` only picks the language of the plain-column text (user bios, FAQs,
-wish responses). These tests pin the merge, the parity between language files
+``--lang`` only picks the language of the plain-column text (user bios, FAQs).
+These tests pin the merge, the parity between language files
 (the seed analogue of ``i18nParity``), the per-language length limits the
 serializers would otherwise enforce, and the raw-string tag consistency the
 subset check depends on.
