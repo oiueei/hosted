@@ -35,7 +35,7 @@ class TestDemoPartition:
         # Every seeded user only owns/joins onboarding collections → all demo.
         assert _row(sections, "Users (real)", "Total real users") == 0
         assert _row(sections, "Demo funnel (NOT real metrics)", "Seed + onboarding-only users") == 5
-        assert _row(sections, "Demo funnel (NOT real metrics)", "Onboarding collections") == 4
+        assert _row(sections, "Demo funnel (NOT real metrics)", "Onboarding collections") == 3
 
     def test_onboarding_only_popin_user_is_demo(self, user):
         onboarding = Collection.objects.create(

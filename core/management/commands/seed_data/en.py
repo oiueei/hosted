@@ -27,7 +27,7 @@ USERS = [
     {
         "code": "1u1ucs",
         "headline": "I know everyone and join every lark – your community spark!",
-        "about": "## Your community spark ✨\n\nI know everyone and join every lark. Keeper of the **Phantom Shelf** — snap it, share it, watch it vanish. If something's happening, *I'm already there*.",
+        "about": "## Your community spark ✨\n\nI know everyone and join every lark. If anyone round here is lending, giving away or selling something, *I'm already there* — and I'll tell you about it. If something's happening, I hear it first.",
     },
 ]
 
@@ -46,11 +46,6 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "headline": "Lili's Lending – time to share our things!",
         "description": "Need a drill, steam cleaner, sturdy ladder, luggage scale or muffin mega-kit? Lili's lending library has your back – all for a token fee!",
-    },
-    {
-        "code": "1u1uC1",
-        "headline": "Lulu's Phantom Shelf – Haunt it with your clutter!",
-        "description": "Spot something gathering dust? Snap a pic, drop it on Lulu's ghostly online shelf – no faff, no prices, just a simple feed of coliving cast-offs. Weekly email with all the new goodies! But be quick, stuff vanishes fast!!",
     },
 ]
 
@@ -194,31 +189,6 @@ THINGS = [
         "code": "l1l123",
         "headline": "Stainless steel saucepan",
         "description": "Professional-quality stainless steel saucepan. Ideal for sauces and creams. Easy to clean and very durable.",
-    },
-    {
-        "code": "1u1u01",
-        "headline": "Forgotten Fondue Set",
-        "description": "Six-person cheese melter from '98! Complete with forks and standby. Snap it up before it ghosts again!",
-    },
-    {
-        "code": "1u1u02",
-        "headline": "Vintage Suitcase Stack",
-        "description": "Three leather beauties, minor scuffs! Perfect for weekend escapes or storage chic. Claim before they vanish!",
-    },
-    {
-        "code": "1u1u03",
-        "headline": "Exercise Bike Beast",
-        "description": "Silent spinner with 8 resistance levels! Post-lockdown guilt-free cardio. Gone in a flash – pedal power!",
-    },
-    {
-        "code": "1u1u04",
-        "headline": "Ceramic Plant Pots",
-        "description": "Hand-thrown terracotta trio, saucer included! Revive your sad succulents. Weekly roundup star – hurry!",
-    },
-    {
-        "code": "1u1u05",
-        "headline": "Board Game Bonanza",
-        "description": "Monopoly, Cluedo and Pictionary complete! Rainy night coliving classics. First come, first served – they fly!",
     },
     {
         "code": "l0l001",

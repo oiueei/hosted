@@ -30,7 +30,7 @@ USERS = [
     {
         "code": "1u1ucs",
         "headline": "Conozco a todos y me apunto a todo – ¡la chispa comunitaria!",
-        "about": "## La chispa de la comunidad ✨\n\nConozco a todo el mundo y me apunto a todo. Guardián del **Estante Fantasma** — foto, compartir y a verlo desaparecer. Si algo pasa, *ya estoy allí*.",
+        "about": "## La chispa de la comunidad ✨\n\nConozco a todo el mundo y me apunto a todo. Si alguien presta, regala o vende algo por el barrio, *ya estoy allí* — y te aviso. Si algo pasa, me entero la primera.",
     },
 ]
 
@@ -49,11 +49,6 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "headline": "Préstamos de Lili – ¡hora de compartir las cosas!",
         "description": "¿Necesitas taladro, limpiador de vapor, escalera sólida, báscula de equipaje o mega kit de magdalenas? La biblioteca de préstamos de Lili te cubre – ¡todo a un coste simbólico!",
-    },
-    {
-        "code": "1u1uC1",
-        "headline": "Estantería fantasma de Lulu – ¡acecha con tus trastos!",
-        "description": "¿Ves algo cogiendo polvo? Hazle una foto y súbelo a la estantería fantasma de Lulu – sin líos, sin precios, solo un feed de descartes del coliving. ¡Email semanal con las novedades! Pero corre, ¡las cosas desaparecen rápido!",
     },
 ]
 
@@ -197,31 +192,6 @@ THINGS = [
         "code": "l1l123",
         "headline": "Cazo de acero inoxidable",
         "description": "Cazo de acero inoxidable de calidad profesional. Ideal para salsas y cremas. Fácil de limpiar y muy duradero.",
-    },
-    {
-        "code": "1u1u01",
-        "headline": "Fondue olvidada",
-        "description": "¡Fundidora de queso del 98 para seis! Con tenedores y piloto incluidos. ¡Pilla antes de que vuelva a desaparecer!",
-    },
-    {
-        "code": "1u1u02",
-        "headline": "Maletas vintage apiladas",
-        "description": "¡Tres bellezas de cuero, rozaduras menores! Perfectas para escapadas de fin de semana o almacenamiento chic. ¡Pídelas antes de que desaparezcan!",
-    },
-    {
-        "code": "1u1u03",
-        "headline": "Bicicleta estática bestial",
-        "description": "¡Spinner silencioso con 8 niveles de resistencia! Cardio sin culpa post-confinamiento. Se va en un suspiro – ¡fuerza al pedal!",
-    },
-    {
-        "code": "1u1u04",
-        "headline": "Macetas de cerámica",
-        "description": "¡Trío de terracota hecho a mano, platito incluido! Revive tus suculentas tristes. Estrella del resumen semanal – ¡corre!",
-    },
-    {
-        "code": "1u1u05",
-        "headline": "Festín de juegos de mesa",
-        "description": "¡Monopoly, Cluedo y Pictionary completos! Clásicos del coliving para noches lluviosas. Por orden de llegada – ¡vuelan!",
     },
     {
         "code": "l0l001",

@@ -8,7 +8,7 @@ Each email belongs to one of three categories (see `_should_send`):
 - CATEGORY_MANDATORY: magic links, invitations, revocations — always sent.
 - CATEGORY_ACTIVITY: user↔user events (bookings, FAQs, reminders, broadcast)
   — opt-out via User.notify_activity.
-- CATEGORY_NEWS: digest/newsletter — opt-out via User.notify_news.
+- CATEGORY_NEWS: digests — opt-out via User.notify_news.
 
 Cat. 2 and Cat. 3 emails include a footer with a tokenised link to /me/notifications
 that lets recipients change preferences without logging in.
@@ -198,7 +198,7 @@ def _filter_recipients(emails, category):
 
 
 def _send_per_language(emails, category, compose, collection=None, reply_to=None):
-    """Send one bulk email (digest, newsletter, broadcast) to a list of
+    """Send one bulk email (digest, broadcast) to a list of
     recipients, **each in their own language**.
 
     A group can be bilingual, so the body can't be composed once up front:
@@ -319,7 +319,7 @@ def _send(
     user action whose DB work has already committed, nor abort a multi-recipient
     loop or a nightly cron.
 
-    ``user`` lets a multi-recipient sender (broadcast/digest/newsletter) pass a
+    ``user`` lets a multi-recipient sender (broadcast/digest) pass a
     batch-resolved User (or a known-absent None) so the preference + footer
     lookups don't fire a query per recipient. Single-recipient callers leave it
     as ``_UNSET`` and the lookup happens here, as before.
@@ -369,7 +369,7 @@ def _send(
         # OSError covers socket.timeout/connection errors (socket.timeout is an
         # OSError subclass). BadHeaderError (a ValueError) guards against a CR/LF
         # that slipped into the subject — caught here so one tainted row can never
-        # abort a multi-recipient loop or a nightly digest/newsletter cron.
+        # abort a multi-recipient loop or a nightly digest cron.
         # Log the exception class only — str(exc) (e.g. SMTPRecipientsRefused)
         # can carry the raw recipient address, which would defeat redaction (M5).
         logger.error(
@@ -696,26 +696,6 @@ def send_booking_decision_email(booking, thing, accepted=True):
     _send(booking.requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
-def send_booking_unavailable_email(booking, thing):
-    """Tell a requester their pending request can no longer be fulfilled.
-
-    Sent when the owner gave the thing to someone else, so this
-    requester's PENDING booking was auto-declined. Warm, non-blaming tone.
-    """
-    user, lang = _recipient(booking.requester_email)
-    T, L = _texts(lang), _local(lang)
-    headline = L(thing.headline)
-    subject = T("unavailable_subject")
-    plain = T("unavailable_plain").format(thing=headline)
-    html = _render_email(
-        [
-            _para(T("unavailable_intro").format(thing=headline)),
-            _para(T("unavailable_outro")),
-        ]
-    )
-    _send(booking.requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
-
-
 def send_invite_rejected_email(invitee_name, collection_headline, owner_email, collection=None):
     """Send notification to collection owner that an invite was declined."""
     user, lang = _recipient(owner_email, collection)
@@ -963,63 +943,3 @@ def send_stats_summary_email(recipient, subject, sections):
         CATEGORY_MANDATORY,
         include_viral=False,
     )
-
-
-def send_newsletter_email(
-    collection_headline,
-    collection_code,
-    new_thing_headlines,
-    transfer_entries,
-    emails,
-    collection=None,
-):
-    """Send a weekly newsletter for share collections.
-
-    Args:
-        collection_headline: The collection name.
-        collection_code: 6-char collection code, used to build the
-            "View collection" link.
-        new_thing_headlines: List of headlines of newly added things.
-        transfer_entries: List of dicts with keys: date, thing, from_name, to_name.
-        emails: List of recipient email addresses.
-    """
-    base_url = _frontend_base_url()
-    collection_url = f"{base_url}/collections/{collection_code}"
-
-    def compose(lang):
-        T, L = _texts(lang), _local(lang)
-        headline = L(collection_headline)
-        newsletter_intro = T("newsletter_intro").format(collection=headline)
-        blocks = [_para(newsletter_intro)]
-        plain_blocks = []
-
-        if new_thing_headlines:
-            headlines = [L(h) for h in new_thing_headlines]
-            things_plain = "\n".join(f"  - {h}" for h in headlines)
-            plain_blocks.append(f"{T('newsletter_new_things')}:\n{things_plain}\n")
-            blocks.append(_heading(T("newsletter_new_things")))
-            blocks.append(_list(headlines))
-
-        if transfer_entries:
-            transfer_lines = [
-                f"{t['date']} — {L(t['thing'])}: {t['from_name']} → {t['to_name']}"
-                for t in transfer_entries
-            ]
-            transfers_plain = "\n".join(f"  - {line}" for line in transfer_lines)
-            plain_blocks.append(f"{T('newsletter_transfers')}:\n{transfers_plain}\n")
-            blocks.append(_heading(T("newsletter_transfers")))
-            blocks.append(_list(transfer_lines))
-
-        blocks.append(_links((collection_url, T("view_collection_cta"))))
-
-        return (
-            T("newsletter_subject").format(collection=headline),
-            (
-                f"{newsletter_intro}\n\n"
-                f"{''.join(b + chr(10) for b in plain_blocks)}"
-                f"{T('view_collection_cta')}: {collection_url}"
-            ),
-            _render_email(blocks),
-        )
-
-    _send_per_language(emails, CATEGORY_NEWS, compose, collection=collection)

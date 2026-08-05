@@ -549,7 +549,6 @@ class TestBookingPeriodModel:
             ("RENT_THING", True, False),
             ("GIFT_THING", False, True),
             ("SELL_THING", False, True),
-            ("SHARE_THING", False, False),
             ("SWAP_THING", False, False),
         ],
     )

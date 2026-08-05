@@ -47,5 +47,4 @@ class ThingTransferStatsSerializer(serializers.Serializer):
     current_holder_name = serializers.CharField(allow_null=True)
     original_owner = serializers.CharField(allow_null=True)
     original_owner_name = serializers.CharField(allow_null=True)
-    is_share_in_community = serializers.BooleanField()
     transfers = ThingTransferSerializer(many=True)

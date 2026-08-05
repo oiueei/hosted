@@ -862,7 +862,7 @@ class TestThingViews:
         col.invites.add(user)
 
         share_thing = Thing.objects.create(
-            code="SHRTR1", type="SHARE_THING", owner=user, headline="Shared Thing"
+            code="SHRTR1", type="LEND_THING", owner=user, headline="Lent Thing"
         )
         col.things.add(share_thing)
 

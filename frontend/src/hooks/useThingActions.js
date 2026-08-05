@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { DATE_TYPES, SHARE_TYPE } from '../constants/things';
+import { DATE_TYPES } from '../constants/things';
 import useThingBooking from './useThingBooking';
 
 /**
@@ -28,7 +28,7 @@ import useThingBooking from './useThingBooking';
  * both views) so callers don't repeat it.
  *
  * Returns everything {@link useThingBooking} returns, plus: `isOwner`,
- * `isCollectionOwner`, `isShare`, `isDateBased`, `needsPage`,
+ * `isCollectionOwner`, `isDateBased`, `needsPage`,
  * `canDelete`, `hasPendingBookings`, `showButton`, `isMine`, `buttonDisabled`,
  * `loginButtonDisabled`, `buttonLabel`.
  */
@@ -48,7 +48,6 @@ export default function useThingActions(thing, userCode, {
   const { t } = useTranslation();
 
   const isOwner = thing?.owner === userCode;
-  const isShare = thing?.type === SHARE_TYPE;
   const isDateBased = DATE_TYPES.includes(thing?.type);
   // `needsPage` drives whether the reserve button navigates to a follow-up form
   // (date-based picks dates) or POSTs directly. `bookingKeepsStatus`
@@ -57,10 +56,7 @@ export default function useThingActions(thing, userCode, {
   const needsPage = isDateBased;
   const bookingKeepsStatus = needsPage || !!thing?.is_endless;
   const isCollectionOwner = (collectionOwner || thing?.collection_owner) === userCode;
-  const canDelete = isCollectionOwner || (isOwner && (!isShare || thing?.transfer_count === 0));
-  // Accepting a SHARE hold transfers ownership to the requester (other types
-  // just confirm a lend/booking); that accept gets an inline confirm.
-  const acceptTransfersOwnership = isShare;
+  const canDelete = isCollectionOwner || isOwner;
 
   const booking = useThingBooking(thing, {
     isOwner,
@@ -83,12 +79,10 @@ export default function useThingActions(thing, userCode, {
   // by the serializer). Only they see "waiting"; everyone else sees the reason
   // the disabled button can't be used — so the cause travels with the control.
   const isMine = requested || !!thing?.my_pending_booking;
-  const buttonDisabled =
-    isPaused
-    || thing?.status === 'TAKEN'
-    || submitting
-    || requested
-    || (isShare && !!thing?.my_pending_booking);
+  // NB: a pending booking of the viewer's own does NOT disable the button here.
+  // That term was SHARE-only (one transfer request per person) and left with it —
+  // a date-based thing must stay requestable for a second, non-overlapping range.
+  const buttonDisabled = isPaused || thing?.status === 'TAKEN' || submitting || requested;
   // Anonymous (loginToAct) buttons only gate on pause/TAKEN — the click routes to
   // the join page, so submitting/requested don't apply.
   const loginButtonDisabled = isPaused || thing?.status === 'TAKEN';
@@ -106,11 +100,9 @@ export default function useThingActions(thing, userCode, {
     ...booking,
     isOwner,
     isCollectionOwner,
-    isShare,
     isDateBased,
     needsPage,
     canDelete,
-    acceptTransfersOwnership,
     hasPendingBookings,
     showButton,
     isMine,

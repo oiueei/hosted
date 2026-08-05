@@ -183,7 +183,7 @@ class Command(BaseCommand):
                     "koro": data.get("koro", "basic"),
                     "photo": _seed_image(data.get("photo", "")),
                     "about": data.get("about", ""),
-                    # Demos opt INTO news so the newsletter/digest collection in
+                    # Demos opt INTO news so the digest collection in
                     # seed_data/common.py keeps landing in an inbox regardless of
                     # the model default (which is OFF for real new users — DESIGN §6).
                     "notify_news": True,
@@ -199,9 +199,7 @@ class Command(BaseCommand):
                 "status": "ACTIVE",
                 "mode": data.get("mode", "PROPRIETARY"),
                 "visibility": data.get("visibility", "PRIVATE"),
-                "is_share": data.get("is_share", False),
                 "is_onboarding": data.get("is_onboarding", False),
-                "newsletter_enabled": data.get("newsletter_enabled", False),
                 "digest_frequency": data.get("digest_frequency", "NONE"),
                 "thumbnail": _seed_image(data.get("thumbnail", "")),
                 "tags": data.get("tags", []),

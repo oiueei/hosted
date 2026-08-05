@@ -11,7 +11,6 @@ vi.mock('../services/api', () => ({
 }));
 
 import { apiFetch } from '../services/api';
-import { reconcileAllowedTypes } from '../constants/things';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
 
@@ -174,23 +173,3 @@ describe('EditCollectionPage — load + pause + submit', () => {
   });
 });
 
-// ════════════════════════════════════════════════════════════════════════
-// reconcileAllowedTypes — P1-5: preserve the valid selection across mode/flag
-// changes instead of wiping it.
-// ════════════════════════════════════════════════════════════════════════
-describe('reconcileAllowedTypes', () => {
-  test('PROPRIETARY → COMMUNITY keeps the still-valid types', () => {
-    expect(reconcileAllowedTypes(
-      ['GIFT_THING', 'SELL_THING'],
-      { mode: 'COMMUNITY', isSwap: false, isShare: false },
-    )).toEqual(['GIFT_THING', 'SELL_THING']);
-  });
-
-  test('COMMUNITY → PROPRIETARY drops the COMMUNITY-only types', () => {
-    expect(reconcileAllowedTypes(
-      ['GIFT_THING', 'SHARE_THING'],
-      { mode: 'PROPRIETARY', isSwap: false, isShare: false },
-    )).toEqual(['GIFT_THING']);
-  });
-
-});

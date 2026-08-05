@@ -1,34 +1,22 @@
 import { Select, ToggleButton } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import {
-  PROPRIETARY_TYPES,
-  COMMUNITY_TYPES,
-  isLockedToSingleType,
-  reconcileAllowedTypes,
-} from '../constants/things';
+import { ALLOWED_TYPES } from '../constants/things';
 
 /**
  * The shared identity cluster of the Create and Edit collection forms — the part
  * that stays visible above the "More options" accordion (O1): the visibility
- * toggle, the COMMUNITY-only toggles (share, newsletter)
- * and the allowed-thing-types multi-select (locked + pre-filled when a flag
- * forces a single type; its "pick at least one" rule must never hide).
+ * toggle and the allowed-thing-types multi-select (its "pick at least one" rule
+ * must never hide).
  *
  * The rental-rules fields that used to trail this cluster now live in
  * `RentalRulesFields` (rendered by the pages inside the accordion).
  *
  * Controlled: every value + setter is owned by the page; this component only
- * renders the cluster and holds the (identical-across-both-pages) toggle
- * mutual-exclusivity / allowlist auto-fill logic. `idPrefix` is `create-collection`
+ * renders the cluster. `idPrefix` is `create-collection`
  * or `edit-collection`; `theeemeColor01` is the theeeme `color_01` token name.
  */
 export default function CollectionForm({
   idPrefix,
-  mode,
-  isShare,
-  setIsShare,
-  newsletterEnabled,
-  setNewsletterEnabled,
   allowedThingTypes,
   setAllowedThingTypes,
   visibility = 'PRIVATE',
@@ -38,15 +26,8 @@ export default function CollectionForm({
 }) {
   const { t } = useTranslation();
   const toggleTheme = theeemeColor01 ? { '--toggle-button-color': `var(--color-${theeemeColor01})` } : undefined;
-  const locked = isLockedToSingleType({ isShare });
 
-  const allowedTypesOptions = (() => {
-    if (mode === 'PROPRIETARY') {
-      return PROPRIETARY_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
-    }
-    if (isShare) return [{ label: t('types.SHARE_THING'), value: 'SHARE_THING' }];
-    return COMMUNITY_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
-  })();
+  const allowedTypesOptions = ALLOWED_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
 
   return (
     <>
@@ -60,39 +41,7 @@ export default function CollectionForm({
           theme={toggleTheme}
         />
       </div>
-      {mode === 'COMMUNITY' && (
-        <div className="toggle-left">
-          <ToggleButton
-            id={`${idPrefix}-share`}
-            label={t('share.enableShare')}
-            checked={isShare}
-            onChange={(val) => {
-              const next = !val;
-              setIsShare(next);
-              // turning OFF clears the share-only newsletter setting.
-              if (!next) setNewsletterEnabled(false);
-              setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, {
-                mode, isShare: next,
-              }));
-            }}
-            variant="inline"
-            theme={toggleTheme}
-          />
-        </div>
-      )}
-      {mode === 'COMMUNITY' && isShare && (
-        <div className="toggle-left">
-          <ToggleButton
-            id={`${idPrefix}-newsletter`}
-            label={t('newsletter.enableNewsletter')}
-            checked={newsletterEnabled}
-            onChange={(val) => setNewsletterEnabled(!val)}
-            variant="inline"
-            theme={toggleTheme}
-          />
-        </div>
-      )}
-      <div className={locked ? 'multiselect-locked' : undefined}>
+      <div>
         <Select
           language="en"
           multiSelect
@@ -101,7 +50,6 @@ export default function CollectionForm({
             label: t('createCollection.allowedTypesLabel'),
             placeholder: t('createCollection.allowedTypesPlaceholder'),
             assistive: (() => {
-              if (mode === 'COMMUNITY' && isShare) return t('createCollection.allowedTypesShareHelper');
               return t('createCollection.allowedTypesHelper');
             })(),
             error: errors.allowedThingTypes,
@@ -112,7 +60,6 @@ export default function CollectionForm({
             value: v,
           }))}
           onChange={(opts) => setAllowedThingTypes(opts.map((o) => o.value))}
-          disabled={locked}
           invalid={!!errors.allowedThingTypes}
         />
       </div>

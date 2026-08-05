@@ -56,7 +56,6 @@ def quiet_emails():
         patch("core.services.email_service.send_booking_request_email"),
         patch("core.services.email_service.send_booking_confirmation_email"),
         patch("core.services.email_service.send_booking_decision_email"),
-        patch("core.services.email_service.send_booking_unavailable_email"),
     ):
         yield
 
@@ -175,36 +174,6 @@ def test_requester_cancelling_clears_the_owner_notification(
 
     assert resp.status_code == status.HTTP_200_OK
     assert not _request_notification(owner).exists()
-
-
-@pytest.mark.django_db
-def test_an_ownership_transfer_clears_the_auto_declined_siblings_too(
-    db, owner, requester, quiet_emails
-):
-    """Accepting a SHARE request auto-declines the other pending ones — the owner's
-    notifications for those can no longer be acted on either."""
-    other = User.objects.create(code="IREQ02", email="ioreq2@test.com", name="Other")
-    collection = Collection.objects.create(
-        code="IOSH01", owner=owner, headline="Shared", mode="COMMUNITY"
-    )
-    thing = Thing.objects.create(
-        code="IOSH02", owner=owner, headline="The drill", type="SHARE_THING"
-    )
-    collection.things.add(thing)
-    collection.invites.add(requester, other)
-
-    _client(requester).post(f"/api/v1/things/{thing.code}/request/", {}, format="json")
-    _client(other).post(f"/api/v1/things/{thing.code}/request/", {}, format="json")
-    assert _request_notification(owner).count() == 2
-
-    winner = BookingPeriod.objects.get(thing_code=thing, requester_code=requester)
-    resp = _client(owner).post(f"/api/v1/bookings/{winner.code}/accept/")
-
-    assert resp.status_code == status.HTTP_200_OK
-    assert not _request_notification(owner).exists()
-    assert InAppNotification.objects.filter(
-        user=other, type=InAppNotification.Type.BOOKING_UNAVAILABLE
-    ).exists()
 
 
 @pytest.mark.django_db

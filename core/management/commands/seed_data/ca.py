@@ -32,7 +32,7 @@ USERS = [
     {
         "code": "1u1ucs",
         "headline": "Conec tothom i m'apunto a tot – l'espurna de la comunitat!",
-        "about": "## L'espurna de la comunitat ✨\n\nConec tothom i m'apunto a tot. Guardià de la **Prestatgeria Fantasma** — foto, compartir i veure-ho desaparèixer. Si passa alguna cosa, *ja hi soc*.",
+        "about": "## L'espurna de la comunitat ✨\n\nConec tothom i m'apunto a tot. Si algú del barri presta, regala o ven alguna cosa, *ja hi soc* — i te n'aviso. Si passa alguna cosa, me n'assabento la primera.",
     },
 ]
 
@@ -51,11 +51,6 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "headline": "Préstecs de la Lili – hora de compartir les coses!",
         "description": "Necessites trepant, vaporeta, escala sòlida, bàscula d'equipatge o un mega kit de magdalenes? La biblioteca de préstecs de la Lili t'ho cobreix – tot a un cost simbòlic!",
-    },
-    {
-        "code": "1u1uC1",
-        "headline": "Prestatgeria fantasma d'en Lulu – aguaita amb els trastos!",
-        "description": "Veus alguna cosa agafant pols? Fes-li una foto i puja-la a la prestatgeria fantasma d'en Lulu – sense embolics, sense preus, només un feed de descarts del coliving. Email setmanal amb les novetats! Però afanya't, les coses desapareixen ràpid!",
     },
 ]
 
@@ -199,31 +194,6 @@ THINGS = [
         "code": "l1l123",
         "headline": "Cassó d'acer inoxidable",
         "description": "Cassó d'acer inoxidable de qualitat professional. Ideal per a salses i cremes. Fàcil de netejar i molt durador.",
-    },
-    {
-        "code": "1u1u01",
-        "headline": "Fondue oblidada",
-        "description": "Fonedora de formatge del 98 per a sis! Amb forquilles i pilot inclosos. Agafa-la abans que torni a desaparèixer!",
-    },
-    {
-        "code": "1u1u02",
-        "headline": "Maletes vintage apilades",
-        "description": "Tres belleses de cuir, fregades menors! Perfectes per a escapades de cap de setmana o emmagatzematge chic. Demana-les abans que desapareguin!",
-    },
-    {
-        "code": "1u1u03",
-        "headline": "Bicicleta estàtica bestial",
-        "description": "Spinner silenciós amb 8 nivells de resistència! Cardio sense culpa postconfinament. Se'n va en un sospir – força al pedal!",
-    },
-    {
-        "code": "1u1u04",
-        "headline": "Testos de ceràmica",
-        "description": "Trio de terracota fet a mà, platet inclòs! Reviu les teves suculentes tristes. Estrella del resum setmanal – afanya't!",
-    },
-    {
-        "code": "1u1u05",
-        "headline": "Festí de jocs de taula",
-        "description": "Monopoly, Cluedo i Pictionary complets! Clàssics del coliving per a nits plujoses. Per ordre d'arribada – volen!",
     },
     {
         "code": "l0l001",

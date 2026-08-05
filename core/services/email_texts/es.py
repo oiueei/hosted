@@ -15,7 +15,6 @@ TEXTS = {
     "action_noun_SELL_THING": "compra",
     "action_noun_LEND_THING": "préstamo",
     "action_noun_RENT_THING": "alquiler",
-    "action_noun_SHARE_THING": "traspaso",
     # Magic link
     "magic_subject": "¡Hola, te damos la bienvenida a OIUEEI!",
     "magic_subject_collection": "¡Hola, te damos la bienvenida a '{collection}' - OIUEEI!",
@@ -106,14 +105,6 @@ TEXTS = {
     ),
     "decision_plain": "Tu solicitud de {action} de '{thing}' ha sido {decision}.",
     "decision_intro": "Tu solicitud de {action} ha sido {decision}:",
-    # Booking auto-declined (someone else got it)
-    "unavailable_subject": "Alguien llegó primero",
-    "unavailable_plain": (
-        "'{thing}' se ha ido con otra persona esta vez. "
-        "No pasa nada — por aquí las cosas van y vienen, ¡mantente al tanto!"
-    ),
-    "unavailable_intro": "{thing} se ha ido con otra persona esta vez.",
-    "unavailable_outro": "No pasa nada — por aquí las cosas van y vienen, ¡mantente al tanto!",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",
     "invite_rejected_plain": "{invitee} ha rechazado la invitación a '{collection}'.",
@@ -174,11 +165,6 @@ TEXTS = {
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",
     "digest_intro": "Cosas nuevas en {collection}:",
-    # Newsletter
-    "newsletter_subject": "Boletín semanal: {collection}",
-    "newsletter_intro": "Boletín de {collection}:",
-    "newsletter_new_things": "Cosas nuevas",
-    "newsletter_transfers": "Cambios de dueño",
 }
 
 # Frases de crecimiento que se añaden a los correos salientes (encima del pie

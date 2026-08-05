@@ -27,7 +27,6 @@ from core.serializers.booking import (
 from core.services.booking_service import (
     BookingRequestError,
     request_date_based_booking,
-    request_share_booking,
     request_standard_booking,
     resolve_rental_collection,
 )
@@ -41,7 +40,6 @@ class ThingRequestView(APIView):
 
     All thing types now use BookingPeriod:
     - LEND/RENT: requires start_date and end_date
-    - SHARE: no dates — permanent ownership transfer on acceptance, thing stays ACTIVE
     - GIFT/SELL: no extra fields required
     """
 
@@ -108,13 +106,7 @@ class ThingRequestView(APIView):
         collection_code = request.data.get("collection_code")
 
         try:
-            if thing.type == Thing.Type.SHARE_THING:
-                booking = request_share_booking(thing, request.user, owner_email, collection_code)
-                return Response(
-                    {"message": "Booking request sent", "booking_code": booking.code},
-                    status=status.HTTP_201_CREATED,
-                )
-            elif thing.type in DATE_BASED_TYPES:
+            if thing.type in DATE_BASED_TYPES:
                 return self._request_date_based(request, thing, owner_email)
             else:
                 booking = request_standard_booking(

@@ -34,58 +34,10 @@ class TestCreateWithAllowedTypes:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["allowed_thing_types"] == []
 
-    def test_create_proprietary_rejects_community_only_type(self, authenticated_client):
-        for community_type in ("SHARE_THING",):
-            response = authenticated_client.post(
-                "/api/v1/collections/",
-                {"headline": "Bad", "allowed_thing_types": ["GIFT_THING", community_type]},
-                format="json",
-            )
-            assert response.status_code == status.HTTP_400_BAD_REQUEST, community_type
-
 
 @pytest.mark.django_db
 class TestCommunityWithAllowedTypes:
     """COMMUNITY collections accept the wider type set; flags override the list."""
-
-    def test_create_community_with_share_succeeds(self, authenticated_client):
-        for community_type in ("SHARE_THING",):
-            response = authenticated_client.post(
-                "/api/v1/collections/",
-                {
-                    "headline": f"Community {community_type}",
-                    "mode": "COMMUNITY",
-                    "allowed_thing_types": [community_type],
-                },
-                format="json",
-            )
-            assert response.status_code == status.HTTP_201_CREATED, community_type
-
-    def test_create_with_is_share_accepts_matching_share_thing_list(self, authenticated_client):
-        response = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "Share with matching allowlist",
-                "mode": "COMMUNITY",
-                "is_share": True,
-                "allowed_thing_types": ["SHARE_THING"],
-            },
-            format="json",
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-
-    def test_create_with_is_share_rejects_non_matching_list(self, authenticated_client):
-        response = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "Share with wrong allowlist",
-                "mode": "COMMUNITY",
-                "is_share": True,
-                "allowed_thing_types": ["LEND_THING"],
-            },
-            format="json",
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.django_db

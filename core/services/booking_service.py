@@ -164,9 +164,6 @@ def accept_booking(booking):
     Wrapped in transaction.atomic with select_for_update to prevent race
     conditions when updating both BookingPeriod status and Thing status.
 
-    For SHARE_THING: transfers ownership to the requester. The thing stays
-    ACTIVE so the new owner can continue sharing it.
-
     The booking row is locked and re-read FIRST, then its PENDING status is
     re-checked under the lock, so a concurrent double-accept (owner double
     click, or email link racing the in-app action) cannot run the transfer /
@@ -181,22 +178,12 @@ def accept_booking(booking):
         if booking.status != BookingPeriod.Status.PENDING:
             return None
         thing = Thing.objects.select_for_update().get(code=booking.thing_code_id)
-        # Ownership re-validation for SHARE_THING: the booking snapshots owner_code
-        # at request time. If an earlier accepted booking already transferred the
-        # thing away, this one is stale — bail out like an already-processed booking
-        # so a second accept can never transfer from a no-longer-owner (the row lock
-        # above serialises concurrent accepts).
-        if booking.thing_type == Thing.Type.SHARE_THING and thing.owner_id != booking.owner_code_id:
-            return None
         booking.accept()
         if booking.thing_type in SINGLE_USE_TYPES:
             if not thing.is_endless:
                 thing.status = Thing.Status.INACTIVE
                 thing.save(update_fields=["status"])
                 thing.deal.add(booking.requester_code)
-        elif booking.thing_type == Thing.Type.SHARE_THING:
-            thing.owner = booking.requester_code
-            thing.save(update_fields=["owner"])
 
         # Record the transfer (item changing hands) — skip for endless things
         if not thing.is_endless:
@@ -261,33 +248,12 @@ def _clear_request_notifications(booking):
     ).delete()
 
 
-def _decline_conflicting_siblings(booking):
-    """Reject other PENDING bookings for the same, now-transferred, thing.
-
-    Only meaningful for SHARE_THING: once the thing has changed hands, any other
-    pending request for it can no longer be fulfilled.
-    Returns the list of bookings actually declined so the caller can notify each
-    requester. Each rejection is race-safe — reject_booking re-checks the PENDING
-    status under a row lock and no-ops (returns None) on anything already handled.
-    """
-    siblings = list(
-        BookingPeriod.objects.filter(
-            thing_code=booking.thing_code_id,
-            status=BookingPeriod.Status.PENDING,
-        ).exclude(code=booking.code)
-    )
-    return [sibling for sibling in siblings if reject_booking(sibling) is not None]
-
-
 def finalize_booking_decision(booking, accepted):
     """Apply an owner's accept/reject decision and run the shared side-effects.
 
     Wraps accept_booking()/reject_booking() (which perform the locked, race-safe
     status transition) and, on success, notifies the requester (in-app + email)
-    and invalidates the booking's outstanding accept/reject RSVP links. On accept
-    of a SHARE_THING, every other pending request for the same thing can no
-    longer be fulfilled, so each is auto-declined and
-    its requester is told warmly (their RSVP links are invalidated too). Shared by
+    and invalidates the booking's outstanding accept/reject RSVP links. Shared by
     the email/RSVP path (VerifyLinkView) and the in-app API path
     (BookingActionView) so this money/ownership-sensitive sequence lives in one
     place.
@@ -296,10 +262,7 @@ def finalize_booking_decision(booking, accepted):
     concurrent transition already handled it) — each caller turns None into its
     own "expired or already processed" response.
     """
-    from core.services.email_service import (
-        send_booking_decision_email,
-        send_booking_unavailable_email,
-    )
+    from core.services.email_service import send_booking_decision_email
 
     thing = accept_booking(booking) if accepted else reject_booking(booking)
     if thing is None:
@@ -336,23 +299,6 @@ def finalize_booking_decision(booking, accepted):
             thing_type=booking.thing_type,
         )
     _delete_booking_rsvps(booking.code)
-
-    if accepted and booking.thing_type == Thing.Type.SHARE_THING:
-        for sibling in _decline_conflicting_siblings(booking):
-            InAppNotification.objects.create(
-                user=sibling.requester_code,
-                type=InAppNotification.Type.BOOKING_UNAVAILABLE,
-                payload={
-                    "thing_headline": thing.headline,
-                    "thing_code": thing.code,
-                    "collection_code": collection.code if collection else "",
-                },
-            )
-            send_booking_unavailable_email(sibling, thing)
-            _delete_booking_rsvps(sibling.code)
-            # The owner never decided this one — the transfer did — but their inbox
-            # still holds its request notification, and it can no longer be acted on.
-            _clear_request_notifications(sibling)
 
     return thing
 
@@ -406,30 +352,6 @@ def resolve_request_collection(thing, collection_code=None):
         resolve_rental_collection(thing)
         or thing.collections.filter(status=Collection.Status.ACTIVE).first()
     )
-
-
-def request_share_booking(thing, requester, owner_email, collection_code=None):
-    """SHARE_THING — no dates, permanent transfer on acceptance, thing stays ACTIVE."""
-    with transaction.atomic():
-        Thing.objects.select_for_update().get(code=thing.code)
-
-        if BookingPeriod.objects.filter(
-            thing_code=thing,
-            requester_code=requester,
-            status=BookingPeriod.Status.PENDING,
-        ).exists():
-            raise BookingRequestError("You already have a pending request for this thing")
-
-        booking = BookingPeriod.objects.create(
-            thing_code=thing,
-            thing_type=thing.type,
-            requester_code=requester,
-            requester_email=requester.email,
-            owner_code=thing.owner,
-        )
-
-    send_booking_request_notifications(requester, thing, booking, owner_email, collection_code)
-    return booking
 
 
 def request_date_based_booking(

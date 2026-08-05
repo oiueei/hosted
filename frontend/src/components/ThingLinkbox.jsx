@@ -2,7 +2,6 @@ import { useState, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, IconSpeechbubbleText, IconSwapUser } from 'hds-react';
-import { SHARE_TYPE } from '../constants/things';
 import MarkdownText from './MarkdownText';
 import InlineConfirm from './InlineConfirm';
 import useTheeeme from '../hooks/useTheeeme';
@@ -29,7 +28,7 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
 
   // Owner-button-matrix + reservation view-model (shared with ThingPage). The
-  // card's own seeds (pending from the serializer, SHARE fold, endless calendar)
+  // card's own seeds (pending from the serializer, endless calendar)
   // and `loginToAct` mode are passed as options; see useThingActions.
   const {
     bookingAction,
@@ -45,7 +44,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
     isDateBased,
     needsPage,
     canDelete,
-    acceptTransfersOwnership,
     showButton,
     buttonDisabled,
     loginButtonDisabled,
@@ -58,7 +56,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
     onThingChange: (patch) => onUpdateThing(thing.code, patch),
     setToast,
     initialActivePending: thing.pending_booking,
-    initialRequested: thing.type === SHARE_TYPE && !!thing.my_pending_booking,
     fetchOnEndless: true,
     collectionCode: collectionCode || thing.collection_code,
   });
@@ -130,7 +127,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
               <span>{t(`transfers.${
                 thing.type === 'LEND_THING' ? 'lendCount' :
                 thing.type === 'RENT_THING' ? 'rentCount' :
-                thing.type === 'SHARE_THING' ? 'shareCount' :
                 'changesCount'
               }`, { count: thing.transfer_count })}</span>
             </div>
@@ -142,22 +138,9 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
             <>
               {needsPage && activePendingCode && (
                 <>
-                  {acceptTransfersOwnership ? (
-                    <InlineConfirm
-                      triggerLabel={acceptLabel}
-                      triggerProps={{ fullWidth: true, disabled: !!bookingAction, style: btnStyle }}
-                      title={t('thingCard.transferConfirmTitle')}
-                      body={t('thingCard.transferConfirmBody')}
-                      confirmLabel={t('thingCard.transferConfirm')}
-                      onConfirm={() => handleBookingAction('accept', activePendingCode)}
-                      confirming={!!bookingAction}
-                      confirmProps={{ style: btnStyle }}
-                    />
-                  ) : (
                     <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept', activePendingCode)} style={btnStyle}>
                       {acceptLabel}
                     </Button>
-                  )}
                   <Button variant="secondary" fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('reject', activePendingCode)} style={btnSecondaryStyle}>
                     {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
                   </Button>
@@ -179,22 +162,9 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
           )}
           {isOwner && thing.status === 'TAKEN' && (
             <>
-              {acceptTransfersOwnership ? (
-                <InlineConfirm
-                  triggerLabel={acceptLabel}
-                  triggerProps={{ fullWidth: true, disabled: !!bookingAction, style: btnStyle }}
-                  title={t('thingCard.transferConfirmTitle')}
-                  body={t('thingCard.transferConfirmBody')}
-                  confirmLabel={t('thingCard.transferConfirm')}
-                  onConfirm={() => handleBookingAction('accept')}
-                  confirming={!!bookingAction}
-                  confirmProps={{ style: btnStyle }}
-                />
-              ) : (
                 <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept')} style={btnStyle}>
                   {acceptLabel}
                 </Button>
-              )}
               <Button variant="secondary" fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('reject')} style={btnSecondaryStyle}>
                 {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
               </Button>

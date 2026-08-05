@@ -211,8 +211,6 @@
     "bookingAcceptedBody": "{{owner_name}} confirmed your hold on {{thing_headline}}.",
     "bookingRejectedLabel": "Hold declined",
     "bookingRejectedBody": "{{owner_name}} declined your hold on {{thing_headline}}.",
-    "bookingUnavailableLabel": "Already taken",
-    "bookingUnavailableBody": "{{thing_headline}} went to someone else this time — things come and go, so keep an eye out!",
     "bookingRequestedLabel": "New hold request",
     "bookingRequestedBody": "{{requester_name}} requested {{thing_headline}}.",
     "faqQuestionLabel": "New question",
@@ -326,8 +324,7 @@
       "GIFT_THING": "Claim",
       "SELL_THING": "Buy",
       "RENT_THING": "Rent",
-      "LEND_THING": "Borrow",
-      "SHARE_THING": "Take"
+      "LEND_THING": "Borrow"
     }
   },
   "thingTags": {
@@ -459,7 +456,6 @@
     "allowedTypesLabel": "What can be added to this collection",
     "allowedTypesPlaceholder": "Pick one or more types",
     "allowedTypesHelper": "Pick at least one. Only the types you choose will be available when adding things later.",
-    "allowedTypesShareHelper": "Share-only mode only accepts share things.",
     "allowedTypesAtLeastOne": "Pick at least one type.",
     "advancedTitle": "More options",
     "tagsLabel": "Tags",
@@ -584,16 +580,14 @@
     "GIFT_THING": "Gift",
     "SELL_THING": "Sale",
     "RENT_THING": "Rental",
-    "LEND_THING": "Lend",
-    "SHARE_THING": "Share"
+    "LEND_THING": "Lend"
   },
   "typeInfo": {
     "title": "What each type means",
     "GIFT_THING": "A give-away — whoever claims it keeps it.",
     "SELL_THING": "For sale at the price you set.",
     "RENT_THING": "Rented out for a fee, by dates.",
-    "LEND_THING": "Borrowed for a few days, then returned.",
-    "SHARE_THING": "Accepting a request gives it to the requester — it keeps circulating in the group."
+    "LEND_THING": "Borrowed for a few days, then returned."
   },
   "availability": {
     "IMMEDIATE": "Immediate",
@@ -624,22 +618,14 @@
     "returnedOn": "Returned on {{date}}",
     "to": "to",
     "noTransfers": "No transfers yet.",
-    "shareHistoryHeading": "Sharing history",
-    "originallySharedBy": "Originally shared by {{name}}",
-    "sharedByCount_one": "Shared by {{count}} person",
-    "sharedByCount_other": "Shared by {{count}} people",
     "changesCount_one": "{{count}} change",
     "changesCount_other": "{{count}} changes",
     "lendCount_one": "{{count}} loan",
     "lendCount_other": "{{count}} loans",
     "rentCount_one": "{{count}} rental",
-    "rentCount_other": "{{count}} rentals",
-    "shareCount_one": "{{count}} share",
-    "shareCount_other": "{{count}} shares"
+    "rentCount_other": "{{count}} rentals"
   },
   "share": {
-    "enableShare": "Exclusively SHARE things",
-    "shareCollection": "Share collection",
     "pageTitle": "Join us on OIUEEI",
     "pageDescription": "Enter your email and we'll send you a magic link to join the collection. One click and you're in.",
     "emailLabel": "Email",
@@ -649,9 +635,6 @@
     "magicLinkSent": "Magic link sent! Check your inbox and click the link to join the collection.",
     "errorSendingLink": "Error sending link.",
     "alreadyHaveAccount": "Already have an account? Sign in →"
-  },
-  "newsletter": {
-    "enableNewsletter": "Weekly activity newsletter"
   },
   "endless": {
     "label": "Endless — multiple people can hold at the same time, thing stays active forever"

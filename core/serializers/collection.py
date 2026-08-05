@@ -16,21 +16,14 @@ from core.validators import (
     SafeTextField,
 )
 
-# Thing types valid for proprietary collections (excludes COMMUNITY-only
-# SHARE_THING).
-PROPRIETARY_THING_TYPES = (
+# The thing types a collection's allowlist may name. PROPRIETARY and COMMUNITY
+# take the same set — mode decides WHO may add a thing (owner only, or any
+# member), never WHICH types are on offer.
+ALLOWED_THING_TYPES = (
     Thing.Type.GIFT_THING,
     Thing.Type.SELL_THING,
     Thing.Type.RENT_THING,
     Thing.Type.LEND_THING,
-)
-# Thing types valid for community collections without the is_share flag.
-COMMUNITY_THING_TYPES = (
-    Thing.Type.GIFT_THING,
-    Thing.Type.SELL_THING,
-    Thing.Type.RENT_THING,
-    Thing.Type.LEND_THING,
-    Thing.Type.SHARE_THING,
 )
 
 
@@ -129,8 +122,6 @@ class CollectionSerializer(serializers.ModelSerializer):
             "visibility",
             "digest_frequency",
             "language",
-            "is_share",
-            "newsletter_enabled",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -274,8 +265,6 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "visibility",
             "digest_frequency",
             "language",
-            "is_share",
-            "newsletter_enabled",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -304,12 +293,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
                 if mode == Collection.Mode.COMMUNITY
                 else Collection.Visibility.PRIVATE
             )
-        _validate_collection_flags(
-            mode=attrs.get("mode", Collection.Mode.PROPRIETARY),
-            is_share=attrs.get("is_share", False),
-            newsletter_enabled=attrs.get("newsletter_enabled", False),
-            allowed_thing_types=attrs.get("allowed_thing_types", []),
-        )
+        _validate_allowed_thing_types(attrs.get("allowed_thing_types", []))
         return attrs
 
 
@@ -335,63 +319,17 @@ def _normalize_tags(tags):
     return result
 
 
-def _validate_allowed_thing_types(mode, is_share, allowed_thing_types):
+def _validate_allowed_thing_types(allowed_thing_types):
     """Validate the allowed_thing_types list when non-empty.
 
     Empty list means "no restriction" — accepted in any mode (preserves the
     pre-feature behaviour and keeps the API tolerant for non-form callers).
     The "user must pick at least one" rule is enforced in the create/edit
     form on the frontend, where it belongs as a UX nudge.
-
-    When non-empty:
-    - is_share forces SHARE_THING via its flag, so the only consistent list is
-      [Thing.Type.SHARE_THING]. Anything else is rejected so the form and the
-      data cannot disagree.
-    - PROPRIETARY excludes the COMMUNITY-only SHARE_THING.
-    - COMMUNITY (no flag) accepts the 5-type COMMUNITY set.
     """
-    if not allowed_thing_types:
-        return
-    if is_share:
-        if list(allowed_thing_types) != [Thing.Type.SHARE_THING]:
-            raise serializers.ValidationError(
-                "Share-only collections only accept share things —"
-                " allowed_thing_types must be ['SHARE_THING'] or empty."
-            )
-        return
-    if mode == Collection.Mode.PROPRIETARY:
-        invalid = [t for t in allowed_thing_types if t not in PROPRIETARY_THING_TYPES]
-        if invalid:
-            raise serializers.ValidationError(
-                f"These types are not allowed in proprietary collections: {invalid}"
-            )
-        return
-    # COMMUNITY
-    invalid = [t for t in allowed_thing_types if t not in COMMUNITY_THING_TYPES]
+    invalid = [t for t in allowed_thing_types if t not in ALLOWED_THING_TYPES]
     if invalid:
-        raise serializers.ValidationError(
-            f"These types are not allowed in community collections: {invalid}"
-        )
-
-
-def _validate_collection_flags(
-    *,
-    mode,
-    is_share,
-    newsletter_enabled,
-    allowed_thing_types,
-):
-    """Shared flag-consistency rules for collection create/update validate().
-
-    Both serializers resolve the effective flag values differently (create uses
-    plain defaults, update falls back to the existing instance) and then call this
-    with the resolved values, so the rules live in exactly one place.
-    """
-    if is_share and mode != Collection.Mode.COMMUNITY:
-        raise serializers.ValidationError("Share mode requires COMMUNITY mode.")
-    if newsletter_enabled and not is_share:
-        raise serializers.ValidationError("Newsletter requires share mode to be enabled.")
-    _validate_allowed_thing_types(mode, is_share, allowed_thing_types)
+        raise serializers.ValidationError(f"These types are not allowed: {invalid}")
 
 
 class CollectionUpdateSerializer(serializers.ModelSerializer):
@@ -433,8 +371,6 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "visibility",
             "digest_frequency",
             "language",
-            "is_share",
-            "newsletter_enabled",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -452,21 +388,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         instance = self.instance
-        is_share = attrs.get("is_share", instance.is_share if instance else False)
-        newsletter_enabled = attrs.get(
-            "newsletter_enabled", instance.newsletter_enabled if instance else False
-        )
-        mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
         allowed_thing_types = attrs.get(
             "allowed_thing_types",
             instance.allowed_thing_types if instance else [],
         )
-        _validate_collection_flags(
-            mode=mode,
-            is_share=is_share,
-            newsletter_enabled=newsletter_enabled,
-            allowed_thing_types=allowed_thing_types,
-        )
+        _validate_allowed_thing_types(allowed_thing_types)
         # Orphan check: if this is an update narrowing the list, every existing
         # thing currently in the collection must keep a valid slot in the new
         # list. Otherwise the rule would become incoherent ("type X is not

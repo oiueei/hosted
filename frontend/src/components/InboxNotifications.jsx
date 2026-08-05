@@ -83,7 +83,6 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'BOOKING_ACCEPTED': return t('home.bookingAcceptedLabel');
       case 'BOOKING_REJECTED': return t('home.bookingRejectedLabel');
       case 'BOOKING_REQUESTED': return t('home.bookingRequestedLabel');
-      case 'BOOKING_UNAVAILABLE': return t('home.bookingUnavailableLabel');
       case 'FAQ_QUESTION': return t('home.faqQuestionLabel');
       case 'FAQ_ANSWERED': return t('home.faqAnsweredLabel');
       case 'FAQ_HIDDEN': return t('home.faqHiddenLabel');
@@ -101,7 +100,6 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'BOOKING_ACCEPTED': return t('home.bookingAcceptedBody', { thing_headline: p.thing_headline, owner_name: p.owner_name });
       case 'BOOKING_REJECTED': return t('home.bookingRejectedBody', { thing_headline: p.thing_headline, owner_name: p.owner_name });
       case 'BOOKING_REQUESTED': return t('home.bookingRequestedBody', { thing_headline: p.thing_headline, requester_name: p.requester_name });
-      case 'BOOKING_UNAVAILABLE': return t('home.bookingUnavailableBody', { thing_headline: p.thing_headline });
       case 'FAQ_QUESTION': return t('home.faqQuestionBody', { thing_headline: p.thing_headline, questioner_name: p.questioner_name });
       case 'FAQ_ANSWERED': return t('home.faqAnsweredBody', { thing_headline: p.thing_headline, owner_name: p.owner_name });
       case 'FAQ_HIDDEN': return t('home.faqHiddenBody', { thing_headline: p.thing_headline, owner_name: p.owner_name });

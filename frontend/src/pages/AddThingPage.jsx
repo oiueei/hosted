@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES, SHARE_TYPE } from '../constants/things';
+import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -30,8 +30,6 @@ export default function AddThingPage() {
   }, [routerLocation.hash]);
 
   const [collectionHeadline, setCollectionHeadline] = useState('');
-  const [collectionMode, setCollectionMode] = useState('');
-  const [isShareCollection, setIsShareCollection] = useState(false);
   const [type, setType] = useState('GIFT_THING');
   const [headline, setHeadline] = useState('');
   const [description, setDescription] = useState('');
@@ -56,11 +54,6 @@ export default function AddThingPage() {
       .then((res) => (res.ok ? res.json() : {}))
       .then((data) => {
         setCollectionHeadline(data.headline || '');
-        setCollectionMode(data.mode || '');
-        if (data.is_share) {
-          setIsShareCollection(true);
-          setType('SHARE_THING');
-        }
         const allowed = data.allowed_thing_types || [];
         setCollectionAllowedTypes(allowed);
         setCollectionTags(data.tags || []);
@@ -143,10 +136,7 @@ export default function AddThingPage() {
   const { tc, btnStyle } = useTheeeme();
 
   const typeOptions = (() => {
-    // A share-only collection forces its single offer type.
-    if (isShareCollection) return [SHARE_TYPE];
     return TYPE_VALUES.filter((v) => {
-      if (v === SHARE_TYPE && collectionMode !== 'COMMUNITY') return false;
       // Per-collection allowlist (set on Create/Edit). Empty = no restriction.
       if (collectionAllowedTypes.length > 0 && !collectionAllowedTypes.includes(v)) return false;
       return true;

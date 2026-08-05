@@ -1,6 +1,6 @@
 """
 Integration tests for OIUEEI booking calendar system.
-Tests for LEND_THING, RENT_THING, and SHARE_THING types.
+Tests for LEND_THING and RENT_THING types.
 """
 
 from datetime import date, timedelta
@@ -38,19 +38,6 @@ def rent_thing(db, user, collection):
         owner=user,
         headline="Rent Item",
         fee=25.00,
-    )
-    collection.add_thing(t.code)
-    return t
-
-
-@pytest.fixture
-def share_thing(db, user, collection):
-    """Create a SHARE_THING thing."""
-    t = Thing.objects.create(
-        code="SHAR01",
-        type="SHARE_THING",
-        owner=user,
-        headline="Share Item",
     )
     collection.add_thing(t.code)
     return t
@@ -153,13 +140,12 @@ class TestBookingRequest:
         [
             ("lend_thing", 3),  # LEND_THING
             ("rent_thing", 5),  # RENT_THING (same date-based flow as lend)
-            ("share_thing", 1),  # SHARE_THING
         ],
     )
     def test_guest_can_request_date_based_booking(
         self, request, user, user2, collection, thing_fixture, days
     ):
-        """A guest can request a date-based booking for LEND/RENT/SHARE things."""
+        """A guest can request a date-based booking for LEND/RENT things."""
         thing = request.getfixturevalue(thing_fixture)
         collection.add_invite(user2.code)
 
@@ -176,25 +162,6 @@ class TestBookingRequest:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["message"] == "Booking request sent"
         assert "booking_code" in response.data
-
-    def test_duplicate_share_request_denied(self, user, user2, share_thing, collection):
-        """SHARE_THING has its own duplicate-pending-request guard, separate
-        from the standard (GIFT/SELL) one."""
-        collection.add_invite(user2.code)
-        BookingPeriod.objects.create(
-            thing_code=share_thing,
-            thing_type=share_thing.type,
-            requester_code=user2,
-            requester_email=user2.email,
-            owner_code=user,
-            status="PENDING",
-        )
-
-        client2 = get_client_for_user(user2)
-        response = client2.post(f"/api/v1/things/{share_thing.code}/request/")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["error"] == "You already have a pending request for this thing"
 
     def test_owner_cannot_request_own_thing(self, authenticated_client, lend_thing):
         """Owner cannot request booking for their own thing."""
@@ -622,7 +589,7 @@ class TestBookingAcceptReject:
 
 @pytest.mark.django_db
 class TestLendingThingStatusNotTaken:
-    """Tests that LEND/RENT/SHARE things stay ACTIVE (not TAKEN)."""
+    """Tests that LEND/RENT things stay ACTIVE (not TAKEN)."""
 
     def test_lend_thing_stays_active_after_booking(self, user, user2, lend_thing, collection):
         """LEND_THING stays ACTIVE after booking request."""
@@ -982,7 +949,7 @@ class TestSingleUseThingCompleteFlow:
 
 @pytest.mark.django_db
 class TestDateBasedThingCompleteFlow:
-    """Tests for complete date-based thing flow (LEND/RENT/SHARE)."""
+    """Tests for complete date-based thing flow (LEND/RENT)."""
 
     def test_complete_lend_flow_with_emails(self, api_client, user, user2, lend_thing, collection):
         """Complete flow: request with dates → owner email → accept → requester email."""
@@ -1079,25 +1046,6 @@ class TestDateBasedThingCompleteFlow:
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
-
-    def test_share_thing_stays_active_after_accept(self, api_client, user, user2, share_thing):
-        """SHARE_THING stays ACTIVE after booking is accepted."""
-        booking = BookingPeriod.objects.create(
-            thing_code=share_thing,
-            thing_type="SHARE_THING",
-            requester_code=user2,
-            requester_email=user2.email,
-            owner_code=user,
-            start_date=date.today(),
-            end_date=date.today() + timedelta(days=3),
-        )
-
-        # Accept via RSVP
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
-        api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
-
-        share_thing.refresh_from_db()
-        assert share_thing.status == "ACTIVE"
 
     def test_calendar_shows_pending_and_accepted_only(
         self, authenticated_client, user, user2, lend_thing, collection

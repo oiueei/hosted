@@ -6,7 +6,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Collection, Thing
 from core.models.transfer import ThingTransfer
 from core.serializers.transfer import ThingTransferStatsSerializer
 from core.views._helpers import get_viewable_thing, viewer_code
@@ -67,12 +66,6 @@ class ThingTransferView(APIView):
         original_owner = oldest.from_user_id if oldest else None
         original_owner_name = oldest.from_user.name if oldest and oldest.from_user else None
 
-        # Is this a SHARE_THING in a COMMUNITY collection?
-        is_share_in_community = (
-            thing.type == Thing.Type.SHARE_THING
-            and thing.collections.filter(mode=Collection.Mode.COMMUNITY).exists()
-        )
-
         stats_data = {
             "total_transfers": total_transfers,
             "unique_homes": unique_homes,
@@ -80,7 +73,6 @@ class ThingTransferView(APIView):
             "current_holder_name": current_holder_name,
             "original_owner": original_owner,
             "original_owner_name": original_owner_name,
-            "is_share_in_community": is_share_in_community,
             "transfers": transfers,
         }
 

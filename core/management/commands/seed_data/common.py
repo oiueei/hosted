@@ -13,7 +13,6 @@ folder the demo fixtures actually live in, kept apart from real user uploads.
 """
 
 import json
-from datetime import date
 
 
 def _localized_tag(**texts):
@@ -90,7 +89,7 @@ COLLECTIONS = [
         "code": "l0l0C1",
         "owner_code": "l0l0oh",
         "visibility": "PUBLIC",
-        "invites": ["La1aN1", "l1l13S", "L3L3oo"],
+        "invites": ["La1aN1", "l1l13S", "L3L3oo", "1u1ucs"],
         "is_onboarding": True,
         "allowed_thing_types": ["GIFT_THING"],
         "thumbnail": "L3L3C2",
@@ -114,19 +113,6 @@ COLLECTIONS = [
             TAG_ELECTRONICA,
         ],
         "thumbnail": "l1l1C1",
-    },
-    {
-        "code": "1u1uC1",
-        "owner_code": "1u1ucs",
-        "visibility": "PUBLIC",
-        "mode": "COMMUNITY",
-        "is_share": True,
-        "newsletter_enabled": True,
-        "digest_frequency": "WEEKLY",
-        "invites": ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh"],
-        "is_onboarding": True,
-        "allowed_thing_types": ["SHARE_THING"],
-        "thumbnail": "1u1uC1",
     },
 ]
 
@@ -387,46 +373,6 @@ THINGS = [
         "tags": [TAG_COCINA],
     },
     {
-        "code": "1u1u01",
-        "type": "SHARE_THING",
-        "owner_code": "La1aN1",
-        "collections": ["1u1uC1"],
-        "thumbnail": "1u1u01",
-        "condition": "NEW",
-    },
-    {
-        "code": "1u1u02",
-        "type": "SHARE_THING",
-        "owner_code": "L3L3oo",
-        "collections": ["1u1uC1"],
-        "thumbnail": "1u1u02",
-        "condition": "GOOD",
-    },
-    {
-        "code": "1u1u03",
-        "type": "SHARE_THING",
-        "owner_code": "l1l13S",
-        "collections": ["1u1uC1"],
-        "thumbnail": "1u1u03",
-        "condition": "NEW",
-    },
-    {
-        "code": "1u1u04",
-        "type": "SHARE_THING",
-        "owner_code": "l0l0oh",
-        "collections": ["1u1uC1"],
-        "thumbnail": "1u1u04",
-        "condition": "USED",
-    },
-    {
-        "code": "1u1u05",
-        "type": "SHARE_THING",
-        "owner_code": "1u1ucs",
-        "collections": ["1u1uC1"],
-        "thumbnail": "1u1u05",
-        "condition": "FAIR",
-    },
-    {
         "code": "l0l001",
         "type": "GIFT_THING",
         "owner_code": "l0l0oh",
@@ -508,15 +454,4 @@ FAQS = [
 ]
 
 # ThingTransfer chain — (thing_code, from_code, to_code, lent_date, returned_date)
-TRANSFERS = [
-    # Lulu's share collection — single transfers
-    ("1u1u01", "1u1ucs", "La1aN1", date(2026, 3, 1), None),
-    ("1u1u02", "1u1ucs", "L3L3oo", date(2026, 3, 15), None),
-    ("1u1u03", "1u1ucs", "l1l13S", date(2026, 4, 1), None),
-    # lltl14 — full chain ending at Lolo
-    ("1u1u04", "1u1ucs", "l0l0oh", date(2026, 1, 10), date(2026, 1, 31)),
-    ("1u1u04", "l0l0oh", "La1aN1", date(2026, 2, 1), date(2026, 2, 28)),
-    ("1u1u04", "La1aN1", "L3L3oo", date(2026, 3, 1), date(2026, 3, 31)),
-    ("1u1u04", "L3L3oo", "l1l13S", date(2026, 4, 1), date(2026, 4, 15)),
-    ("1u1u04", "l1l13S", "l0l0oh", date(2026, 4, 16), None),
-]
+TRANSFERS = []

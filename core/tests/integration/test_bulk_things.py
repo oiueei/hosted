@@ -79,10 +79,13 @@ class TestBulkCreate:
         assert collection.things.count() == 0
 
     def test_rejects_type_invalid_for_collection(self, auth_client, collection):
-        # SHARE_THING is community-only; this collection is proprietary.
+        """The owner's allowed_thing_types gates the bulk path too, not just the
+        one-by-one create — otherwise a CSV would be the way around it (L4)."""
+        collection.allowed_thing_types = ["SELL_THING"]
+        collection.save(update_fields=["allowed_thing_types"])
         res = auth_client.post(
             URL.format(code=collection.code),
-            {"rows": [{"type": "SHARE_THING", "headline": "A shelf item"}]},
+            {"rows": [{"type": "GIFT_THING", "headline": "A gift"}]},
             format="json",
         )
         assert res.status_code == 400

@@ -125,16 +125,15 @@ describe('AddThingPage — type explainer popover', () => {
   });
 
   // The panel is built from the already-filtered typeOptions, so a type the
-  // collection can't hold is never explained. A share-only collection offers
-  // only SHARE: GIFT must be absent.
+  // collection can't hold is never explained. An allowlist of one leaves one.
   test('does not list a type the collection filtered out', async () => {
-    renderAdd({ collection: { mode: 'COMMUNITY', is_share: true } });
+    renderAdd({ collection: { mode: 'COMMUNITY', allowed_thing_types: ['SELL_THING'] } });
 
     fireEvent.click(await screen.findByRole('button', { name: 'What each type means' }));
 
-    // SHARE is offered here, so its description is present…
-    expect(await screen.findByText(/it keeps circulating in the group/)).toBeInTheDocument();
-    // …but GIFT is not part of a share collection's options.
+    // SELL is the only offered type, so its description is present…
+    expect(await screen.findByText(/For sale at the price you set/)).toBeInTheDocument();
+    // …and GIFT, which the allowlist excludes, is not explained.
     expect(screen.queryByText(/whoever claims it keeps it/)).toBeNull();
   });
 });

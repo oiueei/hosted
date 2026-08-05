@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TextInput, TextArea, Select, Button, RadioButton, Accordion } from 'hds-react';
-import { isLockedToSingleType, reconcileAllowedTypes } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
@@ -29,8 +28,6 @@ export default function CreateCollectionPage() {
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
-  const [isShare, setIsShare] = useState(false);
-  const [newsletterEnabled, setNewsletterEnabled] = useState(false);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
@@ -47,30 +44,23 @@ export default function CreateCollectionPage() {
     { label: t('createCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
   ];
 
-  const locked = isLockedToSingleType({ isShare });
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Live "pick at least one" feedback once a submit has been attempted (P1-5):
   // the error clears the moment the user picks a type, without nagging earlier.
-  const allowedTypesError = submitAttempted && !locked && allowedThingTypes.length === 0
+  const allowedTypesError = submitAttempted && allowedThingTypes.length === 0
     ? t('createCollection.allowedTypesAtLeastOne')
     : '';
 
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
-    const nextFlags = {
-      mode: newMode,
-      isShare: newMode === 'COMMUNITY' ? isShare : false,
-    };
     setMode(newMode);
     // Visibility follows the mode default on create: a community is born public,
     // a proprietary list private. The owner can still flip the toggle afterwards.
     setVisibility(newMode === 'COMMUNITY' ? 'PUBLIC' : 'PRIVATE');
-    if (newMode !== 'COMMUNITY') { setIsShare(false); setNewsletterEnabled(false); }
-    // Keep the still-valid part of the selection instead of wiping it (P1-5).
-    setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, nextFlags));
+    // Both modes allow the same types, so the selection carries over untouched.
   };
 
   const validate = () => {
@@ -80,8 +70,7 @@ export default function CreateCollectionPage() {
     if (localizedCounter(headline, 64).over) newErrors.headline = t('createCollection.maxHeadline');
     if (localizedCounter(description, 256).over) newErrors.description = t('createCollection.maxDescription');
     setErrors(newErrors);
-    // The locked select (share) auto-fills, so it passes by construction.
-    const allowedTypesOk = locked || allowedThingTypes.length > 0;
+    const allowedTypesOk = allowedThingTypes.length > 0;
     return Object.keys(newErrors).length === 0 && allowedTypesOk;
   };
 
@@ -94,11 +83,9 @@ export default function CreateCollectionPage() {
       headline: headline.trim(),
       mode,
       visibility,
-      is_share: isShare && mode === 'COMMUNITY',
-      newsletter_enabled: newsletterEnabled && isShare && mode === 'COMMUNITY',
       allowed_thing_types: allowedThingTypes,
-      rental_durations: isShare ? [] : rentalDurations,
-      rental_weekdays: isShare ? [] : rentalWeekdays,
+      rental_durations: rentalDurations,
+      rental_weekdays: rentalWeekdays,
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -173,11 +160,6 @@ export default function CreateCollectionPage() {
           </fieldset>
           <CollectionForm
             idPrefix="create-collection"
-            mode={mode}
-            isShare={isShare}
-            setIsShare={setIsShare}
-            newsletterEnabled={newsletterEnabled}
-            setNewsletterEnabled={setNewsletterEnabled}
             allowedThingTypes={allowedThingTypes}
             setAllowedThingTypes={setAllowedThingTypes}
             visibility={visibility}
@@ -205,7 +187,6 @@ export default function CreateCollectionPage() {
               />
               <LocalizedInfo id="create-collection-tags-info" variant="tags" />
             </div>
-            {!isShare && (
               <RentalRulesFields
                 idPrefix="create-collection"
                 rentalDurations={rentalDurations}
@@ -214,7 +195,6 @@ export default function CreateCollectionPage() {
                 setRentalWeekdays={setRentalWeekdays}
                 theeemeColor01={theeemeColors.color_01}
               />
-            )}
             <Select
               language="en"
               id="create-collection-language"

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TextInput, TextArea, Select, Button, RadioButton, Notification, Accordion } from 'hds-react';
-import { isLockedToSingleType, reconcileAllowedTypes } from '../constants/things';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
@@ -34,8 +33,6 @@ export default function EditCollectionPage() {
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
   const [digestFrequency, setDigestFrequency] = useState('NONE');
-  const [isShare, setIsShare] = useState(false);
-  const [newsletterEnabled, setNewsletterEnabled] = useState(false);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
@@ -70,23 +67,16 @@ export default function EditCollectionPage() {
     { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
   ];
 
-  const locked = isLockedToSingleType({ isShare });
 
   // Live "pick at least one" feedback once a submit has been attempted (P1-5).
-  const allowedTypesError = submitAttempted && !locked && allowedThingTypes.length === 0
+  const allowedTypesError = submitAttempted && allowedThingTypes.length === 0
     ? t('createCollection.allowedTypesAtLeastOne')
     : '';
 
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
-    const nextFlags = {
-      mode: newMode,
-      isShare: newMode === 'COMMUNITY' ? isShare : false,
-    };
     setMode(newMode);
-    if (newMode !== 'COMMUNITY') { setIsShare(false); setNewsletterEnabled(false); }
-    // Keep the still-valid part of the selection instead of wiping it (P1-5).
-    setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, nextFlags));
+    // Both modes allow the same types, so the selection carries over untouched.
   };
 
   useEffect(() => {
@@ -102,8 +92,6 @@ export default function EditCollectionPage() {
           setMode(data.mode || 'PROPRIETARY');
           setVisibility(data.visibility || 'PRIVATE');
           setDigestFrequency(data.digest_frequency || 'NONE');
-          setIsShare(data.is_share || false);
-          setNewsletterEnabled(data.newsletter_enabled || false);
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
@@ -136,7 +124,7 @@ export default function EditCollectionPage() {
     if (localizedCounter(headline, 64).over) newErrors.headline = t('editCollection.maxHeadline');
     if (localizedCounter(description, 256).over) newErrors.description = t('editCollection.maxDescription');
     setErrors(newErrors);
-    const allowedTypesOk = locked || allowedThingTypes.length > 0;
+    const allowedTypesOk = allowedThingTypes.length > 0;
     return Object.keys(newErrors).length === 0 && allowedTypesOk;
   };
 
@@ -152,11 +140,9 @@ export default function EditCollectionPage() {
       mode,
       visibility,
       digest_frequency: digestFrequency,
-      is_share: isShare && mode === 'COMMUNITY',
-      newsletter_enabled: newsletterEnabled && isShare && mode === 'COMMUNITY',
       allowed_thing_types: allowedThingTypes,
-      rental_durations: isShare ? [] : rentalDurations,
-      rental_weekdays: isShare ? [] : rentalWeekdays,
+      rental_durations: rentalDurations,
+      rental_weekdays: rentalWeekdays,
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -298,11 +284,6 @@ export default function EditCollectionPage() {
         </fieldset>
         <CollectionForm
           idPrefix="edit-collection"
-          mode={mode}
-          isShare={isShare}
-          setIsShare={setIsShare}
-          newsletterEnabled={newsletterEnabled}
-          setNewsletterEnabled={setNewsletterEnabled}
           allowedThingTypes={allowedThingTypes}
           setAllowedThingTypes={setAllowedThingTypes}
           visibility={visibility}
@@ -330,7 +311,6 @@ export default function EditCollectionPage() {
             />
             <LocalizedInfo id="edit-collection-tags-info" variant="tags" />
           </div>
-          {!isShare && (
             <RentalRulesFields
               idPrefix="edit-collection"
               rentalDurations={rentalDurations}
@@ -339,7 +319,6 @@ export default function EditCollectionPage() {
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}
             />
-          )}
           <Select
             language="en"
             id="edit-collection-digest"

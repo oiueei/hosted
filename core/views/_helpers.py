@@ -42,26 +42,15 @@ def get_viewable_thing(code, user_code, message):
 
 
 def type_validity_error(thing_type, collection):
-    """Error message if ``thing_type`` isn't valid for ``collection`` (or for no
-    collection, when None), else None.
+    """Error message if ``thing_type`` isn't valid for ``collection``, else None.
 
     Shared by thing create/update AND the collection add-thing endpoint so the
-    type rules (community-only types, share restrictions, per-collection
-    allowlist) can't be bypassed by any path (L4).
+    owner's per-collection allowlist can't be bypassed by any path (L4). A thing
+    with no collection has no allowlist to answer to, so it is always valid —
+    the type-vs-mode rules that used to live here went with SHARE and SWAP.
     """
     if collection is None:
-        if thing_type == Thing.Type.SHARE_THING:
-            return (
-                f"{thing_type.replace('_', ' ').title()}s can only be created"
-                " in community collections"
-            )
         return None
-    if thing_type == Thing.Type.SHARE_THING and not collection.is_community():
-        return (
-            f"{thing_type.replace('_', ' ').title()}s can only be created in community collections"
-        )
-    if collection.is_share and thing_type != Thing.Type.SHARE_THING:
-        return "Only share things can be added to a share collection"
     if collection.allowed_thing_types and thing_type not in collection.allowed_thing_types:
         return (
             f"This collection does not accept {thing_type.replace('_', ' ').title()}s."

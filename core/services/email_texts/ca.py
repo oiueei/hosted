@@ -20,7 +20,6 @@ TEXTS = {
     "action_noun_SELL_THING": "de compra",
     "action_noun_LEND_THING": "de préstec",
     "action_noun_RENT_THING": "de lloguer",
-    "action_noun_SHARE_THING": "de traspàs",
     # Magic link
     "magic_subject": "Hola, et donem la benvinguda a OIUEEI!",
     "magic_subject_collection": "Hola, et donem la benvinguda a '{collection}' - OIUEEI!",
@@ -111,14 +110,6 @@ TEXTS = {
     ),
     "decision_plain": "La teva sol·licitud {action} de '{thing}' ha estat {decision}.",
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
-    # Booking auto-declined (someone else got it)
-    "unavailable_subject": "Algú ha arribat abans",
-    "unavailable_plain": (
-        "'{thing}' se n'ha anat amb una altra persona aquesta vegada. "
-        "No passa res — per aquí les coses van i venen, estigues pendent!"
-    ),
-    "unavailable_intro": "{thing} se n'ha anat amb una altra persona aquesta vegada.",
-    "unavailable_outro": "No passa res — per aquí les coses van i venen, estigues pendent!",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",
     "invite_rejected_plain": "{invitee} ha rebutjat la invitació a '{collection}'.",
@@ -179,11 +170,6 @@ TEXTS = {
     "digest_subject": "Novetats a {collection}",
     "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",
     "digest_intro": "Coses noves a {collection}:",
-    # Newsletter
-    "newsletter_subject": "Butlletí setmanal: {collection}",
-    "newsletter_intro": "Butlletí de {collection}:",
-    "newsletter_new_things": "Coses noves",
-    "newsletter_transfers": "Canvis de propietari",
 }
 
 # Frases de creixement que s'afegeixen als correus sortints (sobre el peu de

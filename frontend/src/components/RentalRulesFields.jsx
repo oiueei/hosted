@@ -15,7 +15,7 @@ import {
  * Extracted from CollectionForm so it can live inside the collection form's
  * "More options" accordion (O1) while the identity cluster stays visible. A
  * swap/share-only collection can't hold LEND/RENT things, so the pages render
- * this only when the share flag is off (they already know `isShare`).
+ * this for every collection.
  *
  * Controlled: value + setter owned by the page. `idPrefix` is
  * `create-collection` / `edit-collection`; `theeemeColor01` is the theeeme

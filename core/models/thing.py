@@ -23,7 +23,6 @@ class Thing(models.Model):
         SELL_THING = "SELL_THING", "Sell Thing"
         RENT_THING = "RENT_THING", "Rent Thing"
         LEND_THING = "LEND_THING", "Lend Thing"
-        SHARE_THING = "SHARE_THING", "Share Thing"
 
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"

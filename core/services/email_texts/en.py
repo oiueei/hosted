@@ -17,7 +17,6 @@ TEXTS = {
     "action_noun_SELL_THING": "purchase",
     "action_noun_LEND_THING": "loan",
     "action_noun_RENT_THING": "rental",
-    "action_noun_SHARE_THING": "transfer",
     # Magic link
     "magic_subject": "Hello, welcome to OIUEEI!",
     "magic_subject_collection": "Hello, welcome to '{collection}' - OIUEEI!",
@@ -107,14 +106,6 @@ TEXTS = {
     ),
     "decision_plain": "Your {action} request for '{thing}' has been {decision}.",
     "decision_intro": "Your {action} request has been {decision}:",
-    # Booking auto-declined (someone else got it)
-    "unavailable_subject": "Someone got there first",
-    "unavailable_plain": (
-        "'{thing}' went to someone else this time. "
-        "No worries — things come and go around here, so keep an eye out!"
-    ),
-    "unavailable_intro": "{thing} went to someone else this time.",
-    "unavailable_outro": "No worries — things come and go around here, so keep an eye out!",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",
     "invite_rejected_plain": "{invitee} has declined the invitation to '{collection}'.",
@@ -173,11 +164,6 @@ TEXTS = {
     "digest_subject": "What's new in {collection}",
     "digest_plain": "New things in {collection}:\n\n{things}\n\nView collection: {url}",
     "digest_intro": "New things in {collection}:",
-    # Newsletter
-    "newsletter_subject": "Weekly newsletter: {collection}",
-    "newsletter_intro": "Newsletter for {collection}:",
-    "newsletter_new_things": "New things",
-    "newsletter_transfers": "Ownership changes",
 }
 
 # Growth blurbs appended to outbound emails (above the preferences footer) to

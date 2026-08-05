@@ -147,24 +147,6 @@ describe('ThingLinkbox — guest reservation button', () => {
     );
   });
 
-  // NOTE: SHARE_THING is NOT in `needsPage` (only date-based LEND/RENT is),
-  // so the SHARE hold POSTs directly here — it does NOT navigate to
-  // RequestThingPage. This contradicts frontend/CLAUDE.md ("LEND/RENT/SHARE …
-  // navigate"), but matches the code today. Locked as-is; not a fix.
-  test('SHARE_THING holds via direct POST (does not navigate)', async () => {
-    const thing = makeThing({ type: 'SHARE_THING' });
-    renderLinkbox({ thing, userCode: 'GUEST1' });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Take' }));
-
-    await waitFor(() => {
-      expect(apiFetch).toHaveBeenCalledWith(
-        '/api/v1/things/THG001/request/',
-        expect.objectContaining({ method: 'POST' })
-      );
-    });
-    expect(screen.queryByTestId('navigated')).toBeNull();
-  });
 
   // An endless GIFT/SELL keeps circulating (bookingKeepsStatus) but has no
   // dates/items to pick, so its hold POSTs directly — it must NOT navigate to an
