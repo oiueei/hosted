@@ -69,6 +69,51 @@ describe('TooltipButton', () => {
     fireEvent.focusOut(wrapper);
     expect(screen.queryByText('Need help')).toBeNull();
   });
+
+  // WCAG 1.4.13 "dismissible": content shown on hover/focus must be dismissible
+  // without moving the pointer or the focus, or it can obscure the row beneath
+  // it with no way out for a keyboard user.
+  test('Escape dismisses the bubble but leaves focus on the button', () => {
+    render(
+      <TooltipButton tooltip="Need help">
+        <span>icon</span>
+      </TooltipButton>
+    );
+
+    const button = screen.getByRole('button', { name: 'Need help' });
+    const wrapper = button.parentElement;
+    fireEvent.focusIn(wrapper);
+    button.focus();
+    expect(screen.getByText('Need help')).toBeInTheDocument();
+
+    // Dispatched on document, not the wrapper: a mouse user reading the bubble
+    // usually has focus elsewhere, so that is the only listener that can serve
+    // both the pointer and the keyboard case.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByText('Need help')).toBeNull();
+    // Dismissing must not cost the user their place in the table.
+    expect(document.activeElement).toBe(button);
+
+    // The dismissal is per-reveal, not permanent: focusing away and back shows
+    // the label again, so Escape can't silently disable the affordance.
+    fireEvent.focusOut(wrapper);
+    fireEvent.focusIn(wrapper);
+    expect(screen.getByText('Need help')).toBeInTheDocument();
+  });
+
+  // The bubble repeats the button's own aria-label verbatim; exposing both would
+  // make a screen reader announce the label twice.
+  test('the bubble is hidden from assistive tech, leaving one accessible name', () => {
+    render(
+      <TooltipButton tooltip="Need help">
+        <span>icon</span>
+      </TooltipButton>
+    );
+
+    const wrapper = screen.getByRole('button', { name: 'Need help' }).parentElement;
+    fireEvent.focusIn(wrapper);
+    expect(screen.getByText('Need help')).toHaveAttribute('aria-hidden', 'true');
+  });
 });
 
 describe('ImageCarousel', () => {

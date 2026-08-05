@@ -623,6 +623,27 @@ div[class*="Linkbox-module_linkbox"] {
   margin-top: var(--spacing-s);
 }
 
+/* Icon-only action button whose label appears on hover/focus (TooltipButton).
+   The bubble deliberately keeps pointer events so WCAG 1.4.13 "hoverable" holds:
+   a pointer drifting up from the button onto the bubble must not dismiss it. */
+.tooltip-button {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-button-bubble {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background-color: var(--color-black-90);
+  color: var(--color-white);
+  font-size: var(--fontsize-body-s);
+  max-width: min(280px, 80vw);
+}
+
 /* Rental pickup/return weekday chips (#7) — a compact [L M X J V S D] toggle row
    for the collection form, in place of a dropdown. */
 .weekday-field-label {
