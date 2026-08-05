@@ -6,12 +6,18 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: mode === 'production' ? '/static/' : '/',
   build: {
-    // vendor-hds is ~575 kB raw but only ~152 kB gzipped (under our 200 kB-gz
+    // vendor-hds is ~614 kB raw but only ~159 kB gzipped (under our 200 kB-gz
     // bar) — it's the irreducible hds-react library, shared and long-cached.
     // Raising the limit keeps the build green; the per-language i18n locales are
     // now code-split (see src/i18n/index.js), so the remaining win (HDS v6
     // tree-shaking) is tracked separately.
-    chunkSizeWarningLimit: 600,
+    //
+    // The number is a tripwire, not a budget: it sits just above the current
+    // chunk so the next HDS minor that grows it materially says so out loud.
+    // Raise it deliberately, after checking the gzipped figure — that is the
+    // one that governs the 4G mid-range Android target in DESIGN §7. Bumped
+    // 600 → 650 on the 6.0.4 → 6.0.5 upgrade (585 → 614 kB raw).
+    chunkSizeWarningLimit: 650,
     rollupOptions: {
       output: {
         // Split the rarely-changing vendor libraries from app code so a page
