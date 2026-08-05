@@ -65,10 +65,8 @@ class Collection(models.Model):
     # over it. See email_service.resolve_email_language.
     language = models.CharField(max_length=2, choices=Language.choices, blank=True, default="")
     is_onboarding = models.BooleanField(default=False)
-    is_swap = models.BooleanField(default=False)
     is_share = models.BooleanField(default=False)
     newsletter_enabled = models.BooleanField(default=False)
-    swap_minimum_items = models.PositiveIntegerField(default=0)
     # Rental rules for LEND/RENT things in this collection (#7).
     # rental_durations: allowed rental lengths in DAYS (weeks are normalised to
     #   days, e.g. [1, 3, 7, 14]); the renter picks exactly one. Empty = no fixed

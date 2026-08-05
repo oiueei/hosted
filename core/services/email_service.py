@@ -120,8 +120,8 @@ def resolve_email_language(user=None, collection=None):
     Weakest to strongest: the **deployment default** (``EMAIL_LANGUAGE``), the
     **collection's** language (the owner's choice for their group), the
     **recipient's own** preference. Blank means "inherit", so a level only speaks
-    when it was actually set. Thing-scoped 1:1 emails (bookings, FAQs, swaps,
-    reminders) pass no collection — there is no group to speak for — so they are
+    when it was actually set. Thing-scoped 1:1 emails (bookings, FAQs, reminders)
+    pass no collection — there is no group to speak for — so they are
     the recipient's preference or the deployment default.
     """
     return (
@@ -449,10 +449,8 @@ def _action_noun(thing, lang=None):
     Mirrors the frontend's per-type vocabulary (``thingCard.action`` / ``types``)
     so a SELL request reads 'solicitud de compra' / 'purchase request', a LEND
     request 'solicitud de préstamo' / 'loan request', etc. Every bookable type
-    carries a noun — including SWAP: its request/confirmation emails have their
-    own dedicated templates, but ``send_booking_decision_email`` is shared with
-    swaps (``finalize_booking_decision`` runs for every booking type), so a
-    missing noun would be a KeyError mid-decision.
+    carries a noun — a missing one would be a KeyError mid-decision, after the
+    booking already committed.
     """
     return T(f"action_noun_{thing.type}", lang)
 
@@ -701,7 +699,7 @@ def send_booking_decision_email(booking, thing, accepted=True):
 def send_booking_unavailable_email(booking, thing):
     """Tell a requester their pending request can no longer be fulfilled.
 
-    Sent when the owner gave or swapped the thing to someone else, so this
+    Sent when the owner gave the thing to someone else, so this
     requester's PENDING booking was auto-declined. Warm, non-blaming tone.
     """
     user, lang = _recipient(booking.requester_email)
@@ -903,60 +901,6 @@ def send_return_reminder_email(requester_name, thing_headline, end_date, owner_e
     body = T("reminder_body").format(requester=requester_name, thing=headline, end=end_date)
     html = _render_email([_para(body)])
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
-
-
-def send_swap_request_email(
-    requester, thing, offered_things, owner_email, accept_link, reject_link
-):
-    """Send swap request email to owner with offered thing headlines."""
-    user, lang = _recipient(owner_email)
-    T, L = _texts(lang), _local(lang)
-    requester_name = requester.display_name
-    headline = L(thing.headline)
-    offered_headlines = [L(t.headline) for t in offered_things]
-    offered_names = ", ".join(offered_headlines)
-
-    subject = T("swap_request_subject")
-    plain = T("swap_request_plain").format(
-        requester=requester_name,
-        thing=headline,
-        offered=offered_names,
-        accept=accept_link,
-        reject=reject_link,
-    )
-    html = _render_email(
-        [
-            _para(T("swap_request_intro").format(requester=requester_name)),
-            _strong(headline),
-            _para(T("swap_exchange_label")),
-            _list(offered_headlines),
-            _links((accept_link, T("swap_confirm_cta")), (reject_link, T("swap_cancel_cta"))),
-        ]
-    )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
-
-
-def send_swap_confirmation_email(requester, thing, offered_things, booking):
-    """Send swap request confirmation to the requester."""
-    user, lang = _recipient(requester.email)
-    T, L = _texts(lang), _local(lang)
-    headline = L(thing.headline)
-    offered_headlines = [L(t.headline) for t in offered_things]
-    offered_names = ", ".join(offered_headlines)
-
-    subject = T("swap_conf_subject")
-    plain = T("swap_conf_plain").format(thing=headline, offered=offered_names)
-    html = _render_email(
-        [
-            _para(T("swap_conf_sent")),
-            _para(T("swap_conf_requested_label")),
-            _strong(headline),
-            _para(T("swap_conf_offered_label")),
-            _list(offered_headlines),
-            _para(T("swap_conf_outro")),
-        ]
-    )
-    _send(requester.email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
 # --- Category 3: News / broadcast ---------------------------------------------

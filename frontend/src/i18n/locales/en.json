@@ -215,8 +215,6 @@
     "bookingUnavailableBody": "{{thing_headline}} went to someone else this time — things come and go, so keep an eye out!",
     "bookingRequestedLabel": "New hold request",
     "bookingRequestedBody": "{{requester_name}} requested {{thing_headline}}.",
-    "swapRequestedLabel": "New swap proposal",
-    "swapRequestedBody": "{{requester_name}} proposed a swap for {{thing_headline}}.",
     "faqQuestionLabel": "New question",
     "faqQuestionBody": "{{questioner_name}} asked a question about {{thing_headline}}.",
     "faqAnsweredLabel": "Question answered",
@@ -329,8 +327,7 @@
       "SELL_THING": "Buy",
       "RENT_THING": "Rent",
       "LEND_THING": "Borrow",
-      "SHARE_THING": "Take",
-      "SWAP_THING": "Swap"
+      "SHARE_THING": "Take"
     }
   },
   "thingTags": {
@@ -462,7 +459,6 @@
     "allowedTypesLabel": "What can be added to this collection",
     "allowedTypesPlaceholder": "Pick one or more types",
     "allowedTypesHelper": "Pick at least one. Only the types you choose will be available when adding things later.",
-    "allowedTypesSwapHelper": "Swap mode only accepts swap things.",
     "allowedTypesShareHelper": "Share-only mode only accepts share things.",
     "allowedTypesAtLeastOne": "Pick at least one type.",
     "advancedTitle": "More options",
@@ -589,8 +585,7 @@
     "SELL_THING": "Sale",
     "RENT_THING": "Rental",
     "LEND_THING": "Lend",
-    "SHARE_THING": "Share",
-    "SWAP_THING": "Swap"
+    "SHARE_THING": "Share"
   },
   "typeInfo": {
     "title": "What each type means",
@@ -598,8 +593,7 @@
     "SELL_THING": "For sale at the price you set.",
     "RENT_THING": "Rented out for a fee, by dates.",
     "LEND_THING": "Borrowed for a few days, then returned.",
-    "SHARE_THING": "Accepting a request gives it to the requester — it keeps circulating in the group.",
-    "SWAP_THING": "Traded for another member's things — accepting exchanges ownership both ways."
+    "SHARE_THING": "Accepting a request gives it to the requester — it keeps circulating in the group."
   },
   "availability": {
     "IMMEDIATE": "Immediate",
@@ -627,7 +621,6 @@
     "journeyCount_other": "This item has travelled to {{count}} homes",
     "currentlyWith": "Currently with {{name}}",
     "lentOn": "Lent on {{date}}",
-    "swappedOn": "Swapped on {{date}}",
     "returnedOn": "Returned on {{date}}",
     "to": "to",
     "noTransfers": "No transfers yet.",
@@ -642,27 +635,7 @@
     "rentCount_one": "{{count}} rental",
     "rentCount_other": "{{count}} rentals",
     "shareCount_one": "{{count}} share",
-    "shareCount_other": "{{count}} shares",
-    "swapCount_one": "{{count}} swap",
-    "swapCount_other": "{{count}} swaps"
-  },
-  "swap": {
-    "offerItems": "Select items to offer",
-    "selectAtLeastOne": "Select at least one item to offer.",
-    "selectItems": "Choose your items to swap",
-    "noItemsToOffer": "You have no items to offer in this collection.",
-    "addItemToOffer": "Add one →",
-    "swapButton": "Propose swap",
-    "offeredItems": "Offered items",
-    "swapAccepted": "Swap completed! Items have been exchanged.",
-    "swapRejected": "Swap request declined.",
-    "enableSwap": "Enable item swapping",
-    "swapCollection": "Swap collection",
-    "requireMinimumLabel": "Require 3 items before swapping",
-    "requireMinimumHelper": "Guests (and you) must upload at least 3 of your own items to this collection before being allowed to propose a swap.",
-    "minimumNotMetLabel": "Upload more items first",
-    "minimumNotMetBody_one": "Upload {{count}} more item to this collection before you can propose a swap.",
-    "minimumNotMetBody_other": "Upload {{count}} more items to this collection before you can propose a swap."
+    "shareCount_other": "{{count}} shares"
   },
   "share": {
     "enableShare": "Exclusively SHARE things",

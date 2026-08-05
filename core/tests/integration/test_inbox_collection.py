@@ -57,8 +57,6 @@ def quiet_emails():
         patch("core.services.email_service.send_booking_confirmation_email"),
         patch("core.services.email_service.send_booking_decision_email"),
         patch("core.services.email_service.send_booking_unavailable_email"),
-        patch("core.services.email_service.send_swap_request_email"),
-        patch("core.services.email_service.send_swap_confirmation_email"),
     ):
         yield
 
@@ -68,7 +66,6 @@ def _request_notification(owner):
         user=owner,
         type__in=[
             InAppNotification.Type.BOOKING_REQUESTED,
-            InAppNotification.Type.SWAP_REQUESTED,
         ],
     )
 
@@ -113,33 +110,6 @@ def test_request_notification_uses_the_collection_it_was_made_through(
 
 
 @pytest.mark.django_db
-def test_swap_request_notification_carries_the_codes(db, owner, requester, quiet_emails):
-    collection = Collection.objects.create(
-        code="IOSW01", owner=owner, headline="Swaps", mode="COMMUNITY", is_swap=True
-    )
-    wanted = Thing.objects.create(
-        code="IOSW02", owner=owner, headline="Owner item", type="SWAP_THING"
-    )
-    offered = Thing.objects.create(
-        code="IOSW03", owner=requester, headline="Guest item", type="SWAP_THING"
-    )
-    collection.things.add(wanted, offered)
-    collection.invites.add(requester)
-
-    resp = _client(requester).post(
-        f"/api/v1/things/{wanted.code}/request/",
-        {"offered_thing_codes": [offered.code]},
-        format="json",
-    )
-
-    assert resp.status_code == status.HTTP_201_CREATED
-    notif = _request_notification(owner).get()
-    assert notif.type == InAppNotification.Type.SWAP_REQUESTED
-    assert notif.payload["booking_code"] == resp.data["booking_code"]
-    assert notif.payload["thing_code"] == wanted.code
-    assert notif.payload["collection_code"] == collection.code
-
-
 @pytest.mark.django_db
 def test_decision_notification_deep_links_the_thing_and_collection(
     owner, requester, gift_in_collection, quiet_emails

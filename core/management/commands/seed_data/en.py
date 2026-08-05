@@ -11,8 +11,8 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "headline": "Resistance is futile! Lele's circuit swap.",
-        "about": "## Lele's workshop ⚡\n\nA hands-on **electronics** tinkerer and component hoarder. My coliving runs on jumper wires and half-finished Arduinos. Spare Nano or a stray sensor? Pop it on the board and propose a swap. *Resistance is futile!*",
+        "headline": "Resistance is futile! Lele and her electronics.",
+        "about": "## Lele's workshop ⚡\n\nA hands-on **electronics** tinkerer and component hoarder. My coliving runs on jumper wires and half-finished Arduinos. I join in on whatever goes round the neighbourhood — if it lights up, I can fix it. *Resistance is futile!*",
     },
     {
         "code": "l1l13S",
@@ -46,11 +46,6 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "headline": "Lili's Lending – time to share our things!",
         "description": "Need a drill, steam cleaner, sturdy ladder, luggage scale or muffin mega-kit? Lili's lending library has your back – all for a token fee!",
-    },
-    {
-        "code": "L3L3C1",
-        "headline": "Lele's Circuit Swap – Resistance is futile!",
-        "description": "Lele's coliving runs on jumper wires and half-finished Arduino dreams. Got a spare Nano gathering dust? A sensor that wasn't quite the one? Pop it on the board, eye up what you fancy, propose a swap. Components only — no cash, no shame, no short circuits.",
     },
     {
         "code": "1u1uC1",
@@ -256,38 +251,6 @@ THINGS = [
     {
         "code": "La1a00",
         "headline": "Hey! Maybe a small ladder, anyone? The top shelf is winning! 🪜",
-    },
-    {
-        "code": "L3L301",
-        "headline": "Grove Shield for Arduino Nano v1.1 (Seeed Studio)",
-    },
-    {
-        "code": "L3L302",
-        "headline": "Grove - Laser PM2.5 Dust Sensor (HM3301)",
-    },
-    {
-        "code": "L3L303",
-        "headline": "MB102 Breadboard Power Supply Module (HW-131)",
-    },
-    {
-        "code": "L3L304",
-        "headline": "Arduino Nano Screw Terminal Adapter",
-    },
-    {
-        "code": "L3L305",
-        "headline": "Arduino Nano 33 BLE",
-    },
-    {
-        "code": "L3L306",
-        "headline": "CCS811 Indoor Air Quality Sensor",
-    },
-    {
-        "code": "L3L307",
-        "headline": "Grove's: Temperature & Humidity, Water, Sound, UV, Air",
-    },
-    {
-        "code": "L3L308",
-        "headline": "DFRobot Analogue UV Sensor V2 (Gravity)",
     },
 ]
 

@@ -167,10 +167,6 @@ def accept_booking(booking):
     For SHARE_THING: transfers ownership to the requester. The thing stays
     ACTIVE so the new owner can continue sharing it.
 
-    For SWAP_THING: bilateral ownership transfer — requested thing goes to
-    requester, all offered things go to the original owner. All things stay
-    ACTIVE. ThingTransfer records are created for each transfer.
-
     The booking row is locked and re-read FIRST, then its PENDING status is
     re-checked under the lock, so a concurrent double-accept (owner double
     click, or email link racing the in-app action) cannot run the transfer /
@@ -178,56 +174,20 @@ def accept_booking(booking):
     get_or_create for idempotency, backed by the (booking, thing) unique
     constraint.
 
-    A SWAP takes every Thing row it touches in one PK-ordered lock, so two
-    crossed swaps can't deadlock against each other — see the comment inline.
-
     Returns the Thing on success, or None if the booking was no longer PENDING.
     """
     with transaction.atomic():
         booking = BookingPeriod.objects.select_for_update().get(code=booking.code)
         if booking.status != BookingPeriod.Status.PENDING:
             return None
-        offered_things = None
-        if booking.thing_type == Thing.Type.SWAP_THING:
-            # A swap is the one accept that locks several Thing rows, so it is the
-            # one that can deadlock: two owners accepting *crossed* swaps (A asks
-            # for X offering Y while B asks for Y offering X) would take X→Y and
-            # Y→X and wait on each other until PostgreSQL aborts one. Locking every
-            # row involved in ONE query ordered by PK gives both transactions the
-            # same order, so the second simply waits its turn.
-            offered_codes = list(booking.offered_things.values_list("code", flat=True))
-            locked = {
-                t.code: t
-                for t in Thing.objects.select_for_update()
-                .filter(code__in=[booking.thing_code_id, *offered_codes])
-                .order_by("code")
-            }
-            thing = locked[booking.thing_code_id]
-            offered_things = [locked[code] for code in offered_codes]
-        else:
-            thing = Thing.objects.select_for_update().get(code=booking.thing_code_id)
-        # Ownership re-validation for ownership-transferring types (SHARE/SWAP):
-        # the booking snapshots owner_code at request time. If an earlier accepted
-        # booking already transferred the thing away, this one is stale — bail out
-        # like an already-processed booking so a second accept can never transfer
-        # from a no-longer-owner (the row lock above serialises concurrent accepts).
-        if (
-            booking.thing_type in (Thing.Type.SHARE_THING, Thing.Type.SWAP_THING)
-            and thing.owner_id != booking.owner_code_id
-        ):
+        thing = Thing.objects.select_for_update().get(code=booking.thing_code_id)
+        # Ownership re-validation for SHARE_THING: the booking snapshots owner_code
+        # at request time. If an earlier accepted booking already transferred the
+        # thing away, this one is stale — bail out like an already-processed booking
+        # so a second accept can never transfer from a no-longer-owner (the row lock
+        # above serialises concurrent accepts).
+        if booking.thing_type == Thing.Type.SHARE_THING and thing.owner_id != booking.owner_code_id:
             return None
-        # A SWAP snapshots the offered things at request time too. Re-validate them
-        # under the lock (taken above) before any mutation: an offered thing already
-        # handed off by an earlier accepted swap (or since deactivated) makes this
-        # booking stale — bail out like an already-processed booking so the same item
-        # can never be transferred twice (stolen from the recipient it first went to).
-        if booking.thing_type == Thing.Type.SWAP_THING:
-            for offered in offered_things:
-                if (
-                    offered.owner_id != booking.requester_code_id
-                    or offered.status != Thing.Status.ACTIVE
-                ):
-                    return None
         booking.accept()
         if booking.thing_type in SINGLE_USE_TYPES:
             if not thing.is_endless:
@@ -237,23 +197,6 @@ def accept_booking(booking):
         elif booking.thing_type == Thing.Type.SHARE_THING:
             thing.owner = booking.requester_code
             thing.save(update_fields=["owner"])
-        elif booking.thing_type == Thing.Type.SWAP_THING:
-            # Requested thing → requester
-            thing.owner = booking.requester_code
-            thing.save(update_fields=["owner"])
-            # Offered things → original owner (already locked + validated above)
-            for offered in offered_things:
-                ThingTransfer.objects.get_or_create(
-                    thing=offered,
-                    booking=booking,
-                    defaults={
-                        "from_user": booking.requester_code,
-                        "to_user": booking.owner_code,
-                        "lent_date": date.today(),
-                    },
-                )
-                offered.owner = booking.owner_code
-                offered.save(update_fields=["owner"])
 
         # Record the transfer (item changing hands) — skip for endless things
         if not thing.is_endless:
@@ -303,7 +246,7 @@ def _delete_booking_rsvps(booking_code):
 def _clear_request_notifications(booking):
     """Drop the owner's "someone asked for this" notification once the request is settled.
 
-    A BOOKING_REQUESTED / SWAP_REQUESTED notification is a question put to the owner:
+    A BOOKING_REQUESTED notification is a question put to the owner:
     accept or reject? Accept, reject, auto-decline and requester-cancel all answer it,
     so leaving it in the inbox asks for a decision that no longer exists — the owner
     reads it as still pending and can't tell the stale ones from the live ones.
@@ -313,10 +256,7 @@ def _clear_request_notifications(booking):
     """
     InAppNotification.objects.filter(
         user=booking.owner_code,
-        type__in=[
-            InAppNotification.Type.BOOKING_REQUESTED,
-            InAppNotification.Type.SWAP_REQUESTED,
-        ],
+        type=InAppNotification.Type.BOOKING_REQUESTED,
         payload__booking_code=booking.code,
     ).delete()
 
@@ -324,8 +264,8 @@ def _clear_request_notifications(booking):
 def _decline_conflicting_siblings(booking):
     """Reject other PENDING bookings for the same, now-transferred, thing.
 
-    Only meaningful for ownership-transferring types (SHARE/SWAP): once the thing
-    has changed hands, any other pending request for it can no longer be fulfilled.
+    Only meaningful for SHARE_THING: once the thing has changed hands, any other
+    pending request for it can no longer be fulfilled.
     Returns the list of bookings actually declined so the caller can notify each
     requester. Each rejection is race-safe — reject_booking re-checks the PENDING
     status under a row lock and no-ops (returns None) on anything already handled.
@@ -345,8 +285,8 @@ def finalize_booking_decision(booking, accepted):
     Wraps accept_booking()/reject_booking() (which perform the locked, race-safe
     status transition) and, on success, notifies the requester (in-app + email)
     and invalidates the booking's outstanding accept/reject RSVP links. On accept
-    of an ownership-transferring type (SHARE/SWAP), every other pending request
-    for the same thing can no longer be fulfilled, so each is auto-declined and
+    of a SHARE_THING, every other pending request for the same thing can no
+    longer be fulfilled, so each is auto-declined and
     its requester is told warmly (their RSVP links are invalidated too). Shared by
     the email/RSVP path (VerifyLinkView) and the in-app API path
     (BookingActionView) so this money/ownership-sensitive sequence lives in one
@@ -397,7 +337,7 @@ def finalize_booking_decision(booking, accepted):
         )
     _delete_booking_rsvps(booking.code)
 
-    if accepted and booking.thing_type in (Thing.Type.SHARE_THING, Thing.Type.SWAP_THING):
+    if accepted and booking.thing_type == Thing.Type.SHARE_THING:
         for sibling in _decline_conflicting_siblings(booking):
             InAppNotification.objects.create(
                 user=sibling.requester_code,
@@ -562,69 +502,6 @@ def request_standard_booking(thing, requester, owner_email, collection_code=None
     return booking
 
 
-def request_swap_booking(thing, requester, owner_email, offered_codes):
-    """SWAP_THING — requester offers their own things in exchange.
-
-    Returns ``(booking, offered_things)`` so the view can echo the resolved
-    offered codes in its response.
-    """
-    # Find the collection this thing belongs to
-    thing_collection = thing.collections.filter(is_swap=True).first()
-    if not thing_collection:
-        raise BookingRequestError("Thing is not in a swap collection")
-
-    # Enforce per-collection minimum: requester must already have N of their own
-    # SWAP_THINGs (ACTIVE/TAKEN) in this collection before they can ask for a
-    # swap. Backstops the frontend gating in ThingLinkbox/ThingPage.
-    minimum = thing_collection.swap_minimum_items
-    if minimum > 0:
-        own_count = Thing.objects.filter(
-            owner=requester,
-            type=Thing.Type.SWAP_THING,
-            status__in=(Thing.Status.ACTIVE, Thing.Status.TAKEN),
-            collections=thing_collection,
-        ).count()
-        if own_count < minimum:
-            raise BookingRequestError(
-                f"You need to upload at least {minimum} item(s) to this collection"
-                " before you can propose a swap."
-            )
-
-    # Validate all offered things
-    offered_things = []
-    for code in offered_codes:
-        try:
-            offered = Thing.objects.get(code=code)
-        except Thing.DoesNotExist:
-            raise BookingRequestError(f"Offered thing {code} not found") from None
-        if offered.type != Thing.Type.SWAP_THING:
-            raise BookingRequestError(f"Offered thing {code} is not a swap thing")
-        if not offered.is_owner(requester.code):
-            raise BookingRequestError(f"You do not own offered thing {code}")
-        if offered.status != Thing.Status.ACTIVE:
-            raise BookingRequestError(f"Offered thing {code} is not active")
-        if not offered.collections.filter(code=thing_collection.code).exists():
-            raise BookingRequestError(f"Offered thing {code} is not in the same collection")
-        offered_things.append(offered)
-
-    with transaction.atomic():
-        Thing.objects.select_for_update().get(code=thing.code)
-
-        booking = BookingPeriod.objects.create(
-            thing_code=thing,
-            thing_type=thing.type,
-            requester_code=requester,
-            requester_email=requester.email,
-            owner_code=thing.owner,
-        )
-        booking.offered_things.set(offered_things)
-
-    send_swap_request_notifications(
-        requester, thing, offered_things, booking, owner_email, thing_collection
-    )
-    return booking, offered_things
-
-
 def send_booking_request_notifications(
     requester, thing, booking, owner_email, collection_code=None
 ):
@@ -649,46 +526,6 @@ def send_booking_request_notifications(
             "requester_name": requester.display_name,
             # The codes let the inbox deep-link the request, show it on its own
             # collection's page, and drop it once the owner has decided.
-            "booking_code": booking.code,
-            "thing_code": thing.code,
-            "collection_code": collection.code if collection else "",
-        },
-    )
-    Event.log(
-        Event.Kind.HOLD_REQUESTED,
-        actor=requester,
-        thing=thing,
-        thing_type=booking.thing_type,
-    )
-
-
-def send_swap_request_notifications(
-    requester, thing, offered_things, booking, owner_email, collection=None
-):
-    """Fan out a swap request (as send_booking_request_notifications, with the
-    offered things listed to the owner). The swap collection is already resolved by
-    the caller — a swap only exists inside one."""
-    from core.services.email_service import (
-        send_swap_confirmation_email,
-        send_swap_request_email,
-    )
-
-    rsvp_accept, rsvp_reject = RSVP.create_booking_pair(booking, owner_email)
-    send_swap_request_email(
-        requester,
-        thing,
-        offered_things,
-        owner_email,
-        rsvp_accept.action_link(),
-        rsvp_reject.action_link(),
-    )
-    send_swap_confirmation_email(requester, thing, offered_things, booking)
-    InAppNotification.objects.create(
-        user=thing.owner,
-        type=InAppNotification.Type.SWAP_REQUESTED,
-        payload={
-            "thing_headline": thing.headline,
-            "requester_name": requester.display_name,
             "booking_code": booking.code,
             "thing_code": thing.code,
             "collection_code": collection.code if collection else "",

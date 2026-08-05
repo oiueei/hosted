@@ -12,16 +12,12 @@ TEXTS = {
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
     # thingCard.action / types vocabulary so a SELL request reads "purchase
-    # request", a LEND request "loan request", etc. SWAP's request/confirmation
-    # emails have their own dedicated templates, but the decision email
-    # (send_booking_decision_email) is shared and interpolates {action} for
-    # swaps too, so SWAP needs a noun as well.
+    # request", a LEND request "loan request", etc.
     "action_noun_GIFT_THING": "gift",
     "action_noun_SELL_THING": "purchase",
     "action_noun_LEND_THING": "loan",
     "action_noun_RENT_THING": "rental",
     "action_noun_SHARE_THING": "transfer",
-    "action_noun_SWAP_THING": "swap",
     # Magic link
     "magic_subject": "Hello, welcome to OIUEEI!",
     "magic_subject_collection": "Hello, welcome to '{collection}' - OIUEEI!",
@@ -173,26 +169,6 @@ TEXTS = {
     "reminder_subject": "Reminder: a hold ends tomorrow",
     "reminder_plain": "Reminder: {requester}'s hold on '{thing}' ends {end}.",
     "reminder_body": "Reminder: {requester}'s hold on {thing} ends {end}.",
-    # Swap request (to owner)
-    "swap_request_subject": "You have a swap request",
-    "swap_request_plain": (
-        "{requester} wants to swap '{thing}' for: {offered}. "
-        "Confirm swap: {accept} | Cancel swap: {reject}"
-    ),
-    "swap_request_intro": "{requester} wants to swap:",
-    "swap_exchange_label": "In exchange for:",
-    "swap_confirm_cta": "Confirm swap",
-    "swap_cancel_cta": "Cancel swap",
-    # Swap confirmation (to requester)
-    "swap_conf_subject": "Swap request sent",
-    "swap_conf_plain": (
-        "Your swap request for '{thing}' (offering: {offered}) has been sent. "
-        "The owner will get back to you soon."
-    ),
-    "swap_conf_sent": "Your swap request has been sent!",
-    "swap_conf_requested_label": "You requested:",
-    "swap_conf_offered_label": "You offered:",
-    "swap_conf_outro": "The owner will get back to you soon.",
     # Digest
     "digest_subject": "What's new in {collection}",
     "digest_plain": "New things in {collection}:\n\n{things}\n\nView collection: {url}",

@@ -46,12 +46,10 @@ class ThingCalendarView(APIView):
 
         # Owner sees full details; guests see only dates and status.
         if thing.is_owner(viewer_code(request)):
-            # The owner serializer reads requester_code.name and the swap offers
-            # per period — pull both in up front so the calendar stays a fixed
-            # number of queries regardless of how many bookings it lists.
-            blocked_periods = blocked_periods.select_related("requester_code").prefetch_related(
-                "offered_things"
-            )
+            # The owner serializer reads requester_code.name per period — pull it
+            # in up front so the calendar stays a fixed number of queries
+            # regardless of how many bookings it lists.
+            blocked_periods = blocked_periods.select_related("requester_code")
             serializer = BookingPeriodOwnerCalendarSerializer(blocked_periods, many=True)
         else:
             serializer = BookingPeriodCalendarSerializer(blocked_periods, many=True)
@@ -73,7 +71,6 @@ class MyBookingsView(ListAPIView):
         return (
             BookingPeriod.objects.filter(requester_code=self.request.user)
             .select_related("thing_code", "owner_code")
-            .prefetch_related("offered_things")
             .order_by("-created")
         )
 
@@ -92,7 +89,6 @@ class OwnerBookingsView(ListAPIView):
         return (
             BookingPeriod.objects.filter(owner_code=self.request.user)
             .select_related("thing_code", "requester_code")
-            .prefetch_related("offered_things")
             .order_by("-created")
         )
 

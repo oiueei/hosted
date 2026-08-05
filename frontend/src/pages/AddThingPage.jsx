@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES, SHARE_TYPE, SWAP_TYPE } from '../constants/things';
+import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES, SHARE_TYPE } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -31,7 +31,6 @@ export default function AddThingPage() {
 
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const [collectionMode, setCollectionMode] = useState('');
-  const [isSwapCollection, setIsSwapCollection] = useState(false);
   const [isShareCollection, setIsShareCollection] = useState(false);
   const [type, setType] = useState('GIFT_THING');
   const [headline, setHeadline] = useState('');
@@ -58,10 +57,6 @@ export default function AddThingPage() {
       .then((data) => {
         setCollectionHeadline(data.headline || '');
         setCollectionMode(data.mode || '');
-        if (data.is_swap) {
-          setIsSwapCollection(true);
-          setType('SWAP_THING');
-        }
         if (data.is_share) {
           setIsShareCollection(true);
           setType('SHARE_THING');
@@ -148,11 +143,9 @@ export default function AddThingPage() {
   const { tc, btnStyle } = useTheeeme();
 
   const typeOptions = (() => {
-    // Swap-only / share-only collections force their single offer type.
-    if (isSwapCollection) return [SWAP_TYPE];
+    // A share-only collection forces its single offer type.
     if (isShareCollection) return [SHARE_TYPE];
     return TYPE_VALUES.filter((v) => {
-      if (v === SWAP_TYPE) return false;
       if (v === SHARE_TYPE && collectionMode !== 'COMMUNITY') return false;
       // Per-collection allowlist (set on Create/Edit). Empty = no restriction.
       if (collectionAllowedTypes.length > 0 && !collectionAllowedTypes.includes(v)) return false;

@@ -27,9 +27,6 @@ export default function OwnerBookingsList({ bookings, activePendingCode, isOwner
             {b.start_date && b.end_date && (
               <>{new Date(b.start_date).toLocaleDateString(i18n.language)} – {new Date(b.end_date).toLocaleDateString(i18n.language)}</>
             )}
-            {b.offered_thing_headlines && b.offered_thing_headlines.length > 0 && (
-              <><br />{t('swap.offeredItems')}: {b.offered_thing_headlines.map(L).join(', ')}</>
-            )}
             {' '}
             <span style={{ color: b.status === 'ACCEPTED' ? 'var(--color-success)' : 'var(--color-alert-dark)' }}>
               ({b.status === 'ACCEPTED' ? t('thingCard.confirmed') : t('thingCard.pending')}){showStar ? ' *' : ''}

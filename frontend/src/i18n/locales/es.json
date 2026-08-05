@@ -197,8 +197,6 @@
     "bookingUnavailableBody": "{{thing_headline}} fue para otra persona esta vez — las cosas van y vienen, ¡mantente atento!",
     "bookingRequestedLabel": "Nueva solicitud de reserva",
     "bookingRequestedBody": "{{requester_name}} ha solicitado {{thing_headline}}.",
-    "swapRequestedLabel": "Nueva propuesta de intercambio",
-    "swapRequestedBody": "{{requester_name}} ha propuesto un intercambio por {{thing_headline}}.",
     "faqQuestionLabel": "Nueva pregunta",
     "faqQuestionBody": "{{questioner_name}} ha hecho una pregunta sobre {{thing_headline}}.",
     "faqAnsweredLabel": "Pregunta respondida",
@@ -311,8 +309,7 @@
       "SELL_THING": "Comprar",
       "RENT_THING": "Alquilar",
       "LEND_THING": "Tomar prestado",
-      "SHARE_THING": "Quedármelo",
-      "SWAP_THING": "Intercambiar"
+      "SHARE_THING": "Quedármelo"
     }
   },
   "thingTags": {
@@ -444,7 +441,6 @@
     "allowedTypesLabel": "Qué se puede añadir a esta colección",
     "allowedTypesPlaceholder": "Elige uno o más tipos",
     "allowedTypesHelper": "Elige al menos uno. Solo estarán disponibles los tipos que selecciones cuando añadas cosas.",
-    "allowedTypesSwapHelper": "El modo intercambio solo permite cosas del tipo intercambio.",
     "allowedTypesShareHelper": "El modo exclusivamente share solo permite cosas del tipo share.",
     "allowedTypesAtLeastOne": "Elige al menos un tipo.",
     "advancedTitle": "Más opciones",
@@ -571,8 +567,7 @@
     "SELL_THING": "Venta",
     "RENT_THING": "Alquiler",
     "LEND_THING": "Préstamo",
-    "SHARE_THING": "Compartir",
-    "SWAP_THING": "Intercambio"
+    "SHARE_THING": "Compartir"
   },
   "typeInfo": {
     "title": "Qué significa cada tipo",
@@ -580,8 +575,7 @@
     "SELL_THING": "En venta al precio que pongas.",
     "RENT_THING": "Se alquila por días, con precio.",
     "LEND_THING": "Se presta unos días y vuelve.",
-    "SHARE_THING": "Al aceptar una petición pasa a ser de quien lo pidió — y sigue circulando en el grupo.",
-    "SWAP_THING": "Se intercambia por cosas de otro miembro — al aceptar, la propiedad cambia en ambos sentidos."
+    "SHARE_THING": "Al aceptar una petición pasa a ser de quien lo pidió — y sigue circulando en el grupo."
   },
   "availability": {
     "IMMEDIATE": "Inmediata",
@@ -609,7 +603,6 @@
     "journeyCount_other": "Este objeto ha viajado a {{count}} hogares",
     "currentlyWith": "Actualmente con {{name}}",
     "lentOn": "Prestado el {{date}}",
-    "swappedOn": "Intercambiado el {{date}}",
     "returnedOn": "Devuelto el {{date}}",
     "to": "a",
     "noTransfers": "Sin transferencias aún.",
@@ -624,27 +617,7 @@
     "rentCount_one": "{{count}} alquiler",
     "rentCount_other": "{{count}} alquileres",
     "shareCount_one": "{{count}} vez compartido",
-    "shareCount_other": "{{count}} veces compartido",
-    "swapCount_one": "{{count}} intercambio",
-    "swapCount_other": "{{count}} intercambios"
-  },
-  "swap": {
-    "offerItems": "Seleccionar artículos a ofrecer",
-    "selectAtLeastOne": "Elige al menos un artículo para ofrecer.",
-    "selectItems": "Elige tus artículos para intercambiar",
-    "noItemsToOffer": "No tienes artículos para ofrecer en esta colección.",
-    "addItemToOffer": "Añade uno →",
-    "swapButton": "Proponer intercambio",
-    "offeredItems": "Artículos ofrecidos",
-    "swapAccepted": "¡Intercambio completado! Los artículos han sido intercambiados.",
-    "swapRejected": "Solicitud de intercambio rechazada.",
-    "enableSwap": "Activar intercambio de artículos",
-    "swapCollection": "Colección de intercambio",
-    "minimumNotMetBody_one": "Sube {{count}} artículo más a esta colección antes de poder proponer un intercambio.",
-    "minimumNotMetBody_other": "Sube {{count}} artículos más a esta colección antes de poder proponer un intercambio.",
-    "minimumNotMetLabel": "Sube más artículos primero",
-    "requireMinimumHelper": "Los invitados (y tú) debéis subir al menos 3 artículos propios a esta colección antes de poder proponer un intercambio.",
-    "requireMinimumLabel": "Exigir 3 artículos antes de intercambiar"
+    "shareCount_other": "{{count}} veces compartido"
   },
   "share": {
     "enableShare": "Exclusivamente cosas tipo SHARE",

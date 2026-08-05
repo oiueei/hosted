@@ -69,10 +69,9 @@ beforeEach(() => {
 // CreateCollectionPage — mode-gated toggles + submit
 // ════════════════════════════════════════════════════════════════════════
 describe('CreateCollectionPage', () => {
-  test('PROPRIETARY (default): swap/share hidden, types not locked', () => {
+  test('PROPRIETARY (default): share hidden, types not locked', () => {
     const { container } = renderCreate();
 
-    expect(screen.queryByRole('button', { name: 'Enable item swapping' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Exclusively SHARE things' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Album mode/ })).toBeNull();
     expect(container.querySelector('.multiselect-locked')).toBeNull();
@@ -92,31 +91,9 @@ describe('CreateCollectionPage', () => {
   test('selecting the Community mode radio reveals the COMMUNITY toggles', () => {
     renderCreate();
 
-    expect(screen.queryByRole('button', { name: 'Enable item swapping' })).toBeNull();
     fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
-    expect(screen.getByRole('button', { name: 'Enable item swapping' })).toBeInTheDocument();
   });
 
-  // Enabling swap in COMMUNITY locks the allowed-types select to a single
-  // auto-filled value, which lets submit pass validation without driving the
-  // (jsdom-fiddly) multi-select. We use this to exercise the POST payload.
-  test('swap toggle locks the type select and submit POSTs the payload', async () => {
-    const { container } = renderCreate();
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enable item swapping' }));
-    expect(container.querySelector('.multiselect-locked')).toBeTruthy();
-
-    fireEvent.change(container.querySelector('#create-collection-headline'), { target: { value: 'My Swap' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
-    await waitFor(() => {
-      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/collections/' && c[1]?.method === 'POST');
-      expect(call).toBeTruthy();
-      const body = JSON.parse(call[1].body);
-      expect(body).toMatchObject({ headline: 'My Swap', mode: 'COMMUNITY', is_swap: true });
-    });
-  });
 
   // O1: the optional fields (thumbnail, welcome doc, tags, language, rental rules)
   // fold into a "More options" accordion, closed on load, so the happy path is
@@ -133,52 +110,6 @@ describe('CreateCollectionPage', () => {
 
     await waitFor(() => expect(thumb()).toBeVisible());
     expect(container.querySelector('#create-collection-welcome-doc')).toBeVisible();
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════════
-// EditCollectionPage — COMMUNITY toggles, mutual exclusivity, lock, pause
-// ════════════════════════════════════════════════════════════════════════
-describe('EditCollectionPage — COMMUNITY toggles', () => {
-  test('COMMUNITY reveals swap + share; require-min hidden when swap off', async () => {
-    renderEdit({ headline: 'Comm', mode: 'COMMUNITY', is_swap: false, is_share: false });
-
-    expect(await screen.findByRole('button', { name: 'Enable item swapping' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Exclusively SHARE things' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Album mode/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Require 3 items/ })).toBeNull();
-  });
-
-  test('swap and share are mutually exclusive', async () => {
-    renderEdit({ headline: 'Comm', mode: 'COMMUNITY', is_swap: true, is_share: false });
-
-    const swap = await screen.findByRole('button', { name: 'Enable item swapping' });
-    const share = screen.getByRole('button', { name: 'Exclusively SHARE things' });
-    expect(swap).toHaveAttribute('aria-pressed', 'true');
-    expect(share).toHaveAttribute('aria-pressed', 'false');
-    // Require-3-items rides on swap, so it is visible here.
-    expect(screen.getByRole('button', { name: /Require 3 items/ })).toBeInTheDocument();
-
-    // Turning share ON clears swap (and the swap-only minimum-items toggle).
-    fireEvent.click(share);
-    await waitFor(() => expect(share).toHaveAttribute('aria-pressed', 'true'));
-    expect(swap).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.queryByRole('button', { name: /Require 3 items/ })).toBeNull();
-  });
-
-  test('toggling swap on reveals require-min and locks the allowed-types select', async () => {
-    const { container } = renderEdit({ headline: 'Comm', mode: 'COMMUNITY', is_swap: false, is_share: false });
-
-    const swap = await screen.findByRole('button', { name: 'Enable item swapping' });
-    expect(container.querySelector('.multiselect-locked')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Require 3 items/ })).toBeNull();
-
-    fireEvent.click(swap);
-
-    // NOTE: the allowed_thing_types reset to ['SWAP_THING'] is internal state; we
-    // lock its visible consequence — the multi-select becomes locked/disabled.
-    await waitFor(() => expect(container.querySelector('.multiselect-locked')).toBeTruthy());
-    expect(screen.getByRole('button', { name: /Require 3 items/ })).toBeInTheDocument();
   });
 });
 
@@ -262,10 +193,4 @@ describe('reconcileAllowedTypes', () => {
     )).toEqual(['GIFT_THING']);
   });
 
-  test('a locked combination (swap) snaps to its forced single type', () => {
-    expect(reconcileAllowedTypes(
-      ['GIFT_THING', 'SELL_THING'],
-      { mode: 'COMMUNITY', isSwap: true, isShare: false },
-    )).toEqual(['SWAP_THING']);
-  });
 });

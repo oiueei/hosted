@@ -47,8 +47,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
     canDelete,
     acceptTransfersOwnership,
     showButton,
-    swapMinimumNotMet,
-    swapItemsMissing,
     buttonDisabled,
     loginButtonDisabled,
     buttonLabel,
@@ -133,7 +131,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
                 thing.type === 'LEND_THING' ? 'lendCount' :
                 thing.type === 'RENT_THING' ? 'rentCount' :
                 thing.type === 'SHARE_THING' ? 'shareCount' :
-                thing.type === 'SWAP_THING' ? 'swapCount' :
                 'changesCount'
               }`, { count: thing.transfer_count })}</span>
             </div>
@@ -235,16 +232,6 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
             >
               {buttonLabel}
             </Button>
-          )}
-          {showButton && swapMinimumNotMet && !loginToAct && (
-            <Notification
-              type="info"
-              label={t('swap.minimumNotMetLabel')}
-              size="small"
-              style={{ marginTop: 'var(--spacing-2-xs)' }}
-            >
-              {t('swap.minimumNotMetBody', { count: swapItemsMissing })}
-            </Notification>
           )}
           {isCollectionOwner && !isOwner && (
             <Button

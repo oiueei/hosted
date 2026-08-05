@@ -17,17 +17,14 @@ from core.validators import (
 )
 
 # Thing types valid for proprietary collections (excludes COMMUNITY-only
-# SHARE_THING and the SWAP_THING which is gated by is_swap on COMMUNITY
-# collections).
+# SHARE_THING).
 PROPRIETARY_THING_TYPES = (
     Thing.Type.GIFT_THING,
     Thing.Type.SELL_THING,
     Thing.Type.RENT_THING,
     Thing.Type.LEND_THING,
 )
-# Thing types valid for community collections without is_swap/is_share flags.
-# SWAP_THING is excluded because it requires is_swap=True (which forces a
-# single-type collection and bypasses the allowlist entirely).
+# Thing types valid for community collections without the is_share flag.
 COMMUNITY_THING_TYPES = (
     Thing.Type.GIFT_THING,
     Thing.Type.SELL_THING,
@@ -42,8 +39,6 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
 
     owner = serializers.CharField(source="owner_id")
     thumbnail_url = serializers.SerializerMethodField()
-    collection_swap_minimum_items = serializers.SerializerMethodField()
-    my_swap_count_in_collection = serializers.SerializerMethodField()
     deal = serializers.SlugRelatedField(slug_field="code", many=True, read_only=True)
 
     class Meta:
@@ -69,23 +64,12 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
             "my_pending_booking",
             "pending_questions",
             "transfer_count",
-            "collection_swap_minimum_items",
-            "my_swap_count_in_collection",
             "deal",
             "created",
         ]
 
     def get_thumbnail_url(self, obj):
         return cloudinary_url(obj.thumbnail) if obj.thumbnail else None
-
-    def get_collection_swap_minimum_items(self, obj):
-        parent = self.context.get("parent_collection")
-        return parent.swap_minimum_items if parent else 0
-
-    def get_my_swap_count_in_collection(self, obj):
-        # Pre-computed once at the parent CollectionSerializer level — same
-        # value for every thing in this collection, so we avoid N queries.
-        return self.context.get("my_swap_count_in_collection", 0)
 
 
 class CollectionListSerializer(serializers.ListSerializer):
@@ -145,10 +129,8 @@ class CollectionSerializer(serializers.ModelSerializer):
             "visibility",
             "digest_frequency",
             "language",
-            "is_swap",
             "is_share",
             "newsletter_enabled",
-            "swap_minimum_items",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -189,13 +171,6 @@ class CollectionSerializer(serializers.ModelSerializer):
     def get_things(self, obj):
         request = self.context.get("request")
         ctx = {**self.context, "parent_collection": obj}
-        if request and request.user.is_authenticated and obj.is_swap:
-            ctx["my_swap_count_in_collection"] = Thing.objects.filter(
-                owner=request.user,
-                type=Thing.Type.SWAP_THING,
-                status__in=(Thing.Status.ACTIVE, Thing.Status.TAKEN),
-                collections=obj,
-            ).count()
         is_owner = bool(
             request and request.user.is_authenticated and obj.is_owner(request.user.code)
         )
@@ -299,10 +274,8 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "visibility",
             "digest_frequency",
             "language",
-            "is_swap",
             "is_share",
             "newsletter_enabled",
-            "swap_minimum_items",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -333,10 +306,8 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             )
         _validate_collection_flags(
             mode=attrs.get("mode", Collection.Mode.PROPRIETARY),
-            is_swap=attrs.get("is_swap", False),
             is_share=attrs.get("is_share", False),
             newsletter_enabled=attrs.get("newsletter_enabled", False),
-            swap_minimum_items=attrs.get("swap_minimum_items", 0),
             allowed_thing_types=attrs.get("allowed_thing_types", []),
         )
         return attrs
@@ -364,7 +335,7 @@ def _normalize_tags(tags):
     return result
 
 
-def _validate_allowed_thing_types(mode, is_swap, is_share, allowed_thing_types):
+def _validate_allowed_thing_types(mode, is_share, allowed_thing_types):
     """Validate the allowed_thing_types list when non-empty.
 
     Empty list means "no restriction" — accepted in any mode (preserves the
@@ -373,22 +344,13 @@ def _validate_allowed_thing_types(mode, is_swap, is_share, allowed_thing_types):
     form on the frontend, where it belongs as a UX nudge.
 
     When non-empty:
-    - is_swap forces SWAP_THING via its flag, so the only consistent list is
-      [Thing.Type.SWAP_THING]. Anything else is rejected so the form and the data
-      cannot disagree.
-    - is_share is the same with [Thing.Type.SHARE_THING].
-    - PROPRIETARY excludes COMMUNITY-only types (SHARE/SWAP).
-    - COMMUNITY (no flags) accepts the 5-type COMMUNITY set (all except SWAP,
-      which requires is_swap).
+    - is_share forces SHARE_THING via its flag, so the only consistent list is
+      [Thing.Type.SHARE_THING]. Anything else is rejected so the form and the
+      data cannot disagree.
+    - PROPRIETARY excludes the COMMUNITY-only SHARE_THING.
+    - COMMUNITY (no flag) accepts the 5-type COMMUNITY set.
     """
     if not allowed_thing_types:
-        return
-    if is_swap:
-        if list(allowed_thing_types) != [Thing.Type.SWAP_THING]:
-            raise serializers.ValidationError(
-                "Swap collections only accept swap things —"
-                " allowed_thing_types must be ['SWAP_THING'] or empty."
-            )
         return
     if is_share:
         if list(allowed_thing_types) != [Thing.Type.SHARE_THING]:
@@ -415,10 +377,8 @@ def _validate_allowed_thing_types(mode, is_swap, is_share, allowed_thing_types):
 def _validate_collection_flags(
     *,
     mode,
-    is_swap,
     is_share,
     newsletter_enabled,
-    swap_minimum_items,
     allowed_thing_types,
 ):
     """Shared flag-consistency rules for collection create/update validate().
@@ -427,15 +387,11 @@ def _validate_collection_flags(
     plain defaults, update falls back to the existing instance) and then call this
     with the resolved values, so the rules live in exactly one place.
     """
-    if is_swap and is_share:
-        raise serializers.ValidationError("A collection cannot be both swap-only and share-only.")
-    if (is_swap or is_share) and mode != Collection.Mode.COMMUNITY:
-        raise serializers.ValidationError("Swap and share modes require COMMUNITY mode.")
+    if is_share and mode != Collection.Mode.COMMUNITY:
+        raise serializers.ValidationError("Share mode requires COMMUNITY mode.")
     if newsletter_enabled and not is_share:
         raise serializers.ValidationError("Newsletter requires share mode to be enabled.")
-    if swap_minimum_items > 0 and not is_swap:
-        raise serializers.ValidationError("swap_minimum_items can only be set on swap collections.")
-    _validate_allowed_thing_types(mode, is_swap, is_share, allowed_thing_types)
+    _validate_allowed_thing_types(mode, is_share, allowed_thing_types)
 
 
 class CollectionUpdateSerializer(serializers.ModelSerializer):
@@ -477,10 +433,8 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "visibility",
             "digest_frequency",
             "language",
-            "is_swap",
             "is_share",
             "newsletter_enabled",
-            "swap_minimum_items",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -498,13 +452,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         instance = self.instance
-        is_swap = attrs.get("is_swap", instance.is_swap if instance else False)
         is_share = attrs.get("is_share", instance.is_share if instance else False)
         newsletter_enabled = attrs.get(
             "newsletter_enabled", instance.newsletter_enabled if instance else False
-        )
-        swap_minimum_items = attrs.get(
-            "swap_minimum_items", instance.swap_minimum_items if instance else 0
         )
         mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
         allowed_thing_types = attrs.get(
@@ -513,10 +463,8 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         )
         _validate_collection_flags(
             mode=mode,
-            is_swap=is_swap,
             is_share=is_share,
             newsletter_enabled=newsletter_enabled,
-            swap_minimum_items=swap_minimum_items,
             allowed_thing_types=allowed_thing_types,
         )
         # Orphan check: if this is an update narrowing the list, every existing

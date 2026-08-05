@@ -10,7 +10,7 @@ import {
 /**
  * The shared identity cluster of the Create and Edit collection forms — the part
  * that stays visible above the "More options" accordion (O1): the visibility
- * toggle, the COMMUNITY-only toggles (swap, require-3-items, share, newsletter)
+ * toggle, the COMMUNITY-only toggles (share, newsletter)
  * and the allowed-thing-types multi-select (locked + pre-filled when a flag
  * forces a single type; its "pick at least one" rule must never hide).
  *
@@ -25,14 +25,10 @@ import {
 export default function CollectionForm({
   idPrefix,
   mode,
-  isSwap,
-  setIsSwap,
   isShare,
   setIsShare,
   newsletterEnabled,
   setNewsletterEnabled,
-  requireMinimumSwapItems,
-  setRequireMinimumSwapItems,
   allowedThingTypes,
   setAllowedThingTypes,
   visibility = 'PRIVATE',
@@ -42,13 +38,12 @@ export default function CollectionForm({
 }) {
   const { t } = useTranslation();
   const toggleTheme = theeemeColor01 ? { '--toggle-button-color': `var(--color-${theeemeColor01})` } : undefined;
-  const locked = isLockedToSingleType({ isSwap, isShare });
+  const locked = isLockedToSingleType({ isShare });
 
   const allowedTypesOptions = (() => {
     if (mode === 'PROPRIETARY') {
       return PROPRIETARY_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
     }
-    if (isSwap) return [{ label: t('types.SWAP_THING'), value: 'SWAP_THING' }];
     if (isShare) return [{ label: t('types.SHARE_THING'), value: 'SHARE_THING' }];
     return COMMUNITY_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
   })();
@@ -68,52 +63,16 @@ export default function CollectionForm({
       {mode === 'COMMUNITY' && (
         <div className="toggle-left">
           <ToggleButton
-            id={`${idPrefix}-swap`}
-            label={t('swap.enableSwap')}
-            checked={isSwap}
-            onChange={(val) => {
-              const next = !val;
-              setIsSwap(next);
-              // Turning ON swap clears the mutually-exclusive share flag;
-              // turning OFF clears the swap-specific minimum-items rule.
-              if (next) { setIsShare(false); } else { setRequireMinimumSwapItems(false); }
-              // is_swap forces SWAP_THING (locked); turning off keeps whatever of
-              // the previous selection is still valid in the wider community set.
-              setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, {
-                mode, isSwap: next, isShare: next ? false : isShare,
-              }));
-            }}
-            variant="inline"
-            theme={toggleTheme}
-          />
-        </div>
-      )}
-      {mode === 'COMMUNITY' && isSwap && (
-        <div className="toggle-left">
-          <ToggleButton
-            id={`${idPrefix}-swap-minimum`}
-            label={<>{t('swap.requireMinimumLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('swap.requireMinimumHelper')}</span></>}
-            checked={requireMinimumSwapItems}
-            onChange={(val) => setRequireMinimumSwapItems(!val)}
-            variant="inline"
-            theme={toggleTheme}
-          />
-        </div>
-      )}
-      {mode === 'COMMUNITY' && (
-        <div className="toggle-left">
-          <ToggleButton
             id={`${idPrefix}-share`}
             label={t('share.enableShare')}
             checked={isShare}
             onChange={(val) => {
               const next = !val;
               setIsShare(next);
-              // Turning ON share clears the mutually-exclusive swap flag;
               // turning OFF clears the share-only newsletter setting.
-              if (next) setIsSwap(false); else setNewsletterEnabled(false);
+              if (!next) setNewsletterEnabled(false);
               setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, {
-                mode, isShare: next, isSwap: next ? false : isSwap,
+                mode, isShare: next,
               }));
             }}
             variant="inline"
@@ -142,7 +101,6 @@ export default function CollectionForm({
             label: t('createCollection.allowedTypesLabel'),
             placeholder: t('createCollection.allowedTypesPlaceholder'),
             assistive: (() => {
-              if (mode === 'COMMUNITY' && isSwap) return t('createCollection.allowedTypesSwapHelper');
               if (mode === 'COMMUNITY' && isShare) return t('createCollection.allowedTypesShareHelper');
               return t('createCollection.allowedTypesHelper');
             })(),

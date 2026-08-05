@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { DATE_TYPES, SHARE_TYPE, SWAP_TYPE } from '../constants/things';
+import { DATE_TYPES, SHARE_TYPE } from '../constants/things';
 import useThingBooking from './useThingBooking';
 
 /**
@@ -28,9 +28,8 @@ import useThingBooking from './useThingBooking';
  * both views) so callers don't repeat it.
  *
  * Returns everything {@link useThingBooking} returns, plus: `isOwner`,
- * `isCollectionOwner`, `isShare`, `isSwap`, `isDateBased`, `needsPage`,
- * `canDelete`, `hasPendingBookings`, `showButton`, `swapMinimum`, `swapOwnCount`,
- * `swapMinimumNotMet`, `swapItemsMissing`, `isMine`, `buttonDisabled`,
+ * `isCollectionOwner`, `isShare`, `isDateBased`, `needsPage`,
+ * `canDelete`, `hasPendingBookings`, `showButton`, `isMine`, `buttonDisabled`,
  * `loginButtonDisabled`, `buttonLabel`.
  */
 export default function useThingActions(thing, userCode, {
@@ -50,19 +49,18 @@ export default function useThingActions(thing, userCode, {
 
   const isOwner = thing?.owner === userCode;
   const isShare = thing?.type === SHARE_TYPE;
-  const isSwap = thing?.type === SWAP_TYPE;
   const isDateBased = DATE_TYPES.includes(thing?.type);
   // `needsPage` drives whether the reserve button navigates to a follow-up form
-  // (date-based picks dates, swap picks items) or POSTs directly. `bookingKeepsStatus`
+  // (date-based picks dates) or POSTs directly. `bookingKeepsStatus`
   // drives whether accepting a hold keeps the thing circulating — endless GIFT/SELL
   // keep their status but reserve via a direct POST, so the two must stay separate.
-  const needsPage = isDateBased || isSwap;
+  const needsPage = isDateBased;
   const bookingKeepsStatus = needsPage || !!thing?.is_endless;
   const isCollectionOwner = (collectionOwner || thing?.collection_owner) === userCode;
   const canDelete = isCollectionOwner || (isOwner && (!isShare || thing?.transfer_count === 0));
-  // Accepting a SHARE or SWAP hold transfers ownership to the requester (other
-  // types just confirm a lend/booking); those accepts get an inline confirm.
-  const acceptTransfersOwnership = isShare || isSwap;
+  // Accepting a SHARE hold transfers ownership to the requester (other types
+  // just confirm a lend/booking); that accept gets an inline confirm.
+  const acceptTransfersOwnership = isShare;
 
   const booking = useThingBooking(thing, {
     isOwner,
@@ -81,10 +79,6 @@ export default function useThingActions(thing, userCode, {
   // `canAct` covers a member; `loginToAct` shows the buttons to an anonymous
   // visitor on a public collection (each click routes to the join page).
   const showButton = (canAct || loginToAct) && !isOwner && thing?.status !== 'INACTIVE';
-  const swapMinimum = thing?.collection_swap_minimum_items || 0;
-  const swapOwnCount = thing?.my_swap_count_in_collection || 0;
-  const swapMinimumNotMet = isSwap && swapMinimum > 0 && swapOwnCount < swapMinimum;
-  const swapItemsMissing = swapMinimumNotMet ? swapMinimum - swapOwnCount : 0;
   // The current viewer holds the pending booking (locally requested, or returned
   // by the serializer). Only they see "waiting"; everyone else sees the reason
   // the disabled button can't be used — so the cause travels with the control.
@@ -94,10 +88,9 @@ export default function useThingActions(thing, userCode, {
     || thing?.status === 'TAKEN'
     || submitting
     || requested
-    || (isShare && !!thing?.my_pending_booking)
-    || swapMinimumNotMet;
+    || (isShare && !!thing?.my_pending_booking);
   // Anonymous (loginToAct) buttons only gate on pause/TAKEN — the click routes to
-  // the join page, so submitting/requested/swap-minimum don't apply.
+  // the join page, so submitting/requested don't apply.
   const loginButtonDisabled = isPaused || thing?.status === 'TAKEN';
   const buttonLabel = submitting
     ? t('common.sending')
@@ -107,26 +100,19 @@ export default function useThingActions(thing, userCode, {
         ? t('thingCard.notAvailable')
         : isPaused
           ? t('thingCard.paused')
-          : swapMinimumNotMet
-            ? t('thingCard.needMoreItems', { count: swapItemsMissing })
-            : t(`thingCard.action.${thing?.type}`, { defaultValue: t('thingCard.hold') });
+          : t(`thingCard.action.${thing?.type}`, { defaultValue: t('thingCard.hold') });
 
   return {
     ...booking,
     isOwner,
     isCollectionOwner,
     isShare,
-    isSwap,
     isDateBased,
     needsPage,
     canDelete,
     acceptTransfersOwnership,
     hasPendingBookings,
     showButton,
-    swapMinimum,
-    swapOwnCount,
-    swapMinimumNotMet,
-    swapItemsMissing,
     isMine,
     buttonDisabled,
     loginButtonDisabled,

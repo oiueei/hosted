@@ -48,20 +48,6 @@ class TestShareCollectionCreation:
         assert res.status_code == 201
         data = res.json()
         assert data["is_share"] is True
-        assert data["is_swap"] is False
-
-    def test_share_and_swap_mutually_exclusive(self, authenticated_client):
-        res = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "Both",
-                "mode": "COMMUNITY",
-                "is_share": True,
-                "is_swap": True,
-            },
-            format="json",
-        )
-        assert res.status_code == 400
 
     def test_share_requires_community_mode(self, authenticated_client):
         res = authenticated_client.post(
@@ -71,14 +57,6 @@ class TestShareCollectionCreation:
                 "mode": "PROPRIETARY",
                 "is_share": True,
             },
-            format="json",
-        )
-        assert res.status_code == 400
-
-    def test_update_to_share_and_swap_rejected(self, authenticated_client, community_collection):
-        res = authenticated_client.patch(
-            f"/api/v1/collections/{community_collection.code}/",
-            {"is_swap": True, "is_share": True},
             format="json",
         )
         assert res.status_code == 400
@@ -107,18 +85,6 @@ class TestShareCollectionTypeRestrictions:
             {
                 "type": "GIFT_THING",
                 "headline": "A Gift",
-                "collection_code": community_collection.code,
-            },
-            format="json",
-        )
-        assert res.status_code == 400
-
-    def test_share_collection_rejects_swap_thing(self, authenticated_client, community_collection):
-        res = authenticated_client.post(
-            "/api/v1/things/",
-            {
-                "type": "SWAP_THING",
-                "headline": "A Swap",
                 "collection_code": community_collection.code,
             },
             format="json",

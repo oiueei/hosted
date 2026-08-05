@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import RequestThingPage from './RequestThingPage';
@@ -122,43 +122,5 @@ describe('RequestThingPage (what the pickers produce is what the POST carries)',
     expect(screen.queryByText("You're all set!")).not.toBeInTheDocument();
   });
 
-  test('a swap proposal sends exactly the ticked offerings', async () => {
-    mockRoutes({
-      thing: SWAP_THING,
-      ownThings: [
-        { code: 'MINE01', headline: 'My camera', type: 'SWAP_THING', status: 'ACTIVE', collection_code: 'SWAP01' },
-        { code: 'MINE02', headline: 'My skates', type: 'SWAP_THING', status: 'ACTIVE', collection_code: 'SWAP01' },
-      ],
-    });
-    renderPage('SWAP01', 'SWTH01');
-    // The offerings arrive from a second fetch after the thing itself — wait
-    // for the checkbox, not just the section heading.
-    fireEvent.click(await screen.findByLabelText('My camera'));
-    fireEvent.click(screen.getByRole('button', { name: 'Propose swap' }));
 
-    await screen.findByText("You're all set!");
-    const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/request/'));
-    expect(JSON.parse(options.body)).toEqual({
-      offered_thing_codes: ['MINE01'],
-      collection_code: 'SWAP01',
-    });
-  });
-
-  test('a swap with nothing ticked sends nothing', async () => {
-    mockRoutes({
-      thing: SWAP_THING,
-      ownThings: [
-        { code: 'MINE01', headline: 'My camera', type: 'SWAP_THING', status: 'ACTIVE', collection_code: 'SWAP01' },
-      ],
-    });
-    renderPage('SWAP01', 'SWTH01');
-    await screen.findByLabelText('My camera');
-
-    // The button is disabled with an empty selection — and even so, no
-    // request POST may ever have left the page.
-    expect(screen.getByRole('button', { name: 'Propose swap' })).toBeDisabled();
-    await waitFor(() => {
-      expect(globalThis.fetch.mock.calls.some(([u]) => u.endsWith('/request/'))).toBe(false);
-    });
-  });
 });

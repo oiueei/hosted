@@ -29,10 +29,8 @@ export default function CreateCollectionPage() {
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
-  const [isSwap, setIsSwap] = useState(false);
   const [isShare, setIsShare] = useState(false);
   const [newsletterEnabled, setNewsletterEnabled] = useState(false);
-  const [requireMinimumSwapItems, setRequireMinimumSwapItems] = useState(false);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
@@ -49,7 +47,7 @@ export default function CreateCollectionPage() {
     { label: t('createCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
   ];
 
-  const locked = isLockedToSingleType({ isSwap, isShare });
+  const locked = isLockedToSingleType({ isShare });
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [toast, setToast] = useState(null);
@@ -64,14 +62,13 @@ export default function CreateCollectionPage() {
     if (newMode === mode) return;
     const nextFlags = {
       mode: newMode,
-      isSwap: newMode === 'COMMUNITY' ? isSwap : false,
       isShare: newMode === 'COMMUNITY' ? isShare : false,
     };
     setMode(newMode);
     // Visibility follows the mode default on create: a community is born public,
     // a proprietary list private. The owner can still flip the toggle afterwards.
     setVisibility(newMode === 'COMMUNITY' ? 'PUBLIC' : 'PRIVATE');
-    if (newMode !== 'COMMUNITY') { setIsSwap(false); setIsShare(false); setNewsletterEnabled(false); }
+    if (newMode !== 'COMMUNITY') { setIsShare(false); setNewsletterEnabled(false); }
     // Keep the still-valid part of the selection instead of wiping it (P1-5).
     setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, nextFlags));
   };
@@ -83,7 +80,7 @@ export default function CreateCollectionPage() {
     if (localizedCounter(headline, 64).over) newErrors.headline = t('createCollection.maxHeadline');
     if (localizedCounter(description, 256).over) newErrors.description = t('createCollection.maxDescription');
     setErrors(newErrors);
-    // Locked selects (swap, share) auto-fill, so they pass by construction.
+    // The locked select (share) auto-fills, so it passes by construction.
     const allowedTypesOk = locked || allowedThingTypes.length > 0;
     return Object.keys(newErrors).length === 0 && allowedTypesOk;
   };
@@ -97,14 +94,11 @@ export default function CreateCollectionPage() {
       headline: headline.trim(),
       mode,
       visibility,
-      is_swap: isSwap && mode === 'COMMUNITY',
       is_share: isShare && mode === 'COMMUNITY',
       newsletter_enabled: newsletterEnabled && isShare && mode === 'COMMUNITY',
-      swap_minimum_items:
-        requireMinimumSwapItems && isSwap && mode === 'COMMUNITY' ? 3 : 0,
       allowed_thing_types: allowedThingTypes,
-      rental_durations: isSwap || isShare ? [] : rentalDurations,
-      rental_weekdays: isSwap || isShare ? [] : rentalWeekdays,
+      rental_durations: isShare ? [] : rentalDurations,
+      rental_weekdays: isShare ? [] : rentalWeekdays,
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -180,14 +174,10 @@ export default function CreateCollectionPage() {
           <CollectionForm
             idPrefix="create-collection"
             mode={mode}
-            isSwap={isSwap}
-            setIsSwap={setIsSwap}
             isShare={isShare}
             setIsShare={setIsShare}
             newsletterEnabled={newsletterEnabled}
             setNewsletterEnabled={setNewsletterEnabled}
-            requireMinimumSwapItems={requireMinimumSwapItems}
-            setRequireMinimumSwapItems={setRequireMinimumSwapItems}
             allowedThingTypes={allowedThingTypes}
             setAllowedThingTypes={setAllowedThingTypes}
             visibility={visibility}
@@ -215,7 +205,7 @@ export default function CreateCollectionPage() {
               />
               <LocalizedInfo id="create-collection-tags-info" variant="tags" />
             </div>
-            {!isSwap && !isShare && (
+            {!isShare && (
               <RentalRulesFields
                 idPrefix="create-collection"
                 rentalDurations={rentalDurations}

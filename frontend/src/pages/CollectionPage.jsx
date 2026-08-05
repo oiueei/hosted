@@ -125,8 +125,8 @@ export default function CollectionPage() {
     ? visibleThings.filter((thg) => (thg.tags || []).includes(effectiveTag))
     : visibleThings;
   // A collection locked to one thing type makes the per-card "Type = X" row
-  // redundant — hide it (swap/share force a single type; an allowlist of one).
-  const singleType = collection.is_swap || collection.is_share
+  // redundant — hide it (share forces a single type; an allowlist of one).
+  const singleType = collection.is_share
     || (collection.allowed_thing_types || []).length === 1;
 
   return (
@@ -148,9 +148,6 @@ export default function CollectionPage() {
             {headline}
             {collection.mode === 'COMMUNITY' && (
               <>{' '}<Tag theme={{ '--tag-background': 'var(--color-engel)', '--tag-color': 'var(--color-black-90)' }}>{t('collectionPage.communityTag')}</Tag></>
-            )}
-            {collection.is_swap && (
-              <>{' '}<Tag theme={{ '--tag-background': 'var(--color-coat-of-arms-light)', '--tag-color': 'var(--color-white)' }}>{t('swap.swapCollection')}</Tag></>
             )}
             {collection.is_share && (
               <>{' '}<Tag theme={{ '--tag-background': 'var(--color-tram)', '--tag-color': 'var(--color-white)' }}>{t('share.shareCollection')}</Tag></>

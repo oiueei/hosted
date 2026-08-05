@@ -152,8 +152,8 @@ class ThingViewSet(ModelViewSet):
                     "You do not have permission to add things to this collection"
                 )
 
-            # Type must be valid for the collection (community-only types, swap/
-            # share restrictions, per-collection allowlist) — shared with update,
+            # Type must be valid for the collection (community-only types, share
+            # restrictions, per-collection allowlist) — shared with update,
             # so key it under "type" like perform_update does.
             err = type_validity_error(thing_type, collection)
             if err:

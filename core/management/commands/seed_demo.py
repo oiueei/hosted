@@ -199,7 +199,6 @@ class Command(BaseCommand):
                 "status": "ACTIVE",
                 "mode": data.get("mode", "PROPRIETARY"),
                 "visibility": data.get("visibility", "PRIVATE"),
-                "is_swap": data.get("is_swap", False),
                 "is_share": data.get("is_share", False),
                 "is_onboarding": data.get("is_onboarding", False),
                 "newsletter_enabled": data.get("newsletter_enabled", False),

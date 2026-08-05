@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Checkbox, DateInput, Notification, Select } from 'hds-react';
-import { DATE_TYPES, SWAP_TYPE } from '../constants/things';
+import { DATE_TYPES } from '../constants/things';
 import {
   durationLabel,
   isPickupDisabled,
@@ -52,8 +52,6 @@ export default function RequestThingPage() {
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
-  const [ownSwapThings, setOwnSwapThings] = useState([]);
-  const [selectedOfferings, setSelectedOfferings] = useState([]);
 
   useEffect(() => {
     if (!userCode) return;
@@ -71,19 +69,6 @@ export default function RequestThingPage() {
       setDuration(String(thing.rental_durations[0]));
     }
   }, [thing]);
-
-  useEffect(() => {
-    if (!userCode || !thing || thing.type !== SWAP_TYPE) return;
-    apiFetch('/api/v1/things/')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        const items = (data.results || data).filter(
-          (t) => t.type === SWAP_TYPE && t.code !== thingCode && t.status === 'ACTIVE' && t.collection_code === thing.collection_code
-        );
-        setOwnSwapThings(items);
-      })
-      .catch(() => {});
-  }, [userCode, thing, thingCode]);
 
   useEffect(() => {
     if (!userCode || !thing || !DATE_TYPES.includes(thing.type)) return;
@@ -108,13 +93,9 @@ export default function RequestThingPage() {
     setAttempted(true);
 
     const isDateBased = thing && DATE_TYPES.includes(thing.type);
-    const isSwap = thing && thing.type === SWAP_TYPE;
 
     let body = {};
-    if (isSwap) {
-      if (selectedOfferings.length === 0) return;
-      body = { offered_thing_codes: selectedOfferings };
-    } else if (isDateBased) {
+    if (isDateBased) {
       if (isConstrainedRental) {
         // Renter picks a fixed length + a pickup date; the return date is derived
         // as pickup + length (a week rental comes back on the same weekday).
@@ -175,7 +156,6 @@ export default function RequestThingPage() {
   if (!thing) return <LoadingSpinner />;
 
   const isDateBased = DATE_TYPES.includes(thing.type);
-  const isSwap = thing.type === SWAP_TYPE;
 
   return (
     <PageLayout
@@ -197,40 +177,6 @@ export default function RequestThingPage() {
       <>
       {thing.fee && <p><strong>{t('request.priceLabel')}</strong> {t('request.priceValue', { fee: thing.fee })}</p>}
       <div className="spacer-m" />
-      {isSwap && (
-        <div className="summary-grid section-mt">
-          <h2>{t('swap.offerItems')}</h2>
-          <p>{t('swap.selectItems')}</p>
-          <div className="spacer-xs" />
-          {ownSwapThings.length === 0 ? (
-            <p>
-              {t('swap.noItemsToOffer')}{' '}
-              {code && <Link to={`/collections/${code}/add`}>{t('swap.addItemToOffer')}</Link>}
-            </p>
-          ) : (
-            ownSwapThings.map((item) => (
-              <Checkbox
-                key={item.code}
-                id={`swap-offer-${item.code}`}
-                label={L(item.headline)}
-                checked={selectedOfferings.includes(item.code)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedOfferings((prev) => [...prev, item.code]);
-                  } else {
-                    setSelectedOfferings((prev) => prev.filter((c) => c !== item.code));
-                  }
-                }}
-              />
-            ))
-          )}
-          {attempted && selectedOfferings.length === 0 && (
-            <p id="swap-offer-error" role="alert" style={{ color: 'var(--color-error)' }}>
-              {t('swap.selectAtLeastOne')}
-            </p>
-          )}
-        </div>
-      )}
       {isDateBased && (
         <>
           <Notification
@@ -327,8 +273,8 @@ export default function RequestThingPage() {
 
       <div className="spacer-xs" />
       <div className="form-grid">
-        <Button fullWidth disabled={submitting || (isSwap && selectedOfferings.length === 0)} onClick={handleSubmit} style={btnStyle}>
-          {submitting ? t('common.sending') : isSwap ? t('swap.swapButton') : t(`thingCard.action.${thing?.type}`, { defaultValue: t('thingCard.hold') })}
+        <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
+          {submitting ? t('common.sending') : t(`thingCard.action.${thing?.type}`, { defaultValue: t('thingCard.hold') })}
         </Button>
         <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
           {t('common.cancel')}

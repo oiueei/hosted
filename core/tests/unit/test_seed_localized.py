@@ -85,12 +85,10 @@ class TestMergedSeedData:
             )["headline"]
             assert resolve_localized(headline, code) == expected
 
-    def test_language_neutral_thing_stays_plain(self):
-        # "Arduino Nano 33 BLE" reads the same in every language file.
-        data = load_seed_data("en")
-        headline = next(t for t in data.THINGS if t["code"] == "L3L305")["headline"]
-        assert headline == "Arduino Nano 33 BLE"
-        assert parse_localized(headline) is None
+    # The "language-neutral text stays plain" case used to be asserted here on a
+    # seed row (the electronics jargon in the removed swap collection). No seeded
+    # text reads the same in all three languages any more, so the rule is pinned
+    # where it actually lives: TestLocalize above, on ``_localize`` itself.
 
     def test_merged_values_fit_the_storage_columns(self):
         data = load_seed_data("en")

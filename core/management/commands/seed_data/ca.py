@@ -16,8 +16,8 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "headline": "La resistència és fútil! La Lele i el seu swap de circuits.",
-        "about": "## El taller de la Lele ⚡\n\nManetes de l'**electrònica** i caçadora de components. El meu coliving funciona amb jumpers i Arduinos a mig fer. Et sobra un Nano o un sensor perdut? Posa'l al tauler i proposa un swap. *La resistència és fútil!*",
+        "headline": "La resistència és fútil! La Lele i la seva electrònica.",
+        "about": "## El taller de la Lele ⚡\n\nManetes de l'**electrònica** i caçadora de components. El meu coliving funciona amb jumpers i Arduinos a mig fer. M'apunto a tot el que circula pel barri — si s'encén, ho puc arreglar. *La resistència és fútil!*",
     },
     {
         "code": "l1l13S",
@@ -51,11 +51,6 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "headline": "Préstecs de la Lili – hora de compartir les coses!",
         "description": "Necessites trepant, vaporeta, escala sòlida, bàscula d'equipatge o un mega kit de magdalenes? La biblioteca de préstecs de la Lili t'ho cobreix – tot a un cost simbòlic!",
-    },
-    {
-        "code": "L3L3C1",
-        "headline": "Swap de circuits de la Lele – la resistència és fútil!",
-        "description": "El coliving de la Lele funciona amb jumpers i Arduinos a mig fer. Tens un Nano agafant pols? Un sensor que no era teu? Posa'l al tauler, tria el que t'agradi, proposa un swap. Només components — sense diners ni curtcircuits.",
     },
     {
         "code": "1u1uC1",
@@ -261,38 +256,6 @@ THINGS = [
     {
         "code": "La1a00",
         "headline": "Algú té una escaleta? La prestatgeria alta guanya! 🪜",
-    },
-    {
-        "code": "L3L301",
-        "headline": "Grove Shield per a Arduino Nano v1.1 (Seeed Studio)",
-    },
-    {
-        "code": "L3L302",
-        "headline": "Grove - Sensor de pols làser PM2.5 (HM3301)",
-    },
-    {
-        "code": "L3L303",
-        "headline": "MB102 Mòdul d'alimentació per a protoboard (HW-131)",
-    },
-    {
-        "code": "L3L304",
-        "headline": "Adaptador de terminals per a Arduino Nano",
-    },
-    {
-        "code": "L3L305",
-        "headline": "Arduino Nano 33 BLE",
-    },
-    {
-        "code": "L3L306",
-        "headline": "CCS811 Sensor de qualitat de l'aire interior",
-    },
-    {
-        "code": "L3L307",
-        "headline": "Grove: temperatura i humitat, aigua, so, UV, aire",
-    },
-    {
-        "code": "L3L308",
-        "headline": "DFRobot Sensor UV analògic V2 (Gravity)",
     },
 ]
 

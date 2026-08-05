@@ -35,7 +35,7 @@ class TestCreateWithAllowedTypes:
         assert response.data["allowed_thing_types"] == []
 
     def test_create_proprietary_rejects_community_only_type(self, authenticated_client):
-        for community_type in ("SHARE_THING", "SWAP_THING"):
+        for community_type in ("SHARE_THING",):
             response = authenticated_client.post(
                 "/api/v1/collections/",
                 {"headline": "Bad", "allowed_thing_types": ["GIFT_THING", community_type]},
@@ -60,47 +60,6 @@ class TestCommunityWithAllowedTypes:
                 format="json",
             )
             assert response.status_code == status.HTTP_201_CREATED, community_type
-
-    def test_create_community_rejects_swap_type_without_is_swap(self, authenticated_client):
-        """SWAP_THING needs is_swap=True; listing it on a non-swap COMMUNITY is invalid."""
-        response = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "No-swap community",
-                "mode": "COMMUNITY",
-                "allowed_thing_types": ["SWAP_THING"],
-            },
-            format="json",
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_create_with_is_swap_accepts_matching_swap_thing_list(self, authenticated_client):
-        """is_swap forces SWAP_THING; the only consistent allowlist is ['SWAP_THING']."""
-        response = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "Swap with matching allowlist",
-                "mode": "COMMUNITY",
-                "is_swap": True,
-                "allowed_thing_types": ["SWAP_THING"],
-            },
-            format="json",
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["allowed_thing_types"] == ["SWAP_THING"]
-
-    def test_create_with_is_swap_rejects_non_matching_list(self, authenticated_client):
-        response = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "Swap with wrong allowlist",
-                "mode": "COMMUNITY",
-                "is_swap": True,
-                "allowed_thing_types": ["GIFT_THING"],
-            },
-            format="json",
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_create_with_is_share_accepts_matching_share_thing_list(self, authenticated_client):
         response = authenticated_client.post(
@@ -127,19 +86,6 @@ class TestCommunityWithAllowedTypes:
             format="json",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_create_with_is_swap_empty_allowlist_succeeds(self, authenticated_client):
-        """Empty allowlist is fine on a swap collection — the flag does the restricting."""
-        response = authenticated_client.post(
-            "/api/v1/collections/",
-            {
-                "headline": "Swap clean",
-                "mode": "COMMUNITY",
-                "is_swap": True,
-            },
-            format="json",
-        )
-        assert response.status_code == status.HTTP_201_CREATED
 
 
 @pytest.mark.django_db

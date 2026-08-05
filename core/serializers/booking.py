@@ -7,40 +7,13 @@ from datetime import date, timedelta
 from rest_framework import serializers
 
 from core.models.booking import BookingPeriod
-from core.models.thing import Thing
 
 # Bookings/orders can't be placed more than ~3 months ahead — matches the
 # frontend's today+90 cap and the availability horizon (L7).
 MAX_BOOKING_HORIZON_DAYS = 90
 
 
-class SwapOfferedFieldsMixin(serializers.Serializer):
-    """Shared swap fields: the codes/headlines of the things offered in exchange.
-
-    Both return ``None`` for non-swap bookings, so the same two
-    ``SerializerMethodField``s can be reused by every booking serializer that
-    exposes a swap proposal (full owner view, owner calendar, requester view).
-    """
-
-    offered_thing_codes = serializers.SerializerMethodField()
-    offered_thing_headlines = serializers.SerializerMethodField()
-
-    # Iterate ``offered_things.all()`` rather than ``.values_list()``: the latter
-    # always issues its own query and so bypasses a ``prefetch_related("offered_things")``
-    # cache, re-introducing an N+1 on the booking-list and owner-calendar endpoints.
-    # ``.all()`` reuses the prefetched rows when the view set them up.
-    def get_offered_thing_codes(self, obj):
-        if obj.thing_type != Thing.Type.SWAP_THING:
-            return None
-        return [t.code for t in obj.offered_things.all()]
-
-    def get_offered_thing_headlines(self, obj):
-        if obj.thing_type != Thing.Type.SWAP_THING:
-            return None
-        return [t.headline for t in obj.offered_things.all()]
-
-
-class BookingPeriodSerializer(SwapOfferedFieldsMixin, serializers.ModelSerializer):
+class BookingPeriodSerializer(serializers.ModelSerializer):
     """Full booking period serializer (for owner view)."""
 
     thing_code = serializers.CharField(source="thing_code_id")
@@ -64,8 +37,6 @@ class BookingPeriodSerializer(SwapOfferedFieldsMixin, serializers.ModelSerialize
             "start_date",
             "end_date",
             "status",
-            "offered_thing_codes",
-            "offered_thing_headlines",
         ]
 
 
@@ -81,7 +52,7 @@ class BookingPeriodCalendarSerializer(serializers.ModelSerializer):
         ]
 
 
-class BookingPeriodOwnerCalendarSerializer(SwapOfferedFieldsMixin, serializers.ModelSerializer):
+class BookingPeriodOwnerCalendarSerializer(serializers.ModelSerializer):
     """Calendar view serializer for owner (includes requester info)."""
 
     requester_code = serializers.CharField(source="requester_code_id")
@@ -97,8 +68,6 @@ class BookingPeriodOwnerCalendarSerializer(SwapOfferedFieldsMixin, serializers.M
             "start_date",
             "end_date",
             "status",
-            "offered_thing_codes",
-            "offered_thing_headlines",
         ]
 
     def get_requester_name(self, obj):
@@ -135,17 +104,7 @@ class ThingRequestWithDatesSerializer(serializers.Serializer):
         return data
 
 
-class ThingSwapRequestSerializer(serializers.Serializer):
-    """Validates a SWAP request's offered items: a bounded list of thing codes (L5)."""
-
-    offered_thing_codes = serializers.ListField(
-        child=serializers.CharField(max_length=6),
-        min_length=1,
-        max_length=20,
-    )
-
-
-class MyBookingSerializer(SwapOfferedFieldsMixin, serializers.ModelSerializer):
+class MyBookingSerializer(serializers.ModelSerializer):
     """Serializer for user's own booking requests."""
 
     thing_code = serializers.CharField(source="thing_code_id")
@@ -166,8 +125,6 @@ class MyBookingSerializer(SwapOfferedFieldsMixin, serializers.ModelSerializer):
             "start_date",
             "end_date",
             "status",
-            "offered_thing_codes",
-            "offered_thing_headlines",
         ]
 
     def get_owner_name(self, obj):

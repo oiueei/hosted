@@ -34,10 +34,8 @@ export default function EditCollectionPage() {
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
   const [digestFrequency, setDigestFrequency] = useState('NONE');
-  const [isSwap, setIsSwap] = useState(false);
   const [isShare, setIsShare] = useState(false);
   const [newsletterEnabled, setNewsletterEnabled] = useState(false);
-  const [requireMinimumSwapItems, setRequireMinimumSwapItems] = useState(false);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
@@ -72,7 +70,7 @@ export default function EditCollectionPage() {
     { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
   ];
 
-  const locked = isLockedToSingleType({ isSwap, isShare });
+  const locked = isLockedToSingleType({ isShare });
 
   // Live "pick at least one" feedback once a submit has been attempted (P1-5).
   const allowedTypesError = submitAttempted && !locked && allowedThingTypes.length === 0
@@ -83,11 +81,10 @@ export default function EditCollectionPage() {
     if (newMode === mode) return;
     const nextFlags = {
       mode: newMode,
-      isSwap: newMode === 'COMMUNITY' ? isSwap : false,
       isShare: newMode === 'COMMUNITY' ? isShare : false,
     };
     setMode(newMode);
-    if (newMode !== 'COMMUNITY') { setIsSwap(false); setIsShare(false); setNewsletterEnabled(false); setRequireMinimumSwapItems(false); }
+    if (newMode !== 'COMMUNITY') { setIsShare(false); setNewsletterEnabled(false); }
     // Keep the still-valid part of the selection instead of wiping it (P1-5).
     setAllowedThingTypes((prev) => reconcileAllowedTypes(prev, nextFlags));
   };
@@ -105,10 +102,8 @@ export default function EditCollectionPage() {
           setMode(data.mode || 'PROPRIETARY');
           setVisibility(data.visibility || 'PRIVATE');
           setDigestFrequency(data.digest_frequency || 'NONE');
-          setIsSwap(data.is_swap || false);
           setIsShare(data.is_share || false);
           setNewsletterEnabled(data.newsletter_enabled || false);
-          setRequireMinimumSwapItems((data.swap_minimum_items || 0) > 0);
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
@@ -157,14 +152,11 @@ export default function EditCollectionPage() {
       mode,
       visibility,
       digest_frequency: digestFrequency,
-      is_swap: isSwap && mode === 'COMMUNITY',
       is_share: isShare && mode === 'COMMUNITY',
       newsletter_enabled: newsletterEnabled && isShare && mode === 'COMMUNITY',
-      swap_minimum_items:
-        requireMinimumSwapItems && isSwap && mode === 'COMMUNITY' ? 3 : 0,
       allowed_thing_types: allowedThingTypes,
-      rental_durations: isSwap || isShare ? [] : rentalDurations,
-      rental_weekdays: isSwap || isShare ? [] : rentalWeekdays,
+      rental_durations: isShare ? [] : rentalDurations,
+      rental_weekdays: isShare ? [] : rentalWeekdays,
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -307,14 +299,10 @@ export default function EditCollectionPage() {
         <CollectionForm
           idPrefix="edit-collection"
           mode={mode}
-          isSwap={isSwap}
-          setIsSwap={setIsSwap}
           isShare={isShare}
           setIsShare={setIsShare}
           newsletterEnabled={newsletterEnabled}
           setNewsletterEnabled={setNewsletterEnabled}
-          requireMinimumSwapItems={requireMinimumSwapItems}
-          setRequireMinimumSwapItems={setRequireMinimumSwapItems}
           allowedThingTypes={allowedThingTypes}
           setAllowedThingTypes={setAllowedThingTypes}
           visibility={visibility}
@@ -342,7 +330,7 @@ export default function EditCollectionPage() {
             />
             <LocalizedInfo id="edit-collection-tags-info" variant="tags" />
           </div>
-          {!isSwap && !isShare && (
+          {!isShare && (
             <RentalRulesFields
               idPrefix="edit-collection"
               rentalDurations={rentalDurations}

@@ -56,15 +56,12 @@ export default function ThingPage() {
     handleBookingAction,
     isOwner,
     isCollectionOwner,
-    isSwap,
     isDateBased,
     needsPage,
     canDelete,
     acceptTransfersOwnership,
     hasPendingBookings,
     showButton,
-    swapMinimumNotMet,
-    swapItemsMissing,
     buttonDisabled,
     loginButtonDisabled,
     buttonLabel,
@@ -135,7 +132,7 @@ export default function ThingPage() {
     return <LoadingSpinner />;
   }
 
-  // isOwner, type flags, canDelete, showButton, the swap gate, buttonDisabled and
+  // isOwner, type flags, canDelete, showButton, buttonDisabled and
   // buttonLabel all come from useThingActions (destructured at the top).
 
   const editPath = code
@@ -280,16 +277,6 @@ export default function ThingPage() {
             {buttonLabel}
           </Button>
         )}
-        {showButton && swapMinimumNotMet && !loginToAct && (
-          <Notification
-            type="info"
-            label={t('swap.minimumNotMetLabel')}
-            size="small"
-            style={{ marginTop: 'var(--spacing-2-xs)' }}
-          >
-            {t('swap.minimumNotMetBody', { count: swapItemsMissing })}
-          </Notification>
-        )}
 
         {isCollectionOwner && !isOwner && (
           <div className="button-row">
@@ -358,7 +345,7 @@ export default function ThingPage() {
                       {tr.from_user_name || t('common.formerMember')} {t('transfers.to')}{' '}
                       {tr.to_user_name || t('common.formerMember')}
                       {' — '}
-                      {t(isSwap ? 'transfers.swappedOn' : 'transfers.lentOn', { date: new Date(tr.lent_date).toLocaleDateString(i18n.language) })}
+                      {t('transfers.lentOn', { date: new Date(tr.lent_date).toLocaleDateString(i18n.language) })}
                       {tr.returned_date && (
                         <> · {t('transfers.returnedOn', { date: new Date(tr.returned_date).toLocaleDateString(i18n.language) })}</>
                       )}

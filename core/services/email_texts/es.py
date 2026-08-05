@@ -10,16 +10,12 @@ TEXTS = {
     "view_collection_cta": "Ver la colección",
     # Sustantivos de acción por tipo para los correos de reserva — calcan el
     # vocabulario del frontend (thingCard.action / types): una solicitud SELL
-    # es "solicitud de compra", una LEND "solicitud de préstamo", etc. SWAP
-    # tiene sus propias plantillas de solicitud/confirmación, pero el correo de
-    # decisión (send_booking_decision_email) es compartido e interpola {action}
-    # también para los intercambios, así que SWAP necesita su sustantivo.
+    # es "solicitud de compra", una LEND "solicitud de préstamo", etc.
     "action_noun_GIFT_THING": "regalo",
     "action_noun_SELL_THING": "compra",
     "action_noun_LEND_THING": "préstamo",
     "action_noun_RENT_THING": "alquiler",
     "action_noun_SHARE_THING": "traspaso",
-    "action_noun_SWAP_THING": "intercambio",
     # Magic link
     "magic_subject": "¡Hola, te damos la bienvenida a OIUEEI!",
     "magic_subject_collection": "¡Hola, te damos la bienvenida a '{collection}' - OIUEEI!",
@@ -174,26 +170,6 @@ TEXTS = {
     "reminder_subject": "Recordatorio: una reserva termina mañana",
     "reminder_plain": "Recordatorio: la reserva de {requester} sobre '{thing}' termina el {end}.",
     "reminder_body": "Recordatorio: la reserva de {requester} sobre {thing} termina el {end}.",
-    # Swap request (to owner)
-    "swap_request_subject": "Tienes una propuesta de intercambio",
-    "swap_request_plain": (
-        "{requester} quiere intercambiar '{thing}' por: {offered}. "
-        "Confirmar el intercambio: {accept} | Cancelar el intercambio: {reject}"
-    ),
-    "swap_request_intro": "{requester} quiere intercambiar:",
-    "swap_exchange_label": "A cambio de:",
-    "swap_confirm_cta": "Confirmar el intercambio",
-    "swap_cancel_cta": "Cancelar el intercambio",
-    # Swap confirmation (to requester)
-    "swap_conf_subject": "Propuesta de intercambio enviada",
-    "swap_conf_plain": (
-        "Tu propuesta de intercambio de '{thing}' (ofreciendo: {offered}) ha sido enviada. "
-        "Su dueño te responderá pronto."
-    ),
-    "swap_conf_sent": "¡Tu propuesta de intercambio ha sido enviada!",
-    "swap_conf_requested_label": "Has pedido:",
-    "swap_conf_offered_label": "Has ofrecido:",
-    "swap_conf_outro": "Su dueño te responderá pronto.",
     # Digest
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",

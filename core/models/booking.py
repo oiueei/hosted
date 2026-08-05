@@ -71,12 +71,6 @@ class BookingPeriod(models.Model):
     status = models.CharField(
         max_length=9, choices=Status.choices, default=Status.PENDING, db_index=True
     )
-    offered_things = models.ManyToManyField(
-        "Thing",
-        blank=True,
-        related_name="swap_offers",
-        db_table="booking_offered_things",
-    )
 
     class Meta:
         app_label = "core"

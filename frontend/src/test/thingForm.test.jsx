@@ -92,16 +92,6 @@ describe('AddThingPage — field visibility', () => {
     expect(container.querySelector('#add-thing-location')).toBeTruthy();
   });
 
-  test('swap collection: shows the type selector, forced to SWAP', async () => {
-    const { container } = renderAdd({ collection: { mode: 'COMMUNITY', is_swap: true } });
-
-    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // The Select is shown even though the flag forces the single option.
-    expect(screen.getByText('Type')).toBeInTheDocument();
-    // Default stays SWAP (neither a FEE_TYPE nor a DETAIL_TYPE), so those stay hidden.
-    expect(container.querySelector('#add-thing-fee')).toBeNull();
-    expect(screen.queryByText('Availability')).toBeNull();
-  });
 
   test('share collection: shows the type selector, forced to SHARE', async () => {
     const { container } = renderAdd({ collection: { mode: 'COMMUNITY', is_share: true } });
@@ -135,18 +125,17 @@ describe('AddThingPage — type explainer popover', () => {
   });
 
   // The panel is built from the already-filtered typeOptions, so a type the
-  // collection can't hold is never explained. A swap-only collection offers only
-  // SWAP: GIFT/SHARE must be absent.
+  // collection can't hold is never explained. A share-only collection offers
+  // only SHARE: GIFT must be absent.
   test('does not list a type the collection filtered out', async () => {
-    renderAdd({ collection: { mode: 'COMMUNITY', is_swap: true } });
+    renderAdd({ collection: { mode: 'COMMUNITY', is_share: true } });
 
     fireEvent.click(await screen.findByRole('button', { name: 'What each type means' }));
 
-    // SWAP is offered here, so its description is present…
-    expect(await screen.findByText(/accepting exchanges ownership both ways/)).toBeInTheDocument();
-    // …but GIFT and SHARE are not part of a swap collection's options.
+    // SHARE is offered here, so its description is present…
+    expect(await screen.findByText(/it keeps circulating in the group/)).toBeInTheDocument();
+    // …but GIFT is not part of a share collection's options.
     expect(screen.queryByText(/whoever claims it keeps it/)).toBeNull();
-    expect(screen.queryByText(/it keeps circulating in the group/)).toBeNull();
   });
 });
 

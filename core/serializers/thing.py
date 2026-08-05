@@ -61,7 +61,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     ``_transfer_count``, ``faq_set`` and ``_blocked_periods``
     caches set by the views — so serialising a list of things stays free of N+1
     queries. Fields whose logic genuinely differs between the two serializers
-    (``thumbnail_url`` and the two swap-gate fields) deliberately stay on each
+    (``thumbnail_url``) deliberately stay on each
     serializer rather than here.
     """
 
@@ -164,8 +164,6 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_code = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
-    collection_swap_minimum_items = serializers.SerializerMethodField()
-    my_swap_count_in_collection = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
@@ -201,8 +199,6 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_code",
             "collection_headline",
             "collection_owner",
-            "collection_swap_minimum_items",
-            "my_swap_count_in_collection",
             "rental_durations",
             "rental_weekdays",
             "transfer_count",
@@ -235,11 +231,6 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         first = collections[0] if collections else None
         return first.owner_id if first else None
 
-    def get_collection_swap_minimum_items(self, obj):
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
-        return first.swap_minimum_items if first else 0
-
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).
         Used by RequestThingPage to offer the fixed-duration picker for LEND/RENT."""
@@ -252,31 +243,6 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         collections = obj.collections.all()
         first = collections[0] if collections else None
         return list(first.rental_weekdays) if first else []
-
-    def get_my_swap_count_in_collection(self, obj):
-        """Number of own ACTIVE/TAKEN SWAP_THINGs the requester has in this thing's
-        first collection. Used by the frontend to gate the 'Propose swap' button
-        against `collection_swap_minimum_items`. Returns 0 when no collection,
-        no requester, or thing isn't a swap."""
-        request = self.context.get("request")
-        if not request or not request.user.is_authenticated:
-            return 0
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
-        if not first or not first.is_swap:
-            return 0
-        # The count depends only on (requester, collection), not the specific
-        # thing, so memoise it per collection on the shared context — a things
-        # list in one swap collection then costs one query, not one per thing.
-        cache = self.context.setdefault("_my_swap_count_cache", {})
-        if first.code not in cache:
-            cache[first.code] = Thing.objects.filter(
-                owner=request.user,
-                type=Thing.Type.SWAP_THING,
-                status__in=(Thing.Status.ACTIVE, Thing.Status.TAKEN),
-                collections=first,
-            ).count()
-        return cache[first.code]
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available

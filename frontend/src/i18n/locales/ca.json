@@ -197,8 +197,6 @@
     "bookingUnavailableBody": "{{thing_headline}} ha estat per a una altra persona aquesta vegada — les coses van i venen, estigues atent!",
     "bookingRequestedLabel": "Nova sol·licitud de reserva",
     "bookingRequestedBody": "{{requester_name}} ha sol·licitat {{thing_headline}}.",
-    "swapRequestedLabel": "Nova proposta d'intercanvi",
-    "swapRequestedBody": "{{requester_name}} ha proposat un intercanvi per {{thing_headline}}.",
     "faqQuestionLabel": "Nova pregunta",
     "faqQuestionBody": "{{questioner_name}} ha fet una pregunta sobre {{thing_headline}}.",
     "faqAnsweredLabel": "Pregunta resposta",
@@ -311,8 +309,7 @@
       "SELL_THING": "Comprar",
       "RENT_THING": "Llogar",
       "LEND_THING": "Demanar prestat",
-      "SHARE_THING": "Quedar-m'ho",
-      "SWAP_THING": "Intercanviar"
+      "SHARE_THING": "Quedar-m'ho"
     }
   },
   "thingTags": {
@@ -444,7 +441,6 @@
     "allowedTypesLabel": "Què es pot afegir a aquesta col·lecció",
     "allowedTypesPlaceholder": "Tria un o més tipus",
     "allowedTypesHelper": "Tria almenys un. Només estaran disponibles els tipus que seleccionis quan hi afegeixis coses.",
-    "allowedTypesSwapHelper": "El mode intercanvi només accepta coses d'intercanvi.",
     "allowedTypesShareHelper": "El mode exclusivament share només accepta coses share.",
     "allowedTypesAtLeastOne": "Tria almenys un tipus.",
     "advancedTitle": "Més opcions",
@@ -571,8 +567,7 @@
     "SELL_THING": "Venda",
     "RENT_THING": "Lloguer",
     "LEND_THING": "Préstec",
-    "SHARE_THING": "Compartir",
-    "SWAP_THING": "Intercanvi"
+    "SHARE_THING": "Compartir"
   },
   "typeInfo": {
     "title": "Què significa cada tipus",
@@ -580,8 +575,7 @@
     "SELL_THING": "En venda al preu que posis.",
     "RENT_THING": "Es lloga per dies, amb preu.",
     "LEND_THING": "Es deixa uns dies i torna.",
-    "SHARE_THING": "En acceptar una petició passa a ser de qui l'ha demanat — i segueix circulant pel grup.",
-    "SWAP_THING": "S'intercanvia per coses d'un altre membre — en acceptar, la propietat canvia en tots dos sentits."
+    "SHARE_THING": "En acceptar una petició passa a ser de qui l'ha demanat — i segueix circulant pel grup."
   },
   "availability": {
     "IMMEDIATE": "Immediata",
@@ -609,7 +603,6 @@
     "journeyCount_other": "Aquest objecte ha viatjat a {{count}} llars",
     "currentlyWith": "Actualment amb {{name}}",
     "lentOn": "Prestat el {{date}}",
-    "swappedOn": "Intercanviat el {{date}}",
     "returnedOn": "Retornat el {{date}}",
     "to": "a",
     "noTransfers": "Sense transferències encara.",
@@ -624,27 +617,7 @@
     "rentCount_one": "{{count}} lloguer",
     "rentCount_other": "{{count}} lloguers",
     "shareCount_one": "{{count}} cop compartit",
-    "shareCount_other": "{{count}} cops compartit",
-    "swapCount_one": "{{count}} intercanvi",
-    "swapCount_other": "{{count}} intercanvis"
-  },
-  "swap": {
-    "offerItems": "Seleccionar articles a oferir",
-    "selectAtLeastOne": "Selecciona almenys un article per oferir.",
-    "selectItems": "Tria els teus articles per intercanviar",
-    "noItemsToOffer": "No tens articles per oferir en aquesta col·lecció.",
-    "addItemToOffer": "Afegeix-ne un →",
-    "swapButton": "Proposar intercanvi",
-    "offeredItems": "Articles oferts",
-    "swapAccepted": "Intercanvi completat! Els articles han estat intercanviats.",
-    "swapRejected": "Sol·licitud d'intercanvi rebutjada.",
-    "enableSwap": "Activar intercanvi d'articles",
-    "swapCollection": "Col·lecció d'intercanvi",
-    "minimumNotMetBody_one": "Afegeix {{count}} article més a aquesta col·lecció abans de poder proposar un intercanvi.",
-    "minimumNotMetBody_other": "Afegeix {{count}} articles més a aquesta col·lecció abans de poder proposar un intercanvi.",
-    "minimumNotMetLabel": "Afegeix més articles primer",
-    "requireMinimumHelper": "Els convidats (i tu) heu d'afegir almenys 3 articles propis a aquesta col·lecció abans de poder proposar un intercanvi.",
-    "requireMinimumLabel": "Exigir 3 articles abans d'intercanviar"
+    "shareCount_other": "{{count}} cops compartit"
   },
   "share": {
     "enableShare": "Exclusivament coses tipus SHARE",

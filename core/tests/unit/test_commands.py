@@ -281,11 +281,11 @@ class TestSeedDemoCommand:
         Tag labels are localized {lang: text} maps now (O6) — the stored value
         is the serialized constant from seed_data/common.py, byte-identical
         between the vocabulary and the thing that wears it."""
-        from core.management.commands.seed_data.common import TAG_MODULOS, TAG_SENSORES
+        from core.management.commands.seed_data.common import TAG_CRIANZA, TAG_JARDIN
 
         call_command("seed_demo")
-        assert TAG_MODULOS in Collection.objects.get(code="L3L3C1").tags
-        assert Thing.objects.get(code="L3L302").tags == [TAG_SENSORES]
+        assert TAG_JARDIN in Collection.objects.get(code="l1l1C1").tags
+        assert Thing.objects.get(code="l1l101").tags == [TAG_CRIANZA]
 
     def test_maps_user_photo_key(self):
         """Regression guard: _seed_users must copy the `photo` key onto the user

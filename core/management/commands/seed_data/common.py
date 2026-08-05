@@ -38,12 +38,6 @@ TAG_DEPORTE = _localized_tag(es="Deporte", ca="Esport", en="Sports")
 TAG_OCIO = _localized_tag(es="Ocio", ca="Lleure", en="Leisure")
 TAG_ELECTRONICA = _localized_tag(es="Electrónica", ca="Electrònica", en="Electronics")
 
-# Lele's circuit-swap vocabulary. "shields" is the same jargon everywhere → plain.
-TAG_SENSORES = _localized_tag(es="sensores", ca="sensors", en="sensors")
-TAG_PLACAS = _localized_tag(es="placas", ca="plaques", en="boards")
-TAG_SHIELDS = "shields"
-TAG_MODULOS = _localized_tag(es="módulos", ca="mòduls", en="modules")
-
 USERS = [
     {
         "code": "La1aN1",
@@ -120,18 +114,6 @@ COLLECTIONS = [
             TAG_ELECTRONICA,
         ],
         "thumbnail": "l1l1C1",
-    },
-    {
-        "code": "L3L3C1",
-        "owner_code": "L3L3oo",
-        "visibility": "PUBLIC",
-        "mode": "COMMUNITY",
-        "is_swap": True,
-        "invites": ["La1aN1", "l1l13S", "l0l0oh", "1u1ucs"],
-        "is_onboarding": True,
-        "allowed_thing_types": ["SWAP_THING"],
-        "tags": [TAG_SENSORES, TAG_PLACAS, TAG_SHIELDS, TAG_MODULOS],
-        "thumbnail": "l1l1C2",
     },
     {
         "code": "1u1uC1",
@@ -500,70 +482,6 @@ THINGS = [
         "thumbnail": "l0l007",
         "is_endless": True,
     },
-    {
-        "code": "L3L301",
-        "type": "SWAP_THING",
-        "owner_code": "La1aN1",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L301",
-        "tags": [TAG_SHIELDS],
-    },
-    {
-        "code": "L3L302",
-        "type": "SWAP_THING",
-        "owner_code": "L3L3oo",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L302",
-        "tags": [TAG_SENSORES],
-    },
-    {
-        "code": "L3L303",
-        "type": "SWAP_THING",
-        "owner_code": "l0l0oh",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L303",
-        "tags": [TAG_MODULOS],
-    },
-    {
-        "code": "L3L304",
-        "type": "SWAP_THING",
-        "owner_code": "1u1ucs",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L304",
-        "tags": [TAG_SHIELDS],
-    },
-    {
-        "code": "L3L305",
-        "type": "SWAP_THING",
-        "owner_code": "l1l13S",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L305",
-        "tags": [TAG_PLACAS],
-    },
-    {
-        "code": "L3L306",
-        "type": "SWAP_THING",
-        "owner_code": "l1l13S",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L306",
-        "tags": [TAG_SENSORES],
-    },
-    {
-        "code": "L3L307",
-        "type": "SWAP_THING",
-        "owner_code": "l1l13S",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L307",
-        "tags": [TAG_SENSORES],
-    },
-    {
-        "code": "L3L308",
-        "type": "SWAP_THING",
-        "owner_code": "l1l13S",
-        "collections": ["L3L3C1"],
-        "thumbnail": "L3L308",
-        "tags": [TAG_SENSORES],
-    },
 ]
 
 FAQS = [
@@ -601,10 +519,4 @@ TRANSFERS = [
     ("1u1u04", "La1aN1", "L3L3oo", date(2026, 3, 1), date(2026, 3, 31)),
     ("1u1u04", "L3L3oo", "l1l13S", date(2026, 4, 1), date(2026, 4, 15)),
     ("1u1u04", "l1l13S", "l0l0oh", date(2026, 4, 16), None),
-    # Lili's circuit swap — historical swaps
-    ("L3L301", "l1l13S", "La1aN1", date(2026, 3, 20), None),
-    ("L3L302", "l1l13S", "L3L3oo", date(2026, 3, 25), None),
-    ("L3L305", "l0l0oh", "l1l13S", date(2026, 4, 5), None),
-    ("L3L307", "l0l0oh", "L3L3oo", date(2026, 1, 20), None),
-    ("L3L307", "L3L3oo", "l1l13S", date(2026, 3, 1), None),
 ]

@@ -17,7 +17,7 @@ import { useLocalized, localizedCounter } from '../utils/localized';
  * Controlled: each value + setter is owned by the page. Field visibility is
  * derived from `type` so both pages share one set of rules. The page supplies
  * the already filtered `typeOptions` and whether the selector is shown (Add
- * hides it for swap/share collections). `idPrefix` is `add-thing` or `edit-thing`.
+ * hides it for share collections). `idPrefix` is `add-thing` or `edit-thing`.
  */
 export default function ThingForm({
   idPrefix,

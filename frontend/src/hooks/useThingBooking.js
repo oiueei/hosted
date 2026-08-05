@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DATE_TYPES, SWAP_TYPE } from '../constants/things';
+import { DATE_TYPES } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 
 /**
@@ -70,11 +70,10 @@ export default function useThingBooking(thing, {
   const status = thing?.status;
   const isEndless = thing?.is_endless;
   const isDateBased = DATE_TYPES.includes(type);
-  const isSwap = type === SWAP_TYPE;
 
   useEffect(() => {
     const shouldFetch = isOwner
-      && (isDateBased || isSwap || status === 'TAKEN' || (fetchOnEndless && isEndless));
+      && (isDateBased || status === 'TAKEN' || (fetchOnEndless && isEndless));
     if (!shouldFetch || !code) return undefined;
     const controller = new AbortController();
     apiFetch(`/api/v1/things/${code}/calendar/`, { signal: controller.signal })
@@ -95,7 +94,7 @@ export default function useThingBooking(thing, {
       })
       .catch(() => {});
     return () => controller.abort();
-  }, [code, status, isEndless, isOwner, isDateBased, isSwap, fetchOnEndless]);
+  }, [code, status, isEndless, isOwner, isDateBased, fetchOnEndless]);
 
   const handleRequest = async () => {
     if (requestLockRef.current) return;

@@ -23,14 +23,12 @@ from core.models import Collection, Thing
 from core.models.booking import DATE_BASED_TYPES
 from core.serializers.booking import (
     ThingRequestWithDatesSerializer,
-    ThingSwapRequestSerializer,
 )
 from core.services.booking_service import (
     BookingRequestError,
     request_date_based_booking,
     request_share_booking,
     request_standard_booking,
-    request_swap_booking,
     resolve_rental_collection,
 )
 from core.views._helpers import get_viewable_thing
@@ -110,9 +108,7 @@ class ThingRequestView(APIView):
         collection_code = request.data.get("collection_code")
 
         try:
-            if thing.type == Thing.Type.SWAP_THING:
-                return self._request_swap(request, thing, owner_email)
-            elif thing.type == Thing.Type.SHARE_THING:
+            if thing.type == Thing.Type.SHARE_THING:
                 booking = request_share_booking(thing, request.user, owner_email, collection_code)
                 return Response(
                     {"message": "Booking request sent", "booking_code": booking.code},
@@ -157,27 +153,6 @@ class ThingRequestView(APIView):
                 "booking_code": booking.code,
                 "start_date": str(start_date),
                 "end_date": str(end_date),
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-    def _request_swap(self, request, thing, owner_email):
-        """Validate the offered-things list then delegate to the service."""
-        swap_ser = ThingSwapRequestSerializer(data=request.data)
-        if not swap_ser.is_valid():
-            return Response(
-                {"error": "You must offer between 1 and 20 things to swap"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        booking, offered_things = request_swap_booking(
-            thing, request.user, owner_email, swap_ser.validated_data["offered_thing_codes"]
-        )
-        return Response(
-            {
-                "message": "Swap request sent",
-                "booking_code": booking.code,
-                "offered_thing_codes": [t.code for t in offered_things],
             },
             status=status.HTTP_201_CREATED,
         )

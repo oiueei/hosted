@@ -10,21 +10,17 @@ TEXTS = {
     "view_collection_cta": "Veure la col·lecció",
     # Substantius d'acció per als correus de reserva — calquen el vocabulari del
     # frontend (thingCard.action / types): una sol·licitud SELL és "sol·licitud
-    # de compra", una LEND "sol·licitud de préstec", etc. SWAP té les seves
-    # plantilles de sol·licitud/confirmació, però el correu de decisió
-    # (send_booking_decision_email) és compartit i interpola {action} també per
-    # als intercanvis, així que SWAP necessita el seu substantiu.
+    # de compra", una LEND "sol·licitud de préstec", etc.
     #
-    # A DIFERÈNCIA d'en/es, aquí els valors porten la preposició ("de compra",
-    # "d'intercanvi") i les plantilles diuen "sol·licitud {action}" — el català
-    # elideix "de" davant de vocal, i "sol·licitud de intercanvi" seria
-    # incorrecte.
+    # A DIFERÈNCIA d'en/es, aquí els valors porten la preposició ("de compra") i
+    # les plantilles diuen "sol·licitud {action}" — el català elideix "de" davant
+    # de vocal, així que un tipus nou que hi comenci ha de portar "d'" al valor
+    # ("d'intercanvi"), no a la plantilla.
     "action_noun_GIFT_THING": "de regal",
     "action_noun_SELL_THING": "de compra",
     "action_noun_LEND_THING": "de préstec",
     "action_noun_RENT_THING": "de lloguer",
     "action_noun_SHARE_THING": "de traspàs",
-    "action_noun_SWAP_THING": "d'intercanvi",
     # Magic link
     "magic_subject": "Hola, et donem la benvinguda a OIUEEI!",
     "magic_subject_collection": "Hola, et donem la benvinguda a '{collection}' - OIUEEI!",
@@ -179,26 +175,6 @@ TEXTS = {
     "reminder_subject": "Recordatori: una reserva acaba demà",
     "reminder_plain": "Recordatori: la reserva de {requester} sobre '{thing}' acaba el {end}.",
     "reminder_body": "Recordatori: la reserva de {requester} sobre {thing} acaba el {end}.",
-    # Swap request (to owner)
-    "swap_request_subject": "Tens una proposta d'intercanvi",
-    "swap_request_plain": (
-        "{requester} vol intercanviar '{thing}' per: {offered}. "
-        "Confirmar l'intercanvi: {accept} | Cancel·lar l'intercanvi: {reject}"
-    ),
-    "swap_request_intro": "{requester} vol intercanviar:",
-    "swap_exchange_label": "A canvi de:",
-    "swap_confirm_cta": "Confirmar l'intercanvi",
-    "swap_cancel_cta": "Cancel·lar l'intercanvi",
-    # Swap confirmation (to requester)
-    "swap_conf_subject": "Proposta d'intercanvi enviada",
-    "swap_conf_plain": (
-        "La teva proposta d'intercanvi de '{thing}' (oferint: {offered}) s'ha enviat. "
-        "El seu propietari et respondrà aviat."
-    ),
-    "swap_conf_sent": "La teva proposta d'intercanvi s'ha enviat!",
-    "swap_conf_requested_label": "Has demanat:",
-    "swap_conf_offered_label": "Has ofert:",
-    "swap_conf_outro": "El seu propietari et respondrà aviat.",
     # Digest
     "digest_subject": "Novetats a {collection}",
     "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",

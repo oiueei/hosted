@@ -129,12 +129,11 @@ describe('ThingLinkbox — guest reservation button', () => {
     expect(screen.queryByTestId('navigated')).toBeNull();
   });
 
-  // Date-based (LEND/RENT) and SWAP navigate to RequestThingPage instead
-  // of POSTing — these need a follow-up form (dates / swap items).
+  // Date-based (LEND/RENT) navigates to RequestThingPage instead of POSTing —
+  // it needs a follow-up form (the dates).
   test.each([
     ['LEND_THING', 'Borrow'],
     ['RENT_THING', 'Rent'],
-    ['SWAP_THING', 'Swap'],
   ])('%s navigates to the request page', async (type, label) => {
     const thing = makeThing({ type, fee: type === 'RENT_THING' ? '5' : null });
     renderLinkbox({ thing, userCode: 'GUEST1' });
@@ -148,8 +147,8 @@ describe('ThingLinkbox — guest reservation button', () => {
     );
   });
 
-  // NOTE: SHARE_THING is NOT in `needsPage` (only date-based LEND/RENT and SWAP
-  // are), so the SHARE hold POSTs directly here — it does NOT navigate to
+  // NOTE: SHARE_THING is NOT in `needsPage` (only date-based LEND/RENT is),
+  // so the SHARE hold POSTs directly here — it does NOT navigate to
   // RequestThingPage. This contradicts frontend/CLAUDE.md ("LEND/RENT/SHARE …
   // navigate"), but matches the code today. Locked as-is; not a fix.
   test('SHARE_THING holds via direct POST (does not navigate)', async () => {
@@ -221,37 +220,6 @@ describe('ThingLinkbox — status and pause gating', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// ThingLinkbox — swap minimum-items gate
-// ════════════════════════════════════════════════════════════════════════
-describe('ThingLinkbox — swap minimum gate', () => {
-  test('below the minimum disables the button, labels the gap, and shows the notification', () => {
-    const thing = makeThing({
-      type: 'SWAP_THING',
-      collection_swap_minimum_items: 3,
-      my_swap_count_in_collection: 1,
-    });
-    renderLinkbox({ thing, userCode: 'GUEST1' });
-
-    // The disabled button now states the gap (P1-2) instead of the action verb,
-    // and the detailed notification still appears below it.
-    expect(screen.getByRole('button', { name: 'Need 2 more items' })).toBeDisabled();
-    expect(screen.getByText('Upload more items first')).toBeInTheDocument();
-  });
-
-  test('at the minimum enables the button and hides the notification', () => {
-    const thing = makeThing({
-      type: 'SWAP_THING',
-      collection_swap_minimum_items: 3,
-      my_swap_count_in_collection: 3,
-    });
-    renderLinkbox({ thing, userCode: 'GUEST1' });
-
-    expect(screen.getByRole('button', { name: 'Swap' })).toBeEnabled();
-    expect(screen.queryByText('Upload more items first')).toBeNull();
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════════
 // ThingLinkbox — owner button matrix
 // ════════════════════════════════════════════════════════════════════════
 describe('ThingLinkbox — owner button matrix', () => {
@@ -318,15 +286,6 @@ describe('ThingPage — guest reservation', () => {
     });
   });
 
-  test('SWAP navigates to the request page', async () => {
-    localStorage.setItem('userCode', 'GUEST1');
-    setApi({ thing: makeThing({ type: 'SWAP_THING', owner: 'OWNER1' }) });
-    renderThingPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Swap' }));
-
-    await waitFor(() => expect(screen.getByTestId('navigated')).toBeInTheDocument());
-  });
 });
 
 describe('ThingPage — owner button matrix', () => {

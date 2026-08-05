@@ -46,7 +46,7 @@ def type_validity_error(thing_type, collection):
     collection, when None), else None.
 
     Shared by thing create/update AND the collection add-thing endpoint so the
-    type rules (community-only types, swap/share restrictions, per-collection
+    type rules (community-only types, share restrictions, per-collection
     allowlist) can't be bypassed by any path (L4).
     """
     if collection is None:
@@ -55,17 +55,11 @@ def type_validity_error(thing_type, collection):
                 f"{thing_type.replace('_', ' ').title()}s can only be created"
                 " in community collections"
             )
-        if thing_type == Thing.Type.SWAP_THING:
-            return "Swap things can only be created in swap collections"
         return None
     if thing_type == Thing.Type.SHARE_THING and not collection.is_community():
         return (
             f"{thing_type.replace('_', ' ').title()}s can only be created in community collections"
         )
-    if collection.is_swap and thing_type != Thing.Type.SWAP_THING:
-        return "Only swap things can be added to a swap collection"
-    if thing_type == Thing.Type.SWAP_THING and not collection.is_swap:
-        return "Swap things can only be created in swap collections"
     if collection.is_share and thing_type != Thing.Type.SHARE_THING:
         return "Only share things can be added to a share collection"
     if collection.allowed_thing_types and thing_type not in collection.allowed_thing_types:
