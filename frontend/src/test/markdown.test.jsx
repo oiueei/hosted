@@ -21,6 +21,48 @@ describe('markdownToHtml', () => {
     expect(result).toContain('>Click here</a>');
   });
 
+  test('a query string survives with one ampersand, not an escaped one', () => {
+    // The line is HTML-escaped before link parsing, so escaping the URL a
+    // second time produced `&amp;amp;` — which the browser then resolves to a
+    // literal `&amp;` in the href, sending the reader to a different URL than
+    // the owner wrote. Owner descriptions and user bios are full of such links.
+    const result = markdownToHtml('[Docs](https://example.com/?a=1&b=2)');
+    expect(result).toContain('href="https://example.com/?a=1&amp;b=2"');
+    expect(result).not.toContain('&amp;amp;');
+  });
+
+  test('an asterisk inside a URL is not turned into emphasis', () => {
+    // The bold/italic passes run over the whole string after links are built,
+    // so an unprotected href could come back with an <em> spliced into it.
+    const result = markdownToHtml('[Photo](https://example.com/a/*b*/c)');
+    expect(result).toContain('href="https://example.com/a/*b*/c"');
+    expect(result).not.toContain('<em>');
+  });
+
+  test('emphasis around a link still renders, and the link stays intact', () => {
+    // The placeholder must not cost us the ordinary case.
+    const result = markdownToHtml('**See [the docs](https://example.com) now**');
+    expect(result).toContain('<strong>');
+    expect(result).toContain('href="https://example.com"');
+    expect(result).toContain('>the docs</a>');
+  });
+
+  test('a link label keeps its ampersand readable', () => {
+    const result = markdownToHtml('[Tom & Jerry](https://example.com)');
+    // Escaped exactly once: renders as "Tom & Jerry", not "Tom &amp; Jerry".
+    expect(result).toContain('>Tom &amp; Jerry</a>');
+    expect(result).not.toContain('&amp;amp;');
+  });
+
+  test('user text cannot forge a link placeholder', () => {
+    // Links are parked behind NUL-delimited markers while emphasis is applied.
+    // NUL is stripped by the escaper so typed text can never mint one and pull
+    // in another link — or an undefined slot.
+    const result = markdownToHtml('\0LINK0\0 plain text');
+    expect(result).not.toContain('<a ');
+    expect(result).not.toContain('undefined');
+  });
+
   test('rejects javascript: URLs', () => {
     const result = markdownToHtml('[Click](javascript:alert(1))');
     expect(result).toContain('href="#"');

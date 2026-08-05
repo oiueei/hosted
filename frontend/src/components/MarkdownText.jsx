@@ -17,6 +17,9 @@
 
 function escapeHtml(str) {
   return str
+    // NUL is dropped, not escaped: renderInline parks extracted links behind
+    // NUL-delimited placeholders, so user text must not be able to forge one.
+    .replace(/\0/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -32,18 +35,31 @@ function sanitizeUrl(url) {
   }
 }
 
+// `text` always arrives HTML-escaped from markdownToHtml, so nothing in here
+// escapes again: doing so turned a `&` in a query string into `&amp;amp;`, and
+// the browser then resolved the href with a literal `&amp;` inside it —
+// `?a=1&b=2` became `?a=1&amp;b=2` and the link went somewhere else.
 function renderInline(text) {
-  // Links: [text](url)
+  // Links: [text](url). Each generated anchor is parked behind a placeholder
+  // before the emphasis passes run, so they cannot rewrite the inside of an
+  // href: a URL with a `*…*` segment used to come back with an <em> spliced
+  // into it. Restored at the end, untouched.
+  const links = [];
   let result = text.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_, label, url) => `<a href="${escapeHtml(sanitizeUrl(url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`
+    (_, label, url) => {
+      links.push(
+        `<a href="${sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+      );
+      return `\0LINK${links.length - 1}\0`;
+    }
   );
   // Bold: **text**
   result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // Italic: *text* or _text_
   result = result.replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>');
   result = result.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
-  return result;
+  return result.replace(/\0LINK(\d+)\0/g, (match, i) => links[Number(i)] ?? match);
 }
 
 // GFM pipe-table line shapes. The separator row (|---|---|, optional colons)
