@@ -23,11 +23,12 @@ import { apiFetch, extractApiError } from '../services/api';
  * - `setToast`            — toast setter from the consuming view.
  * - `initialActivePending`— initial active pending booking code (ThingLinkbox seeds
  *                           it from `thing.pending_booking`; ThingPage starts null).
- * - `initialRequested`    — initial "already requested" flag (ThingLinkbox folds the
- *                           SHARE pending-booking in here; ThingPage starts false).
+ * - `initialRequested`    — initial "already requested" flag (ThingLinkbox seeds it
+ *                           from the thing's pending booking; ThingPage starts false).
  * - `fetchOnEndless`      — also fetch the calendar for endless GIFT/SELL (ThingLinkbox).
- * - `bookingKeepsStatus`  — when true, accept/reject keeps `thing.status` (date/order/
- *                           swap/endless flows); when false it flips it (GIFT/SELL).
+ * - `bookingKeepsStatus`  — when true, accept/reject keeps `thing.status` (the
+ *                           date-based and endless flows); when false it flips it
+ *                           (GIFT/SELL).
  * - `activateSuccessMessage` — toast shown after a successful reactivate (ThingPage only).
  * - `collectionCode`      — the collection the requester is browsing, sent with the
  *                           request. A thing can live in several, so this is what
