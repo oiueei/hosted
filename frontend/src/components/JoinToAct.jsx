@@ -98,6 +98,13 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
           </Button>
         </div>
       </form>
+      {/* Third door that mints an account from a typed email (see
+          MagicLinkJoinPage) — the privacy information travels with it. */}
+      <p style={{ marginBottom: 'var(--spacing-2-xs)' }}>
+        <Link to="/legal" style={{ color: 'var(--color-black-60)', textDecoration: 'underline', fontSize: 'var(--fontsize-body-s)' }}>
+          {t('login.legalLink')}
+        </Link>
+      </p>
       <p style={{ marginBottom: 0 }}>
         <Link to="/login">{t('joinToAct.alreadyHaveAccount')}</Link>
       </p>

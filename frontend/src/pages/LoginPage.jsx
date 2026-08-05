@@ -82,6 +82,24 @@ export default function LoginPage() {
           />
         </p>
         <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-s)' }}>{t('login.manifesto')}</p>
+        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
+          <Trans
+            i18nKey="login.noBanner"
+            components={[
+              <span key="0" />,
+              // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
+              <a key="1" href="https://github.com/oiueei/standalone#privacy" target="_blank" rel="noopener noreferrer" />,
+            ]}
+          />
+        </p>
+        {/* Per-deployment note (who operates this instance and where it runs): empty in
+            the standalone repo, filled on the deploy branch — the same split as
+            src/legal/. Only rendered when the operator has actually written one. */}
+        {t('login.operator') ? (
+          <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
+            {t('login.operator')}
+          </p>
+        ) : null}
         <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-2-xs)' }}>
           <Link to="/legal" style={{ color: 'var(--color-black-60)', textDecoration: 'underline', fontSize: 'var(--fontsize-body-s)' }}>
             {t('login.legalLink')}

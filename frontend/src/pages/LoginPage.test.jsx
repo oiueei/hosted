@@ -90,6 +90,34 @@ describe('LoginPage magic-link request (the front door)', () => {
   });
 });
 
+describe('LoginPage privacy claim (the promise the front door makes)', () => {
+  test('states there is no cookie banner because there is nothing to consent to', () => {
+    // This is a public, checkable claim, not decoration: it is what justifies
+    // shipping the app without a consent banner. If the app ever gains a
+    // tracker, this sentence becomes a lie and must be removed deliberately.
+    renderLogin();
+    expect(
+      screen.getByText(/a cookie banner: there is nothing to consent to/i)
+    ).toBeInTheDocument();
+  });
+
+  test('the claim carries a link to the README so it can be verified, not just believed', () => {
+    renderLogin();
+    const verify = screen.getByRole('link', { name: 'you can check' });
+    // The anchor matters: it must land on the Privacy section, not the repo root.
+    expect(verify).toHaveAttribute('href', 'https://github.com/oiueei/standalone#privacy');
+    expect(verify).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  test('the per-deployment operator note stays hidden when no operator wrote one', () => {
+    // The standalone repo ships login.operator empty — a self-hoster must never
+    // inherit a claim about someone else's servers or whereabouts.
+    const { container } = renderLogin();
+    const paragraphs = [...container.querySelectorAll('p')];
+    expect(paragraphs.some((p) => p.textContent.trim() === '')).toBe(false);
+  });
+});
+
 describe('LoginPage hero title-logo (S9)', () => {
   test('the h1 keeps the accessible name "OIUEEI" even though the logo replaces the text', () => {
     render(

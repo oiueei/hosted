@@ -100,6 +100,15 @@ export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descripti
           </div>
         </form>
       )}
+      {/* Both doors this component serves (/popin, /share/:token) create a real
+          account from the typed email, so the privacy information has to be
+          reachable *here* — at the moment data is collected — not only on
+          /login. Reuses login.legalLink: same destination, same words. */}
+      <p style={{ marginTop: 'var(--spacing-s)', maxWidth: '400px' }}>
+        <Link to="/legal" style={{ color: 'var(--color-black-60)', textDecoration: 'underline', fontSize: 'var(--fontsize-body-s)' }}>
+          {t('login.legalLink')}
+        </Link>
+      </p>
       <p style={{ marginTop: 'var(--spacing-m)', maxWidth: '400px' }}>
         <Link to="/login">{t(`${ns}.alreadyHaveAccount`)}</Link>
       </p>

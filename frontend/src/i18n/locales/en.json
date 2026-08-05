@@ -146,6 +146,8 @@
     "description": "OIUEEI is an open-source app for sharing what you own with the people around you. Create a collection — things to give away, sell, lend or swap — and share it with your circle: they can browse, reserve and ask.",
     "openSource": "OIUEEI's code is public — source-available under BUSL 1.1, MIT from 2030. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there. New here? The Pop in button below is the door.",
     "manifesto": "No ads, no trackers. Your data is not the product.",
+    "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
+    "operator": "",
     "popIn": "New here? Pop in →",
     "legalLink": "Legal notice & privacy",
     "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →"

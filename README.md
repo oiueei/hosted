@@ -2,6 +2,8 @@
 
 A source-available web application (BUSL 1.1 — every line public and auditable; MIT from 2030; self-hosting in production is allowed, offering it as a competing hosted service is not) for people to share their belongings with friends and others around. Users can create collections (wishlists, gift lists, items for sale) and share them with friends who can then reserve items or ask questions.
 
+No ads, no tracking of any kind, no third-party code running in your browser — and no cookie banner, because there is nothing to consent to. Each of those claims comes with a way to check it: **[→ Privacy](#privacy)**.
+
 ## Authorship & Development
 
 OIUEEI is designed and led by Carlos Alberto, a designer, and co-written with [Claude Code](https://claude.ai/code), Anthropic's command-line coding assistant. UI and UX design decisions, product scope, tone and voice, and the choice to build on HDS are Carlos Alberto's; Claude carries a large share of the Django, DRF, and React implementation under direction. Every commit involves Claude, is reviewed before it ships, and is signed with a `Co-Authored-By: Claude` trailer — the contribution history is fully transparent.
@@ -375,13 +377,44 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 
 ## Privacy
 
-OIUEEI does not sell or share user data with third parties. There is **no third-party analytics SDK** in the app: nothing is loaded, nothing is sent, no consent banner is needed. The only outbound data flows are the operational ones the user expects — email delivery via the configured SMTP provider, image hosting via Cloudinary, and the user's own session cookies.
+Everything below is written so you don't have to take my word for it. Each claim comes with the way to check it yourself — "we take your privacy seriously" is what a page says when it has nothing checkable to offer.
 
-Product metrics are **first-party only**: an append-only `Event` log and a `(user, date)` `DailyActivity` record, both computed into an aggregate `stats_summary` that is printed and emailed to the operator. They record less than the web-server logs already hold, never leave our DB, and are never wrapped in tracking pixels or redirect links. Demo/seed activity is reported separately so it can't inflate the real numbers.
+### What the app does not do
 
-**Right to erasure**: every user can delete their own account from their profile (Edit profile → Delete account). Deletion is immediate and irreversible once confirmed via an emailed 24h link: the account, its collections, things, photos and pending requests are permanently deleted (Cloudinary assets included). Questions asked on other people's things and an item's transfer history survive **anonymised** — the content stays with the thing, the name goes ("former member").
+- **No advertising.** No ad slots, no ad SDK, no ad network, no sponsored placement. Nothing in the product is sold to anyone who wants your attention.
+- **No tracking, of any kind.** No analytics SDK, no tag manager, no fingerprinting, no session replay, no heatmaps, no A/B-testing service, no "anonymous" telemetry that phones home.
+- **No third-party code running in your browser.** The app ships 12 runtime dependencies (React, HDS, i18next, a router, a QR renderer, a CSV/ZIP parser) — all rendering and parsing libraries, none of which talks to anyone. No script from another origin is loaded, ever.
+- **No cookie banner, because there is nothing to consent to.** The only cookies are the technical ones that keep you signed in (auth + CSRF). There is no third-party cookie, no advertising cookie, no tracker to ask permission for — so asking would be theatre.
+- **No tracking pixels or wrapped links in emails.** Links go where they say they go; there is no open-tracking pixel, no click-redirect domain.
+- **No sale, sharing, profiling or automated decisions** on user data. [DESIGN.md §9](DESIGN.md#9-user-data-is-never-a-product) lists what is forbidden here under any justification — it is a design rule, not a policy page.
 
-Full ethical commitment and the rules I follow: [DESIGN.md §9](DESIGN.md#9-user-data-is-never-a-product).
+### How to check all of that
+
+| Claim | How to verify it |
+|---|---|
+| Third-party scripts *cannot* load | `curl -sI https://www.oiueei.com/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
+| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and `res.cloudinary.com` (the photos). That is the whole list. |
+| No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
+| Only technical cookies | DevTools → Application → Cookies. |
+| The metrics are first-party | `core/models/event.py` and `core/models/activity.py` — an append-only event log and one `(user, date)` row, aggregated by `stats_summary` and emailed to the operator. They record *less* than any web server log, and never leave the database. |
+| All of it | The whole codebase is public. Read it. |
+
+### What does leave the server
+
+Four outbound flows exist, all operational, all named — the app is a normal web service, not a magic box:
+
+1. **Hosting and database** — where the operator deploys it.
+2. **Email delivery** — the configured SMTP provider (magic links, invitations, activity notices).
+3. **Images and documents** — Cloudinary, which serves the photos to your browser and therefore sees the request.
+4. **Error monitoring** — optional, deploy-only (Sentry). Events are scrubbed of cookies, auth headers, IP and user identity before being sent (`send_default_pii=False` + a `before_send` hook).
+
+For the official deployment at **www.oiueei.com**, the verified locations are: application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`). Cloudinary and Sentry are, at the time of writing, on their US regions — which is why this README does not claim "everything is in Europe". The current state is always the one written on the [`/legal`](https://www.oiueei.com/legal) page.
+
+### Your rights over your data
+
+**Right to erasure is self-service, not a support ticket**: delete your own account from your profile (Edit profile → Delete account). Once confirmed via an emailed 24-hour link it is immediate and irreversible — the account, its collections, things, photos and pending requests are permanently deleted, Cloudinary assets included (`core/services/cloudinary_cleanup.py` runs on the delete). Questions you asked on other people's things and an item's transfer history survive **anonymised**: the content stays with the thing, your name goes ("former member").
+
+For access, rectification, portability, objection or restriction, write to the operator — for www.oiueei.com, the address on the [`/legal`](https://www.oiueei.com/legal) page.
 
 
 ## Architecture Decisions

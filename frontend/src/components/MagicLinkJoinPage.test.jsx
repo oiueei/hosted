@@ -104,3 +104,31 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('MagicLinkJoinPage privacy information (art. 13 at the point of collection)', () => {
+  test('links to /legal on the form itself, not only from /login', () => {
+    // This door mints a real account from the typed email. The privacy
+    // information has to be one click away *here*, at the moment the data is
+    // collected — a visitor arriving on a share link never passes /login.
+    renderShareVariant();
+    expect(screen.getByRole('link', { name: 'Legal notice & privacy' })).toHaveAttribute(
+      'href',
+      '/legal'
+    );
+  });
+
+  test('the link survives the form being replaced by the success notification', () => {
+    // The address is already stored by then, so the information must not
+    // disappear along with the form that collected it.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderShareVariant();
+
+    submitEmail();
+
+    expect(screen.getByRole('link', { name: 'Legal notice & privacy' })).toBeInTheDocument();
+  });
+});
