@@ -2,13 +2,17 @@
 Collection model for OIUEEI.
 """
 
+import logging
 import secrets
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 from core.models.language import Language
 from core.utils import generate_id
+
+logger = logging.getLogger(__name__)
 
 
 def generate_share_token():
@@ -90,6 +94,15 @@ class Collection(models.Model):
     welcome_doc = models.CharField(max_length=255, blank=True, default="")
     pause_message = models.CharField(max_length=256, blank=True, default="")
     share_token = models.CharField(max_length=22, blank=True, null=True, unique=True)
+    # Mass-upload guards (see the COLLECTION_* thresholds in settings). The two
+    # `*_alarm_sent` flags make each counter's alarm fire once per collection
+    # rather than on every add past the line. `capacity_unblocked` is the
+    # superuser's override: tick it in the admin and this collection may pass
+    # BOTH ceilings — the unblock follows one manual review of the account, the
+    # owner and the collection. All three are inert without thresholds.
+    things_alarm_sent = models.BooleanField(default=False)
+    invites_alarm_sent = models.BooleanField(default=False)
+    capacity_unblocked = models.BooleanField(default=False)
     things = models.ManyToManyField(
         "Thing",
         blank=True,
@@ -191,6 +204,92 @@ class Collection(models.Model):
     def has_rental_rules(self):
         """True if this collection constrains LEND/RENT booking dates (#7)."""
         return bool(self.rental_durations) or bool(self.rental_weekdays)
+
+    # ---- Mass-upload capacity guards -------------------------------------
+    # Two INDEPENDENT counters per collection — things and invitees — because a
+    # collection can be abused in either direction (dumping stock, or harvesting
+    # a mailing list) and one crossing says nothing about the other. Each has its
+    # own thresholds and its own fire-once alarm flag; a single
+    # `capacity_unblocked` lifts both ceilings, since the unblock follows one
+    # manual review of the account, the owner and the collection.
+    #
+    # Both counters are inert unless the deployment sets thresholds (see
+    # settings) — the standalone default is off.
+    _COUNTERS = {
+        "things": {
+            "alarm_setting": "COLLECTION_THINGS_ALARM",
+            "block_setting": "COLLECTION_THINGS_BLOCK",
+            "flag": "things_alarm_sent",
+            "noun": "things",
+        },
+        "invites": {
+            "alarm_setting": "COLLECTION_INVITES_ALARM",
+            "block_setting": "COLLECTION_INVITES_BLOCK",
+            "flag": "invites_alarm_sent",
+            "noun": "members",
+        },
+    }
+
+    def _capacity_count(self, counter):
+        return (self.things if counter == "things" else self.invites).count()
+
+    def capacity_violation(self, counter="things", adding=1):
+        """Return an error string if adding ``adding`` rows to ``counter`` would
+        cross this deployment's hard ceiling, else ``None``.
+
+        Mirrors ``rental_violation``'s shape: a string is a refusal the caller
+        turns into a 400. A ceiling of 0 (or unset) means no ceiling, which is
+        the standalone default. A superuser who has ticked
+        ``capacity_unblocked`` lifts it for this collection.
+
+        Checked BEFORE the add and against the WHOLE batch, so a bulk import or
+        bulk invite cannot step over the line 100 rows at a time. The message
+        names the ceiling: once it actually bites, hiding the number would just
+        leave the owner with an unexplained refusal (the thresholds are
+        unpublished, not secret from the person hitting one).
+        """
+        spec = self._COUNTERS[counter]
+        ceiling = getattr(settings, spec["block_setting"], 0) or 0
+        if ceiling <= 0 or self.capacity_unblocked:
+            return None
+        if self._capacity_count(counter) + adding > ceiling:
+            return (
+                f"This collection has reached its limit of {ceiling} "
+                f"{spec['noun']}. Contact the site administrator if you need "
+                "more room."
+            )
+        return None
+
+    def note_capacity(self, counter="things"):
+        """Email the superusers once if ``counter`` has crossed its alarm line.
+
+        A **silent** tripwire: the owner is told nothing. A legitimate bulk
+        import must not be interrupted, and someone probing the endpoint must not
+        be told where the line sits — only the hard ceiling is user-visible, and
+        only once it bites. Called AFTER a successful add, so the count is real.
+
+        The per-counter flag makes it fire once per collection. Failures are
+        swallowed — an alarm that cannot send must never 500 an upload whose rows
+        are already committed; the ceiling is the guard that actually stops
+        abuse, the alarm is only the early warning.
+        """
+        spec = self._COUNTERS[counter]
+        threshold = getattr(settings, spec["alarm_setting"], 0) or 0
+        if threshold <= 0 or getattr(self, spec["flag"]):
+            return
+        count = self._capacity_count(counter)
+        if count < threshold:
+            return
+        # Flag first: a send that raises must not leave the alarm armed to
+        # re-fire on every subsequent add.
+        Collection.objects.filter(code=self.code).update(**{spec["flag"]: True})
+        setattr(self, spec["flag"], True)
+        try:
+            from core.services.email_service import send_collection_capacity_alarm
+
+            send_collection_capacity_alarm(self, counter, count, threshold)
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Capacity alarm email failed for collection %s", self.code)
 
     def rental_violation(self, start_date, end_date):
         """Return an error string if a LEND/RENT booking of ``[start, end]`` breaks

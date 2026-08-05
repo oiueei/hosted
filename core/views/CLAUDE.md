@@ -892,6 +892,15 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 4. **Dates** — Start dates must be today or future. End dates must be >= start dates.
 5. **Email HTML** — All user content escaped via `django.utils.html.escape()` in `email_service.py`.
 
+### Mass-upload guards (per collection)
+
+Independent of the rate limits below, and **off unless the deployment sets thresholds** — the standalone default. Two counters per collection, things and invitees, each with:
+
+- a **silent alarm** (`COLLECTION_THINGS_ALARM` / `COLLECTION_INVITES_ALARM`) that emails the **superusers** once and changes nothing. The owner is never told: a tripwire, not a warning, so a legitimate bulk import is not interrupted and someone probing the endpoint does not learn where the line sits.
+- a **hard ceiling** (`COLLECTION_THINGS_BLOCK` / `COLLECTION_INVITES_BLOCK`) that refuses adds with **400**, checked against the whole batch so bulk cannot walk past it. A superuser lifts it per collection with `capacity_unblocked` in the admin — there is no API.
+
+Enforcement points: things — `ThingViewSet.create` (before the row is created), `ThingBulkCreateView` (whole batch, all-or-nothing), `CollectionViewSet.add_thing` (so moving an existing thing is not the unguarded door). Members — `CollectionInviteView` and `CollectionBulkInviteView`, enforced where invitations are **sent** rather than accepted (refusing an invitee at the door would punish someone who did nothing wrong); the alarm fires from `_join_collection`, the single funnel every join path goes through.
+
 ### Rate Limiting
 
 - `/auth/request-link/` — 5 requests per minute per IP **and** 5 per hour per account (email)

@@ -307,6 +307,10 @@ python manage.py backfill_events
 | `CLOUDINARY_URL` | Uploads | Cloudinary credentials for image uploads: `cloudinary://api_key:api_secret@cloud_name` (free account at cloudinary.com) |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
 | `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day, single + bulk combined. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
+| `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
+| `COLLECTION_THINGS_BLOCK` | No | Per-collection ceiling on things: adds that would cross it are refused, including whole CSV batches. **Unset or `0` = off** (the default). A superuser lifts it per collection with `capacity_unblocked` in the admin. |
+| `COLLECTION_INVITES_ALARM` | No | The same silent, fire-once alert for a collection's **member** count. **Unset or `0` = off**. |
+| `COLLECTION_INVITES_BLOCK` | No | Per-collection ceiling on members: invitations that would cross it are refused when **sent**, not when accepted. **Unset or `0` = off**. Same `capacity_unblocked` override. |
 | `STATS_EMAIL` | No | Recipient for the weekly `stats_summary` command email (`--email` forces a send). Unset skips the email — third-party deploys don't email metrics anywhere by default. |
 | `STATS_EMAIL_WEEKDAY` | No | Weekday for the weekly `stats_summary` email: 0=Monday (default) … 6=Sunday. |
 

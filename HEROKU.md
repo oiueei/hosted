@@ -118,6 +118,14 @@ heroku config:set \
 > a deployment that never sets it has no ceiling on invitation fan-out. A free account can otherwise
 > send 100 owner-authored emails per bulk request, riding your domain. Set it before opening sign-ups.
 
+> **Recommended — mass-upload guards:** four per-collection thresholds, all **off unless set**
+> (`COLLECTION_THINGS_ALARM` / `_BLOCK`, `COLLECTION_INVITES_ALARM` / `_BLOCK`). The `_ALARM` pair
+> emails your superusers once per collection and changes nothing else — a tripwire you watch. The
+> `_BLOCK` pair refuses adds that would cross it, including whole CSV batches, until a superuser
+> ticks `capacity_unblocked` on that collection in the admin. Things and members are counted
+> separately: dumping stock and harvesting a mailing list are different abuses. Pick your own
+> numbers — they are infrastructure defence, so they are meant to be adjusted without notice.
+
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
 > **Email** is configured separately — see the [Email](#email) section below. Magic-link sign-in does not work until SMTP is set.

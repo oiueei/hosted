@@ -207,7 +207,15 @@ class CollectionViewSet(ModelViewSet):
         if type_error:
             return Response({"error": type_error}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Mass-upload ceiling. This path moves an existing thing rather than
+        # creating one, but it lands in the same collection and must not be the
+        # way around the guard.
+        full = collection.capacity_violation("things", adding=1)
+        if full:
+            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+
         collection.things.add(thing)
+        collection.note_capacity("things")
 
         return Response(
             {
@@ -337,6 +345,15 @@ class CollectionInviteView(APIView):
                 {"error": _INVITE_QUOTA_MESSAGE},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+
+        # Member ceiling, enforced where invitations are SENT rather than where
+        # they are accepted: refusing an invitee at the door would punish someone
+        # who did nothing wrong. It counts current members, so invitations still
+        # pending are not included — the daily email quota above is what caps a
+        # fan-out of unaccepted invites.
+        full = collection.capacity_violation("invites", adding=1)
+        if full:
+            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = CollectionInviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -603,6 +620,14 @@ class CollectionBulkInviteView(APIView):
                 {"error": _INVITE_QUOTA_MESSAGE},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+
+        # Member ceiling for the whole batch — same reasoning as the single
+        # endpoint, and checked against the batch so a bulk invite cannot step
+        # over the line 100 rows at a time.
+        batch = len(request.data.get("invites") or [])
+        full = collection.capacity_violation("invites", adding=batch)
+        if full:
+            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
         rows = request.data.get("invites") if isinstance(request.data, dict) else None
         if not isinstance(rows, list) or not rows:

@@ -219,6 +219,26 @@ RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
 # the whole rate-limiting layer off in development and tests.
 INVITE_EMAILS_PER_DAY = int(os.environ.get("INVITE_EMAILS_PER_DAY", "0"))
 
+# Per-collection capacity guards against mass upload. Same reasoning as the
+# invitation cap above: this is the operator protecting their own storage,
+# Cloudinary bill and moderation load, so the standalone default is **off** and
+# each deployment sets its own numbers.
+#
+# COLLECTION_THINGS_ALARM — cross it and the operator gets ONE email per
+#   collection. The owner is never told: a silent tripwire, not a warning, so a
+#   real bulk import is not interrupted and someone abusing the endpoint is not
+#   told where the line sits.
+# COLLECTION_THINGS_BLOCK — adds that would cross it are refused (400) until a
+#   superuser ticks `capacity_unblocked` on the collection in the admin.
+#
+# 0 (or unset) disables each independently. Unlike the invitation cap these do
+# NOT follow RATELIMIT_ENABLE: they are a storage ceiling rather than a rate,
+# and a test that sets them means to exercise them.
+COLLECTION_THINGS_ALARM = int(os.environ.get("COLLECTION_THINGS_ALARM", "0"))
+COLLECTION_THINGS_BLOCK = int(os.environ.get("COLLECTION_THINGS_BLOCK", "0"))
+COLLECTION_INVITES_ALARM = int(os.environ.get("COLLECTION_INVITES_ALARM", "0"))
+COLLECTION_INVITES_BLOCK = int(os.environ.get("COLLECTION_INVITES_BLOCK", "0"))
+
 
 # Custom User Model
 AUTH_USER_MODEL = "core.User"

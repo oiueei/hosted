@@ -943,3 +943,62 @@ def send_stats_summary_email(recipient, subject, sections):
         CATEGORY_MANDATORY,
         include_viral=False,
     )
+
+
+def send_collection_capacity_alarm(collection, counter, count, threshold):
+    """Alert the operator that a collection crossed the mass-upload alarm line.
+
+    Ops mail, like ``send_stats_summary_email``: operator-only, so it carries no
+    i18n catalogue, no footer and no viral CTA.
+
+    **Recipients are the superusers**, not a config var. The spec says this
+    alert reaches the operator alone, and on the deploy branch the operator *is*
+    the superuser — so deriving the address from `is_superuser` keeps the two
+    definitions from drifting, and a deployment that adds a second admin gets
+    them included without touching config. Falls back to ``CONTACT_EMAIL`` /
+    ``DEFAULT_FROM_EMAIL`` if no superuser has an email, because an abuse signal
+    that silently goes nowhere is worse than no signal.
+
+    **The owner is never copied.** The alarm is a tripwire, not a warning: a
+    legitimate bulk import must not be interrupted, and someone probing the
+    endpoint must not be told where the line sits. Only the hard ceiling
+    (``COLLECTION_THINGS_BLOCK``) is user-visible, and only once it bites.
+    """
+    import os
+
+    from core.models import User
+
+    recipients = list(
+        User.objects.filter(is_superuser=True).exclude(email="").values_list("email", flat=True)
+    ) or [os.environ.get("CONTACT_EMAIL", "") or settings.DEFAULT_FROM_EMAIL]
+    owner = collection.owner
+    headline = resolve_localized(collection.headline)
+    noun = "things" if counter == "things" else "members"
+    subject = f"[OIUEEI] Collection {collection.code} passed {threshold} {noun}"
+    rows = [
+        ("Collection", f"{headline} ({collection.code})"),
+        ("Counter", noun),
+        (noun.capitalize(), str(count)),
+        ("Alarm threshold", str(threshold)),
+        ("Owner", f"{owner.display_name} <{owner.email}>" if owner else "-"),
+        ("Owner code", owner.code if owner else "-"),
+        ("Created", collection.created.isoformat()),
+    ]
+    blocks = [
+        _para(
+            "A collection has crossed the mass-upload alarm threshold. This is "
+            "informational — nothing has been blocked and the owner has not been "
+            "notified. Review it if the volume looks wrong for this account."
+        )
+    ]
+    plain_lines = ["Collection passed the mass-upload alarm threshold.", ""]
+    for label, value in rows:
+        blocks.append(_field(label, value))
+        plain_lines.append(f"  {label}: {value}")
+
+    # One send per superuser: _send takes a single address, and a per-recipient
+    # send keeps a bad address from costing the others their alert.
+    plain = "\n".join(plain_lines)
+    html = _render_email(blocks)
+    for recipient in recipients:
+        _send(recipient, subject, plain, html, CATEGORY_MANDATORY, include_viral=False)

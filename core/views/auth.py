@@ -124,6 +124,12 @@ def _join_collection(collection, user):
     if already_member:
         return
 
+    # The member counter only moves on a genuine join, and this is the single
+    # funnel every join path goes through (invite acceptance, share token,
+    # public login-to-act, onboarding) — so one hook covers all of them. The
+    # matching ceiling is enforced earlier, when invitations are *sent*.
+    collection.note_capacity("invites")
+
     Event.log(Event.Kind.MEMBER_JOINED, actor=user, collection=collection)
     if not collection.welcome_doc:
         return

@@ -33,9 +33,20 @@ class CollectionAdmin(admin.ModelAdmin):
         "headline",
         "owner",
         "status",
+        "thing_count",
+        "capacity_unblocked",
     ]
     search_fields = ["code", "headline"]
-    list_filter = ["status"]
+    # `capacity_unblocked` is filterable and editable in the list: lifting the
+    # mass-upload ceiling for one collection is the documented superuser
+    # unblock, and it should not require opening the change form to find it.
+    list_filter = ["status", "capacity_unblocked", "things_alarm_sent", "invites_alarm_sent"]
+    list_editable = ["capacity_unblocked"]
+
+    @admin.display(description="Things")
+    def thing_count(self, obj):
+        """The number the capacity guards compare against."""
+        return obj.things.count()
 
 
 @admin.register(Thing)

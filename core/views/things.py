@@ -158,6 +158,12 @@ class ThingViewSet(ModelViewSet):
             if err:
                 raise ValidationError({"type": err})
 
+            # Mass-upload ceiling. Checked before the Thing row is created so a
+            # refused add leaves nothing orphaned behind it.
+            full = collection.capacity_violation("things", adding=1)
+            if full:
+                raise ValidationError({"collection_code": full})
+
         # Tags must come from the collection's owner-defined vocabulary.
         tags = serializer.validated_data.get("tags", [])
         if tags:
@@ -175,6 +181,7 @@ class ThingViewSet(ModelViewSet):
 
         if collection:
             collection.things.add(thing)
+            collection.note_capacity("things")
 
         Event.log(
             Event.Kind.THING_ADDED,
@@ -331,6 +338,13 @@ class ThingBulkCreateView(APIView):
         if errors:
             return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Mass-upload ceiling, checked against the WHOLE batch: the point of the
+        # guard is that a bulk import cannot step over the line 100 rows at a
+        # time. All-or-nothing, like every other failure on this endpoint.
+        full = collection.capacity_violation("things", adding=len(validated))
+        if full:
+            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+
         with transaction.atomic():
             created = [Thing.objects.create(owner=request.user, **data) for data in validated]
             collection.things.add(*created)
@@ -341,6 +355,10 @@ class ThingBulkCreateView(APIView):
                     collection=collection,
                     thing=thing,
                 )
+
+        # After the commit: the alarm reports the real count, and a failing
+        # alarm can never roll back a good import.
+        collection.note_capacity("things")
 
         return Response(
             {"created": len(created), "codes": [thing.code for thing in created]},
