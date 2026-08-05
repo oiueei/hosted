@@ -7,6 +7,19 @@ from rest_framework.response import Response
 from core.models import Thing
 
 
+def body_dict(request):
+    """``request.data`` when the body is a JSON object, else an empty dict.
+
+    DRF parses a JSON *array* body into a ``list``, which has no ``.get`` — so a
+    view that reads ``request.data.get(...)`` before any serializer has run
+    raises ``AttributeError`` and answers 500 where it owes a 400. Every endpoint
+    using this expects an object body, so anything else is simply "no fields
+    given" and falls through to the view's own validation, which already has the
+    right message for an empty request.
+    """
+    return request.data if isinstance(request.data, dict) else {}
+
+
 def viewer_code(request):
     """The requesting user's code, or ``None`` for an anonymous visitor.
 

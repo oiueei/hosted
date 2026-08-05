@@ -30,7 +30,7 @@ from core.services.booking_service import (
     request_standard_booking,
     resolve_rental_collection,
 )
-from core.views._helpers import get_viewable_thing
+from core.views._helpers import body_dict, get_viewable_thing
 
 
 class ThingRequestView(APIView):
@@ -103,7 +103,7 @@ class ThingRequestView(APIView):
         # The collection the requester was looking at when they asked (the SPA sends
         # it whenever it has one). It picks the collection the owner's notification
         # deep-links to and shows up on — a thing can live in several.
-        collection_code = request.data.get("collection_code")
+        collection_code = body_dict(request).get("collection_code")
 
         try:
             if thing.type in DATE_BASED_TYPES:
@@ -127,7 +127,7 @@ class ThingRequestView(APIView):
 
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
-        collection_code = request.data.get("collection_code")
+        collection_code = body_dict(request).get("collection_code")
         rental_collection = resolve_rental_collection(thing, collection_code)
 
         booking = request_date_based_booking(

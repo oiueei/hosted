@@ -49,7 +49,12 @@ from core.services.email_service import (
 )
 from core.utils import redact_email
 from core.validators import SafeHeadlineField
-from core.views._helpers import require_collection_owner, type_validity_error, viewer_code
+from core.views._helpers import (
+    body_dict,
+    require_collection_owner,
+    type_validity_error,
+    viewer_code,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -624,12 +629,12 @@ class CollectionBulkInviteView(APIView):
         # Member ceiling for the whole batch — same reasoning as the single
         # endpoint, and checked against the batch so a bulk invite cannot step
         # over the line 100 rows at a time.
-        batch = len(request.data.get("invites") or [])
+        batch = len(body_dict(request).get("invites") or [])
         full = collection.capacity_violation("invites", adding=batch)
         if full:
             return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
-        rows = request.data.get("invites") if isinstance(request.data, dict) else None
+        rows = body_dict(request).get("invites")
         if not isinstance(rows, list) or not rows:
             return Response({"error": "No emails to invite."}, status=status.HTTP_400_BAD_REQUEST)
         if len(rows) > self.MAX_ROWS:
@@ -946,7 +951,7 @@ class CollectionShareLinkView(APIView):
         if denied:
             return denied
 
-        rotate = bool(request.data.get("rotate"))
+        rotate = bool(body_dict(request).get("rotate"))
 
         if rotate or not collection.share_token:
             collection.share_token = generate_share_token()

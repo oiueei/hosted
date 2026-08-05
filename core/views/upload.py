@@ -31,6 +31,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.views._helpers import body_dict
+
 # Image-mode folders only — "oiueei/documents" is document-mode-only (forced
 # below, never client-chosen) and deliberately absent from this set.
 IMAGE_FOLDERS = {"oiueei/users", "oiueei/things", "oiueei/collections"}
@@ -72,16 +74,17 @@ class CloudinarySignatureView(APIView):
 
     @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
     def post(self, request):
+        body = body_dict(request)
         # Anything that isn't the one document kind is an image upload — an unknown
         # value can only ever narrow to the (unchanged) image defaults.
-        is_document = request.data.get("kind") == "document"
+        is_document = body.get("kind") == "document"
 
         if is_document:
             # Document mode always signs the documents folder — an image-mode
             # request may not choose it, keeping images out of it (S4).
             folder = "oiueei/documents"
         else:
-            folder = request.data.get("folder", "oiueei/users")
+            folder = body.get("folder", "oiueei/users")
             # oiueei/documents isn't in IMAGE_FOLDERS, so naming it here falls
             # back like any other value the image mode doesn't recognise.
             if folder not in IMAGE_FOLDERS:
