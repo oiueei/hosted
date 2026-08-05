@@ -272,8 +272,8 @@ The `BookingPeriod` model is the unified reservation/booking model for all thing
 | `requester_code` | ForeignKey(User) | **Yes** | User who made the request |
 | `requester_email` | CharField(64) | **Yes** | Email of the requester |
 | `owner_code` | ForeignKey(User) | **Yes** | Owner of the thing |
-| `start_date` | DateField | No | Start date (for LEND/RENT/SHARE) |
-| `end_date` | DateField | No | End date (for LEND/RENT/SHARE) |
+| `start_date` | DateField | No | Start date (LEND/RENT only — `request_standard_booking` leaves GIFT/SELL bookings dateless) |
+| `end_date` | DateField | No | End date (LEND/RENT only, same as `start_date`) |
 | `status` | CharField(9) | No | Status: PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED. Indexed (`db_index=True`) |
 
 ### Thing Type Categories
@@ -324,9 +324,9 @@ The `Thing` model represents an item in a collection.
 | `tags` | JSONField (list) | No | Owner-defined tags assigned to this thing — a subset of its collection's `Collection.tags` vocabulary (validated on create/update). Max 12. Rendered as HDS `Tag`s on the card and detail. Default `[]`. |
 | `status` | CharField(8) | No | Status: ACTIVE, TAKEN, INACTIVE |
 | `fee` | DecimalField | No | Price/fee (for SELL/RENT types) |
-| `availability` | CharField(12) | No | Availability: IMMEDIATE, NEXT_WEEK, END_OF_MONTH, NEXT_MONTH. Only for GIFT/SELL/LEND/SHARE types. |
-| `location` | CharField(32) | No | Free-text location. Only for GIFT/SELL/LEND/SHARE types. |
-| `condition` | CharField(12) | No | Condition: NEW, GOOD, FAIR, USED, WELL_USED, ALMOST_JUNK. Only for GIFT/SELL/LEND/SHARE types. |
+| `availability` | CharField(12) | No | Availability: IMMEDIATE, NEXT_WEEK, END_OF_MONTH, NEXT_MONTH. Offered by the thing form for GIFT/SELL/LEND only (`DETAIL_TYPES` in `frontend/src/constants/things.js`); the column and the serializers accept it on any type. |
+| `location` | CharField(32) | No | Free-text location. Same GIFT/SELL/LEND form gate as `availability` — not enforced server-side. |
+| `condition` | CharField(12) | No | Condition: NEW, GOOD, FAIR, USED, WELL_USED, ALMOST_JUNK. Same GIFT/SELL/LEND form gate as `availability` — not enforced server-side. |
 | `is_endless` | BooleanField | No | GIFT_THING and SELL_THING only. When True: multiple simultaneous PENDING bookings from different users are allowed, thing status never changes to TAKEN, no ThingTransfer is created on acceptance, thing remains ACTIVE forever (until owner hides or deletes it). Default: False. |
 | `deal` | ManyToManyField(User) | No | Users who have reserved |
 

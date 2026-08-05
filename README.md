@@ -184,7 +184,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | PUT | `/api/v1/things/{code}/` | Update thing (owner only) |
 | DELETE | `/api/v1/things/{code}/` | Delete thing (owner only) |
 | POST | `/api/v1/things/{code}/request/` | Request reservation (invited only) |
-| GET | `/api/v1/things/{code}/calendar/` | View booking calendar (LEND/RENT/SHARE) |
+| GET | `/api/v1/things/{code}/calendar/` | View booking calendar (any thing — bookings without dates are listed too) |
 | GET | `/api/v1/things/{code}/transfers/` | View transfer history and stats (Loan Chain) |
 | POST | `/api/v1/things/{code}/activate/` | Reactivate an inactive thing (owner only) |
 | POST | `/api/v1/things/{code}/hide/` | Set an active thing to inactive (owner only) |
