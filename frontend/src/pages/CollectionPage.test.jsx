@@ -24,8 +24,6 @@ const COLLECTION_WITH_PHOTO = {
   things: [],
   invites: [],
   is_paused: false,
-  is_swap: false,
-  is_share: false,
   allowed_thing_types: [],
 };
 

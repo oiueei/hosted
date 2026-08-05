@@ -1,6 +1,6 @@
 ## What is OIUEEI?
 
-A source-available web application (BUSL 1.1 — every line public and auditable; MIT from 2030; self-hosting in production is allowed, offering it as a competing hosted service is not) for people to share their belongings with friends and others around. Users can create collections (wishlists, gift lists, items for sale) and share them with friends who can then reserve items or ask questions.
+A source-available web application (BUSL 1.1 — every line public and auditable; MIT from 2030; self-hosting in production is allowed, offering it as a competing hosted service is not) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
 
 No ads, no tracking of any kind, no third-party code running in your browser — and no cookie banner, because there is nothing to consent to. Each of those claims comes with a way to check it: **[→ Privacy](#privacy)**.
 
@@ -105,13 +105,12 @@ core/
 | Model | Purpose |
 |-------|---------|
 | **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` (default on) and `notify_news` (default off — an explicit opt-in, DESIGN §6) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). Optional profile extras: `about` (free Markdown bio) and `photo` (Cloudinary profile photo, exposed as `photo_url`) |
-| **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things). `is_swap` flag enables item swapping (COMMUNITY only). `is_share` flag restricts to SHARE_THING only (COMMUNITY only, mutually exclusive with `is_swap`). `newsletter_enabled` sends weekly activity newsletter on Mondays (requires `is_share`). `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
-| **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING, SHARE_THING, WISH_THING, SWAP_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). WISH_THING ("Pedido") is a request a member posts on a community board: instead of a reservation it collects structured `WishResponse` answers; resolving it sets `status=INACTIVE` so it leaves the active board. WISH_THING and SHARE_THING are restricted to COMMUNITY collections. SHARE_THING transfers ownership to the requester on booking acceptance; after the first transfer, only the collection owner can hide it. SWAP_THING enables item swapping in swap collections (`is_swap=True`); requester offers own things, on acceptance all things transfer ownership bilaterally. `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
+| **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
+| **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
 | **Theeeme** | Colour palettes (6 HDS colour token names) for customising collections |
 | **RSVP** | One-time-use tokens (24h expiry) for auth and email actions. FK to User |
-| **BookingPeriod** | Unified booking model for all thing types (72h expiry). FKs to Thing, User (requester), User (owner). `offered_things` M2M for SWAP_THING exchange proposals |
-| **WishResponse** | An answer to a wish (WISH_THING). FK to Thing (`wish`) and User (`responder`). `kind`: HAVE_THIS (links a real listing via FK `thing`), KNOW_WHERE (text + `url`), CAN_MAKE (text + `fee`). `status`: PENDING or ACCEPTED. The creator accepts one answer; accepting is scoped to the answer, not the wish |
+| **BookingPeriod** | Unified booking model for all thing types (72h expiry). FKs to Thing, User (requester), User (owner) |
 | **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires; consumed only by `stats_summary`. Never exposed to users |
 | **DailyActivity** | One `(user, date)` row per user per active day, written by `DailyActivityMiddleware` (cache-gated to ≤1 DB write per user per day). Powers WAU/MAU and retention. Records less than the web-server logs already hold and never leaves our DB |
 
@@ -125,9 +124,6 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 - `Collection.theeeme` -> FK to Theeeme (PROTECT)
 - `Thing.owner` -> FK to User
 - `Thing.deal` -> M2M to User (via `thing_deals` table)
-- `WishResponse.wish` -> FK to Thing (a WISH_THING; reverse `responses`)
-- `WishResponse.responder` -> FK to User (reverse `wish_responses`)
-- `WishResponse.thing` -> FK to Thing (the offered listing, HAVE_THIS only; SET_NULL)
 - `FAQ.thing` -> FK to Thing
 - `FAQ.questioner` -> FK to User
 - `BookingPeriod.thing_code` -> FK to Thing
@@ -183,17 +179,13 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/api/v1/things/` | List own things |
-| POST | `/api/v1/things/` | Create thing (`WISH_THING` may set `notify_group`, default true, to email the collection group) |
+| POST | `/api/v1/things/` | Create thing |
 | GET | `/api/v1/things/{code}/` | View thing (owner or invited) |
 | PUT | `/api/v1/things/{code}/` | Update thing (owner only) |
 | DELETE | `/api/v1/things/{code}/` | Delete thing (owner only) |
 | POST | `/api/v1/things/{code}/request/` | Request reservation (invited only) |
 | GET | `/api/v1/things/{code}/calendar/` | View booking calendar (LEND/RENT/SHARE) |
-| GET | `/api/v1/things/{code}/transfers/` | View transfer history and stats (Loan Chain). For SHARE_THING in COMMUNITY collections, includes `original_owner`, `original_owner_name`, and `is_share_in_community` fields |
-| GET | `/api/v1/things/{code}/responses/` | List answers to a wish (creator sees all; a responder sees their own) |
-| POST | `/api/v1/things/{code}/responses/` | Answer a wish — `kind` HAVE_THIS / KNOW_WHERE / CAN_MAKE (invited, not owner; rate limited: 20/h). Emails the creator |
-| POST | `/api/v1/things/{code}/resolve/` | Mark a wish resolved (creator only): hides it from the active board and thanks the accepted responder |
-| POST | `/api/v1/wish-responses/{code}/accept/` | Accept one answer to a wish (creator only) |
+| GET | `/api/v1/things/{code}/transfers/` | View transfer history and stats (Loan Chain) |
 | POST | `/api/v1/things/{code}/activate/` | Reactivate an inactive thing (owner only) |
 | POST | `/api/v1/things/{code}/hide/` | Set an active thing to inactive (owner only) |
 | POST | `/api/v1/things/{code}/report/` | Report a listing anonymously (logged-in non-owners) |
@@ -253,7 +245,7 @@ python manage.py migrate
 #    (Lala, Lele, Lili, Lolo, Lulu and their collections — idempotent.)
 #    Collection/thing text is ALWAYS seeded in all three languages at once
 #    (inline {es,ca,en} maps — every reader sees their own); --lang only picks
-#    the language of the plain-column text (user bios, FAQs, wish responses).
+#    the language of the plain-column text (user bios, FAQs).
 python manage.py seed_demo                 # plain-column text in English (default)
 python manage.py seed_demo --lang=es       # … in Spanish (also: --lang=ca)
 python manage.py seed_demo --lang=es --reset   # wipe demos first, then re-seed
@@ -351,12 +343,10 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 | Rate Limiting | Upload signature | 30 req/hour per user |
 | Rate Limiting | Broadcast | 5 req/day per user |
 | Rate Limiting | FAQ question | 20 req/hour per user |
-| Rate Limiting | Wish response | 20 req/hour per user |
 | Rate Limiting | Notifications token | GET 20/min, PATCH 10/min per IP |
 | Rate Limiting | Thing single create | 60 req/hour per user |
 | Rate Limiting | Collection single create | 30 req/hour per user |
 | Rate Limiting | Collection add-thing | 60 req/hour per user |
-| Rate Limiting | Wish response accept | 30 req/hour per user |
 | Rate Limiting | Collection leave | 30 req/hour per user |
 | Rate Limiting | Account delete request | 3 req/hour per user |
 | Rate Limiting | Contact form | 5 req/hour per IP |
@@ -424,7 +414,7 @@ For access, rectification, portability, objection or restriction, write to the o
 - **Proper FK/M2M**: All relationships use Django ForeignKey and ManyToManyField (migrated from JSONField arrays). This enables `select_related`/`prefetch_related`, cascade deletes, and referential integrity.
 - **Centralized email**: All email HTML composition lives in `email_service.py` with `django.utils.html.escape()` for XSS prevention. Every send is routed through a preference pipeline that filters Cat. 2 (activity) and Cat. 3 (news) based on `User.notify_activity` / `notify_news`; Cat. 1 (magic links, invitations, revokes) is always delivered. Non-mandatory emails carry a footer with a `TimestampSigner`-signed link to `/me/notifications/{token}` so recipients can toggle preferences without logging in (see `NotificationsByTokenView`).
 - **RSVP intermediary**: All email action links use RSVP codes. Real entity codes are never exposed in URLs.
-- **Seed data out of migrations**: Demo fixtures (Lala/Lele/Lili/Lolo/Lulu and their collections) live in `core/management/commands/seed_demo.py` + `seed_data/{lang}.py`, not in migrations. Fresh environments start with a clean DB and only get demo data when `python manage.py seed_demo` is run explicitly. The command is idempotent (`update_or_create` / `get_or_create`). Collection/thing text is always seeded **in all three languages at once** as inline localized maps (`{"es": …, "ca": …, "en": …}` — every reader resolves their own, see the multilingual-content notes); `--lang=en|es|ca` (default English) only selects the language of the plain-column text (user bios, FAQs, wish responses). The old seed migrations (`0037`–`0076`) are retained as no-ops to preserve migration history.
+- **Seed data out of migrations**: Demo fixtures (Lala/Lele/Lili/Lolo/Lulu and their collections) live in `core/management/commands/seed_demo.py` + `seed_data/{lang}.py`, not in migrations. Fresh environments start with a clean DB and only get demo data when `python manage.py seed_demo` is run explicitly. The command is idempotent (`update_or_create` / `get_or_create`). Collection/thing text is always seeded **in all three languages at once** as inline localized maps (`{"es": …, "ca": …, "en": …}` — every reader resolves their own, see the multilingual-content notes); `--lang=en|es|ca` (default English) only selects the language of the plain-column text (user bios, FAQs). The old seed migrations (`0037`–`0076`) are retained as no-ops to preserve migration history.
 
 ## Default Data
 

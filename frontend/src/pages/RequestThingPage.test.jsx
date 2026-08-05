@@ -39,16 +39,6 @@ const RENTAL_THING = {
   collection_code: 'RCOL01',
 };
 
-const SWAP_THING = {
-  code: 'SWTH01',
-  headline: 'Owner Swap Item',
-  type: 'SWAP_THING',
-  fee: null,
-  rental_durations: [],
-  rental_weekdays: [],
-  collection_code: 'SWAP01',
-};
-
 function mockRoutes({ thing, ownThings = [], request = { ok: true, status: 201 } }) {
   globalThis.fetch = vi.fn((url, options = {}) => {
     const respond = (status, body) =>

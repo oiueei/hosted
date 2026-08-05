@@ -23,7 +23,7 @@ The `User` model represents a person who can own collections, be invited to othe
 | `koro` | CharField(9) | No | Koros wave type: basic, beat, calm, pulse, vibration, wave (default: basic) |
 | `theeeme` | ForeignKey(Theeeme) | No | Colour palette (default: a random Theeeme, via `_random_theeeme`) |
 | `notify_activity` | BooleanField | No | Opt-out toggle for Cat. 2 (activity) emails — bookings, FAQs, reminders, broadcasts. Default: `True` |
-| `notify_news` | BooleanField | No | Opt-in toggle for Cat. 3 (news) emails — digests and newsletters. Default: `False` (new users must opt in; DESIGN §6) |
+| `notify_news` | BooleanField | No | Opt-in toggle for Cat. 3 (news) emails — digests. Default: `False` (new users must opt in; DESIGN §6) |
 | `age_range` | CharField(8) | No | Optional **birth-year generation** (`PRE_1946` / `BOOMER` 1946–1964 / `GEN_X` 1965–1980 / `GEN_Y` 1981–1996 / `GEN_Z` 1997–2012 / `GEN_A` 2013–2024 / `GEN_B` 2025–2039 — switched from age brackets in migration 0115: 51_60→GEN_X and 31_40→GEN_Y mapped faithfully, the rest reset to unanswered, mirroring 0114's policy). Asked of every user in the profile editor. Per member it's shared only with the owner of a COMMUNITY collection (guests page); in aggregate it appears in any collection owner's stats CSV. Never public. Default empty. |
 | `postal_code` | CharField(10) | No | Optional postal/area code. Same scope as `age_range`: asked of everyone, per-member owner-only in COMMUNITY, aggregate in any owner's stats CSV, never public. Default empty. |
 | `language` | CharField(2) | No | The language OIUEEI writes to this user in (`es`/`ca`/`en`) — **the strongest level of the email language hierarchy**, beating both the collection's language and the deployment default. Blank (default) = inherit. Saved from the language `Select` in `EditProfilePage` (which also switches the UI), and stamped on **newly created** pop-in users from the `language` they were reading the join page in. |
@@ -98,13 +98,9 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `digest_frequency` | CharField(7) | No | Digest email frequency: NONE (default), WEEKLY, or MONTHLY |
 | `language` | CharField(2) | No | The language this group's outbound email is written in (`es`/`ca`/`en`). Blank (default) = inherit the deployment default (`EMAIL_LANGUAGE`); a member's own `User.language` still wins over it. Set by the owner in the Create/Edit collection form. See `core/services/CLAUDE.md` → the email language hierarchy. |
 | `is_onboarding` | BooleanField | No | If True, new users joining via `/popin` are added to this collection (default: False) |
-| `is_swap` | BooleanField | No | If True, only SWAP_THING items allowed (plus WISH_THING — wishes coexist with the swap pool); enables item swapping (default: False). Only meaningful for COMMUNITY collections. |
-| `is_share` | BooleanField | No | If True, only SHARE_THING items allowed (plus WISH_THING — wishes coexist with the share pool) (default: False). Mutually exclusive with `is_swap`. Only meaningful for COMMUNITY collections. |
-| `newsletter_enabled` | BooleanField | No | If True, sends weekly activity newsletter on Mondays (default: False). Requires `is_share=True`. |
-| `swap_minimum_items` | PositiveIntegerField | No | Number of own SWAP_THINGs (status ACTIVE or TAKEN) a user must already have in this collection before they can propose a swap. Default `0` (no requirement). Only meaningful when `is_swap=True` — the serializer rejects `>0` for non-swap collections. Enforced in `core/services/booking_service.py::request_swap_booking`. The frontend reads `collection_swap_minimum_items` and `my_swap_count_in_collection` (both exposed on `ThingSerializer` and `CollectionThingSummarySerializer`) to disable the "Propose swap" button and surface an inline `Notification` before the user submits. The check applies to **every** requester, including the collection owner — owners propose swaps on guests' things and the rule is symmetric. |
-| `rental_durations` | JSONField (list) | No | Rental rules (#7): allowed rental lengths in **days** for LEND/RENT things in this collection (weeks are normalised to days, e.g. `[1, 3, 7, 14]`). The renter picks exactly one; the return date is derived (N days → `end = start + N`, so a one-week rental picked up on a Wednesday returns the NEXT Wednesday — this keeps a single allowed weekday satisfiable for week-multiple lengths). Default `[]` = no fixed durations (free date range). Sorted + deduped by the serializer. Only shown/saved for non-swap/non-share collections. |
+| `rental_durations` | JSONField (list) | No | Rental rules (#7): allowed rental lengths in **days** for LEND/RENT things in this collection (weeks are normalised to days, e.g. `[1, 3, 7, 14]`). The renter picks exactly one; the return date is derived (N days → `end = start + N`, so a one-week rental picked up on a Wednesday returns the NEXT Wednesday — this keeps a single allowed weekday satisfiable for week-multiple lengths). Default `[]` = no fixed durations (free date range). Sorted + deduped by the serializer. |
 | `rental_weekdays` | JSONField (list) | No | Rental rules (#7): allowed weekdays (Python `weekday()`, 0=Mon…6=Sun) for **both** pickup (start) and return (end) of LEND/RENT bookings. Default `[]` = any day. Sorted + deduped by the serializer. |
-| `allowed_thing_types` | JSONField (list) | No | Per-collection allowlist of Thing types that may be added. Default `[]` (no restriction — anything that the mode/flags otherwise permit). When non-empty, `core/views/things.py::ThingViewSet.create` rejects any thing whose type is not in the list with 400. The Create/Edit Collection forms enforce "pick at least one" for both PROPRIETARY and COMMUNITY (without `is_swap`/`is_share`). When `is_swap` or `is_share` is on, the flag itself restricts the type and the multi-select is hidden — the backend rejects any non-empty `allowed_thing_types` in that case to keep the rules unambiguous. (`WISH_THING` is additionally accepted in swap-only/share-only collections and is exempt from this forced allowlist — wishes coexist with the offer pool.) The Update serializer also runs an orphan check: narrowing the list while existing things would no longer fit returns 400 with a message naming the offending types. |
+| `allowed_thing_types` | JSONField (list) | No | Per-collection allowlist of Thing types that may be added. Default `[]` (no restriction). When non-empty, `core/views/things.py::ThingViewSet.create` rejects any thing whose type is not in the list with 400. The Create/Edit Collection forms enforce "pick at least one" in both modes — mode decides WHO may add a thing, never which types. The Update serializer also runs an orphan check: narrowing the list while existing things would no longer fit returns 400 with a message naming the offending types. |
 | `tags` | JSONField (list) | No | Owner-defined tag vocabulary for the collection — an ordered list of free-text labels (max 12, ≤32 chars **per language**, no HTML; a label may itself be a localized `{lang: text}` map, capped at 160 stored; trimmed + deduped case-insensitively — on the **raw** string, so a map is one label like any other). Things in the collection may be tagged with a subset (`Thing.tags`). Removing a tag here cascade-strips it from the collection's things. Default `[]`. |
 | `thumbnail` | CharField(255) | No | Cloudinary image ID for the collection thumbnail (default: empty string). |
 | `welcome_doc` | CharField(255) | No | Cloudinary public_id of the owner's optional **welcome & rules PDF** (default: empty string). Emailed as a **link, never an attachment** (Cat. 1, `send_collection_welcome_doc_email`) the first time a user becomes a member — every join path funnels through `core/views/auth.py::_join_collection`, which decides "first time" *before* the idempotent M2M add, so a login-to-act re-join never resends. PDF only, uploaded to the `oiueei/documents` folder (signed upload, `kind: "document"` — the server forces this folder, S4), 5 MB client-side cap (`max_file_size` isn't a signable Cloudinary parameter, S3). Cloudinary stores a PDF under `resource_type=image`, so the id shares the photo namespace: `core.utils.cloudinary_doc_url` builds the `.pdf` delivery URL (no `f_auto`/`q_auto` — those would re-encode the document), `cloudinary_cleanup` destroys it with the record, and `cleanup_orphan_images` must keep cross-referencing it or its sweep would delete a live document. |
@@ -279,7 +275,6 @@ The `BookingPeriod` model is the unified reservation/booking model for all thing
 | `start_date` | DateField | No | Start date (for LEND/RENT/SHARE) |
 | `end_date` | DateField | No | End date (for LEND/RENT/SHARE) |
 | `status` | CharField(9) | No | Status: PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED. Indexed (`db_index=True`) |
-| `offered_things` | ManyToManyField(Thing) | No | Things offered by the requester in exchange (SWAP_THING only). Related name: `swap_offers`. |
 
 ### Thing Type Categories
 
@@ -292,11 +287,9 @@ SINGLE_USE_TYPES = ["GIFT_THING", "SELL_THING"]  # Thing becomes INACTIVE after 
 
 1. **72h expiry** - PENDING bookings expire after `BOOKING_EXPIRY_HOURS` (default 72h).
 2. **Date-based (LEND/RENT)**: `start_date` and `end_date` required. No **strictly** overlapping bookings — a booking's return day may be the next booking's pickup day (back-to-back handovers); only a shared *interior* day conflicts. Thing stays ACTIVE.
-3. **Share (SHARE_THING)**: NOT date-based. No dates required — permanent ownership transfer on acceptance. Multiple pending requests allowed from different users.
-4. **Single-use (GIFT/SELL)**: No dates. Thing status changes to TAKEN on request, INACTIVE on accept. When `is_endless=True`: multiple simultaneous PENDING bookings allowed, status never TAKEN, thing stays ACTIVE after accept, no ThingTransfer created.
-5. **Swap (SWAP_THING)**: No dates. Requester offers own things via `offered_things` M2M. On acceptance, requested thing transfers to requester and all offered things transfer to original owner. All things stay ACTIVE. ThingTransfer records created for each thing involved.
-6. **Accept/reject/cancel via services** - `booking_service.accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status changes.
-7. **Requester can cancel** - Requesters can cancel their own PENDING bookings. For single-use things, cancellation restores status to ACTIVE.
+3. **Single-use (GIFT/SELL)**: No dates. Thing status changes to TAKEN on request, INACTIVE on accept. When `is_endless=True`: multiple simultaneous PENDING bookings allowed, status never TAKEN, thing stays ACTIVE after accept, no ThingTransfer created.
+4. **Accept/reject/cancel via services** - `booking_service.accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status changes.
+5. **Requester can cancel** - Requesters can cancel their own PENDING bookings. For single-use things, cancellation restores status to ACTIVE.
 
 ### Methods
 
@@ -321,7 +314,7 @@ The `Thing` model represents an item in a collection.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `code` | CharField(6) | Auto | Primary key, 6-character alphanumeric ID |
-| `type` | CharField(11) | No | Type: GIFT_THING, SELL_THING, RENT_THING, LEND_THING, SHARE_THING, WISH_THING, SWAP_THING |
+| `type` | CharField(11) | No | Type: GIFT_THING, SELL_THING, RENT_THING, LEND_THING |
 | `owner` | ForeignKey(User) | **Yes** | Owner of the thing |
 | `created` | DateTimeField | Auto | Timestamp when thing was created |
 | `headline` | CharField(256) | **Yes** | Title of the thing. **64 per language, 256 stored** — may be an inline `{lang: text}` map (see the multilingual-content note under Collection). |
@@ -335,7 +328,7 @@ The `Thing` model represents an item in a collection.
 | `location` | CharField(32) | No | Free-text location. Only for GIFT/SELL/LEND/SHARE types. |
 | `condition` | CharField(12) | No | Condition: NEW, GOOD, FAIR, USED, WELL_USED, ALMOST_JUNK. Only for GIFT/SELL/LEND/SHARE types. |
 | `is_endless` | BooleanField | No | GIFT_THING and SELL_THING only. When True: multiple simultaneous PENDING bookings from different users are allowed, thing status never changes to TAKEN, no ThingTransfer is created on acceptance, thing remains ACTIVE forever (until owner hides or deletes it). Default: False. |
-| `deal` | ManyToManyField(User) | No | Users who have reserved (not used by WISH_THING — wishes use `WishResponse`) |
+| `deal` | ManyToManyField(User) | No | Users who have reserved |
 
 ### Status
 
@@ -358,7 +351,6 @@ The `Thing` model represents an item in a collection.
 - `thing.faq_set` - FAQs about this thing (FAQ.thing FK reverse)
 - `thing.bookings` - Bookings for this thing (BookingPeriod.thing_code FK reverse)
 - `thing.transfers` - Transfer history for this thing (ThingTransfer.thing FK reverse)
-- `thing.swap_offers` - Swap bookings where this thing was offered (BookingPeriod.offered_things M2M reverse)
 
 ---
 
@@ -423,26 +415,21 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `COLLECTION_REVOKED` | Owner removes a guest from collection | Removed user | `collection_headline`, `owner_name` |
 | `BOOKING_ACCEPTED` | Owner accepts a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
 | `BOOKING_REJECTED` | Owner rejects a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
-| `BOOKING_UNAVAILABLE` | Owner accepts a rival SHARE/SWAP request for the same thing | Each auto-declined sibling requester | `thing_headline`, `thing_code`, `collection_code` |
-| `BOOKING_REQUESTED` | User requests a hold (non-swap) | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code` |
-| `SWAP_REQUESTED` | User proposes a swap | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code` |
+| `BOOKING_REQUESTED` | User requests a hold | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code` |
 | `FAQ_QUESTION` | User asks a FAQ question | Thing owner | `thing_headline`, `questioner_name` |
 | `FAQ_ANSWERED` | Owner answers a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `FAQ_HIDDEN` | Owner hides a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `INVITE_REJECTED` | Invitee declines a collection invite | Collection owner | `collection_headline`, `invitee_name` |
 | `MEMBER_LEFT` | A member leaves a collection (self-unlink) | Collection owner | `collection_headline`, `member_name`, `collection_code` |
 | `THING_REPORTED` | A member reports a thing | Thing owner | `thing_headline`, `thing_code` (no reporter identity — anonymous to the owner) |
-| `WISH_POSTED` | Member posts a wish with "Avisar al grupo" on | Each group member | `wish_headline`, `creator_name`, `wish_code`, `collection_code` |
-| `WISH_RESPONSE` | Member answers a wish | Wish creator | `wish_headline`, `responder_name`, `wish_code`, `collection_code` |
-| `WISH_ACCEPTED` | Creator accepts an answer | Responder | `wish_headline`, `owner_name`, `wish_code`, `collection_code` |
 
-The three wish payloads carry `wish_code` + `collection_code` so the inbox banner can render a deep link to `/collections/{collection_code}/things/{wish_code}` (the wish page). The five booking payloads carry **`thing_code` + `collection_code`** for the same reason (the banner links the thing, where a hold is actually answered) and so a collection's page can filter its own; the two *request* types additionally carry **`booking_code`**, which is what lets the decision clear them (see below). `collection_code` is `""` when the thing sits in no active collection — a thing can live in several, so it records the one the request was made through (`booking_service.resolve_request_collection`).
+The booking payloads carry **`thing_code` + `collection_code`** for the same reason (the banner links the thing, where a hold is actually answered) and so a collection's page can filter its own; `BOOKING_REQUESTED` additionally carries **`booking_code`**, which is what lets the decision clear it (see below). `collection_code` is `""` when the thing sits in no active collection — a thing can live in several, so it records the one the request was made through (`booking_service.resolve_request_collection`).
 
 ### Business Rules
 
 1. **One notification per action** — Created atomically alongside the corresponding email.
 2. **Dismissal via DELETE** — `DELETE /api/v1/inbox/{code}/` removes the record (one-time dismiss).
-3. **A settled request clears its own notification** — `BOOKING_REQUESTED`/`SWAP_REQUESTED` ask the owner to decide; accept, reject, auto-decline and requester-cancel all answer that question, and `booking_service._clear_request_notifications()` deletes the notification (matched by `payload__booking_code`) so the inbox never asks twice. Rows written before the key existed don't match and stay until dismissed by hand.
+3. **A settled request clears its own notification** — `BOOKING_REQUESTED` asks the owner to decide; accept, reject and requester-cancel all answer that question, and `booking_service._clear_request_notifications()` deletes the notification (matched by `payload__booking_code`) so the inbox never asks twice. Rows written before the key existed don't match and stay until dismissed by hand.
 4. **Ordered newest-first** — Default ordering is `-created`.
 5. **Cascades on user delete** — `on_delete=CASCADE` on the `user` FK.
 
@@ -452,44 +439,6 @@ The three wish payloads carry `wish_code` + `collection_code` so the inbox banne
 
 ---
 
-## WishResponse
-
-A `WishResponse` is a member's structured answer to a **wish** (a `Thing` of type `WISH_THING`). It is the closest analogue to `FAQ` (a parent-FK + user-FK + text + state), and replaces the old "I can help" toggle.
-
-### Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `code` | CharField(6) | Auto | Primary key, 6-character alphanumeric ID |
-| `wish` | ForeignKey(Thing) | **Yes** | The wish being answered (a `WISH_THING`). `db_column='wish'`, reverse `responses`, CASCADE |
-| `responder` | ForeignKey(User) | **Yes** | The member answering. Reverse `wish_responses`, CASCADE |
-| `created` | DateTimeField | Auto | Timestamp (`timezone.now`) |
-| `kind` | CharField(10) | **Yes** | `HAVE_THIS` / `KNOW_WHERE` / `CAN_MAKE` (TextChoices) |
-| `thing` | ForeignKey(Thing) | No | For `HAVE_THIS`: the real listing offered (its own GIFT/SELL/LEND mode). `db_column='offered_thing'`, reverse `offered_in_responses`, **SET_NULL** |
-| `message` | CharField(256) | No | Free text for `KNOW_WHERE` / `CAN_MAKE` |
-| `url` | CharField(255) | No | Optional link for `KNOW_WHERE` |
-| `fee` | DecimalField(10,2) | No | Optional offer/price for `CAN_MAKE` |
-| `status` | CharField(8) | No | `PENDING` (default) or `ACCEPTED` |
-
-### Business Rules
-
-1. **Owner cannot answer their own wish** — enforced at the view (400).
-2. **HAVE_THIS must offer the responder's own listing** — the offered `thing` must belong to the responder (400 otherwise).
-3. **Acceptance is per-answer, not per-wish** — the creator marks one `WishResponse` `ACCEPTED`; this is the "reserve" applied to the answer so two members can't both think they won.
-4. **Resolution hides the wish** — `WishResolveView` sets `Thing.status = INACTIVE`; the row itself is not deleted.
-5. **SET_NULL on the offered thing** — deleting the offered listing leaves the answer intact with `thing = NULL`.
-6. **Ordering** — newest-first (`-created`). Table: `wish_responses`.
-
-### Methods
-
-- `is_responder(user_code)` — True if the user authored this answer.
-- `accept()` — sets `status = ACCEPTED` and saves.
-
-### Reverse Relations
-
-- `thing.responses` — answers to a wish (`WishResponse.wish` FK reverse)
-- `thing.offered_in_responses` — answers that offer this thing (`WishResponse.thing` FK reverse)
-- `user.wish_responses` — answers authored by a user (`WishResponse.responder` FK reverse)
 
 ---
 

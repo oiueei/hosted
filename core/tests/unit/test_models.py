@@ -549,7 +549,6 @@ class TestBookingPeriodModel:
             ("RENT_THING", True, False),
             ("GIFT_THING", False, True),
             ("SELL_THING", False, True),
-            ("SWAP_THING", False, False),
         ],
     )
     def test_booking_type_classification(self, thing_type, date_based, single_use):

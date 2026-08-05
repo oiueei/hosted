@@ -312,13 +312,13 @@ Unauthenticated endpoint scoped to editing `notify_activity` / `notify_news` on 
 
 **Retrieve:** Uses `thing.can_view(user_code)` — owner, or invited to an ACTIVE collection containing the thing (INACTIVE things are only visible to their owner).
 
-**Create behaviour:** Optionally accepts `collection_code` in request body. `perform_create` raises DRF exceptions directly (no `{"error": ...}` two-phase protocol): an unknown `collection_code` → **404 NotFound**; a collection the user can't add to → **403 PermissionDenied**; a type/tag rule violation → **400 ValidationError** (field-keyed: `{"type": [...]}` / `{"tags": [...]}`, like `perform_update`). If valid, the thing is automatically added to it. WISH_THING and SHARE_THING are restricted to COMMUNITY collections — 400 (`type`) if no collection or if the collection is PROPRIETARY. SWAP_THING requires a swap collection (`is_swap=True`) — 400 otherwise. Swap-only and share-only collections accept their forced offer type (SWAP_THING / SHARE_THING) **plus WISH_THING** — a wish coexists with the offer pool and is exempt from the forced allowlist there; any other type returns 400. **Per-collection allowlist** (`Collection.allowed_thing_types`): if non-empty, the thing's type must be in it — returns 400 otherwise. Empty list = no per-collection restriction. **Tags**: any `tags` on the thing must belong to the collection's `Collection.tags` vocabulary — returns 400 otherwise (tags require a collection; on update, `ThingUpdateSerializer.validate_tags` checks the union of the thing's collections' tags). Removing a tag from a collection (via `CollectionUpdateSerializer`) cascade-strips it from that collection's things. **Group notice**: for `WISH_THING`, the request body may include `notify_group` (boolean, default `true`); when on, creating the wish in a COMMUNITY collection emails every other group member via `send_wish_posted_email` and bulk-creates a `WISH_POSTED` in-app notification (payload: `wish_headline`, `creator_name`, `wish_code`, `collection_code`) for each.
+**Create behaviour:** Optionally accepts `collection_code` in request body. `perform_create` raises DRF exceptions directly (no `{"error": ...}` two-phase protocol): an unknown `collection_code` → **404 NotFound**; a collection the user can't add to → **403 PermissionDenied**; a type/tag rule violation → **400 ValidationError** (field-keyed: `{"type": [...]}` / `{"tags": [...]}`, like `perform_update`). If valid, the thing is automatically added to it. **Per-collection allowlist** (`Collection.allowed_thing_types`): if non-empty, the thing's type must be in it — returns 400 otherwise. Empty list = no per-collection restriction. **Tags**: any `tags` on the thing must belong to the collection's `Collection.tags` vocabulary — returns 400 otherwise (tags require a collection; on update, `ThingUpdateSerializer.validate_tags` checks the union of the thing's collections' tags). Removing a tag from a collection (via `CollectionUpdateSerializer`) cascade-strips it from that collection's things.
 
 **`activate` action:** Sets `status = 'ACTIVE'`. Returns 400 if thing is not INACTIVE.
 
 **`hide` action:** Sets `status = 'INACTIVE'`. Only the current thing owner (`thing.owner`) can hide — returns 403 for everyone else. Returns 400 if thing is not ACTIVE (cannot hide a TAKEN thing — cancel the hold first).
 
-**`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Two cases grant permission: (1) the user owns any collection containing the thing (collection owner can always delete); (2) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for the collection owner regardless of thing status; for the thing owner, Delete is only shown when `transfer_count === 0` (for SHARE_THING) — otherwise the button is hidden.
+**`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Two cases grant permission: (1) the user owns any collection containing the thing (collection owner can always delete); (2) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for the collection owner regardless of thing status; the thing owner sees it when the thing has never changed hands.
 
 ### InvitedThingsView
 
@@ -704,13 +704,7 @@ Rejects a pending booking. Same permission and validation as accept. Calls `reje
 | **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner |
 | **Rate limit** | 10 requests/hour per user |
 
-Creates a reservation/booking request. Returns 400 for WISH_THING (this type bypasses BookingPeriod). The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_share_booking`, `request_date_based_booking`, `request_standard_booking`, `request_swap_booking`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code)`, which the view maps back to `{"error": message}` with the same status. Routes based on thing type:
-
-**Share (SHARE_THING)** — `booking_service.request_share_booking()`:
-- NOT date-based — no `start_date`/`end_date` fields.
-- Permanent ownership transfer on acceptance; thing stays `ACTIVE`.
-- Multiple pending requests from different users are allowed.
-- Returns 400 if the requesting user already has a PENDING request for this thing.
+Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code)`, which the view maps back to `{"error": message}` with the same status. Routes based on thing type:
 
 **Date-based (LEND/RENT):**
 - Requires `start_date` and `end_date`.
@@ -723,18 +717,6 @@ Creates a reservation/booking request. Returns 400 for WISH_THING (this type byp
 { "start_date": "2025-06-01", "end_date": "2025-06-15" }
 ```
 
-**Swap (SWAP_THING):**
-- Requires `offered_thing_codes` (list of thing codes to offer in exchange).
-- Each offered thing must: be SWAP_THING, be owned by the requester, be ACTIVE, be in the same swap collection.
-- **Minimum-items gate** (`Collection.swap_minimum_items`): if `>0`, the requester must already have at least that many own SWAP_THINGs (status ACTIVE or TAKEN) in the same collection — otherwise returns 400 with the message "You need to upload at least N item(s) to this collection before you can propose a swap." Applies symmetrically to guests AND the collection owner (owners only request swaps on guests' things, but the rule treats them the same). Frontend mirrors the gate via `collection_swap_minimum_items` + `my_swap_count_in_collection` on the thing serializer.
-- Creates `BookingPeriod` with no dates, links offered things via M2M.
-- Thing stays `ACTIVE`. Sends swap-specific emails via `booking_service.send_swap_request_notifications()`.
-
-**Request body:**
-```json
-{ "offered_thing_codes": ["THNG01", "THNG02"] }
-```
-
 **Standard (GIFT/SELL):**
 - No extra fields required.
 - Checks for existing pending request from same user. Returns 400 if duplicate.
@@ -744,8 +726,8 @@ Creates a reservation/booking request. Returns 400 for WISH_THING (this type byp
 0. Reads an optional **`collection_code`** from the body — the collection the requester was browsing. It already governed the rental rules (above); it now also decides which collection the owner's in-app notification belongs to, so the request shows up on the right collection's page (a thing can live in several — see `resolve_request_collection`). The SPA sends it from the card and the detail page whenever it has one; the standalone `/things/:code` page has none and the service approximates.
 1. Validates owner email in the parent `post()` method (shared across all type handlers).
 2. Creates `BookingPeriod` with status `PENDING`.
-3. Creates two RSVPs (`BOOKING_ACCEPT` and `BOOKING_REJECT`) for the owner's email action links via `booking_service.send_booking_request_notifications()` (or `send_swap_request_notifications()` for SWAP_THING).
-4. Sends booking request email to owner with accept/reject links, and a confirmation email to the requester ("Hold request sent" / "Swap request sent").
+3. Creates two RSVPs (`BOOKING_ACCEPT` and `BOOKING_REJECT`) for the owner's email action links via `booking_service.send_booking_request_notifications()`.
+4. Sends booking request email to owner with accept/reject links, and a confirmation email to the requester ("Hold request sent").
 
 **INACTIVE collection enforcement:**
 If all collections containing the thing are INACTIVE, the request is blocked with 400 "This collection is currently inactive".
@@ -783,7 +765,6 @@ Returns the transfer history (Loan Chain) and aggregate stats for a thing.
   "current_holder_name": "Lala",
   "original_owner": "ABC123",
   "original_owner_name": "Lala",
-  "is_share_in_community": true,
   "transfers": [
     {
       "code": "XYZ789",
@@ -805,7 +786,6 @@ Returns the transfer history (Loan Chain) and aggregate stats for a thing.
 4. Computes `unique_homes` (distinct user codes across all `from_user` and `to_user` fields; NULL users — deleted accounts — count as at most one former home).
 5. Computes `current_holder` from the most recent unreturned transfer's `to_user`.
 6. Computes `original_owner` from the `from_user` of the oldest transfer (by `lent_date`). Null if no transfers.
-7. Computes `is_share_in_community`: True when the thing is a `SHARE_THING` and belongs to at least one `COMMUNITY` collection.
 
 ---
 
@@ -832,43 +812,6 @@ The reporter is stored server-side only (`Report.reporter`) as a moderation trai
 
 ---
 
-## Wish Views (`core/views/wishes.py`)
-
-A wish is a `Thing` of type `WISH_THING` (reusing `ThingViewSet` for create/edit/hide). These views add the structured-answer layer on top: members answer with `WishResponse` objects ("Tengo esto" / "Sé dónde" / "Puedo hacértelo") instead of a reservation, and the creator accepts one and resolves the wish. All return 400 if the target `Thing` is not a `WISH_THING`.
-
-### ThingWishResponseView
-
-| | |
-|---|---|
-| **Endpoints** | `GET` and `POST /api/v1/things/{thing_code}/responses/` |
-| **Permission** | `IsAuthenticated` + `thing.can_view()` |
-| **Rate limit** | POST: 20 requests/hour per user |
-| **Pagination** | `StandardResultsPagination` |
-
-`GET` lists answers — the wish creator sees every answer; any other member sees only their own. `POST` answers the wish via `WishResponseCreateSerializer`: `kind=HAVE_THIS` requires `thing_code` (a real listing **owned by the responder** — 400 otherwise); `KNOW_WHERE`/`CAN_MAKE` require `message` (plus optional `url` / `fee`). The owner cannot answer their own wish (400). On success, emails the creator via `send_wish_response_email()` and creates a `WISH_RESPONSE` `InAppNotification`.
-
-### WishResponseAcceptView
-
-| | |
-|---|---|
-| **Endpoint** | `POST /api/v1/wish-responses/{code}/accept/` |
-| **Permission** | `IsAuthenticated` + wish creator only |
-
-Marks one `WishResponse` `ACCEPTED` (others stay `PENDING`) — this is the "reserve" applied to the answer, not the wish, so two members can't both think they won. Creates a `WISH_ACCEPTED` `InAppNotification` for the responder. Returns 403 for anyone but the wish creator.
-
-### WishResolveView
-
-| | |
-|---|---|
-| **Endpoint** | `POST /api/v1/things/{thing_code}/resolve/` |
-| **Permission** | `IsAuthenticated` + wish creator only |
-
-Sets the wish `Thing.status` to `INACTIVE` (so it leaves the active board — the repo's soft-delete pattern), and emails the accepted responder a thank-you via `send_wish_thanks_email()`. Returns 400 if the wish is already resolved (not `ACTIVE`), 403 for non-creators. Reopen with the standard `POST /things/{code}/activate/`.
-
-> The previous "I can help" toggle (`offer-help` / `helpers` endpoints on the `deal` M2M) was replaced by this structured-answer flow.
-
----
-
 ### Management Command: `close_transfers`
 
 Daily command (`python manage.py close_transfers`) that closes overdue transfers:
@@ -884,10 +827,9 @@ Daily command (`python manage.py send_reminders`) that sends reminder emails:
 
 ### Management Command: `send_digests`
 
-Daily command (`python manage.py send_digests`) that sends digest emails and newsletters:
+Daily command (`python manage.py send_digests`) that sends digest emails:
 - **Weekly digests**: sent on Mondays for collections with `digest_frequency = "WEEKLY"`. Lists things added in the past 7 days.
 - **Monthly digests**: sent on the 1st of each month for collections with `digest_frequency = "MONTHLY"`. Lists things added in the previous month.
-- **Weekly newsletters**: sent on Mondays for share collections with `newsletter_enabled = True`. Includes two blocks: (1) new things added in the past 7 days, (2) ownership changes (ThingTransfer records) in the past 7 days. Skips collections with no activity or no invitees.
 - Skips collections with no new things or no invitees.
 - Outputs count of digest emails sent.
 
@@ -966,7 +908,6 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
 - `/collections/` POST (single create) — 30 requests per hour per user
 - `/collections/{code}/add-thing/` POST — 60 requests per hour per user
-- `/wish-responses/{code}/accept/` POST — 30 requests per hour per user
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user
 - `/contact/` POST — 5 requests per hour per IP

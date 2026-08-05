@@ -4,7 +4,6 @@ BookingPeriod model - unified reservation/booking model for all thing types.
 This model handles all reservation scenarios:
 - GIFT_THING, SELL_THING: Single-use reservations (no dates, thing becomes INACTIVE)
 - LEND_THING, RENT_THING: Date-based bookings (start/end dates, thing stays ACTIVE on return)
-- SHARE_THING: No dates — permanent ownership transfer on acceptance, thing stays ACTIVE
 """
 
 from datetime import timedelta

@@ -8,12 +8,14 @@ import { apiFetch } from "../services/api";
 import useTheeeme from "../hooks/useTheeeme";
 import ContactCorner from "../components/ContactCorner";
 
+// Lele and Lulu keep their story but own no collection, so they carry no link —
+// the render filters by accessibleCodes and simply shows no link row for them.
 const PERSONA_LINKS = {
   Lala: [{ code: "La1aC1", key: "personaLalaLink2" }],
-  Lele: [{ code: "L3L3C1", key: "personaLeleLink1" }],
+  Lele: [],
   Lili: [{ code: "l1l1C1", key: "personaLiliLink1" }],
   Lolo: [{ code: "l0l0C1", key: "personaLoloLink1" }],
-  Lulu: [{ code: "1u1uC1", key: "personaLuluLink1" }],
+  Lulu: [],
 };
 
 export default function WelcomePage() {

@@ -93,13 +93,13 @@ describe('AddThingPage — field visibility', () => {
   });
 
 
-  test('share collection: shows the type selector, forced to SHARE', async () => {
-    const { container } = renderAdd({ collection: { mode: 'COMMUNITY', is_share: true } });
+  test('single-type allowlist: preselects it and shows its fields', async () => {
+    const { container } = renderAdd({ collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // The Select is shown even though the flag forces the single option.
+    // The Select still renders even when the allowlist leaves one option.
     expect(screen.getByText('Type')).toBeInTheDocument();
-    // Default stays SHARE (a DETAIL_TYPE, not a FEE_TYPE): availability shows, fee hidden.
+    // LEND is a DETAIL_TYPE but not a FEE_TYPE: availability shows, fee hidden.
     expect(container.querySelector('#add-thing-fee')).toBeNull();
     expect(screen.getByText('Availability')).toBeInTheDocument();
   });

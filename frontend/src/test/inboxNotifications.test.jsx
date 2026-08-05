@@ -53,8 +53,6 @@ const COLLECTION = {
   things: [],
   invites: [],
   is_paused: false,
-  is_swap: false,
-  is_share: false,
   allowed_thing_types: [],
 };
 

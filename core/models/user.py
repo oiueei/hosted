@@ -101,7 +101,7 @@ class User(AbstractBaseUser):
 
     # Notification preferences (see core/services/email_service.py categories).
     # Activity (Cat. 2) defaults ON — transactional, expected. News (Cat. 3 —
-    # digests/newsletters) defaults OFF: it is a pre-ticked opt-in today, which
+    # digests) defaults OFF: it is a pre-ticked opt-in today, which
     # violates DESIGN §6; new users must explicitly ask for it.
     notify_activity = models.BooleanField(default=True)
     notify_news = models.BooleanField(default=False)
