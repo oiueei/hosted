@@ -233,6 +233,18 @@ class Collection(models.Model):
     def _capacity_count(self, counter):
         return (self.things if counter == "things" else self.invites).count()
 
+    def capacity_ceiling(self, counter="things"):
+        """The hard ceiling in force for ``counter``, or ``0`` when there is none.
+
+        ``0`` means either the deployment set no ceiling (the standalone default)
+        or a superuser lifted it for this collection. Callers use it as a cheap
+        gate: with no ceiling to judge them, working out how many rows a request
+        would actually add is wasted effort, so the guard costs not one query.
+        """
+        if self.capacity_unblocked:
+            return 0
+        return max(getattr(settings, self._COUNTERS[counter]["block_setting"], 0) or 0, 0)
+
     def capacity_violation(self, counter="things", adding=1):
         """Return an error string if adding ``adding`` rows to ``counter`` would
         cross this deployment's hard ceiling, else ``None``.
@@ -243,14 +255,24 @@ class Collection(models.Model):
         ``capacity_unblocked`` lifts it for this collection.
 
         Checked BEFORE the add and against the WHOLE batch, so a bulk import or
-        bulk invite cannot step over the line 100 rows at a time. The message
-        names the ceiling: once it actually bites, hiding the number would just
-        leave the owner with an unexplained refusal (the thresholds are
-        unpublished, not secret from the person hitting one).
+        bulk invite cannot step over the line 100 rows at a time. ``adding`` is
+        the number of rows that would genuinely *land* — callers must not count
+        rows the request will drop anyway (an invitee who is already a member is
+        inside the count the ceiling measures, so counting them again would
+        refuse a batch that adds nobody). The message names the ceiling: once it
+        actually bites, hiding the number would just leave the owner with an
+        unexplained refusal (the thresholds are unpublished, not secret from the
+        person hitting one).
         """
         spec = self._COUNTERS[counter]
-        ceiling = getattr(settings, spec["block_setting"], 0) or 0
-        if ceiling <= 0 or self.capacity_unblocked:
+        ceiling = self.capacity_ceiling(counter)
+        if ceiling <= 0:
+            return None
+        # Adding nothing can never *cross* a line. Without this, a batch whose
+        # rows all turn out to be no-ops (already members, or every row invalid)
+        # would still be refused on a collection that is already over a ceiling
+        # lowered after the fact — a refusal the request could do nothing about.
+        if adding <= 0:
             return None
         if self._capacity_count(counter) + adding > ceiling:
             return (

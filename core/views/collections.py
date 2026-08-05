@@ -351,19 +351,29 @@ class CollectionInviteView(APIView):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
+        serializer = CollectionInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"].lower()
+
         # Member ceiling, enforced where invitations are SENT rather than where
         # they are accepted: refusing an invitee at the door would punish someone
         # who did nothing wrong. It counts current members, so invitations still
         # pending are not included — the daily email quota above is what caps a
         # fan-out of unaccepted invites.
-        full = collection.capacity_violation("invites", adding=1)
-        if full:
-            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = CollectionInviteSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        email = serializer.validated_data["email"].lower()
+        #
+        # Someone who is already a member consumes no capacity — they are inside
+        # the count the ceiling measures — so re-inviting them is never a ceiling
+        # refusal: it falls through to the "already invited" 400 below, which is
+        # the accurate answer. Checked by email so it still runs before
+        # get_or_create, leaving a refused invite with no User row behind.
+        if (
+            collection.capacity_ceiling("invites")
+            and not collection.invites.filter(email=email).exists()
+        ):
+            full = collection.capacity_violation("invites", adding=1)
+            if full:
+                return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
         invited_user, created = User.objects.get_or_create(
             email=email,
@@ -626,14 +636,6 @@ class CollectionBulkInviteView(APIView):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        # Member ceiling for the whole batch — same reasoning as the single
-        # endpoint, and checked against the batch so a bulk invite cannot step
-        # over the line 100 rows at a time.
-        batch = len(body_dict(request).get("invites") or [])
-        full = collection.capacity_violation("invites", adding=batch)
-        if full:
-            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
-
         rows = body_dict(request).get("invites")
         if not isinstance(rows, list) or not rows:
             return Response({"error": "No emails to invite."}, status=status.HTTP_400_BAD_REQUEST)
@@ -667,6 +669,29 @@ class CollectionBulkInviteView(APIView):
             except serializers.ValidationError:
                 name = ""
             candidates.append((email, name))
+
+        # Member ceiling for the whole batch — same reasoning as the single
+        # endpoint, and checked against the batch so a bulk invite cannot step
+        # over the line 100 rows at a time. Counted AFTER validation and dedup,
+        # and excluding addresses that are ALREADY members: those sit inside the
+        # count the ceiling is measured against, so counting them again would
+        # refuse a batch that adds nobody. With no ceiling set — the standalone
+        # default — none of this runs and the guard costs no query.
+        #
+        # No row lock here, unlike the thing ceiling: this endpoint sends
+        # invitations, it does not add members. The count it reads only moves
+        # when someone accepts, which is deliberately never refused, so two
+        # concurrent batches have nothing to race over.
+        if collection.capacity_ceiling("invites"):
+            emails = [email for email, _ in candidates]
+            already = set(
+                collection.invites.filter(email__in=emails).values_list("email", flat=True)
+            )
+            full = collection.capacity_violation(
+                "invites", adding=sum(1 for email in emails if email not in already)
+            )
+            if full:
+                return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
         inviter_name = request.user.display_name
         invited = []

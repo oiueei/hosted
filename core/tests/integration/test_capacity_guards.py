@@ -265,3 +265,134 @@ def test_bulk_invite_checks_the_whole_batch(mock_send, authenticated_client, col
 
     assert res.status_code == 400
     assert mock_send.call_count == 0
+
+
+# ── The ceiling counts what would LAND, not what was typed ───────────────────
+#
+# `adding` must be the number of rows that genuinely add to the counter. An
+# address that is already a member sits *inside* the count the ceiling is
+# measured against, so counting it again refuses a request that adds nobody.
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_INVITES_BLOCK=10)
+@patch("core.views.collections.send_collection_invite_email")
+def test_bulk_reinviting_existing_members_is_not_a_ceiling_refusal(
+    mock_send, authenticated_client, collection
+):
+    """A batch made only of current members adds nobody, so no ceiling can bite."""
+    members = _fill_members(collection, 9)
+    invites = [{"email": m.email} for m in members[:5]]
+
+    res = authenticated_client.post(
+        BULK_INVITE_URL.format(code=collection.code), {"invites": invites}, format="json"
+    )
+
+    assert res.status_code == 200
+    assert {s["reason"] for s in res.data["skipped"]} == {"already_member"}
+    assert collection.invites.count() == 9
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_INVITES_BLOCK=10)
+@patch("core.views.collections.send_collection_invite_email")
+def test_bulk_counts_only_the_newcomers_against_the_ceiling(
+    mock_send, authenticated_client, collection
+):
+    """9 members + 5 rows, 4 of them already members: exactly one seat is needed."""
+    members = _fill_members(collection, 9)
+    invites = [{"email": m.email} for m in members[:4]] + [{"email": "new@example.com"}]
+
+    res = authenticated_client.post(
+        BULK_INVITE_URL.format(code=collection.code), {"invites": invites}, format="json"
+    )
+
+    assert res.status_code == 200
+    assert res.data["invited"] == 1
+    assert mock_send.call_count == 1
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_INVITES_BLOCK=10)
+@patch("core.views.collections.send_collection_invite_email")
+def test_bulk_still_refuses_when_the_newcomers_alone_cross_it(
+    mock_send, authenticated_client, collection
+):
+    """The relaxation must not defeat the guard: 9 members + 2 real newcomers."""
+    members = _fill_members(collection, 9)
+    invites = [{"email": members[0].email}] + [{"email": f"new{i}@example.com"} for i in range(2)]
+
+    res = authenticated_client.post(
+        BULK_INVITE_URL.format(code=collection.code), {"invites": invites}, format="json"
+    )
+
+    assert res.status_code == 400
+    assert mock_send.call_count == 0
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_INVITES_BLOCK=2)
+@patch("core.views.collections.send_collection_invite_email")
+def test_single_reinvite_of_a_member_answers_already_invited_not_the_ceiling(
+    mock_send, authenticated_client, collection
+):
+    """At the ceiling, re-inviting a member gets the accurate 'already invited'."""
+    members = _fill_members(collection, 2)
+
+    res = authenticated_client.post(
+        INVITE_URL.format(code=collection.code), {"email": members[0].email}, format="json"
+    )
+
+    assert res.status_code == 400
+    assert "already invited" in str(res.data).lower()
+    assert mock_send.call_count == 0
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_INVITES_BLOCK=2)
+@patch("core.views.collections.send_collection_invite_email")
+def test_single_invite_of_a_newcomer_still_hits_the_ceiling(
+    mock_send, authenticated_client, collection
+):
+    """The single-endpoint relaxation is scoped to members, not to everyone."""
+    _fill_members(collection, 2)
+
+    res = authenticated_client.post(
+        INVITE_URL.format(code=collection.code), {"email": "newcomer@example.com"}, format="json"
+    )
+
+    assert res.status_code == 400
+    assert not User.objects.filter(email="newcomer@example.com").exists()
+    assert mock_send.call_count == 0
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_INVITES_BLOCK=10)
+@patch("core.views.collections.send_collection_invite_email")
+def test_a_no_op_batch_is_not_refused_by_a_ceiling_already_crossed(
+    mock_send, authenticated_client, collection
+):
+    """A ceiling lowered after the fact must not trap requests that add nobody.
+
+    15 members under a ceiling of 10 (the operator tightened it, or lifted then
+    re-applied it). A batch of current members adds no one, so there is nothing
+    for the ceiling to refuse — and refusing it would leave the owner unable to
+    act on a state they cannot change from the API.
+    """
+    members = _fill_members(collection, 15)
+
+    res = authenticated_client.post(
+        BULK_INVITE_URL.format(code=collection.code),
+        {"invites": [{"email": m.email} for m in members[:3]]},
+        format="json",
+    )
+
+    assert res.status_code == 200
+    assert res.data["invited"] == 0
+    # A real newcomer is still refused — the counter is over its line.
+    refused = authenticated_client.post(
+        BULK_INVITE_URL.format(code=collection.code),
+        {"invites": [{"email": "newcomer@example.com"}]},
+        format="json",
+    )
+    assert refused.status_code == 400

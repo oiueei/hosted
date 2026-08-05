@@ -901,6 +901,8 @@ Independent of the rate limits below, and **off unless the deployment sets thres
 
 Enforcement points: things — `ThingViewSet.create` (before the row is created), `ThingBulkCreateView` (whole batch, all-or-nothing), `CollectionViewSet.add_thing` (so moving an existing thing is not the unguarded door). Members — `CollectionInviteView` and `CollectionBulkInviteView`, enforced where invitations are **sent** rather than accepted (refusing an invitee at the door would punish someone who did nothing wrong); the alarm fires from `_join_collection`, the single funnel every join path goes through.
 
+**The ceiling counts what would land, not what was typed.** `adding` is the number of rows that genuinely move the counter, so both invite endpoints check *after* validation and dedup and exclude addresses that are **already members** — those sit inside the count the ceiling measures, and counting them again refused batches that added nobody (a re-invite at the ceiling now falls through to the accurate "already invited" 400). The thing paths count `len(validated)` for the same reason. All of it is gated on `Collection.capacity_ceiling()`, so a deployment with no thresholds runs no extra query.
+
 ### Rate Limiting
 
 - `/auth/request-link/` — 5 requests per minute per IP **and** 5 per hour per account (email)
