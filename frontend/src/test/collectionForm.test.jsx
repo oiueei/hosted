@@ -68,12 +68,10 @@ beforeEach(() => {
 // CreateCollectionPage — mode-gated toggles + submit
 // ════════════════════════════════════════════════════════════════════════
 describe('CreateCollectionPage', () => {
-  test('PROPRIETARY (default): share hidden, types not locked', () => {
-    const { container } = renderCreate();
+  test('PROPRIETARY (default): no album-mode toggle', () => {
+    renderCreate();
 
-    expect(screen.queryByRole('button', { name: 'Exclusively SHARE things' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Album mode/ })).toBeNull();
-    expect(container.querySelector('.multiselect-locked')).toBeNull();
   });
 
   // P1-5: the mode picker is a radio group with an inline description per option,

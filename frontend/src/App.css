@@ -1229,16 +1229,6 @@ figure[class*="Highlight-module_highlight"] {
   border-color: var(--color-black-90) !important;
 }
 
-/* When a multi-select is locked to a single auto-filled value (e.g. the
-   collection allowed-types select in swap/share mode), the chip list below the
-   trigger is redundant — the input already carries the value and the helper
-   text explains the constraint. HDS v5 renders the chips in
-   .Select-module_tagListContainer__<hash>; the wildcard targets the prefix
-   without coupling to the hash. */
-.multiselect-locked [class*="Select-module_tagListContainer"] {
-  display: none;
-}
-
 /* HDS multi-select default behaviour: cap the chip area at 80px and surface
    a "Show all (N)" button to expand. Two problems for us: (1) the button's
    label hard-codes Finnish ("Näytä kaikki") regardless of `language="en"`,

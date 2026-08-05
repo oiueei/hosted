@@ -134,11 +134,10 @@ class TestCatalogueParity:
 
     def test_every_bookable_type_has_an_action_noun(self):
         # Every type that can reach the shared booking emails needs a noun in
-        # the en reference (key parity extends it to es/ca). SWAP matters even
-        # though its request/confirmation emails use dedicated templates: the
-        # decision email is shared (finalize_booking_decision runs for every
-        # booking type), so a missing key is a KeyError mid-decision — after
-        # the ownership transfer already committed.
+        # the en reference (key parity extends it to es/ca). The decision email
+        # is shared — finalize_booking_decision runs for every booking type —
+        # so a missing key is a KeyError mid-decision, after the booking has
+        # already been accepted and the thing taken out of circulation.
         from core.models import Thing
 
         missing = [t for t in Thing.Type.values if f"action_noun_{t}" not in en.TEXTS]

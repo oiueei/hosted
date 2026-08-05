@@ -60,7 +60,6 @@
     "privateTag": "Privada"
   },
   "common": {
-    "appName": "OIUEEI",
     "skipToContent": "Saltar al contenido",
     "error": "Error",
     "done": "Hecho",
@@ -171,10 +170,6 @@
     "createCollection": "Crear colección",
     "myProfile": "Mi perfil",
     "myRequests": "Mis solicitudes",
-    "allThings": "Todos los artículos",
-    "loadingThings": "Cargando artículos...",
-    "noThings": "Todavía no hay artículos. Añade artículos a tus colecciones para verlos aquí.",
-    "inactiveThings": "Artículos inactivos",
     "invitedBy": "{{name}} te ha invitado a ver",
     "offlineLabel": "Problema de conexión",
     "offlineBody": "No podemos conectar con OIUEEI ahora mismo. Revisa tu conexión e inténtalo de nuevo.",
@@ -254,8 +249,6 @@
     "holdRequested": "Solicitud enviada — te responderán pronto.",
     "invalidRequest": "Solicitud no válida.",
     "errorSendingRequest": "Error al enviar la solicitud.",
-    "thingHidden": "Artículo ocultado.",
-    "errorHidingThing": "Error al ocultar el artículo.",
     "thingReactivated": "Artículo reactivado.",
     "errorReactivatingThing": "Error al reactivar el artículo.",
     "holdConfirmed": "Reserva confirmada.",
@@ -396,7 +389,6 @@
     "photoLabel": "Foto de perfil",
     "photoHelper": "Se muestra en tu perfil, opcional",
     "maxAbout": "Máximo 2000 caracteres.",
-    "emailPreferences": "Preferencias de email →",
     "languageHelper": "OIUEEI también te escribe en este idioma (correos incluidos).",
     "deleteAccount": "Borrar cuenta",
     "nameHelper": "Tu nombre, un apodo, lo que quieras — es como te verán los demás en OIUEEI."
@@ -537,7 +529,6 @@
     "loadingCollections": "Cargando colecciones...",
     "noCollections": "Todavía no tienes colecciones activas.",
     "createFirst": "Crea tu primera colección",
-    "toGetStarted": "para empezar.",
     "collectionExplainer": "Una colección es una lista que puedes compartir — regalos, préstamos, alquileres, cosas en venta — que solo pueden ver las personas a las que invitas.",
     "learnHow": "Ver cómo funciona",
     "noShared": "Todavía nadie ha compartido una colección contigo.",

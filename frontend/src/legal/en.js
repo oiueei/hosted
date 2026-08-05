@@ -27,7 +27,7 @@ OIUEEI is source-available software (BUSL 1.1 licence; MIT from 2030). This page
 
 # Basic terms
 
-OIUEEI is in alpha and offered "as is", without warranties, to the extent the law allows. The content you publish is yours and you are responsible for it; don't publish anything illegal or harmful. Exchanges (gifts, sales, loans, swaps) are agreements between people: the platform is not a party to them and processes no payments. There is a report button, and the operator may remove content that breaks these rules.
+OIUEEI is in alpha and offered "as is", without warranties, to the extent the law allows. The content you publish is yours and you are responsible for it; don't publish anything illegal or harmful. Exchanges (gifts, sales, loans, rentals) are agreements between people: the platform is not a party to them and processes no payments. There is a report button, and the operator may remove content that breaks these rules.
 
 # For operators (self-hosting)
 

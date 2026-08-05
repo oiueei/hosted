@@ -13,9 +13,9 @@ import {
  * fixed-durations multi-select plus the pickup/return weekday chip row.
  *
  * Extracted from CollectionForm so it can live inside the collection form's
- * "More options" accordion (O1) while the identity cluster stays visible. A
- * swap/share-only collection can't hold LEND/RENT things, so the pages render
- * this for every collection.
+ * "More options" accordion (O1) while the identity cluster stays visible.
+ * Rendered for every collection: the rules only bite on LEND/RENT things, and
+ * leaving them empty is the "no fixed durations" default.
  *
  * Controlled: value + setter owned by the page. `idPrefix` is
  * `create-collection` / `edit-collection`; `theeemeColor01` is the theeeme

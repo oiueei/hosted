@@ -60,7 +60,6 @@
     "privateTag": "Privada"
   },
   "common": {
-    "appName": "OIUEEI",
     "skipToContent": "Vés al contingut",
     "error": "Error",
     "done": "Fet",
@@ -171,10 +170,6 @@
     "createCollection": "Crear col·lecció",
     "myProfile": "El meu perfil",
     "myRequests": "Les meves sol·licituds",
-    "allThings": "Tots els articles",
-    "loadingThings": "Carregant articles...",
-    "noThings": "Encara no hi ha articles. Afegeix articles a les teves col·leccions per veure'ls aquí.",
-    "inactiveThings": "Articles inactius",
     "invitedBy": "{{name}} t'ha convidat a veure",
     "offlineLabel": "Problema de connexió",
     "offlineBody": "Ara mateix no podem connectar amb OIUEEI. Comprova la connexió i torna-ho a provar.",
@@ -254,8 +249,6 @@
     "holdRequested": "Sol·licitud enviada — aviat et respondran.",
     "invalidRequest": "Sol·licitud no vàlida.",
     "errorSendingRequest": "Error en enviar la sol·licitud.",
-    "thingHidden": "Article ocultado.",
-    "errorHidingThing": "Error en ocultar l'article.",
     "thingReactivated": "Article reactivat.",
     "errorReactivatingThing": "Error en reactivar l'article.",
     "holdConfirmed": "Reserva confirmada.",
@@ -396,7 +389,6 @@
     "photoLabel": "Foto de perfil",
     "photoHelper": "Es mostra al teu perfil, opcional",
     "maxAbout": "Màxim 2000 caràcters.",
-    "emailPreferences": "Preferències d'email →",
     "languageHelper": "OIUEEI també t'escriu en aquesta llengua (correus inclosos).",
     "deleteAccount": "Esborrar el compte",
     "nameHelper": "El teu nom, un àlies, el que vulguis — és com et veuran els altres a OIUEEI."
@@ -537,7 +529,6 @@
     "loadingCollections": "Carregant col·leccions...",
     "noCollections": "Encara no tens col·leccions actives.",
     "createFirst": "Crea la teva primera col·lecció",
-    "toGetStarted": "per començar.",
     "collectionExplainer": "Una col·lecció és una llista que pots compartir —regals, préstecs, lloguers, articles en venda— que només poden veure les persones que convidis.",
     "learnHow": "Mira com funciona",
     "noShared": "Encara ningú ha compartit una col·lecció amb tu.",

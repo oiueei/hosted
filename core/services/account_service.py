@@ -13,11 +13,12 @@ What `user.delete()` cascades away (CASCADE):
   M2M rows. Things *inside* that belong to other members survive (only the M2M
   row dies); the collection page itself is gone.
 - Their things — everywhere, including ones they added to other people's
-  COMMUNITY collections and SHARE/SWAP things they received (ownership had
-  transferred, so those are theirs to take down). Each thing drags its own
-  FAQs, transfers, bookings and wish-links with it.
-- Their bookings (both sides), RSVPs, in-app notifications, daily-activity rows
-  and wish responses.
+  COMMUNITY collections. Ownership is the only test: no thing type transfers
+  it, so a thing someone *received* is still the giver's row and stays put
+  (its `ThingTransfer` hop survives anonymised, below). Each thing drags its
+  own FAQs, transfers and bookings with it.
+- Their bookings (both sides), RSVPs, in-app notifications and daily-activity
+  rows.
 
 What survives, anonymised (SET_NULL):
 - FAQ questions they asked on *other people's* things (`FAQ.questioner`) — the
