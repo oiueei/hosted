@@ -56,14 +56,14 @@ export default defineConfig(({ mode }) => ({
       ],
       // Ratchet floor: set ~2-3 points below the suite's current coverage so it
       // guards against regression without blocking. Raise it as coverage grows.
-      // Bumped after the 2026-07 full-suite audit (login/report/join/prefs/
-      // request/tags/invites/wishes tests) lifted coverage to
-      // ~78.3 / 68.8 / 66.1 / 82.2.
+      // Bumped after the 2026-08 pre-release frontend round (carousel focus,
+      // markdown links, pop-in hook, MyBookings + RentalRulesFields suites)
+      // lifted coverage to ~79.9 / 71.1 / 69.2 / 83.5.
       thresholds: {
-        statements: 76,
-        branches: 66,
-        functions: 63,
-        lines: 80,
+        statements: 77,
+        branches: 68,
+        functions: 66,
+        lines: 81,
       },
     },
   },
