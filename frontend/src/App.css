@@ -794,10 +794,19 @@ div[class*="Linkbox-module_linkbox"] {
   right: var(--spacing-2-xs);
 }
 
-.image-carousel-arrow:disabled {
+/* At the first/last image the arrow is `aria-disabled`, not `disabled`: a real
+   `disabled` on the button that currently has focus makes the browser drop focus
+   to <body>, which costs the user their place AND takes focus out of the
+   carousel group, where the arrow-key handler lives. `aria-disabled` keeps it
+   focusable and announced as unavailable; the click handler no-ops. */
+.image-carousel-arrow[aria-disabled='true'] {
   color: var(--color-black-40);
   background: rgba(255, 255, 255, 0.6);
   cursor: default;
+}
+
+.image-carousel-arrow[aria-disabled='true']:hover {
+  background: rgba(255, 255, 255, 0.6);
 }
 
 /* Card variant: matches the collection-grid cover (.thing-card-image) sizing */

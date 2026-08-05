@@ -66,11 +66,17 @@ export default function ImageCarousel({ images = [], alt = '', variant = 'detail
         onTouchEnd={onTouchEnd}
       >
         {to ? <Link to={to}>{img}</Link> : img}
+        {/* `aria-disabled`, never `disabled`: disabling the button that currently
+            holds focus makes the browser drop focus to <body>, so reaching the
+            last image by clicking "next" would cost the reader their tab position
+            and silently kill the arrow-key handler above (it only fires while
+            focus is inside this group). Kept focusable, announced as
+            unavailable, and the handler no-ops. */}
         <button
           type="button"
           className="image-carousel-arrow image-carousel-arrow--prev"
           onClick={() => go(-1)}
-          disabled={index === 0}
+          aria-disabled={index === 0}
           aria-label={t('thingPage.galleryPrev')}
         >
           <IconAngleLeft aria-hidden="true" />
@@ -79,7 +85,7 @@ export default function ImageCarousel({ images = [], alt = '', variant = 'detail
           type="button"
           className="image-carousel-arrow image-carousel-arrow--next"
           onClick={() => go(1)}
-          disabled={index === count - 1}
+          aria-disabled={index === count - 1}
           aria-label={t('thingPage.galleryNext')}
         >
           <IconAngleRight aria-hidden="true" />
