@@ -69,9 +69,9 @@ export default function LoginPage() {
         />
       </div>
       <div className="page-container">
-        <p className="section-mt" style={{ maxWidth: '400px', fontWeight: 700 }}>{t('login.pitch')}</p>
-        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}>{t('login.description')}</p>
-        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-s)' }}>
+        <p className="section-mt measure" style={{ fontWeight: 700 }}>{t('login.pitch')}</p>
+        <p className="measure" style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}>{t('login.description')}</p>
+        <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
           <Trans
             i18nKey="login.openSource"
             components={[
@@ -81,8 +81,8 @@ export default function LoginPage() {
             ]}
           />
         </p>
-        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-s)' }}>{t('login.manifesto')}</p>
-        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
+        <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>{t('login.manifesto')}</p>
+        <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
           <Trans
             i18nKey="login.noBanner"
             components={[
@@ -96,12 +96,12 @@ export default function LoginPage() {
             the standalone repo, filled on the deploy branch — the same split as
             src/legal/. Only rendered when the operator has actually written one. */}
         {t('login.operator') ? (
-          <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
+          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
             {t('login.operator')}
           </p>
         ) : null}
-        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-2-xs)' }}>
-          <Link to="/legal" style={{ color: 'var(--color-black-60)', textDecoration: 'underline', fontSize: 'var(--fontsize-body-s)' }}>
+        <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+          <Link to="/legal" className="legal-link">
             {t('login.legalLink')}
           </Link>
         </p>
@@ -117,7 +117,7 @@ export default function LoginPage() {
             </div>
           </>
         ) : (
-          <form onSubmit={handleSubmit} style={{ maxWidth: '400px', marginTop: 'var(--spacing-s)' }}>
+          <form onSubmit={handleSubmit} className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
             <TextInput
               id="login-email"
               label={t('login.emailLabel')}
@@ -135,12 +135,12 @@ export default function LoginPage() {
             </div>
           </form>
         )}
-        <p style={{ maxWidth: '400px', marginTop: 'var(--spacing-m)' }}>
+        <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
           <Link to="/contact" style={{ textDecoration: 'underline' }}>
             {t('login.loginHelp')}
           </Link>
         </p>
-        <div style={{ maxWidth: '400px', marginTop: 'var(--spacing-s)' }}>
+        <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
           <Link to="/popin">
             <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
               {t('login.popIn')}
