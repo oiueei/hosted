@@ -129,3 +129,64 @@ def test_quota_follows_the_ratelimit_switch(mock_send, authenticated_client, col
         )
         assert res.status_code == 200
     assert mock_send.call_count == 2
+
+
+@override_settings(**QUOTA_SETTINGS)
+@patch("core.views.collections.send_collection_invite_email")
+def test_no_cap_configured_means_unlimited(mock_send, authenticated_client, collection):
+    """The standalone default: rate limiting ON, no INVITE_EMAILS_PER_DAY set.
+
+    The cap is operator policy — it protects a particular deployment's sending
+    reputation — so a self-hosted instance must not inherit a number chosen for
+    www.oiueei.com. This is the case that regresses silently: reinstate a
+    module-level default and every self-hoster starts getting 429s they never
+    configured, on a limit they cannot find in their settings.
+    """
+    caches["default"].clear()
+    for i in range(4):
+        res = authenticated_client.post(
+            SINGLE_URL.format(code=collection.code),
+            {"email": f"guest{i}@example.com"},
+            format="json",
+        )
+        assert res.status_code == 200, res.data
+    assert mock_send.call_count == 4
+    assert _invite_rsvp_count(collection) == 4
+
+
+@override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=0)
+@patch("core.views.collections.send_collection_invite_email")
+def test_zero_is_the_explicit_way_to_turn_the_quota_off(
+    mock_send, authenticated_client, collection
+):
+    """0 means unlimited, not "no invitations allowed".
+
+    An operator turning the cap off writes INVITE_EMAILS_PER_DAY=0 rather than
+    deleting the config var. Reading it as a literal ceiling would lock every
+    owner out of inviting anyone at all.
+    """
+    caches["default"].clear()
+    for i in range(3):
+        res = authenticated_client.post(
+            SINGLE_URL.format(code=collection.code),
+            {"email": f"guest{i}@example.com"},
+            format="json",
+        )
+        assert res.status_code == 200, res.data
+    assert mock_send.call_count == 3
+
+
+@override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=2)
+@patch("core.views.collections.send_collection_invite_email")
+def test_bulk_respects_a_configured_cap(mock_send, authenticated_client, collection):
+    """The cap counts emails, so the bulk fan-out cannot multiply past it."""
+    caches["default"].clear()
+    res = authenticated_client.post(
+        BULK_URL.format(code=collection.code),
+        {"invites": [{"email": f"guest{i}@example.com"} for i in range(4)]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    assert res.data["invited"] == 2
+    assert mock_send.call_count == 2
+    assert [s["reason"] for s in res.data["skipped"]] == ["daily_limit", "daily_limit"]

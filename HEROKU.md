@@ -111,6 +111,13 @@ heroku config:set \
 
 > **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home/Welcome) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. Defaults to the project's Tally form.
 
+> **Recommended — invitation-email cap:** `INVITE_EMAILS_PER_DAY` caps the invitation emails one
+> account may send per day (single + bulk combined), e.g. `heroku config:set INVITE_EMAILS_PER_DAY=150
+> -a your-app-name`. **Unset or `0` means no limit** — that is deliberate, because the cap protects
+> *your* sending domain's reputation and only you know what your provider tolerates, but it does mean
+> a deployment that never sets it has no ceiling on invitation fan-out. A free account can otherwise
+> send 100 owner-authored emails per bulk request, riding your domain. Set it before opening sign-ups.
+
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
 > **Email** is configured separately — see the [Email](#email) section below. Magic-link sign-in does not work until SMTP is set.

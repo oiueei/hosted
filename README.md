@@ -306,6 +306,7 @@ python manage.py backfill_events
 | `SHARE_LINK_BASE_URL` | Prod | Base URL for public collection share links (default in dev: `http://localhost:3000/share`) |
 | `CLOUDINARY_URL` | Uploads | Cloudinary credentials for image uploads: `cloudinary://api_key:api_secret@cloud_name` (free account at cloudinary.com) |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
+| `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day, single + bulk combined. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `STATS_EMAIL` | No | Recipient for the weekly `stats_summary` command email (`--email` forces a send). Unset skips the email — third-party deploys don't email metrics anywhere by default. |
 | `STATS_EMAIL_WEEKDAY` | No | Weekday for the weekly `stats_summary` email: 0=Monday (default) … 6=Sunday. |
 
@@ -335,7 +336,7 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 | Rate Limiting | Pop-in | 5 req/min per IP + 5 req/hour per email |
 | Rate Limiting | Collection invite | 30 req/hour per user |
 | Rate Limiting | Collection bulk invite | 5 req/hour per user |
-| Rate Limiting | Invitation emails | 150/day per account, single + bulk combined (`INVITE_EMAILS_PER_DAY`) |
+| Rate Limiting | Invitation emails | Off by default; set `INVITE_EMAILS_PER_DAY` to cap per account, single + bulk combined |
 | Rate Limiting | Collection share-link | 30 req/hour per user |
 | Rate Limiting | Thing request | 10 req/hour per user |
 | Rate Limiting | Thing bulk create | 10 req/hour per user |

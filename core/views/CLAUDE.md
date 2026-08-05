@@ -386,7 +386,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 
 Invites a user to a collection by email. Creates user if they don't exist (`get_or_create`). Returns 400 if the user is already invited (in M2M). Deletes any existing pending RSVPs for the same user+collection before creating new ones (resend-safe). Creates two RSVPs (`COLLECTION_INVITE` for accept and `COLLECTION_REJECT` for decline) and sends invitation email with both links.
 
-**Daily invitation-email quota (shared with the bulk endpoint).** The per-view rate limits count *requests*, so one bulk request could still fan out 100 emails (5/h × 100 rows ≈ 500 owner-authored emails an hour from a free pop-in account — a spam vector riding the platform's sending domain). `INVITE_EMAILS_PER_DAY` (default 150, settings-overridable) counts the invitation *emails* an account sends per day, shared between this endpoint and `CollectionBulkInviteView`. Exhausted → **429** `{"error": ...}` before any User/RSVP is created. The counter lives on the shared cache (`invq:{user}:{date}`, ~24h TTL) and follows `RATELIMIT_ENABLE` — off in dev/tests, same switch as the django-ratelimit decorators; its read-then-set shares the DatabaseCache non-atomicity note (I7) in `config/settings/base.py`.
+**Daily invitation-email quota (shared with the bulk endpoint).** The per-view rate limits count *requests*, so one bulk request could still fan out 100 emails (5/h × 100 rows ≈ 500 owner-authored emails an hour from a free pop-in account — a spam vector riding the platform's sending domain). `INVITE_EMAILS_PER_DAY` counts the invitation *emails* an account sends per day — **operator policy, not a product rule**: it guards a particular deployment's sending reputation, so the standalone ships it **unset (= unlimited)** and each operator sets their own (0 also means unlimited). It is shared between this endpoint and `CollectionBulkInviteView`. Exhausted → **429** `{"error": ...}` before any User/RSVP is created. The counter lives on the shared cache (`invq:{user}:{date}`, ~24h TTL) and follows `RATELIMIT_ENABLE` — off in dev/tests, same switch as the django-ratelimit decorators; its read-then-set shares the DatabaseCache non-atomicity note (I7) in `config/settings/base.py`.
 
 **Request body:**
 ```json
@@ -898,7 +898,7 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 - `/auth/pop-in/` — 5 requests per minute per IP **and** 5 per hour per account (email)
 - `/auth/verify/{token}/` — 10 requests per minute per IP
 - `/collections/{code}/invite/` POST — 30 requests per hour per user
-- Invitation **emails** (single + bulk combined) — 150 per day per account (`INVITE_EMAILS_PER_DAY`; counts emails, not requests, so the bulk fan-out can't multiply past it)
+- Invitation **emails** (single + bulk combined) — **unlimited unless the operator sets `INVITE_EMAILS_PER_DAY`** (counts emails, not requests, so the bulk fan-out can't multiply past it; 0/unset = off)
 - `/things/{code}/request/` POST — 10 requests per hour per user
 - `/things/{code}/faq/` POST — 20 requests per hour per user
 - `/collections/{code}/broadcast/` POST — 5 requests per day per user

@@ -260,15 +260,34 @@ class CollectionViewSet(ModelViewSet):
 
 # Daily cap on invitation *emails* per account, shared by the single and bulk
 # invite endpoints. The per-view rate limits count requests, and one bulk request
-# fans out up to MAX_ROWS emails — 5/h x 100 rows was ~500 owner-authored emails
+# fans out up to MAX_ROWS emails — 5/h x 100 rows is ~500 owner-authored emails
 # an hour from a free pop-in account, a spam/phishing vector riding the
-# platform's sending domain. This counts the emails themselves. Coarse abuse
-# prevention, not an exact quota: it follows RATELIMIT_ENABLE (the same switch
-# the django-ratelimit decorators read, so dev and tests stay consistent) and
-# its DatabaseCache read-then-set shares base.py's I7 non-atomicity note.
-INVITE_EMAILS_PER_DAY = 150
+# deployment's sending domain. This counts the emails themselves.
+#
+# **Operator policy, not a product rule.** The cap protects the deployment's own
+# sending reputation, and only the operator knows what their provider tolerates,
+# so the value lives in settings (`INVITE_EMAILS_PER_DAY`, read from the env in
+# base.py) and the standalone ships it **unset = unlimited**: a self-hoster
+# decides for their own instance. www.oiueei.com sets the config var.
+#
+# Coarse abuse prevention, not an exact quota: it also follows RATELIMIT_ENABLE
+# (the same switch the django-ratelimit decorators read, so dev and tests stay
+# consistent) and its DatabaseCache read-then-set shares base.py's I7
+# non-atomicity note.
 _INVITE_QUOTA_TTL = 60 * 60 * 24  # ~24h; the date is in the key, so it rolls over anyway.
 _INVITE_QUOTA_MESSAGE = "Daily invitation limit reached. Try again tomorrow."
+
+
+def _invite_quota_cap():
+    """Configured daily cap, or ``None`` when the quota is off.
+
+    Off means either the whole rate-limiting layer is disabled (dev, tests) or
+    the operator left the cap unset/zero — the standalone default.
+    """
+    if not getattr(settings, "RATELIMIT_ENABLE", True):
+        return None
+    cap = getattr(settings, "INVITE_EMAILS_PER_DAY", 0) or 0
+    return cap if cap > 0 else None
 
 
 def _invite_quota_key(user_code):
@@ -277,15 +296,15 @@ def _invite_quota_key(user_code):
 
 def _invite_quota_left(user_code):
     """Invitation emails this account may still send today; ``None`` = unlimited."""
-    if not getattr(settings, "RATELIMIT_ENABLE", True):
+    cap = _invite_quota_cap()
+    if cap is None:
         return None
-    cap = getattr(settings, "INVITE_EMAILS_PER_DAY", INVITE_EMAILS_PER_DAY)
     return max(cap - cache.get(_invite_quota_key(user_code), 0), 0)
 
 
 def _consume_invite_quota(user_code, count):
     """Record ``count`` invitation emails against today's quota."""
-    if count <= 0 or not getattr(settings, "RATELIMIT_ENABLE", True):
+    if count <= 0 or _invite_quota_cap() is None:
         return
     key = _invite_quota_key(user_code)
     cache.set(key, cache.get(key, 0) + count, _INVITE_QUOTA_TTL)

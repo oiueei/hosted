@@ -209,6 +209,16 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
 # appended by the Heroku router. Accepts a dotted path called as fn(request).
 RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
 
+# Invitation emails one account may send per day. This is **operator policy,
+# not a product rule**: it protects the deployment's own sending domain and
+# reputation, and only the operator knows what their provider tolerates. The
+# standalone default is therefore **unlimited** — a self-hoster decides for
+# their own instance — while www.oiueei.com sets the config var explicitly.
+#
+# 0 (or unset) means no limit. Also gated by RATELIMIT_ENABLE, which switches
+# the whole rate-limiting layer off in development and tests.
+INVITE_EMAILS_PER_DAY = int(os.environ.get("INVITE_EMAILS_PER_DAY", "0"))
+
 
 # Custom User Model
 AUTH_USER_MODEL = "core.User"
