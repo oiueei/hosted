@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
@@ -93,5 +93,68 @@ describe('CollectionPage anonymous visitor intro', () => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
     expect(screen.queryByRole('link', { name: /join to take part/i })).toBeNull();
+  });
+});
+
+describe('CollectionPage inactive-things grid', () => {
+  // The inactive grid used to build its own inline `onUpdateThing` instead of
+  // sharing the page's useCallback'd one. Both did the same work, so the bug it
+  // could hide is silent: hand the wrong callback (or none) to these cards and
+  // reactivating a hidden thing still POSTs and still succeeds, but the card
+  // never leaves the "Inactive things" section — the owner clicks Reactivate
+  // again, and again. This pins that the card's update actually reaches the
+  // page's state.
+  const HIDDEN_THING = {
+    code: 'THG001',
+    headline: 'Old blender',
+    type: 'GIFT_THING',
+    status: 'INACTIVE',
+    owner: 'ABC123',
+    owner_name: 'Test User',
+    created: '2026-07-01T10:00:00Z',
+    tags: [],
+    gallery_urls: [],
+  };
+  const COLLECTION_WITH_HIDDEN = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    things: [HIDDEN_THING],
+  };
+
+  test('reactivating a hidden thing moves it out of the hidden section', async () => {
+    const { apiFetch } = await import('../services/api');
+    apiFetch.mockImplementation((url) => {
+      if (url.includes('/activate/')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(COLLECTION_WITH_HIDDEN),
+      });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // It starts under "Hidden things", carrying the owner-only Inactive tag.
+    await screen.findByRole('heading', { name: 'Inactive things' });
+    expect(screen.getByText('Old blender')).toBeInTheDocument();
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate' }));
+
+    // The section disappears with its last member — proof the card's patch
+    // landed in the page's `things` state, not in a detached copy.
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Inactive things' })).toBeNull();
+    });
+    expect(screen.queryByText('Inactive')).toBeNull();
+    expect(screen.getByText('Old blender')).toBeInTheDocument();
   });
 });

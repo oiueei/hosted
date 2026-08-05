@@ -41,7 +41,7 @@ export default function CollectionPage() {
   const handleUpdateThing = useCallback((thingCode, updates) => {
     setCollection((prev) => ({
       ...prev,
-      things: prev.things.map((t) => (t.code === thingCode ? { ...t, ...updates } : t)),
+      things: prev.things.map((thg) => (thg.code === thingCode ? { ...thg, ...updates } : thg)),
     }));
   }, []);
 
@@ -385,13 +385,13 @@ export default function CollectionPage() {
         </>
       )}
 
-      {isOwner && collection.things.some((t) => t.status === 'INACTIVE') && (
+      {isOwner && collection.things.some((thg) => thg.status === 'INACTIVE') && (
         <>
           <div className="spacer-l" />
           <h2>{t('collectionPage.inactiveThings')}</h2>
           <div className="spacer-m" />
           <div className="things-grid">
-            {[...collection.things].filter((t) => t.status === 'INACTIVE').sort((a, b) => {
+            {[...collection.things].filter((thg) => thg.status === 'INACTIVE').sort((a, b) => {
               return new Date(b.created) - new Date(a.created);
             }).map((thing) => (
               <ThingLinkbox
@@ -403,12 +403,7 @@ export default function CollectionPage() {
                 collectionOwner={collection.owner}
                 collectionMode={collection.mode}
                 hideType={singleType}
-                onUpdateThing={(thingCode, updates) => setCollection((prev) => ({
-                  ...prev,
-                  things: prev.things.map((t) =>
-                    t.code === thingCode ? { ...t, ...updates } : t
-                  ),
-                }))}
+                onUpdateThing={handleUpdateThing}
               />
             ))}
           </div>
