@@ -3,6 +3,8 @@ Development settings for OIUEEI project.
 Uses SQLite and console email backend.
 """
 
+import os
+
 from .base import *  # noqa: F401, F403
 
 DEBUG = True
@@ -10,11 +12,20 @@ DEBUG = True
 # Disable rate limiting in development/testing
 RATELIMIT_ENABLE = False
 
-# Database: SQLite for development
+# Database: SQLite for development.
+#
+# DEV_DB_NAME points the whole thing at a throwaway file, which is what makes a
+# migration rehearsal safe: seed the "before" rows, migrate, inspect the result,
+# delete the file — without any of it landing in the working DB. Unset (the
+# normal case) it falls back to db.sqlite3 exactly as before.
+#
+#   DEV_DB_NAME=/tmp/rehearsal.sqlite3 python manage.py migrate core 0121
+#
+# Production never reaches here: production.py builds DATABASES from DATABASE_URL.
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
+        "NAME": os.environ.get("DEV_DB_NAME") or BASE_DIR / "db.sqlite3",  # noqa: F405
     }
 }
 
