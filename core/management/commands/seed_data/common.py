@@ -13,6 +13,7 @@ folder the demo fixtures actually live in, kept apart from real user uploads.
 """
 
 import json
+from datetime import date
 
 
 def _localized_tag(**texts):
@@ -98,7 +99,7 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "owner_code": "l1l13S",
         "visibility": "PUBLIC",
-        "invites": ["La1aN1"],
+        "invites": ["La1aN1", "L3L3oo", "l0l0oh"],
         "is_onboarding": True,
         "allowed_thing_types": ["RENT_THING"],
         "tags": [
@@ -454,4 +455,26 @@ FAQS = [
 ]
 
 # ThingTransfer chain — (thing_code, from_code, to_code, lent_date, returned_date)
-TRANSFERS = []
+#
+# Lili's lending library: a thing goes out from Lili and comes back, so each row
+# is one loan. A null returned_date means it is still out — that thing renders as
+# "currently with X", and its journey lists every borrower before them. Rows are
+# oldest-first per thing; the model's -lent_date ordering shows the newest on top.
+TRANSFERS = [
+    # The drill is the library's workhorse — three borrowers, still out.
+    ("l1l112", "l1l13S", "l0l0oh", date(2026, 1, 15), date(2026, 2, 2)),
+    ("l1l112", "l1l13S", "La1aN1", date(2026, 3, 10), date(2026, 3, 24)),
+    ("l1l112", "l1l13S", "L3L3oo", date(2026, 5, 5), None),
+    # Steam cleaner — spring cleaning, both returned.
+    ("l1l110", "l1l13S", "La1aN1", date(2026, 2, 20), date(2026, 2, 27)),
+    ("l1l110", "l1l13S", "l0l0oh", date(2026, 4, 11), date(2026, 4, 18)),
+    # Wet & dry vacuum — one long loan, back on the shelf.
+    ("l1l111", "l1l13S", "L3L3oo", date(2026, 3, 1), date(2026, 3, 20)),
+    # Game Boy — passed around the neighbourhood, still out.
+    ("l1l108", "l1l13S", "l0l0oh", date(2026, 1, 8), date(2026, 2, 14)),
+    ("l1l108", "l1l13S", "L3L3oo", date(2026, 4, 2), None),
+    # Toolkit — a single afternoon.
+    ("l1l113", "l1l13S", "La1aN1", date(2026, 4, 25), date(2026, 4, 26)),
+    # Laser printer — the tax-return loan.
+    ("l1l107", "l1l13S", "L3L3oo", date(2026, 6, 1), date(2026, 6, 8)),
+]
