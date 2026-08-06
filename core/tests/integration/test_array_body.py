@@ -84,3 +84,20 @@ def test_the_public_auth_doors_answer_400_not_500(api_client, path):
     res = api_client.post(path, ARRAY_BODY, format="json")
 
     assert res.status_code == 400
+
+
+@pytest.mark.django_db
+def test_logout_answers_200_not_500(api_client):
+    """The third public door, and the one with no serializer to catch the body.
+
+    `pop-in` and `request-link` both validate through `RequestLinkSerializer`
+    before reading anything, so a list body 400s there on its own. Logout reads
+    the body directly — it authenticates nobody and takes no CSRF token — so the
+    `.get` was reached and answered 500. Logout must never fail: no refresh token
+    in the body is the same as not sending one, and the cookies still get dropped.
+    """
+    res = api_client.post("/api/v1/auth/logout/", ARRAY_BODY, format="json")
+
+    assert res.status_code == 200
+    assert res.cookies["access_token"].value == ""
+    assert res.cookies["refresh_token"].value == ""

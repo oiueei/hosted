@@ -36,6 +36,7 @@ from core.services.email_service import (
     send_magic_link_email,
 )
 from core.utils import cloudinary_doc_url, get_client_ip, redact_email
+from core.views._helpers import body_dict
 
 security_logger = logging.getLogger("security")
 
@@ -831,8 +832,14 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # Try to blacklist the refresh token from cookie or body
-        refresh_token = request.COOKIES.get("refresh_token") or request.data.get("refresh")
+        # Try to blacklist the refresh token from cookie or body.
+        #
+        # `body_dict`, not `request.data.get`: this view runs no serializer, so
+        # nothing ahead of it rejects a non-object body first — a JSON array
+        # reached the `.get` and answered 500 on the one endpoint that
+        # authenticates nobody and takes no CSRF token. A non-object body simply
+        # carries no `refresh`, which is the same as not sending one.
+        refresh_token = request.COOKIES.get("refresh_token") or body_dict(request).get("refresh")
         if refresh_token:
             try:
                 token = RefreshToken(refresh_token)
