@@ -129,7 +129,7 @@ export default function MyBookingsPage() {
   const cols = [
     {
       key: '_thing',
-      headerName: 'Thing',
+      headerName: t('myBookings.colThing'),
       transform: (row) => (
         <div>
           <Link to={`/things/${row._thingCode}`}>{row._thingHeadline}</Link>
@@ -151,7 +151,7 @@ export default function MyBookingsPage() {
     },
     {
       key: '_status',
-      headerName: 'Status',
+      headerName: t('myBookings.colStatus'),
       transform: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2-xs)' }}>
           <Tag>{t('types.' + row._type)}</Tag>

@@ -143,7 +143,7 @@ export default function ManageInvitesPage() {
         const cols = [
           {
             key: 'guest',
-            headerName: 'Guest',
+            headerName: t('manageInvites.colGuest'),
             transform: (row) => (
               <div>
                 <div>{row.guest}</div>
@@ -157,7 +157,7 @@ export default function ManageInvitesPage() {
               </div>
             ),
           },
-          { key: 'status', headerName: 'Status' },
+          { key: 'status', headerName: t('manageInvites.colStatus') },
           ...(isOwner ? [{
             key: '_actions',
             headerName: '',

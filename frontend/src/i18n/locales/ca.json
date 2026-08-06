@@ -468,6 +468,8 @@
   },
   "myBookings": {
     "pageTitle": "Les meves sol·licituds",
+    "colThing": "Cosa",
+    "colStatus": "Estat",
     "noBookings": "Encara no tens sol·licituds de reserva.",
     "goHome": "Explorar col·leccions",
     "noPending": "Sense sol·licituds pendents.",
@@ -487,6 +489,8 @@
   },
   "manageInvites": {
     "pageTitle": "Gestionar convidats",
+    "colGuest": "Convidat",
+    "colStatus": "Estat",
     "emailLabel": "Correu del convidat",
     "emailPlaceholder": "usuari@correu.com",
     "invite": "Convidar",

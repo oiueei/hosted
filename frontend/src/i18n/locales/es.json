@@ -468,6 +468,8 @@
   },
   "myBookings": {
     "pageTitle": "Mis solicitudes",
+    "colThing": "Cosa",
+    "colStatus": "Estado",
     "noBookings": "Todavía no tienes solicitudes de reserva.",
     "goHome": "Explorar colecciones",
     "noPending": "Sin solicitudes pendientes.",
@@ -487,6 +489,8 @@
   },
   "manageInvites": {
     "pageTitle": "Gestionar invitados",
+    "colGuest": "Invitado",
+    "colStatus": "Estado",
     "emailLabel": "Correo del invitado",
     "emailPlaceholder": "usuario@correo.com",
     "invite": "Invitar",

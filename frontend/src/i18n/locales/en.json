@@ -486,6 +486,8 @@
   },
   "myBookings": {
     "pageTitle": "My requests",
+    "colThing": "Thing",
+    "colStatus": "Status",
     "noBookings": "You have no booking requests yet.",
     "goHome": "Browse collections",
     "noPending": "No pending requests.",
@@ -505,6 +507,8 @@
   },
   "manageInvites": {
     "pageTitle": "Manage guests",
+    "colGuest": "Guest",
+    "colStatus": "Status",
     "emailLabel": "Guest email",
     "emailPlaceholder": "user@email.com",
     "invite": "Invite",
