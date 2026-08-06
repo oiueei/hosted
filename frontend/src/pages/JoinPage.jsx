@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Koros } from 'hds-react';
@@ -6,6 +6,8 @@ import BackLink from '../components/BackLink';
 import JoinToAct from '../components/JoinToAct';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
+import { apiFetch } from '../services/api';
+import { useLocalized } from '../utils/localized';
 
 /**
  * Login-to-act landing page for a PUBLIC collection. An anonymous visitor who
@@ -19,9 +21,32 @@ export default function JoinPage() {
   const location = useLocation();
   const { t } = useTranslation();
   const { tc, koro } = useTheeeme();
-  const headline = location.state?.collectionHeadline || '';
+  const L = useLocalized();
+  // The name is seeded from the navigation state when there is one — that
+  // renders it with no flicker — but it can't be the only source. Only
+  // `ThingLinkbox` passes it; the hero's own "Join to take part" link, a
+  // refresh, and a /join URL somebody shared all arrive with nothing, and the
+  // page then asked a stranger to hand over their email to join "Collection".
+  // This is the first screen of the viral funnel, so it fetches the collection
+  // itself. Public and ACTIVE by definition (login-to-act only exists there), so
+  // an anonymous GET resolves; a private or missing one simply 403/404s and we
+  // keep the generic copy rather than inventing a name.
+  const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
 
   useEffect(() => { document.title = `${t('joinToAct.heading')} — OIUEEI`; }, [t]);
+
+  useEffect(() => {
+    if (!code) return undefined;
+    const controller = new AbortController();
+    apiFetch(`/api/v1/collections/${code}/`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => { if (data?.headline) setHeadline(L(data.headline)); })
+      .catch(() => {});
+    return () => controller.abort();
+    // `L` is rebuilt on every language change; re-running for that would only
+    // re-fetch to resolve the same map again, and the copy already re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   return (
     <div
