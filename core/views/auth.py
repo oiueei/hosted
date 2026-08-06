@@ -35,7 +35,11 @@ from core.services.email_service import (
     send_invite_rejected_email,
     send_magic_link_email,
 )
-from core.services.invitation_service import approve_proposal, reject_proposal
+from core.services.invitation_service import (
+    approve_proposal,
+    proposal_approval_blocked,
+    reject_proposal,
+)
 from core.utils import cloudinary_doc_url, get_client_ip, redact_email
 from core.views._helpers import body_dict
 
@@ -658,6 +662,18 @@ class VerifyLinkView(APIView):
             )
 
         if approve:
+            # The same two guards the in-app approval applies. Without them the
+            # emailed link was a way around the operator's daily invitation cap
+            # and the collection's member ceiling — the owner clicking the link
+            # in their mail client instead of the button in the app.
+            #
+            # The RSVP is deliberately left alive: the answer is "not now", so
+            # the link has to still work tomorrow. Declining is never blocked —
+            # saying no sends the proposer one email and adds nobody.
+            blocked = proposal_approval_blocked(proposal)
+            if blocked:
+                reason, code = blocked
+                return Response({"error": reason}, status=code)
             approve_proposal(proposal)
             message = "Invitation sent"
         else:

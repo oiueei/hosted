@@ -62,6 +62,41 @@ def _consume_invite_quota(user_code, count):
     cache.set(key, cache.get(key, 0) + count, _INVITE_QUOTA_TTL)
 
 
+def proposal_approval_blocked(proposal):
+    """Why this approval cannot be delivered right now, or ``None``.
+
+    Returns ``(message, http_status)``. Shared by the owner's **two** routes to
+    the same decision — the in-app POST and the emailed approve link — so the
+    operator's daily cap and the collection's member ceiling mean the same thing
+    whichever one they reach for.
+
+    They used not to. The in-app view checked both and the email link approved
+    unconditionally, which made `INVITE_EMAILS_PER_DAY` — a cap that exists to
+    protect a deployment's sending reputation, not to police the product —
+    walkable one recommendation at a time by the owner simply clicking the link
+    in their mail client instead of the button in the app. Nothing documented
+    the difference, and the in-app path's own reasoning ("an approval that can't
+    be delivered should say so rather than half-happen") argues against it.
+
+    The quota is charged to the **owner** on both paths (see
+    ``deliver_invitation``), so it is the owner's allowance that is read here —
+    never the member's, who cannot send anything on their own.
+    """
+    collection = proposal.collection
+    if _invite_quota_left(collection.owner_id) == 0:
+        return _INVITE_QUOTA_MESSAGE, 429
+    # Someone already in the group costs the counter nothing, so a full
+    # collection must not refuse an approval that would add nobody.
+    if (
+        collection.capacity_ceiling("invites")
+        and not collection.invites.filter(email=proposal.email).exists()
+    ):
+        full = collection.capacity_violation("invites", adding=1)
+        if full:
+            return full, 400
+    return None
+
+
 def deliver_invitation(collection, email, inviter_name, quota_user_code=None, proposer_name=None):
     """Create the invitee (if new), mint the RSVP pair and send the invitation.
 

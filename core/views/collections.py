@@ -57,6 +57,7 @@ from core.services.invitation_service import (
     approve_proposal,
     create_proposal,
     deliver_invitation,
+    proposal_approval_blocked,
     reject_proposal,
 )
 from core.utils import redact_email
@@ -618,21 +619,14 @@ class CollectionProposalActionView(APIView):
             )
 
         if action == "approve":
-            # The ceiling and the quota are the owner's, and are checked here for
-            # the same reason the direct invite checks them: an approval that
-            # can't be delivered should say so rather than half-happen.
-            if _invite_quota_left(request.user.code) == 0:
-                return Response(
-                    {"error": _INVITE_QUOTA_MESSAGE},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-            if (
-                proposal.collection.capacity_ceiling("invites")
-                and not proposal.collection.invites.filter(email=proposal.email).exists()
-            ):
-                full = proposal.collection.capacity_violation("invites", adding=1)
-                if full:
-                    return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+            # The ceiling and the quota are the owner's, and are checked for the
+            # same reason the direct invite checks them: an approval that can't
+            # be delivered should say so rather than half-happen. Shared with the
+            # emailed approve link, which must not be a way around either.
+            blocked = proposal_approval_blocked(proposal)
+            if blocked:
+                reason, code = blocked
+                return Response({"error": reason}, status=code)
             approve_proposal(proposal)
             return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
 

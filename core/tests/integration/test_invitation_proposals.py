@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 import pytest
 from django.core import mail
+from django.core.cache import caches
+from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -19,6 +21,18 @@ from core.models import RSVP, Collection, InvitationProposal, User
 from core.models.notification import InAppNotification
 
 PROPOSE_URL = "/api/v1/collections/{code}/invite/propose/"
+
+# The quota follows RATELIMIT_ENABLE, which the test settings turn off; switch it
+# on with a local-memory cache, the same way test_invite_quota.py does.
+QUOTA_SETTINGS = {
+    "RATELIMIT_ENABLE": True,
+    "CACHES": {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "proposal-quota-test",
+        }
+    },
+}
 
 
 def client_for(user):
@@ -112,6 +126,30 @@ class TestProposing:
         second = client_for(member).post(url, {"email": "f@test.com"}, format="json")
         assert second.status_code == 400
         assert InvitationProposal.objects.filter(email="f@test.com").count() == 1
+
+    def test_the_owner_is_sent_to_the_real_invite_instead(self, group):
+        """An owner has the actual invitation one endpoint over. Queuing a
+        suggestion for themselves to approve would be a round trip to nowhere."""
+        resp = client_for(group.owner).post(
+            PROPOSE_URL.format(code=group.code), {"email": "friend@test.com"}, format="json"
+        )
+
+        assert resp.status_code == 400
+        assert "invite them directly" in str(resp.data)
+        assert InvitationProposal.objects.count() == 0
+
+    def test_suggesting_somebody_already_in_the_group_says_so(self, group, member):
+        """Answered here rather than by the owner: it needs no decision, and it
+        tells the proposer nothing they couldn't already see — membership is
+        visible to members.
+        """
+        resp = client_for(member).post(
+            PROPOSE_URL.format(code=group.code), {"email": member.email}, format="json"
+        )
+
+        assert resp.status_code == 400
+        assert "already part of this group" in str(resp.data)
+        assert InvitationProposal.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -276,6 +314,57 @@ class TestTheEmailLinks:
         ).exists()
         assert APIClient().post(f"/api/v1/rsvp/{reject.token}/").status_code == 401
 
+    def test_the_no_link_declines_and_burns_both_too(self, group, member):
+        """The other half of the owner's email, and the one that had never been
+        exercised: every test above posts the *approve* token.
+
+        Saying no from the mail client must reach exactly the same place as
+        saying no in the app — the proposer told, the proposed person never
+        contacted, and neither link left alive.
+        """
+        proposal, approve, reject = self._proposal_rsvps(group, member)
+        mail.outbox.clear()
+
+        resp = APIClient().post(f"/api/v1/rsvp/{reject.token}/")
+
+        assert resp.status_code == 200
+        proposal.refresh_from_db()
+        assert proposal.status == InvitationProposal.Status.REJECTED
+
+        recipients = [addr for m in mail.outbox for addr in m.to]
+        assert member.email in recipients, "the proposer is told"
+        assert "friend@test.com" not in recipients, "the proposed person is never contacted"
+        assert not User.objects.filter(email="friend@test.com").exists()
+        assert not RSVP.objects.filter(
+            target_code=proposal.code,
+            action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
+        ).exists()
+        assert APIClient().post(f"/api/v1/rsvp/{approve.token}/").status_code == 401
+
+    def test_a_link_to_a_settled_suggestion_says_so_and_dies(self, group, member):
+        """Two links reach one decision, and an owner may have both open — in the
+        app and in their mail. The second one to arrive must not re-run it."""
+        proposal, approve, reject = self._proposal_rsvps(group, member)
+        client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/reject/")
+        # The in-app path burns the pair, so mint a link that outlived its
+        # decision the way a forwarded or cached one would.
+        stale = RSVP.objects.create(
+            user_code=group.owner,
+            user_email=group.owner.email,
+            action=RSVP.Action.PROPOSAL_APPROVE,
+            target_code=proposal.code,
+        )
+        mail.outbox.clear()
+
+        resp = APIClient().post(f"/api/v1/rsvp/{stale.token}/")
+
+        assert resp.status_code == 400
+        assert "no longer pending" in str(resp.data)
+        proposal.refresh_from_db()
+        assert proposal.status == InvitationProposal.Status.REJECTED
+        assert mail.outbox == [], "a settled suggestion must not invite anybody"
+        assert not RSVP.objects.filter(code=stale.code).exists(), "the dead link is consumed"
+
 
 @pytest.mark.django_db
 class TestQuota:
@@ -293,3 +382,126 @@ class TestQuota:
             client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
 
         consume.assert_called_once_with(group.owner_id, 1)
+
+
+# ── The two guards on approval, on BOTH of the owner's routes ────────────────
+#
+# An approval sends an email to a third party and adds a member, so it answers
+# to the operator's daily cap and the collection's member ceiling. There are two
+# ways for the owner to approve — the in-app button and the emailed link — and
+# the link used to apply neither, which made the cap walkable by clicking the
+# mail instead of the app. These run every case against both doors.
+
+
+def _proposal_for(group, member, email="friend@test.com"):
+    client_for(member).post(PROPOSE_URL.format(code=group.code), {"email": email}, format="json")
+    return InvitationProposal.objects.get(collection=group, email=email)
+
+
+def _approve_in_app(group, proposal):
+    return client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
+
+
+def _approve_by_email_link(group, proposal):
+    rsvp = RSVP.objects.get(target_code=proposal.code, action=RSVP.Action.PROPOSAL_APPROVE)
+    return APIClient().post(f"/api/v1/rsvp/{rsvp.token}/")
+
+
+BOTH_DOORS = [
+    pytest.param(_approve_in_app, id="in-app"),
+    pytest.param(_approve_by_email_link, id="email-link"),
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approve", BOTH_DOORS)
+@override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=1)
+def test_an_exhausted_daily_quota_refuses_the_approval(approve, group, member):
+    """`INVITE_EMAILS_PER_DAY` guards a deployment's sending reputation, so it
+    cannot depend on which of the two doors the owner happens to use.
+
+    The email link used to skip this check entirely: an owner with a mailbox
+    full of pending suggestions could approve every one past the cap.
+    """
+    caches["default"].clear()
+    proposal = _proposal_for(group, member)
+    # Spend the day's single allowance on an ordinary invite.
+    with patch("core.services.invitation_service.send_collection_invite_email"):
+        assert (
+            client_for(group.owner)
+            .post(f"/api/v1/collections/{group.code}/invite/", {"email": "a@test.com"}, "json")
+            .status_code
+            == 200
+        )
+    mail.outbox.clear()
+
+    resp = approve(group, proposal)
+
+    assert resp.status_code == 429
+    proposal.refresh_from_db()
+    assert proposal.status == InvitationProposal.Status.PENDING, (
+        "a refused approval decides nothing"
+    )
+    assert not User.objects.filter(email="friend@test.com").exists()
+    assert mail.outbox == [], "nothing may reach the proposed address"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approve", BOTH_DOORS)
+@override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=1)
+def test_a_refused_approval_leaves_the_owner_a_way_back(approve, group, member):
+    """ "Not now", not "never": the suggestion and both its links survive, so the
+    owner can answer tomorrow instead of asking the member to suggest again."""
+    caches["default"].clear()
+    proposal = _proposal_for(group, member)
+    with patch("core.services.invitation_service.send_collection_invite_email"):
+        client_for(group.owner).post(
+            f"/api/v1/collections/{group.code}/invite/", {"email": "a@test.com"}, "json"
+        )
+
+    assert approve(group, proposal).status_code == 429
+
+    assert RSVP.objects.filter(
+        target_code=proposal.code, action=RSVP.Action.PROPOSAL_APPROVE
+    ).exists()
+    assert RSVP.objects.filter(
+        target_code=proposal.code, action=RSVP.Action.PROPOSAL_REJECT
+    ).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approve", BOTH_DOORS)
+@override_settings(COLLECTION_INVITES_BLOCK=2)
+def test_a_full_collection_refuses_the_approval(approve, group, member):
+    """The member ceiling is checked where invitations are *sent*, so approving
+    one is exactly where it bites. Both doors, for the same reason as the quota.
+    """
+    group.invites.add(User.objects.create(email="second@test.com"))
+    proposal = _proposal_for(group, member)
+    mail.outbox.clear()
+
+    resp = approve(group, proposal)
+
+    assert resp.status_code == 400
+    assert "reached its limit" in str(resp.data)
+    proposal.refresh_from_db()
+    assert proposal.status == InvitationProposal.Status.PENDING
+    assert not User.objects.filter(email="friend@test.com").exists()
+    assert mail.outbox == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approve", BOTH_DOORS)
+@override_settings(COLLECTION_INVITES_BLOCK=2)
+def test_declining_is_never_blocked_by_a_full_collection(approve, group, member):
+    """Saying no adds nobody and sends one email to a member who is already
+    inside the count. A ceiling that stopped the owner clearing their queue
+    would leave them with a queue they cannot answer."""
+    group.invites.add(User.objects.create(email="second@test.com"))
+    proposal = _proposal_for(group, member)
+
+    resp = client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/reject/")
+
+    assert resp.status_code == 200
+    proposal.refresh_from_db()
+    assert proposal.status == InvitationProposal.Status.REJECTED

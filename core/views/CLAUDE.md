@@ -58,7 +58,7 @@ Routes to the appropriate handler based on `rsvp.action`:
 | `COLLECTION_REJECT` | `_handle_collection_reject` | GET | Notifies collection owner of rejection, deletes sibling `COLLECTION_INVITE` RSVP, no JWT |
 | `BOOKING_ACCEPT` | `_handle_booking_accept` | **POST** | Accepts booking via `accept_booking()` service (GET previews only) |
 | `BOOKING_REJECT` | `_handle_booking_reject` | **POST** | Rejects booking via `reject_booking()` service (GET previews only) |
-| `PROPOSAL_APPROVE` | `_handle_proposal_approve` | **POST** | Sends the real invitation. GET previews (who was suggested, by whom, their note) — approving **mails a third party**, so a link scanner must never fire it |
+| `PROPOSAL_APPROVE` | `_handle_proposal_approve` | **POST** | Sends the real invitation, behind the **same** quota + member-ceiling guard as the in-app approval (`invitation_service.proposal_approval_blocked` — the link is not a way around either; a refusal leaves both links alive so the owner can answer tomorrow). GET previews (who was suggested, by whom, their note) — approving **mails a third party**, so a link scanner must never fire it |
 | `PROPOSAL_REJECT` | `_handle_proposal_reject` | **POST** | Declines. Both links die with the decision, either way |
 | `ACCOUNT_DELETE` | `_handle_account_delete` | **POST** | Erases the account via `account_service.delete_account()` (GET previews only: name, email, owned collection/thing counts). Unlike bookings, the frontend **never auto-commits** this preview — the person must press the explicit on-page confirm button. The commit response also clears the auth cookies (the session died with the account); the RSVP itself cascades away with the user row |
 
@@ -447,7 +447,9 @@ The 30/day cap is high on purpose: abuse is not expected, and an owner has a bet
 | **Endpoint** | `POST /api/v1/proposals/{proposal_code}/{approve\|reject}/` |
 | **Permission** | `IsAuthenticated` + collection owner |
 
-The owner's in-app answer; the email links reach the same two decisions through `VerifyLinkView`. Owner-only — the proposer must not be able to wave their own suggestion through. Approving checks the owner's quota and member ceiling first (an approval that can't be delivered should say so rather than half-happen), then goes through `invitation_service.approve_proposal`. 400 on a suggestion that is no longer pending.
+The owner's in-app answer; the email links reach the same two decisions through `VerifyLinkView`. Owner-only — the proposer must not be able to wave their own suggestion through. Approving runs `invitation_service.proposal_approval_blocked` first — the owner's daily quota (429) and the collection's member ceiling (400), since an approval that can't be delivered should say so rather than half-happen — then goes through `approve_proposal`. 400 on a suggestion that is no longer pending.
+
+**The guard is shared with the emailed approve link**, which used to apply neither: an owner clicking the link in their mail client instead of the button in the app walked straight past `INVITE_EMAILS_PER_DAY`, a cap that exists to protect the deployment's sending reputation. Nothing documented the difference and this view's own reasoning argued against it, so the two routes now answer identically. A blocked approval decides nothing and consumes no RSVP — "not now", not "never". **Declining is never blocked**: it adds nobody and mails one member who is already inside the count.
 
 ### CollectionDigestPrefView
 

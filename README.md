@@ -310,7 +310,7 @@ python manage.py backfill_events
 | `SHARE_LINK_BASE_URL` | Prod | Base URL for public collection share links (default in dev: `http://localhost:3000/share`) |
 | `CLOUDINARY_URL` | Uploads | Cloudinary credentials for image uploads: `cloudinary://api_key:api_secret@cloud_name` (free account at cloudinary.com) |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
-| `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day, single + bulk combined. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
+| `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
 | `COLLECTION_THINGS_BLOCK` | No | Per-collection ceiling on things: adds that would cross it are refused, including whole CSV batches. **Unset or `0` = off** (the default). A superuser lifts it per collection with `capacity_unblocked` in the admin. |
 | `COLLECTION_INVITES_ALARM` | No | The same silent, fire-once alert for a collection's **member** count. **Unset or `0` = off**. |
@@ -344,7 +344,7 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 | Rate Limiting | Pop-in | 5 req/min per IP + 5 req/hour per email |
 | Rate Limiting | Collection invite | 30 req/hour per user |
 | Rate Limiting | Collection bulk invite | 5 req/hour per user |
-| Rate Limiting | Invitation emails | Off by default; set `INVITE_EMAILS_PER_DAY` to cap per account, single + bulk combined |
+| Rate Limiting | Invitation emails | Off by default; set `INVITE_EMAILS_PER_DAY` to cap per account — single, bulk and approved recommendations combined, on both of the owner's routes |
 | Rate Limiting | Collection share-link | 30 req/hour per user |
 | Rate Limiting | Thing request | 10 req/hour per user |
 | Rate Limiting | Thing bulk create | 10 req/hour per user |
