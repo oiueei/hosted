@@ -159,6 +159,80 @@ class TestNPlusOneGuards:
             f"N+1 on owner calendar requesters: {len(small)} vs {len(big)}"
         )
 
+    def test_collection_detail_embeds_owner_bookings_for_free(
+        self, authenticated_client, user, collection
+    ):
+        """Serving the owner's bookings on the card must add no query, per thing
+        or per booking.
+
+        The card used to GET /things/{code}/calendar/ once each, so an owner
+        opening a 30-item lending library fired 30 requests. Those rows were
+        already in memory (`_blocked_periods`), so the field is free — but only
+        while the prefetch keeps `select_related("requester_code")`: the
+        serialiser prints the requester's name, and dropping that join trades one
+        request per card for one query per booking, which is worse.
+        """
+        url = f"/api/v1/collections/{collection.code}/"
+        _warm_activity(authenticated_client)
+
+        def lend_thing_with_bookings(n, offset):
+            thing = ThingFactory(owner=user, type="LEND_THING")
+            collection.things.add(thing)
+            for i in range(n):
+                BookingPeriodFactory(
+                    thing_code=thing,
+                    requester_code=UserFactory(),
+                    thing_type="LEND_THING",
+                    start_date=date(2099, 1, 1) + timedelta(days=(offset + i) * 10),
+                    end_date=date(2099, 1, 5) + timedelta(days=(offset + i) * 10),
+                    status="PENDING",
+                )
+
+        lend_thing_with_bookings(2, 0)
+        with CaptureQueriesContext(connection) as small:
+            r1 = authenticated_client.get(url)
+        assert r1.status_code == 200
+        assert any(t["bookings"] for t in r1.data["things"]), (
+            "the owner must actually receive the embedded bookings"
+        )
+
+        # Two more things, each with its own bookings and its own requesters.
+        lend_thing_with_bookings(2, 2)
+        lend_thing_with_bookings(2, 4)
+        with CaptureQueriesContext(connection) as big:
+            r2 = authenticated_client.get(url)
+        assert r2.status_code == 200
+
+        assert len(big) == len(small), (
+            f"N+1 on embedded owner bookings: {len(small)} queries for 1 thing, "
+            f"{len(big)} for 3 (each with 2 bookings and distinct requesters)"
+        )
+
+    def test_collection_detail_hides_bookings_from_non_owners(self, api_client, user):
+        """A card's booking list names the people who requested it — owner only.
+
+        The field rides on the same serialiser an anonymous visitor gets for a
+        PUBLIC collection, so the gate is the only thing between a requester's
+        name and the open web.
+        """
+        public = CollectionFactory(owner=user, visibility=Collection.Visibility.PUBLIC)
+        thing = ThingFactory(owner=user, type="LEND_THING")
+        public.things.add(thing)
+        BookingPeriodFactory(
+            thing_code=thing,
+            requester_code=UserFactory(name="Nosy Neighbour"),
+            thing_type="LEND_THING",
+            start_date=date(2099, 2, 1),
+            end_date=date(2099, 2, 5),
+            status="PENDING",
+        )
+
+        resp = api_client.get(f"/api/v1/collections/{public.code}/")
+
+        assert resp.status_code == 200
+        assert resp.data["things"][0]["bookings"] is None
+        assert "Nosy Neighbour" not in str(resp.data)
+
     def test_collection_list_constant_with_pending_invites(self, authenticated_client, user):
         """The collection list must batch pending_invites (one RSVP query for the
         whole page), not query the RSVP table once per owned collection."""

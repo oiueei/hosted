@@ -71,30 +71,62 @@ export default function useThingBooking(thing, {
   const status = thing?.status;
   const isEndless = thing?.is_endless;
   const isDateBased = DATE_TYPES.includes(type);
+  // Owner-only, and null for everyone else — which is also the signal to fetch.
+  const embeddedBookings = thing?.bookings;
+
+  // The owner's bookings now ride along on the thing itself (serializer field
+  // `bookings`, owner-only). Reading them costs no request at all, which is the
+  // point: this effect used to GET /things/{code}/calendar/ once per card, so
+  // an owner opening a 30-item lending library fired 30 parallel requests on
+  // the page they visit most (DESIGN §7). The fetch stays as the fallback for
+  // any caller whose thing came from somewhere that doesn't embed them.
+  const seededCodeRef = useRef(null);
 
   useEffect(() => {
-    const shouldFetch = isOwner
+    const shouldLoad = isOwner
       && (isDateBased || status === 'TAKEN' || (fetchOnEndless && isEndless));
-    if (!shouldFetch || !code) return undefined;
+    if (!shouldLoad || !code) return undefined;
+
+    const futureOnly = (rows) => rows.filter((b) => {
+      if (!b.end_date) return true; // GIFT/SELL: no dates, always current
+      const d = new Date(b.end_date);
+      d.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return d >= today;
+    });
+
+    const seed = (rows) => {
+      const future = futureOnly(rows);
+      setBookings(future);
+      setActivePendingCode(future.find((b) => b.status === 'PENDING')?.code || null);
+    };
+
+    if (Array.isArray(embeddedBookings)) {
+      // Seed once per thing, never on every re-render. The parent hands back a
+      // fresh `thing` object after each accept/reject (setCollection maps a new
+      // array), and re-seeding from it would overwrite the list that
+      // `handleBookingAction` has just updated locally — the decision would
+      // visibly undo itself.
+      if (seededCodeRef.current !== code) {
+        seededCodeRef.current = code;
+        seed(embeddedBookings);
+      }
+      return undefined;
+    }
+
     const controller = new AbortController();
     apiFetch(`/api/v1/things/${code}/calendar/`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (controller.signal.aborted) return;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const future = data.filter((b) => {
-          if (!b.end_date) return true; // GIFT/SELL: no dates, always current
-          const d = new Date(b.end_date);
-          d.setHours(0, 0, 0, 0);
-          return d >= today;
-        });
-        const firstPending = future.find((b) => b.status === 'PENDING');
-        setBookings(future);
-        setActivePendingCode(firstPending?.code || null);
+        seed(data);
       })
       .catch(() => {});
     return () => controller.abort();
+    // `embeddedBookings` is deliberately absent: the ref above owns re-seeding,
+    // and depending on an array identity that changes every render would defeat it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, status, isEndless, isOwner, isDateBased, fetchOnEndless]);
 
   const handleRequest = async () => {

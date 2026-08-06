@@ -54,6 +54,7 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
             "gallery_urls",
             "tags",
             "pending_booking",
+            "bookings",
             "my_pending_booking",
             "pending_questions",
             "transfer_count",

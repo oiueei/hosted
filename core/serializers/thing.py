@@ -46,7 +46,13 @@ def optimise_thing_queryset(queryset, *, with_collections=False):
                         BookingPeriod.Status.PENDING,
                         BookingPeriod.Status.ACCEPTED,
                     ]
-                ).order_by("start_date"),
+                )
+                # The requester is joined here because this prefetch now also
+                # feeds the owner-only `bookings` field, which prints their name.
+                # Without it the field would trade one query per card for one per
+                # booking — a worse N+1 than the one it removes.
+                .select_related("requester_code")
+                .order_by("start_date"),
                 to_attr="_blocked_periods",
             ),
         )
@@ -68,6 +74,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     owner_name = serializers.SerializerMethodField()
     gallery_urls = serializers.SerializerMethodField()
     pending_booking = serializers.SerializerMethodField()
+    bookings = serializers.SerializerMethodField()
     my_pending_booking = serializers.SerializerMethodField()
     pending_questions = serializers.SerializerMethodField()
     transfer_count = serializers.SerializerMethodField()
@@ -109,6 +116,33 @@ class ThingComputedFieldsMixin(serializers.Serializer):
             status=BookingPeriod.Status.PENDING,
         ).first()
         return booking.code if booking else None
+
+    def get_bookings(self, obj):
+        """The owner's own booking list, served from the prefetch (owner-only).
+
+        This is the same set `GET /things/{code}/calendar/` returns, and it is
+        here so the card stops asking for it. `ThingLinkbox` fetched the calendar
+        once **per card** for every date-based or TAKEN thing it rendered, so a
+        lending library's owner opening their own collection fired one request
+        per item — on the page they visit most, from a phone (DESIGN §7). The
+        rows were already in memory: `_blocked_periods` is the same PENDING +
+        ACCEPTED set, prefetched to compute availability.
+
+        `None` for anyone who isn't the thing's owner — requester names are not
+        public — which also tells the client to fall back to fetching, so a
+        serializer that hasn't been given a request still behaves as before.
+        """
+        from core.serializers.booking import BookingPeriodOwnerCalendarSerializer
+
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated and obj.owner_id == request.user.code):
+            return None
+        periods = (
+            obj._blocked_periods
+            if hasattr(obj, "_blocked_periods")
+            else list(BookingPeriod.get_blocked_periods(obj.code))
+        )
+        return BookingPeriodOwnerCalendarSerializer(periods, many=True).data
 
     def get_my_pending_booking(self, obj):
         request = self.context.get("request")
@@ -194,6 +228,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "next_available",
             "deal",
             "pending_booking",
+            "bookings",
             "my_pending_booking",
             "pending_questions",
             "collection_code",
