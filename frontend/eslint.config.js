@@ -35,4 +35,10 @@ export default defineConfig([
     files: ['**/*.config.{js,mjs,cjs}'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // `scripts/` is Node, not browser: the audit gate and its tests read
+    // `process` and shell out. Without this they lint as undefined globals.
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: { globals: globals.node },
+  },
 ])
