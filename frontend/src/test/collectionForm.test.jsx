@@ -108,6 +108,85 @@ describe('CreateCollectionPage', () => {
     await waitFor(() => expect(thumb()).toBeVisible());
     expect(container.querySelector('#create-collection-welcome-doc')).toBeVisible();
   });
+
+  // The Create form used to omit the digest field entirely. That was survivable
+  // while `digest_frequency` defaulted to NONE; it stopped being survivable when
+  // the default became WEEKLY, because a group now mails its members from the
+  // moment it exists. The owner has to see — and be able to change — that at the
+  // moment they create it, which is exactly what these two pin.
+  test('the digest field is on the Create form, folded into "More options"', async () => {
+    const { container } = renderCreate();
+
+    const digest = () => container.querySelector('#create-collection-digest');
+    expect(digest()).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    await waitFor(() => expect(digest()).toBeVisible());
+  });
+
+  // "Pick at least one type" is the only thing besides the headline that can
+  // block submit, so this is the shortest path to a valid Create.
+  async function fillTheRequiredFields(container, headline) {
+    fireEvent.change(container.querySelector('#create-collection-headline'), {
+      target: { value: headline },
+    });
+    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
+  }
+
+  const createBody = () => {
+    const post = apiFetch.mock.calls.find(
+      ([u, o]) => u === '/api/v1/collections/' && o?.method === 'POST'
+    );
+    return post && JSON.parse(post[1].body);
+  };
+
+  test('a new collection is created subscribed to its own digest', async () => {
+    const { container } = renderCreate();
+    await fillTheRequiredFields(container, 'The street');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    // Not "whatever the server defaults to": the value the owner was shown in
+    // the form is the value that ships, so the field can never disagree with
+    // the row it created.
+    await waitFor(() => expect(createBody()?.digest_frequency).toBe('WEEKLY'));
+  });
+
+  test('turning the digest off at creation time is honoured', async () => {
+    const { container } = renderCreate();
+    await fillTheRequiredFields(container, 'Quiet group');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(await screen.findByRole('combobox', { name: /Digest emails/ }));
+    fireEvent.click(await screen.findByRole('option', { name: 'None' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()?.digest_frequency).toBe('NONE'));
+  });
+
+  // The toggle that decides whether members may recommend guests at all: the
+  // owner's answer to "am I willing to be asked", which a group with a waiting
+  // list or an admission process may not be. It has to reach the POST.
+  test('the recommend-a-guest setting reaches the create request', async () => {
+    const { container } = renderCreate();
+    await fillTheRequiredFields(container, 'Closed group');
+
+    fireEvent.click(container.querySelector('#create-collection-allow-proposals'));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(false));
+  });
+
+  test('left alone, a group is willing to be asked', async () => {
+    const { container } = renderCreate();
+    await fillTheRequiredFields(container, 'Open group');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(true));
+  });
 });
 
 describe('EditCollectionPage — load + pause + submit', () => {
@@ -140,7 +219,8 @@ describe('EditCollectionPage — load + pause + submit', () => {
 
   // O1 on Edit: digest, language, thumbnail and the welcome doc fold into the
   // same "More options" accordion; status, mode and the identity cluster stay
-  // visible. The digest select is the Edit-only field that moved.
+  // visible. The digest select lives on BOTH forms now (see the Create suite
+  // above) — it is folded here, not exclusive to here.
   test('the digest select is hidden until "More options" is opened', async () => {
     const { container } = renderEdit({ headline: 'Comm', mode: 'PROPRIETARY', allowed_thing_types: ['GIFT_THING'] });
 
