@@ -36,6 +36,11 @@ export default function CreateCollectionPage() {
   // The group's email language. Defaults to whatever the owner is reading the app
   // in; each member's own preference still wins over it.
   const [language, setLanguage] = useState(i18n.resolvedLanguage || i18n.language);
+  // Mirrors the model default (WEEKLY). The Create form used to omit this field
+  // entirely, which was survivable while the default was NONE — it is not now
+  // that a new collection mails its members on the owner's behalf. The owner has
+  // to be able to see and change it at the moment they create the group.
+  const [digestFrequency, setDigestFrequency] = useState('WEEKLY');
   const [welcomeDoc, setWelcomeDoc] = useState('');
   const [errors, setErrors] = useState({});
 
@@ -89,6 +94,7 @@ export default function CreateCollectionPage() {
       tags,
       thumbnail: thumbnail || '',
       language,
+      digest_frequency: digestFrequency,
       welcome_doc: welcomeDoc || '',
     };
     if (description.trim()) body.description = description.trim();
@@ -195,6 +201,23 @@ export default function CreateCollectionPage() {
                 setRentalWeekdays={setRentalWeekdays}
                 theeemeColor01={theeemeColors.color_01}
               />
+            {/* Same order and same `editCollection.*` keys as EditCollectionPage,
+                so the one field doesn't read differently on the two screens. */}
+            <Select
+              language="en"
+              id="create-collection-digest"
+              texts={{ label: t('editCollection.digestLabel') }}
+              helper={t('editCollection.digestHelper')}
+              options={[
+                { label: t('editCollection.digestNone'), value: 'NONE' },
+                { label: t('editCollection.digestWeekly'), value: 'WEEKLY' },
+                { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
+              ]}
+              value={digestFrequency}
+              onChange={(selectedOptions) => {
+                if (selectedOptions.length > 0) setDigestFrequency(selectedOptions[0].value);
+              }}
+            />
             <Select
               language="en"
               id="create-collection-language"

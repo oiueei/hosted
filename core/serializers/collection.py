@@ -105,6 +105,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     invites = serializers.SerializerMethodField()
     pending_invites = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
+    is_digest_muted = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -136,6 +137,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "invites",
             "pending_invites",
             "is_member",
+            "is_digest_muted",
         ]
         read_only_fields = [
             "code",
@@ -146,6 +148,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "invites",
             "pending_invites",
             "is_member",
+            "is_digest_muted",
         ]
 
     def get_owner_name(self, obj):
@@ -186,6 +189,15 @@ class CollectionSerializer(serializers.ModelSerializer):
         if not (request and request.user.is_authenticated) or self._requester_is_owner(obj):
             return False
         return any(u.code == request.user.code for u in obj.invites.all())
+
+    def get_is_digest_muted(self, obj):
+        # Whether *this* viewer has silenced this collection's digest. Only
+        # meaningful for a member — the owner never receives their own digest —
+        # so everyone else gets False and no toggle is rendered for them.
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated) or self._requester_is_owner(obj):
+            return False
+        return any(u.code == request.user.code for u in obj.digest_muted.all())
 
     def get_invites(self, obj):
         members = obj.invites.all()

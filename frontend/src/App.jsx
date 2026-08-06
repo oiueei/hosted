@@ -43,6 +43,7 @@ const SharePage = lazy(() => import('./pages/SharePage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
+const DigestMutePage = lazy(() => import('./pages/DigestMutePage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const CollaboratePage = lazy(() => import('./pages/CollaboratePage'));
 
@@ -103,6 +104,8 @@ function App() {
         <Route path="/me/notifications/:token" element={<NotificationsPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/legal" element={<LegalPage />} />
+        {/* The digest footer's one-click unsubscribe — public by necessity. */}
+        <Route path="/digest/mute/:token" element={<DigestMutePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/collaborate" element={<CollaboratePage />} />
         <Route path="/popin" element={<PopInPage />} />

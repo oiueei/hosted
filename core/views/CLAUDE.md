@@ -281,6 +281,18 @@ Unauthenticated endpoint scoped to editing `notify_activity` / `notify_news` on 
 - On PATCH: accepts partial `{ notify_activity?, notify_news? }` via `NotificationPrefsSerializer` and persists the change.
 - Token has blast radius limited to these two booleans — it cannot be used to read or modify anything else.
 
+### DigestMuteByTokenView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/digest/mute/{token}/` |
+| **Permission** | `AllowAny` — the signed token is the whole credential |
+| **Rate limit** | 10 requests/minute per IP |
+
+The one-click unsubscribe at the foot of every digest. The token signs `{user_code}:{collection_code}` under its own salt (`make_digest_mute_token`), so it can't be exchanged for a preferences token; its blast radius is one row in one M2M, which the member can undo from the collection page.
+
+**POST, not GET** — the same anti-prefetch reasoning as the booking decisions in `VerifyLinkView`: a mail client's link scanner issues a bare GET and runs no JS, so it must not be able to unsubscribe someone. The SPA page at `/digest/mute/:token` fires the POST from JS on mount. Answers 401 on an invalid/expired/tampered token, and never reveals whether the member was subscribed.
+
 ---
 
 ## Thing Views (`core/views/things.py`)
@@ -413,6 +425,18 @@ Removes a user from the collection's invite list. If the invite is still pending
 | **Permission** | `IsAuthenticated` + must be an invited member (not the owner) |
 
 Lets an invited member remove **themselves** from a collection (self-unlink) — the inverse of the owner-only `CollectionInviteView` DELETE. Returns 400 if the requester is the collection **owner** ("The owner can't leave their own collection." — owners delete instead) or is **not a member** ("You are not a member of this collection."). On success removes the user from the `invites` M2M, creates a `MEMBER_LEFT` in-app notification for the owner (payload: `collection_headline`, `member_name`, `collection_code`), and returns `200 {"message": "You have left the collection"}`. The frontend shows the "Leave the group" button (hero, `CollectionSerializer.is_member` gate) → `LeaveCollectionPage` confirm → back to Home.
+
+### CollectionDigestPrefView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/digest/` |
+| **Permission** | `IsAuthenticated` + must be an invited member |
+| **Rate limit** | 30 requests/hour per user |
+
+A member silences (or un-silences) this one group's digest: `{"muted": true|false}` → `Collection.digest_muted`. Members only — the owner never receives their own collection's digest (it goes to `invites`), so they change `digest_frequency` instead; a non-member gets **400**. Idempotent (`add`/`remove`), so a double POST is harmless.
+
+This is the control that lets `User.notify_news` default to `True` without it being a pre-ticked opt-in (DESIGN §6): leaving one group's summaries costs the member none of their Cat. 2 activity email. Read back as `is_digest_muted` on `CollectionSerializer`.
 
 ### InvitedCollectionsView
 
@@ -977,7 +1001,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Service Layer
 
 Business logic is extracted into `core/services/`:
-- `email_service.py` — All email HTML composition and sending (25 `send_*` functions). Uses `django.utils.html.escape()`.
+- `email_service.py` — All email HTML composition and sending (19 `send_*` functions). Uses `django.utils.html.escape()`.
 - `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.
 
 ### Utilities

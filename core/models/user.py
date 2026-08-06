@@ -100,11 +100,21 @@ class User(AbstractBaseUser):
     )
 
     # Notification preferences (see core/services/email_service.py categories).
-    # Activity (Cat. 2) defaults ON — transactional, expected. News (Cat. 3 —
-    # digests) defaults OFF: it is a pre-ticked opt-in today, which
-    # violates DESIGN §6; new users must explicitly ask for it.
+    # Activity (Cat. 2) defaults ON — transactional, expected.
+    #
+    # News (Cat. 3 — the per-collection digest) also defaults ON, which is only
+    # defensible because of the second, narrower control beside it:
+    # `Collection.digest_muted` lets a member silence one group without giving up
+    # the booking and question emails they want. DESIGN §6 forbids making the
+    # exit harder than the entrance, not sensible defaults — and the exit here is
+    # one link in the footer of the very email being complained about.
+    #
+    # It defaulted OFF until the 2026-08 design round, which is why the digest
+    # reached almost nobody: the owner had to find a buried per-collection
+    # setting AND every reader had to have opted in to a switch labelled
+    # "optional".
     notify_activity = models.BooleanField(default=True)
-    notify_news = models.BooleanField(default=False)
+    notify_news = models.BooleanField(default=True)
 
     # Optional demographics. Per member they're shared only with the owner of a
     # COMMUNITY collection (on the guests page); in aggregate they appear in any

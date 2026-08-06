@@ -170,6 +170,7 @@ TEXTS = {
     "digest_subject": "Novetats a {collection}",
     "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",
     "digest_intro": "Coses noves a {collection}:",
+    "digest_mute_cta": "Deixar de rebre els resums d'aquest grup",
 }
 
 # Frases de creixement que s'afegeixen als correus sortints (sobre el peu de

@@ -104,7 +104,7 @@ core/
 
 | Model | Purpose |
 |-------|---------|
-| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` (default on) and `notify_news` (default off — an explicit opt-in, DESIGN §6) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). Optional profile extras: `about` (free Markdown bio) and `photo` (Cloudinary profile photo, exposed as `photo_url`) |
+| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio) and `photo` (Cloudinary profile photo, exposed as `photo_url`) |
 | **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
 | **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
@@ -152,6 +152,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | PUT | `/api/v1/users/{user_code}/` | Update own profile (name, headline, `about` Markdown bio, `photo`, koro, theeeme, `notify_activity`, `notify_news`) |
 | GET | `/api/v1/notifications/token/{token}/` | Read `notify_activity`/`notify_news` via signed token (no login required; linked from every Cat. 2/3 email footer) |
 | PATCH | `/api/v1/notifications/token/{token}/` | Update `notify_activity`/`notify_news` via signed token |
+| POST | `/api/v1/digest/mute/{token}/` | One-click unsubscribe from **one** collection's digest, via the signed link in that digest's footer (no login). POST-only so an email link-scanner can't unsubscribe anyone |
 
 ### Collections (ModelViewSet + Router)
 | Method | URL | Description |
@@ -170,6 +171,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
 | POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) |
+| POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h |
 | POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner only, rate limited: 5/h) |
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner only) |
 | POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner only) |
@@ -353,6 +355,8 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 | Rate Limiting | Collection single create | 30 req/hour per user |
 | Rate Limiting | Collection add-thing | 60 req/hour per user |
 | Rate Limiting | Collection leave | 30 req/hour per user |
+| Rate Limiting | Collection digest pref | 30 req/hour per user |
+| Rate Limiting | Digest mute by token | 10 req/min per IP |
 | Rate Limiting | Account delete request | 3 req/hour per user |
 | Rate Limiting | Contact form | 5 req/hour per IP |
 | Headers | HSTS | 1-year strict transport security with preload |

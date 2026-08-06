@@ -27,6 +27,7 @@ from core.services.email_service import (
     CATEGORY_MANDATORY,
     CATEGORY_NEWS,
     _should_send,
+    make_digest_mute_token,
     make_notifications_token,
     send_booking_decision_email,
     send_digest_email,
@@ -42,12 +43,70 @@ def noti_user(db):
     )
 
 
-def test_new_user_defaults_news_off_activity_on(db):
-    """DESIGN §6: news (Cat. 3) is opt-in — a brand-new user starts opted out,
-    while transactional activity (Cat. 2) stays on."""
+def test_new_user_starts_subscribed_to_both_categories(db):
+    """A new user receives both activity and news without opting in.
+
+    News (Cat. 3 — the digest) defaulted OFF until the 2026-08 design round, and
+    the digest consequently reached almost nobody. Turning it on is only
+    compatible with DESIGN §6 because of the per-collection mute below: the way
+    out of one group's summaries no longer costs you the transactional email you
+    need. If that mute is ever removed, this default has to go back to False.
+    """
     fresh = User.objects.create(code="NEW01", email="new@test.com", name="Fresh")
-    assert fresh.notify_news is False
+    assert fresh.notify_news is True
     assert fresh.notify_activity is True
+
+
+def test_new_collection_sends_a_weekly_digest_by_default(db):
+    """A new collection is born sending a weekly summary.
+
+    The other half of the same 2026-08 change: `notify_news` defaulting on is
+    worth nothing while every collection defaults to `NONE`, which is the state
+    that made the digest unreachable. Both ends had to move, and the Create form
+    has to show the field (it didn't) so an owner isn't mailing their members
+    without knowing.
+    """
+    owner = User.objects.create(code="DGDEF1", email="dgdef@test.com", name="Owner")
+    collection = Collection.objects.create(code="DGDEF2", owner=owner, headline="Fresh")
+    assert collection.digest_frequency == Collection.DigestFrequency.WEEKLY
+
+
+def test_muting_one_collection_stops_only_that_digest(db, noti_user):
+    """A member who silences a group stops that group's digest and no other.
+
+    This is the guarantee that makes notify_news default True defensible, so it
+    is asserted on both sides: the muted collection sends nothing, an unmuted
+    one still lands in the same person's inbox.
+    """
+    owner = User.objects.create(code="DGOWN1", email="dgown@test.com", name="Owner")
+    noisy = Collection.objects.create(code="DGNOI1", owner=owner, headline="Noisy")
+    quiet = Collection.objects.create(code="DGQUI1", owner=owner, headline="Quiet")
+    for col in (noisy, quiet):
+        col.invites.add(noti_user)
+    noisy.digest_muted.add(noti_user)
+
+    mail.outbox.clear()
+    send_digest_email("Noisy", noisy.code, ["A thing"], [noti_user.email], collection=noisy)
+    assert mail.outbox == [], "the muted collection must not reach this member"
+
+    send_digest_email("Quiet", quiet.code, ["A thing"], [noti_user.email], collection=quiet)
+    assert len(mail.outbox) == 1, "muting one group must not silence the others"
+
+
+def test_muting_a_collection_leaves_its_activity_email_alone(db, noti_user):
+    """The mute is about a group's news, not about the group.
+
+    A member who silences the weekly summary still has to hear that their own
+    hold was decided — the whole point of keeping the two categories apart.
+    """
+    owner = User.objects.create(code="DGOWN2", email="dgown2@test.com", name="Owner")
+    collection = Collection.objects.create(code="DGCOL2", owner=owner, headline="Group")
+    collection.invites.add(noti_user)
+    collection.digest_muted.add(noti_user)
+
+    mail.outbox.clear()
+    assert _should_send(noti_user.email, CATEGORY_ACTIVITY, collection=collection) is True
+    assert _should_send(noti_user.email, CATEGORY_NEWS, collection=collection) is False
 
 
 def test_should_send_mandatory_always_true(db, noti_user):
@@ -127,6 +186,122 @@ def test_news_email_skipped_when_opted_out(db, noti_user):
     send_digest_email("Club", "COLL01", ["Thing A"], [noti_user.email, second.email])
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == [second.email]
+
+
+def test_member_can_mute_and_unmute_a_collection_digest(db, noti_user):
+    """The member-facing switch round-trips, and the serializer reports it back.
+
+    `is_digest_muted` is what renders the toggle in its correct position, so a
+    mute the API accepted but the read endpoint denied would leave the member
+    clicking a control that springs back on every reload.
+    """
+    owner = User.objects.create(code="DGOWN3", email="dgown3@test.com", name="Owner")
+    collection = Collection.objects.create(
+        code="DGCOL3", owner=owner, headline="Group", visibility=Collection.Visibility.PUBLIC
+    )
+    collection.invites.add(noti_user)
+    client = APIClient()
+    token = RefreshToken.for_user(noti_user)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+
+    resp = client.post(
+        f"/api/v1/collections/{collection.code}/digest/", {"muted": True}, format="json"
+    )
+    assert resp.status_code == 200
+    assert collection.digest_muted.filter(code=noti_user.code).exists()
+    assert client.get(f"/api/v1/collections/{collection.code}/").data["is_digest_muted"] is True
+
+    resp = client.post(
+        f"/api/v1/collections/{collection.code}/digest/", {"muted": False}, format="json"
+    )
+    assert resp.status_code == 200
+    assert not collection.digest_muted.filter(code=noti_user.code).exists()
+    assert client.get(f"/api/v1/collections/{collection.code}/").data["is_digest_muted"] is False
+
+
+def test_digest_pref_rejects_a_body_without_a_boolean(db, noti_user):
+    """A missing or non-boolean `muted` is a 400, not a silent un-mute.
+
+    The view reads the flag straight from the body, so a typo'd or absent field
+    falling through to `else: remove()` would quietly re-subscribe someone who
+    asked to be left alone.
+    """
+    owner = User.objects.create(code="DGOWN6", email="dgown6@test.com", name="Owner")
+    collection = Collection.objects.create(code="DGCOL6", owner=owner, headline="Group")
+    collection.invites.add(noti_user)
+    collection.digest_muted.add(noti_user)
+    client = APIClient()
+    token = RefreshToken.for_user(noti_user)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+
+    for body in ({}, {"muted": "false"}, {"muted": None}):
+        resp = client.post(f"/api/v1/collections/{collection.code}/digest/", body, format="json")
+        assert resp.status_code == 400, f"{body} should not be accepted"
+    assert collection.digest_muted.filter(code=noti_user.code).exists(), (
+        "a rejected request must leave the existing preference untouched"
+    )
+
+
+def test_non_member_cannot_mute_a_collection_digest(db, noti_user):
+    """A stranger's POST must not write a row against someone else's group.
+
+    The endpoint is unguarded by any object permission class, so membership is
+    the only thing standing between an arbitrary code and a write.
+    """
+    owner = User.objects.create(code="DGOWN4", email="dgown4@test.com", name="Owner")
+    collection = Collection.objects.create(
+        code="DGCOL4", owner=owner, headline="Not yours", visibility=Collection.Visibility.PUBLIC
+    )
+    client = APIClient()
+    token = RefreshToken.for_user(noti_user)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+
+    resp = client.post(
+        f"/api/v1/collections/{collection.code}/digest/", {"muted": True}, format="json"
+    )
+    assert resp.status_code == 400
+    assert collection.digest_muted.count() == 0, "the denied request must not have written"
+
+
+def test_digest_footer_link_mutes_that_collection_without_a_login(db, noti_user):
+    """The unsubscribe in the digest footer works for someone with no session.
+
+    This is the whole justification for notify_news defaulting to True: if the
+    one-click exit needed a login it would be harder to leave than to be
+    enrolled, which is the DESIGN §6 line.
+    """
+    owner = User.objects.create(code="DGOWN5", email="dgown5@test.com", name="Owner")
+    collection = Collection.objects.create(code="DGCOL5", owner=owner, headline="Group")
+    collection.invites.add(noti_user)
+
+    mail.outbox.clear()
+    send_digest_email(
+        "Group", collection.code, ["A thing"], [noti_user.email], collection=collection
+    )
+    assert len(mail.outbox) == 1
+    token = make_digest_mute_token(noti_user, collection)
+    assert f"/digest/mute/{token}" in mail.outbox[0].body, "the footer must carry the link"
+
+    # No credentials — an unauthenticated client, as from a mail app.
+    resp = APIClient().post(f"/api/v1/digest/mute/{token}/")
+    assert resp.status_code == 200
+    assert collection.digest_muted.filter(code=noti_user.code).exists()
+
+    mail.outbox.clear()
+    send_digest_email(
+        "Group", collection.code, ["A thing"], [noti_user.email], collection=collection
+    )
+    assert mail.outbox == [], "the next digest must not be sent after unsubscribing"
+
+
+def test_digest_mute_token_rejects_a_tampered_signature(db):
+    """An unsigned or edited token must not write anything.
+
+    The token names both the user and the collection, so a forgeable one would
+    let anybody unsubscribe anybody from any group.
+    """
+    resp = APIClient().post("/api/v1/digest/mute/NOTI01:DGCOL5/")
+    assert resp.status_code == 401
 
 
 def test_patch_me_updates_prefs(db, noti_user):

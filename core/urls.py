@@ -29,6 +29,7 @@ from .views.booking import (
 from .views.collections import (
     CollectionBroadcastView,
     CollectionBulkInviteView,
+    CollectionDigestPrefView,
     CollectionInviteView,
     CollectionLeaveView,
     CollectionShareLinkView,
@@ -41,7 +42,7 @@ from .views.contact import ContactView
 from .views.csp import csp_report
 from .views.faq import FAQAnswerView, FAQDetailView, FAQVisibilityView, ThingFAQListView
 from .views.inbox import InboxView
-from .views.notifications import NotificationsByTokenView
+from .views.notifications import DigestMuteByTokenView, NotificationsByTokenView
 from .views.report import ThingReportView
 from .views.reservations import ThingRequestView
 from .views.theeemes import TheeemeListView
@@ -104,6 +105,11 @@ urlpatterns = [
         NotificationsByTokenView.as_view(),
         name="notifications-token",
     ),
+    path(
+        "digest/mute/<str:token>/",
+        DigestMuteByTokenView.as_view(),
+        name="digest-mute-token",
+    ),
     # Collections (non-viewset)
     path(
         "invited-collections/",
@@ -124,6 +130,11 @@ urlpatterns = [
         "collections/<str:collection_code>/leave/",
         CollectionLeaveView.as_view(),
         name="collection-leave",
+    ),
+    path(
+        "collections/<str:collection_code>/digest/",
+        CollectionDigestPrefView.as_view(),
+        name="collection-digest-pref",
     ),
     path(
         "collections/<str:collection_code>/invite/bulk/",

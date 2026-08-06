@@ -164,6 +164,7 @@ TEXTS = {
     "digest_subject": "What's new in {collection}",
     "digest_plain": "New things in {collection}:\n\n{things}\n\nView collection: {url}",
     "digest_intro": "New things in {collection}:",
+    "digest_mute_cta": "Stop the summaries from this group",
 }
 
 # Growth blurbs appended to outbound emails (above the preferences footer) to

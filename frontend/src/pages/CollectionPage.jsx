@@ -29,6 +29,8 @@ export default function CollectionPage() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [digestError, setDigestError] = useState(false);
   // The owner may have written the collection's text once per language; every
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
@@ -111,6 +113,27 @@ export default function CollectionPage() {
       setBroadcastResult({ type: 'error', message: t('common.connectionError') });
     }
     setBroadcastSending(false);
+  };
+
+  // Silence (or un-silence) this one group's digest. The narrow control that
+  // lets `notify_news` default to on: leaving a chatty group's summaries costs
+  // this member nothing else (DESIGN §6). Optimistic-free — the state only moves
+  // once the server has agreed, so a failure can't leave the label lying.
+  const toggleDigest = async () => {
+    const muted = !collection.is_digest_muted;
+    setDigestSaving(true);
+    setDigestError(false);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/digest/`, {
+        method: 'POST',
+        body: JSON.stringify({ muted }),
+      });
+      if (res.ok) setCollection((prev) => ({ ...prev, is_digest_muted: muted }));
+      else setDigestError(true);
+    } catch {
+      setDigestError(true);
+    }
+    setDigestSaving(false);
   };
 
   const userCode = localStorage.getItem('userCode');
@@ -216,6 +239,29 @@ export default function CollectionPage() {
                   <Button variant="secondary" style={btnSecondaryStyle}>{t('collectionPage.addThing')}</Button>
                 </Link>
               </div>
+            )}
+            {collection.is_member && collection.digest_frequency !== 'NONE' && (
+              <p className="digest-pref">
+                {collection.is_digest_muted
+                  ? t('collectionPage.digestMuted')
+                  : t('collectionPage.digestSubscribed')}{' '}
+                <button
+                  type="button"
+                  className="digest-pref-button"
+                  onClick={toggleDigest}
+                  disabled={digestSaving}
+                >
+                  {collection.is_digest_muted
+                    ? t('collectionPage.digestUnmute')
+                    : t('collectionPage.digestMute')}
+                </button>
+                {digestError && (
+                  <>
+                    {' '}
+                    <span role="alert">{t('collectionPage.digestError')}</span>
+                  </>
+                )}
+              </p>
             )}
             {collection.is_member && (
               <p className="leave-group">

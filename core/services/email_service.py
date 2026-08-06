@@ -87,6 +87,38 @@ def verify_notifications_token(token):
     return user_code if User.objects.filter(code=user_code).exists() else None
 
 
+_DIGEST_MUTE_SALT = "digest-mute"
+
+
+def make_digest_mute_token(user, collection):
+    """Signed token for the digest footer's one-click 'stop these' link.
+
+    Carries ``{user_code}:{collection_code}`` under its own salt, so it cannot be
+    swapped for a preferences token and vice versa. Its blast radius is one row
+    in one M2M: at worst someone silences a digest for a member who can turn it
+    straight back on from the collection page.
+
+    Same long TTL as the preferences token, for the same reason (see
+    ``_PREFS_TOKEN_MAX_AGE``): this is an unsubscribe link, and an expired one
+    turns "stop emailing me" into a support request.
+    """
+    return TimestampSigner(salt=_DIGEST_MUTE_SALT).sign(f"{user.code}:{collection.code}")
+
+
+def verify_digest_mute_token(token):
+    """Return ``(user_code, collection_code)`` for a valid token, else ``None``."""
+    try:
+        payload = TimestampSigner(salt=_DIGEST_MUTE_SALT).unsign(
+            token, max_age=_PREFS_TOKEN_MAX_AGE
+        )
+    except (BadSignature, SignatureExpired):
+        return None
+    user_code, _, collection_code = payload.partition(":")
+    if not user_code or not collection_code:
+        return None
+    return user_code, collection_code
+
+
 # Sentinel for "no prefetched value" — distinct from a looked-up None (the
 # recipient has no User row). Lets the multi-recipient senders pass a resolved
 # user (or a known-absent None) so _send doesn't re-query _lookup_user per
@@ -179,12 +211,37 @@ def _recipient(email, collection=None):
     return user, resolve_email_language(user=user, collection=collection)
 
 
-def _should_send(email, category, user=_UNSET):
+def _muted_codes(collection):
+    """User codes that have silenced this collection's digest (empty set if none).
+
+    Only consulted for CATEGORY_NEWS: the mute is per group and about *this
+    group's news*, so it must not reach the activity emails — a member who
+    silences a chatty collection still gets told when their own hold is
+    confirmed there.
+    """
+    if collection is None:
+        return set()
+    # Memoised on the instance: `_send_per_language` calls `_send` (and so
+    # `_should_send`) once per recipient, and without this the belt-and-braces
+    # re-check would cost one query per member of the group — the N+1 that a
+    # digest to a 200-member collection would notice.
+    cached = getattr(collection, "_digest_muted_codes", None)
+    if cached is None:
+        cached = set(collection.digest_muted.values_list("code", flat=True))
+        collection._digest_muted_codes = cached
+    return cached
+
+
+def _should_send(email, category, user=_UNSET, collection=None):
     """True unless the recipient has opted out of this category.
 
     ``user`` may be prefetched by a multi-recipient sender (a User, or None once
     it is known the recipient has no User row); leave it as ``_UNSET`` for the
     single-recipient path, which looks the user up here.
+
+    ``collection`` narrows CATEGORY_NEWS by the per-collection mute. The check
+    lives here, beside the global one, so it holds for any future single-
+    recipient news sender rather than only for the bulk path digests use today.
     """
     if category == CATEGORY_MANDATORY:
         return True
@@ -195,12 +252,16 @@ def _should_send(email, category, user=_UNSET):
     if category == CATEGORY_ACTIVITY:
         return user.notify_activity
     if category == CATEGORY_NEWS:
-        return user.notify_news
+        return user.notify_news and user.code not in _muted_codes(collection)
     return True
 
 
-def _filter_recipients(emails, category):
-    """Filter a bulk recipient list, removing users who have opted out."""
+def _filter_recipients(emails, category, collection=None):
+    """Filter a bulk recipient list, removing users who have opted out.
+
+    Two independent opt-outs for news: the global ``notify_news`` switch and,
+    when the mail belongs to a collection, that collection's own mute list.
+    """
     if category == CATEGORY_MANDATORY:
         return list(emails)
     from core.models import User
@@ -211,10 +272,17 @@ def _filter_recipients(emails, category):
             "email", flat=True
         )
     )
+    if category == CATEGORY_NEWS and collection is not None:
+        muted = set(
+            collection.digest_muted.filter(email__in=list(emails)).values_list("email", flat=True)
+        )
+        opted_out |= muted
     return [e for e in emails if e not in opted_out]
 
 
-def _send_per_language(emails, category, compose, collection=None, reply_to=None):
+def _send_per_language(
+    emails, category, compose, collection=None, reply_to=None, extra_footer=None
+):
     """Send one bulk email (digest, broadcast) to a list of
     recipients, **each in their own language**.
 
@@ -225,7 +293,7 @@ def _send_per_language(emails, category, compose, collection=None, reply_to=None
     first, and the users are bulk-resolved in a single query so ``_send`` doesn't
     re-look-up anyone.
     """
-    recipients = _filter_recipients(emails, category)
+    recipients = _filter_recipients(emails, category, collection=collection)
     users = _lookup_users(recipients)
     composed = {}
     for email in recipients:
@@ -234,7 +302,28 @@ def _send_per_language(emails, category, compose, collection=None, reply_to=None
         if lang not in composed:
             composed[lang] = compose(lang)
         subject, plain, html = composed[lang]
-        _send(email, subject, plain, html, category, reply_to=reply_to, user=user, lang=lang)
+        # Composed once per language, but this line is per recipient: it carries
+        # a token signed for *this* user, so it cannot join the cached body.
+        if extra_footer:
+            extra = extra_footer(user, lang)
+            if extra:
+                label, link = extra
+                plain = f"{plain}\n\n{label}: {link}"
+                html = (
+                    f'{html}<p style="color:#666;font-size:12px;">'
+                    f'<a href="{escape(link)}">{escape(label)}</a></p>'
+                )
+        _send(
+            email,
+            subject,
+            plain,
+            html,
+            category,
+            reply_to=reply_to,
+            user=user,
+            lang=lang,
+            collection=collection,
+        )
 
 
 def _frontend_base_url():
@@ -327,6 +416,7 @@ def _send(
     user=_UNSET,
     include_viral=True,
     lang=None,
+    collection=None,
 ):
     """Send a single email through the category + footer + viral pipeline.
 
@@ -358,7 +448,7 @@ def _send(
     # the mandatory + include_viral=False send (stats summary) skips it.
     if (category != CATEGORY_MANDATORY or include_viral) and user is _UNSET:
         user = _lookup_user(to_email)
-    if not _should_send(to_email, category, user=user):
+    if not _should_send(to_email, category, user=user, collection=collection):
         return False
     if include_viral:
         plain, html = _with_viral_line(plain, html, user=user, lang=lang)
@@ -927,7 +1017,24 @@ def send_digest_email(
             ),
         )
 
-    _send_per_language(emails, CATEGORY_NEWS, compose, collection=collection)
+    # The per-collection unsubscribe, appended after the generic preferences
+    # footer. It is what lets `notify_news` default to on (DESIGN §6): the way to
+    # stop *these* emails is one click in the email itself, and it costs the
+    # reader none of the transactional mail they actually want. `_send`'s footer
+    # can't build it — it is scoped to a collection, and only this sender has one.
+    def per_recipient_footer(user, lang):
+        if user is None or collection is None:
+            return None
+        link = f"{base_url}/digest/mute/{make_digest_mute_token(user, collection)}"
+        return T("digest_mute_cta", lang), link
+
+    _send_per_language(
+        emails,
+        CATEGORY_NEWS,
+        compose,
+        collection=collection,
+        extra_footer=per_recipient_footer,
+    )
 
 
 def send_stats_summary_email(recipient, subject, sections):

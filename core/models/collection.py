@@ -61,8 +61,22 @@ class Collection(models.Model):
     visibility = models.CharField(
         max_length=7, choices=Visibility.choices, default=Visibility.PRIVATE
     )
+    # WEEKLY by default since the 2026-08 design round. It was NONE, which — with
+    # `User.notify_news` also defaulting off — is why the digest reached almost
+    # nobody: it needed an owner to find a setting inside an accordion *and* every
+    # reader to have opted in.
+    #
+    # A default that sends email has to be visible to the person it sends on
+    # behalf of, so the selector is now in the Create form too (it was Edit-only).
+    # And it has to be escapable by the people who receive it, which is
+    # `digest_muted` — one click, per group, from the footer of the digest itself.
+    #
+    # Existing collections keep whatever they have: an `AlterField` default does
+    # not rewrite rows, and quietly starting to mail someone else's members on
+    # their behalf is not ours to decide (contrast 0127, which subscribes existing
+    # *recipients*, who can unsubscribe themselves).
     digest_frequency = models.CharField(
-        max_length=7, choices=DigestFrequency.choices, default=DigestFrequency.NONE
+        max_length=7, choices=DigestFrequency.choices, default=DigestFrequency.WEEKLY
     )
     # The language this group's outbound email speaks. Blank = inherit the
     # deployment default (EMAIL_LANGUAGE); a member's own preference still wins
@@ -114,6 +128,21 @@ class Collection(models.Model):
         blank=True,
         related_name="invited_to_collections",
         db_table="collection_invites",
+    )
+    # Members who have silenced THIS group's digest. Presence of a row means
+    # "don't send"; the absence of one means subscribed — so the default costs no
+    # data and a new member starts subscribed without anything being written.
+    #
+    # It is what makes `User.notify_news` defaulting to True honest rather than a
+    # pre-ticked opt-in (DESIGN §6): the global switch is not the only way out,
+    # so silencing one noisy group never costs you the booking and question
+    # emails you actually want. `notify_news` remains the master switch — this
+    # narrows it, it cannot re-enable anything.
+    digest_muted = models.ManyToManyField(
+        "User",
+        blank=True,
+        related_name="muted_digest_collections",
+        db_table="collection_digest_muted",
     )
 
     class Meta:

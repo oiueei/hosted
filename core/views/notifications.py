@@ -14,8 +14,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import User
-from core.services.email_service import verify_notifications_token
+from core.models import Collection, User
+from core.services.email_service import verify_digest_mute_token, verify_notifications_token
 
 
 class NotificationPrefsSerializer(serializers.ModelSerializer):
@@ -64,3 +64,43 @@ class NotificationsByTokenView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class DigestMuteByTokenView(APIView):
+    """
+    POST /api/v1/digest/mute/{token}/
+
+    The one-click unsubscribe at the foot of every digest: silences that one
+    collection's summaries for that one member, no login required. The token is
+    a signed ``{user_code}:{collection_code}`` (see ``make_digest_mute_token``).
+
+    **POST, not GET, on purpose** — same reasoning as the booking decisions in
+    `VerifyLinkView`: a mail client's link scanner or a prefetch issues a bare
+    GET and runs no JS, so it must not be able to unsubscribe someone. The SPA
+    page fires this POST from JS, which a scanner never reaches.
+
+    Idempotent, and it never reports whether the member was subscribed — the
+    answer to "stop these" is always the same, and a token holder learns nothing
+    about the account behind it.
+    """
+
+    permission_classes = [AllowAny]
+
+    @method_decorator(ratelimit(key="ip", rate="10/m", method="POST", block=True))
+    def post(self, request, token):
+        resolved = verify_digest_mute_token(token)
+        if not resolved:
+            return Response(
+                {"detail": "Invalid or expired link"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user_code, collection_code = resolved
+        user = User.objects.filter(code=user_code).first()
+        collection = Collection.objects.filter(code=collection_code).first()
+        if not user or not collection:
+            return Response(
+                {"detail": "Invalid or expired link"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        collection.digest_muted.add(user)
+        return Response({"muted": True, "collection_headline": collection.headline})

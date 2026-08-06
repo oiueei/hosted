@@ -165,6 +165,7 @@ TEXTS = {
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",
     "digest_intro": "Cosas nuevas en {collection}:",
+    "digest_mute_cta": "Dejar de recibir los resúmenes de este grupo",
 }
 
 # Frases de crecimiento que se añaden a los correos salientes (encima del pie

@@ -59,12 +59,27 @@ from core.views._helpers import (
 logger = logging.getLogger(__name__)
 
 
-def _optimise_collection_queryset(queryset):
-    """Add select/prefetch_related for nested serializer access on collections."""
-    return queryset.select_related("owner").prefetch_related(
+def _optimise_collection_queryset(queryset, viewer=None):
+    """Add select/prefetch_related for nested serializer access on collections.
+
+    ``viewer`` is the requesting user, when there is one. It buys the
+    ``is_digest_muted`` prefetch, and only then: the field answers False without
+    a lookup for anonymous readers and for owners, so prefetching unconditionally
+    spends a query on the anonymous PUBLIC-collection read — the hot path that
+    costs us the most and gains nothing (pinned by the query-budget tests).
+
+    The prefetch is narrowed to the viewer's own row rather than pulling every
+    muted member of the group: the serializer only ever asks "did *I* mute this?"
+    """
+    queryset = queryset.select_related("owner").prefetch_related(
         "invites",
         Prefetch("things", queryset=optimise_thing_queryset(Thing.objects.all())),
     )
+    if viewer is not None and viewer.is_authenticated:
+        queryset = queryset.prefetch_related(
+            Prefetch("digest_muted", queryset=User.objects.filter(code=viewer.code))
+        )
+    return queryset
 
 
 class CollectionViewSet(ModelViewSet):
@@ -114,7 +129,7 @@ class CollectionViewSet(ModelViewSet):
             # Use the optimised queryset (prefetch + annotations) so nesting the
             # collection's things doesn't N+1. No owner filter — can_view() below
             # gates access so invited (non-owner) users can still retrieve.
-            qs = _optimise_collection_queryset(Collection.objects.all())
+            qs = _optimise_collection_queryset(Collection.objects.all(), viewer=self.request.user)
             obj = get_object_or_404(qs, code=self.kwargs[self.lookup_field])
             if not obj.can_view(viewer_code(self.request)):
                 self.permission_denied(self.request)
@@ -542,6 +557,50 @@ class CollectionLeaveView(APIView):
         )
 
 
+class CollectionDigestPrefView(APIView):
+    """
+    POST /api/v1/collections/{collection_code}/digest/  {"muted": true|false}
+
+    A member silences (or un-silences) this one group's digest. It is the narrow
+    control that makes ``User.notify_news`` defaulting to True honest: leaving a
+    chatty group's summaries costs nothing else, so nobody has to choose between
+    a weekly digest they didn't ask for and the booking emails they need.
+
+    Members only. The owner never receives their own collection's digest (it goes
+    to ``invites``), so there is nothing here for them to mute — they change the
+    frequency on the collection instead.
+
+    Idempotent: ``add``/``remove`` on the M2M, so a double POST is harmless and
+    the email footer's one-click link can be followed twice without an error.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    def post(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        if not collection.invites.filter(code=request.user.code).exists():
+            return Response(
+                {"detail": "You are not a member of this collection."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        muted = body_dict(request).get("muted")
+        if not isinstance(muted, bool):
+            return Response(
+                {"muted": ["This field is required and must be true or false."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if muted:
+            collection.digest_muted.add(request.user)
+        else:
+            collection.digest_muted.remove(request.user)
+
+        return Response({"muted": muted}, status=status.HTTP_200_OK)
+
+
 def _send_bulk_invites(inviter_name, headline, recipients, collection=None):
     """Send the collection-invite emails for a bulk invite without blocking.
 
@@ -878,7 +937,8 @@ class InvitedCollectionsView(APIView):
 
     def get(self, request):
         invited_collections = _optimise_collection_queryset(
-            request.user.invited_to_collections.filter(status=Collection.Status.ACTIVE)
+            request.user.invited_to_collections.filter(status=Collection.Status.ACTIVE),
+            viewer=request.user,
         ).order_by("owner__name", "created")
         serializer = CollectionSerializer(
             invited_collections, many=True, context={"request": request}
