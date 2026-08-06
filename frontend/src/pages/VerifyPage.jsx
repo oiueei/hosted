@@ -92,6 +92,15 @@ export default function VerifyPage() {
             } else if (commit.ok && done.action === 'BOOKING_REJECT') {
               setTitle(t('verify.rejected'));
               setSuccess(t('verify.holdRejected'));
+            } else if (commit.ok && done.action === 'PROPOSAL_APPROVE') {
+              // The owner chose which of the two links to open, so the click is
+              // the decision — same as a booking. The scanner guard still holds:
+              // the commit only runs from real JS.
+              setTitle(t('verify.confirmed'));
+              setSuccess(t('verify.proposalApproved', { email: done.email }));
+            } else if (commit.ok && done.action === 'PROPOSAL_REJECT') {
+              setTitle(t('verify.declined'));
+              setSuccess(t('verify.proposalDeclined'));
             } else {
               setError(t('verify.invalidOrExpired'));
             }

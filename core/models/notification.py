@@ -20,6 +20,11 @@ class InAppNotification(models.Model):
         INVITE_REJECTED = "INVITE_REJECTED"
         MEMBER_LEFT = "MEMBER_LEFT"
         THING_REPORTED = "THING_REPORTED"
+        # A member suggested somebody; the owner has to approve before anything
+        # is sent. INVITE_PROPOSAL_DECLINED goes back to the proposer — with no
+        # reason attached, deliberately.
+        INVITE_PROPOSED = "INVITE_PROPOSED"
+        INVITE_PROPOSAL_DECLINED = "INVITE_PROPOSAL_DECLINED"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")

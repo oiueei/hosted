@@ -13,6 +13,7 @@ import InboxNotifications from '../components/InboxNotifications';
 import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
+import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 
 export default function CollectionPage() {
@@ -239,6 +240,9 @@ export default function CollectionPage() {
                   <Button variant="secondary" style={btnSecondaryStyle}>{t('collectionPage.addThing')}</Button>
                 </Link>
               </div>
+            )}
+            {collection.is_member && collection.allow_member_proposals && (
+              <RecommendGuest collectionCode={code} ownerName={collection.owner_name} />
             )}
             {collection.is_member && collection.digest_frequency !== 'NONE' && (
               <p className="digest-pref">

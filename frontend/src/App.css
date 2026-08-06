@@ -1558,3 +1558,51 @@ main:focus {
   color: inherit;
   text-decoration: underline;
 }
+
+/* A member's recommendation awaiting the owner's answer (ManageInvitesPage).
+   Card-shaped rather than a table row: it carries a note in the proposer's own
+   words, which a cell would squeeze, and it is a decision rather than a record. */
+.proposal-card {
+  padding: var(--spacing-s) var(--spacing-m);
+  margin-bottom: var(--spacing-s);
+  border: 1px solid var(--color-black-20);
+  border-radius: 4px;
+  background: var(--color-black-5);
+}
+
+.proposal-who {
+  margin: 0;
+}
+
+.proposal-by {
+  color: var(--color-black-60);
+  font-size: var(--fontsize-body-s);
+}
+
+.proposal-note {
+  margin: var(--spacing-2-xs) 0 var(--spacing-s);
+  font-style: italic;
+  color: var(--color-black-70);
+}
+
+/* The member's own "recommend someone" affordance in the collection hero —
+   quiet by default, one line, expanding into the form only when used. */
+.recommend-open {
+  margin-top: var(--spacing-2-xs);
+  font-size: var(--fontsize-body-s);
+  color: var(--hero-text-color, var(--color-black-90));
+}
+
+.recommend-box {
+  margin-top: var(--spacing-s);
+  padding: var(--spacing-s) var(--spacing-m);
+  max-width: 32rem;
+  border-radius: 4px;
+  background: var(--color-white);
+  color: var(--color-black-90);
+}
+
+.recommend-intro {
+  margin: 0 0 var(--spacing-s);
+  font-size: var(--fontsize-body-s);
+}

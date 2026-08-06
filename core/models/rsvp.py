@@ -42,6 +42,13 @@ class RSVP(models.Model):
         # Like the booking decisions, it only ever commits on POST — see
         # VerifyLinkView.CONFIRM_ACTIONS.
         ACCOUNT_DELETE = "ACCOUNT_DELETE", "Account Delete"
+        # A member has asked the owner to invite somebody (InvitationProposal).
+        # Approving SENDS an email to a third party who has not been contacted
+        # yet, so — like the booking decisions — it only commits on POST and a
+        # bare GET merely previews: a link scanner must not be able to invite
+        # a stranger on the owner's behalf.
+        PROPOSAL_APPROVE = "PROPOSAL_APPROVE", "Invitation Proposal Approve"
+        PROPOSAL_REJECT = "PROPOSAL_REJECT", "Invitation Proposal Reject"
 
     class Origin(models.TextChoices):
         """Where a MAGIC_LINK was born — it decides where the user lands after login."""
@@ -95,7 +102,16 @@ class RSVP(models.Model):
     def expiry_hours_for(cls, action):
         if action in (cls.Action.BOOKING_ACCEPT, cls.Action.BOOKING_REJECT):
             return getattr(settings, "BOOKING_EXPIRY_HOURS", 72)
-        if action in (cls.Action.COLLECTION_INVITE, cls.Action.COLLECTION_REJECT):
+        if action in (
+            cls.Action.COLLECTION_INVITE,
+            cls.Action.COLLECTION_REJECT,
+            # A member's suggestion waits as long as an invitation does: neither
+            # has a natural deadline, and an owner who is slow to answer should
+            # not silently lose the request. It lapses quietly — the proposed
+            # person was never told, so there is nobody to disappoint.
+            cls.Action.PROPOSAL_APPROVE,
+            cls.Action.PROPOSAL_REJECT,
+        ):
             return getattr(settings, "COLLECTION_INVITE_EXPIRY_HOURS", 720)
         return getattr(settings, "MAGIC_LINK_EXPIRY_HOURS", 24)
 

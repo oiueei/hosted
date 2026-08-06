@@ -28,6 +28,7 @@ TEXTS = {
         "Aceptar la invitación: {accept} | Rechazar la invitación: {reject}"
     ),
     "invite_intro": "{inviter} te ha invitado a ver:",
+    "invite_recommended_by": "{proposer} te ha propuesto para este grupo.",
     "invite_accept_cta": "Aceptar la invitación",
     "invite_decline_cta": "Rechazar la invitación",
     # Collection access revoked
@@ -165,6 +166,26 @@ TEXTS = {
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",
     "digest_intro": "Cosas nuevas en {collection}:",
+    "proposal_subject": "{collection}: ¿invitamos a alguien?",
+    "proposal_plain": (
+        "{proposer} quiere invitar a alguien a {collection}:\n\n  {email}\n\n"
+        "Todavía no hemos contactado con nadie: sólo ocurre si dices que sí.\n\n"
+        "Invitarle: {approve}\nAhora no: {reject}"
+    ),
+    "proposal_intro": "{proposer} quiere invitar a alguien a {collection}.",
+    "proposal_note": "Añade: {note}",
+    "proposal_nobody_told": (
+        "Todavía no hemos contactado con nadie. La invitación sólo se envía si dices que sí y, si"
+        " dices que no, la persona propuesta nunca sabrá que lo fue."
+    ),
+    "proposal_approve_cta": "Invitarle",
+    "proposal_reject_cta": "Ahora no",
+    "proposal_declined_subject": "Sobre tu propuesta para {collection}",
+    "proposal_declined_body": (
+        "Gracias por pensar en alguien para {collection}. {owner} ha decidido no enviar esa "
+        "invitación por ahora, así que no hemos contactado con {email} ni lo haremos. No cambia "
+        "nada más: sigues formando parte del grupo."
+    ),
     "digest_mute_cta": "Dejar de recibir los resúmenes de este grupo",
 }
 

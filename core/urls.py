@@ -32,6 +32,8 @@ from .views.collections import (
     CollectionDigestPrefView,
     CollectionInviteView,
     CollectionLeaveView,
+    CollectionProposalActionView,
+    CollectionProposeInviteView,
     CollectionShareLinkView,
     CollectionStatsView,
     CollectionViewSet,
@@ -130,6 +132,16 @@ urlpatterns = [
         "collections/<str:collection_code>/leave/",
         CollectionLeaveView.as_view(),
         name="collection-leave",
+    ),
+    path(
+        "collections/<str:collection_code>/invite/propose/",
+        CollectionProposeInviteView.as_view(),
+        name="collection-invite-propose",
+    ),
+    path(
+        "proposals/<str:proposal_code>/<str:action>/",
+        CollectionProposalActionView.as_view(),
+        name="collection-proposal-action",
     ),
     path(
         "collections/<str:collection_code>/digest/",

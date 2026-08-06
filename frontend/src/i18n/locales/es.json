@@ -164,7 +164,9 @@
     "accountDeleteConfirm": "Borrar mi cuenta para siempre",
     "accountDeleting": "Borrando…",
     "accountDeletedTitle": "Cuenta borrada",
-    "accountDeletedBody": "Tu cuenta y tus datos se han borrado. Gracias por haber formado parte de OIUEEI."
+    "accountDeletedBody": "Tu cuenta y tus datos se han borrado. Gracias por haber formado parte de OIUEEI.",
+    "proposalApproved": "Invitación enviada a {{email}}. Se lo hemos dicho al miembro que la recomendó.",
+    "proposalDeclined": "No se ha enviado ninguna invitación. Se lo hemos dicho al miembro, sin decir por qué; y con la persona que propuso no hemos contactado en ningún momento."
   },
   "home": {
     "greeting": "Hola, {{name}}",
@@ -546,6 +548,26 @@
     "invitationSent": "Invitación enviada.",
     "errorSending": "Error al enviar la invitación.",
     "errorLoading": "Error al cargar la colección."
+  },
+  "recommend": {
+    "openLink": "¿Conoces a alguien que encaje? Recomiéndale →",
+    "intro": "Decide {{owner}}: no se le envía nada hasta que diga que sí.",
+    "emailLabel": "Su correo",
+    "emailPlaceholder": "alguien@correo.com",
+    "noteLabel": "¿Algo que {{owner}} deba saber? (opcional)",
+    "noteHelper": "Sólo lo ve {{owner}}. Le ayuda a decidir.",
+    "send": "Recomendar",
+    "sent": "Enviado a {{owner}}. Si acepta, le invitaremos.",
+    "error": "No hemos podido enviarlo. Inténtalo de nuevo.",
+    "ownerHeading": "Recomendaciones",
+    "ownerIntro": "Tus miembros han propuesto a estas personas. No hemos contactado con nadie: sólo sabrán de nosotros si les invitas.",
+    "ownerBy": "recomendada por {{name}}",
+    "ownerApprove": "Invitarle",
+    "ownerReject": "Ahora no",
+    "ownerApproved": "Invitación enviada.",
+    "ownerDeclined": "Rechazada. Se lo hemos dicho al miembro, sin decir por qué.",
+    "settingLabel": "Los miembros pueden recomendar invitados",
+    "settingHelper": "Ellos proponen, tú decides: no sale ninguna invitación sin tu visto bueno."
   },
   "removeGuest": {
     "pageTitle": "Quitar: {{name}}",

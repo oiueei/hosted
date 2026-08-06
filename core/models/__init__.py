@@ -5,6 +5,7 @@ from .event import Event
 from .faq import FAQ
 from .language import Language
 from .notification import InAppNotification
+from .proposal import InvitationProposal
 from .report import Report
 from .rsvp import RSVP
 from .theeeme import Theeeme
@@ -24,6 +25,7 @@ __all__ = [
     "ThingTransfer",
     "InAppNotification",
     "Report",
+    "InvitationProposal",
     "Event",
     "DailyActivity",
 ]

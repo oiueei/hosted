@@ -9,7 +9,6 @@ from collections import Counter
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Prefetch
 from django.http import HttpResponse
@@ -24,7 +23,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from core.models import RSVP, Collection, Thing, User
+from core.models import RSVP, Collection, InvitationProposal, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.collection import generate_share_token
 from core.models.event import Event
@@ -36,6 +35,7 @@ from core.serializers import (
     CollectionBroadcastSerializer,
     CollectionCreateSerializer,
     CollectionInviteSerializer,
+    CollectionProposeInviteSerializer,
     CollectionRemoveInviteSerializer,
     CollectionRemoveThingSerializer,
     CollectionSerializer,
@@ -44,8 +44,20 @@ from core.serializers import (
 from core.serializers.thing import optimise_thing_queryset
 from core.services.email_service import (
     send_broadcast_email,
+    # Still used directly by the bulk-invite fan-out, which batches its RSVP
+    # creation and then mails off the request thread — a different shape from
+    # the one-at-a-time `deliver_invitation` path below.
     send_collection_invite_email,
     send_collection_revoke_email,
+)
+from core.services.invitation_service import (
+    _INVITE_QUOTA_MESSAGE,
+    _consume_invite_quota,
+    _invite_quota_left,
+    approve_proposal,
+    create_proposal,
+    deliver_invitation,
+    reject_proposal,
 )
 from core.utils import redact_email
 from core.validators import SafeHeadlineField
@@ -77,7 +89,18 @@ def _optimise_collection_queryset(queryset, viewer=None):
     )
     if viewer is not None and viewer.is_authenticated:
         queryset = queryset.prefetch_related(
-            Prefetch("digest_muted", queryset=User.objects.filter(code=viewer.code))
+            Prefetch("digest_muted", queryset=User.objects.filter(code=viewer.code)),
+            # Owner-only in the serializer, but prefetched for any signed-in
+            # viewer: the alternative is a query per collection on the owner's
+            # own list (caught by the query-budget tests). The proposer is
+            # joined because the card prints their name.
+            Prefetch(
+                "invitation_proposals",
+                queryset=InvitationProposal.objects.filter(
+                    status=InvitationProposal.Status.PENDING
+                ).select_related("proposer"),
+                to_attr="_pending_proposals",
+            ),
         )
     return queryset
 
@@ -99,7 +122,11 @@ class CollectionViewSet(ModelViewSet):
     def get_queryset(self):
         qs = Collection.objects.filter(owner=self.request.user).order_by("-created")
         if self.action in ("list", "retrieve"):
-            return _optimise_collection_queryset(qs)
+            # The viewer matters here even though this list is always their own:
+            # `pending_proposals` is owner-only, so this is exactly the list that
+            # needs its prefetch, and without it the field costs one query per
+            # collection (caught by the query-budget tests).
+            return _optimise_collection_queryset(qs, viewer=self.request.user)
         return qs
 
     def get_serializer_class(self):
@@ -302,42 +329,6 @@ class CollectionViewSet(ModelViewSet):
 # (the same switch the django-ratelimit decorators read, so dev and tests stay
 # consistent) and its DatabaseCache read-then-set shares base.py's I7
 # non-atomicity note.
-_INVITE_QUOTA_TTL = 60 * 60 * 24  # ~24h; the date is in the key, so it rolls over anyway.
-_INVITE_QUOTA_MESSAGE = "Daily invitation limit reached. Try again tomorrow."
-
-
-def _invite_quota_cap():
-    """Configured daily cap, or ``None`` when the quota is off.
-
-    Off means either the whole rate-limiting layer is disabled (dev, tests) or
-    the operator left the cap unset/zero — the standalone default.
-    """
-    if not getattr(settings, "RATELIMIT_ENABLE", True):
-        return None
-    cap = getattr(settings, "INVITE_EMAILS_PER_DAY", 0) or 0
-    return cap if cap > 0 else None
-
-
-def _invite_quota_key(user_code):
-    return f"invq:{user_code}:{timezone.localdate().isoformat()}"
-
-
-def _invite_quota_left(user_code):
-    """Invitation emails this account may still send today; ``None`` = unlimited."""
-    cap = _invite_quota_cap()
-    if cap is None:
-        return None
-    return max(cap - cache.get(_invite_quota_key(user_code), 0), 0)
-
-
-def _consume_invite_quota(user_code, count):
-    """Record ``count`` invitation emails against today's quota."""
-    if count <= 0 or _invite_quota_cap() is None:
-        return
-    key = _invite_quota_key(user_code)
-    cache.set(key, cache.get(key, 0) + count, _INVITE_QUOTA_TTL)
-
-
 class CollectionInviteView(APIView):
     """
     POST /api/v1/collections/{collection_code}/invite/
@@ -390,53 +381,21 @@ class CollectionInviteView(APIView):
             if full:
                 return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
-        invited_user, created = User.objects.get_or_create(
-            email=email,
-            defaults={"email": email},
+        # One delivery path, shared with an owner approving a member's proposal
+        # (invitation_service.deliver_invitation): the get_or_create, the RSVP
+        # pair, the email and the quota all live there, so the two routes into an
+        # invitation cannot drift.
+        invited_user, already_invited = deliver_invitation(
+            collection,
+            email,
+            request.user.display_name,
+            quota_user_code=request.user.code,
         )
-        if created:
-            Event.log(Event.Kind.USER_JOINED, actor=invited_user)
-
-        if collection.is_invited(invited_user.code):
+        if already_invited:
             return Response(
                 {"detail": "This user is already invited to this collection."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Delete any old pending RSVPs for this user+collection (allows resend)
-        RSVP.objects.filter(
-            user_code=invited_user,
-            target_code=collection_code,
-            action__in=[RSVP.Action.COLLECTION_INVITE, RSVP.Action.COLLECTION_REJECT],
-        ).delete()
-
-        # Create RSVPs for accept and reject actions
-        accept_rsvp = RSVP.objects.create(
-            user_code=invited_user,
-            user_email=email,
-            action=RSVP.Action.COLLECTION_INVITE,
-            target_code=collection_code,
-        )
-        reject_rsvp = RSVP.objects.create(
-            user_code=invited_user,
-            user_email=email,
-            action=RSVP.Action.COLLECTION_REJECT,
-            target_code=collection_code,
-        )
-
-        # Send invitation email with accept and reject links
-        accept_link = accept_rsvp.action_link()
-        reject_link = reject_rsvp.action_link()
-
-        send_collection_invite_email(
-            request.user.display_name,
-            collection.headline,
-            email,
-            accept_link,
-            reject_link,
-            collection=collection,
-        )
-        _consume_invite_quota(request.user.code, 1)
 
         return Response(
             {
@@ -555,6 +514,130 @@ class CollectionLeaveView(APIView):
             {"message": "You have left the collection"},
             status=status.HTTP_200_OK,
         )
+
+
+class CollectionProposeInviteView(APIView):
+    """
+    POST /api/v1/collections/{collection_code}/invite/propose/
+
+    A **member** asks the owner to invite somebody. Nothing is sent to the
+    proposed address here — see `invitation_service.create_proposal`.
+
+    Members could not bring anyone in at all before this: every new person cost
+    an owner action, so a group grew only as fast as one person worked at it. But
+    an owner is not merely a bottleneck: the group may be closed, may run on
+    subscriptions, papers or rules of admission the product knows nothing about.
+    So the member proposes and the owner decides.
+
+    Open in **both** modes. PROPRIETARY decides who may add a *thing*; it has
+    never decided who may suggest a person, and the owner's approval is the gate
+    either way.
+
+    Rate limited 30/day per member — high on purpose. This is not expected to be
+    abused, and if somebody does, the owner has a much better answer than a quota:
+    removing them from the collection.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ratelimit(key="user", rate="30/d", method="POST", block=True))
+    def post(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        if collection.is_owner(request.user.code):
+            # Owners have the real thing one endpoint over.
+            return Response(
+                {"detail": "You own this collection — invite them directly."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not collection.invites.filter(code=request.user.code).exists():
+            return Response(
+                {"detail": "Only members can propose someone."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not collection.allow_member_proposals:
+            # The owner has said they don't want to be asked. The frontend hides
+            # the form, so reaching this means a stale page or a direct POST.
+            return Response(
+                {"detail": "This group doesn't take suggestions from members."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = CollectionProposeInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"].lower()
+        note = serializer.validated_data.get("note", "")
+
+        # Answered here rather than by the owner: these need no decision, and
+        # they must not tell the proposer anything they couldn't already see.
+        # Membership is visible to members, so "already a member" is safe.
+        if collection.invites.filter(email=email).exists():
+            return Response(
+                {"detail": "They are already part of this group."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if InvitationProposal.objects.filter(
+            collection=collection, email=email, status=InvitationProposal.Status.PENDING
+        ).exists():
+            return Response(
+                {"detail": "Someone has already suggested them — it's with the owner."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        create_proposal(collection, request.user, email, note)
+        return Response(
+            {"message": "Suggestion sent to the owner"},
+            status=status.HTTP_200_OK,
+        )
+
+
+class CollectionProposalActionView(APIView):
+    """
+    POST /api/v1/proposals/{proposal_code}/{approve|reject}/
+
+    The owner's in-app answer to a member's suggestion; the email links reach the
+    same decisions through `VerifyLinkView`. Owner only — the proposer must not
+    be able to wave their own suggestion through.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, proposal_code, action):
+        proposal = get_object_or_404(InvitationProposal, code=proposal_code)
+
+        denied = require_collection_owner(
+            proposal.collection, request.user.code, "Only the owner can answer a suggestion"
+        )
+        if denied:
+            return denied
+
+        if not proposal.is_valid():
+            return Response(
+                {"detail": "This suggestion is no longer pending."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if action == "approve":
+            # The ceiling and the quota are the owner's, and are checked here for
+            # the same reason the direct invite checks them: an approval that
+            # can't be delivered should say so rather than half-happen.
+            if _invite_quota_left(request.user.code) == 0:
+                return Response(
+                    {"error": _INVITE_QUOTA_MESSAGE},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            if (
+                proposal.collection.capacity_ceiling("invites")
+                and not proposal.collection.invites.filter(email=proposal.email).exists()
+            ):
+                full = proposal.collection.capacity_violation("invites", adding=1)
+                if full:
+                    return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+            approve_proposal(proposal)
+            return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
+
+        reject_proposal(proposal)
+        return Response({"message": "Suggestion declined"}, status=status.HTTP_200_OK)
 
 
 class CollectionDigestPrefView(APIView):

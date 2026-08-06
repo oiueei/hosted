@@ -164,7 +164,9 @@
     "accountDeleteConfirm": "Esborrar el meu compte per sempre",
     "accountDeleting": "S'està esborrant…",
     "accountDeletedTitle": "Compte esborrat",
-    "accountDeletedBody": "El teu compte i les teves dades s'han esborrat. Gràcies per haver format part d'OIUEEI."
+    "accountDeletedBody": "El teu compte i les teves dades s'han esborrat. Gràcies per haver format part d'OIUEEI.",
+    "proposalApproved": "Invitació enviada a {{email}}. L'hi hem dit al membre que la va recomanar.",
+    "proposalDeclined": "No s'ha enviat cap invitació. L'hi hem dit al membre, sense dir per què; i amb la persona que va proposar no hi hem contactat en cap moment."
   },
   "home": {
     "greeting": "Hola, {{name}}",
@@ -546,6 +548,26 @@
     "invitationSent": "Invitació enviada.",
     "errorSending": "Error en enviar la invitació.",
     "errorLoading": "Error en carregar la col·lecció."
+  },
+  "recommend": {
+    "openLink": "Coneixes algú que hi encaixi? Recomana'l →",
+    "intro": "Decideix {{owner}}: no se li envia res fins que digui que sí.",
+    "emailLabel": "El seu correu",
+    "emailPlaceholder": "algu@correu.com",
+    "noteLabel": "Alguna cosa que {{owner}} hagi de saber? (opcional)",
+    "noteHelper": "Només ho veu {{owner}}. L'ajuda a decidir.",
+    "send": "Recomanar",
+    "sent": "Enviat a {{owner}}. Si accepta, el convidarem.",
+    "error": "No ho hem pogut enviar. Torna-ho a provar.",
+    "ownerHeading": "Recomanacions",
+    "ownerIntro": "Els teus membres han proposat aquestes persones. No hem contactat amb ningú: només sabran de nosaltres si els convides.",
+    "ownerBy": "recomanada per {{name}}",
+    "ownerApprove": "Convidar-lo",
+    "ownerReject": "Ara no",
+    "ownerApproved": "Invitació enviada.",
+    "ownerDeclined": "Rebutjada. L'hi hem dit al membre, sense dir per què.",
+    "settingLabel": "Els membres poden recomanar convidats",
+    "settingHelper": "Ells proposen, tu decideixes: no surt cap invitació sense el teu vistiplau."
   },
   "removeGuest": {
     "pageTitle": "Treure: {{name}}",

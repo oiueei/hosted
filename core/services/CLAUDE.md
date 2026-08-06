@@ -61,7 +61,7 @@ Every email belongs to one of three categories. Each function routes through the
 | Category | Constant | User flag | Scope |
 |----------|----------|-----------|-------|
 | **Cat. 1 — Mandatory** | `CATEGORY_MANDATORY` | (ignored — always sent) | `send_magic_link_email`, `send_collection_invite_email`, `send_collection_welcome_doc_email`, `send_collection_revoke_email`, `send_account_delete_email` |
-| **Cat. 2 — Activity** | `CATEGORY_ACTIVITY` | `User.notify_activity` | `send_booking_request_email`, `send_booking_decision_email`, `send_booking_confirmation_email`, `send_invite_rejected_email`, `send_faq_question_email`, `send_faq_answer_email`, `send_faq_hide_email`, `send_thing_reported_email`, `send_return_reminder_email`, `send_broadcast_email` |
+| **Cat. 2 — Activity** | `CATEGORY_ACTIVITY` | `User.notify_activity` | `send_booking_request_email`, `send_booking_decision_email`, `send_booking_confirmation_email`, `send_invite_rejected_email`, `send_faq_question_email`, `send_faq_answer_email`, `send_faq_hide_email`, `send_thing_reported_email`, `send_return_reminder_email`, `send_broadcast_email`, `send_invitation_proposal_email`, `send_proposal_declined_email` |
 | **Cat. 3 — News** | `CATEGORY_NEWS` | `User.notify_news` **and** `Collection.digest_muted` | `send_digest_email` |
 
 **Both flags default to ON, and Cat. 3 has a second, narrower switch.** `notify_news` used to default to `False`, which — combined with `Collection.digest_frequency` defaulting to `NONE` — meant the digest reached almost nobody: an owner had to find a setting buried in an accordion *and* every reader had to have opted in to a toggle labelled "optional". The 2026-08 design round turned both on and added the control that makes it honest rather than a pre-ticked opt-in (DESIGN §6): **`Collection.digest_muted`**, a per-group mute.
@@ -145,6 +145,20 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 - **Digest emails**: `send_digest_email()` lists new thing headlines in both plain text (bulleted) and HTML (`<ul>/<li>`) formats.
 - **Direct collection links**: `send_digest_email()` links straight to `{frontend_base}/collections/{code}`. Per DESIGN.md §9 we do not track email engagement — links are never wrapped in a redirect or tracking pixel.
 - **Preference pipeline**: every send goes through `_send()` → `_should_send()` + `_with_viral_line()` + `_with_footer()`. Never build an `EmailMultiAlternatives` directly from outside this module — the preference check, viral CTA, footer and logo attachment would all be bypassed.
+
+---
+
+### `invitation_service.py` — Sending an invitation, and the member-proposal flow
+
+**`deliver_invitation(collection, email, inviter_name, quota_user_code=None, proposer_name=None)`** is the single place an invitation actually goes out: the `get_or_create`, the RSVP pair, the email and the daily quota. Both callers reach it — the owner inviting directly (`CollectionInviteView`) and an owner approving a member's recommendation — so an approved proposal is indistinguishable from an owner's own invite. Two paths would drift, and the one used less often is the one that would rot. (The bulk-invite endpoint keeps its own batched fan-out: it creates RSVPs in a batch and mails off the request thread, a different shape.)
+
+The **daily invitation-email quota** helpers live here too (`_invite_quota_left`, `_consume_invite_quota`) — they moved out of the views when both senders ended up here, since a service reaching back into a view for them was a layering inversion. The views import them.
+
+| Function | Behaviour |
+|---|---|
+| `create_proposal(collection, proposer, email, note="")` | Records the suggestion, mints the owner's approve/reject RSVP pair, writes their in-app notification and emails them. **Nothing reaches the proposed address** — no `User` row, no email. If the answer turns out to be no, that person must never learn they were suggested. |
+| `approve_proposal(proposal)` | Delivers the real invitation via `deliver_invitation`, charged to the **owner's** quota (the mail leaves their group under the deployment's domain) and naming the proposer in the body — the invitee almost certainly knows *them*, not the owner. Bare `name`, never `display_name`: the fallback is the email address and this message goes to a third party (L2). |
+| `reject_proposal(proposal)` | Marks it rejected and tells the **proposer** — in-app and by email, **with no reason**. Silence would leave them waiting and asking again; a reason would put words in the owner's mouth about rules that are not the product's business. The proposed person is never contacted. |
 
 ---
 

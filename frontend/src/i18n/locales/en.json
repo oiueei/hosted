@@ -182,7 +182,9 @@
     "accountDeleteConfirm": "Delete my account forever",
     "accountDeleting": "Deleting…",
     "accountDeletedTitle": "Account deleted",
-    "accountDeletedBody": "Your account and your data have been deleted. Thank you for having been part of OIUEEI."
+    "accountDeletedBody": "Your account and your data have been deleted. Thank you for having been part of OIUEEI.",
+    "proposalApproved": "Invitation sent to {{email}}. We've told the member who recommended them.",
+    "proposalDeclined": "No invitation was sent. We've let the member know, without saying why — and the person they suggested was never contacted."
   },
   "home": {
     "greeting": "Hello, {{name}}",
@@ -564,6 +566,26 @@
     "invitationSent": "Invitation sent.",
     "errorSending": "Error sending invitation.",
     "errorLoading": "Error loading collection."
+  },
+  "recommend": {
+    "openLink": "Know someone who'd fit? Recommend them →",
+    "intro": "{{owner}} decides — nothing is sent to them until they say yes.",
+    "emailLabel": "Their email",
+    "emailPlaceholder": "them@email.com",
+    "noteLabel": "Anything {{owner}} should know? (optional)",
+    "noteHelper": "Only {{owner}} sees this. It helps them decide.",
+    "send": "Recommend",
+    "sent": "Sent to {{owner}}. If they agree, we'll invite them.",
+    "error": "We couldn't send that. Please try again.",
+    "ownerHeading": "Recommendations",
+    "ownerIntro": "Members have suggested these people. Nobody has been contacted — they'll only hear from us if you invite them.",
+    "ownerBy": "recommended by {{name}}",
+    "ownerApprove": "Invite them",
+    "ownerReject": "Not this time",
+    "ownerApproved": "Invitation sent.",
+    "ownerDeclined": "Declined. We've let the member know, without saying why.",
+    "settingLabel": "Members can recommend guests",
+    "settingHelper": "They suggest, you decide — no invitation goes out without your say-so."
   },
   "removeGuest": {
     "pageTitle": "Remove: {{name}}",

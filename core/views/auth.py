@@ -21,7 +21,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, Collection, Language, User
+from core.models import RSVP, Collection, InvitationProposal, Language, User
 from core.models.booking import BookingPeriod
 from core.models.event import Event
 from core.models.notification import InAppNotification
@@ -35,6 +35,7 @@ from core.services.email_service import (
     send_invite_rejected_email,
     send_magic_link_email,
 )
+from core.services.invitation_service import approve_proposal, reject_proposal
 from core.utils import cloudinary_doc_url, get_client_ip, redact_email
 from core.views._helpers import body_dict
 
@@ -255,7 +256,17 @@ class VerifyLinkView(APIView):
     # it from the load effect either — the person must press an explicit
     # on-page button (see VerifyPage).
     CONFIRM_ACTIONS = frozenset(
-        {RSVP.Action.BOOKING_ACCEPT, RSVP.Action.BOOKING_REJECT, RSVP.Action.ACCOUNT_DELETE}
+        {
+            RSVP.Action.BOOKING_ACCEPT,
+            RSVP.Action.BOOKING_REJECT,
+            RSVP.Action.ACCOUNT_DELETE,
+            # Approving MAILS a third party who has not been contacted yet, and
+            # declining closes a member's request — neither may fire from a bare
+            # GET, or a mail client's link scanner would decide who joins the
+            # group on the owner's behalf.
+            RSVP.Action.PROPOSAL_APPROVE,
+            RSVP.Action.PROPOSAL_REJECT,
+        }
     )
 
     # Where the SPA sends the user after a successful login (``landing`` in the
@@ -297,6 +308,8 @@ class VerifyLinkView(APIView):
             "BOOKING_ACCEPT": self._handle_booking_accept,
             "BOOKING_REJECT": self._handle_booking_reject,
             "ACCOUNT_DELETE": self._handle_account_delete,
+            "PROPOSAL_APPROVE": self._handle_proposal_approve,
+            "PROPOSAL_REJECT": self._handle_proposal_reject,
         }
         handler = action_handlers.get(rsvp.action)
         if not handler:
@@ -325,6 +338,19 @@ class VerifyLinkView(APIView):
             data["email"] = user.email
             data["collections"] = user.owned_collections.count()
             data["things"] = user.owned_things.count()
+            return Response(data, status=status.HTTP_200_OK)
+        if rsvp.action in (RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT):
+            # The owner cannot decide without seeing who is being suggested, by
+            # whom, and for which group. The proposed address is theirs to judge;
+            # the note is the proposer's word for them. None of it has been sent
+            # to the proposed person, who does not know they were suggested.
+            proposal = InvitationProposal.objects.filter(code=rsvp.target_code).first()
+            if proposal:
+                data["email"] = proposal.email
+                data["note"] = proposal.note
+                data["proposer_name"] = proposal.proposer.display_name
+                data["collection_headline"] = proposal.collection.headline
+                data["resolved"] = proposal.status != InvitationProposal.Status.PENDING
             return Response(data, status=status.HTTP_200_OK)
         booking = BookingPeriod.objects.filter(code=rsvp.target_code).first()
         if booking and booking.thing_code:
@@ -615,6 +641,49 @@ class VerifyLinkView(APIView):
         response.delete_cookie("access_token", path="/")
         response.delete_cookie("refresh_token", path=REFRESH_COOKIE_PATH)
         return response
+
+    def _handle_proposal_action(self, rsvp, approve):
+        """Commit the owner's answer to a member's suggestion (POST only).
+
+        The RSVP was addressed to the owner, so holding the link *is* the
+        authorisation — the same standing an invitation's accept link has. It is
+        consumed either way, so a forwarded email can't be replayed.
+        """
+        proposal = InvitationProposal.objects.filter(code=rsvp.target_code).first()
+        if not proposal or not proposal.is_valid():
+            rsvp.delete()
+            return Response(
+                {"error": "This suggestion is no longer pending"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if approve:
+            approve_proposal(proposal)
+            message = "Invitation sent"
+        else:
+            reject_proposal(proposal)
+            message = "Suggestion declined"
+
+        # Both links die with the decision — the other one must not still work.
+        RSVP.objects.filter(
+            target_code=proposal.code,
+            action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
+        ).delete()
+        return Response(
+            {
+                "action": rsvp.action,
+                "message": message,
+                "email": proposal.email,
+                "collection_headline": proposal.collection.headline,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _handle_proposal_approve(self, request, rsvp):
+        return self._handle_proposal_action(rsvp, approve=True)
+
+    def _handle_proposal_reject(self, request, rsvp):
+        return self._handle_proposal_action(rsvp, approve=False)
 
     def _handle_booking_accept(self, request, rsvp):
         """Handle booking accept action for all thing types."""

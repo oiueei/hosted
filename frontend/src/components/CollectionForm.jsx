@@ -21,6 +21,8 @@ export default function CollectionForm({
   setAllowedThingTypes,
   visibility = 'PRIVATE',
   setVisibility = () => {},
+  allowProposals = true,
+  setAllowProposals = () => {},
   errors,
   theeemeColor01,
 }) {
@@ -37,6 +39,20 @@ export default function CollectionForm({
           label={<>{t('visibility.publicLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('visibility.publicHelper')}</span></>}
           checked={visibility === 'PUBLIC'}
           onChange={(val) => setVisibility(val ? 'PRIVATE' : 'PUBLIC')}
+          variant="inline"
+          theme={toggleTheme}
+        />
+      </div>
+      {/* Whether members may recommend guests. The owner still decides on every
+          one — this is whether they are willing to be asked at all, which a
+          group with a waiting list or an admission process may not be. Sits
+          with visibility because both answer "who can get in here". */}
+      <div className="toggle-left">
+        <ToggleButton
+          id={`${idPrefix}-allow-proposals`}
+          label={<>{t('recommend.settingLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('recommend.settingHelper')}</span></>}
+          checked={allowProposals}
+          onChange={(val) => setAllowProposals(!val)}
           variant="inline"
           theme={toggleTheme}
         />

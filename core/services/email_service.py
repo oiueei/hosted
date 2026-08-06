@@ -599,22 +599,120 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
 
 
 def send_collection_invite_email(
-    inviter_name, collection_headline, email, accept_link, reject_link, collection=None
+    inviter_name,
+    collection_headline,
+    email,
+    accept_link,
+    reject_link,
+    collection=None,
+    proposer_name=None,
 ):
-    """Send collection invitation email with accept and reject links."""
+    """Send collection invitation email with accept and reject links.
+
+    ``proposer_name`` names the member who suggested this person, when the
+    invitation came from an approved proposal. It matters more than it looks: the
+    invitee usually knows *them*, not the owner, so without it a warm
+    recommendation arrives as an email from a stranger. The invitation is still
+    the owner's — this is context, not authorship.
+
+    **The bare `name`, never `display_name`.** The fallback in `display_name` is
+    the email address, and this message goes to a third party: an owner or
+    proposer who never set a name would have their address handed to someone
+    outside the group (L2). No name, no line.
+    """
     user, lang = _recipient(email, collection)
     T, L = _texts(lang), _local(lang)
     headline = L(collection_headline)
     subject = T("invite_subject").format(collection=headline)
     plain = T("invite_plain").format(collection=headline, accept=accept_link, reject=reject_link)
-    html = _render_email(
-        [
-            _para(T("invite_intro").format(inviter=inviter_name)),
-            _strong(headline),
-            _links((accept_link, T("invite_accept_cta")), (reject_link, T("invite_decline_cta"))),
-        ]
+    blocks = [
+        _para(T("invite_intro").format(inviter=inviter_name)),
+        _strong(headline),
+    ]
+    if proposer_name:
+        recommended = T("invite_recommended_by").format(proposer=proposer_name)
+        blocks.append(_para(recommended))
+        plain = f"{plain} {recommended}"
+    blocks.append(
+        _links((accept_link, T("invite_accept_cta")), (reject_link, T("invite_decline_cta")))
     )
-    _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
+    _send(email, subject, plain, _render_email(blocks), CATEGORY_MANDATORY, user=user, lang=lang)
+
+
+def send_invitation_proposal_email(
+    owner_email,
+    proposer_name,
+    collection_headline,
+    proposed_email,
+    note,
+    approve_link,
+    reject_link,
+    collection=None,
+):
+    """Ask the owner whether a member's suggested guest should be invited.
+
+    Cat. 2: it is one member asking another to act, exactly like a hold request,
+    and it is answerable — an owner who has switched activity mail off has
+    switched off every other decision they are asked to make too, and the
+    proposal still waits for them in the app.
+
+    The proposed address is named because the owner cannot decide without it, and
+    the proposer's note travels with it — an owner asked to admit a stranger has
+    nothing else to go on. Neither is ever shown to the proposed person, who has
+    not been contacted at all at this point.
+    """
+    user, lang = _recipient(owner_email, collection)
+    T, L = _texts(lang), _local(lang)
+    headline = L(collection_headline)
+    subject = T("proposal_subject").format(collection=headline)
+    plain = T("proposal_plain").format(
+        proposer=proposer_name,
+        collection=headline,
+        email=proposed_email,
+        approve=approve_link,
+        reject=reject_link,
+    )
+    blocks = [
+        _para(T("proposal_intro").format(proposer=proposer_name, collection=headline)),
+        _strong(proposed_email),
+    ]
+    if note:
+        blocks.append(_para(T("proposal_note").format(note=note)))
+    blocks.append(_para(T("proposal_nobody_told")))
+    blocks.append(
+        _links((approve_link, T("proposal_approve_cta")), (reject_link, T("proposal_reject_cta")))
+    )
+    _send(
+        owner_email, subject, plain, _render_email(blocks), CATEGORY_ACTIVITY, user=user, lang=lang
+    )
+
+
+def send_proposal_declined_email(
+    proposer_email, owner_name, collection_headline, proposed_email, collection=None
+):
+    """Tell the member their suggestion wasn't taken up. **No reason given.**
+
+    Saying nothing at all would be worse — they would wait, and probably ask
+    again — but the owner owes nobody a justification: the group may run on rules
+    (a subscription, papers, a waiting list) that are none of the product's
+    business. So the copy is deliberately soft and final, and carries no cause.
+    """
+    user, lang = _recipient(proposer_email, collection)
+    T, L = _texts(lang), _local(lang)
+    headline = L(collection_headline)
+    subject = T("proposal_declined_subject").format(collection=headline)
+    body = T("proposal_declined_body").format(
+        owner=owner_name, collection=headline, email=proposed_email
+    )
+    _send(
+        proposer_email,
+        subject,
+        body,
+        _render_email([_para(body)]),
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+    )
 
 
 def send_collection_welcome_doc_email(collection_headline, doc_url, email, collection=None):

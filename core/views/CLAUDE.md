@@ -58,6 +58,8 @@ Routes to the appropriate handler based on `rsvp.action`:
 | `COLLECTION_REJECT` | `_handle_collection_reject` | GET | Notifies collection owner of rejection, deletes sibling `COLLECTION_INVITE` RSVP, no JWT |
 | `BOOKING_ACCEPT` | `_handle_booking_accept` | **POST** | Accepts booking via `accept_booking()` service (GET previews only) |
 | `BOOKING_REJECT` | `_handle_booking_reject` | **POST** | Rejects booking via `reject_booking()` service (GET previews only) |
+| `PROPOSAL_APPROVE` | `_handle_proposal_approve` | **POST** | Sends the real invitation. GET previews (who was suggested, by whom, their note) — approving **mails a third party**, so a link scanner must never fire it |
+| `PROPOSAL_REJECT` | `_handle_proposal_reject` | **POST** | Declines. Both links die with the decision, either way |
 | `ACCOUNT_DELETE` | `_handle_account_delete` | **POST** | Erases the account via `account_service.delete_account()` (GET previews only: name, email, owned collection/thing counts). Unlike bookings, the frontend **never auto-commits** this preview — the person must press the explicit on-page confirm button. The commit response also clears the auth cookies (the session died with the account); the RSVP itself cascades away with the user row |
 
 **Post-login landing (`landing`).** The successful-login response carries where the SPA should send the user — `"collection"` (plus `collection`, the code), `"welcome"`, or `"home"`. It used to be decided in the browser from the `seenWelcome` localStorage key, but logout clears that key, so every re-login looked like a first visit and dropped returning users on `/welcome`. The rules, in order:
@@ -425,6 +427,27 @@ Removes a user from the collection's invite list. If the invite is still pending
 | **Permission** | `IsAuthenticated` + must be an invited member (not the owner) |
 
 Lets an invited member remove **themselves** from a collection (self-unlink) — the inverse of the owner-only `CollectionInviteView` DELETE. Returns 400 if the requester is the collection **owner** ("The owner can't leave their own collection." — owners delete instead) or is **not a member** ("You are not a member of this collection."). On success removes the user from the `invites` M2M, creates a `MEMBER_LEFT` in-app notification for the owner (payload: `collection_headline`, `member_name`, `collection_code`), and returns `200 {"message": "You have left the collection"}`. The frontend shows the "Leave the group" button (hero, `CollectionSerializer.is_member` gate) → `LeaveCollectionPage` confirm → back to Home.
+
+### CollectionProposeInviteView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/invite/propose/` |
+| **Permission** | `IsAuthenticated` + must be a member (not the owner) + `collection.allow_member_proposals` |
+| **Rate limit** | 30/day per member |
+
+A member recommends somebody: `{email, note?}` → an `InvitationProposal` plus the owner's email and in-app notification. **Nothing reaches the proposed address** — no `User` row, no email — until the owner approves. Open in **both** modes: PROPRIETARY decides who may add a *thing*, never who may suggest a person, and the owner's approval is the gate either way. 400 for the owner (they invite directly), for a non-member, for someone already in the group, and for a duplicate pending suggestion; **403** when the owner has switched recommendations off.
+
+The 30/day cap is high on purpose: abuse is not expected, and an owner has a better answer than a quota — removing the member.
+
+### CollectionProposalActionView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/proposals/{proposal_code}/{approve\|reject}/` |
+| **Permission** | `IsAuthenticated` + collection owner |
+
+The owner's in-app answer; the email links reach the same two decisions through `VerifyLinkView`. Owner-only — the proposer must not be able to wave their own suggestion through. Approving checks the owner's quota and member ceiling first (an approval that can't be delivered should say so rather than half-happen), then goes through `invitation_service.approve_proposal`. 400 on a suggestion that is no longer pending.
 
 ### CollectionDigestPrefView
 
@@ -1001,7 +1024,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Service Layer
 
 Business logic is extracted into `core/services/`:
-- `email_service.py` — All email HTML composition and sending (19 `send_*` functions). Uses `django.utils.html.escape()`.
+- `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
 - `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.
 
 ### Utilities

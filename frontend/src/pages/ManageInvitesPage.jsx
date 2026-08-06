@@ -21,6 +21,11 @@ export default function ManageInvitesPage() {
   const [loading, setLoading] = useState(true);
   const [invites, setInvites] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
+  // Members' recommendations awaiting the owner's answer. Owner-only from the
+  // serializer: they name someone who has not been contacted and does not know
+  // they were suggested, and they carry the proposer's private note.
+  const [proposals, setProposals] = useState([]);
+  const [answering, setAnswering] = useState(null);
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const headline = L(collectionHeadline);
   useEffect(() => { document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault'); }, [headline, t]);
@@ -39,6 +44,7 @@ export default function ManageInvitesPage() {
         const data = await res.json();
         setInvites(data.invites || []);
         setPendingInvites(data.pending_invites || []);
+        setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
         setIsOwner(localStorage.getItem('userCode') === data.owner);
       } else {
@@ -54,6 +60,34 @@ export default function ManageInvitesPage() {
   useEffect(() => {
     fetchCollection();
   }, [fetchCollection]);
+
+  const answerProposal = async (proposalCode, decision) => {
+    setAnswering(proposalCode);
+    try {
+      const res = await apiFetch(`/api/v1/proposals/${proposalCode}/${decision}/`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setProposals((prev) => prev.filter((p) => p.code !== proposalCode));
+        setToast({
+          type: 'success',
+          message: decision === 'approve'
+            ? t('recommend.ownerApproved')
+            : t('recommend.ownerDeclined'),
+        });
+        // An approval creates a pending invitation — reload so the guest list
+        // shows it rather than looking as though nothing happened.
+        if (decision === 'approve') fetchCollection();
+      } else {
+        const detail = await extractApiError(res);
+        setToast({ type: 'error', message: detail || t('common.error') });
+      }
+    } catch {
+      setToast({ type: 'error', message: t('common.connectionError') });
+    } finally {
+      setAnswering(null);
+    }
+  };
 
   const handleResend = async (email) => {
     if (resendLockRef.current) return;
@@ -115,6 +149,48 @@ export default function ManageInvitesPage() {
       backTo={`/collections/${code}`}
       backLabel={headline || t('common.collection')}
     >
+      {/* Members' recommendations, above the guest list because they are the
+          thing waiting on the owner. Each shows who suggested whom and their
+          note — an owner asked to admit an address they don't recognise needs
+          the proposer's word to decide. Nothing has been sent to the person
+          named here. */}
+      {isOwner && proposals.length > 0 && (
+        <>
+          <h2>{t('recommend.ownerHeading')}</h2>
+          <div className="spacer-s" />
+          <p className="text-muted">{t('recommend.ownerIntro')}</p>
+          <div className="spacer-s" />
+          {proposals.map((p) => (
+            <div key={p.code} className="proposal-card">
+              <p className="proposal-who">
+                <strong>{p.email}</strong>
+                <span className="proposal-by">
+                  {' '}{t('recommend.ownerBy', { name: p.proposer_name })}
+                </span>
+              </p>
+              {p.note && <p className="proposal-note">“{p.note}”</p>}
+              <div className="button-row-wide">
+                <Button
+                  style={btnStyle}
+                  disabled={answering === p.code}
+                  onClick={() => answerProposal(p.code, 'approve')}
+                >
+                  {t('recommend.ownerApprove')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={answering === p.code}
+                  onClick={() => answerProposal(p.code, 'reject')}
+                >
+                  {t('recommend.ownerReject')}
+                </Button>
+              </div>
+            </div>
+          ))}
+          <div className="spacer-xl" />
+        </>
+      )}
+
       {invites.length === 0 && pendingInvites.length === 0 ? (
         <p>{t('manageInvites.noGuests')} {isOwner && t('manageInvites.noGuestsCta')}</p>
       ) : (() => {

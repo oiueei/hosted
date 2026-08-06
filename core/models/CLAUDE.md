@@ -97,6 +97,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `visibility` | CharField(7) | No | Visibility: PUBLIC or PRIVATE. A PUBLIC collection is readable by anyone — including anonymous visitors — at `/collections/{code}`; PRIVATE keeps the invite-only behaviour (403 without membership). New collections default **by mode** in `CollectionCreateSerializer` (COMMUNITY→PUBLIC, PROPRIETARY→PRIVATE) and the owner can toggle either way. The DB-level default is PRIVATE (safe fallback for any non-serializer create path). |
 | `digest_frequency` | CharField(7) | No | Digest email frequency: NONE, **WEEKLY (default since the 2026-08 design round — it was NONE)**, or MONTHLY. Both ends of the digest moved in that round: an on-by-default frequency here is what makes `User.notify_news` defaulting on mean anything. **Existing collections keep what they have** — an `AlterField` default rewrites no rows, and starting to mail someone else's members on their behalf isn't ours to decide (contrast migration 0127, which subscribes existing *recipients*, who can unsubscribe themselves). Shown in **both** the Create and Edit forms now: a default that sends email has to be visible to the person it sends for. |
 | `language` | CharField(2) | No | The language this group's outbound email is written in (`es`/`ca`/`en`). Blank (default) = inherit the deployment default (`EMAIL_LANGUAGE`); a member's own `User.language` still wins over it. Set by the owner in the Create/Edit collection form. See `core/services/CLAUDE.md` → the email language hierarchy. |
+| `allow_member_proposals` | BooleanField | No | Whether members may recommend guests (`InvitationProposal`). The owner still decides on every one — this is whether they are willing to be **asked**, which a group with a waiting list, a subscription or an admission process may not be. Default `True`: the recommendation reaches nobody but the owner, who declines in one click and can switch this off just as easily. |
 | `is_onboarding` | BooleanField | No | If True, new users joining via `/popin` are added to this collection (default: False) |
 | `rental_durations` | JSONField (list) | No | Rental rules (#7): allowed rental lengths in **days** for LEND/RENT things in this collection (weeks are normalised to days, e.g. `[1, 3, 7, 14]`). The renter picks exactly one; the return date is derived (N days → `end = start + N`, so a one-week rental picked up on a Wednesday returns the NEXT Wednesday — this keeps a single allowed weekday satisfiable for week-multiple lengths). Default `[]` = no fixed durations (free date range). Sorted + deduped by the serializer. |
 | `rental_weekdays` | JSONField (list) | No | Rental rules (#7): allowed weekdays (Python `weekday()`, 0=Mon…6=Sun) for **both** pickup (start) and return (end) of LEND/RENT bookings. Default `[]` = any day. Sorted + deduped by the serializer. |
@@ -533,3 +534,35 @@ A `DailyActivity` is one `(user, date)` row per user per day they were active �
 ### Reverse Relations
 
 - `user.daily_activity` — a user's activity days (`DailyActivity.user` FK reverse)
+
+---
+
+## InvitationProposal
+
+A member asking the owner to invite somebody. Members could not bring anyone in
+at all before this: every new person cost an owner action, so a group grew only
+as fast as one person worked at it. But the owner is not a bottleneck to route
+around — the group may be closed, or run on rules of admission the product knows
+nothing about — so **the member proposes and the owner decides**.
+
+### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `code` | CharField(6) | Auto | Primary key |
+| `collection` | ForeignKey(Collection) | **Yes** | CASCADE, reverse `invitation_proposals` |
+| `proposer` | ForeignKey(User) | **Yes** | The member. CASCADE — a departed account's pending suggestions go with it, so an owner never answers a request from somebody who no longer exists |
+| `email` | CharField(64) | **Yes** | The proposed address. **No `User` row is created for it and no email is sent to it while the proposal is pending** |
+| `note` | CharField(256) | No | The proposer's word to the owner ("my downstairs neighbour", "he's paid the subs"). What makes the approval a decision rather than a guess. **Owner-only — never travels to the person it describes** |
+| `status` | CharField(8) | No | PENDING (default) / APPROVED / REJECTED, indexed |
+| `created` / `resolved` | DateTimeField | Auto / No | |
+
+### Business Rules
+
+1. **Nobody is contacted before the owner says yes.** If the answer is no, the person suggested never learns they were suggested — no account, no email. Pinned by `test_invitation_proposals.py`.
+2. **One live proposal per address per collection** (`unique_pending_proposal_per_email`, a partial constraint on PENDING) — the owner must not be asked the same question twice, nor able to approve it twice.
+3. **Expiry mirrors an invitation** (~30 days, `COLLECTION_INVITE_EXPIRY_HOURS`) and lapses silently: nobody was told it existed.
+4. **Approval reuses the ordinary invitation path** (`invitation_service.deliver_invitation`), so an approved proposal is indistinguishable from an owner's own invite — and is charged to the **owner's** `INVITE_EMAILS_PER_DAY`, since it leaves their group under their sending domain. The invitation email names the proposer (bare `name`, never the email fallback — this message goes to a third party).
+5. **Rejection tells the proposer, with no reason** — silence would leave them waiting and asking again; a reason would put words in the owner's mouth about rules that are not the product's business.
+6. **Two owner routes, one decision**: `POST /api/v1/proposals/{code}/{approve|reject}/` in-app, or the email links (RSVP `PROPOSAL_APPROVE`/`PROPOSAL_REJECT`, **POST-only** so a link scanner cannot invite a stranger). Either consumes both links.
+7. **`Collection.allow_member_proposals` gates the whole thing** — off means the owner is not asked at all (403).

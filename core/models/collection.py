@@ -82,6 +82,17 @@ class Collection(models.Model):
     # deployment default (EMAIL_LANGUAGE); a member's own preference still wins
     # over it. See email_service.resolve_email_language.
     language = models.CharField(max_length=2, choices=Language.choices, blank=True, default="")
+    # Whether members may suggest new guests (InvitationProposal). The owner
+    # always decides on each one — this decides whether they are willing to be
+    # asked at all. A group with a waiting list, a subscription or an admission
+    # process may not want the question raised, and saying so once beats
+    # declining the same suggestion over and over.
+    #
+    # Default ON: the proposal reaches nobody but the owner, who can decline it
+    # in one click and turn this off just as easily, so the cost of being asked
+    # is small and the cost of the feature never being discovered is the whole
+    # point of building it.
+    allow_member_proposals = models.BooleanField(default=True)
     is_onboarding = models.BooleanField(default=False)
     # Rental rules for LEND/RENT things in this collection (#7).
     # rental_durations: allowed rental lengths in DAYS (weeks are normalised to

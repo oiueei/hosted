@@ -30,6 +30,7 @@ TEXTS = {
         "Accept invitation: {accept} | Decline invitation: {reject}"
     ),
     "invite_intro": "{inviter} has invited you to view:",
+    "invite_recommended_by": "{proposer} suggested you for this group.",
     "invite_accept_cta": "Accept invitation",
     "invite_decline_cta": "Decline invitation",
     # Collection access revoked
@@ -164,6 +165,26 @@ TEXTS = {
     "digest_subject": "What's new in {collection}",
     "digest_plain": "New things in {collection}:\n\n{things}\n\nView collection: {url}",
     "digest_intro": "New things in {collection}:",
+    "proposal_subject": "{collection}: can we invite someone?",
+    "proposal_plain": (
+        "{proposer} would like to invite someone to {collection}:\n\n  {email}\n\n"
+        "Nobody has been contacted yet — this only happens if you say yes.\n\n"
+        "Invite them: {approve}\nNot this time: {reject}"
+    ),
+    "proposal_intro": "{proposer} would like to invite someone to {collection}.",
+    "proposal_note": "They added: {note}",
+    "proposal_nobody_told": (
+        "Nobody has been contacted yet. The invitation is only sent if you say yes, and if you "
+        "don't, the person suggested will never know they were."
+    ),
+    "proposal_approve_cta": "Invite them",
+    "proposal_reject_cta": "Not this time",
+    "proposal_declined_subject": "About your suggestion for {collection}",
+    "proposal_declined_body": (
+        "Thanks for thinking of someone for {collection}. {owner} has decided not to send that "
+        "invitation for now, so {email} hasn't been contacted and won't be. Nothing else changes "
+        "— you're still part of the group."
+    ),
     "digest_mute_cta": "Stop the summaries from this group",
 }
 

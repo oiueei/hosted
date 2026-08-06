@@ -28,6 +28,7 @@ export default function CreateCollectionPage() {
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
+  const [allowProposals, setAllowProposals] = useState(true);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
@@ -88,6 +89,7 @@ export default function CreateCollectionPage() {
       headline: headline.trim(),
       mode,
       visibility,
+      allow_member_proposals: allowProposals,
       allowed_thing_types: allowedThingTypes,
       rental_durations: rentalDurations,
       rental_weekdays: rentalWeekdays,
@@ -170,6 +172,8 @@ export default function CreateCollectionPage() {
             setAllowedThingTypes={setAllowedThingTypes}
             visibility={visibility}
             setVisibility={setVisibility}
+            allowProposals={allowProposals}
+            setAllowProposals={setAllowProposals}
             errors={{ ...errors, allowedThingTypes: allowedTypesError }}
             theeemeColor01={theeemeColors.color_01}
           />

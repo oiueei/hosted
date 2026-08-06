@@ -32,6 +32,7 @@ export default function EditCollectionPage() {
   const [status, setStatus] = useState('ACTIVE');
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
+  const [allowProposals, setAllowProposals] = useState(true);
   const [digestFrequency, setDigestFrequency] = useState('NONE');
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
@@ -91,6 +92,10 @@ export default function EditCollectionPage() {
           setStatus(data.status || 'ACTIVE');
           setMode(data.mode || 'PROPRIETARY');
           setVisibility(data.visibility || 'PRIVATE');
+          // `?? true` rather than `||`: the field is a boolean, and a genuine
+          // `false` (the owner turned recommendations off) must survive the load
+          // instead of springing back on at the next save.
+          setAllowProposals(data.allow_member_proposals ?? true);
           setDigestFrequency(data.digest_frequency || 'NONE');
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
@@ -139,6 +144,7 @@ export default function EditCollectionPage() {
       status,
       mode,
       visibility,
+      allow_member_proposals: allowProposals,
       digest_frequency: digestFrequency,
       allowed_thing_types: allowedThingTypes,
       rental_durations: rentalDurations,
@@ -288,6 +294,8 @@ export default function EditCollectionPage() {
           setAllowedThingTypes={setAllowedThingTypes}
           visibility={visibility}
           setVisibility={setVisibility}
+          allowProposals={allowProposals}
+          setAllowProposals={setAllowProposals}
           errors={{ ...errors, allowedThingTypes: allowedTypesError }}
           theeemeColor01={tc.color_01}
         />

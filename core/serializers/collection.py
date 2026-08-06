@@ -5,7 +5,7 @@ Collection serializers for OIUEEI.
 from django.db import transaction
 from rest_framework import serializers
 
-from core.models import RSVP, Collection, Thing
+from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.serializers.thing import ThingComputedFieldsMixin
 from core.utils import cloudinary_doc_url, cloudinary_url
 from core.validators import (
@@ -107,6 +107,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     pending_invites = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
     is_digest_muted = serializers.SerializerMethodField()
+    pending_proposals = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -123,6 +124,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "mode",
             "visibility",
             "digest_frequency",
+            "allow_member_proposals",
             "language",
             "allowed_thing_types",
             "rental_durations",
@@ -139,6 +141,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "pending_invites",
             "is_member",
             "is_digest_muted",
+            "pending_proposals",
         ]
         read_only_fields = [
             "code",
@@ -150,6 +153,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "pending_invites",
             "is_member",
             "is_digest_muted",
+            "pending_proposals",
         ]
 
     def get_owner_name(self, obj):
@@ -190,6 +194,33 @@ class CollectionSerializer(serializers.ModelSerializer):
         if not (request and request.user.is_authenticated) or self._requester_is_owner(obj):
             return False
         return any(u.code == request.user.code for u in obj.invites.all())
+
+    def get_pending_proposals(self, obj):
+        """Members' pending recommendations — **owner only**.
+
+        These name a person who has not been contacted and does not know they
+        were suggested, and they carry the proposer's private note. Nobody but
+        the person who has to decide sees them.
+        """
+        if not self._requester_is_owner(obj):
+            return []
+        # Prefetched by `_optimise_collection_queryset` for signed-in viewers;
+        # the fallback keeps a request-less or unoptimised caller working.
+        pending = getattr(obj, "_pending_proposals", None)
+        if pending is None:
+            pending = obj.invitation_proposals.filter(
+                status=InvitationProposal.Status.PENDING
+            ).select_related("proposer")
+        return [
+            {
+                "code": p.code,
+                "email": p.email,
+                "note": p.note,
+                "proposer_name": p.proposer.name,
+                "created": p.created,
+            }
+            for p in pending
+        ]
 
     def get_is_digest_muted(self, obj):
         # Whether *this* viewer has silenced this collection's digest. Only
@@ -277,6 +308,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "mode",
             "visibility",
             "digest_frequency",
+            "allow_member_proposals",
             "language",
             "allowed_thing_types",
             "rental_durations",
@@ -383,6 +415,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "mode",
             "visibility",
             "digest_frequency",
+            "allow_member_proposals",
             "language",
             "allowed_thing_types",
             "rental_durations",
@@ -451,6 +484,19 @@ class CollectionInviteSerializer(serializers.Serializer):
     """Serializer for inviting a user to a collection."""
 
     email = serializers.EmailField(max_length=64)
+
+
+class CollectionProposeInviteSerializer(serializers.Serializer):
+    """A member suggesting somebody to the collection's owner.
+
+    The `note` is the proposer's word to the owner — the thing that makes the
+    approval a decision rather than a guess ("she's my downstairs neighbour",
+    "he's paid the subs"). Optional, `SafeTextField` like every other free-text
+    field, and never shown to the person being proposed.
+    """
+
+    email = serializers.EmailField(max_length=64)
+    note = SafeTextField(max_length=256, required=False, allow_blank=True)
 
 
 class CollectionAddThingSerializer(serializers.Serializer):

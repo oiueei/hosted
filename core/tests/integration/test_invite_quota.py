@@ -30,6 +30,17 @@ QUOTA_SETTINGS = {
 }
 
 
+def _emails_sent(*mocks):
+    """Invitation emails across both delivery paths.
+
+    The single invite runs through `invitation_service.deliver_invitation` (the
+    path an approved member proposal also takes); the bulk endpoint keeps its own
+    batched fan-out. The daily quota counts emails, not endpoints, so a test that
+    watched only one path would pass while the other quietly went uncapped.
+    """
+    return sum(m.call_count for m in mocks)
+
+
 def _invite_rsvp_count(collection):
     return RSVP.objects.filter(
         target_code=collection.code, action=RSVP.Action.COLLECTION_INVITE
@@ -37,8 +48,11 @@ def _invite_rsvp_count(collection):
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=2)
-@patch("core.views.collections.send_collection_invite_email")
-def test_single_invite_blocks_after_daily_cap(mock_send, authenticated_client, collection):
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
+def test_single_invite_blocks_after_daily_cap(
+    mock_single, mock_bulk, authenticated_client, collection
+):
     caches["default"].clear()
     for email in ("a@example.com", "b@example.com"):
         res = authenticated_client.post(
@@ -51,16 +65,17 @@ def test_single_invite_blocks_after_daily_cap(mock_send, authenticated_client, c
     )
     assert res.status_code == 429
     assert "error" in res.data
-    assert mock_send.call_count == 2
+    assert _emails_sent(mock_single, mock_bulk) == 2
     # The blocked request created neither RSVPs nor a User row.
     assert _invite_rsvp_count(collection) == 2
     assert not User.objects.filter(email="c@example.com").exists()
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=3)
-@patch("core.views.collections.send_collection_invite_email")
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
 def test_bulk_invite_caps_batch_and_reports_daily_limit(
-    mock_send, authenticated_client, collection
+    mock_single, mock_bulk, authenticated_client, collection
 ):
     caches["default"].clear()
     invites = [{"email": f"u{i}@example.com"} for i in range(5)]
@@ -71,15 +86,18 @@ def test_bulk_invite_caps_batch_and_reports_daily_limit(
     assert res.data["invited"] == 3
     assert [s["reason"] for s in res.data["skipped"]] == ["daily_limit", "daily_limit"]
     assert {s["email"] for s in res.data["skipped"]} == {"u3@example.com", "u4@example.com"}
-    assert mock_send.call_count == 3
+    assert _emails_sent(mock_single, mock_bulk) == 3
     assert _invite_rsvp_count(collection) == 3
     # Quota-skipped rows never reached get_or_create.
     assert not User.objects.filter(email="u3@example.com").exists()
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=2)
-@patch("core.views.collections.send_collection_invite_email")
-def test_quota_is_shared_between_single_and_bulk(mock_send, authenticated_client, collection):
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
+def test_quota_is_shared_between_single_and_bulk(
+    mock_single, mock_bulk, authenticated_client, collection
+):
     caches["default"].clear()
     res = authenticated_client.post(
         SINGLE_URL.format(code=collection.code), {"email": "one@example.com"}, format="json"
@@ -93,13 +111,14 @@ def test_quota_is_shared_between_single_and_bulk(mock_send, authenticated_client
     assert res.status_code == 200
     assert res.data["invited"] == 1
     assert res.data["skipped"] == [{"email": "three@example.com", "reason": "daily_limit"}]
-    assert mock_send.call_count == 2
+    assert _emails_sent(mock_single, mock_bulk) == 2
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=1)
-@patch("core.views.collections.send_collection_invite_email")
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
 def test_bulk_invite_blocks_outright_when_quota_exhausted(
-    mock_send, authenticated_client, collection
+    mock_single, mock_bulk, authenticated_client, collection
 ):
     caches["default"].clear()
     res = authenticated_client.post(
@@ -114,12 +133,15 @@ def test_bulk_invite_blocks_outright_when_quota_exhausted(
     )
     assert res.status_code == 429
     assert "error" in res.data
-    assert mock_send.call_count == 1
+    assert _emails_sent(mock_single, mock_bulk) == 1
 
 
 @override_settings(INVITE_EMAILS_PER_DAY=1)
-@patch("core.views.collections.send_collection_invite_email")
-def test_quota_follows_the_ratelimit_switch(mock_send, authenticated_client, collection):
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
+def test_quota_follows_the_ratelimit_switch(
+    mock_single, mock_bulk, authenticated_client, collection
+):
     """RATELIMIT_ENABLE=False (the dev/test default) disables the quota too —
     same switch the django-ratelimit decorators read, so local development
     never trips an abuse guard."""
@@ -128,12 +150,15 @@ def test_quota_follows_the_ratelimit_switch(mock_send, authenticated_client, col
             SINGLE_URL.format(code=collection.code), {"email": email}, format="json"
         )
         assert res.status_code == 200
-    assert mock_send.call_count == 2
+    assert _emails_sent(mock_single, mock_bulk) == 2
 
 
 @override_settings(**QUOTA_SETTINGS)
-@patch("core.views.collections.send_collection_invite_email")
-def test_no_cap_configured_means_unlimited(mock_send, authenticated_client, collection):
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
+def test_no_cap_configured_means_unlimited(
+    mock_single, mock_bulk, authenticated_client, collection
+):
     """The standalone default: rate limiting ON, no INVITE_EMAILS_PER_DAY set.
 
     The cap is operator policy — it protects a particular deployment's sending
@@ -150,14 +175,15 @@ def test_no_cap_configured_means_unlimited(mock_send, authenticated_client, coll
             format="json",
         )
         assert res.status_code == 200, res.data
-    assert mock_send.call_count == 4
+    assert _emails_sent(mock_single, mock_bulk) == 4
     assert _invite_rsvp_count(collection) == 4
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=0)
-@patch("core.views.collections.send_collection_invite_email")
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
 def test_zero_is_the_explicit_way_to_turn_the_quota_off(
-    mock_send, authenticated_client, collection
+    mock_single, mock_bulk, authenticated_client, collection
 ):
     """0 means unlimited, not "no invitations allowed".
 
@@ -173,12 +199,13 @@ def test_zero_is_the_explicit_way_to_turn_the_quota_off(
             format="json",
         )
         assert res.status_code == 200, res.data
-    assert mock_send.call_count == 3
+    assert _emails_sent(mock_single, mock_bulk) == 3
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=2)
-@patch("core.views.collections.send_collection_invite_email")
-def test_bulk_respects_a_configured_cap(mock_send, authenticated_client, collection):
+@patch("core.views.collections.send_collection_invite_email")  # bulk fan-out
+@patch("core.services.invitation_service.send_collection_invite_email")  # single invite
+def test_bulk_respects_a_configured_cap(mock_single, mock_bulk, authenticated_client, collection):
     """The cap counts emails, so the bulk fan-out cannot multiply past it."""
     caches["default"].clear()
     res = authenticated_client.post(
@@ -188,5 +215,5 @@ def test_bulk_respects_a_configured_cap(mock_send, authenticated_client, collect
     )
     assert res.status_code == 200, res.data
     assert res.data["invited"] == 2
-    assert mock_send.call_count == 2
+    assert _emails_sent(mock_single, mock_bulk) == 2
     assert [s["reason"] for s in res.data["skipped"]] == ["daily_limit", "daily_limit"]

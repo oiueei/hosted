@@ -33,6 +33,7 @@ TEXTS = {
         "Acceptar la invitació: {accept} | Rebutjar la invitació: {reject}"
     ),
     "invite_intro": "{inviter} t'ha convidat a veure:",
+    "invite_recommended_by": "{proposer} t'ha proposat per a aquest grup.",
     "invite_accept_cta": "Acceptar la invitació",
     "invite_decline_cta": "Rebutjar la invitació",
     # Collection access revoked
@@ -170,6 +171,26 @@ TEXTS = {
     "digest_subject": "Novetats a {collection}",
     "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",
     "digest_intro": "Coses noves a {collection}:",
+    "proposal_subject": "{collection}: convidem algú?",
+    "proposal_plain": (
+        "{proposer} vol convidar algú a {collection}:\n\n  {email}\n\n"
+        "Encara no hem contactat amb ningú: només passa si dius que sí.\n\n"
+        "Convidar-lo: {approve}\nAra no: {reject}"
+    ),
+    "proposal_intro": "{proposer} vol convidar algú a {collection}.",
+    "proposal_note": "Hi afegeix: {note}",
+    "proposal_nobody_told": (
+        "Encara no hem contactat amb ningú. La invitació només s'envia si dius que sí i, si dius "
+        "que no, la persona proposada no sabrà mai que ho va ser."
+    ),
+    "proposal_approve_cta": "Convidar-lo",
+    "proposal_reject_cta": "Ara no",
+    "proposal_declined_subject": "Sobre la teva proposta per a {collection}",
+    "proposal_declined_body": (
+        "Gràcies per pensar en algú per a {collection}. {owner} ha decidit no enviar aquesta "
+        "invitació de moment, així que no hem contactat amb {email} ni ho farem. No canvia res "
+        "més: continues formant part del grup."
+    ),
     "digest_mute_cta": "Deixar de rebre els resums d'aquest grup",
 }
 
