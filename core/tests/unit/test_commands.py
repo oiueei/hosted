@@ -5,6 +5,7 @@ Unit tests for OIUEEI management commands.
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from io import StringIO
+from unittest.mock import patch
 
 import pytest
 import time_machine
@@ -14,6 +15,7 @@ from django.utils import timezone
 
 from core.models import RSVP, Collection, Thing, User
 from core.models.booking import BookingPeriod
+from core.services import email_service
 
 
 @pytest.mark.django_db
@@ -261,6 +263,60 @@ class TestSendDigestsCommand:
         call_command("send_digests", stdout=out)
 
         assert len(mail.outbox) == 0
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_a_collection_with_nobody_to_tell_is_skipped(self):
+        """New things but no members: the digest has an audience of nobody.
+
+        Worth its own case because the emptiness is on the *recipient* side —
+        the things query matched, so this is a different `continue` from the one
+        above, and getting it wrong means composing a digest for zero addresses.
+        """
+        monday = date(2026, 4, 20)
+        collection, _, invitee = self._setup_collection_with_things(
+            "DGE", "WEEKLY", thing_days_ago=3, anchor_date=monday
+        )
+        collection.invites.remove(invitee)
+
+        out = StringIO()
+        call_command("send_digests", stdout=out)
+
+        assert mail.outbox == []
+        assert "Sent 0 digest" in out.getvalue()
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_one_collection_failing_does_not_cost_the_rest_their_digest(self):
+        """This runs nightly on the scheduler, unattended, for every collection
+        at once. One group whose send raises must not take the whole run down
+        with it — the others would silently lose a week and nobody would look
+        until somebody complained.
+        """
+        monday = date(2026, 4, 20)
+        self._setup_collection_with_things("DGA", "WEEKLY", thing_days_ago=3, anchor_date=monday)
+        self._setup_collection_with_things("DGB", "WEEKLY", thing_days_ago=3, anchor_date=monday)
+
+        real = email_service.send_digest_email
+        calls = []
+
+        def one_bad_apple(**kwargs):
+            calls.append(kwargs["collection_code"])
+            if len(calls) == 1:
+                raise RuntimeError("template blew up")
+            return real(**kwargs)
+
+        out, err = StringIO(), StringIO()
+        with patch(
+            "core.management.commands.send_digests.send_digest_email", side_effect=one_bad_apple
+        ):
+            call_command("send_digests", stdout=out, stderr=err)
+
+        assert len(calls) == 2, "the run carried on to the second collection"
+        assert len(mail.outbox) == 1, "the healthy collection still got its digest"
+        # The failure is reported, not swallowed: an operator reading the
+        # scheduler log has to be able to see which collection went wrong.
+        assert calls[0] in err.getvalue()
+        # And it is not counted as delivered.
+        assert "Sent 1 digest" in out.getvalue()
 
 
 @pytest.mark.django_db
