@@ -43,7 +43,23 @@ CATEGORY_NEWS = "news"
 
 
 _PREFS_TOKEN_SALT = "notifications-prefs"
-_PREFS_TOKEN_MAX_AGE = 60 * 60 * 24 * 365  # ~1 year
+# ~1 year, and deliberately long — this is the shortest TTL of any bearer
+# credential we hand out, judged the other way round from the rest.
+#
+# It looks like a token that should expire fast: it sits in a URL path, in the
+# footer of every Cat. 2 / Cat. 3 email, and it authenticates without a login.
+# But weigh the two sides. Stolen, it can flip exactly two booleans — turn news
+# on, or turn activity off so someone misses a hold request. A nuisance, not a
+# breach; there is nothing to read and nothing to spend. Expired, it breaks the
+# link somebody clicks *to stop receiving email from us* — this is the
+# unsubscribe link, whatever the page calls it. A dead one turns withdrawing
+# consent into "log in, find the profile editor, scroll to preferences", which
+# is friction on a right, in a product that ships an RGPD notice.
+#
+# So the long TTL is the user-protective choice here, not the lax one. Rotating
+# SECRET_KEY still invalidates every outstanding token at once, which is the
+# revocation path that matters. Reviewed and kept, 2026-08 security round.
+_PREFS_TOKEN_MAX_AGE = 60 * 60 * 24 * 365  # ~1 year — see above before shortening
 
 
 def make_notifications_token(user):
@@ -51,8 +67,9 @@ def make_notifications_token(user):
 
     A ``TimestampSigner`` signature over the user's code (salt
     ``notifications-prefs``) rather than a stored column: it carries a ~1-year
-    TTL and needs no DB lookup or per-user secret to mint. Its blast radius is
-    limited to toggling the two notification booleans (see NotificationsByTokenView).
+    TTL (deliberately — see ``_PREFS_TOKEN_MAX_AGE``) and needs no DB lookup or
+    per-user secret to mint. Its blast radius is limited to toggling the two
+    notification booleans (see NotificationsByTokenView).
     """
     return TimestampSigner(salt=_PREFS_TOKEN_SALT).sign(user.code)
 

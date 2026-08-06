@@ -97,6 +97,8 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 - `verify_notifications_token(token)` — returns the user_code on success, `None` on failure.
 - Used by `NotificationsByTokenView` at `GET/PATCH /api/v1/notifications/token/<token>/` so recipients can toggle preferences via the email footer without logging in.
 
+**The 1-year TTL is deliberate, and was reviewed as such** (2026-08 security round — don't re-flag it without reading `_PREFS_TOKEN_MAX_AGE`). It looks like a token that should expire fast: it rides in a URL path, in the footer of every Cat. 2 / Cat. 3 email, and authenticates without a login. But stolen it can flip exactly two booleans — nothing to read, nothing to spend — while expired it breaks the link somebody clicks *to stop receiving email from us*. That is the unsubscribe link whatever the page calls it, and a dead one turns withdrawing consent into "log in, find the profile editor, scroll to preferences". The long TTL is the user-protective side of that trade, not the lax one. Rotating `SECRET_KEY` invalidates every outstanding token at once, which is the revocation path that matters.
+
 
 
 #### Functions
