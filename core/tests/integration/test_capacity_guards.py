@@ -14,9 +14,11 @@ www.oiueei.com's abuse posture.
 from unittest.mock import patch
 
 import pytest
+from django.core import mail
 from django.test import override_settings
 
 from core.models import Collection, Thing, User
+from core.services.email_service import send_collection_capacity_alarm
 
 THINGS_URL = "/api/v1/things/"
 BULK_THINGS_URL = "/api/v1/collections/{code}/things/bulk/"
@@ -155,13 +157,17 @@ def test_superuser_unblock_lifts_the_ceiling(authenticated_client, collection, u
 @pytest.mark.django_db
 @override_settings(COLLECTION_THINGS_ALARM=3)
 @patch("core.services.email_service.send_collection_capacity_alarm")
-def test_alarm_fires_once_and_never_reaches_the_owner(
+def test_alarm_fires_once_and_never_interrupts_the_upload(
     alarm, authenticated_client, collection, user
 ):
     """A tripwire, not a warning. Crossing the line must not interrupt the
-    upload, must not tell the owner anything, and must not re-fire on every
-    subsequent add — an alarm that mails the operator per row is an alarm they
-    will filter away."""
+    upload, and must not re-fire on every subsequent add — an alarm that mails
+    the operator per row is an alarm they will filter away.
+
+    This asserts *when* the alarm fires; it cannot say anything about who
+    receives it, because the send is mocked out. The recipient rule — the
+    operator, never the owner — is pinned further down against `mail.outbox`.
+    """
     _fill_things(collection, user, 2)
 
     for i in range(3):
@@ -403,21 +409,131 @@ def test_a_no_op_batch_is_not_refused_by_a_ceiling_already_crossed(
 
 @pytest.mark.django_db
 @override_settings(COLLECTION_THINGS_ALARM=1)
-@patch("core.models.collection.Collection.objects")
-def test_the_alarm_is_claimed_by_exactly_one_racing_request(mock_manager, collection, user):
+def test_the_alarm_is_claimed_by_exactly_one_racing_request(collection, user):
     """Two requests that both read `things_alarm_sent=False` must send ONE email.
 
-    The claim is a conditional UPDATE, so the loser's `.update()` matches no row
-    and it must return without sending — simulated here by a manager whose
-    filtered update reports 0 rows affected (what a DB gives the loser).
+    The two instances stand in for two request threads that loaded the row
+    before either had written to it: both see `False` in memory, so the only
+    thing separating them is the conditional `UPDATE … WHERE flag=False`. The
+    loser's update matches no row and it must return without sending.
+
+    Deliberately **not** mocked at the manager: patching `Collection.objects` to
+    report 0 rows affected proves only that the code branches on its own mock.
+    Drop the `flag=False` from the WHERE clause and this test goes red, which is
+    the whole point of it.
     """
     _fill_things(collection, user, 1)
-    mock_manager.filter.return_value.update.return_value = 0
+    first = Collection.objects.get(code=collection.code)
+    second = Collection.objects.get(code=collection.code)
+    assert (first.things_alarm_sent, second.things_alarm_sent) == (False, False)
 
     with patch("core.services.email_service.send_collection_capacity_alarm") as mock_alarm:
-        collection.note_capacity("things")
+        first.note_capacity("things")
+        second.note_capacity("things")
 
-    assert mock_alarm.call_count == 0
+    assert mock_alarm.call_count == 1
+
+
+@pytest.mark.django_db
+@override_settings(COLLECTION_THINGS_ALARM=1)
+def test_the_winner_of_the_race_is_the_one_that_sends(collection, user):
+    """The other half: the request that *does* claim the flag must send.
+
+    Without this, a claim that never matched anything would satisfy the test
+    above just as well as a correct one.
+    """
+    _fill_things(collection, user, 1)
+    fresh = Collection.objects.get(code=collection.code)
+
+    with patch("core.services.email_service.send_collection_capacity_alarm") as mock_alarm:
+        fresh.note_capacity("things")
+
+    mock_alarm.assert_called_once_with(fresh, "things", 1, 1)
+    collection.refresh_from_db()
+    assert collection.things_alarm_sent is True
+
+
+# ── What the alarm actually sends ────────────────────────────────────────────
+#
+# Everything above mocks `send_collection_capacity_alarm` away to assert *when*
+# it fires. These assert what it puts in the mailbox — the half no mocked test
+# can reach, and the half carrying the guarantee that matters: this mail is the
+# operator's, and the owner must never be on it.
+
+
+@pytest.mark.django_db
+def test_the_alarm_goes_to_the_superusers_and_never_to_the_owner(collection, user):
+    """A tripwire, not a warning.
+
+    Copying the owner would interrupt a legitimate bulk import and would tell
+    somebody probing the endpoint exactly where the line sits. Only the hard
+    ceiling is ever user-visible, and only once it bites.
+    """
+    admin = User.objects.create(email="admin@example.com", is_superuser=True)
+    mail.outbox.clear()
+
+    send_collection_capacity_alarm(collection, "things", 42, 40)
+
+    recipients = {addr for m in mail.outbox for addr in m.to}
+    assert recipients == {admin.email}
+    assert collection.owner.email not in recipients
+
+
+@pytest.mark.django_db
+def test_every_superuser_gets_their_own_copy(collection, user):
+    """One send per address: `_send` takes a single recipient, and a per-recipient
+    send keeps one bad address from costing the others their alert."""
+    first = User.objects.create(email="admin1@example.com", is_superuser=True)
+    second = User.objects.create(email="admin2@example.com", is_superuser=True)
+    mail.outbox.clear()
+
+    send_collection_capacity_alarm(collection, "invites", 100, 80)
+
+    assert sorted(m.to for m in mail.outbox) == [[first.email], [second.email]]
+
+
+@pytest.mark.django_db
+def test_a_superuser_without_an_email_is_not_mailed_into_the_void(collection, monkeypatch):
+    """An abuse signal that silently goes nowhere is worse than no signal, so an
+    installation whose superusers have no address still reaches the operator."""
+    User.objects.create(email="", is_superuser=True)
+    monkeypatch.setenv("CONTACT_EMAIL", "ops@example.com")
+    mail.outbox.clear()
+
+    send_collection_capacity_alarm(collection, "things", 42, 40)
+
+    assert [m.to for m in mail.outbox] == [["ops@example.com"]]
+
+
+@pytest.mark.django_db
+def test_with_no_operator_address_configured_it_falls_back_to_the_from_address(
+    collection, settings, monkeypatch
+):
+    monkeypatch.delenv("CONTACT_EMAIL", raising=False)
+    settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
+    mail.outbox.clear()
+
+    send_collection_capacity_alarm(collection, "things", 42, 40)
+
+    assert [m.to for m in mail.outbox] == [["noreply@example.com"]]
+
+
+@pytest.mark.django_db
+def test_the_alarm_names_everything_needed_to_judge_it(collection, user):
+    """The operator has to decide whether this volume is wrong for this account
+    without opening the admin, so the mail carries the account, not just a count.
+    """
+    User.objects.create(email="admin@example.com", is_superuser=True)
+    mail.outbox.clear()
+
+    send_collection_capacity_alarm(collection, "things", 42, 40)
+
+    sent = mail.outbox[0]
+    assert collection.code in sent.subject
+    assert "40" in sent.subject, "the threshold crossed belongs in the subject line"
+    assert collection.code in sent.body
+    assert "42" in sent.body, "the count that tripped it"
+    assert user.email in sent.body, "the owner to look at — named to the operator, not copied"
 
 
 @pytest.mark.django_db
