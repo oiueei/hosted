@@ -74,8 +74,25 @@ export default function DeleteCollectionPage() {
       backTo={backPath}
       backLabel={backLabel}
     >
-      <p>{t('deleteCollection.warning')}</p>
-      <div className="spacer-xs" />
+      {/* The erasure map, to the standard DeleteAccountPage set. A COMMUNITY
+          collection holds things its members contributed, and deleting it takes
+          those with it (core/views/collections.py — every thing whose only
+          collection is this one), along with their questions and history. The
+          owner is the only person who can do this and the only one warned, so
+          the warning has to name what leaves that isn't theirs. */}
+      <p><strong>{t('deleteCollection.warning')}</strong></p>
+      <div className="spacer-s" />
+      <p>{t('deleteCollection.whatGoesTitle')}</p>
+      <ul className="measure">
+        <li>{t('deleteCollection.goesThings')}</li>
+        <li>{t('deleteCollection.goesFaq')}</li>
+        <li>{t('deleteCollection.goesGuests')}</li>
+      </ul>
+      <div className="spacer-s" />
+      <p className="measure">{t('deleteCollection.staysShared')}</p>
+      <div className="spacer-s" />
+      <p className="measure"><strong>{t('deleteCollection.backupNote')}</strong></p>
+      <div className="spacer-s" />
       <div className="form-grid">
         <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle}>
           {deleting ? t('common.deleting') : t('common.delete')}

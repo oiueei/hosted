@@ -369,7 +369,13 @@
   },
   "deleteCollection": {
     "pageTitle": "Eliminar: {{headline}}",
-    "warning": "Aquesta acció no es pot desfer. Totes les coses d'aquesta col·lecció també s'eliminaran.",
+    "warning": "Això no es pot desfer. En esborrar aquesta col·lecció es destrueix tot el que només vivia aquí: el teu i el dels altres.",
+    "whatGoesTitle": "Què s'esborra:",
+    "goesThings": "Totes les coses de la col·lecció, incloses les que van afegir els teus membres, amb les seves fotos, les seves reserves i el seu historial.",
+    "goesFaq": "Totes les preguntes i respostes fetes sobre aquestes coses.",
+    "goesGuests": "La llista de convidats. Als teus membres se'ls avisa que la col·lecció ja no hi és; cap no en podrà recuperar res.",
+    "staysShared": "Només se salva una cosa: el que també pertanyi a una altra col·lecció s'hi queda; simplement surt d'aquesta.",
+    "backupNote": "Si vols conservar alguna cosa, desa-la abans de prémer esborrar. Encara no hi ha exportació, i després no queda res per recuperar.",
     "errorDeleting": "Error en eliminar la col·lecció."
   },
   "editProfile": {

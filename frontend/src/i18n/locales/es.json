@@ -369,7 +369,13 @@
   },
   "deleteCollection": {
     "pageTitle": "Eliminar: {{headline}}",
-    "warning": "Esta acción no se puede deshacer. Todas las cosas de esta colección también serán eliminadas.",
+    "warning": "Esto no se puede deshacer. Al borrar esta colección se destruye todo lo que sólo vivía aquí: lo tuyo y lo de los demás.",
+    "whatGoesTitle": "Qué se borra:",
+    "goesThings": "Todas las cosas de la colección, incluidas las que añadieron tus miembros, con sus fotos, sus reservas y su historial.",
+    "goesFaq": "Todas las preguntas y respuestas hechas sobre esas cosas.",
+    "goesGuests": "La lista de invitados. A tus miembros se les avisa de que la colección ya no está; ninguno podrá recuperar nada.",
+    "staysShared": "Sólo se salva una cosa: lo que además pertenezca a otra colección se queda allí; simplemente sale de ésta.",
+    "backupNote": "Si quieres conservar algo, guárdalo antes de pulsar borrar. Todavía no hay exportación, y después no queda nada que recuperar.",
     "errorDeleting": "Error al eliminar la colección."
   },
   "editProfile": {

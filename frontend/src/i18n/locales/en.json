@@ -387,7 +387,13 @@
   },
   "deleteCollection": {
     "pageTitle": "Delete: {{headline}}",
-    "warning": "This action cannot be undone. All things in this collection will also be deleted.",
+    "warning": "This cannot be undone. Deleting this collection destroys everything that lived only here — yours and everyone else's.",
+    "whatGoesTitle": "What is deleted:",
+    "goesThings": "Every thing in the collection, the ones your members added included, with their photos, holds and journey history.",
+    "goesFaq": "Every question and answer asked about those things.",
+    "goesGuests": "The guest list. Your members are told the collection is gone; none of them can get any of it back.",
+    "staysShared": "One thing survives: anything that also belongs to another collection stays there — it simply leaves this one.",
+    "backupNote": "If you want to keep any of it, save it before you press delete. There is no export yet, and nothing to recover afterwards.",
     "errorDeleting": "Error deleting collection."
   },
   "editProfile": {
