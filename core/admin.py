@@ -42,6 +42,13 @@ class CollectionAdmin(admin.ModelAdmin):
     # unblock, and it should not require opening the change form to find it.
     list_filter = ["status", "capacity_unblocked", "things_alarm_sent", "invites_alarm_sent"]
     list_editable = ["capacity_unblocked"]
+    # The share token is a bearer credential: anyone holding it can join the
+    # collection. Read-only here not to hide it — a superuser reaches the row
+    # either way — but because the default form made it *writable*, and a
+    # hand-typed value silently bypasses `generate_share_token`'s 22 URL-safe
+    # characters of entropy. Rotating and revoking belong to the owner, through
+    # CollectionShareLinkView, which always mints a real one.
+    readonly_fields = ["share_token"]
 
     @admin.display(description="Things")
     def thing_count(self, obj):
