@@ -86,8 +86,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # `npm audit --audit-level=high`, minus a written allowlist. The threshold
+      # is unchanged; the script exists because npm cannot accept one advisory,
+      # so a single unfixable finding would otherwise force the whole gate down
+      # to `critical`. Each exception carries its reason and its removal
+      # condition in scripts/audit-gate.mjs.
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: node scripts/audit-gate.mjs
 
       - name: Lint
         run: npm run lint

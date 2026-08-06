@@ -526,6 +526,27 @@ Smoke tests and automated accessibility checks using vitest + testing-library + 
 - **hds-design-tokens** — HDS CSS custom property tokens (npm `^6.0.5`)
 - **hds-core** — HDS core CSS and base styles (npm `^6.0.5`)
 
+### The dependency audit gate (`scripts/audit-gate.mjs`)
+
+CI runs `node scripts/audit-gate.mjs` instead of `npm audit --audit-level=high`. Same threshold — it fails on any high or critical advisory — but it can accept a named one, which plain `npm audit` cannot. Without that, a single unfixable finding leaves only two options: a permanently red pipeline, or dropping the whole gate to `critical` and silently ceasing to guard every other high.
+
+An allowlist entry requires **both** conditions, written into the script next to the id: the advisory has **no published fix**, and its vulnerable path **cannot be reached from this app**. It also records what would let it be deleted. A high with a fix we simply haven't applied must never be listed. The script also flags an entry that no longer matches anything (fixed or withdrawn upstream) so the list doesn't rot — as a message, not a failure, since a greener audit must not turn the build red.
+
+Currently allowed: **GHSA-qwww-vcr4-c8h2** (react-router RSC-mode CSRF). OIUEEI ships no RSC — no `@react-router/*` framework package is installed, `App.jsx` mounts a client-side `<BrowserRouter>`, and the build is static files served by WhiteNoise, so there is no server route handler for an action to reach. It is fixed in react-router `8.3.0`, which is **unpublished**; npm's only suggestion is a downgrade to 7.11.0, which reintroduces the four advisories 7.18.2 fixes — including the open redirect in `<Link>`/`useNavigate` (CVE-2025-68470 bypass).
+
+### `overrides` in `package.json`
+
+Four transitive pins, all security patches for packages we don't depend on directly. Scope each to its parent rather than pinning globally, so an unrelated consumer isn't dragged to the same version:
+
+| Override | Why |
+|---|---|
+| `@typescript-eslint/typescript-estree` → `minimatch@9.0.9` | pre-existing |
+| `eslint-plugin-jsx-a11y` → `brace-expansion@1.1.18` | high DoS in `<1.1.18`; stays on the 1.x line, since `minimatch@3` needs `^1.1.7` |
+| `jsdom` → `undici@7.29.0` | five advisories in `<7.29.0`. **This pin is itself what holds the version** — when bumping, check the advisory floor, not just that it installs |
+| `postcss` → `^8.5.25` (top level) | high path traversal in `sourceMappingURL` auto-loading (`<=8.5.17`). Top-level is safe here: `hds-react` and `vite` both want `^8`. **Do not take npm's suggested fix** — it downgrades `hds-react` to 5.2.2 and undoes the HDS 6 upgrade |
+
+Never run `npm audit fix --force` in this repo: its "fixes" include major downgrades of `hds-react`.
+
 ### HDS Select quirks (v5)
 
 All `<Select>` components must include `language="en"` — the HDS default is `"fi"` which produces Finnish placeholder text ("Valitse yksi"). Additional API notes: `value` is an array (`[{ label, value }]`), `onChange` receives an array (`(sel) => sel[0].value`), error text uses the `error` prop (string), not `errorText`.
