@@ -12,16 +12,39 @@ const COLLECTION = {
   pending_invites: [{ code: 'RSVP01', email: 'pending@example.com' }],
 };
 
-function mockRoutes({ collection = COLLECTION, invite = { status: 200 } } = {}) {
+// A member's suggestion, as `CollectionSerializer.pending_proposals` emits it.
+const PROPOSAL = {
+  code: 'PRP001',
+  email: 'lili@example.com',
+  note: 'my downstairs neighbour',
+  proposer_name: 'Lele',
+};
+
+function mockRoutes({
+  collection = COLLECTION,
+  invite = { status: 200 },
+  proposal = { status: 200 },
+} = {}) {
+  // An answered suggestion stops being pending server-side, so the reload an
+  // approval triggers must not hand the same card straight back. Modelling that
+  // is what makes "it disappears" a claim about the page and not about the mock.
+  let answered = false;
   globalThis.fetch = vi.fn((url) => {
     const respond = (status, body) =>
       Promise.resolve({ ok: status < 400, status, json: async () => body });
     if (url.endsWith('/invite/')) {
       return respond(invite.status, invite.body ?? { message: 'Invitation sent' });
     }
-    return respond(200, collection);
+    if (url.includes('/proposals/')) {
+      if (proposal.status < 400) answered = true;
+      return respond(proposal.status, proposal.body ?? { message: 'Invitation sent' });
+    }
+    return respond(200, answered ? { ...collection, pending_proposals: [] } : collection);
   });
 }
+
+const proposalCalls = () =>
+  globalThis.fetch.mock.calls.filter(([u]) => u.includes('/proposals/'));
 
 function renderPage() {
   return render(
@@ -86,6 +109,92 @@ describe('ManageInvitesPage (the guest list)', () => {
     await screen.findByText('Invitation resent.');
     const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/invite/'));
     expect(JSON.parse(options.body)).toEqual({ email: 'pending@example.com' });
+  });
+
+  // ── Members' recommendations ──────────────────────────────────────────────
+  //
+  // A member suggests somebody and the owner decides. The guarantee running
+  // through all of these: until the owner says yes, the person named has not
+  // been contacted and does not know they were suggested — so the page must
+  // never read as though an invitation already went out.
+
+  test('a suggestion shows who was recommended, by whom, and their note', async () => {
+    mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
+    renderPage();
+
+    expect(await screen.findByText('lili@example.com')).toBeInTheDocument();
+    expect(screen.getByText(/recommended by Lele/)).toBeInTheDocument();
+    // The note is the proposer's word FOR THE OWNER — it is the whole reason
+    // this is a decision rather than a guess at an unfamiliar address.
+    expect(screen.getByText(/my downstairs neighbour/)).toBeInTheDocument();
+    expect(screen.getByText(/Nobody has been contacted/)).toBeInTheDocument();
+  });
+
+  test('approving posts to the proposal and clears it from the list', async () => {
+    mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
+    renderPage();
+    await screen.findByText('lili@example.com');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Invite them' }));
+
+    await waitFor(() => expect(proposalCalls()).toHaveLength(1));
+    const [url, options] = proposalCalls()[0];
+    expect(url).toBe('/api/v1/proposals/PRP001/approve/');
+    expect(options.method).toBe('POST');
+    // Answered means answered: an owner must not be asked the same question
+    // twice, nor be able to approve it twice from a stale card.
+    await waitFor(() => expect(screen.queryByText('lili@example.com')).toBeNull());
+  });
+
+  test('declining goes to the reject endpoint, never to approve', async () => {
+    mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
+    renderPage();
+    await screen.findByText('lili@example.com');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Not this time' }));
+
+    await waitFor(() => expect(proposalCalls()).toHaveLength(1));
+    expect(proposalCalls()[0][0]).toBe('/api/v1/proposals/PRP001/reject/');
+    await waitFor(() => expect(screen.queryByText('lili@example.com')).toBeNull());
+  });
+
+  test('a refused decision keeps the suggestion and surfaces the reason', async () => {
+    mockRoutes({
+      collection: { ...COLLECTION, pending_proposals: [PROPOSAL] },
+      proposal: { status: 429, body: { error: 'Daily invitation limit reached. Try again tomorrow.' } },
+    });
+    renderPage();
+    await screen.findByText('lili@example.com');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Invite them' }));
+
+    // The backend's own words: "not now" and "no" call for different replies
+    // from the owner, and a generic error would hide which one this was.
+    expect(await screen.findByText(/Daily invitation limit reached/)).toBeInTheDocument();
+    // The card stays, so the owner can answer tomorrow.
+    expect(screen.getByText('lili@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Invite them' })).toBeInTheDocument();
+  });
+
+  test('a member never sees suggestions meant for the owner', async () => {
+    localStorage.setItem('userCode', 'GUEST9');
+    mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    // The note is one member's private word about a third person, written for
+    // the owner alone; the address is somebody who has not agreed to be here.
+    expect(screen.queryByText('lili@example.com')).toBeNull();
+    expect(screen.queryByText(/my downstairs neighbour/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Invite them' })).toBeNull();
+  });
+
+  test('with nothing suggested the section stays out of the way', async () => {
+    mockRoutes({ collection: { ...COLLECTION, pending_proposals: [] } });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(screen.queryByRole('heading', { name: 'Recommendations' })).toBeNull();
   });
 
   test('a non-owner sees the list but no invite controls', async () => {
