@@ -182,6 +182,15 @@ export default function HomePage() {
             <Link to="/my-bookings">
               <Button variant="secondary" style={btnSecondaryStyle}>{t('home.myRequests')}</Button>
             </Link>
+            {/* Only for people who can actually receive requests — owning a
+                *thing* is the test, not owning a collection: in a COMMUNITY
+                collection you can contribute a thing to someone else's group and
+                be asked for it there. */}
+            {user.things?.length > 0 && (
+              <Link to="/owner-bookings">
+                <Button variant="secondary" style={btnSecondaryStyle}>{t('home.requestsToMe')}</Button>
+              </Link>
+            )}
           </div>
         </div>
         <Koros

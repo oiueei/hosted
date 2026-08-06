@@ -131,7 +131,8 @@
     "deleteAccount": "Delete account — OIUEEI",
     "legal": "Legal & privacy — OIUEEI",
     "contact": "Contact — OIUEEI",
-    "collaborate": "Collaborate — OIUEEI"
+    "collaborate": "Collaborate — OIUEEI",
+    "ownerBookings": "Requests to me — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -188,6 +189,7 @@
     "createCollection": "Create collection",
     "myProfile": "My profile",
     "myRequests": "My requests",
+    "requestsToMe": "Requests to me",
     "invitedBy": "{{name}} has invited you to view",
     "offlineLabel": "Connection problem",
     "offlineBody": "We can't reach OIUEEI right now. Check your connection and try again.",
@@ -529,6 +531,20 @@
     "statusExpired": "Expired",
     "expiredHelper": "This request expired automatically because the owner didn't reply within 72 hours (3 days).",
     "pastRequests": "Past requests"
+  },
+  "ownerBookings": {
+    "pageTitle": "Requests to me",
+    "waitingOnYou": "Waiting on you",
+    "noPending": "Nothing waiting on you right now.",
+    "noBookings": "Nobody has requested anything from you yet.",
+    "colRequest": "Request",
+    "requestedBy": "Asked by {{name}}",
+    "acceptTooltip": "Confirm this request",
+    "rejectTooltip": "Decline this request",
+    "accepted": "Request confirmed. We've let them know.",
+    "rejected": "Request declined. We've let them know.",
+    "errorActing": "Couldn't answer that request. Please try again.",
+    "errorLoading": "Error loading requests."
   },
   "manageInvites": {
     "pageTitle": "Manage guests",

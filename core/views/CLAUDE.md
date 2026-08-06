@@ -699,7 +699,7 @@ Lists all booking requests made by the current user, ordered by `-created`.
 | **Permission** | `IsAuthenticated` |
 | **Pagination** | `StandardResultsPagination` |
 
-Lists all booking requests for things owned by the current user, ordered by `-created`.
+Lists all booking requests for things owned by the current user, ordered by `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`. (It was implemented and documented for a long time with no caller at all: an owner's only routes to a pending request were the email, an inbox banner, or opening each collection in turn.)
 
 ### BookingCancelView
 
