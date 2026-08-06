@@ -26,16 +26,28 @@ export default function WelcomePage() {
   }, [t]);
   const [userName, setUserName] = useState("");
   const [accessibleCodes, setAccessibleCodes] = useState(() => new Set());
+  // Read once on mount, like every other page in the app. It decides which doors
+  // this page offers: a member gets "create a collection" / "edit profile", a
+  // stranger gets the one door that actually opens for them (/popin). Every
+  // action below used to point at a RequireAuth route, so a visitor who finally
+  // reached this page still hit a login form on whatever they clicked.
+  const [isAuthenticated] = useState(() => !!localStorage.getItem("userCode"));
 
+  // Both calls are `optionalAuth` because this is a PUBLIC route: it is the page
+  // that explains what OIUEEI is, so a stranger handed the link must be able to
+  // read it. Without the flag a plain `apiFetch` 401 hard-navigates to /login
+  // from inside the helper — the `.catch()` below never gets a say — and the one
+  // page written for people without an account was the one they couldn't reach.
+  // Signed in, both resolve and add the greeting and the example-collection links.
   useEffect(() => {
-    apiFetch("/api/v1/auth/me/")
+    apiFetch("/api/v1/auth/me/", { optionalAuth: true })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => setUserName(data.name || data.email || ""))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    apiFetch("/api/v1/invited-collections/")
+    apiFetch("/api/v1/invited-collections/", { optionalAuth: true })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) =>
         setAccessibleCodes(new Set((data || []).map((c) => c.code))),
@@ -73,7 +85,7 @@ export default function WelcomePage() {
           }
         >
           <ContactCorner />
-          <BackLink to="/" label={t("common.home")} />
+          {isAuthenticated && <BackLink to="/" label={t("common.home")} />}
           <div className="spacer-m" />
           {userName && (
             <p
@@ -93,26 +105,43 @@ export default function WelcomePage() {
             className="button-row-wide"
             style={{ paddingBottom: "var(--spacing-s)" }}
           >
-            <Link
-              to="/collections/new"
-              state={{
-                backPath: "/welcome",
-                backLabel: t("welcome.pageTitle"),
-              }}
-            >
-              <Button style={btnStyle}>{t("welcome.createCollection")}</Button>
-            </Link>
-            <Link
-              to="/me/edit"
-              state={{
-                backPath: "/welcome",
-                backLabel: t("welcome.pageTitle"),
-              }}
-            >
-              <Button variant="secondary" style={btnSecondaryStyle}>
-                {t("welcome.editProfile")}
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/collections/new"
+                  state={{
+                    backPath: "/welcome",
+                    backLabel: t("welcome.pageTitle"),
+                  }}
+                >
+                  <Button style={btnStyle}>
+                    {t("welcome.createCollection")}
+                  </Button>
+                </Link>
+                <Link
+                  to="/me/edit"
+                  state={{
+                    backPath: "/welcome",
+                    backLabel: t("welcome.pageTitle"),
+                  }}
+                >
+                  <Button variant="secondary" style={btnSecondaryStyle}>
+                    {t("welcome.editProfile")}
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/popin">
+                  <Button style={btnStyle}>{t("login.popIn")}</Button>
+                </Link>
+                <Link to="/login">
+                  <Button variant="secondary" style={btnSecondaryStyle}>
+                    {t("login.signIn")}
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
         <Koros
@@ -214,8 +243,10 @@ export default function WelcomePage() {
         ))}
         <div className="spacer-xl" />
         <div className="button-row-wide">
-          <Link to="/">
-            <Button style={btnStyle}>{t("welcome.enterCta")}</Button>
+          <Link to={isAuthenticated ? "/" : "/popin"}>
+            <Button style={btnStyle}>
+              {isAuthenticated ? t("welcome.enterCta") : t("login.popIn")}
+            </Button>
           </Link>
         </div>
         <FeedbackLink />

@@ -58,33 +58,51 @@ export async function extractApiError(res) {
   }
 }
 
+/**
+ * `optionalAuth: true` — for a page that renders for anonymous visitors but shows
+ * a little more when there *is* a session (`/welcome`: the greeting, the example
+ * collections). An unrecoverable 401 then returns the response so the caller can
+ * shrug it off, instead of clearing `userCode` and hard-navigating to `/login`.
+ *
+ * Without it, one authenticated call on a public page evicts every anonymous
+ * visitor: the redirect fires inside `apiFetch`, so a caller's `.catch()` runs
+ * far too late to stop it — which is exactly what made the public `/welcome`
+ * route unreachable without an account.
+ *
+ * The refresh attempt still runs, so a signed-in reader whose access token has
+ * merely expired keeps their greeting rather than silently downgrading to the
+ * anonymous view.
+ */
 export async function apiFetch(url, options = {}) {
-  const headers = { ...options.headers };
+  const { optionalAuth = false, ...fetchOptions } = options;
+  const headers = { ...fetchOptions.headers };
 
-  if (options.body && !headers['Content-Type']) {
+  if (fetchOptions.body && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const method = (options.method || 'GET').toUpperCase();
+  const method = (fetchOptions.method || 'GET').toUpperCase();
   if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method) && !headers['X-CSRFToken']) {
     headers['X-CSRFToken'] = getCsrfToken();
   }
 
-  const res = await fetch(url, { ...options, headers, credentials: 'include' });
+  const res = await fetch(url, { ...fetchOptions, headers, credentials: 'include' });
 
   if (res.status === 401) {
     // Try refreshing the token once (shared across concurrent 401s)
     const refreshRes = await refreshTokens();
     if (refreshRes.ok) {
       // Retry the original request with fresh cookies
-      const retryRes = await fetch(url, { ...options, headers, credentials: 'include' });
+      const retryRes = await fetch(url, { ...fetchOptions, headers, credentials: 'include' });
       if (retryRes.status === 401) {
+        if (optionalAuth) return retryRes;
         localStorage.removeItem('userCode');
         window.location.href = '/login';
         throw new Error('Unauthorised');
       }
       return retryRes;
     }
+    if (optionalAuth) return res;
     localStorage.removeItem('userCode');
     window.location.href = '/login';
     throw new Error('Unauthorised');

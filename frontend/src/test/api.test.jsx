@@ -124,6 +124,46 @@ describe('apiFetch', () => {
     expect(localStorage.getItem('userCode')).toBeNull();
     expect(window.location.href).toBe('/login');
   });
+
+  // `optionalAuth` exists for the public pages that show a little more when there
+  // IS a session (/welcome). Without it, one authenticated call on a public page
+  // evicts every anonymous visitor: the redirect fires inside apiFetch, so the
+  // caller's own .catch() runs far too late to stop it. That is exactly what made
+  // the public /welcome route unreachable without an account.
+  test('optionalAuth: an unrecoverable 401 returns the response instead of evicting', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 401 }));
+    localStorage.removeItem('userCode');
+
+    const res = await apiFetch('/api/v1/auth/me/', { optionalAuth: true });
+
+    expect(res.status).toBe(401);
+    expect(window.location.href).toBe('');
+  });
+
+  test('optionalAuth: a signed-in reader whose access token expired still gets their data', async () => {
+    // The refresh must still be attempted — otherwise a member reading /welcome
+    // silently drops to the anonymous view whenever their access token has aged out.
+    let call = 0;
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('/auth/refresh/')) return Promise.resolve({ ok: true, status: 200 });
+      call += 1;
+      return Promise.resolve({ ok: call > 1, status: call > 1 ? 200 : 401 });
+    });
+
+    const res = await apiFetch('/api/v1/auth/me/', { optionalAuth: true });
+
+    expect(res.status).toBe(200);
+    expect(localStorage.getItem('userCode')).toBe('USER01');
+  });
+
+  test('optionalAuth is not forwarded to fetch as a request option', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, status: 200 }));
+
+    await apiFetch('/api/v1/auth/me/', { optionalAuth: true });
+
+    const [, opts] = globalThis.fetch.mock.calls[0];
+    expect(opts.optionalAuth).toBeUndefined();
+  });
 });
 
 describe('extractApiError — message precedence', () => {
