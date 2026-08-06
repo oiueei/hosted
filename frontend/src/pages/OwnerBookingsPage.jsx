@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Notification, StatusLabel, Tag, Table, IconCheck, IconCrossCircle } from 'hds-react';
+import { Button, Dialog, Notification, StatusLabel, Tag, Table, IconCheck, IconCrossCircle } from 'hds-react';
+import { DATE_TYPES } from '../constants/things';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -43,6 +44,12 @@ export default function OwnerBookingsPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [acting, setActing] = useState(null);
+  // The row whose acceptance would hand the thing over for good, pending
+  // confirmation. Accepting a GIFT or SELL that isn't endless flips it INACTIVE,
+  // adds the requester to `deal` and writes a ThingTransfer — the owner no
+  // longer has it, and there is no undo. A loan, a rental and an endless
+  // give-away all come back or never run out, so those accept straight away.
+  const [transferRow, setTransferRow] = useState(null);
   useEffect(() => { document.title = t('titles.ownerBookings'); }, [t]);
 
   const STATUS_LABELS = {
@@ -140,6 +147,7 @@ export default function OwnerBookingsPage() {
     _startDate: b.start_date,
     _endDate: b.end_date,
     _created: b.created,
+    _transfersOwnership: !DATE_TYPES.includes(b.thing_type) && !b.thing_is_endless,
   }));
 
   const cols = [
@@ -184,7 +192,9 @@ export default function OwnerBookingsPage() {
         <div style={{ display: 'flex', gap: 'var(--spacing-xs)', justifyContent: 'flex-end' }}>
           <TooltipButton
             tooltip={t('ownerBookings.acceptTooltip')}
-            onClick={() => handleAction(row._code, 'accept')}
+            onClick={() => (row._transfersOwnership
+              ? setTransferRow(row)
+              : handleAction(row._code, 'accept'))}
             disabled={acting === row._code}
           >
             <IconCheck aria-hidden />
@@ -244,6 +254,43 @@ export default function OwnerBookingsPage() {
             {t('common.loadMore')}
           </Button>
         </>
+      )}
+
+      {transferRow && (
+        <Dialog
+          id="transfer-confirm"
+          aria-labelledby="transfer-confirm-title"
+          isOpen
+          close={() => setTransferRow(null)}
+          closeButtonLabelText={t('common.close')}
+        >
+          <Dialog.Header id="transfer-confirm-title" title={t('thingCard.transferConfirmTitle')} />
+          <Dialog.Content>
+            <p>{t('thingCard.transferConfirmBody')}</p>
+            <p style={{ marginBottom: 0 }}>
+              <strong>{transferRow._thingHeadline}</strong>
+              {transferRow._requesterName
+                ? ` — ${t('ownerBookings.requestedBy', { name: transferRow._requesterName })}`
+                : ''}
+            </p>
+          </Dialog.Content>
+          <Dialog.ActionButtons>
+            <Button
+              style={btnStyle}
+              disabled={acting === transferRow._code}
+              onClick={() => {
+                const row = transferRow;
+                setTransferRow(null);
+                handleAction(row._code, 'accept');
+              }}
+            >
+              {t('thingCard.transferConfirm')}
+            </Button>
+            <Button variant="secondary" style={btnSecondaryStyle} onClick={() => setTransferRow(null)}>
+              {t('common.cancel')}
+            </Button>
+          </Dialog.ActionButtons>
+        </Dialog>
       )}
 
       <Toast toast={toast} onClose={() => setToast(null)} />

@@ -106,7 +106,7 @@ Foreign keys are exposed as 6-character alphanumeric codes, not database IDs:
 
 | Serializer | Fields | Notes |
 |------------|--------|-------|
-| `BookingPeriodSerializer` | code, created, thing_code, thing_headline, thing_type, requester_code, requester_name, requester_email, owner_code, start_date, end_date, status | Full booking for owner view. Uses `source` to traverse FK relations. |
+| `BookingPeriodSerializer` | code, created, thing_code, thing_headline, thing_type, **thing_is_endless**, requester_code, requester_name, requester_email, owner_code, start_date, end_date, status | Full booking for owner view. Uses `source` to traverse FK relations. **`thing_is_endless`** exists so a client can tell whether accepting hands the thing over for good: `thing_type` cannot answer it, because an endless GIFT is given away again and again and writes no `ThingTransfer`. The `/owner-bookings` page uses it to decide whether accepting needs a confirmation dialog first. |
 | `BookingPeriodCalendarSerializer` | start_date, end_date, status | Minimal calendar view for guests (no requester info). |
 | `BookingPeriodOwnerCalendarSerializer` | code, created, requester_code, requester_name, start_date, end_date, status | Owner calendar view with requester details. `requester_name` falls back to email. `created` is the booking request date. |
 | `ThingRequestWithDatesSerializer` | start_date, end_date | Plain `Serializer` for LEND/RENT requests. Validates start >= today, end >= start. |

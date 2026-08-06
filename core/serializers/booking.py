@@ -21,6 +21,12 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
     requester_code = serializers.CharField(source="requester_code_id")
     requester_name = serializers.CharField(source="requester_code.name", read_only=True)
     owner_code = serializers.CharField(source="owner_code_id")
+    # Whether accepting this request hands the thing over for good. `thing_type`
+    # alone can't answer it: an endless GIFT is given away again and again and
+    # transfers nothing, so a client deciding from the type would warn about a
+    # transfer that isn't going to happen. The owner-requests page uses it to
+    # decide whether accepting needs a confirmation first.
+    thing_is_endless = serializers.BooleanField(source="thing_code.is_endless", read_only=True)
 
     class Meta:
         model = BookingPeriod
@@ -30,6 +36,7 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "thing_code",
             "thing_headline",
             "thing_type",
+            "thing_is_endless",
             "requester_code",
             "requester_name",
             "requester_email",

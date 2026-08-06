@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import RSVP, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.transfer import ThingTransfer
+from core.tests.factories import ThingFactory
 
 
 @pytest.fixture
@@ -731,6 +732,35 @@ class TestMyBookingsAndOwnerBookings:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["results"]) == 1
         assert response.data["results"][0]["requester_code"] == user2.code
+
+    def test_owner_bookings_says_whether_accepting_hands_the_thing_over(
+        self, authenticated_client, user, user2
+    ):
+        """`thing_is_endless` rides along so the client can warn before a handover.
+
+        Accepting a GIFT or SELL that isn't endless flips the thing INACTIVE and
+        writes a ThingTransfer — it is gone. An endless one is given away again
+        and again and transfers nothing, and `thing_type` is identical in both
+        cases, so without this field the owner's requests page would either warn
+        about a handover that isn't going to happen or skip the warning entirely.
+        """
+        once = ThingFactory(owner=user, type="GIFT_THING", is_endless=False)
+        endless = ThingFactory(owner=user, type="GIFT_THING", is_endless=True)
+        for thing in (once, endless):
+            BookingPeriod.objects.create(
+                thing_code=thing,
+                requester_code=user2,
+                requester_email=user2.email,
+                owner_code=user,
+                thing_type="GIFT_THING",
+            )
+
+        response = authenticated_client.get("/api/v1/owner-bookings/")
+
+        assert response.status_code == status.HTTP_200_OK
+        by_thing = {r["thing_code"]: r["thing_is_endless"] for r in response.data["results"]}
+        assert by_thing[once.code] is False
+        assert by_thing[endless.code] is True
 
     def test_my_bookings_empty_when_no_bookings(self, authenticated_client):
         """my-bookings returns empty list when user has no bookings."""

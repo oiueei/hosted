@@ -184,22 +184,15 @@ export default function ThingPage() {
           <div className="button-col">
             {needsPage && activePendingCode && (
               <>
-                {acceptTransfersOwnership ? (
-                  <InlineConfirm
-                    triggerLabel={acceptLabel}
-                    triggerProps={{ fullWidth: true, disabled: !!bookingAction, style: btnStyle }}
-                    title={t('thingCard.transferConfirmTitle')}
-                    body={t('thingCard.transferConfirmBody')}
-                    confirmLabel={t('thingCard.transferConfirm')}
-                    onConfirm={() => handleBookingAction('accept')}
-                    confirming={!!bookingAction}
-                    confirmProps={{ style: btnStyle }}
-                  />
-                ) : (
-                  <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept')} style={btnStyle}>
-                    {acceptLabel}
-                  </Button>
-                )}
+                {/* No transfer confirm here, by construction: this branch is
+                    `needsPage` (LEND/RENT) and `acceptTransfersOwnership` is its
+                    inverse, so the confirm could never render. A loan or rental
+                    comes back — nothing changes hands for good. The TAKEN block
+                    below is where a GIFT/SELL is accepted, and where the confirm
+                    belongs. */}
+                <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept')} style={btnStyle}>
+                  {acceptLabel}
+                </Button>
                 <Button fullWidth variant="secondary" disabled={!!bookingAction} onClick={() => handleBookingAction('reject')} style={btnSecondaryStyle}>
                   {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
                 </Button>

@@ -55,6 +55,16 @@ export default function useThingActions(thing, userCode, {
   // keep their status but reserve via a direct POST, so the two must stay separate.
   const needsPage = isDateBased;
   const bookingKeepsStatus = needsPage || !!thing?.is_endless;
+  // Accepting hands the thing over for good: a GIFT or SELL that isn't endless.
+  // `accept_booking` flips it INACTIVE, adds the requester to `deal` and writes a
+  // ThingTransfer, so the owner no longer has it. A loan or rental comes back and
+  // an endless give-away never runs out, so neither transfers anything.
+  //
+  // This is the inverse of `bookingKeepsStatus` by construction, and it MUST be
+  // returned below: `ThingPage` has been destructuring it since it was written,
+  // the hook never provided it, so it read `undefined` and the "Transfer
+  // ownership?" confirm — copy, three locales and all — has never once rendered.
+  const acceptTransfersOwnership = !bookingKeepsStatus;
   const isCollectionOwner = (collectionOwner || thing?.collection_owner) === userCode;
   const canDelete = isCollectionOwner || isOwner;
 
@@ -102,6 +112,7 @@ export default function useThingActions(thing, userCode, {
     isCollectionOwner,
     isDateBased,
     needsPage,
+    acceptTransfersOwnership,
     canDelete,
     hasPendingBookings,
     showButton,
