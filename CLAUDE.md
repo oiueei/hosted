@@ -6,7 +6,7 @@
 - **Settings**: Split into `base.py`, `development.py`, `production.py` under `config/settings/`
 - **Code style**: Ruff (100-char lines) — `ruff check` (lint + import sort) and `ruff format`; replaces black/isort/flake8. Pre-commit hooks in `.pre-commit-config.yaml` (run `pre-commit install`).
 - **Test structure**: `core/tests/unit/`, `core/tests/integration/`, `core/tests/scenarios/`
-- **Coverage minimum**: 80% enforced by CI
+- **Coverage minimum**: backend **94%**, frontend **82/73/73/85** (statements/branches/functions/lines), both enforced by CI. They are **ratchets, not targets** — each sits ~2 points under the suite's real coverage so a genuine regression is visible. Raise them as coverage grows; never lower one to make a red build pass. New code owes tests that name a behaviour, not lines.
 - **All PKs**: 6-character alphanumeric codes generated via `secrets.choice()` (not auto-increment)
 - **Emails**: All user content escaped via `django.utils.html.escape()`
 - **String length in migrations**: SQLite (local) does NOT enforce `CharField(max_length=N)` at the DB level — PostgreSQL (Heroku/production) does. Always verify that seed data fits within the model's `max_length` before committing. Key limits: `headline` = 64, `description` = 256, `name` = 32, `email` = 64, `question` = 64, `answer` = 256, `location` = 32, `about` (User Markdown bio) = 2000, each `tags` label (Collection/Thing) = 32 (max 12 tags).
