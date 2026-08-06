@@ -38,6 +38,7 @@ from .views.collections import (
     MyPendingInvitationsView,
 )
 from .views.contact import ContactView
+from .views.csp import csp_report
 from .views.faq import FAQAnswerView, FAQDetailView, FAQVisibilityView, ThingFAQListView
 from .views.inbox import InboxView
 from .views.notifications import NotificationsByTokenView
@@ -77,6 +78,8 @@ router.register(r"collections", CollectionViewSet, basename="collection")
 urlpatterns = [
     # Health check
     path("health/", health_check, name="health-check"),
+    # Where the browser reports a CSP violation (see core/views/csp.py)
+    path("csp-report/", csp_report, name="csp-report"),
     # Auth & RSVP Actions
     path("auth/request-link/", RequestLinkView.as_view(), name="request-link"),
     path("auth/pop-in/", PopInView.as_view(), name="pop-in"),

@@ -359,7 +359,7 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 | Headers | X-Frame-Options | DENY (prevents clickjacking) |
 | Headers | Content-Type | nosniff (prevents MIME confusion) |
 | Headers | Referrer-Policy | strict-origin-when-cross-origin |
-| Headers | Content-Security-Policy | Applied in every environment via `SecurityHeadersMiddleware` (`core/middleware.py`), plus a `Permissions-Policy` disabling camera/microphone/geolocation/payment |
+| Headers | Content-Security-Policy | Applied in every environment via `SecurityHeadersMiddleware` (`core/middleware.py`), plus a `Permissions-Policy` disabling camera/microphone/geolocation/payment. Violations are reported to **our own** `POST /api/v1/csp-report/` (`report-uri` + `report-to`) and logged to the `security` logger — a hosted collector would be handed the URL of every page a member visits, which §9 rules out |
 | Production | SSL | Forced HTTPS redirect, secure cookies |
 | Production | Admin Path | Custom path (`/oiueei-admin/`) instead of `/admin/` |
 | Production | API Renderer | JSON-only in production (BrowsableAPI disabled) |

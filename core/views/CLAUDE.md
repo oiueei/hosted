@@ -564,6 +564,32 @@ Shows a previously hidden FAQ.
 
 ---
 
+## CSP Report View (`core/views/csp.py`)
+
+### csp_report
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/csp-report/` |
+| **Permission** | Anonymous — the reporter is a browser, and it sends no credentials. `@csrf_exempt` for the same reason |
+| **Rate limit** | 30 requests/hour per IP |
+
+Where the browser reports a Content-Security-Policy violation. It exists so that a blocked injection leaves a trace instead of failing silently — the CSP is the last net under `MarkdownText`, the one place the app hands the browser markup it did not write. Reports go to the `security` logger, alongside the auth events.
+
+**First-party on purpose** (DESIGN §9): a hosted report collector would receive the URL of every page a member visits, which is exactly the tracking OIUEEI promises not to do.
+
+**A plain Django view, not a DRF one**: browsers send `application/csp-report` or `application/reports+json`, which DRF's JSON parser rejects with a 415 before the handler runs.
+
+**Always answers 204**, whatever arrives — the browser is not a client we owe an error to, and a report we can't parse is one to drop. Three guards keep the endpoint from becoming a liability of its own, since anyone can POST to it and browser extensions generate a lot of false reports:
+
+- **Body cap** (`MAX_REPORT_BYTES`, 8 kB) — the log must not be a surface an anonymous POST can write megabytes into.
+- **Field allowlist, each truncated** — only `violated-directive`, `effective-directive`, `document-uri`, `blocked-uri` and `script-sample` are logged (the two attacker-influenced ones get the shortest limits). A report can't smuggle its own payload into the log.
+- **Newlines stripped** — `blocked-uri` is attacker-chosen, and a raw newline in it would forge extra `[SECURITY]` log lines.
+
+Both report shapes are understood: the legacy `{"csp-report": {...}}` and a `report-to` batch (`[{"body": {...}}, ...]`, first entry only — the rest are repeats). Pinned by `core/tests/unit/test_csp_report.py`, whose negative assertions need the local `security_log` fixture: the `security` logger sets `propagate: False`, so plain `caplog` reads empty and every "must NOT be logged" test would pass vacuously.
+
+---
+
 ## Upload Views (`core/views/upload.py`)
 
 ### CloudinarySignatureView
@@ -858,7 +884,7 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 
 ## Middleware (`core/middleware.py`)
 
-- **`SecurityHeadersMiddleware`** — adds CSP + Permissions-Policy to every response (all environments).
+- **`SecurityHeadersMiddleware`** — adds CSP + Permissions-Policy to every response (all environments). The CSP names a violation collector in both syntaxes (`report-uri` and `report-to`, the latter resolved by the `Reporting-Endpoints` header) pointing at `csp_report` below.
 - **`DailyActivityMiddleware`** — records the authenticated user's daily activity (see [`DailyActivity`](../models/CLAUDE.md#dailyactivity)). Registered **innermost** so it can read the DRF-authenticated `request.user` *after* the view (there is no Django session — auth is JWT-cookie via DRF authenticators, so `request.user` only resolves once a view/permission touches it). A DatabaseCache key gates it to one write per user per day; failures are swallowed so tracking can never 500 a good response. Anonymous / non-DRF requests are skipped.
 
 ---
@@ -924,6 +950,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user
 - `/contact/` POST — 5 requests per hour per IP
+- `/csp-report/` POST — 30 requests per hour per IP (violation reports; browser extensions make these noisy)
 
 ### Secure Code Practices
 

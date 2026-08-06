@@ -26,6 +26,15 @@ class SecurityHeadersMiddleware:
       DRF browsable API (inline scripts) keeps working; production stays strict.
     """
 
+    # Violations are reported to our own endpoint (core/views/csp.py) — a hosted
+    # collector would be handed the URL of every page a member visits, which is
+    # the tracking DESIGN §9 rules out. Both syntaxes are sent: `report-to` is
+    # the current standard and needs the Reporting-Endpoints header to resolve
+    # the name, `report-uri` is deprecated but is still what several browsers
+    # actually implement. A browser honouring both sends one report, not two.
+    REPORT_ENDPOINT = "/api/v1/csp-report/"
+    REPORT_GROUP = "csp"
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -44,7 +53,10 @@ class SecurityHeadersMiddleware:
             "object-src 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "
+            f"report-uri {self.REPORT_ENDPOINT}; "
+            f"report-to {self.REPORT_GROUP}; "
         )
+        response["Reporting-Endpoints"] = f'{self.REPORT_GROUP}="{self.REPORT_ENDPOINT}"'
         response["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
         return response
 
