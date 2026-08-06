@@ -34,11 +34,15 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
+import { apiFetch } from '../services/api';
 import CollectionPage from './CollectionPage';
 
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
+  // Each test asserts on the exact calls it caused; without this the previous
+  // test's POSTs are still in the log and `find(...)` picks the wrong one.
+  vi.clearAllMocks();
 });
 
 describe('CollectionPage with a collection thumbnail', () => {
@@ -156,5 +160,112 @@ describe('CollectionPage inactive-things grid', () => {
     });
     expect(screen.queryByText('Inactive')).toBeNull();
     expect(screen.getByText('Old blender')).toBeInTheDocument();
+  });
+});
+
+describe('CollectionPage digest switch', () => {
+  // The per-group half of the email preferences. `User.notify_news` defaults on
+  // now, and this control is what makes that defensible rather than a pre-ticked
+  // opt-in (DESIGN §6): a member leaves one chatty group's summaries without
+  // giving up a single transactional email. So it has to be reachable, honest
+  // about its state, and it must never claim a change the server refused.
+  const MEMBER_VIEW = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    owner: 'OTHER1',
+    is_member: true,
+    digest_frequency: 'WEEKLY',
+    is_digest_muted: false,
+  };
+
+  function mockPage(collection, { postOk = true } = {}) {
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve({ ok: postOk, status: postOk ? 200 : 500, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => collection });
+    });
+    return apiFetch;
+  }
+
+  function renderCollection() {
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  test('a subscribed member is told so, and offered the way out', async () => {
+    mockPage(MEMBER_VIEW);
+    renderCollection();
+
+    expect(await screen.findByText("You get a summary of what's new here.")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
+  });
+
+  test('muting posts the member’s choice and only then moves the label', async () => {
+    const apiFetch = mockPage(MEMBER_VIEW);
+    renderCollection();
+    await screen.findByRole('button', { name: 'Turn it off' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Turn it off' }));
+
+    await waitFor(() => {
+      const post = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
+      expect(post[0]).toBe('/api/v1/collections/COL001/digest/');
+      expect(JSON.parse(post[1].body)).toEqual({ muted: true });
+    });
+    expect(await screen.findByText('Summaries from this group are off.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Turn them back on' })).toBeInTheDocument();
+  });
+
+  test('a muted member can turn them back on', async () => {
+    const apiFetch = mockPage({ ...MEMBER_VIEW, is_digest_muted: true });
+    renderCollection();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn them back on' }));
+
+    await waitFor(() => {
+      const post = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
+      expect(JSON.parse(post[1].body)).toEqual({ muted: false });
+    });
+    expect(await screen.findByText("You get a summary of what's new here.")).toBeInTheDocument();
+  });
+
+  test('a failed save leaves the label telling the truth', async () => {
+    // The label must follow the server, not the click. A member who is told
+    // "summaries are off" while the row never changed keeps receiving them and
+    // has no reason to look at this control again.
+    mockPage(MEMBER_VIEW, { postOk: false });
+    renderCollection();
+    await screen.findByRole('button', { name: 'Turn it off' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Turn it off' }));
+
+    expect(await screen.findByText(/Couldn't change that/)).toBeInTheDocument();
+    expect(screen.getByText("You get a summary of what's new here.")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
+  });
+
+  test('a group that sends no summary shows nothing to silence', async () => {
+    // DESIGN §3: there is nothing to turn off, so there is no control.
+    mockPage({ ...MEMBER_VIEW, digest_frequency: 'NONE' });
+    renderCollection();
+
+    await screen.findByText('Things from the kitchen');
+    expect(screen.queryByRole('button', { name: 'Turn it off' })).toBeNull();
+    expect(screen.queryByText("You get a summary of what's new here.")).toBeNull();
+  });
+
+  test('the owner is not offered a switch for a digest they never receive', async () => {
+    // The digest goes to `invites`; an owner changes `digest_frequency` instead.
+    mockPage({ ...MEMBER_VIEW, owner: 'ABC123', is_member: false });
+    renderCollection();
+
+    await screen.findByText('Things from the kitchen');
+    expect(screen.queryByRole('button', { name: 'Turn it off' })).toBeNull();
   });
 });
