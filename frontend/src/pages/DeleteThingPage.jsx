@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Notification } from 'hds-react';
+import { Button, Notification, IconTrash } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -72,10 +72,22 @@ export default function DeleteThingPage() {
       backTo={backPath}
       backLabel={backLabel}
     >
-      <p>{t('deleteThing.warning')}</p>
-      <div className="spacer-xs" />
+      {/* Same erasure map as DeleteCollectionPage and DeleteAccountPage. A thing
+          is not only the owner's: other people asked questions on it and it may
+          have a journey behind it, and both go with it (FAQ and ThingTransfer
+          cascade on the FK). Someone's pending hold dies here too. "This action
+          cannot be undone" said none of that. */}
+      <p><strong>{t('deleteThing.warning')}</strong></p>
+      <div className="spacer-s" />
+      <p>{t('deleteThing.whatGoesTitle')}</p>
+      <ul className="measure">
+        <li>{t('deleteThing.goesPhotos')}</li>
+        <li>{t('deleteThing.goesFaq')}</li>
+        <li>{t('deleteThing.goesHolds')}</li>
+      </ul>
+      <div className="spacer-s" />
       <div className="form-grid">
-        <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle}>
+        <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle} iconStart={<IconTrash aria-hidden="true" />}>
           {deleting ? t('common.deleting') : t('common.delete')}
         </Button>
         <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>

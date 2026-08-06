@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
-import { Button } from 'hds-react';
+import { Button, IconCrossCircle } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
@@ -59,7 +59,7 @@ export default function RemoveGuestPage() {
       <p><Trans i18nKey="removeGuest.warning" values={{ name: guestName }} components={[<strong key="0" />]} /></p>
       <div className="spacer-xs" />
       <div className="form-grid">
-        <Button fullWidth disabled={removing} onClick={handleRemove} style={btnStyle}>
+        <Button fullWidth disabled={removing} onClick={handleRemove} style={btnStyle} iconStart={<IconCrossCircle aria-hidden="true" />}>
           {removing ? t('common.removing') : t('common.remove')}
         </Button>
         <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>

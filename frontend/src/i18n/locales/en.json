@@ -397,7 +397,11 @@
   },
   "deleteThing": {
     "pageTitle": "Delete: {{headline}}",
-    "warning": "This action cannot be undone.",
+    "warning": "This cannot be undone, and some of what goes isn't yours.",
+    "whatGoesTitle": "What is deleted:",
+    "goesPhotos": "The listing and its photos.",
+    "goesFaq": "Every question other people asked about it, and their answers.",
+    "goesHolds": "Any pending request on it, and the record of the journey it has made.",
     "errorDeleting": "Error deleting thing."
   },
   "deleteCollection": {

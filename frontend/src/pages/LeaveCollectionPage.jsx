@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
-import { Button } from 'hds-react';
+import { Button, IconSignout } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
@@ -46,7 +46,7 @@ export default function LeaveCollectionPage() {
       <p><Trans i18nKey="leaveCollection.warning" values={{ headline }} components={[<strong key="0" />]} /></p>
       <div className="spacer-xs" />
       <div className="form-grid">
-        <Button fullWidth disabled={leaving} onClick={handleLeave} style={btnStyle}>
+        <Button fullWidth disabled={leaving} onClick={handleLeave} style={btnStyle} iconStart={<IconSignout aria-hidden="true" />}>
           {leaving ? t('leaveCollection.leaving') : t('leaveCollection.leave')}
         </Button>
         <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>

@@ -379,7 +379,11 @@
   },
   "deleteThing": {
     "pageTitle": "Eliminar: {{headline}}",
-    "warning": "Esta acción no se puede deshacer.",
+    "warning": "Esto no se puede deshacer, y parte de lo que se va no es tuyo.",
+    "whatGoesTitle": "Qué se borra:",
+    "goesPhotos": "El anuncio y sus fotos.",
+    "goesFaq": "Todas las preguntas que hizo otra gente sobre él, y sus respuestas.",
+    "goesHolds": "Cualquier solicitud pendiente, y el registro del recorrido que ha hecho.",
     "errorDeleting": "Error al eliminar el artículo."
   },
   "deleteCollection": {

@@ -179,6 +179,10 @@ HDS icons must always render in the default black (`--color-black-90`). Never co
 
 **When adding icons to a view:** do not set a custom colour on them unless the intent is to show a disabled/faded state using `--color-black-40`.
 
+**One recorded exception — an icon inside a button.** When an icon sits in a button's label (`iconStart`), it is part of that label, not an icon in its own right, and it takes the button's text colour: theeeme `color_06` on a primary, `color_04` on a secondary. Forcing it black would make it vanish on the darker `color_01` backgrounds — the rule would defeat the legibility it exists to protect. HDS icons render `fill: currentColor`, so this happens on its own; the point is not to "fix" it back to black. The rule stands unchanged everywhere else: an icon on its own, in an info row or a card, is black.
+
+This is used on the four irreversible confirms, which deliberately do **not** use HDS's red `variant="danger"` — a fixed red would fight every theeeme. The signal is the icon plus the page's own warning copy: `IconTrash` on delete thing / delete collection, `IconCrossCircle` on remove guest, `IconSignout` on leave the group.
+
 ---
 
 ## 12. Responsive Breakpoints

@@ -379,7 +379,11 @@
   },
   "deleteThing": {
     "pageTitle": "Eliminar: {{headline}}",
-    "warning": "Aquesta acció no es pot desfer.",
+    "warning": "Això no es pot desfer, i part del que se'n va no és teu.",
+    "whatGoesTitle": "Què s'esborra:",
+    "goesPhotos": "L'anunci i les seves fotos.",
+    "goesFaq": "Totes les preguntes que va fer altra gent sobre ell, i les seves respostes.",
+    "goesHolds": "Qualsevol sol·licitud pendent, i el registre del recorregut que ha fet.",
     "errorDeleting": "Error en eliminar l'article."
   },
   "deleteCollection": {

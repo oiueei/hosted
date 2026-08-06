@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Notification } from 'hds-react';
+import { Button, Notification, IconTrash } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -94,7 +94,7 @@ export default function DeleteCollectionPage() {
       <p className="measure"><strong>{t('deleteCollection.backupNote')}</strong></p>
       <div className="spacer-s" />
       <div className="form-grid">
-        <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle}>
+        <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle} iconStart={<IconTrash aria-hidden="true" />}>
           {deleting ? t('common.deleting') : t('common.delete')}
         </Button>
         <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
