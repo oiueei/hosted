@@ -5,10 +5,10 @@ Unit tests for OIUEEI security features.
 import string
 
 import pytest
-from django.test import Client, RequestFactory
+from django.test import Client, RequestFactory, override_settings
 
 from core.middleware import SecurityHeadersMiddleware
-from core.utils import generate_id, get_client_ip, redact_email
+from core.utils import UNKNOWN_CLIENT_IP, generate_id, get_client_ip, redact_email
 
 
 class TestSecureIdGeneration:
@@ -57,8 +57,8 @@ class TestGetClientIp:
     def test_returns_last_ip_from_forwarded_header(self):
         """Heroku appends the real client IP at the end — must take the last value."""
         request = self.factory.get("/")
-        request.META["HTTP_X_FORWARDED_FOR"] = "attacker-injected, real-client-ip"
-        assert get_client_ip(request) == "real-client-ip"
+        request.META["HTTP_X_FORWARDED_FOR"] = "10.0.0.1, 8.8.4.4"
+        assert get_client_ip(request) == "8.8.4.4"
 
     def test_spoofed_first_ip_is_ignored(self):
         """An attacker injecting a fake IP at position 0 should not affect rate limiting."""
@@ -80,7 +80,56 @@ class TestGetClientIp:
         request = self.factory.get("/")
         request.META.pop("REMOTE_ADDR", None)
         request.META.pop("HTTP_X_FORWARDED_FOR", None)
-        assert get_client_ip(request) == "unknown"
+        assert get_client_ip(request) == UNKNOWN_CLIENT_IP
+
+    def test_ipv6_client_is_accepted(self):
+        request = self.factory.get("/")
+        request.META["HTTP_X_FORWARDED_FOR"] = "2001:db8::1"
+        assert get_client_ip(request) == "2001:db8::1"
+
+    def test_unparseable_forwarded_value_falls_back_to_remote_addr(self):
+        """A non-IP would reach ipaddress.ip_network() inside django-ratelimit and
+        raise ValueError there — a 500 from the decorator, before the view runs.
+        The rate limit still has to happen, so we fall back rather than trust it."""
+        request = self.factory.get("/")
+        request.META["REMOTE_ADDR"] = "3.3.3.3"
+        request.META["HTTP_X_FORWARDED_FOR"] = "not-an-ip"
+        assert get_client_ip(request) == "3.3.3.3"
+
+    def test_unparseable_everything_buckets_together(self):
+        """Nothing parseable anywhere still has to yield a usable bucket key, and a
+        *shared* one: an unidentifiable caller must not get a fresh allowance."""
+        request = self.factory.get("/")
+        request.META["REMOTE_ADDR"] = "garbage"
+        request.META["HTTP_X_FORWARDED_FOR"] = "also-garbage"
+        assert get_client_ip(request) == UNKNOWN_CLIENT_IP
+
+    @override_settings(TRUSTED_PROXY_COUNT=0)
+    def test_forwarded_header_is_ignored_when_no_proxy_is_trusted(self):
+        """The whole point of the setting: a deployment terminating connections
+        itself must not read a header the caller wrote, or one caller mints a
+        fresh rate-limit bucket per request and every IP limit stops holding."""
+        request = self.factory.get("/")
+        request.META["REMOTE_ADDR"] = "4.4.4.4"
+        request.META["HTTP_X_FORWARDED_FOR"] = "1.2.3.4"
+        assert get_client_ip(request) == "4.4.4.4"
+
+    @override_settings(TRUSTED_PROXY_COUNT=2)
+    def test_two_trusted_hops_skips_the_cdns_own_entry(self):
+        """A CDN in front of the platform router: the client is second from the
+        right, because both proxies appended after it."""
+        request = self.factory.get("/")
+        request.META["HTTP_X_FORWARDED_FOR"] = "spoofed, 7.7.7.7, 10.0.0.9"
+        assert get_client_ip(request) == "7.7.7.7"
+
+    @override_settings(TRUSTED_PROXY_COUNT=2)
+    def test_chain_shorter_than_the_trusted_hops_falls_back(self):
+        """Fewer entries than trusted proxies means the request didn't come
+        through them — there is no entry we may believe, so use REMOTE_ADDR."""
+        request = self.factory.get("/")
+        request.META["REMOTE_ADDR"] = "6.6.6.6"
+        request.META["HTTP_X_FORWARDED_FOR"] = "1.2.3.4"
+        assert get_client_ip(request) == "6.6.6.6"
 
 
 class TestRateLimitClientIp:
@@ -109,6 +158,18 @@ class TestRateLimitClientIp:
         request.META["REMOTE_ADDR"] = "10.0.0.1"  # shared router IP — must NOT be the bucket key
         request.META["HTTP_X_FORWARDED_FOR"] = "6.6.6.6, 203.0.113.7"  # spoofed, real-client
         assert _get_ip(request) == "203.0.113.7"
+
+    def test_limiter_survives_a_forwarded_header_that_is_not_an_ip(self):
+        """django-ratelimit feeds our return value to ipaddress.ip_network(), so
+        anything unparseable raised ValueError *inside the decorator* — a 500 on
+        every rate-limited endpoint (request-link, pop-in, contact, csp-report,
+        the admin login) from one header, before the view ever ran."""
+        from django_ratelimit.core import _get_ip
+
+        request = self.factory.post("/")
+        request.META["REMOTE_ADDR"] = "203.0.113.9"
+        request.META["HTTP_X_FORWARDED_FOR"] = "'; DROP TABLE users; --"
+        assert _get_ip(request) == "203.0.113.9"
 
 
 class TestSecurityHeadersMiddleware:

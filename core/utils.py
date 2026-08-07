@@ -4,6 +4,7 @@ Utility functions for OIUEEI.
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import secrets
 import string
@@ -47,25 +48,57 @@ def generate_token():
     return "".join(secrets.choice(chars) for _ in range(26))
 
 
+# Every request that cannot be tied to a parseable address shares this bucket.
+# Fail-closed on purpose: they are rate-limited together rather than each getting
+# a fresh allowance. It is a real IPv4 address, which matters — django-ratelimit
+# feeds whatever we return straight into ``ipaddress.ip_network()``.
+UNKNOWN_CLIENT_IP = "0.0.0.0"  # noqa: S104 — a bucket key, never a bind address.
+
+
+def _valid_ip(value):
+    """``value`` if it parses as an IP address, else ``None``."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return None
+    return value
+
+
 def get_client_ip(request):
-    """Get client IP address from request.
+    """The client's IP address: the rate-limit bucket key, and what we log.
 
-    On Heroku (and similar proxies), the real client IP is the last value
-    appended by the load balancer — not the first, which is attacker-controlled.
-    Taking the rightmost IP prevents X-Forwarded-For spoofing that would otherwise
-    bypass IP-based rate limiting.
+    ``X-Forwarded-For`` is written by whoever is upstream, and the part of it that
+    can be trusted is only the tail a proxy we control appended — everything to
+    the left of that is the client's own text. ``TRUSTED_PROXY_COUNT`` says how
+    many hops that is, so the entry we read is counted from the **right**:
 
-    Assumption (I6): exactly ONE trusted proxy hop sits in front of the app (the
-    Heroku router), so the last XFF entry is the genuine client. If the deployment
-    ever gains another trusted proxy (e.g. a CDN in front of Heroku), this must
-    take the Nth-from-last entry instead — revisit it then. The value is used only
-    as a rate-limit bucket key, so a malformed header degrades to a coarse key, not
-    a security bypass.
+    - ``1`` (default) — one trusted proxy, the Heroku router. It appends the
+      connecting client's address, so the last entry is the genuine one and
+      anything the client prepended is ignored.
+    - ``0`` — nothing trusted in front of the app. ``X-Forwarded-For`` is then
+      entirely client-supplied and is not read at all; ``REMOTE_ADDR`` is the
+      only honest source. **This is the setting for a deployment that terminates
+      connections directly**, where trusting the header would let one caller mint
+      a fresh rate-limit bucket per request — every IP limit in the app (magic
+      links, pop-in, contact, CSP reports, the admin login) defeated by a header.
+    - ``N`` — a CDN in front of the router: skip the CDN's own hops.
+
+    The chosen entry is **validated** before it is returned. django-ratelimit
+    passes it to ``ipaddress.ip_network()``, so a value like ``abc`` used to raise
+    ``ValueError`` inside the decorator and answer 500 before the view ever ran.
+    Anything unparseable — or a chain shorter than the trusted hop count, i.e. a
+    request that did not come through the expected proxies — falls back to
+    ``REMOTE_ADDR``, and then to ``UNKNOWN_CLIENT_IP``.
     """
-    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[-1].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
+    hops = getattr(settings, "TRUSTED_PROXY_COUNT", 1)
+    if hops > 0:
+        chain = [part.strip() for part in request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")]
+        chain = [part for part in chain if part]
+        if len(chain) >= hops:
+            trusted = _valid_ip(chain[-hops])
+            if trusted:
+                return trusted
+    return _valid_ip(request.META.get("REMOTE_ADDR", "")) or UNKNOWN_CLIENT_IP
 
 
 def parse_localized(value):

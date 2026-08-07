@@ -126,6 +126,15 @@ heroku config:set \
 > separately: dumping stock and harvesting a mailing list are different abuses. Pick your own
 > numbers — they are infrastructure defence, so they are meant to be adjusted without notice.
 
+> **Leave alone on Heroku — proxy trust:** `TRUSTED_PROXY_COUNT` says how many proxies in front of
+> the app are trusted to have appended to `X-Forwarded-For`, and so which entry every per-IP rate
+> limit buckets on (counted from the right — only the tail of that header is written by a proxy).
+> The default `1` is exactly the Heroku router, which appends the connecting client's address, so
+> **you do not need to set it here**. It exists for the two deployments that are not this one:
+> `0` when nothing trusted sits in front (gunicorn facing the internet — otherwise the header is
+> caller-supplied and one caller mints a fresh bucket per request, defeating every IP limit in the
+> app), and `2` when a CDN sits in front of the router.
+
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
 > **Email** is configured separately — see the [Email](#email) section below. Magic-link sign-in does not work until SMTP is set.

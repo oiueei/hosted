@@ -1002,6 +1002,9 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/auth/delete-account/` POST — 3 requests per hour per user
 - `/contact/` POST — 5 requests per hour per IP
 - `/csp-report/` POST — 30 requests per hour per IP (violation reports; browser extensions make these noisy)
+- `/health/` GET+HEAD — 60 requests per minute per IP. The only anonymous endpoint that reaches the database on every hit, so uncapped it is DB amplification rather than a monitor. Far above a real monitor's cadence (5 minutes = 0.2/m). It is a plain Django view, so it answers **429 itself** (`block=False` + `request.limited`) rather than letting `Ratelimited` surface as Django's 403 — DRF's exception handler doesn't run here
+
+**Which IP a limit buckets on** is decided by `core.utils.get_client_ip` (wired in via `RATELIMIT_IP_META_KEY`), and by `TRUSTED_PROXY_COUNT`: how many proxies in front of the app are trusted to have appended to `X-Forwarded-For`. The entry is counted from the **right**, because only the tail of that header was written by a proxy we control — the rest is the caller's own text. Default `1` = the Heroku router. **A deployment with nothing trusted in front must set `0`**, or the header is entirely caller-supplied and one caller mints a fresh bucket per request, defeating every limit above. The chosen entry is validated as an IP before it is returned: django-ratelimit feeds it to `ipaddress.ip_network()`, so an unparseable value used to raise `ValueError` *inside the decorator* — a 500 on every limited endpoint from one header, before the view ran. Anything unparseable falls back to `REMOTE_ADDR`, then to a single shared bucket (`UNKNOWN_CLIENT_IP`), never to a fresh allowance.
 
 ### Secure Code Practices
 

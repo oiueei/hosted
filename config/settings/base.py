@@ -209,6 +209,18 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
 # appended by the Heroku router. Accepts a dotted path called as fn(request).
 RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
 
+# How many proxies in front of this app are trusted to have appended to
+# X-Forwarded-For. It decides which entry `core.utils.get_client_ip` reads —
+# counted from the right, since only the tail was written by a proxy we control.
+#
+# The default of 1 is the Heroku router, which appends the connecting client's
+# address: the last entry is genuine and anything the client prepended is
+# ignored. **A deployment that terminates connections directly must set 0** —
+# there, the whole header is client-supplied, and reading it lets one caller mint
+# a fresh rate-limit bucket per request, defeating every IP limit in the app.
+# Raise it above 1 only when another trusted proxy (a CDN) sits in front.
+TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "1"))
+
 # Invitation emails one account may send per day. This is **operator policy,
 # not a product rule**: it protects the deployment's own sending domain and
 # reputation, and only the operator knows what their provider tolerates. The
