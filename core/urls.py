@@ -8,6 +8,7 @@ Never expose real codes (booking_code, reservation_code, etc.) in URLs.
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import path
+from django_ratelimit.decorators import ratelimit
 from rest_framework.routers import DefaultRouter
 
 from .views.auth import (
@@ -58,6 +59,7 @@ from .views.upload import CloudinarySignatureView
 from .views.users import UserDetailView
 
 
+@ratelimit(key="ip", rate="60/m", method=("GET", "HEAD"), block=False)
 def health_check(request):
     """Liveness + database health, for uptime monitors.
 
@@ -65,7 +67,22 @@ def health_check(request):
     failure mode a monitor most needs to catch. The check is one SELECT 1, so a
     5-minute polling cadence costs nothing. The body never carries error detail:
     this endpoint is public.
+
+    Rate-limited because it is the one anonymous endpoint that reaches the
+    database on every hit: uncapped, it is cheap DB amplification rather than a
+    monitor. 60/m per IP sits far above any real monitor (a 5-minute cadence is
+    0.2/m) and far below a useful flood. HEAD counts too — monitors prefer it, so
+    a limiter scoped to GET alone would leave the flood one verb away.
+
+    ``block=False`` and an explicit 429: this is a plain Django view, not a DRF
+    one, so the handler that turns django-ratelimit's ``Ratelimited`` into a 429
+    (``core.exceptions.api_exception_handler``) never runs here — blocking would
+    answer 403, and "forbidden" is the wrong thing to tell a monitor about a
+    throttle. The refusal is returned before the database is touched, which is
+    the entire point of the cap.
     """
+    if getattr(request, "limited", False):
+        return JsonResponse({"status": "throttled"}, status=429)
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
