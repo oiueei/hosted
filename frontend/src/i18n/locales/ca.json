@@ -871,6 +871,9 @@
     "linkFromContact": "Disseny, producte, codi o beta-testing? Col·laboracions →"
   },
   "footer": {
-    "madeIn": "Fet amb ♥︎ des de la Zona Franca, Barcelona, Catalunya, Espanya, UE"
+    "madeIn": "Fet amb ♥︎ des de la Zona Franca, Barcelona, Catalunya, Espanya, UE",
+    "navLabel": "Sobre OIUEEI",
+    "about": "Què és OIUEEI",
+    "legal": "Privacitat i avís legal"
   }
 }

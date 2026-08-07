@@ -292,6 +292,21 @@ body {
   padding: var(--spacing-m) var(--spacing-s) var(--spacing-l);
 }
 
+/* The colophon's two doors (what OIUEEI is, and the page the privacy claims
+   point at). 44px targets, because for a signed-out reader of a public
+   collection these are the only two links on the page. */
+.site-footer-links {
+  margin-bottom: var(--spacing-2-xs);
+}
+
+.site-footer-links a {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 var(--spacing-2-xs);
+  color: inherit;
+}
+
 .form-actions {
   padding: var(--spacing-l) 0;
 }
