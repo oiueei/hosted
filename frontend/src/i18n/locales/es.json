@@ -205,7 +205,17 @@
     "viewCollection": "¡Puedo ayudar!",
     "reportedLabel": "Han denunciado una publicación",
     "reportedBody": "Alguien ha denunciado «{{thing_headline}}». Échale un vistazo.",
-    "viewThing": "Ver publicación"
+    "viewThing": "Ver publicación",
+    "memberLeftLabel": "Alguien ha dejado el grupo",
+    "memberLeftBody": "{{member_name}} ha dejado “{{collection_headline}}”.",
+    "proposedLabel": "Te recomiendan a alguien",
+    "proposedBody": "{{proposer_name}} propone invitar a {{email}} a “{{collection_headline}}”. No se ha contactado con nadie: la decisión es tuya.",
+    "proposalApprovedLabel": "Tu recomendación ha salido adelante",
+    "proposalApprovedBody": "Se ha invitado a {{email}} a “{{collection_headline}}”. Gracias por acercarle al grupo.",
+    "proposalDeclinedLabel": "Recomendación no aceptada",
+    "proposalDeclinedBody": "Quien lleva “{{collection_headline}}” ha decidido no invitar a {{email}} esta vez. No se ha contactado con nadie, y no se le ha dicho por qué.",
+    "viewProposal": "Decidir ahora",
+    "viewGroup": "Abrir el grupo"
   },
   "collectionPage": {
     "editCollection": "Editar colección",

@@ -229,11 +229,13 @@ def approve_proposal(proposal):
 
     InAppNotification.objects.create(
         user=proposal.proposer,
-        type=InAppNotification.Type.INVITE_PROPOSED,
+        type=InAppNotification.Type.INVITE_PROPOSAL_APPROVED,
         payload={
             "collection_headline": collection.headline,
             "collection_code": collection.code,
             "email": proposal.email,
+            # Kept for the inbox's back-compatibility branch, which still has to
+            # read rows written as INVITE_PROPOSED before this type existed.
             "approved": True,
         },
     )

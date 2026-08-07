@@ -223,7 +223,17 @@
     "viewCollection": "I can help!",
     "reportedLabel": "A listing was reported",
     "reportedBody": "Someone reported “{{thing_headline}}”. Please take a look.",
-    "viewThing": "View listing"
+    "viewThing": "View listing",
+    "memberLeftLabel": "Someone left the group",
+    "memberLeftBody": "{{member_name}} has left “{{collection_headline}}”.",
+    "proposedLabel": "A guest has been recommended",
+    "proposedBody": "{{proposer_name}} suggests inviting {{email}} to “{{collection_headline}}”. Nobody has been contacted — it's your call.",
+    "proposalApprovedLabel": "Your recommendation went through",
+    "proposalApprovedBody": "{{email}} has been invited to “{{collection_headline}}”. Thanks for bringing them in.",
+    "proposalDeclinedLabel": "Recommendation not taken up",
+    "proposalDeclinedBody": "The owner of “{{collection_headline}}” decided not to invite {{email}} this time. Nobody was contacted, and they haven't been told why.",
+    "viewProposal": "Decide now",
+    "viewGroup": "Open the group"
   },
   "collectionPage": {
     "editCollection": "Edit collection",

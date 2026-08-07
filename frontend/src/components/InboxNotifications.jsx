@@ -7,9 +7,16 @@ import { useLocalized } from '../utils/localized';
 
 const ALERT_TYPES = new Set([
   'COLLECTION_DELETED', 'COLLECTION_REVOKED', 'BOOKING_REJECTED', 'FAQ_HIDDEN', 'INVITE_REJECTED',
-  'THING_REPORTED',
+  'THING_REPORTED', 'INVITE_PROPOSAL_DECLINED',
 ]);
-const SUCCESS_TYPES = new Set(['BOOKING_ACCEPTED']);
+const SUCCESS_TYPES = new Set(['BOOKING_ACCEPTED', 'INVITE_PROPOSAL_APPROVED']);
+
+// The owner said yes to a recommendation. Written as INVITE_PROPOSAL_APPROVED
+// since the 2026-08 design round; rows created before that are an
+// INVITE_PROPOSED carrying `approved: true`, and both must read the same.
+const isProposalApproved = (n) =>
+  n.type === 'INVITE_PROPOSAL_APPROVED'
+  || (n.type === 'INVITE_PROPOSED' && n.payload?.approved);
 
 const notificationType = (type) => {
   if (ALERT_TYPES.has(type)) return 'alert';
@@ -88,6 +95,13 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'FAQ_HIDDEN': return t('home.faqHiddenLabel');
       case 'INVITE_REJECTED': return t('home.inviteRejectedLabel');
       case 'THING_REPORTED': return t('home.reportedLabel');
+      case 'MEMBER_LEFT': return t('home.memberLeftLabel');
+      case 'INVITE_PROPOSAL_APPROVED': return t('home.proposalApprovedLabel');
+      case 'INVITE_PROPOSAL_DECLINED': return t('home.proposalDeclinedLabel');
+      case 'INVITE_PROPOSED':
+        return isProposalApproved(n)
+          ? t('home.proposalApprovedLabel')
+          : t('home.proposedLabel');
       default: return t('home.broadcastLabel', { owner_name: p.owner_name, collection_headline: p.collection_headline });
     }
   };
@@ -105,6 +119,13 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'FAQ_HIDDEN': return t('home.faqHiddenBody', { thing_headline: p.thing_headline, owner_name: p.owner_name });
       case 'INVITE_REJECTED': return t('home.inviteRejectedBody', { collection_headline: p.collection_headline, invitee_name: p.invitee_name });
       case 'THING_REPORTED': return t('home.reportedBody', { thing_headline: p.thing_headline });
+      case 'MEMBER_LEFT': return t('home.memberLeftBody', { collection_headline: p.collection_headline, member_name: p.member_name });
+      case 'INVITE_PROPOSAL_APPROVED': return t('home.proposalApprovedBody', { collection_headline: p.collection_headline, email: p.email });
+      case 'INVITE_PROPOSAL_DECLINED': return t('home.proposalDeclinedBody', { collection_headline: p.collection_headline, email: p.email });
+      case 'INVITE_PROPOSED':
+        return isProposalApproved(n)
+          ? t('home.proposalApprovedBody', { collection_headline: p.collection_headline, email: p.email })
+          : t('home.proposedBody', { collection_headline: p.collection_headline, proposer_name: p.proposer_name, email: p.email });
       default: return t('home.broadcastBody', { message: p.message });
     }
   };
@@ -116,6 +137,19 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     const p = n.payload || {};
     if (n.type === 'BROADCAST' && p.collection_code) {
       return { to: `/collections/${p.collection_code}`, label: t('home.viewCollection') };
+    }
+    // A pending recommendation is a question, and the guest list is where the
+    // owner answers it — landing them on the collection would leave them hunting
+    // for the button. The two resolved states just point at the group.
+    if (n.type === 'INVITE_PROPOSED' && !isProposalApproved(n) && p.collection_code) {
+      return { to: `/collections/${p.collection_code}/invites`, label: t('home.viewProposal') };
+    }
+    if (
+      (n.type === 'MEMBER_LEFT' || n.type === 'INVITE_PROPOSAL_APPROVED'
+        || n.type === 'INVITE_PROPOSAL_DECLINED' || n.type === 'INVITE_PROPOSED')
+      && p.collection_code
+    ) {
+      return { to: `/collections/${p.collection_code}`, label: t('home.viewGroup') };
     }
     if (p.thing_code) {
       const to = p.collection_code

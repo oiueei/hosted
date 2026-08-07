@@ -131,3 +131,132 @@ describe('InboxNotifications (O1)', () => {
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/inbox/', expect.anything());
   });
 });
+
+/**
+ * Every type the backend writes must SAY something.
+ *
+ * These four had no `case` in notificationLabel/notificationBody, so they fell
+ * through to the BROADCAST default and rendered a card headed " — {headline}"
+ * with an empty body. The decline was the worst of them: its payload carries
+ * `owner_name`, so it drew a blank message apparently *from the owner*.
+ *
+ * The assertion that matters is the negative one — the body is not empty and is
+ * not broadcast copy. Adding a Type to core/models/notification.py without a
+ * matching case fails here rather than shipping a silent card.
+ */
+describe('InboxNotifications — every type says something', () => {
+  const CASES = [
+    {
+      what: 'a member leaving the group tells the owner who left',
+      notification: {
+        code: 'NOTA01',
+        type: 'MEMBER_LEFT',
+        payload: { collection_headline: 'Toy library', member_name: 'Lulu', collection_code: 'COL001' },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/Lulu/, /Toy library/],
+      links: '/collections/COL001',
+    },
+    {
+      what: 'a pending recommendation names the member, the guest and whose call it is',
+      notification: {
+        code: 'NOTA02',
+        type: 'INVITE_PROPOSED',
+        payload: {
+          collection_headline: 'Toy library',
+          collection_code: 'COL001',
+          proposer_name: 'Lele',
+          email: 'nou@vei.cat',
+          note: 'my downstairs neighbour',
+        },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/Lele/, /nou@vei\.cat/, /your call/i],
+      // The guest list is where the owner actually answers it.
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'an approved recommendation tells the proposer their guest is in',
+      notification: {
+        code: 'NOTA03',
+        type: 'INVITE_PROPOSAL_APPROVED',
+        payload: {
+          collection_headline: 'Toy library',
+          collection_code: 'COL001',
+          email: 'nou@vei.cat',
+          approved: true,
+        },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/nou@vei\.cat/, /Toy library/],
+      links: '/collections/COL001',
+    },
+    {
+      what: 'a declined recommendation says no reason travelled with it',
+      notification: {
+        code: 'NOTA04',
+        type: 'INVITE_PROPOSAL_DECLINED',
+        payload: {
+          collection_headline: 'Toy library',
+          collection_code: 'COL001',
+          owner_name: 'Lili',
+          email: 'nou@vei.cat',
+        },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/nou@vei\.cat/, /nobody was contacted/i, /haven't been told why/i],
+      links: '/collections/COL001',
+    },
+  ];
+
+  test.each(CASES)('$what', async ({ notification, says, links }) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok([notification]);
+      if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
+      if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
+      return ok([]);
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+
+    for (const phrase of says) {
+      expect(await screen.findByText(phrase, { exact: false })).toBeInTheDocument();
+    }
+    // Not the broadcast fallback: that renders an empty body and a bare " — ".
+    expect(container.textContent).not.toMatch(/\s—\s*Toy library\s*$/);
+    expect(container.textContent).not.toMatch(/\{\{\w+\}\}/);
+    expect(screen.getByRole('link', { name: /decide now|open the group/i }))
+      .toHaveAttribute('href', links);
+  });
+
+  test('a recommendation approved before the dedicated type existed still reads right', async () => {
+    // Legacy row: INVITE_PROPOSED carrying `approved: true`. Without the
+    // back-compatibility branch it would read as a request to decide — telling
+    // the proposer to go and approve their own recommendation.
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok([{
+        code: 'NOTA05',
+        type: 'INVITE_PROPOSED',
+        payload: { collection_headline: 'Toy library', collection_code: 'COL001', email: 'nou@vei.cat', approved: true },
+        created: '2026-08-06T10:00:00Z',
+      }]);
+      if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
+      if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
+      return ok([]);
+    });
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/recommendation went through/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /open the group/i }))
+      .toHaveAttribute('href', '/collections/COL001');
+  });
+});

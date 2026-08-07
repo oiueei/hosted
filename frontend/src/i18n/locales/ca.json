@@ -205,7 +205,17 @@
     "viewCollection": "Puc ajudar!",
     "reportedLabel": "Han denunciat una publicació",
     "reportedBody": "Algú ha denunciat «{{thing_headline}}». Fes-hi un cop d'ull.",
-    "viewThing": "Mostra la publicació"
+    "viewThing": "Mostra la publicació",
+    "memberLeftLabel": "Algú ha deixat el grup",
+    "memberLeftBody": "{{member_name}} ha deixat “{{collection_headline}}”.",
+    "proposedLabel": "Et recomanen algú",
+    "proposedBody": "{{proposer_name}} proposa convidar {{email}} a “{{collection_headline}}”. No s'ha contactat amb ningú: la decisió és teva.",
+    "proposalApprovedLabel": "La teva recomanació ha tirat endavant",
+    "proposalApprovedBody": "S'ha convidat {{email}} a “{{collection_headline}}”. Gràcies per acostar-l'hi.",
+    "proposalDeclinedLabel": "Recomanació no acceptada",
+    "proposalDeclinedBody": "Qui porta “{{collection_headline}}” ha decidit no convidar {{email}} aquesta vegada. No s'ha contactat amb ningú, i no se li ha dit per què.",
+    "viewProposal": "Decidir ara",
+    "viewGroup": "Obrir el grup"
   },
   "collectionPage": {
     "editCollection": "Editar col·lecció",

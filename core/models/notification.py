@@ -21,9 +21,17 @@ class InAppNotification(models.Model):
         MEMBER_LEFT = "MEMBER_LEFT"
         THING_REPORTED = "THING_REPORTED"
         # A member suggested somebody; the owner has to approve before anything
-        # is sent. INVITE_PROPOSAL_DECLINED goes back to the proposer — with no
+        # is sent. The two answers go back to the proposer — the decline with no
         # reason attached, deliberately.
+        #
+        # Three types, not two: APPROVED used to be an INVITE_PROPOSED carrying
+        # `approved: True`, which meant one type addressed two audiences with
+        # opposite meanings ("please decide" to the owner, "they said yes" to the
+        # proposer) and no reader could tell them apart without inspecting the
+        # payload. Rows written before this split still carry the flag, so the
+        # inbox keeps reading it.
         INVITE_PROPOSED = "INVITE_PROPOSED"
+        INVITE_PROPOSAL_APPROVED = "INVITE_PROPOSAL_APPROVED"
         INVITE_PROPOSAL_DECLINED = "INVITE_PROPOSAL_DECLINED"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
