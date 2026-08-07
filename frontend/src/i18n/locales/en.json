@@ -693,7 +693,8 @@
     "lendCount_one": "{{count}} loan",
     "lendCount_other": "{{count}} loans",
     "rentCount_one": "{{count}} rental",
-    "rentCount_other": "{{count}} rentals"
+    "rentCount_other": "{{count}} rentals",
+    "dueBackOn": "Due back on {{date}}"
   },
   "share": {
     "pageTitle": "Join us on OIUEEI",

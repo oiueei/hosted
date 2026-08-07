@@ -377,12 +377,13 @@ The `ThingTransfer` model tracks the physical journey of a thing between users (
 | `booking` | ForeignKey(BookingPeriod) | No | The booking that triggered this transfer (null for manual transfers) |
 | `lent_date` | DateField | **Yes** | Date the thing was handed over |
 | `returned_date` | DateField | No | Date the thing was returned (null = still with `to_user`) |
+| `auto_closed` | BooleanField | No | The return date was **inferred**, not confirmed: `close_transfers` wrote it because the booking's `end_date` passed, and nobody said the thing came back. The journey timeline reads it and renders "Due back on {date}" instead of "Returned on {date}". Default `False`, i.e. a genuine handover. Added in the 2026-08 design round — the journey is the product's most human surface ("this item has travelled to 4 homes") and it must not narrate a handover it never witnessed |
 | `created` | DateTimeField | Auto | Record creation timestamp |
 
 ### Business Rules
 
 1. **Created on booking acceptance** — When `accept_booking()` is called in the booking service, a `ThingTransfer` is automatically created with `from_user` = owner, `to_user` = requester, and `lent_date` = booking's `start_date` (or today for types without dates).
-2. **Closed by management command** — The `close_transfers` daily command sets `returned_date = today` for transfers linked to ACCEPTED bookings whose `end_date` has passed.
+2. **Closed by management command, and marked as a guess** — The `close_transfers` daily command sets `returned_date = today` **and `auto_closed = True`** for transfers linked to ACCEPTED bookings whose `end_date` has passed. Nobody confirms the return; the due date passing is the whole of what is known, so the UI says "due back on" rather than claiming a handover. A transfer already closed with a real date is skipped and keeps `auto_closed = False`.
 3. **Booking FK uses SET_NULL** — If a booking is deleted, the transfer record survives (the physical handoff happened regardless). The two user FKs follow the same logic for account deletion: the hop stays, the name goes (`unique_homes` counts the nulls as at most one former home; the serializer returns `""` names and the frontend renders "former member").
 4. **Ordering** — Default ordering is `-lent_date` (most recent first).
 

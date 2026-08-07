@@ -68,6 +68,14 @@ class ThingTransfer(models.Model):
     )
     lent_date = models.DateField()
     returned_date = models.DateField(null=True, blank=True)
+    # The return date was written by the `close_transfers` command when the
+    # booking's end_date passed — nobody confirmed the thing actually came back.
+    # The journey is the product's most human surface ("this item has travelled
+    # to 4 homes"), so it must not narrate a handover that may not have
+    # happened: the timeline says "due back on" rather than "returned on" for
+    # these. Clearing it is what a future owner-confirms-the-return step would
+    # do; until then, an auto-closed hop is honest about being a guess.
+    auto_closed = models.BooleanField(default=False)
     created = models.DateTimeField(default=timezone.now)
 
     class Meta:

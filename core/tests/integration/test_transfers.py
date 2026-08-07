@@ -91,3 +91,44 @@ class TestThingTransferEndpoint:
         response = authenticated_client.get(f"/api/v1/things/{thing.code}/")
         assert response.status_code == 200
         assert response.json()["transfer_count"] == 1
+
+
+@pytest.mark.django_db
+class TestAutoClosedReachesTheJourney:
+    """The "nobody confirmed this" flag has to survive as far as the page.
+
+    `close_transfers` stamps a return date once the booking's end_date passes;
+    the journey used to print that as "Returned on {date}", narrating a handover
+    nobody witnessed. The flag is only worth writing if the UI can read it.
+    """
+
+    def test_an_auto_closed_hop_is_marked_as_such_in_the_response(
+        self, authenticated_client, user, user2, thing
+    ):
+        transfer = ThingTransfer.objects.create(
+            thing=thing,
+            from_user=user,
+            to_user=user2,
+            lent_date=date.today() - timedelta(days=7),
+            returned_date=date.today(),
+            auto_closed=True,
+        )
+
+        response = authenticated_client.get(f"/api/v1/things/{thing.code}/transfers/")
+
+        assert response.status_code == 200
+        hop = next(t for t in response.json()["transfers"] if t["code"] == transfer.code)
+        assert hop["auto_closed"] is True
+
+    def test_a_confirmed_return_is_not_marked(self, authenticated_client, user, user2, thing):
+        ThingTransfer.objects.create(
+            thing=thing,
+            from_user=user,
+            to_user=user2,
+            lent_date=date.today() - timedelta(days=7),
+            returned_date=date.today(),
+        )
+
+        response = authenticated_client.get(f"/api/v1/things/{thing.code}/transfers/")
+
+        assert response.json()["transfers"][0]["auto_closed"] is False

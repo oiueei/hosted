@@ -10,7 +10,9 @@ import time_machine
 from django.core.management import call_command
 
 from core.models.booking import BookingPeriod
+from core.models.thing import Thing
 from core.models.transfer import ThingTransfer
+from core.models.user import User
 from core.services.booking_service import accept_booking
 
 
@@ -211,3 +213,63 @@ class TestCloseTransfersCommand:
         transfer = ThingTransfer.objects.get(thing=thing)
         assert transfer.returned_date is None
         assert "Closed 0 transfers" in out.getvalue()
+
+
+@pytest.mark.django_db
+class TestAutoClosedIsNotAConfirmedReturn:
+    """`close_transfers` infers a return; it never witnesses one.
+
+    The journey timeline is the product's most human surface — "this item has
+    travelled to 4 homes" — and it used to print "Returned on {date}" for a hop
+    that nobody confirmed: the command simply stamped today's date once the
+    booking's end_date had passed. `auto_closed` is what lets the UI say "due
+    back on" instead of narrating a handover that may not have happened.
+    """
+
+    def _overdue_transfer(self):
+        owner = User.objects.create(code="ACOWN1", email="acowner@test.com", name="Owner")
+        borrower = User.objects.create(code="ACBOR1", email="acbor@test.com", name="Borrower")
+        thing = Thing.objects.create(
+            code="ACTHN1", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        booking = BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=borrower,
+            requester_email=borrower.email,
+            owner_code=owner,
+            start_date=date.today() - timedelta(days=10),
+            end_date=date.today() - timedelta(days=1),
+            status="ACCEPTED",
+        )
+        return ThingTransfer.objects.create(
+            thing=thing,
+            from_user=owner,
+            to_user=borrower,
+            booking=booking,
+            lent_date=date.today() - timedelta(days=10),
+        )
+
+    def test_the_command_marks_what_it_closes_as_inferred(self):
+        transfer = self._overdue_transfer()
+        assert transfer.auto_closed is False
+
+        call_command("close_transfers", stdout=StringIO())
+
+        transfer.refresh_from_db()
+        assert transfer.returned_date == date.today()
+        # The flag is the whole point: the date is a guess and says so.
+        assert transfer.auto_closed is True
+
+    def test_a_transfer_closed_by_a_real_handover_stays_unflagged(self):
+        transfer = self._overdue_transfer()
+        transfer.returned_date = date.today() - timedelta(days=2)
+        transfer.save(update_fields=["returned_date"])
+
+        call_command("close_transfers", stdout=StringIO())
+
+        transfer.refresh_from_db()
+        # Already returned, so the command skips it — and it keeps reading as a
+        # confirmed return rather than being retroactively downgraded.
+        assert transfer.auto_closed is False
+        assert transfer.returned_date == date.today() - timedelta(days=2)

@@ -675,7 +675,8 @@
     "lendCount_one": "{{count}} préstec",
     "lendCount_other": "{{count}} préstecs",
     "rentCount_one": "{{count}} lloguer",
-    "rentCount_other": "{{count}} lloguers"
+    "rentCount_other": "{{count}} lloguers",
+    "dueBackOn": "Havia de tornar el {{date}}"
   },
   "share": {
     "pageTitle": "Uneix-te a OIUEEI",

@@ -2,7 +2,10 @@
 Management command to close completed transfers.
 
 Finds ThingTransfer records linked to ACCEPTED bookings whose end_date
-has passed, and sets returned_date. Run daily via Heroku Scheduler.
+has passed, and sets returned_date — flagging each `auto_closed`, because
+nobody confirmed the thing came back; the due date passing is all we know.
+The journey timeline reads that flag and says "due back on" instead of
+"returned on". Run daily via Heroku Scheduler.
 """
 
 from datetime import date
@@ -27,5 +30,6 @@ class Command(BaseCommand):
             booking__status=BookingPeriod.Status.ACCEPTED,
         )
 
-        count = transfers.update(returned_date=today)
+        # `auto_closed` marks these as inferred, not confirmed — see the model.
+        count = transfers.update(returned_date=today, auto_closed=True)
         self.stdout.write(self.style.SUCCESS(f"Closed {count} transfers"))

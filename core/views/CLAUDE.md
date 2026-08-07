@@ -891,7 +891,7 @@ The reporter is stored server-side only (`Report.reporter`) as a moderation trai
 
 Daily command (`python manage.py close_transfers`) that closes overdue transfers:
 - Finds unreturned `ThingTransfer` records linked to `ACCEPTED` bookings whose `end_date < today`.
-- Sets `returned_date = today` via bulk update.
+- Sets `returned_date = today` **and `auto_closed = True`** via bulk update — the date is inferred from the due date passing, not confirmed by anyone, and the journey timeline renders those hops as "Due back on" rather than "Returned on".
 - Outputs count of closed transfers.
 
 ### Management Command: `send_reminders`

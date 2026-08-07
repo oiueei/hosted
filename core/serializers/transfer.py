@@ -25,6 +25,7 @@ class ThingTransferSerializer(serializers.ModelSerializer):
             "to_user_name",
             "lent_date",
             "returned_date",
+            "auto_closed",
         ]
 
     def get_from_user_name(self, obj):

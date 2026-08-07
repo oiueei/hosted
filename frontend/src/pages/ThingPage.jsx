@@ -313,8 +313,13 @@ export default function ThingPage() {
                   {tr.to_user_name || t('common.formerMember')}
                   {' — '}
                   {t('transfers.lentOn', { date: new Date(tr.lent_date).toLocaleDateString(i18n.language) })}
+                  {/* `auto_closed` means the daily command wrote this date when
+                      the booking's end_date passed — nobody said the thing came
+                      back. The journey is the product's most human surface, so
+                      it says "due back on" rather than claiming a handover we
+                      never witnessed. */}
                   {tr.returned_date && (
-                    <> · {t('transfers.returnedOn', { date: new Date(tr.returned_date).toLocaleDateString(i18n.language) })}</>
+                    <> · {t(tr.auto_closed ? 'transfers.dueBackOn' : 'transfers.returnedOn', { date: new Date(tr.returned_date).toLocaleDateString(i18n.language) })}</>
                   )}
                 </li>
               ))}
