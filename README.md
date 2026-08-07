@@ -193,7 +193,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/things/{code}/activate/` | Reactivate an inactive thing (owner only) |
 | POST | `/api/v1/things/{code}/hide/` | Set an active thing to inactive (owner only) |
 | POST | `/api/v1/things/{code}/report/` | Report a listing anonymously (logged-in non-owners) |
-| GET | `/api/v1/invited-things/` | List things from invited collections |
+| GET | `/api/v1/invited-things/` | List things from invited collections (paginated). Backs the frontend's `/shared` page — everything your groups are sharing, in one place |
 
 ### Bookings
 | Method | URL | Description |

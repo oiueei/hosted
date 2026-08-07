@@ -126,7 +126,8 @@
     "legal": "Legal y privacidad — OIUEEI",
     "contact": "Contacto — OIUEEI",
     "collaborate": "Colabora — OIUEEI",
-    "ownerBookings": "Solicitudes para mí — OIUEEI"
+    "ownerBookings": "Solicitudes para mí — OIUEEI",
+    "sharedThings": "Compartido conmigo — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -875,5 +876,13 @@
     "navLabel": "Sobre OIUEEI",
     "about": "Qué es OIUEEI",
     "legal": "Privacidad y aviso legal"
+  },
+  "sharedThings": {
+    "pageTitle": "Compartido conmigo",
+    "intro": "Todo lo que ahora mismo comparten los grupos a los que perteneces, lo más nuevo primero.",
+    "homeLink": "Ver todo lo que hay en estos grupos →",
+    "empty": "Todavía no se ha compartido nada en tus grupos.",
+    "emptyCta": "Volver a mis grupos",
+    "errorLoading": "No hemos podido cargar lo que se ha compartido contigo."
   }
 }
