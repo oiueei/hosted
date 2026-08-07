@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, StatusLabel, Tag, Table, IconCrossCircle } from 'hds-react';
 import { apiFetch } from '../services/api';

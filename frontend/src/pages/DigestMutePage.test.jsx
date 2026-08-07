@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import DigestMutePage from './DigestMutePage';
 

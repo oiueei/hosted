@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Linkbox, Notification, Tag, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router';
 import { apiFetch } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 

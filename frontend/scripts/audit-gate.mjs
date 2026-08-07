@@ -22,22 +22,14 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-export const ALLOWED = {
-  'GHSA-qwww-vcr4-c8h2': {
-    package: 'react-router',
-    why:
-      'RSC Mode CSRF bypass. OIUEEI runs no RSC and no React Router server: ' +
-      'no @react-router/* framework package is installed, App.jsx mounts a ' +
-      'client-side <BrowserRouter>, and the build is static files served by ' +
-      'WhiteNoise. There is no server route handler for an action to reach.',
-    noFix:
-      'Fixed in react-router 8.3.0, which is unpublished — 7.18.2 is the ' +
-      'latest release. npm can only suggest downgrading to 7.11.0, which ' +
-      'reintroduces the four advisories 7.18.2 fixes, including the ' +
-      'open redirect in <Link>/useNavigate (CVE-2025-68470 bypass).',
-    remove: 'When react-router 8.3.0 ships and the app is upgraded to it.',
-  },
-};
+// Empty, and worth keeping that way. The one entry this list ever held —
+// GHSA-qwww-vcr4-c8h2, the react-router RSC-mode CSRF bypass — was accepted
+// because its fix (react-router 8.3.0) was unpublished at the time. 8.3.0 has
+// since shipped, so the debt was paid the way an allowlist entry is meant to be:
+// by taking the upgrade (react-router-dom 7.18.2 -> react-router 8.3.0; v8
+// consolidated the two packages, so there is no react-router-dom 8.x) and
+// deleting the entry, not by re-justifying it.
+export const ALLOWED = {};
 
 export const BLOCKING = new Set(['high', 'critical']);
 

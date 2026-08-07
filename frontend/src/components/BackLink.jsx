@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { IconArrowLeft } from 'hds-react';
 
 export default function BackLink({ to, label }) {

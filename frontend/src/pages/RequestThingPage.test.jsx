@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import RequestThingPage from './RequestThingPage';
 

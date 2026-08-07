@@ -528,7 +528,9 @@ Smoke tests and automated accessibility checks using vitest + testing-library + 
 
 ## Tech Stack
 
-- **React 19** + **Vite 7** + **React Router 7**
+- **React 19** + **Vite 7** + **React Router 8**
+
+**Import from `react-router`, never `react-router-dom`.** v8 consolidated the two packages — there is no `react-router-dom@8` — so the dependency is `react-router` alone and every `import { Link, useNavigate, … } from 'react-router'`. Test files that stub the router (`vi.mock`) must name the same specifier, or the mock silently applies to nothing. The upgrade came from the 2026-08 security round: it is what closed GHSA-qwww-vcr4-c8h2 and let the audit gate's allowlist go back to empty. It also raised the React floor — react-router 8 peer-depends on `react >= 19.2.7`, so `react`/`react-dom` moved to `^19.2.8` with it.
 - **hds-react** — Helsinki Design System React components (npm `^6.0.5`)
 - **hds-design-tokens** — HDS CSS custom property tokens (npm `^6.0.5`)
 - **hds-core** — HDS core CSS and base styles (npm `^6.0.5`)
@@ -541,7 +543,7 @@ An allowlist entry requires **both** conditions, written into the script next to
 
 The decision is a pure function (`evaluateAudit(report, allowlist)`); running npm, printing and exiting sit around it, and importing the module runs nothing. That split exists so `scripts/audit-gate.test.js` can exercise the gate itself — a gate nobody tests can quietly stop guarding, and the failure looks exactly like a green build. The suite pins what blocks (unlisted high/critical), what doesn't (moderate/low, listed entries), that listing one advisory never stops the others blocking, that a stale entry is reported but never fails the build, that `npm audit`'s non-zero exit on findings is normal while a scanner that **couldn't run** is fatal, and that every real allowlist entry carries all three justifications.
 
-Currently allowed: **GHSA-qwww-vcr4-c8h2** (react-router RSC-mode CSRF). OIUEEI ships no RSC — no `@react-router/*` framework package is installed, `App.jsx` mounts a client-side `<BrowserRouter>`, and the build is static files served by WhiteNoise, so there is no server route handler for an action to reach. It is fixed in react-router `8.3.0`, which is **unpublished**; npm's only suggestion is a downgrade to 7.11.0, which reintroduces the four advisories 7.18.2 fixes — including the open redirect in `<Link>`/`useNavigate` (CVE-2025-68470 bypass).
+**Currently allowed: nothing** — `ALLOWED` is `{}`, and that is the state to keep it in. The only entry it ever held was **GHSA-qwww-vcr4-c8h2** (react-router RSC-mode CSRF), accepted because the fix, react-router `8.3.0`, was unpublished and npm's only suggestion was a downgrade to 7.11.0 that reintroduced four advisories 7.18.2 had fixed. 8.3.0 shipped, so the debt was paid the way an allowlist entry is meant to be — by taking the upgrade and deleting the entry, not by re-justifying it. When the list is empty, `every real entry justifies itself on both counts` iterates nothing, so a companion test pins the bar itself against entries that must fail it; keep that pairing if you ever add an entry back.
 
 ### `overrides` in `package.json`
 

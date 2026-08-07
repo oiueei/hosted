@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation, Trans } from 'react-i18next';
 import { Button, IconSignout } from 'hds-react';
 import { apiFetch } from '../services/api';

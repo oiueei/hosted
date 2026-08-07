@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router';
 import { useTranslation, Trans } from 'react-i18next';
 import { TextInput, TextArea, Button, ToggleButton, Select } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';

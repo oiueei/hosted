@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { TextInput, Button, Notification, Table, IconEnvelope, IconCrossCircle } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';

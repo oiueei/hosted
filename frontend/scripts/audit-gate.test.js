@@ -150,16 +150,39 @@ describe('the allowlist', () => {
     expect(text).toContain('when fixed');
   });
 
+  // The documented bar for an allowlist entry: no published fix AND unreachable
+  // from this app, plus what would let it be deleted. A bare `'GHSA-x': {}`
+  // added to make a red build go away has to be caught.
+  const unjustified = (id, entry) => {
+    const missing = [];
+    if (!entry.why) missing.push('why');
+    if (!entry.noFix) missing.push('noFix');
+    if (!entry.remove) missing.push('remove');
+    if (entry.why && entry.why.length <= 40) missing.push('why (a word, not an argument)');
+    return missing.map((field) => `${id}: ${field}`);
+  };
+
+  test('the bar rejects an entry that does not argue its case', () => {
+    // ALLOWED is empty today, so applying the rule to it alone would pass
+    // vacuously and keep passing if the rule itself were deleted. Pin the rule
+    // against entries that must fail it, so the check below means something at
+    // zero entries.
+    expect(unjustified('GHSA-bare', {})).toHaveLength(3);
+    expect(unjustified('GHSA-terse', { why: 'unreachable', noFix: 'none', remove: 'later' })).toEqual([
+      'GHSA-terse: why (a word, not an argument)',
+    ]);
+    expect(
+      unjustified('GHSA-ok', {
+        why: 'x'.repeat(41),
+        noFix: 'no release carries the patch yet',
+        remove: 'when the fix ships',
+      })
+    ).toEqual([]);
+  });
+
   test('every real entry justifies itself on both counts', () => {
-    // The documented bar: no published fix AND unreachable from this app, plus
-    // what would let it be deleted. A bare `'GHSA-x': {}` added to make a red
-    // build go away is caught here.
-    for (const [id, entry] of Object.entries(ALLOWED)) {
-      expect(entry.why, `${id} must say why it is unreachable`).toBeTruthy();
-      expect(entry.noFix, `${id} must say why there is no fix`).toBeTruthy();
-      expect(entry.remove, `${id} must say what would let it be deleted`).toBeTruthy();
-      expect(entry.why.length, `${id}: "why" must be an argument, not a word`).toBeGreaterThan(40);
-    }
+    const problems = Object.entries(ALLOWED).flatMap(([id, entry]) => unjustified(id, entry));
+    expect(problems).toEqual([]);
   });
 });
 

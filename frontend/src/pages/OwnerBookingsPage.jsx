@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Dialog, Notification, StatusLabel, Tag, Table, IconCheck, IconCrossCircle } from 'hds-react';
 import { DATE_TYPES } from '../constants/things';
