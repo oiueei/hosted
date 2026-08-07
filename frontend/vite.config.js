@@ -61,14 +61,19 @@ export default defineConfig(({ mode }) => ({
       // recommendations, the collection digest switch, AddThing +
       // EditCollection) lifted coverage to ~84.2 / 75.3 / 75.9 / 87.7.
       //
+      // Raised again at the close of that round, once the Phase B work (the
+      // shared-things pager, the inbox dismiss, the collection hero) took the
+      // suite to 84.9 / 77.0 / 77.2 / 88.3: branches and functions had drifted
+      // to ~4 points of slack, which is wider than this band is meant to be.
+      //
       // The floor is not the goal — it only catches a drop. New code still owes
       // tests that name a behaviour; a change that lands under this line means
       // the code needs covering, never that the line needs lowering.
       thresholds: {
         statements: 82,
-        branches: 73,
-        functions: 73,
-        lines: 85,
+        branches: 74,
+        functions: 74,
+        lines: 86,
       },
     },
   },

@@ -58,3 +58,7 @@ Thumbs.db
 .claude/workflows/
 .claude/settings.local.json
 frontend/.claude/
+
+# Mutation testing artefacts (mutmut copies the tree into ./mutants)
+mutants/
+.mutmut-cache

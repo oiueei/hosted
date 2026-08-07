@@ -29,3 +29,30 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
 ]
+
+
+# Mutation testing (dev-only, never in CI, never a declared dependency —
+# `pip install mutmut` ad hoc). This section exists because mutmut cannot run in
+# this repo without it, and the two non-obvious parts cost an afternoon to find:
+# it copies the sources into ./mutants and runs there, so Django needs `config/`
+# and `manage.py` copied along, and `frontend/public` too — the email service
+# reads the inline logo from disk, and without it the baseline suite fails
+# before a single mutant is generated. `also_copy` cannot name a nested file,
+# only a directory or a top-level one.
+#
+# `only_mutate` is the per-run scope dial: mutating all of core/ is a
+# multi-hour run nobody will wait for. Point it at what a round actually
+# changed. Individual mutants can also be re-checked by name:
+#   mutmut run core.utils.x_get_client_ip__mutmut_4
+#
+# NOTE: .claude/skills/solid-testing/scripts/mutation_test.sh still speaks the
+# mutmut 2.x CLI (--paths-to-mutate / --tests-dir / --runner) and fails on 3.x.
+[tool.mutmut]
+source_paths = ["core/"]
+pytest_add_cli_args_test_selection = ["core/tests/"]
+only_mutate = [
+    "core/services/invitation_service.py",
+    "core/utils.py",
+    "core/views/_helpers.py",
+]
+also_copy = ["pytest.ini", "manage.py", "config/", "conftest.py", "frontend/public"]
