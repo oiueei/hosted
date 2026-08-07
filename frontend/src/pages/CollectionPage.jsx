@@ -289,13 +289,13 @@ export default function CollectionPage() {
                 )}
               </p>
             )}
-            {collection.is_member && (
-              <p className="leave-group">
-                <Link to={`/collections/${code}/leave`} state={{ headline }}>
-                  {t('collectionPage.leaveGroup')}
-                </Link>
-              </p>
-            )}
+            {/* "Leave the group" used to sit here, third in a stack of
+                unlabelled text links under the description — and the only
+                destructive one of the three. It moved to the own profile's "My
+                groups" list (design round): leaving is something you do to your
+                own membership, so it belongs with the rest of your account, next
+                to the other memberships you might weigh it against. The route
+                (/collections/:code/leave) is unchanged. */}
             </>
           )}
         </div>

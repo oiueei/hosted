@@ -618,7 +618,9 @@
     "errorLoading": "Error al cargar el perfil.",
     "logout": "Cerrar sesión",
     "aboutHeading": "Acerca de",
-    "photoAlt": "Foto de {{name}}"
+    "photoAlt": "Foto de {{name}}",
+    "myGroups": "Mis grupos",
+    "myGroupsIntro": "Grupos a los que te han invitado. Si dejas uno, pierdes el acceso."
   },
   "koro": {
     "basic": "Básico",

@@ -595,13 +595,6 @@ div[class*="Linkbox-module_linkbox"] {
   width: 100%;
 }
 
-/* "Leave the group" is a low-frequency, understated action — a plain text link
-   rather than a button so it doesn't compete with the page's primary actions. */
-.leave-group {
-  margin-top: var(--spacing-s);
-  font-size: var(--fontsize-body-s);
-}
-
 /* Owner cold-start nudge — a quiet line in the hero once the owner has things
    but no guests yet (DESIGN §6, no banner). Hero text colour so it sits with
    the owner controls above it; the AA-guaranteed color_05 keeps it legible. */
@@ -611,8 +604,8 @@ div[class*="Linkbox-module_linkbox"] {
   color: var(--hero-text-color, var(--color-black-90));
 }
 
-/* The member's per-collection digest switch, sitting with "Leave the group" in
-   the hero. A <button> rather than a Link (it acts, it doesn't navigate) styled
+/* The member's per-collection digest switch in the hero ("Leave the group" left
+   for the profile). A <button> rather than a Link (it acts, it doesn't navigate) styled
    as the surrounding text so it reads as one sentence — the same quiet register
    as .invite-nudge, and the hero text colour keeps it legible on every theeeme.
    Rendered only when the collection actually sends a digest: nothing to silence
@@ -1620,4 +1613,29 @@ main:focus {
 .recommend-intro {
   margin: 0 0 var(--spacing-s);
   font-size: var(--fontsize-body-s);
+}
+
+/* "My groups" on the own profile: one row per membership, the group's name on
+   the left and the way out on the right. Leaving moved here from the collection
+   hero, where it was the third unlabelled text link in a stack. */
+.membership-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.membership-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2-xs) var(--spacing-s);
+  min-height: 44px;
+  padding: var(--spacing-2-xs) 0;
+  border-bottom: 1px solid var(--color-black-20);
+}
+
+.membership-leave {
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-60);
 }

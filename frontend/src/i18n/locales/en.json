@@ -636,7 +636,9 @@
     "errorLoading": "Error loading profile.",
     "logout": "Log out",
     "aboutHeading": "About",
-    "photoAlt": "Photo of {{name}}"
+    "photoAlt": "Photo of {{name}}",
+    "myGroups": "My groups",
+    "myGroupsIntro": "Groups you've been invited to. Leaving one removes your access to it."
   },
   "koro": {
     "basic": "Basic",

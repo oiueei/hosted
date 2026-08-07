@@ -618,7 +618,9 @@
     "errorLoading": "Error en carregar el perfil.",
     "logout": "Tancar sessió",
     "aboutHeading": "Sobre",
-    "photoAlt": "Foto de {{name}}"
+    "photoAlt": "Foto de {{name}}",
+    "myGroups": "Els meus grups",
+    "myGroupsIntro": "Grups on t'han convidat. Si en deixes un, en perds l'accés."
   },
   "koro": {
     "basic": "Bàsic",

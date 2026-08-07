@@ -8,14 +8,23 @@ import { apiFetch } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MarkdownText from '../components/MarkdownText';
 import CollectionLinkbox from '../components/CollectionLinkbox';
+import { useLocalized } from '../utils/localized';
 import HeroPhoto from '../components/HeroPhoto';
 import ContactCorner from '../components/ContactCorner';
 
 export default function UserPage() {
   const { userCode: paramCode } = useParams();
   const { t, i18n } = useTranslation();
+  // A group's headline may carry one text per language.
+  const L = useLocalized();
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
+  // The groups I'm a *member* of — not the ones I own, which live on Home. This
+  // is where "Leave the group" moved to (design round): it used to sit in the
+  // collection hero, third in a stack of unlabelled text links under the
+  // description, one of them destructive. Leaving is something you do to your
+  // own membership, so it belongs with the rest of your account.
+  const [memberships, setMemberships] = useState([]);
 
   const userCode = paramCode || localStorage.getItem('userCode');
   const isOwnProfile = !paramCode || paramCode === localStorage.getItem('userCode');
@@ -54,6 +63,18 @@ export default function UserPage() {
     fetchUser();
 
   }, [userCode, isOwnProfile, t]);
+
+  useEffect(() => {
+    if (!isOwnProfile) return undefined;
+    const controller = new AbortController();
+    apiFetch('/api/v1/invited-collections/', { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setMemberships(Array.isArray(data) ? data : []))
+      // A failed fetch simply shows no groups section — it must never take the
+      // profile down with it.
+      .catch(() => {});
+    return () => controller.abort();
+  }, [isOwnProfile]);
 
   if (error) {
     return (
@@ -144,6 +165,29 @@ export default function UserPage() {
             <h2>{t('userPage.aboutHeading')}</h2>
             <div className="spacer-s" />
             <MarkdownText text={user.about} className="about-markdown" />
+            <div className="spacer-l" />
+          </>
+        )}
+        {isOwnProfile && memberships.length > 0 && (
+          <>
+            <h2>{t('userPage.myGroups')}</h2>
+            <div className="spacer-s" />
+            <p className="text-muted">{t('userPage.myGroupsIntro')}</p>
+            <div className="spacer-m" />
+            <ul className="membership-list">
+              {memberships.map((c) => (
+                <li key={c.code} className="membership-row">
+                  <Link to={`/collections/${c.code}`}>{L(c.headline)}</Link>
+                  <Link
+                    to={`/collections/${c.code}/leave`}
+                    state={{ headline: L(c.headline) }}
+                    className="membership-leave"
+                  >
+                    {t('collectionPage.leaveGroup')}
+                  </Link>
+                </li>
+              ))}
+            </ul>
             <div className="spacer-l" />
           </>
         )}
