@@ -31,7 +31,7 @@ import LeaveCollectionPage from '../pages/LeaveCollectionPage';
 // mode is "the destructive action just happens".
 //
 // So each page is held to three claims: the destructive action does not fire
-// until the confirm is pressed; the button carries the danger affordance; and
+// until the confirm is pressed; the button names the act with its own icon; and
 // Cancel goes back without touching anything.
 
 const COLLECTION = { code: 'COL001', headline: 'Kitchen Collection', owner: 'USR001' };
@@ -50,9 +50,22 @@ function mockApi({ ok = true } = {}, body = {}) {
 const mutations = () =>
   apiFetch.mock.calls.filter(([, o]) => o?.method).map(([u, o]) => `${o.method} ${u}`);
 
-/** The icon HDS renders inside the button, the affordance the release added. */
-const iconInside = (name) =>
-  screen.getByRole('button', { name }).querySelector('svg, [class*="hds-icon"]');
+/**
+ * The icon HDS renders inside a button, identified by the name HDS writes into
+ * the `<svg>`'s own `aria-label` ("trash", "signout", "cross-circle").
+ *
+ * This used to match `svg, [class*="hds-icon"]` — any icon at all — which could
+ * not tell a destructive affordance from a Save button that happens to carry
+ * one, while the test's name claimed exactly that distinction. It also keyed off
+ * `icon_hds-icon__O6EV0`, a build-hashed CSS-module class an HDS upgrade
+ * renames at will; the `aria-label` is the semantic handle and survives.
+ */
+const iconNamed = (buttonName, iconName) =>
+  screen.getByRole('button', { name: buttonName }).querySelector(`svg[aria-label="${iconName}"]`);
+
+/** Any icon, used only to assert Cancel has none — the contrast is the point. */
+const anyIconIn = (buttonName) =>
+  screen.getByRole('button', { name: buttonName }).querySelector('svg');
 
 beforeEach(() => {
   localStorage.clear();
@@ -84,12 +97,17 @@ describe('DeleteThingPage', () => {
     expect(mutations()).toEqual([]);
   });
 
-  test('the confirm carries the danger affordance, not a Save-shaped button', async () => {
+  test('the confirm is marked destructive by a trash icon, and Cancel by none', async () => {
     mockApi({}, THING);
     renderPage();
     await screen.findByText(/cannot be undone/);
 
-    expect(iconInside('Delete')).toBeTruthy();
+    // These stay theeeme-primary buttons — they are not `variant="danger"` — so
+    // the icon is the *whole* of what separates them from Save, and which icon
+    // it is carries the meaning. Cancel is the control case: an assertion that
+    // any icon exists would have passed on both.
+    expect(iconNamed('Delete', 'trash')).toBeTruthy();
+    expect(anyIconIn('Cancel')).toBeNull();
   });
 
   test('deleting fires exactly one DELETE and leaves the page', async () => {
@@ -151,12 +169,13 @@ describe('DeleteCollectionPage', () => {
     expect(mutations()).toEqual([]);
   });
 
-  test('the confirm carries the danger affordance', async () => {
+  test('the confirm is marked destructive by a trash icon, and Cancel by none', async () => {
     mockApi({}, COLLECTION);
     renderPage();
     await screen.findByText(/cannot be undone/);
 
-    expect(iconInside('Delete')).toBeTruthy();
+    expect(iconNamed('Delete', 'trash')).toBeTruthy();
+    expect(anyIconIn('Cancel')).toBeNull();
   });
 
   test('deleting fires one DELETE and goes home', async () => {
@@ -206,12 +225,13 @@ describe('RemoveGuestPage', () => {
     expect(mutations()).toEqual([]);
   });
 
-  test('the confirm carries the danger affordance', async () => {
+  test('the confirm is marked destructive by a cross icon, and Cancel by none', async () => {
     mockApi({}, COLLECTION);
     renderPage();
     await screen.findByText(/lose access immediately/i);
 
-    expect(iconInside('Remove')).toBeTruthy();
+    expect(iconNamed('Remove', 'cross-circle')).toBeTruthy();
+    expect(anyIconIn('Cancel')).toBeNull();
   });
 
   test('removing sends the guest code, once', async () => {
@@ -262,12 +282,15 @@ describe('LeaveCollectionPage', () => {
     expect(mutations()).toEqual([]);
   });
 
-  test('the confirm carries the danger affordance', async () => {
+  test('the confirm is marked by a sign-out icon, and Cancel by none', async () => {
     mockApi({}, COLLECTION);
     renderPage();
     await screen.findByText(/unless the owner invites you again/i);
 
-    expect(iconInside('Leave the group')).toBeTruthy();
+    // Leaving is the one of the four that destroys nothing of anyone else's, so
+    // it is signout rather than trash — the icon states which act it is.
+    expect(iconNamed('Leave the group', 'signout')).toBeTruthy();
+    expect(anyIconIn('Cancel')).toBeNull();
   });
 
   test('leaving posts once and goes home — the collection may now be unreadable', async () => {
