@@ -1,10 +1,19 @@
 name: Tests
 
+# `heroku` is the deploy branch of the private mirror (oiueei/heroku), and it was
+# the one branch this never ran on: the trigger listed main and development, so
+# the branch that actually reaches production was the only one never tested. It
+# deploys automatically on push and does not wait for CI, which made "somebody
+# ran the suite locally first" the entire safety net.
+#
+# There is no `heroku` branch in this public repo, so the extra name simply never
+# matches here. Keeping the file identical across all three branches is the point
+# — a deploy-branch-only edit would conflict on every future merge.
 on:
   push:
-    branches: [main, development]
+    branches: [main, development, heroku]
   pull_request:
-    branches: [main, development]
+    branches: [main, development, heroku]
 
 # Least-privilege default token, and cancel superseded runs on the same ref.
 # Every third-party action is pinned to a full commit SHA (the trailing comment
