@@ -559,7 +559,8 @@
     "accepted": "Request confirmed. We've let them know.",
     "rejected": "Request declined. We've let them know.",
     "errorActing": "Couldn't answer that request. Please try again.",
-    "errorLoading": "Error loading requests."
+    "errorLoading": "Error loading requests.",
+    "emptyCta": "Share a collection"
   },
   "manageInvites": {
     "pageTitle": "Manage guests",

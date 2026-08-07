@@ -541,7 +541,8 @@
     "accepted": "Sol·licitud confirmada. Ja l'hi hem dit.",
     "rejected": "Sol·licitud rebutjada. Ja l'hi hem dit.",
     "errorActing": "No s'ha pogut respondre la sol·licitud. Torna-ho a provar.",
-    "errorLoading": "Error en carregar les sol·licituds."
+    "errorLoading": "Error en carregar les sol·licituds.",
+    "emptyCta": "Comparteix una col·lecció"
   },
   "manageInvites": {
     "pageTitle": "Gestionar convidats",

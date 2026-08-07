@@ -223,8 +223,11 @@ export default function OwnerBookingsPage() {
         <div>
           <p>{t('ownerBookings.noBookings')}</p>
           <div className="spacer-m" />
+          {/* Its own copy, not the requester page's "Browse collections": an
+              owner with no requests wants to get their things in front of
+              somebody, not to go shopping. */}
           <Link to="/">
-            <Button style={btnStyle}>{t('myBookings.goHome')}</Button>
+            <Button style={btnStyle}>{t('ownerBookings.emptyCta')}</Button>
           </Link>
         </div>
       ) : (
