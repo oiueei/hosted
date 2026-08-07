@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -12,6 +12,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import CollectionPage from '../pages/CollectionPage';
 import HomePage from '../pages/HomePage';
+import InboxNotifications from '../components/InboxNotifications';
 
 const REQUEST_NOTIFICATION = {
   code: 'NOT001',
@@ -258,5 +259,69 @@ describe('InboxNotifications — every type says something', () => {
     expect(await screen.findByText(/recommendation went through/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open the group/i }))
       .toHaveAttribute('href', '/collections/COL001');
+  });
+});
+
+/**
+ * Dismissing — the one thing the inbox does that no test ever did.
+ *
+ * `dismiss()` drops the row from state optimistically and then DELETEs it. If
+ * the DELETE stops being sent, nothing looks broken: the card vanishes on
+ * click, exactly as it should, and comes back on the next load — for ever. The
+ * member can never clear their inbox and has no way to tell why.
+ *
+ * Rendered directly rather than through a page: the dismiss and its failure
+ * path belong to this component, and `onNetworkError` is a prop only a direct
+ * render can observe (Home turns it into an offline banner).
+ */
+describe('InboxNotifications — dismissing', () => {
+  const renderInbox = (onNetworkError) =>
+    render(
+      <MemoryRouter>
+        <InboxNotifications onNetworkError={onNetworkError} />
+      </MemoryRouter>
+    );
+
+  test('dismissing removes the card and tells the server which one', async () => {
+    renderInbox();
+    await screen.findByText(/The drill/);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]);
+
+    await waitFor(() =>
+      expect(apiFetch).toHaveBeenCalledWith('/api/v1/inbox/NOT001/', { method: 'DELETE' })
+    );
+    expect(screen.queryByText(/The drill/)).not.toBeInTheDocument();
+  });
+
+  test('dismissing one leaves the others standing', async () => {
+    // The filter is by code. A predicate that matched too widely would empty
+    // the whole inbox on one click, and the rows are gone server-side too.
+    renderInbox();
+    await screen.findByText(/A ladder/);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]);
+
+    const deletes = () => apiFetch.mock.calls.filter(([, o]) => o?.method === 'DELETE');
+    await waitFor(() => expect(deletes()).toHaveLength(1));
+    // Exactly one row was dropped, and it was the one clicked.
+    expect(deletes()[0][0]).toBe('/api/v1/inbox/NOT001/');
+    expect(screen.getByText(/A ladder/)).toBeInTheDocument();
+    expect(screen.queryByText(/The drill/)).not.toBeInTheDocument();
+  });
+
+  test('a dropped connection while dismissing is reported, not swallowed', async () => {
+    const onNetworkError = vi.fn();
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'DELETE') return Promise.reject(new TypeError('Failed to fetch'));
+      if (url.startsWith('/api/v1/inbox/')) return ok([REQUEST_NOTIFICATION]);
+      return ok([]);
+    });
+    renderInbox(onNetworkError);
+    await screen.findByText(/The drill/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    await waitFor(() => expect(onNetworkError).toHaveBeenCalled());
   });
 });

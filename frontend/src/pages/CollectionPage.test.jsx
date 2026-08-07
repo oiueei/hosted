@@ -268,4 +268,26 @@ describe('CollectionPage digest switch', () => {
     await screen.findByText('Things from the kitchen');
     expect(screen.queryByRole('button', { name: 'Turn it off' })).toBeNull();
   });
+
+  /**
+   * Leaving moved out of this hero in the 2026-08 design round, to the own
+   * profile's "My groups" list. Its new home is well covered (`myGroups.test`);
+   * the place it left was not, so a resurrected link would put the one
+   * destructive control back where it was third in a stack of unlabelled text
+   * links under the description — and nothing would go red.
+   *
+   * Asserted against the *route*, not a label: the point is that no control
+   * here leads to the leave confirm, whatever it ends up being called.
+   */
+  test('a member is given no way out of the group from the collection hero', async () => {
+    mockPage(MEMBER_VIEW);
+    const { container } = renderCollection();
+    // The member-only hero controls that stayed — so this is a page where the
+    // leave link *would* render, not one where the member section is missing.
+    await screen.findByRole('button', { name: 'Turn it off' });
+
+    expect(container.querySelector('a[href="/collections/COL001/leave"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: /leave the group/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /leave the group/i })).toBeNull();
+  });
 });

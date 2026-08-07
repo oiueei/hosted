@@ -570,3 +570,118 @@ class TestApprovedRecommendationIsDistinguishable:
         }
         assert by_email["direct@test.com"] == Event.Source.INVITE
         assert by_email["viafriend@test.com"] == Event.Source.RECOMMENDATION
+
+
+# ── The boundaries the mutation pass found unguarded ─────────────────────────
+#
+# `proposal_approval_blocked` carries two pieces of arithmetic that no test
+# pinned: the carve-out for somebody already inside, and how many seats an
+# approval claims. Both survived mutation (`and` → `or`, `adding=1` → `2`)
+# against the whole suite, which means a full collection could start refusing
+# approvals it owes — the queue the owner cannot clear, one release later.
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approve", BOTH_DOORS)
+@override_settings(COLLECTION_INVITES_BLOCK=2)
+def test_a_full_collection_still_approves_somebody_already_inside(approve, group, member):
+    """ "Someone already in the group costs the counter nothing, so a full
+    collection must not refuse an approval that would add nobody" — the code's
+    own carve-out, and until now only its opposite was tested.
+
+    The real sequence, since you cannot propose somebody already inside: the
+    suggestion is made, the person gets in by another door meanwhile (the owner
+    invites them directly, or they pop in from a public link), and the owner
+    reaches the now-stale suggestion when the group is full.
+
+    Turn the `and` into an `or` and this goes red: the ceiling would swallow an
+    approval that adds no one, and the owner would be stuck with a suggestion
+    they can neither approve nor clear.
+    """
+    proposal = _proposal_for(group, member)
+    # They arrive by another route, filling the collection to its ceiling of 2.
+    group.invites.add(User.objects.create(email="friend@test.com"))
+    mail.outbox.clear()
+
+    resp = approve(group, proposal)
+
+    assert resp.status_code == 200, resp.data
+    proposal.refresh_from_db()
+    assert proposal.status == InvitationProposal.Status.APPROVED
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approve", BOTH_DOORS)
+@override_settings(COLLECTION_INVITES_BLOCK=3)
+def test_an_approval_claims_exactly_one_seat_so_the_last_free_one_is_enough(approve, group, member):
+    """Two of three seats taken (the member plus one) and one person arriving:
+    it fits, exactly. An approval that claimed two would refuse this — the
+    off-by-one that hides until a group is nearly full, which is precisely when
+    an owner is most likely to be approving."""
+    group.invites.add(User.objects.create(email="second@test.com"))
+    proposal = _proposal_for(group, member)
+    mail.outbox.clear()
+
+    resp = approve(group, proposal)
+
+    assert resp.status_code == 200, resp.data
+    proposal.refresh_from_db()
+    assert proposal.status == InvitationProposal.Status.APPROVED
+    # The invitation actually went out — approving is what sends it; the person
+    # joins `invites` later, when they accept it.
+    assert RSVP.objects.filter(
+        user_email="friend@test.com",
+        target_code=group.code,
+        action=RSVP.Action.COLLECTION_INVITE,
+    ).exists()
+    assert "friend@test.com" in [addr for m in mail.outbox for addr in m.to]
+
+
+@pytest.mark.django_db
+def test_the_approved_notification_is_marked_approved_for_the_old_inbox_branch(group, member):
+    """The inbox still reads rows written before `INVITE_PROPOSAL_APPROVED`
+    existed, and `payload["approved"]` is the only thing telling those apart
+    from a pending suggestion. The frontend has a test for rendering such a row;
+    nothing checked that the backend actually writes the flag, so flipping it to
+    False survived the whole suite."""
+    proposal = _proposal_for(group, member)
+
+    _approve_in_app(group, proposal)
+
+    note = InAppNotification.objects.get(
+        user=member, type=InAppNotification.Type.INVITE_PROPOSAL_APPROVED
+    )
+    assert note.payload["approved"] is True
+    assert note.payload["email"] == "friend@test.com"
+    assert note.payload["collection_code"] == group.code
+
+
+@pytest.mark.django_db
+def test_a_resend_clears_only_the_invitation_pair_it_is_replacing(group):
+    """`deliver_invitation` wipes the pending RSVPs for this user+collection
+    before minting a fresh pair, so a resend doesn't leave two live invitations.
+    It must stay scoped to the two invitation actions: dropping the `action__in`
+    survived mutation, and would delete every RSVP that person holds against
+    this collection — including a magic link they are about to click.
+    """
+    invitee = User.objects.create(email="guest@test.com")
+    unrelated = RSVP.objects.create(
+        user_code=invitee,
+        user_email=invitee.email,
+        action=RSVP.Action.MAGIC_LINK,
+        target_code=group.code,
+    )
+
+    with patch("core.services.invitation_service.send_collection_invite_email"):
+        deliver_invitation(group, invitee.email, "Lala")
+        deliver_invitation(group, invitee.email, "Lala")  # the resend
+
+    assert RSVP.objects.filter(code=unrelated.code).exists(), (
+        "a resend must not invalidate an unrelated live link"
+    )
+    # And it did do its own job: one live pair, not two.
+    for action in (RSVP.Action.COLLECTION_INVITE, RSVP.Action.COLLECTION_REJECT):
+        assert (
+            RSVP.objects.filter(user_code=invitee, target_code=group.code, action=action).count()
+            == 1
+        )

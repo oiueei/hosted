@@ -15,9 +15,13 @@ from django.core.cache import caches
 from django.test import override_settings
 
 from core.models import RSVP, User
+from core.services.invitation_service import _consume_invite_quota, _invite_quota_key
 
 SINGLE_URL = "/api/v1/collections/{code}/invite/"
 BULK_URL = "/api/v1/collections/{code}/invite/bulk/"
+
+# The quota is pure cache bookkeeping keyed by user code — no row needed.
+QUOTA_USER = "QUOTA1"
 
 QUOTA_SETTINGS = {
     "RATELIMIT_ENABLE": True,
@@ -217,3 +221,30 @@ def test_bulk_respects_a_configured_cap(mock_single, mock_bulk, authenticated_cl
     assert res.data["invited"] == 2
     assert _emails_sent(mock_single, mock_bulk) == 2
     assert [s["reason"] for s in res.data["skipped"]] == ["daily_limit", "daily_limit"]
+
+
+@override_settings(**QUOTA_SETTINGS)
+def test_an_unset_cap_records_no_bookkeeping_at_all():
+    """Off means off, down to the cache.
+
+    `_consume_invite_quota` returns before writing when there is nothing to
+    record — no cap configured, or nothing sent. Both guards survived mutation
+    (`or` → `and`, `<= 0` → `< 0`) because a stray key changes no answer today:
+    `_invite_quota_left` reads None while the cap is off. It would start
+    mattering the moment an operator sets a cap on a running deployment, which
+    is exactly when the counter must begin at zero rather than at whatever a
+    disabled feature had been quietly accumulating per user per day.
+    """
+    caches["default"].clear()
+
+    _consume_invite_quota(QUOTA_USER, 5)  # no INVITE_EMAILS_PER_DAY set
+    assert caches["default"].get(_invite_quota_key(QUOTA_USER)) is None
+
+    # And with a cap on, recording nothing writes nothing.
+    with override_settings(INVITE_EMAILS_PER_DAY=10):
+        _consume_invite_quota(QUOTA_USER, 0)
+        assert caches["default"].get(_invite_quota_key(QUOTA_USER)) is None
+
+        # The other half: a real send does land, so this isn't a dead assertion.
+        _consume_invite_quota(QUOTA_USER, 2)
+        assert caches["default"].get(_invite_quota_key(QUOTA_USER)) == 2
