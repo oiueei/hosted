@@ -20,3 +20,15 @@ time-machine==2.19.0
 # Linting & formatting (Ruff replaces black + isort + flake8)
 ruff==0.15.22
 pre-commit==4.6.1
+
+# PostgreSQL, so the suite can run on the engine production runs on.
+#
+# CI sets DATABASE_URL and development.py picks it up. This is not about parity
+# for its own sake: on SQLite, Django reports `has_select_for_update = False` and
+# silently drops the FOR UPDATE clause, so every row-locked path in the app was
+# tested unlocked. SQLite also doesn't enforce CharField(max_length=N).
+#
+# Same versions as production.txt on purpose — testing against a different
+# driver than the one that ships defeats the point.
+dj-database-url==2.3.0
+psycopg2-binary==2.9.12

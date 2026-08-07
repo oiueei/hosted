@@ -264,8 +264,16 @@ python manage.py runserver                 # backend → http://localhost:8000
 cd frontend && npm install && npm run dev  # frontend → http://localhost:3000 (separate terminal)
 
 # 5. Tests & linting
-pytest -v --cov=core --cov-fail-under=80   # backend tests
+pytest -v --cov=core --cov-fail-under=95   # backend tests (SQLite locally)
 cd frontend && npm test                    # frontend tests (smoke + accessibility)
+
+# CI runs the same backend suite against PostgreSQL, by setting DATABASE_URL.
+# That is not parity for its own sake: on SQLite, Django reports
+# has_select_for_update = False and silently drops the FOR UPDATE clause, so
+# every row-locked path (booking accept/reject/cancel, the capacity recheck)
+# would be tested without its lock. SQLite also doesn't enforce max_length.
+# To reproduce a CI failure locally, point the same variable at a throwaway DB:
+#   DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 ruff check .                               # lint + import sort (replaces flake8 + isort)
 ruff format .                              # formatting (replaces black)
 
@@ -294,7 +302,8 @@ python manage.py backfill_events
 | `DJANGO_SETTINGS_MODULE` | No | Settings module (defaults to production) |
 | `DJANGO_DEBUG` | No | Enables Django debug mode (default: `False` — fail-closed on a missing/typo'd value) |
 | `DJANGO_ALLOWED_HOSTS` | No | Comma-separated allowed hosts |
-| `DATABASE_URL` | Prod | PostgreSQL connection string |
+| `DATABASE_URL` | Prod | PostgreSQL connection string. Also read by `development.py`, which is how CI runs the test suite on Postgres rather than SQLite — see Testing |
+| `DEV_DB_NAME` | No | Dev only: points the SQLite file elsewhere, so a migration can be rehearsed on a throwaway DB (`DEV_DB_NAME=/tmp/rehearsal.sqlite3 python manage.py migrate core 0121`). Ignored when `DATABASE_URL` is set |
 | `MAGIC_LINK_BASE_URL` | Prod | Base URL for magic link emails (default in dev: `http://localhost:3000/verify`) |
 | `CORS_ALLOWED_ORIGINS` | Prod | Comma-separated allowed origins |
 | `CSRF_TRUSTED_ORIGINS` | Prod | Comma-separated trusted origins |
