@@ -47,6 +47,23 @@ class Event(models.Model):
         HOLD_REQUESTED = "HOLD_REQUESTED"
         HOLD_ACCEPTED = "HOLD_ACCEPTED"
 
+    class Source(models.TextChoices):
+        """Which door a MEMBER_JOINED came through.
+
+        OIUEEI has six ways to acquire a member (owner invite, bulk CSV invite,
+        share link/QR, public collection + login-to-act, a member's
+        recommendation, and the /popin demo). Every one of them was measured as
+        the same undifferentiated join, so "which of these actually works?" —
+        the question that decides whether any of them should go — had no answer
+        in the data. Aggregate, first-party, consumed only by stats_summary.
+        """
+
+        INVITE = "INVITE"
+        RECOMMENDATION = "RECOMMENDATION"
+        SHARE = "SHARE"
+        PUBLIC = "PUBLIC"
+        ONBOARDING = "ONBOARDING"
+
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     kind = models.CharField(max_length=18, choices=Kind.choices)
     # Snapshots, not FKs — the history must outlive the hard-deleted objects.
@@ -54,6 +71,10 @@ class Event(models.Model):
     collection_code = models.CharField(max_length=6, blank=True, default="")
     thing_code = models.CharField(max_length=6, blank=True, default="")
     thing_type = models.CharField(max_length=17, blank=True, default="")
+    # Only set on MEMBER_JOINED; blank everywhere else (and on rows written
+    # before this existed, which is why stats_summary reports an "unknown" bucket
+    # rather than pretending the history is complete).
+    source = models.CharField(max_length=14, choices=Source.choices, blank=True, default="")
     # default=timezone.now (not auto_now_add) so backfill_events can stamp rows with
     # the original historical timestamp instead of "now".
     created = models.DateTimeField(default=timezone.now)
@@ -67,13 +88,25 @@ class Event(models.Model):
         return f"{self.kind} {self.actor_code} @ {self.created:%Y-%m-%d}"
 
     @classmethod
-    def log(cls, kind, *, actor=None, collection=None, thing=None, thing_type=None, created=None):
+    def log(
+        cls,
+        kind,
+        *,
+        actor=None,
+        collection=None,
+        thing=None,
+        thing_type=None,
+        created=None,
+        source="",
+    ):
         """Append one event. The one-liner used at every instrumentation call site.
 
         ``actor`` / ``collection`` / ``thing`` accept either a model instance or a raw
         code string (use the string form when the object is about to be, or has just
         been, deleted). ``thing_type`` defaults to ``thing.type`` when ``thing`` is a
         Thing instance; pass it explicitly when only a code string is available.
+        ``source`` names the door a MEMBER_JOINED came through (see ``Source``);
+        it is meaningless on every other kind and defaults to blank.
         """
         if thing_type is None:
             thing_type = getattr(thing, "type", "") or ""
@@ -83,6 +116,7 @@ class Event(models.Model):
             "collection_code": _snapshot_code(collection),
             "thing_code": _snapshot_code(thing),
             "thing_type": thing_type,
+            "source": source,
         }
         if created is not None:
             fields["created"] = created

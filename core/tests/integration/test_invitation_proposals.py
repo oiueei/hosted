@@ -17,8 +17,9 @@ from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, Collection, InvitationProposal, User
+from core.models import RSVP, Collection, Event, InvitationProposal, User
 from core.models.notification import InAppNotification
+from core.services.invitation_service import deliver_invitation
 
 PROPOSE_URL = "/api/v1/collections/{code}/invite/propose/"
 
@@ -505,3 +506,45 @@ def test_declining_is_never_blocked_by_a_full_collection(approve, group, member)
     assert resp.status_code == 200
     proposal.refresh_from_db()
     assert proposal.status == InvitationProposal.Status.REJECTED
+
+
+@pytest.mark.django_db
+class TestApprovedRecommendationIsDistinguishable:
+    """A recommendation and an owner's own invite must not blur into one number.
+
+    The whole design of `deliver_invitation` is that an approved proposal is
+    *indistinguishable* from an owner's invite — same RSVP pair, same email,
+    same quota — so neither code path can rot. That is right for delivery and
+    wrong for measurement: without a mark, the feature that lets members grow
+    the group is unmeasurable, and there is no way to tell whether it works.
+    """
+
+    def test_the_accept_rsvp_carries_the_mark_only_when_a_member_suggested_them(
+        self, collection, user
+    ):
+        deliver_invitation(collection, "direct@test.com", "Owner")
+        deliver_invitation(collection, "viafriend@test.com", "Owner", proposer_name="Lele")
+
+        direct = RSVP.objects.get(
+            user_email="direct@test.com", action=RSVP.Action.COLLECTION_INVITE
+        )
+        recommended = RSVP.objects.get(
+            user_email="viafriend@test.com", action=RSVP.Action.COLLECTION_INVITE
+        )
+        assert direct.context == {}
+        assert recommended.context == {"via": "recommendation"}
+
+    def test_accepting_each_lands_in_its_own_door(self, client, collection):
+        deliver_invitation(collection, "direct@test.com", "Owner")
+        deliver_invitation(collection, "viafriend@test.com", "Owner", proposer_name="Lele")
+
+        for email in ("direct@test.com", "viafriend@test.com"):
+            rsvp = RSVP.objects.get(user_email=email, action=RSVP.Action.COLLECTION_INVITE)
+            assert client.get(f"/api/v1/auth/verify/{rsvp.token}/").status_code == 200
+
+        by_email = {
+            User.objects.get(code=e.actor_code).email: e.source
+            for e in Event.objects.filter(kind=Event.Kind.MEMBER_JOINED)
+        }
+        assert by_email["direct@test.com"] == Event.Source.INVITE
+        assert by_email["viafriend@test.com"] == Event.Source.RECOMMENDATION

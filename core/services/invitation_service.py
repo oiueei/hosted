@@ -130,6 +130,12 @@ def deliver_invitation(collection, email, inviter_name, quota_user_code=None, pr
         user_email=email,
         action=RSVP.Action.COLLECTION_INVITE,
         target_code=collection.code,
+        # An approved recommendation is delivered as an ordinary invitation on
+        # purpose (one code path, so neither can rot). This is the one mark that
+        # keeps the two apart in the join stats — without it a member's
+        # recommendation is indistinguishable from the owner's own invite, and
+        # the whole feature is unmeasurable.
+        context={"via": "recommendation"} if proposer_name else {},
     )
     reject_rsvp = RSVP.objects.create(
         user_code=invited_user,

@@ -106,7 +106,7 @@ def _send_magic_link(email, magic_link, collection_headline=None, user=None, col
         send_magic_link_email(email, magic_link, collection_headline, lang)
 
 
-def _join_collection(collection, user):
+def _join_collection(collection, user, source=""):
     """Add ``user`` to ``collection``'s members and run the first-join side effects.
 
     Every join path funnels through here: accepting an invitation, a share-token
@@ -124,6 +124,11 @@ def _join_collection(collection, user):
 
     A member who left is out of ``invites``, so a genuine re-join after a
     MEMBER_LEFT logs again — which is what it is.
+
+    ``source`` records which of the six doors this join came through, so
+    stats_summary can answer "which of these actually brings people in?" — the
+    question that decides whether any of them earns its place. Every caller
+    passes one; a blank means a row written before this existed.
     """
     already_member = collection.invites.filter(code=user.code).exists()
     collection.invites.add(user)
@@ -136,7 +141,7 @@ def _join_collection(collection, user):
     # matching ceiling is enforced earlier, when invitations are *sent*.
     collection.note_capacity("invites")
 
-    Event.log(Event.Kind.MEMBER_JOINED, actor=user, collection=collection)
+    Event.log(Event.Kind.MEMBER_JOINED, actor=user, collection=collection, source=source)
     if not collection.welcome_doc:
         return
     send_collection_welcome_doc_email(
@@ -493,7 +498,18 @@ class VerifyLinkView(APIView):
         if rsvp.target_code:
             try:
                 collection = Collection.objects.get(code=rsvp.target_code)
-                _join_collection(collection, user)
+                # An invitation the owner sent themselves, or one they approved
+                # from a member's recommendation — `deliver_invitation` stamps
+                # the RSVP so the two funnels stay distinguishable.
+                _join_collection(
+                    collection,
+                    user,
+                    source=(
+                        Event.Source.RECOMMENDATION
+                        if (rsvp.context or {}).get("via") == "recommendation"
+                        else Event.Source.INVITE
+                    ),
+                )
                 invited_collection = rsvp.target_code
             except Collection.DoesNotExist:
                 pass  # Collection was deleted, ignore
@@ -782,7 +798,7 @@ class PopInView(APIView):
                 shared_collection = None
 
             if shared_collection is not None:
-                _join_collection(shared_collection, user)
+                _join_collection(shared_collection, user, source=Event.Source.SHARE)
                 joined = True
                 target_collection_code = shared_collection.code
                 join_collection = shared_collection
@@ -802,7 +818,7 @@ class PopInView(APIView):
                 public_collection = None
 
             if public_collection is not None:
-                _join_collection(public_collection, user)
+                _join_collection(public_collection, user, source=Event.Source.PUBLIC)
                 joined = True
                 target_collection_code = public_collection.code
                 join_collection = public_collection
@@ -811,7 +827,7 @@ class PopInView(APIView):
         if not joined:
             onboarding_collections = Collection.objects.filter(is_onboarding=True)
             for collection in onboarding_collections:
-                _join_collection(collection, user)
+                _join_collection(collection, user, source=Event.Source.ONBOARDING)
 
         rsvp = RSVP.objects.create(
             user_code=user,

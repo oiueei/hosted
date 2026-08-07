@@ -139,6 +139,7 @@ def build_report():
         _things_section(real_list),
         _holds_section(real_list, guests),
         _history_section(demo, demo_collections, now),
+        _joins_by_door_section(demo, demo_collections, now),
         _conversion_section(demo, demo_collections),
         _retention_section(real, creators, guests, today),
         _demo_section(demo, demo_collections),
@@ -285,6 +286,47 @@ def _history_section(demo, demo_collections, now):
             ("Holds requested / accepted", f"{requested} / {accepted}"),
             ("Hold success rate (all time)", _pct(accepted, requested)),
         ],
+    }
+
+
+def _joins_by_door_section(demo, demo_collections, now):
+    """Which of the six doors actually brings members in.
+
+    OIUEEI has six ways to acquire one — the owner's own invite, a bulk CSV
+    invite, a share link/QR, a public collection's login-to-act, a member's
+    recommendation, and the /popin demo — and until `Event.source` existed they
+    were all counted as the same join. That made "is any of these earning its
+    place?" unanswerable from the data, which is exactly the question worth
+    asking of a product that means to stay small.
+
+    Rows written before the field are counted as `unknown` rather than folded
+    into a bucket they might not belong to.
+    """
+    events = _real_events(demo, demo_collections).filter(kind=Event.Kind.MEMBER_JOINED)
+    d30 = now - timedelta(days=30)
+    labels = {
+        Event.Source.INVITE: "Owner invite",
+        Event.Source.RECOMMENDATION: "Member recommendation",
+        Event.Source.SHARE: "Share link / QR",
+        Event.Source.PUBLIC: "Public collection (login to act)",
+        Event.Source.ONBOARDING: "Pop-in / onboarding",
+    }
+
+    def counts(qs):
+        return {row["source"]: row["n"] for row in qs.values("source").annotate(n=Count("code"))}
+
+    all_time, recent = counts(events), counts(events.filter(created__gte=d30))
+    rows = [
+        (label, f"{all_time.get(source, 0)} ({recent.get(source, 0)} in 30d)")
+        for source, label in labels.items()
+    ]
+    unknown = all_time.get("", 0)
+    if unknown:
+        rows.append(("Unrecorded (joined before this was measured)", unknown))
+    return {
+        "title": "Members joined, by door",
+        "rows": rows,
+        "note": "A door with no joins over several months is a candidate for removal.",
     }
 
 

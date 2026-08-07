@@ -500,11 +500,12 @@ An `Event` is one row in an **append-only, first-party analytics log**. The doma
 | `collection_code` | CharField(6) | No | **Snapshot** of the relevant collection's code. Default `""` |
 | `thing_code` | CharField(6) | No | **Snapshot** of the relevant thing's code. Default `""` |
 | `thing_type` | CharField(17) | No | **Snapshot** of the thing's type (for THING_/HOLD_ events). Default `""` |
+| `source` | CharField(14) | No | **`MEMBER_JOINED` only** — which of OIUEEI's six doors the member came through: `INVITE`, `RECOMMENDATION`, `SHARE`, `PUBLIC`, `ONBOARDING`. Blank on every other kind, and on rows written before the field existed (`stats_summary` reports those as an explicit "unrecorded" bucket rather than folding them into a door they may not belong to). Added in the 2026-08 design round: every acquisition path was counted as the same undifferentiated join, so "which of these is worth keeping?" — the question that decides whether a door earns its place — had no answer in the data. An approved recommendation is delivered as an ordinary invitation on purpose (one code path, so neither can rot), so `deliver_invitation` marks its accept RSVP `context={"via": "recommendation"}` and `_join_collection` reads that back; it is the only thing keeping the two apart |
 | `created` | DateTimeField | Auto | `default=timezone.now` (**not** `auto_now_add`, so `backfill_events` can stamp historical timestamps) |
 
 ### Kinds
 
-`USER_JOINED`, `COLLECTION_CREATED`, `COLLECTION_DELETED`, `THING_ADDED`, `THING_REMOVED`, `MEMBER_JOINED`, `MEMBER_LEFT`, `FAQ_ASKED`, `HOLD_REQUESTED`, `HOLD_ACCEPTED`. Guest→creator conversion is **derived** (first `MEMBER_JOINED` vs first `COLLECTION_CREATED` per actor), not a stored kind.
+`USER_JOINED`, `COLLECTION_CREATED`, `COLLECTION_DELETED`, `THING_ADDED`, `THING_REMOVED`, `MEMBER_JOINED` (carrying a `source`, see above), `MEMBER_LEFT`, `FAQ_ASKED`, `HOLD_REQUESTED`, `HOLD_ACCEPTED`. Guest→creator conversion is **derived** (first `MEMBER_JOINED` vs first `COLLECTION_CREATED` per actor), not a stored kind.
 
 ### Business Rules
 
@@ -515,7 +516,7 @@ An `Event` is one row in an **append-only, first-party analytics log**. The doma
 
 ### Methods
 
-- `Event.log(kind, *, actor=None, collection=None, thing=None, thing_type=None, created=None)` — the instrumentation one-liner. Accepts model instances **or** raw code strings (use strings when the object is about to be / has just been deleted). `thing_type` defaults to `thing.type` when a Thing instance is passed. Meta: `db_table="events"`, ordered `-created`, index on `(kind, created)`.
+- `Event.log(kind, *, actor=None, collection=None, thing=None, thing_type=None, created=None, source="")` — the instrumentation one-liner. Accepts model instances **or** raw code strings (use strings when the object is about to be / has just been deleted). `thing_type` defaults to `thing.type` when a Thing instance is passed. Meta: `db_table="events"`, ordered `-created`, index on `(kind, created)`.
 
 ---
 

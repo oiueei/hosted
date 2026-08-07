@@ -253,3 +253,61 @@ class TestStatsCommand:
             call_command("stats_summary", "--email", stdout=out)
         assert len(mail.outbox) == 0
         assert "STATS_EMAIL not set" in out.getvalue()
+
+
+@pytest.mark.django_db
+class TestJoinsByDoorSection:
+    """The report has to separate the six doors, or C1 stays unanswerable.
+
+    Every acquisition path was counted as the same `MEMBER_JOINED`, so "is this
+    door earning its place?" had no answer in the data. The section exists to
+    give that question one.
+    """
+
+    def _joined(self, source, actor, when=None):
+        Event.objects.create(
+            kind=Event.Kind.MEMBER_JOINED,
+            actor_code=actor,
+            collection_code="REALC1",
+            source=source,
+            created=when or timezone.now(),
+        )
+
+    def _section(self):
+        return next(s for s in build_report() if s["title"] == "Members joined, by door")
+
+    def test_each_door_is_counted_separately(self):
+        self._joined(Event.Source.SHARE, "AAA111")
+        self._joined(Event.Source.SHARE, "AAA222")
+        self._joined(Event.Source.RECOMMENDATION, "AAA333")
+
+        rows = dict(self._section()["rows"])
+
+        assert rows["Share link / QR"].startswith("2 ")
+        assert rows["Member recommendation"].startswith("1 ")
+        assert rows["Owner invite"].startswith("0 ")
+
+    def test_the_30_day_window_is_reported_beside_the_all_time_count(self):
+        self._joined(Event.Source.PUBLIC, "AAA444")
+        self._joined(Event.Source.PUBLIC, "AAA555", when=timezone.now() - timedelta(days=90))
+
+        rows = dict(self._section()["rows"])
+
+        # Two all time, one of them recent — an old door that has since gone
+        # quiet must not read as a live one.
+        assert rows["Public collection (login to act)"] == "2 (1 in 30d)"
+
+    def test_joins_recorded_before_the_field_existed_get_their_own_bucket(self):
+        """Never folded into a door they might not belong to."""
+        self._joined("", "AAA666")
+
+        rows = dict(self._section()["rows"])
+
+        assert rows["Unrecorded (joined before this was measured)"] == 1
+
+    def test_no_unrecorded_row_when_there_is_nothing_to_confess(self):
+        self._joined(Event.Source.INVITE, "AAA777")
+
+        labels = [label for label, _ in self._section()["rows"]]
+
+        assert not any("Unrecorded" in label for label in labels)
