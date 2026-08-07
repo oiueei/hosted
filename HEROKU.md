@@ -135,6 +135,10 @@ heroku config:set \
 > caller-supplied and one caller mints a fresh bucket per request, defeating every IP limit in the
 > app), and `2` when a CDN sits in front of the router.
 
+> **Optional — stats report:** `STATS_EMAIL` is where `manage.py stats_summary` mails its weekly
+> product report; unset, the command still prints to stdout and skips the email. `STATS_EMAIL_WEEKDAY`
+> picks the day (0=Monday … 6=Sunday, default Monday). It rides the existing daily scheduler job.
+
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
 > **Email** is configured separately — see the [Email](#email) section below. Magic-link sign-in does not work until SMTP is set.
