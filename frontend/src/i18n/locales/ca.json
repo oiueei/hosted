@@ -248,7 +248,9 @@
     "noPermission": "No tens accés a aquesta col·lecció. Pot estar inactiva, o el teu accés pot haver canviat — revisa les teves invitacions, o contacta amb el propietari.",
     "notFound": "Col·lecció no trobada.",
     "errorLoading": "Error en carregar la col·lecció.",
-    "curator": "Curador."
+    "curator": "Curador.",
+    "showMoreThings_one": "Veure 1 cosa més",
+    "showMoreThings_other": "Veure {{count}} coses més"
   },
   "digestMute": {
     "pageTitle": "Resums per correu — OIUEEI",

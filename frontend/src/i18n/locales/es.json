@@ -248,7 +248,9 @@
     "noPermission": "No tienes acceso a esta colección. Puede estar inactiva, o tu acceso puede haber cambiado — revisa tus invitaciones, o contacta con el dueño.",
     "notFound": "Colección no encontrada.",
     "errorLoading": "Error al cargar la colección.",
-    "curator": "Curador."
+    "curator": "Curador.",
+    "showMoreThings_one": "Ver 1 cosa más",
+    "showMoreThings_other": "Ver {{count}} cosas más"
   },
   "digestMute": {
     "pageTitle": "Resúmenes por correo — OIUEEI",

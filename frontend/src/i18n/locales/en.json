@@ -266,7 +266,9 @@
     "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask the owner.",
     "notFound": "Collection not found.",
     "errorLoading": "Error loading collection.",
-    "curator": "Curator."
+    "curator": "Curator.",
+    "showMoreThings_one": "Show 1 more thing",
+    "showMoreThings_other": "Show {{count}} more things"
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",

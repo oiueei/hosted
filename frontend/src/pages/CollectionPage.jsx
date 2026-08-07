@@ -16,6 +16,22 @@ import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 
+/**
+ * Cards mounted before the "Show more" button appears.
+ *
+ * The collection serialises **every** thing it holds and there is no ceiling on
+ * how many that is (`COLLECTION_THINGS_BLOCK` is off by default), so a lending
+ * library with 200 items used to mount 200 `ThingLinkbox`es — each with its own
+ * theeeme, localisation and booking view-model — on first paint. The photos were
+ * already `loading="lazy"`, so what this cuts is the mount cost, which is what
+ * a mid-range Android actually feels (DESIGN §7).
+ *
+ * Deliberately a **render** cap, not server pagination: the tag chips count
+ * across the whole collection, and a paginated payload would make those counts
+ * lie. 24 fills the widest grid (4 columns) six rows deep.
+ */
+const CARDS_PER_PAGE = 24;
+
 export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -30,6 +46,7 @@ export default function CollectionPage() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
+  const [shownCount, setShownCount] = useState(CARDS_PER_PAGE);
   const [digestSaving, setDigestSaving] = useState(false);
   const [digestError, setDigestError] = useState(false);
   // The owner may have written the collection's text once per language; every
@@ -145,9 +162,14 @@ export default function CollectionPage() {
   const visibleThings = collection.things.filter((thg) => thg.status !== 'INACTIVE');
   const collectionTags = collection.tags || [];
   const effectiveTag = activeTag && collectionTags.includes(activeTag) ? activeTag : null;
-  const shownThings = effectiveTag
+  const matchingThings = effectiveTag
     ? visibleThings.filter((thg) => (thg.tags || []).includes(effectiveTag))
     : visibleThings;
+  // Newest first, then capped at what's actually been asked for. Sorting before
+  // the slice is what makes "Show more" append older things rather than reshuffle.
+  const sortedThings = [...matchingThings].sort((a, b) => new Date(b.created) - new Date(a.created));
+  const shownThings = sortedThings.slice(0, shownCount);
+  const remainingThings = sortedThings.length - shownThings.length;
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -335,7 +357,7 @@ export default function CollectionPage() {
             type="button"
             className="tag-chip"
             aria-pressed={!effectiveTag}
-            onClick={() => setActiveTag(null)}
+            onClick={() => { setActiveTag(null); setShownCount(CARDS_PER_PAGE); }}
           >
             {t('collectionPage.allTags')} ({visibleThings.length})
           </button>
@@ -347,7 +369,10 @@ export default function CollectionPage() {
                 type="button"
                 className="tag-chip"
                 aria-pressed={effectiveTag === tag}
-                onClick={() => setActiveTag(effectiveTag === tag ? null : tag)}
+                onClick={() => {
+                  setActiveTag(effectiveTag === tag ? null : tag);
+                  setShownCount(CARDS_PER_PAGE);
+                }}
               >
                 {L(tag)} ({count})
               </button>
@@ -366,10 +391,9 @@ export default function CollectionPage() {
       ) : shownThings.length === 0 ? (
         <p>{t('collectionPage.noThingsForTag')}</p>
       ) : (
+        <>
         <div className="things-grid">
-          {[...shownThings].sort((a, b) => {
-            return new Date(b.created) - new Date(a.created);
-          }).map((thing) => (
+          {shownThings.map((thing) => (
             <ThingLinkbox
               key={thing.code}
               thing={thing}
@@ -386,6 +410,19 @@ export default function CollectionPage() {
             />
           ))}
         </div>
+        {remainingThings > 0 && (
+          <>
+            <div className="spacer-m" />
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
+            >
+              {t('collectionPage.showMoreThings', { count: remainingThings })}
+            </Button>
+          </>
+        )}
+        </>
       )}
 
       {isOwner && collection.invites.length > 0 && (
