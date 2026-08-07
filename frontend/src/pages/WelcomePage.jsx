@@ -18,6 +18,16 @@ const PERSONA_LINKS = {
   Lulu: [],
 };
 
+// The seeded demo collections these personas actually live in. The intro copy
+// has to switch on *these* being reachable, not on the visitor having any
+// collection at all: an ordinary invited member — the main membership model —
+// has a non-empty accessible set made entirely of real groups, and used to be
+// promised "we've shared a few example collections with you" above five stories
+// with no links under them.
+const DEMO_CODES = Object.values(PERSONA_LINKS).flatMap((links) =>
+  links.map(({ code }) => code),
+);
+
 export default function WelcomePage() {
   const { t } = useTranslation();
   useEffect(() => {
@@ -194,9 +204,9 @@ export default function WelcomePage() {
         <h2>{t("welcome.whoUsesTitle")}</h2>
         <div className="spacer-s" />
         <p>
-          {accessibleCodes.size === 0
-            ? t("welcome.exampleIntroEmpty")
-            : t("welcome.exampleIntro")}
+          {DEMO_CODES.some((code) => accessibleCodes.has(code))
+            ? t("welcome.exampleIntro")
+            : t("welcome.exampleIntroEmpty")}
         </p>
         <div className="spacer-s" />
         {["Lala", "Lele", "Lili", "Lolo", "Lulu"].map((name, i) => (
