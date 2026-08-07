@@ -578,7 +578,8 @@
     "errorResending": "Error resending invitation.",
     "invitationSent": "Invitation sent.",
     "errorSending": "Error sending invitation.",
-    "errorLoading": "Error loading collection."
+    "errorLoading": "Error loading collection.",
+    "noPermission": "You do not have access to this collection's guests."
   },
   "recommend": {
     "openLink": "Know someone who'd fit? Recommend them →",

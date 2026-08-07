@@ -560,7 +560,8 @@
     "errorResending": "Error al reenviar la invitación.",
     "invitationSent": "Invitación enviada.",
     "errorSending": "Error al enviar la invitación.",
-    "errorLoading": "Error al cargar la colección."
+    "errorLoading": "Error al cargar la colección.",
+    "noPermission": "No tienes acceso a los invitados de esta colección."
   },
   "recommend": {
     "openLink": "¿Conoces a alguien que encaje? Recomiéndale →",

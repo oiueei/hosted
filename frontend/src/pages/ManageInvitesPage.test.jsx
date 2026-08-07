@@ -212,3 +212,57 @@ describe('ManageInvitesPage (the guest list)', () => {
     });
   });
 });
+
+/**
+ * A load failure must say so, not draw a page that contradicts reality.
+ *
+ * This was the only data page in the app with no persistent error state: a 403
+ * or a dead network raised an auto-closing toast and then rendered isOwner=false
+ * over an empty list, so the owner read "no guests, and you can't invite anyone"
+ * with no explanation and no way to retry.
+ */
+describe('ManageInvitesPage load failures', () => {
+  beforeEach(() => { localStorage.setItem('userCode', 'OWNER1'); });
+  afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
+
+  const failWith = (status) => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status, json: async () => ({}) }));
+  };
+
+  test('a server error stops the page instead of showing an empty guest list', async () => {
+    failWith(500);
+    renderPage();
+
+    expect(await screen.findByText(/error loading/i)).toBeInTheDocument();
+    // Crucially: it does not offer the invite form it has no right to show.
+    expect(screen.queryByRole('button', { name: /^invite$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  test('a 403 says it is a permission problem, not a generic failure', async () => {
+    failWith(403);
+    renderPage();
+
+    expect(
+      await screen.findByText(/do not have access to this collection's guests/i)
+    ).toBeInTheDocument();
+  });
+
+  test('Retry re-fetches, and a collection that loads the second time renders normally', async () => {
+    let attempt = 0;
+    globalThis.fetch = vi.fn(() => {
+      attempt += 1;
+      return attempt === 1
+        ? Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+        : Promise.resolve({ ok: true, status: 200, json: async () => COLLECTION });
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
+
+    expect(await screen.findByText(/Ana/)).toBeInTheDocument();
+    expect(screen.queryByText(/error loading/i)).not.toBeInTheDocument();
+  });
+});

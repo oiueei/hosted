@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TextInput, Button, Table, IconEnvelope, IconCrossCircle } from 'hds-react';
+import { TextInput, Button, Notification, Table, IconEnvelope, IconCrossCircle } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,6 +19,7 @@ export default function ManageInvitesPage() {
   const L = useLocalized();
   const { tc, btnStyle } = useTheeeme();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [invites, setInvites] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   // Members' recommendations awaiting the owner's answer. Owner-only from the
@@ -47,11 +48,20 @@ export default function ManageInvitesPage() {
         setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
         setIsOwner(localStorage.getItem('userCode') === data.owner);
+        setLoadError('');
       } else {
-        setToast({ type: 'error', message: t('manageInvites.errorLoading') });
+        // A persistent error, not the auto-closing toast this used to raise.
+        // The toast faded and left the page rendering isOwner=false over an
+        // empty list — "no guests, and you can't invite anyone" — which is not
+        // what happened. Every other data page in the app stops and says so.
+        setLoadError(
+          res.status === 403
+            ? t('manageInvites.noPermission')
+            : t('manageInvites.errorLoading'),
+        );
       }
     } catch {
-      setToast({ type: 'error', message: t('common.connectionError') });
+      setLoadError(t('common.connectionError'));
     } finally {
       setLoading(false);
     }
@@ -141,6 +151,22 @@ export default function ManageInvitesPage() {
 
   if (loading) {
     return <LoadingSpinner />;
+  }
+
+  if (loadError) {
+    return (
+      <PageLayout
+        title={t('common.error')}
+        backTo={`/collections/${code}`}
+        backLabel={t('common.collection')}
+      >
+        <Notification label={t('common.error')} type="error">{loadError}</Notification>
+        <div className="spacer-m" />
+        <Button variant="secondary" onClick={() => { setLoading(true); fetchCollection(); }}>
+          {t('common.retry')}
+        </Button>
+      </PageLayout>
+    );
   }
 
   return (
