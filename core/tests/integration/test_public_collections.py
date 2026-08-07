@@ -167,3 +167,72 @@ def test_anonymous_cannot_ask_a_question_on_a_public_thing(api_client, user):
     thing = _thing(user, coll)
     res = api_client.post(f"/api/v1/things/{thing.code}/faq/", {"question": "Hi?"}, format="json")
     assert res.status_code == 401
+
+
+# --- a thing in two collections must not name the one you can't read ------
+#
+# `Thing.can_view()` lets the thing through on the strength of whichever
+# collection the reader *does* have (a public one, or one they belong to). The
+# `collection_*` fields then answered with `collections.all()[0]` — the DB's
+# first row, viewable or not — so the reader was told the name and code of the
+# other one. The drill lent to both the neighbourhood group and the family group
+# is the ordinary case, not a contrived one.
+
+
+def _thing_in_two_collections(owner, second_visibility=Collection.Visibility.PUBLIC):
+    """A thing in a PRIVATE collection (created first, so it sorts first) and in
+    a second one the reader is meant to reach it through."""
+    private = _collection(owner, Collection.Visibility.PRIVATE, code="PRV001")
+    private.headline = "Cosas de casa"
+    private.tags = ["secreto"]
+    private.save()
+    reachable = _collection(owner, second_visibility, code="OPN001")
+    thing = _thing(owner, private)
+    reachable.things.add(thing)
+    return private, reachable, thing
+
+
+def test_anonymous_reader_is_not_told_the_private_collection_a_public_thing_shares(
+    api_client, user
+):
+    private, reachable, thing = _thing_in_two_collections(user)
+
+    res = api_client.get(f"/api/v1/things/{thing.code}/")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["collection_code"] == reachable.code
+    assert body["collection_headline"] != private.headline
+    assert private.code not in str(body)
+    assert "secreto" not in body["collection_tags"]
+
+
+def test_member_is_not_told_the_private_collection_a_shared_thing_sits_in(
+    authenticated_client2, user, user2
+):
+    """`/shared` (SharedThingsPage) prints collection_headline on every card, so
+    this is the field a member of one group would have read the other's name in."""
+    private, reachable, _thing_obj = _thing_in_two_collections(
+        user, second_visibility=Collection.Visibility.PRIVATE
+    )
+    reachable.invites.add(user2)
+
+    res = authenticated_client2.get("/api/v1/invited-things/")
+
+    assert res.status_code == 200
+    items = _items(res)
+    assert len(items) == 1
+    assert items[0]["collection_code"] == reachable.code
+    assert items[0]["collection_headline"] != private.headline
+
+
+def test_owner_still_sees_their_own_private_collection_on_their_thing(authenticated_client, user):
+    """The narrowing must not cost the owner the collection they actually own —
+    it is `can_view`, not "public only"."""
+    private, _reachable, thing = _thing_in_two_collections(user)
+
+    res = authenticated_client.get(f"/api/v1/things/{thing.code}/")
+
+    assert res.status_code == 200
+    assert res.json()["collection_code"] == private.code
+    assert "secreto" in res.json()["collection_tags"]

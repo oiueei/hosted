@@ -250,33 +250,99 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     def get_thumbnail_url(self, obj):
         return cloudinary_url(obj.thumbnail)
 
+    def _viewer_collection_codes(self):
+        """Codes of every collection the requesting user owns or belongs to.
+
+        One query per request, cached on the shared serializer context: the
+        collection fields below ask this for every thing in a list, and going
+        through ``Collection.can_view()`` instead would fire ``is_invited()``
+        once per thing per collection — an N+1 on ``/invited-things/``.
+        """
+        if "_viewer_collection_codes" not in self.context:
+            from django.db.models import Q
+
+            from core.models import Collection
+
+            request = self.context.get("request")
+            user = getattr(request, "user", None)
+            codes = frozenset()
+            if user is not None and user.is_authenticated:
+                codes = frozenset(
+                    Collection.objects.filter(Q(owner=user) | Q(invites=user)).values_list(
+                        "code", flat=True
+                    )
+                )
+            self.context["_viewer_collection_codes"] = codes
+        return self.context["_viewer_collection_codes"]
+
+    def _viewable_collections(self, obj):
+        """The thing's collections **this viewer is allowed to read**, in order.
+
+        A thing can live in several collections at once, and the collection
+        fields below used to answer with ``collections.all()[0]`` — whichever the
+        DB handed back first, viewable or not. So a drill shared with both a
+        private family group and a public neighbourhood one told every reader of
+        the public one the name and code of the private one: `/shared` printed it
+        on the card, `/things/{code}` used it as the back label for anonymous
+        visitors, and following it landed on a 403. `Thing.can_view()` let the
+        *thing* through on the strength of the public collection; nothing then
+        re-asked the question about the collection it named.
+
+        Mirrors ``Collection.can_view()`` exactly — owner regardless of status,
+        never INACTIVE otherwise, then PUBLIC or membership — but reads the
+        prefetched rows and one cached code set, so it costs no query per thing.
+
+        A context with no request is internal use (a serializer called directly,
+        no viewer to judge): everything is viewable, as before.
+        """
+        collections = list(obj.collections.all())
+        request = self.context.get("request")
+        if request is None:
+            return collections
+
+        from core.models import Collection
+
+        viewer = request.user.code if request.user.is_authenticated else None
+        member_codes = self._viewer_collection_codes()
+        return [
+            collection
+            for collection in collections
+            if collection.owner_id == viewer
+            or (
+                collection.status == Collection.Status.ACTIVE
+                and (collection.is_public() or collection.code in member_codes)
+            )
+        ]
+
+    def _viewable_collection(self, obj):
+        """The first collection this viewer may read, or ``None``. Memoised —
+        five fields ask for it per thing."""
+        if not hasattr(obj, "_viewable_collection_cache"):
+            viewable = self._viewable_collections(obj)
+            obj._viewable_collection_cache = viewable[0] if viewable else None
+        return obj._viewable_collection_cache
+
     def get_collection_code(self, obj):
-        # Use prefetched collections cache if available
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
+        first = self._viewable_collection(obj)
         return first.code if first else None
 
     def get_collection_headline(self, obj):
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
+        first = self._viewable_collection(obj)
         return first.headline if first else None
 
     def get_collection_owner(self, obj):
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
+        first = self._viewable_collection(obj)
         return first.owner_id if first else None
 
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).
         Used by RequestThingPage to offer the fixed-duration picker for LEND/RENT."""
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
+        first = self._viewable_collection(obj)
         return list(first.rental_durations) if first else []
 
     def get_rental_weekdays(self, obj):
         """Allowed pickup/return weekdays (0=Mon…6=Sun) from the first collection."""
-        collections = obj.collections.all()
-        first = collections[0] if collections else None
+        first = self._viewable_collection(obj)
         return list(first.rental_weekdays) if first else []
 
     def get_faqs(self, obj):
@@ -284,11 +350,16 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         return [faq.code for faq in obj.faq_set.all()]
 
     def get_collection_tags(self, obj):
-        # The tag vocabulary available to this thing — union of its collections'
-        # tags. Feeds the tag picker on the edit form without an extra fetch.
+        # The tag vocabulary available to this thing — union of the collections
+        # the viewer may read. Feeds the tag picker on the edit form without an
+        # extra fetch. Narrowed for the same reason as the fields above: a label
+        # set is weaker evidence than a headline, but it still describes a group
+        # the reader has no business seeing. The thing's owner loses nothing —
+        # a thing only reaches a collection because its owner added it, which
+        # takes ownership or membership either way.
         seen = set()
         result = []
-        for collection in obj.collections.all():
+        for collection in self._viewable_collections(obj):
             for tag in collection.tags or []:
                 if tag not in seen:
                     seen.add(tag)
