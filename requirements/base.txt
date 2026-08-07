@@ -1,12 +1,31 @@
+# Direct dependencies, pinned to exact versions.
+#
+# They used to be ranges (`Django>=5.0,<6.0`). A range is resolved at install
+# time, so CI and the Heroku build could each pick a different version on the
+# same commit — and the `pip-audit` run in .github/workflows/tests.yml would then
+# be auditing something other than what production actually installs. A release
+# published between the CI run and the deploy lands in production having been
+# audited by nobody. Exact pins make the audit and the slug agree.
+#
+# **Transitive dependencies are still unpinned**, which is the remaining half of
+# the job: a full lock (`pip-compile --generate-hashes`) has to be resolved
+# against the interpreter that will run it — Python 3.12, per .python-version and
+# the CI matrix — and resolving it on anything else can pin a version that has no
+# 3.12 wheel or drop a backport guarded by a `python_version` marker. Generate it
+# on a 3.12 environment when adding one.
+#
+# Bumping: change the version here, run the suite, and let `pip-audit` in CI
+# confirm the new pin is clean. Dependabot opens these as ordinary PRs.
+
 # Core
-Django>=5.0,<6.0
-djangorestframework>=3.15,<4.0
-djangorestframework-simplejwt>=5.3,<6.0
-django-cors-headers>=4.3,<5.0
-django-ratelimit>=4.1,<5.0
-django-otp>=1.5,<2.0
+Django==5.2.17
+djangorestframework==3.17.2
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.9.0
+django-ratelimit==4.1.0
+django-otp==1.7.0
 
 # Utils
-python-dotenv>=1.0,<2.0
-cloudinary>=1.36,<2.0
-requests>=2.32.0
+python-dotenv==1.2.2
+cloudinary==1.45.0
+requests==2.34.2

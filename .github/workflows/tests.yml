@@ -122,10 +122,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Both files, not just production. The dev tooling runs with checkout and
+      # token access on every push, so a compromised test dependency is a
+      # supply-chain surface of its own — and auditing production alone is
+      # precisely why pytest sat on a version with a known advisory (PYSEC-2026-1845)
+      # without anything noticing. Blocking, like the npm gate: if a dev-only
+      # advisory ever turns out to be unfixable, it earns a written exception the
+      # way frontend/scripts/audit-gate.mjs does, not a quietly dropped check.
       - name: Audit Python dependencies
         run: |
           python -m pip install --upgrade pip pip-audit
           pip-audit -r requirements/production.txt
+          pip-audit -r requirements/development.txt
 
       - name: Secret scan (gitleaks)
         # The sha256 is from gitleaks_8.21.2_checksums.txt on the release page —

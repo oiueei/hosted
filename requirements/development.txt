@@ -1,12 +1,22 @@
 -r base.txt
 
+# Exact pins — see base.txt. Here it also buys a reproducible test run: a Ruff or
+# pytest minor picked up silently between two CI runs is a green build turning
+# red (or the reverse) with no commit to blame it on.
+
 # Testing
-pytest>=8.0,<9.0
-pytest-django>=4.8,<5.0
-pytest-cov>=5.0,<6.0
-factory-boy>=3.3,<4.0
-time-machine>=2.14,<3.0
+#
+# pytest is on 9.x because 8.4.2 — the newest the old `>=8.0,<9.0` range allowed
+# — carries PYSEC-2026-1845, whose fix ships in 9.0.3. Pinning is what surfaced
+# it: the range's ceiling sat below the fix, and CI only audited
+# requirements/production.txt, so nothing ever looked. pytest-cov follows to 7.x
+# for the same major.
+pytest==9.1.1
+pytest-django==4.13.0
+pytest-cov==7.1.0
+factory-boy==3.3.3
+time-machine==2.19.0
 
 # Linting & formatting (Ruff replaces black + isort + flake8)
-ruff>=0.15,<0.16
-pre-commit>=4.0,<5.0
+ruff==0.15.22
+pre-commit==4.6.1
