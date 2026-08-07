@@ -167,6 +167,10 @@ TEXTS = {
     "reminder_subject": "Recordatori: una reserva acaba demà",
     "reminder_plain": "Recordatori: la reserva de {requester} sobre '{thing}' acaba el {end}.",
     "reminder_body": "Recordatori: la reserva de {requester} sobre {thing} acaba el {end}.",
+    "return_due_subject": "Demà tornes {thing}",
+    "return_due_plain": "Un recordatori amable: has de tornar '{thing}' a {owner} el {end}.",
+    "return_due_body": "Un recordatori amable: has de tornar {thing} a {owner} el {end}.",
+    "view_thing_cta": "Veure la publicació",
     # Digest
     "digest_subject": "Novetats a {collection}",
     "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",

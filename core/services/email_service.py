@@ -1088,6 +1088,30 @@ def send_return_reminder_email(requester_name, thing_headline, end_date, owner_e
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
+def send_return_due_email(owner_name, thing_headline, end_date, requester_email, thing_url=None):
+    """Remind the **borrower** that they hand the thing back tomorrow.
+
+    The counterpart of ``send_return_reminder_email``, and the half that was
+    missing: only the owner was ever told a loan was ending, so the one person
+    who has to actually do something — carry the drill back — heard nothing. A
+    lending library runs on this message.
+
+    It names the owner rather than "the owner": returning something is a promise
+    made to a person, and the borrower may be in several groups at once.
+    """
+    user, lang = _recipient(requester_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing_headline)
+    subject = T("return_due_subject").format(thing=headline)
+    plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end_date)
+    body = T("return_due_body").format(owner=owner_name, thing=headline, end=end_date)
+    blocks = [_para(body)]
+    if thing_url:
+        blocks.append(_links((thing_url, T("view_thing_cta"))))
+    html = _render_email(blocks)
+    _send(requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+
+
 # --- Category 3: News / broadcast ---------------------------------------------
 
 

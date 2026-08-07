@@ -161,6 +161,10 @@ TEXTS = {
     "reminder_subject": "Reminder: a hold ends tomorrow",
     "reminder_plain": "Reminder: {requester}'s hold on '{thing}' ends {end}.",
     "reminder_body": "Reminder: {requester}'s hold on {thing} ends {end}.",
+    "return_due_subject": "Tomorrow you take {thing} back",
+    "return_due_plain": "A friendly nudge: you're due to return '{thing}' to {owner} on {end}.",
+    "return_due_body": "A friendly nudge: you're due to return {thing} to {owner} on {end}.",
+    "view_thing_cta": "View the listing",
     # Digest
     "digest_subject": "What's new in {collection}",
     "digest_plain": "New things in {collection}:\n\n{things}\n\nView collection: {url}",

@@ -162,6 +162,10 @@ TEXTS = {
     "reminder_subject": "Recordatorio: una reserva termina mañana",
     "reminder_plain": "Recordatorio: la reserva de {requester} sobre '{thing}' termina el {end}.",
     "reminder_body": "Recordatorio: la reserva de {requester} sobre {thing} termina el {end}.",
+    "return_due_subject": "Mañana devuelves {thing}",
+    "return_due_plain": "Un recordatorio amable: tienes que devolver '{thing}' a {owner} el {end}.",
+    "return_due_body": "Un recordatorio amable: tienes que devolver {thing} a {owner} el {end}.",
+    "view_thing_cta": "Ver la publicación",
     # Digest
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",

@@ -112,8 +112,14 @@ class TestCleanupRsvpsCommand:
 class TestSendRemindersCommand:
     """Tests for send_reminders management command."""
 
-    def test_return_reminder(self):
-        """Should send return reminder when end_date is tomorrow."""
+    def test_return_reminder_reaches_both_sides(self):
+        """Both parties are reminded a loan ends tomorrow — each in their own words.
+
+        The borrower's half is the one that was missing: only the owner was ever
+        told, so the person who actually has to carry the drill back heard
+        nothing. A lending library runs on that message, and the reminder is
+        pointless without it.
+        """
         tomorrow = date.today() + timedelta(days=1)
         owner = User.objects.create(code="RMOWN1", email="rmowner@test.com", name="Owner")
         requester = User.objects.create(code="RMREQ1", email="rmreq@test.com", name="Requester")
@@ -134,10 +140,56 @@ class TestSendRemindersCommand:
         out = StringIO()
         call_command("send_reminders", stdout=out)
 
-        assert len(mail.outbox) == 1
-        assert "ends tomorrow" in mail.outbox[0].subject
-        assert "rmowner@test.com" in mail.outbox[0].to
+        assert len(mail.outbox) == 2
+        by_recipient = {m.to[0]: m for m in mail.outbox}
+        assert set(by_recipient) == {"rmowner@test.com", "rmreq@test.com"}
+
+        # The owner is told somebody's hold is ending; nothing is asked of them.
+        to_owner = by_recipient["rmowner@test.com"]
+        assert "ends tomorrow" in to_owner.subject
+        assert "Requester" in to_owner.body
+
+        # The borrower is told what they must do, and who they owe it to.
+        to_borrower = by_recipient["rmreq@test.com"]
+        assert "Drill" in to_borrower.subject
+        assert "return" in to_borrower.body.lower()
+        assert "Owner" in to_borrower.body
+        assert "Sent 2 reminder" in out.getvalue()
+
+    def test_a_failing_recipient_does_not_cost_the_other_their_reminder(self, monkeypatch):
+        """One broken send must not silence the other half of the same loan."""
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RMOWN2", email="rmowner2@test.com", name="Owner")
+        requester = User.objects.create(code="RMREQ2", email="rmreq2@test.com", name="Requester")
+        thing = Thing.objects.create(
+            code="RMTHN2", owner=owner, headline="Ladder", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=date.today(),
+            end_date=tomorrow,
+            status="ACCEPTED",
+        )
+
+        def boom(**kwargs):
+            raise RuntimeError("SMTP down")
+
+        monkeypatch.setattr(
+            "core.management.commands.send_reminders.send_return_reminder_email", boom
+        )
+
+        out = StringIO()
+        err = StringIO()
+        call_command("send_reminders", stdout=out, stderr=err)
+
+        # The borrower still got theirs.
+        assert [m.to[0] for m in mail.outbox] == ["rmreq2@test.com"]
         assert "Sent 1 reminder" in out.getvalue()
+        assert "Reminder failed" in err.getvalue()
 
     def test_no_reminders(self):
         """Should report zero when nothing is due tomorrow."""

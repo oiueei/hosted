@@ -276,7 +276,7 @@ python manage.py createsuperuser
 python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
-python manage.py send_reminders    # return/delivery reminders (daily)
+python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 python manage.py stats_summary     # product stats (prints daily; emails on STATS_EMAIL_WEEKDAY, default Monday)
 
