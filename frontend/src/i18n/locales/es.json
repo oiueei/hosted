@@ -433,7 +433,7 @@
     "maxAbout": "Máximo 2000 caracteres.",
     "languageHelper": "OIUEEI también te escribe en este idioma (correos incluidos).",
     "deleteAccount": "Borrar cuenta",
-    "nameHelper": "Tu nombre, un apodo, lo que quieras — es como te verán los demás en OIUEEI."
+    "nameHelper": "Tu nombre, un apodo, lo que quieras. Aparece junto a las preguntas que haces, en el recorrido de las cosas que has tenido y en la lista de miembros de tus grupos — en público, si el grupo comparte en público."
   },
   "editCollection": {
     "pageTitle": "Editar colección",
