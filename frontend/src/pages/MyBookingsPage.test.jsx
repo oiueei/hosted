@@ -210,6 +210,30 @@ describe('MyBookingsPage pagination', () => {
     );
   });
 
+  test('a refused second page says so and keeps the first one on screen', async () => {
+    // Regression: `!res.ok` had no branch. The button re-enabled, nothing
+    // appeared and nothing said why — which reads as a broken app rather than
+    // a failed request.
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [booking({ code: 'B1', thing_headline: 'Cordless drill' })],
+          next: 'http://testserver/api/v1/my-bookings/?page=2',
+        }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
+
+    expect(await screen.findByText(/couldn't load more/i)).toBeInTheDocument();
+    expect(screen.getByText('Cordless drill')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeEnabled();
+  });
+
   test('no "Load more" when the first page is the only page', async () => {
     mockList([booking()], null);
     renderPage();

@@ -5,6 +5,7 @@ import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Toast from '../components/Toast';
 import ThingLinkbox from '../components/ThingLinkbox';
 import useTheeeme from '../hooks/useTheeeme';
 
@@ -28,6 +29,7 @@ export default function SharedThingsPage() {
   const [next, setNext] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState(null);
   useEffect(() => { document.title = t('titles.sharedThings'); }, [t]);
 
   useEffect(() => {
@@ -63,9 +65,18 @@ export default function SharedThingsPage() {
         const data = await res.json();
         setThings((prev) => [...prev, ...(data.results || [])]);
         setNext(data.next || null);
+      } else {
+        // A refused page used to fall out of here silently: the button
+        // re-enabled, nothing appeared, and nothing said why. The reader is left
+        // pressing a control that visibly does nothing.
+        setToast({ type: 'error', message: t('common.loadMoreError') });
       }
     } catch {
-      setError(t('common.connectionError'));
+      // A Toast, not `setError` — that swaps the whole page for the error
+      // screen, so a failed *second* page would throw away the first one the
+      // reader is looking at. The initial load still uses `setError`, where
+      // there is nothing on screen to lose.
+      setToast({ type: 'error', message: t('common.connectionError') });
     } finally {
       setLoadingMore(false);
     }
@@ -127,6 +138,7 @@ export default function SharedThingsPage() {
           </Button>
         </>
       )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -13,6 +13,11 @@ import { apiFetch } from '../services/api';
 import SharedThingsPage from '../pages/SharedThingsPage';
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+
+/** One page per call, in order — the pager's own sequence. */
+const mockPages = (...pages) => {
+  pages.forEach((page) => apiFetch.mockImplementationOnce(() => ok(page)));
+};
 
 const THING = {
   code: 'THG001',
@@ -87,5 +92,77 @@ describe('SharedThingsPage', () => {
 
     await screen.findByText('A cordless drill');
     expect(screen.getByRole('button', { name: /load more/i })).toBeInTheDocument();
+  });
+
+  test('no "Load more" when the first page is the only page', async () => {
+    mockPages({ results: [THING], next: null });
+
+    renderPage();
+
+    await screen.findByText('A cordless drill');
+    expect(screen.queryByRole('button', { name: /load more/i })).toBeNull();
+  });
+});
+
+/**
+ * The pager itself. Until now only its *button* was tested — that it appeared
+ * when the API said there was a second page. Everything the button does was
+ * unexecuted: the append, the origin strip, and standing down when exhausted.
+ * Both sibling pagers (`MyBookingsPage`, `OwnerBookingsPage`) carry exactly
+ * these, and this page is the one that shipped without them.
+ */
+describe('SharedThingsPage pagination', () => {
+  test('"Load more" appends the next page and keeps the request same-origin', async () => {
+    mockPages(
+      { results: [THING], next: 'http://testserver/api/v1/invited-things/?page=2' },
+      { results: [{ ...THING, code: 'THG002', headline: 'A folding ladder' }], next: null }
+    );
+    renderPage();
+    await screen.findByText('A cordless drill');
+
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }));
+
+    expect(await screen.findByText('A folding ladder')).toBeInTheDocument();
+    // The first page stays: the pager appends, it doesn't replace.
+    expect(screen.getByText('A cordless drill')).toBeInTheDocument();
+    // DRF hands back an absolute URL. Sending it verbatim would leave the Vite
+    // proxy in dev and go cross-origin everywhere — which drops the auth
+    // cookies, so the second page would come back empty or 401.
+    expect(apiFetch.mock.calls[1][0]).toBe('/api/v1/invited-things/?page=2');
+    // Exhausted, the pager stands down rather than re-fetching the same page.
+    await waitFor(() => expect(screen.queryByRole('button', { name: /load more/i })).toBeNull());
+  });
+
+  test('a dropped connection while paging says so instead of failing silently', async () => {
+    mockPages({ results: [THING], next: 'http://testserver/api/v1/invited-things/?page=2' });
+    apiFetch.mockImplementationOnce(() => Promise.reject(new TypeError('Failed to fetch')));
+    renderPage();
+    await screen.findByText('A cordless drill');
+
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }));
+
+    expect(await screen.findByText(/connection/i)).toBeInTheDocument();
+    // Reported without costing the reader the page they were already looking at.
+    expect(screen.getByText('A cordless drill')).toBeInTheDocument();
+  });
+
+  test('a refused second page says so and keeps the first one on screen', async () => {
+    // Regression: `!res.ok` had no branch at all here. The button re-enabled,
+    // nothing appeared and nothing said why — a control that visibly does
+    // nothing, which reads as a broken app rather than a failed request.
+    mockPages({ results: [THING], next: 'http://testserver/api/v1/invited-things/?page=2' });
+    apiFetch.mockImplementationOnce(() =>
+      Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    );
+    renderPage();
+    await screen.findByText('A cordless drill');
+
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }));
+
+    expect(await screen.findByText(/couldn't load more/i)).toBeInTheDocument();
+    // And the failure must not swap the whole page for the error screen: the
+    // first page is still there, and so is the way to retry.
+    expect(screen.getByText('A cordless drill')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /load more/i })).toBeEnabled();
   });
 });

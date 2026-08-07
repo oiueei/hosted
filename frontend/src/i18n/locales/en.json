@@ -76,6 +76,7 @@
     "connectionError": "Connection error.",
     "tooManyAttempts": "Too many attempts — please wait a moment and try again.",
     "loadMore": "Load more",
+    "loadMoreError": "Couldn't load more. Please try again.",
     "retry": "Retry",
     "home": "Home",
     "collection": "Collection",

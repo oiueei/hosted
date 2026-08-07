@@ -70,6 +70,7 @@
     "connectionError": "Error de connexió.",
     "tooManyAttempts": "Massa intents — espera un moment i torna-ho a provar.",
     "loadMore": "Mostra més",
+    "loadMoreError": "No s'ha pogut carregar-ne més. Torna-ho a provar.",
     "retry": "Tornar a provar",
     "home": "Inici",
     "collection": "Col·lecció",

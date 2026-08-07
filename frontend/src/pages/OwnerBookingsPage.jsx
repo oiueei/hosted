@@ -118,6 +118,11 @@ export default function OwnerBookingsPage() {
         const data = await res.json();
         setBookings((prev) => [...prev, ...(data.results || [])]);
         setNext(data.next || null);
+      } else {
+        // A refused page used to fall out of here silently — the button
+        // re-enabled and nothing else happened, so the reader was left pressing
+        // a control that visibly did nothing.
+        setToast({ type: 'error', message: t('common.loadMoreError') });
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });

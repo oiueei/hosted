@@ -204,4 +204,32 @@ describe('OwnerBookingsPage pagination', () => {
 
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
   });
+
+  test('a refused second page says so and keeps the first one on screen', async () => {
+    // Regression: `!res.ok` had no branch. The button re-enabled, nothing
+    // appeared and nothing said why — which reads as a broken app, not a failed
+    // request. `mockApi` always answers ok, so this one drives fetch directly.
+    apiFetch
+      .mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            results: [booking()],
+            next: 'http://api.example.com/api/v1/owner-bookings/?page=2',
+          }),
+        })
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+      );
+    renderPage();
+    await screen.findByRole('link', { name: 'Cordless drill' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    expect(await screen.findByText(/couldn't load more/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Cordless drill' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeEnabled();
+  });
 });
