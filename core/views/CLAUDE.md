@@ -438,6 +438,8 @@ Lets an invited member remove **themselves** from a collection (self-unlink) —
 
 A member recommends somebody: `{email, note?}` → an `InvitationProposal` plus the owner's email and in-app notification. **Nothing reaches the proposed address** — no `User` row, no email — until the owner approves. Open in **both** modes: PROPRIETARY decides who may add a *thing*, never who may suggest a person, and the owner's approval is the gate either way. 400 for the owner (they invite directly), for a non-member, for someone already in the group, and for a duplicate pending suggestion; **403** when the owner has switched recommendations off.
 
+**The last two 400s share one message, and must keep sharing it.** "Already in the group" and "already suggested" used to read differently, which made the first an email-membership oracle: a member could put any address to this endpoint 30 times a day and read a yes/no on whether it belongs to a co-member — the fact the roster withholds from non-owners (`invites` is `code` + `name`, no email — L2). The single answer ("either they are already in this group, or someone has already suggested them") still tells the proposer the only thing they needed, which is that there is nothing to do. Pinned by `test_an_address_already_inside_is_answered_exactly_like_one_merely_queued`, which compares the two responses byte for byte.
+
 The 30/day cap is high on purpose: abuse is not expected, and an owner has a better answer than a quota — removing the member.
 
 ### CollectionProposalActionView

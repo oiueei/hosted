@@ -139,18 +139,40 @@ class TestProposing:
         assert "invite them directly" in str(resp.data)
         assert InvitationProposal.objects.count() == 0
 
-    def test_suggesting_somebody_already_in_the_group_says_so(self, group, member):
-        """Answered here rather than by the owner: it needs no decision, and it
-        tells the proposer nothing they couldn't already see — membership is
-        visible to members.
-        """
+    def test_suggesting_somebody_already_in_the_group_is_refused(self, group, member):
+        """Answered here rather than by the owner: it needs no decision."""
         resp = client_for(member).post(
             PROPOSE_URL.format(code=group.code), {"email": member.email}, format="json"
         )
 
         assert resp.status_code == 400
-        assert "already part of this group" in str(resp.data)
         assert InvitationProposal.objects.count() == 0
+
+    def test_an_address_already_inside_is_answered_exactly_like_one_merely_queued(
+        self, group, member
+    ):
+        """The refusal must not say **which** of the two it was.
+
+        Split, the membership branch was an oracle: a member could put any
+        address to this endpoint, 30 a day, and read a yes/no on whether it
+        belongs to a co-member. The roster a non-owner receives carries `code`
+        and `name` and no email precisely so those addresses stay the owner's to
+        see (L2), and this handed the same fact back one guess at a time. So the
+        two answers have to be byte-identical — a difference in wording, status
+        or shape is the whole vulnerability.
+        """
+        url = PROPOSE_URL.format(code=group.code)
+        client_for(member).post(url, {"email": "queued@test.com"}, format="json")
+
+        inside = client_for(member).post(url, {"email": member.email}, format="json")
+        queued = client_for(member).post(url, {"email": "queued@test.com"}, format="json")
+
+        assert inside.status_code == queued.status_code == 400
+        assert inside.data == queued.data
+        # And a stranger nobody has mentioned still gets a *different* answer —
+        # otherwise this test would pass on an endpoint that refused everything.
+        fresh = client_for(member).post(url, {"email": "stranger@test.com"}, format="json")
+        assert fresh.status_code == 200
 
 
 @pytest.mark.django_db

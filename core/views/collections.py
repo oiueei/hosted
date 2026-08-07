@@ -569,19 +569,29 @@ class CollectionProposeInviteView(APIView):
         email = serializer.validated_data["email"].lower()
         note = serializer.validated_data.get("note", "")
 
-        # Answered here rather than by the owner: these need no decision, and
-        # they must not tell the proposer anything they couldn't already see.
-        # Membership is visible to members, so "already a member" is safe.
-        if collection.invites.filter(email=email).exists():
-            return Response(
-                {"detail": "They are already part of this group."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if InvitationProposal.objects.filter(
+        # Answered here rather than by the owner: neither case needs a decision.
+        #
+        # **One message for both, deliberately.** Separately they read "they are
+        # already part of this group" and "someone has already suggested them",
+        # and the first of those is an email-membership oracle: a member could
+        # test any address against the roster, 30 a day, and get a yes/no. The
+        # roster a non-owner receives is `code` + `name` and no email precisely
+        # so that co-members' addresses stay the owner's to see (L2) — this
+        # endpoint handed the same fact back one guess at a time. Answering with
+        # both possibilities keeps the proposer's real question answered ("do I
+        # need to do anything? no") while confirming neither branch.
+        already_member = collection.invites.filter(email=email).exists()
+        already_proposed = InvitationProposal.objects.filter(
             collection=collection, email=email, status=InvitationProposal.Status.PENDING
-        ).exists():
+        ).exists()
+        if already_member or already_proposed:
             return Response(
-                {"detail": "Someone has already suggested them — it's with the owner."},
+                {
+                    "detail": (
+                        "Nothing to do — either they are already in this group, "
+                        "or someone has already suggested them and it's with the owner."
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
