@@ -62,3 +62,16 @@ frontend/.claude/
 # Mutation testing artefacts (mutmut copies the tree into ./mutants)
 mutants/
 .mutmut-cache
+
+# Local working documents — planning notes, task and fix lists, and the source
+# of the deploy branch's full legal text. None of these are project code and
+# none belong in a public repo: a *_FIXES.md is a map of what is not fixed yet,
+# and LEGAL_HEROKU.md is the www.oiueei.com legal text, which the standalone
+# deliberately ships in a generic operator-neutral form instead.
+#
+# They were only ever protected by .git/info/exclude, which lives inside .git
+# and travels with no clone — so on any second machine there was nothing
+# stopping them being committed.
+*_TASKS.md
+*_FIXES.md
+LEGAL_HEROKU.md
