@@ -48,5 +48,26 @@ def spa_index(request):
         return HttpResponse("Frontend not built. Run: cd frontend && yarn build", status=503)
 
 
+def deployment_urlpatterns():
+    """Mount the URL modules this deployment adds (`DEPLOYMENT_URLCONFS`).
+
+    Empty in the standalone: every route the product serves is already in
+    `core.urls`. A deployment that adds views of its own — an operator's service
+    layer, a self-hoster's intranet page — names the module in the setting
+    rather than editing this file, which is what lets those routes survive an
+    upgrade instead of being re-applied by hand each time.
+
+    **They mount before the SPA catch-all below, and that ordering is the whole
+    point.** The catch-all spares only `static/`, `api/` and the admin prefix,
+    so a deployment route outside those — a plain Django page at
+    `/request-access/`, say — would otherwise be swallowed and answered with
+    `index.html`: a 200 carrying the wrong page, which is worse to diagnose than
+    a 404 because nothing about it looks broken.
+    """
+    return [path("", include(module)) for module in settings.DEPLOYMENT_URLCONFS]
+
+
+urlpatterns += deployment_urlpatterns()
+
 # Catch-all: serve React SPA for all routes not handled above
 urlpatterns += [re_path(r"^(?!static/|api/|oiueei-admin).*", spa_index)]

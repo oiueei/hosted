@@ -251,6 +251,25 @@ COLLECTION_THINGS_BLOCK = int(os.environ.get("COLLECTION_THINGS_BLOCK", "0"))
 COLLECTION_INVITES_ALARM = int(os.environ.get("COLLECTION_INVITES_ALARM", "0"))
 COLLECTION_INVITES_BLOCK = int(os.environ.get("COLLECTION_INVITES_BLOCK", "0"))
 
+# Extra URL modules this deployment mounts alongside the product's own routes.
+# The standalone ships **none**: everything OIUEEI does as a product already
+# lives in `core.urls`.
+#
+# It exists so a deployment can add views of its own — an operator's service
+# layer, a self-hoster's intranet page — **without editing `config/urls.py`**.
+# That file is the one both would otherwise have to patch, and re-patch, on
+# every update; naming a module here instead is what lets those routes survive
+# an upgrade untouched.
+#
+# Comma-separated dotted paths, e.g. "operator.urls,intranet.urls". Each is
+# mounted at the root and, deliberately, **before** the SPA catch-all — see
+# `config/urls.py`, where that ordering is the whole point.
+DEPLOYMENT_URLCONFS = [
+    module.strip()
+    for module in os.environ.get("DEPLOYMENT_URLCONFS", "").split(",")
+    if module.strip()
+]
+
 
 # Custom User Model
 AUTH_USER_MODEL = "core.User"
