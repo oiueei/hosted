@@ -9,6 +9,7 @@ import ThingForm from '../components/ThingForm';
 import BulkAddCsv from '../components/BulkAddCsv';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import { useLocalized, localizedCounter } from '../utils/localized';
 
 export default function AddThingPage() {
@@ -44,6 +45,7 @@ export default function AddThingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const capabilities = useCapabilities();
   const [collectionAllowedTypes, setCollectionAllowedTypes] = useState([]);
   const [collectionTags, setCollectionTags] = useState([]);
   const [tags, setTags] = useState([]);
@@ -135,11 +137,19 @@ export default function AddThingPage() {
   // Theeeme colors from localStorage (set by HomePage on login)
   const { tc, btnStyle } = useTheeeme();
 
+  // The collection's own allowlist applied, the deployment's policy not yet —
+  // that difference is exactly what the notice under the selector explains.
+  const typeCatalogue = TYPE_VALUES.filter(
+    (v) => collectionAllowedTypes.length === 0 || collectionAllowedTypes.includes(v)
+  ).map((v) => ({ label: t('types.' + v), value: v }));
   const typeOptions = (() => {
     return TYPE_VALUES.filter((v) => {
       // Per-collection allowlist (set on Create/Edit). Empty = no restriction.
       if (collectionAllowedTypes.length > 0 && !collectionAllowedTypes.includes(v)) return false;
-      return true;
+      // The deployment's own policy, which is a different question from the
+      // owner's allowlist: that one is about this collection, this one is about
+      // whether the account may offer the verb anywhere here at all.
+      return isOfferable(capabilities, 'thing_types', v);
     });
   })().map((v) => ({ label: t('types.' + v), value: v }));
 
@@ -155,6 +165,7 @@ export default function AddThingPage() {
             theeemeColor01={tc.color_01}
             errors={errors}
             typeOptions={typeOptions}
+            typeCatalogue={typeCatalogue}
             showTypeSelector
             type={type}
             setType={setType}

@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { getCsrfToken } from '../services/api';
 
 /**
- * The shared `/auth/pop-in/` submit — the door that mints an account from a
- * typed email.
+ * The shared `/auth/join/` submit — how a visitor pointed at a collection joins
+ * it and gets a magic link back.
  *
  * Its two callers render it very differently, which is why they stay separate
- * components: `MagicLinkJoinPage` is a boxed `PageLayout` page (`/popin`,
- * `/share/:token`), `JoinToAct` renders unboxed inside `JoinPage`'s hero and
+ * components: `MagicLinkJoinPage` is a boxed `PageLayout` page
+ * (`/share/:token`), `JoinToAct` renders unboxed inside `JoinPage`'s hero and
  * reports errors inline. But the request itself — the CSRF header, the
  * `language` field, the 429 branch, the `seenWelcome` reset — was identical in
  * both, kept as two copies that had already drifted apart in one place.
@@ -30,7 +30,7 @@ import { getCsrfToken } from '../services/api';
  * Returns `{ email, setEmail, loading, status, message, submit }`, where
  * `status` is `null` | `'success'` | `'error'` and `submit` is a form handler.
  */
-export default function usePopIn({ sentMessageKey, errorMessageKey, extraBody } = {}) {
+export default function useJoin({ sentMessageKey, errorMessageKey, extraBody } = {}) {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function usePopIn({ sentMessageKey, errorMessageKey, extraBody } 
     setStatus(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/pop-in/', {
+      const res = await fetch('/api/v1/auth/join/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

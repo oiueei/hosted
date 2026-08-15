@@ -95,12 +95,12 @@
     "send": "Send",
     "sending": "Sending...",
     "back": "Back",
-    "formerMember": "Former member"
+    "formerMember": "Former member",
+    "closeThisTab": "You can close this tab now — the link is on its way to your inbox."
   },
   "titles": {
     "home": "Home — OIUEEI",
     "login": "Sign in — OIUEEI",
-    "welcome": "Welcome — OIUEEI",
     "verify": "Verifying — OIUEEI",
     "myBookings": "My requests — OIUEEI",
     "addThing": "Add thing — OIUEEI",
@@ -127,7 +127,6 @@
     "guestsDefault": "Guests — OIUEEI",
     "user": "{{name}} — OIUEEI",
     "notFound": "Page not found — OIUEEI",
-    "popin": "Pop in — OIUEEI",
     "share": "Join — OIUEEI",
     "deleteAccount": "Delete account — OIUEEI",
     "legal": "Legal & privacy — OIUEEI",
@@ -153,18 +152,6 @@
     "popIn": "New here? Pop in →",
     "legalLink": "Legal notice & privacy",
     "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →"
-  },
-  "popin": {
-    "title": "Come meet us!",
-    "description": "Enter your email and we'll send you a magic link. One click and you're in — no password, no faff.",
-    "emailLabel": "Email",
-    "emailPlaceholder": "you@email.com",
-    "join": "Pop in",
-    "joining": "Sending…",
-    "magicLinkSent": "Magic link sent! Check your inbox and click the link to join.",
-    "closeThisTab": "You can close this tab now — the link is on its way to your inbox.",
-    "errorSendingLink": "Error sending link.",
-    "alreadyHaveAccount": "Already have an account? Sign in →"
   },
   "verify": {
     "declined": "Declined",
@@ -497,35 +484,6 @@
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
     "maxDescription": "Description is too long: 256 characters per language."
-  },
-  "welcome": {
-    "greeting": "Hello, {{name}}",
-    "pageTitle": "Welcome to OIUEEI!",
-    "description": "OIUEEI is a source-available platform for sharing within trusted communities. Create collections for gifts, sales, rentals and loans — then invite friends to browse, reserve and interact. Everything stays between people who know each other.",
-    "createShare": "OIUEEI revolves around your own collections. Create one for anything you'd like to share — gifts, sales, rentals or loans — and invite your circles: family, friends, neighbours, your street. Only the people you invite can see it and join in.",
-    "commitmentTitle": "Our commitment",
-    "commitmentBody1": "OIUEEI runs without ads and without third-party analytics: nobody tracks you while you use it. Your data is not the product — it is never sold or shared with anyone.",
-    "commitmentBody2": "The code is public and you can read all of it; this commitment is <1>written into our design rules</1>. It's not the fine print: it's the starting point.",
-    "createCollection": "Create collection",
-    "editProfile": "Edit profile",
-    "whoUsesTitle": "Who uses OIUEEI?",
-    "exampleIntro": "To show you how it works, we've shared a few example collections with you. Meet the people below and step into their collections — read on and you'll get the idea.",
-    "exampleIntroEmpty": "These stories show the kinds of things people share on OIUEEI.",
-    "personaLalaTitle": "Lala — The Declutterer.",
-    "personaLalaBody": "Off on sabbatical and clearing out the flat with zero fuss — a tenner each, you come collect, everything gone by the 25th. Whatever's left goes straight to the local orphanage.",
-    "personaLeleTitle": "Lele — The Tinkerer.",
-    "personaLeleBody": "A hands-on electronics tinkerer and component hoarder — her coliving runs on jumper wires and half-finished Arduinos. She turns up in every collection on the street: if it lights up, buzzes or refuses to charge, she can probably fix it. Resistance is futile!",
-    "personaLiliTitle": "Lili — The Lender.",
-    "personaLiliBody": "Her neighbourhood lending library has the lot: drills and steam cleaners, but also kitchen kit, garden gear, sports and baby bits — because nobody should buy what they'll only use once in a blue moon. Borrow it, use it, return it clean. That's the deal.",
-    "personaLoloTitle": "Lolo — The Green Thumb.",
-    "personaLoloBody": "A plant parent with far too many green babies, giving away succulent cuttings from a beautifully curated collection — echeverias, jades, sedums, the lot. Adopt a pup; the only rule is that you have to name it.",
-    "personaLuluTitle": "Lulu — The Connector.",
-    "personaLuluBody": "Nobody quite knows how they hear about everything first, but they do. If someone on the street is lending out a drill, giving away cuttings or clearing a flat, Lulu is already there — and already telling everyone else. Every neighbourhood needs one.",
-    "personaLiliLink1": "Lili's Lending Library",
-    "personaLoloLink1": "Lolo's Leafy Lounge",
-    "personaLalaLink2": "Lala's sabbatical sale",
-    "enterCta": "Enter and see how it works",
-    "legalLink": "Legal notice & privacy →"
   },
   "myBookings": {
     "pageTitle": "My requests",
@@ -892,5 +850,10 @@
     "empty": "Nothing has been shared in your groups yet.",
     "emptyCta": "Back to my groups",
     "errorLoading": "Couldn't load what's been shared with you."
+  },
+  "capabilities": {
+    "needsApproval": "Some options need approval on this deployment: {{list}}.",
+    "unavailable": "Some options are not available on this deployment: {{list}}.",
+    "requestAccess": "Request access"
   }
 }

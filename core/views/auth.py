@@ -28,6 +28,7 @@ from core.models.notification import InAppNotification
 from core.serializers import RequestLinkSerializer, UserSerializer
 from core.services.account_service import delete_account
 from core.services.booking_service import finalize_booking_decision
+from core.services.creator_policy import get_creator_policy
 from core.services.email_service import (
     resolve_email_language,
     send_account_delete_email,
@@ -80,7 +81,7 @@ def _set_auth_cookies(response, refresh):
 def _send_magic_link(email, magic_link, collection_headline=None, user=None, collection=None):
     """Send the magic-link email, off the request thread in production.
 
-    ``collection_headline`` (pop-in / share-link join) is forwarded to
+    ``collection_headline`` (set when this is a join) is forwarded to
     ``send_magic_link_email`` so the subject can name the joined collection; it
     is ``None`` for ``/login`` and the plain onboarding pop-in, which keep the
     generic welcome subject.
@@ -120,13 +121,13 @@ def _join_collection(collection, user, source=""):
     collection re-join, repeat onboarding), so an existing member re-entering
     must be a no-op — they must not be sent the document again, and must not log
     a second MEMBER_JOINED, which would count one person as many joins and
-    inflate the guest→creator funnel in stats_summary.
+    inflate the guest→creator funnel any report over this log measures.
 
     A member who left is out of ``invites``, so a genuine re-join after a
     MEMBER_LEFT logs again — which is what it is.
 
-    ``source`` records which of the six doors this join came through, so
-    stats_summary can answer "which of these actually brings people in?" — the
+    ``source`` records which door this join came through, so a report over the
+    Event log can answer "which of these actually brings people in?" — the
     question that decides whether any of them earns its place. Every caller
     passes one; a blank means a row written before this existed.
     """
@@ -201,7 +202,7 @@ class RequestLinkView(APIView):
         security_logger.info(f"Magic link requested for {redact_email(email)} from IP {ip}")
 
         # Create RSVP. ``origin=LOGIN`` tells VerifyLinkView this is a returning
-        # user, not a first visit — they never land on /welcome again.
+        # user, not a first visit — the new-visitor landing never applies again.
         #
         # This INSERT is the timing signal L10 left behind: it only runs for a
         # registered address, so those responses are a hair slower than the early
@@ -428,9 +429,13 @@ class VerifyLinkView(APIView):
         returning users on /welcome. The rules, in order:
 
         1. The link carries a collection (``target_code``: a share-token or
-           public-collection pop-in) → that collection. They joined it to get there.
-        2. Otherwise a link born in the plain ``/popin`` → /welcome. A genuinely
-           new visitor with nothing else to see.
+           public-collection join) → that collection. They joined it to get there.
+        2. Otherwise a link born at an open door with no target → ``"welcome"``.
+           A genuinely new visitor with nothing else to see. **Nothing in this
+           repository produces that RSVP**: every join here carries a collection.
+           It is kept for a deployment that adds an open door of its own, since
+           this file is one it must never have to edit; the SPA resolves the
+           landing against its own ``aboutPath`` and falls through to home.
         3. Otherwise (``/login``, and any legacy magic link with no origin) → their
            single ACTIVE collection when they have exactly one, else home.
         """
@@ -441,13 +446,13 @@ class VerifyLinkView(APIView):
             return result
         user, refresh, user_data = result
 
-        # A pop-in / share-link magic link can carry the collection the visitor
-        # came to join (``target_code``, stamped by PopInView). Drop them straight
-        # onto it after login — they were already added to its invites (private
-        # share) or it is PUBLIC (login-to-act). If the collection went INACTIVE
-        # between the pop-in and the click, this simply doesn't match — the
-        # origin rules below (POPIN -> /welcome, else solo-collection/home) take
-        # over naturally instead of landing the user on a page that 403s.
+        # A join magic link carries the collection the visitor came for
+        # (``target_code``, stamped by JoinView). Drop them straight onto it
+        # after login — they were already added to its invites (private share)
+        # or it is PUBLIC (login-to-act). If the collection went INACTIVE
+        # between the join and the click, this simply doesn't match — the origin
+        # rules below take over naturally instead of landing the user on a page
+        # that 403s.
         invited_collection = None
         if (
             rsvp.target_code
@@ -726,25 +731,25 @@ class VerifyLinkView(APIView):
         return self._handle_booking_action(rsvp, accepted=False)
 
 
-class PopInView(APIView):
+class JoinView(APIView):
     """
-    POST /api/v1/auth/pop-in/
-    Open-door onboarding: get_or_create a user, add them to onboarding
-    collections, and send a magic link. No prior invitation required.
+    POST /api/v1/auth/join/
+    Join a collection you were pointed at, and get a magic link back.
 
-    Accepts optional `share_token` (string, 22 chars). If present and valid,
-    the user is added to that collection's invitees instead of (or in
-    addition to) the onboarding collections. Invalid tokens are silently
-    ignored — the unified response prevents probing the token space.
+    Two doors reach it, and both are the product: an owner's `share_token`
+    (the `/share/:token` link they handed out) and a PUBLIC collection's
+    `collection_code` (login-to-act — a visitor acting on a collection anyone
+    can read joins it on the way in). Without one of those there is nowhere to
+    go, and nothing is created; see `_resolve_target`.
 
-    Also accepts optional `collection_code`: a visitor acting on a PUBLIC
-    collection joins it by code (the public "link" is the collection URL, not a
-    share token). Only PUBLIC, ACTIVE collections qualify — a code can never be
-    used to slip into a PRIVATE, invite-only collection — and an unknown or
-    non-public code is silently ignored, same as an invalid share token.
+    `share_token` (22 chars) is the owner's bearer link. `collection_code` names
+    a PUBLIC, ACTIVE collection — never a PRIVATE one, so a code can't be used
+    to slip into an invite-only group. Either being unknown, revoked or pointing
+    at an INACTIVE collection is silently ignored: the unified response is what
+    keeps the token space and the code space unprobeable.
 
     Accepts optional `language` (`es`/`ca`/`en` — the UI language the visitor is
-    reading the pop-in page in). It is stored on a **newly created** user only, so
+    reading the joining page in). It is stored on a **newly created** user only, so
     their very first magic link already speaks their language; anything else is
     ignored, and an existing user's saved preference is never overwritten by the
     browser they happened to arrive from.
@@ -767,6 +772,26 @@ class PopInView(APIView):
         if language not in Language.values:
             language = ""
 
+        # Resolve where this address would be joining BEFORE creating anything.
+        #
+        # `get_or_create` used to run first, so a POST carrying nothing but an
+        # email created a real account whatever happened next. On a deployment
+        # with no onboarding collections — a fresh install, anyone who never ran
+        # `seed_demo` — that account joined nothing and led nowhere: an open
+        # registration door into an empty room, on an otherwise invite-only
+        # product. Nothing about the response ever said so.
+        join_collection, join_source = self._resolve_target(share_token, collection_code)
+
+        if join_collection is None:
+            # Nowhere to join: create no user, no RSVP, send no email — and
+            # answer exactly as if we had. The unified response is the whole
+            # anti-enumeration guarantee, so this branch must be indistinguishable
+            # from the successful one to anyone outside.
+            security_logger.info(
+                f"Join request for {redact_email(email)} from IP {ip} (no target, nothing created)"
+            )
+            return self._unified_response()
+
         user, created = User.objects.get_or_create(email=email)
         if created:
             if language:
@@ -774,65 +799,15 @@ class PopInView(APIView):
                 user.save(update_fields=["language"])
             Event.log(Event.Kind.USER_JOINED, actor=user)
 
-        # Join the relevant collection (if any), else fall back to the onboarding
-        # collections. ``joined`` short-circuits that fallback once we've added
-        # the user to a specific collection.
-        joined = False
-        # When the visitor joins a specific collection (owner's share-token link, or
-        # a PUBLIC collection by code) stamp it on the magic-link RSVP so
-        # VerifyLinkView drops them straight onto that collection after login,
-        # instead of the generic /welcome. Empty for the plain onboarding fallback.
-        # ``join_collection`` is that collection: the magic-link subject names it and
-        # the email speaks its language. Both stay empty/None for the plain
-        # onboarding fallback.
-        target_collection_code = ""
-        join_collection = None
+        _join_collection(join_collection, user, source=join_source)
 
-        # 1) An owner's share-token link (bearer credential).
-        if share_token:
-            try:
-                shared_collection = Collection.objects.get(
-                    share_token=share_token, status=Collection.Status.ACTIVE
-                )
-            except Collection.DoesNotExist:
-                shared_collection = None
-
-            if shared_collection is not None:
-                _join_collection(shared_collection, user, source=Event.Source.SHARE)
-                joined = True
-                target_collection_code = shared_collection.code
-                join_collection = shared_collection
-
-        # 2) Login-to-act on a PUBLIC collection: the visitor joins it by code.
-        # Strictly PUBLIC + ACTIVE — a code is never a way into a PRIVATE
-        # collection — and an unknown/non-public code is silently ignored so the
-        # unified response can't be used to probe which codes exist.
-        if not joined and collection_code:
-            try:
-                public_collection = Collection.objects.get(
-                    code=collection_code,
-                    status=Collection.Status.ACTIVE,
-                    visibility=Collection.Visibility.PUBLIC,
-                )
-            except Collection.DoesNotExist:
-                public_collection = None
-
-            if public_collection is not None:
-                _join_collection(public_collection, user, source=Event.Source.PUBLIC)
-                joined = True
-                target_collection_code = public_collection.code
-                join_collection = public_collection
-
-        # 3) No specific target — add to the open demo/onboarding collections.
-        if not joined:
-            onboarding_collections = Collection.objects.filter(is_onboarding=True)
-            for collection in onboarding_collections:
-                _join_collection(collection, user, source=Event.Source.ONBOARDING)
-
+        # The collection is stamped on the magic-link RSVP so VerifyLinkView drops
+        # them straight onto it after login. There is always one now: this point
+        # is unreachable without a resolved target.
         rsvp = RSVP.objects.create(
             user_code=user,
             user_email=email,
-            target_code=target_collection_code,
+            target_code=join_collection.code,
             origin=RSVP.Origin.POPIN,
         )
         magic_link_base = getattr(settings, "MAGIC_LINK_BASE_URL", "http://localhost:3000/verify")
@@ -840,16 +815,56 @@ class PopInView(APIView):
         _send_magic_link(
             email,
             magic_link,
-            collection_headline=join_collection.headline if join_collection else None,
+            collection_headline=join_collection.headline,
             user=user,
             collection=join_collection,
         )
 
         security_logger.info(
-            f"Pop-in request for {redact_email(email)} from IP {ip} "
-            f"(new_user={created}, joined_collection={joined})"
+            f"Join request for {redact_email(email)} from IP {ip} "
+            f"(new_user={created}, collection={join_collection.code})"
         )
 
+        return self._unified_response()
+
+    @staticmethod
+    def _resolve_target(share_token, collection_code):
+        """The collection this request joins, and where it came from — or `(None, None)`.
+
+        Both lookups are deliberately narrow, and both fail silently: an
+        invalid token or an unknown code is answered exactly like a valid one,
+        so neither can be used to probe which collections exist.
+        """
+        # 1) An owner's share-token link (a bearer credential).
+        if share_token:
+            shared = Collection.objects.filter(
+                share_token=share_token, status=Collection.Status.ACTIVE
+            ).first()
+            if shared is not None:
+                return shared, Event.Source.SHARE
+
+        # 2) Login-to-act on a PUBLIC collection: the visitor joins it by code.
+        # Strictly PUBLIC + ACTIVE — a code is never a way into a PRIVATE,
+        # invite-only collection.
+        if collection_code:
+            public = Collection.objects.filter(
+                code=collection_code,
+                status=Collection.Status.ACTIVE,
+                visibility=Collection.Visibility.PUBLIC,
+            ).first()
+            if public is not None:
+                return public, Event.Source.PUBLIC
+
+        return None, None
+
+    @staticmethod
+    def _unified_response():
+        """The one answer this endpoint ever gives.
+
+        Written once, and returned from both the joined and the nothing-to-join
+        paths, so the two cannot drift into being distinguishable — which is the
+        only thing keeping this endpoint from being an account oracle.
+        """
         return Response(
             {"message": "Check your email — we've sent you a magic link to join OIUEEI."},
             status=status.HTTP_200_OK,
@@ -859,7 +874,7 @@ class PopInView(APIView):
 class MeView(APIView):
     """
     GET /api/v1/auth/me/
-    Get current authenticated user.
+    Get current authenticated user, and what this deployment lets them create.
     """
 
     permission_classes = [IsAuthenticated]
@@ -872,8 +887,15 @@ class MeView(APIView):
     def get(self, request):
         user = request.user
         user.update_last_activity()
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+        data = UserSerializer(user).data
+        # Not a field on UserSerializer: what someone may create is a property of
+        # the deployment they are on, not of the person — the same account would
+        # get a different answer elsewhere. It rides on this endpoint because the
+        # SPA already calls it on every app load, and it comes from the same
+        # `capabilities()` the create endpoints refuse with, so the UI can only
+        # offer what the API would accept.
+        data["capabilities"] = get_creator_policy().capabilities(user).as_dict()
+        return Response(data)
 
 
 class AccountDeleteRequestView(APIView):

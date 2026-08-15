@@ -9,7 +9,7 @@ from django.core import mail
 from django.test import override_settings
 from rest_framework import status
 
-from core.models import RSVP, Collection
+from core.models import RSVP, User
 
 
 class _SyncThread:
@@ -51,7 +51,7 @@ class TestAuthViews:
 
     def test_request_link_magic_link_subject_stays_generic(self, api_client, user):
         # /login never carries a collection, so its magic link keeps the generic
-        # welcome subject (only pop-in / share-link joins name the collection).
+        # welcome subject (only a join names the collection).
         mail.outbox.clear()
         api_client.post("/api/v1/auth/request-link/", {"email": user.email}, format="json")
         assert mail.outbox[0].subject == "Hello, welcome to OIUEEI!"
@@ -1986,102 +1986,70 @@ class TestAuthViewEdgeCases:
 
 
 @pytest.mark.django_db
-class TestPopInView:
-    """Tests for the open-door onboarding endpoint."""
+class TestJoinView:
+    """Tests for the join endpoint (`/auth/join/`)."""
 
-    def _make_onboarding_collection(self, owner, code, headline):
-        """Helper to create an onboarding collection."""
-        return Collection.objects.create(
-            code=code,
-            owner=owner,
-            headline=headline,
-            is_onboarding=True,
-        )
+    def test_a_valid_target_creates_the_account_and_joins_it(self, api_client, public_collection):
+        """The whole of what this endpoint does, in one request.
 
-    def test_new_user_is_created_and_added_to_onboarding_collections(self, api_client, user):
-        """New email should create a user and add them to all onboarding collections."""
+        The four tests that stood here checked the onboarding fallback — that a
+        bare email joined every `is_onboarding` collection and nothing else.
+        That fallback was the demo, and it left with it. What remains is this:
+        a collection you were pointed at, joined, with a magic link on its way.
+        """
         from unittest.mock import patch
-
-        col = self._make_onboarding_collection(user, "ONBD01", "Onboarding Collection")
-
-        with patch("core.views.auth.send_magic_link_email"):
-            response = api_client.post(
-                "/api/v1/auth/pop-in/",
-                {"email": "newperson@example.com"},
-                format="json",
-            )
-
-        assert response.status_code == status.HTTP_200_OK
-        from core.models import User as UserModel
-
-        new_user = UserModel.objects.get(email="newperson@example.com")
-        assert col.invites.filter(code=new_user.code).exists()
-
-    def test_existing_user_is_added_to_onboarding_collections(self, api_client, user):
-        """Existing user should be added to onboarding collections and receive a magic link."""
-        from unittest.mock import patch
-
-        col = self._make_onboarding_collection(user, "ONBD01", "Onboarding Collection")
 
         with patch("core.views.auth.send_magic_link_email") as mock_email:
             response = api_client.post(
-                "/api/v1/auth/pop-in/",
-                {"email": user.email},
+                "/api/v1/auth/join/",
+                {"email": "newperson@example.com", "collection_code": public_collection.code},
                 format="json",
             )
 
         assert response.status_code == status.HTTP_200_OK
-        assert col.invites.filter(code=user.code).exists()
+        new_user = User.objects.get(email="newperson@example.com")
+        assert public_collection.invites.filter(code=new_user.code).exists()
+        assert RSVP.objects.filter(user_code=new_user, action="MAGIC_LINK").exists()
         mock_email.assert_called_once()
 
-    def test_magic_link_rsvp_is_created(self, api_client, user):
-        """Should create a MAGIC_LINK RSVP for the user."""
+    def test_an_existing_account_joins_without_being_recreated(
+        self, api_client, user, public_collection
+    ):
         from unittest.mock import patch
 
-        with patch("core.views.auth.send_magic_link_email"):
-            api_client.post(
-                "/api/v1/auth/pop-in/",
-                {"email": user.email},
+        with patch("core.views.auth.send_magic_link_email") as mock_email:
+            response = api_client.post(
+                "/api/v1/auth/join/",
+                {"email": user.email, "collection_code": public_collection.code},
                 format="json",
             )
 
-        assert RSVP.objects.filter(user_code=user, action="MAGIC_LINK").exists()
-
-    def test_only_onboarding_collections_are_joined(self, api_client, user):
-        """Non-onboarding collections should not be touched."""
-        from unittest.mock import patch
-
-        onboarding_col = self._make_onboarding_collection(user, "ONBD01", "Onboarding")
-        regular_col = Collection.objects.create(
-            code="REGC01", owner=user, headline="Regular", is_onboarding=False
-        )
-
-        with patch("core.views.auth.send_magic_link_email"):
-            api_client.post(
-                "/api/v1/auth/pop-in/",
-                {"email": user.email},
-                format="json",
-            )
-
-        assert onboarding_col.invites.filter(code=user.code).exists()
-        assert not regular_col.invites.filter(code=user.code).exists()
+        assert response.status_code == status.HTTP_200_OK
+        assert public_collection.invites.filter(code=user.code).exists()
+        assert User.objects.filter(email=user.email).count() == 1
+        mock_email.assert_called_once()
 
     def test_invalid_email_returns_400(self, api_client):
         """Should reject invalid email."""
         response = api_client.post(
-            "/api/v1/auth/pop-in/",
+            "/api/v1/auth/join/",
             {"email": "not-an-email"},
             format="json",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_returns_unified_message(self, api_client, user):
-        """Should always return 200 with a message (no user enumeration)."""
+        """Always 200 with the same message — including when nothing was created.
+
+        This body is what a request with no valid target gets too, which is the
+        only reason the endpoint isn't an oracle for which addresses, tokens and
+        collection codes exist.
+        """
         from unittest.mock import patch
 
         with patch("core.views.auth.send_magic_link_email"):
             response = api_client.post(
-                "/api/v1/auth/pop-in/",
+                "/api/v1/auth/join/",
                 {"email": "anyone@example.com"},
                 format="json",
             )

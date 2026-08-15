@@ -13,9 +13,9 @@ from rest_framework.routers import DefaultRouter
 
 from .views.auth import (
     AccountDeleteRequestView,
+    JoinView,
     LogoutView,
     MeView,
-    PopInView,
     RequestLinkView,
     TokenRefreshView,
     VerifyLinkView,
@@ -102,7 +102,7 @@ urlpatterns = [
     path("csp-report/", csp_report, name="csp-report"),
     # Auth & RSVP Actions
     path("auth/request-link/", RequestLinkView.as_view(), name="request-link"),
-    path("auth/pop-in/", PopInView.as_view(), name="pop-in"),
+    path("auth/join/", JoinView.as_view(), name="join"),
     path("auth/verify/<str:token>/", VerifyLinkView.as_view(), name="verify-link"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),

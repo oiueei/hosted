@@ -74,7 +74,7 @@ Every email belongs to one of three categories. Each function routes through the
 - **Lookup fallback**: if no `User` matches the recipient email (e.g. a not-yet-registered invitee), `_should_send` returns `True` — all emails reach non-users by default.
 - **Multi-recipient**: functions that take `emails=[...]` (digest, broadcast) use `_filter_recipients()` for a bulk query that drops opted-out addresses before iterating. `_send_per_language` also accepts an **`extra_footer(user, lang)`** hook for a line that must be built *per recipient* rather than per language — the digest's mute link carries a token signed for one user, so it cannot join the language-cached body.
 - **Footer**: Cat. 2 and Cat. 3 emails get an auto-appended footer with a link to `/me/notifications/{token}` (see below). Cat. 1 has no footer — nothing to manage.
-- **Viral CTA**: every send except `send_stats_summary_email` (which passes `include_viral=False` — an operator report, not growth copy) prepends one random growth blurb from the per-language `VIRAL_LINES` catalogue (`email_texts/{lang}.py`, read via `viral_lines()`) above the footer — the CTA is always the plain `{frontend_base}/collections/new` link, never tracking-wrapped (DESIGN §9). It is suppressed for recipients who already own ≥1 collection (the `_owns_collection` flag is folded into the existing `_lookup_user`/`_lookup_users` query via an `Exists` annotation — no extra round-trip), and for an empty list. So the bottom order is always: body → viral line (when shown) → preferences footer (when present). **`send_magic_link_email` carries it too since S2** (CA decided: the magic link is the one email every user gets, so suppressing growth copy there starved the loop) — this makes `_send()` do one extra `User` lookup for magic-link sends it used to skip, but both its callers only ever reach it after the recipient is already resolved (`RequestLinkView` for a confirmed-registered address, `PopInView` after `get_or_create`), so the lookup adds no new registered/unregistered timing signal (L10 stays about language resolution, not this gate — see below).
+- **Viral CTA**: every send except the operator's own ops mail (which passes `include_viral=False` — a report, not growth copy) prepends one random growth blurb from the per-language `VIRAL_LINES` catalogue (`email_texts/{lang}.py`, read via `viral_lines()`) above the footer — the CTA is always the plain `{frontend_base}/collections/new` link, never tracking-wrapped (DESIGN §9). It is suppressed for recipients who already own ≥1 collection (the `_owns_collection` flag is folded into the existing `_lookup_user`/`_lookup_users` query via an `Exists` annotation — no extra round-trip), and for an empty list. So the bottom order is always: body → viral line (when shown) → preferences footer (when present). **`send_magic_link_email` carries it too since S2** (CA decided: the magic link is the one email every user gets, so suppressing growth copy there starved the loop) — this makes `_send()` do one extra `User` lookup for magic-link sends it used to skip, but both its callers only ever reach it after the recipient is already resolved (`RequestLinkView` for a confirmed-registered address, `JoinView` after `get_or_create`), so the lookup adds no new registered/unregistered timing signal (L10 stays about language resolution, not this gate — see below).
 
 #### Email language — the hierarchy (`EMAIL_LANGUAGE` + `Collection.language` + `User.language`)
 
@@ -88,15 +88,15 @@ Blank means "inherit", so a level only speaks when it was actually set — exist
 
 Senders **shadow the module-level `T` with a language-bound one** (`T = _texts(lang)`), so every `T("key")` in the body speaks the recipient's language without threading the argument through each call. `_send(..., lang=)` follows it for the footer and viral line, so the whole message is in one language.
 
-Senders bind **`L = _local(lang)`** next to `T` and pass every **owner-written** value through it — a collection headline, a thing headline (O6: either of them may carry one text per language as inline JSON). So the resolution happens exactly where the recipient's language is already known, and a Catalan member reads "…a 'Les coses de mama'…" while their Spanish neighbour reads "…a 'Las cosas de mamá'…" from the same row. A plain headline — nearly all of them — comes back untouched. The one operator-facing sender, `send_stats_summary_email`, carries aggregate numbers, not owner content.
+Senders bind **`L = _local(lang)`** next to `T` and pass every **owner-written** value through it — a collection headline, a thing headline (O6: either of them may carry one text per language as inline JSON). So the resolution happens exactly where the recipient's language is already known, and a Catalan member reads "…a 'Les coses de mama'…" while their Spanish neighbour reads "…a 'Las cosas de mamá'…" from the same row. A plain headline — nearly all of them — comes back untouched. The operator-facing senders carry aggregate numbers, not owner content.
 
-- **Collection-scoped emails pass their collection**: invite (+ bulk), invite-rejected, revoke, welcome-doc, broadcast, digest, and the pop-in/join magic link.
+- **Collection-scoped emails pass their collection**: invite (+ bulk), invite-rejected, revoke, welcome-doc, broadcast, digest, and the join magic link.
 - **Thing-scoped 1:1 emails pass only the recipient** (bookings, FAQs, reminders, reports): there is no group to speak for, so it's their preference or the deployment default — never a guessed collection.
 - **Bulk sends compose per language**: `_send_per_language(emails, category, compose, collection=...)` drops opt-outs, bulk-resolves the users in one query, and calls `compose(lang)` once per *distinct* language among the recipients — so one digest to a bilingual group leaves in two languages while a 50-member single-language group still composes once.
 - **The magic link is the exception**: its caller (`core/views/auth.py::_send_magic_link`) resolves the language and passes it in, because that sender must not look the recipient up — `request-link` only sends for a registered address, so a DB round trip would make "registered" responses measurably slower and become an email-enumeration timing oracle (L10).
-- **`PopInView` accepts an optional `language`** in the body and stores it on **newly created** users only, so a joiner's very first magic link already speaks their UI language; an existing user's saved preference is never overwritten by the browser they arrived from.
+- **`JoinView` accepts an optional `language`** in the body and stores it on **newly created** users only, so a joiner's very first magic link already speaks their UI language; an existing user's saved preference is never overwritten by the browser they arrived from.
 
-Every user-facing string lives in a per-language catalogue — `email_texts/en.py` (the reference + universal fallback), `es.py`, `ca.py` — as flat `TEXTS` dicts of `str.format` templates, mirroring the `seed_data/{lang}.py` pattern. `T(key, lang=None)` falls back to English for an unknown language or a missing key; without `lang` it reads `settings.EMAIL_LANGUAGE` on every call (so `override_settings` works in tests). `test_email_language.py` pins the en default, the es/ca deployments, the fallback, and en↔{es,ca} catalogue/placeholder/viral-line parity (the email analogue of `i18nParity.test.js`); `test_email_hierarchy.py` pins the resolution matrix and the per-recipient bulk sends. To add a language: copy `en.py` → `{lang}.py`, translate only the values (keep keys + `{placeholders}`), and add the code to `Language` in `core/models/language.py` so owners and users can pick it. The operator-facing `send_stats_summary_email` carries data built by the command and is not part of the catalogue.
+Every user-facing string lives in a per-language catalogue — `email_texts/en.py` (the reference + universal fallback), `es.py`, `ca.py` — as flat `TEXTS` dicts of `str.format` templates, mirroring the `seed_data/{lang}.py` pattern. `T(key, lang=None)` falls back to English for an unknown language or a missing key; without `lang` it reads `settings.EMAIL_LANGUAGE` on every call (so `override_settings` works in tests). `test_email_language.py` pins the en default, the es/ca deployments, the fallback, and en↔{es,ca} catalogue/placeholder/viral-line parity (the email analogue of `i18nParity.test.js`); `test_email_hierarchy.py` pins the resolution matrix and the per-recipient bulk sends. To add a language: copy `en.py` → `{lang}.py`, translate only the values (keep keys + `{placeholders}`), and add the code to `Language` in `core/models/language.py` so owners and users can pick it. The operator-facing senders (the capacity alarm) carry data, not copy, and are not part of the catalogue.
 
 #### Signed tokens for unauthenticated preference editing
 
@@ -113,13 +113,13 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 
 | Function | Trigger | Recipient |
 |----------|---------|-----------|
-| `send_magic_link_email(email, magic_link, collection_headline=None)` | User requests login / pop-in / share-link join | The user (subject names the joined collection when `collection_headline` is passed; generic welcome subject otherwise) |
+| `send_magic_link_email(email, magic_link, collection_headline=None)` | User requests login, or joins a collection | The user (subject names the joined collection when `collection_headline` is passed; generic welcome subject otherwise) |
 | `send_booking_request_email(requester, thing, booking, owner_email, accept_link, reject_link)` | Guest submits a hold request | Thing owner |
 | `send_booking_confirmation_email(requester, thing, booking)` | Guest submits a hold request | Requester (confirmation of what was requested) |
 | `send_booking_decision_email(booking, thing, accepted)` | Owner accepts or rejects a booking | Requester |
 | `send_collection_invite_email(inviter_name, collection_headline, email, accept_link, reject_link)` | Owner invites a user to a collection | Invitee |
 | `send_invite_rejected_email(invitee_name, collection_headline, owner_email)` | Invitee declines a collection invitation | Collection owner |
-| `send_collection_welcome_doc_email(collection_headline, doc_url, email)` | A user becomes a member of a collection **for the first time** (any join path — invite, share-token pop-in, public-collection join, onboarding) and the owner has set a welcome PDF | The new member. The PDF travels as a **link** (Cloudinary), never an attachment. Membership lifecycle ⇒ Cat. 1: a member who never sees the rules can't follow them |
+| `send_collection_welcome_doc_email(collection_headline, doc_url, email)` | A user becomes a member of a collection **for the first time** (any join path — invite, share token, public-collection join) and the owner has set a welcome PDF | The new member. The PDF travels as a **link** (Cloudinary), never an attachment. Membership lifecycle ⇒ Cat. 1: a member who never sees the rules can't follow them |
 | `send_collection_revoke_email(owner_name, collection_headline, email)` | Owner removes a user from a collection | Revoked user |
 | `send_account_delete_email(user, delete_link)` | User requests account deletion (`AccountDeleteRequestView`) | The account owner. States what is deleted and what stays anonymised; the link previews on GET and commits on POST (24h, single-use). `include_viral=False` — a growth CTA on an erasure email would be grotesque |
 | `send_contact_email(name, email, message, kind)` | Anonymous-capable contact/collaborate form (`ContactView`; `kind` picks the subject — support/collab) | The operator (`CONTACT_EMAIL` env, default `DEFAULT_FROM_EMAIL`), with the sender as `Reply-To`. Operator mail: mandatory category, `include_viral=False`, deployment language |
@@ -131,7 +131,6 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 | `send_digest_email(collection_headline, collection_code, thing_headlines, emails)` | Daily command (weekly/monthly) | All collection invitees (individually) |
 | `send_return_reminder_email(requester_name, thing_headline, end_date, owner_email)` | Daily command (end_date = tomorrow) | Thing owner — "somebody's hold ends tomorrow"; nothing is asked of them |
 | `send_return_due_email(owner_name, thing_headline, end_date, requester_email, thing_url=None)` | Daily command (end_date = tomorrow), **alongside** the owner's | The **borrower** — "tomorrow you take it back", naming the owner they owe it to. The half that was missing until the 2026-08 design round: only the owner was told a loan was ending, so the one person with something to do heard nothing. `send_reminders` fans out to both and swallows a failure per recipient, so one broken send costs neither the other side nor the rest of the run |
-| `send_stats_summary_email(recipient, subject, sections)` | `stats_summary` command (weekly, `STATS_EMAIL_WEEKDAY` — default Monday — / `--email`) | The operator. Internal ops report — **CATEGORY_MANDATORY** (ignores `notify_*`, no footer). `sections` is the `[{title, rows, note?}]` structure the command builds; rendered to escaped HTML via the layout blocks |
 
 #### Patterns
 
@@ -161,6 +160,39 @@ The **daily invitation-email quota** helpers live here too (`_invite_quota_left`
 | `proposal_approval_blocked(proposal)` | `(message, http_status)` if this approval cannot be delivered — the owner's daily quota (429) or the collection's member ceiling (400) — else `None`. **Shared by the owner's two routes**, the in-app POST and the emailed approve link, which used to differ: the link approved unconditionally, making `INVITE_EMAILS_PER_DAY` walkable one recommendation at a time. Someone already in the group is excluded from the ceiling check — an approval that adds nobody must not be refused. |
 | `approve_proposal(proposal)` | Delivers the real invitation via `deliver_invitation`, charged to the **owner's** quota (the mail leaves their group under the deployment's domain) and naming the proposer in the body — the invitee almost certainly knows *them*, not the owner. Bare `name`, never `display_name`: the fallback is the email address and this message goes to a third party (L2). |
 | `reject_proposal(proposal)` | Marks it rejected and tells the **proposer** — in-app and by email, **with no reason**. Silence would leave them waiting and asking again; a reason would put words in the owner's mouth about rules that are not the product's business. The proposed person is never contacted. |
+
+---
+
+### `creator_policy.py` — Who May Create What, On This Deployment
+
+The one place a deployment says whether an account is enough to open a collection in either mode and offer a thing under any of the four verbs. Upstream the answer is **yes, to everyone, always** — `OpenCreatorPolicy`, the default of the `CREATOR_POLICY` setting — so a standalone checkout has no gate and behaves exactly as it did before this module existed. A deployment with a narrower rule (only the board opens COMMUNITY collections; lending is vetted first) points the setting at its own subclass instead of editing the serializers, and nothing about that rule needs to live in this repository.
+
+It answers only *may this person bring such a thing into existence here at all*. It is **not** object-level permission (`IsCollectionOwner`), and **not** the owner's per-collection `allowed_thing_types` allowlist (`core.views._helpers.type_validity_error`).
+
+| Function / class | Behaviour |
+|---|---|
+| `Capabilities` | Frozen dataclass: `collection_modes`, `thing_types`, `request_url`. `as_dict()` is the JSON shape served on `GET /auth/me/` (lists, not tuples). `request_url` is where to go and ask; `None` means there is nowhere, which is the standalone's answer because there is nothing to ask for. |
+| `CreatorPolicy` | Base class. A subclass overrides **`capabilities(user)`** and nothing else; `allows_collection_mode()` / `allows_thing_type()` are derived from it, so a policy cannot allow something it does not advertise. Instances are cached and shared across requests — subclasses must be **stateless**. |
+| `OpenCreatorPolicy` | The default. Every mode, every verb, no request URL. Its two lists come from `Collection.Mode.values` / `Thing.Type.values` rather than being spelled out, so a verb added to the model is available the day it is added. |
+| `get_creator_policy()` | The configured policy, instantiated once **per dotted path** (`lru_cache` under the setting lookup, not over it — a module global would pin whichever policy the process loaded first, and `override_settings` in a test would silently not apply). |
+| `collection_mode_denial(user, mode)` | The message explaining why this deployment refuses that mode, else `None`. |
+| `thing_type_denial(user, thing_type)` | The same for a verb, in prose (`"a lend thing"`, not `LEND_THING`) — the text reaches an API client as the 403 body. |
+
+**The module stays free of HTTP**, like `booking_service`: it returns a message and the call site raises the 403. The message carries the request URL when the policy has one, because the API is usable without the SPA and a client that only ever sees the refusal would never learn that asking is possible.
+
+#### Where it is enforced (five doors, not two)
+
+| Call site | Refuses |
+|---|---|
+| `CollectionViewSet.perform_create` | The mode, **including the PROPRIETARY default** when the body names none |
+| `CollectionViewSet.perform_update` | Switching an existing collection **into** a withheld mode |
+| `ThingViewSet.perform_create` | The verb — checked **before** the `collection_code` is looked up, so a refusal never depends on (or reveals) which collection was named |
+| `ThingViewSet.perform_update` | Moving a thing **into** a withheld verb |
+| `ThingBulkCreateView` | The verb of each CSV row — as a **row error (400)**, like the collection's own allowlist, since that endpoint's contract is that one response names every bad row |
+
+**The two edit paths only judge a change.** A collection already in a mode (or a thing already under a verb) the policy has since stopped handing out stays fully editable by its owner: the gate is on bringing that state into existence, never on living in it, so narrowing a deployment cannot freeze what people already own.
+
+**`GET /auth/me/` serves the same `capabilities()`** the doors refuse with (see `MeView`), which is what keeps the UI from offering a control that 403s when pressed.
 
 ---
 

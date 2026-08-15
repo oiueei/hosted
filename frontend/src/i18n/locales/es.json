@@ -89,12 +89,12 @@
     "send": "Enviar",
     "sending": "Enviando...",
     "back": "Volver",
-    "formerMember": "Antiguo miembro"
+    "formerMember": "Antiguo miembro",
+    "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada."
   },
   "titles": {
     "home": "Inicio — OIUEEI",
     "login": "Entrar — OIUEEI",
-    "welcome": "Bienvenido — OIUEEI",
     "verify": "Verificando — OIUEEI",
     "myBookings": "Mis solicitudes — OIUEEI",
     "addThing": "Añadir artículo — OIUEEI",
@@ -122,7 +122,6 @@
     "deleteCollectionDefault": "Eliminar colección — OIUEEI",
     "share": "Únete — OIUEEI",
     "notifications": "Preferencias de email — OIUEEI",
-    "popin": "Pásate — OIUEEI",
     "deleteAccount": "Borrar cuenta — OIUEEI",
     "legal": "Legal y privacidad — OIUEEI",
     "contact": "Contacto — OIUEEI",
@@ -480,35 +479,6 @@
     "tagsHelper": "Etiquetas opcionales para organizar las cosas de esta colección",
     "maxDescription": "La descripción es demasiado larga: 256 caracteres por idioma."
   },
-  "welcome": {
-    "greeting": "Hola, {{name}}",
-    "pageTitle": "¡Bienvenido a OIUEEI!",
-    "description": "OIUEEI es una plataforma de código público para compartir dentro de comunidades de confianza. Crea colecciones para regalos, ventas, alquileres y préstamos — luego invita a amigos a explorar, reservar e interactuar. Todo queda entre personas que se conocen.",
-    "createShare": "OIUEEI gira en torno a tus propias colecciones. Crea una para lo que quieras compartir —regalos, ventas, alquileres o préstamos— e invita a tus círculos: familia, amigos, vecinos, tu calle. Solo quienes invites pueden verla y participar.",
-    "commitmentTitle": "Nuestro compromiso",
-    "commitmentBody1": "OIUEEI funciona sin anuncios y sin analíticas de terceros: nadie te rastrea mientras la usas. Tus datos no son el producto — no se venden ni se comparten con nadie.",
-    "commitmentBody2": "El código es público y puedes leerlo todo; este compromiso está <1>escrito en nuestras reglas de diseño</1>. No es la letra pequeña: es el punto de partida.",
-    "createCollection": "Crear colección",
-    "editProfile": "Editar perfil",
-    "whoUsesTitle": "¿Quién usa OIUEEI?",
-    "exampleIntro": "Para enseñarte cómo funciona, te hemos compartido algunas colecciones de ejemplo. Conoce a las personas de abajo y entra en sus colecciones — sigue leyendo y lo entenderás.",
-    "exampleIntroEmpty": "Estas historias muestran el tipo de cosas que las personas comparten en OIUEEI.",
-    "personaLalaTitle": "Lala — La Desapegada.",
-    "personaLalaBody": "De sabático y vaciando el piso sin complicaciones — diez euros cada cosa, tú lo recoges, todo cerrado antes del 25. Lo que sobre, directo al orfanato del barrio.",
-    "personaLeleTitle": "Lele — La Manitas.",
-    "personaLeleBody": "Cacharrea con electrónica y acumula componentes: su coliving funciona a base de jumpers y Arduinos a medio terminar. Aparece en todas las colecciones de la calle: si algo se enciende, pita o no carga, probablemente sepa arreglarlo. ¡La resistencia es fútil!",
-    "personaLiliTitle": "Lili — La Prestadora.",
-    "personaLiliBody": "Su biblioteca de préstamos del barrio tiene de todo: taladros y vaporetas, pero también cosas de cocina, jardín, deporte y crianza — porque nadie necesita comprar lo que usa de uvas a peras. Pídelo prestado, úsalo y devuélvelo limpio. Ese es el trato.",
-    "personaLoloTitle": "Lolo — El Jardinero.",
-    "personaLoloBody": "Mamá planta con demasiadas crías verdes, regala esquejes de suculentas desde una preciosa colección — echeverias, jades, sedums, de todo. Adopta una cría; la única regla es que tienes que ponerle nombre.",
-    "personaLuluTitle": "Lulu — El Conector.",
-    "personaLuluBody": "Nadie sabe muy bien cómo se entera de todo antes que nadie, pero se entera. Si alguien de la calle presta un taladro, regala esquejes o vacía un piso, Lulu ya está allí — y ya se lo ha contado al resto. En todo barrio hace falta alguien así.",
-    "personaLiliLink1": "La biblioteca de préstamos de Lili",
-    "personaLoloLink1": "El salón verde de Lolo",
-    "personaLalaLink2": "La venta del sabático de Lala",
-    "enterCta": "Entrar y ver cómo funciona",
-    "legalLink": "Aviso legal y privacidad →"
-  },
   "myBookings": {
     "pageTitle": "Mis solicitudes",
     "colThing": "Cosa",
@@ -799,18 +769,6 @@
     "reload": "Recargar página",
     "home": "Ir al inicio"
   },
-  "popin": {
-    "title": "¡Ven a conocernos!",
-    "description": "Introduce tu email y te enviaremos un enlace mágico. Un clic y ya estás dentro — sin contraseñas, sin líos.",
-    "emailLabel": "Email",
-    "emailPlaceholder": "tu@email.com",
-    "join": "Pásate",
-    "joining": "Enviando…",
-    "magicLinkSent": "¡Enlace enviado! Revisa tu bandeja de entrada y pulsa el enlace para unirte.",
-    "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.",
-    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión →",
-    "errorSendingLink": "Error al enviar el enlace."
-  },
   "rental": {
     "durationsLabel": "Duraciones de alquiler",
     "durationsPlaceholder": "Elige las duraciones que ofreces",
@@ -892,5 +850,10 @@
     "empty": "Todavía no se ha compartido nada en tus grupos.",
     "emptyCta": "Volver a mis grupos",
     "errorLoading": "No hemos podido cargar lo que se ha compartido contigo."
+  },
+  "capabilities": {
+    "needsApproval": "Algunas opciones necesitan aprobación en esta instalación: {{list}}.",
+    "unavailable": "Algunas opciones no están disponibles en esta instalación: {{list}}.",
+    "requestAccess": "Solicitar acceso"
   }
 }

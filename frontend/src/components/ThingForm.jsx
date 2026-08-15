@@ -5,6 +5,7 @@ import ImageUpload from './ImageUpload';
 import GalleryUpload from './GalleryUpload';
 import LocalizedInfo from './LocalizedInfo';
 import InfoPopover from './InfoPopover';
+import ApprovalNotice from './ApprovalNotice';
 import { useLocalized, localizedCounter } from '../utils/localized';
 
 /**
@@ -24,6 +25,11 @@ export default function ThingForm({
   theeemeColor01,
   errors,
   typeOptions,
+  // Every type this *collection* would take, labelled — i.e. `typeOptions`
+  // before the deployment's policy narrowed it. ApprovalNotice diffs the two,
+  // so it never offers to get approval for a verb the collection's own
+  // allowlist rules out anyway. Omitted ⇒ no notice.
+  typeCatalogue,
   showTypeSelector = true,
   type,
   setType,
@@ -90,6 +96,7 @@ export default function ThingForm({
               ))}
             </InfoPopover>
           </div>
+          {typeCatalogue && <ApprovalNotice kind="thing_types" catalogue={typeCatalogue} />}
         </>
       )}
       {showEndless && (

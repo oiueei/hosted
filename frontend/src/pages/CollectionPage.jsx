@@ -12,6 +12,7 @@ import ThingLinkbox from '../components/ThingLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
 import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
+import { aboutPath } from '../deployment';
 import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
@@ -330,14 +331,18 @@ export default function CollectionPage() {
         </Notification>
       )}
 
-      {showWelcome && (
+      {/* Offered to someone who has just accepted an invitation — but only on a
+          deployment that has a page explaining what it is. Upstream there is
+          none, so the box never renders; `seenWelcome` keeps working either way,
+          which is what lets a deployment turn it back on from its own file. */}
+      {showWelcome && aboutPath && (
         <div className="linkbox-full-width">
         <Linkbox
-          href="/welcome"
+          href={aboutPath}
           onClick={(e) => {
             e.preventDefault();
             setShowWelcome(false);
-            navigate('/welcome', { state: { collectionHeadline: headline } });
+            navigate(aboutPath, { state: { collectionHeadline: headline } });
           }}
           heading={t('collectionPage.welcomeHeading')}
           text={t('collectionPage.welcomeText')}

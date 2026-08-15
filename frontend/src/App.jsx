@@ -10,6 +10,7 @@ import i18n from './i18n';
 import RequireAuth from './components/RequireAuth';
 import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
+import { deploymentRoutes } from './deployment';
 import './App.css';
 
 // Pages are lazy-loaded so each route ships as its own chunk: the initial bundle
@@ -39,8 +40,6 @@ const LeaveCollectionPage = lazy(() => import('./pages/LeaveCollectionPage'));
 const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'));
 const OwnerBookingsPage = lazy(() => import('./pages/OwnerBookingsPage'));
 const SharedThingsPage = lazy(() => import('./pages/SharedThingsPage'));
-const WelcomePage = lazy(() => import('./pages/WelcomePage'));
-const PopInPage = lazy(() => import('./pages/PopInPage'));
 const SharePage = lazy(() => import('./pages/SharePage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -104,13 +103,11 @@ function App() {
         <Route path="/rsvp/:code" element={<VerifyPage />} />
         <Route path="/magic-link/:code" element={<VerifyPage />} />
         <Route path="/me/notifications/:token" element={<NotificationsPage />} />
-        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/legal" element={<LegalPage />} />
         {/* The digest footer's one-click unsubscribe — public by necessity. */}
         <Route path="/digest/mute/:token" element={<DigestMutePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/collaborate" element={<CollaboratePage />} />
-        <Route path="/popin" element={<PopInPage />} />
         <Route path="/share/:token" element={<SharePage />} />
 
         {/* Public read of PUBLIC collections/things — anonymous visitors can
@@ -151,6 +148,15 @@ function App() {
           <Route path="/shared" element={<SharedThingsPage />} />
           <Route path="/:userCode" element={<UserPage />} />
         </Route>
+
+        {/* Routes this deployment adds (frontend/src/deployment). None upstream.
+            They sit HERE, above the catch-all, for the same reason the backend
+            mounts DEPLOYMENT_URLCONFS before its own: a route declared after a
+            catch-all never matches, and the symptom is a deployment's page
+            rendering as "not found" with nothing else looking wrong. */}
+        {deploymentRoutes.map((route) => (
+          <Route key={route.path} path={route.path} element={<route.Component />} />
+        ))}
 
         <Route path="*" element={<NotFoundPage />} />
         </Routes>

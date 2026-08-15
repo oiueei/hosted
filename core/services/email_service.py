@@ -432,7 +432,7 @@ def _send(
     as ``_UNSET`` and the lookup happens here, as before.
 
     ``include_viral`` prepends a growth CTA above the footer (suppressed for
-    collection owners — see ``_with_viral_line``). ``send_stats_summary_email``
+    collection owners — see ``_with_viral_line``). The operator's own ops mail
     is the one sender that passes ``False`` (an operator report, not growth
     copy); everything else, including ``send_magic_link_email`` since S2, uses
     the default — so magic-link sends now do the one recipient lookup they
@@ -1159,43 +1159,11 @@ def send_digest_email(
     )
 
 
-def send_stats_summary_email(recipient, subject, sections):
-    """Email the first-party stats summary to the platform operator.
-
-    ``sections`` is the structure the ``stats_summary`` command builds: a list of
-    ``{"title": str, "rows": [(label, value), ...], "note"?: str}``. Sent as
-    CATEGORY_MANDATORY — an internal ops report, not a user notification, so it
-    ignores ``notify_*`` prefs and carries no footer. Values are escaped by the
-    autoescaping layout (they're aggregate numbers, but the pipeline stays uniform).
-    """
-    blocks = []
-    plain_lines = []
-    for section in sections:
-        blocks.append(_heading(section["title"]))
-        plain_lines.append(section["title"])
-        for label, value in section["rows"]:
-            blocks.append(_field(label, str(value)))
-            plain_lines.append(f"  {label}: {value}")
-        if section.get("note"):
-            blocks.append(_para(section["note"]))
-            plain_lines.append(f"  ({section['note']})")
-        plain_lines.append("")
-
-    _send(
-        recipient,
-        subject,
-        "\n".join(plain_lines),
-        _render_email(blocks),
-        CATEGORY_MANDATORY,
-        include_viral=False,
-    )
-
-
 def send_collection_capacity_alarm(collection, counter, count, threshold):
     """Alert the operator that a collection crossed the mass-upload alarm line.
 
-    Ops mail, like ``send_stats_summary_email``: operator-only, so it carries no
-    i18n catalogue, no footer and no viral CTA.
+    Ops mail: operator-only, so it carries no i18n catalogue, no footer and no
+    viral CTA.
 
     **Recipients are the superusers**, not a config var. The spec says this
     alert reaches the operator alone, and on the deploy branch the operator *is*

@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 
 from core.models import RSVP, Collection, User
 
-POP_IN_URL = "/api/v1/auth/pop-in/"
+JOIN_URL = "/api/v1/auth/join/"
 SIGNATURE_URL = "/api/v1/upload/signature/"
 
 DOC_ID = "oiueei/collections/welcome-doc-1"
@@ -58,20 +58,20 @@ class TestWelcomeDocOnJoin:
 
     def test_rejoining_does_not_resend(self, api_client, collection):
         # Login-to-act on a PUBLIC collection re-runs the (idempotent) M2M add on
-        # every pop-in, so an existing member must not get the document again.
+        # every join, so an existing member must not get the document again.
         collection.welcome_doc = DOC_ID
         collection.visibility = Collection.Visibility.PUBLIC
         collection.save()
 
         api_client.post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "joiner@test.com", "collection_code": collection.code},
             format="json",
         )
         assert len(_doc_emails()) == 1
 
         api_client.post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "joiner@test.com", "collection_code": collection.code},
             format="json",
         )
@@ -85,7 +85,7 @@ class TestWelcomeDocOnJoin:
         collection.save()
 
         api_client.post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "shared@test.com", "share_token": collection.share_token},
             format="json",
         )

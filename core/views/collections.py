@@ -18,6 +18,7 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import serializers, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -42,6 +43,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
+from core.services.creator_policy import collection_mode_denial
 from core.services.email_service import (
     send_broadcast_email,
     # Still used directly by the bulk-invite fan-out, which batches its RSVP
@@ -198,12 +200,34 @@ class CollectionViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         validated_data = serializer.validated_data
+        # Does this deployment let this person open a collection in that mode?
+        # The default is checked too, not just an explicit one: a policy that
+        # withholds every mode has to refuse a body that names none.
+        denial = collection_mode_denial(
+            self.request.user, validated_data.get("mode", Collection.Mode.PROPRIETARY)
+        )
+        if denial:
+            raise PermissionDenied(denial)
         collection = Collection.objects.create(
             owner=self.request.user,
             **validated_data,
         )
         Event.log(Event.Kind.COLLECTION_CREATED, actor=self.request.user, collection=collection)
         self._created_collection = collection
+
+    def perform_update(self, serializer):
+        # The mode is editable, and switching one is how a collection would
+        # otherwise walk around the gate at creation. Checked only when it
+        # actually changes: a collection already in a mode the policy has since
+        # stopped handing out stays fully editable by its owner — the gate is on
+        # opening one, not on keeping one.
+        collection = serializer.instance
+        new_mode = serializer.validated_data.get("mode", collection.mode)
+        if new_mode != collection.mode:
+            denial = collection_mode_denial(self.request.user, new_mode)
+            if denial:
+                raise PermissionDenied(denial)
+        serializer.save()
 
     @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
     def create(self, request, *args, **kwargs):

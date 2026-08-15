@@ -2,24 +2,24 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { TextInput, Button, Notification } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
-import usePopIn from '../hooks/usePopIn';
+import useJoin from '../hooks/useJoin';
 
 /**
  * "Log in to act" body rendered by JoinPage for an anonymous visitor on a PUBLIC
- * collection or thing. Captures an email and POSTs it to `/auth/pop-in/` along
+ * collection or thing. Captures an email and POSTs it to `/auth/join/` along
  * with the collection code: the backend adds the visitor to that public
  * collection's invitees and emails a magic link, so once they follow it they're
  * a member and can reserve, ask and contribute. No account or prior invitation
  * is needed — and the code only ever joins a PUBLIC collection (the backend
  * silently ignores it otherwise).
  *
- * The request itself lives in `usePopIn`, shared with `MagicLinkJoinPage`
- * (`/popin`, `/share/:token`); only the presentation differs.
+ * The request itself lives in `useJoin`, shared with `MagicLinkJoinPage`
+ * (`/share/:token`, and whatever door a deployment adds); only the presentation differs.
  */
 export default function JoinToAct({ collectionCode, collectionHeadline }) {
   const { t } = useTranslation();
   const { btnStyle } = useTheeeme();
-  const { email, setEmail, loading, status, message, submit } = usePopIn({
+  const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: 'joinToAct.sentBody',
     errorMessageKey: 'joinToAct.error',
     extraBody: { collection_code: collectionCode },
@@ -31,7 +31,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
         <Notification label={t('joinToAct.sent')} type="success">
           {message}
         </Notification>
-        <p className="section-mt">{t('popin.closeThisTab')}</p>
+        <p className="section-mt">{t('common.closeThisTab')}</p>
       </>
     );
   }

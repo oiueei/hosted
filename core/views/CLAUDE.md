@@ -64,11 +64,11 @@ Routes to the appropriate handler based on `rsvp.action`:
 
 **Post-login landing (`landing`).** The successful-login response carries where the SPA should send the user — `"collection"` (plus `collection`, the code), `"welcome"`, or `"home"`. It used to be decided in the browser from the `seenWelcome` localStorage key, but logout clears that key, so every re-login looked like a first visit and dropped returning users on `/welcome`. The rules, in order:
 
-1. The RSVP carries a `target_code` — a share-token or public-collection pop-in — ⇒ **that collection** (they joined it precisely to get there). `invited_collection` is still returned alongside `collection`: it is what tells the SPA the landing came from an invitation (it shows the collection's welcome box).
-2. Otherwise the link was born in the plain `/popin` (`RSVP.origin == POPIN`) ⇒ **`/welcome`** — a genuinely new visitor with nothing else to see.
+1. The RSVP carries a `target_code` — a share-token or public-collection join — ⇒ **that collection** (they joined it precisely to get there). `invited_collection` is still returned alongside `collection`: it is what tells the SPA the landing came from an invitation (it shows the collection's welcome box).
+2. Otherwise the link was born at an open door with no target (`RSVP.origin == POPIN`) ⇒ **`"welcome"`** — a genuinely new visitor with nothing else to see. **Nothing in this repository produces that RSVP any more**: every join here carries a collection, and `/welcome` left the standalone with the demo. It is kept because a deployment that adds its own open door stamps exactly this shape, and `VerifyLinkView` is a shared file it must never have to edit; the SPA resolves it against `deployment/aboutPath` and falls through to home when there is none.
 3. Otherwise (`/login`, `origin == LOGIN` — and any legacy magic link with a blank `origin`) ⇒ their **single ACTIVE collection** (owned or invited) when they have exactly one, else **home**. `_solo_collection_code()` stops the query at two rows.
 
-`RSVP.origin` is stamped `LOGIN` by `RequestLinkView` and `POPIN` by `PopInView`; it is blank on every other action. `seenWelcome` survives only as the suppressor for `CollectionPage`'s first-time welcome box — it no longer decides navigation.
+`RSVP.origin` is stamped `LOGIN` by `RequestLinkView` and `POPIN` by `JoinView`; it is blank on every other action. `seenWelcome` survives only as the suppressor for `CollectionPage`'s first-time welcome box — it no longer decides navigation.
 
 **Common behaviour (`_resolve_rsvp` → `_dispatch`):**
 1. Looks up RSVP by `token` (the high-entropy URL token, not the PK). Returns 401 if not found.
@@ -88,7 +88,7 @@ Routes to the appropriate handler based on `rsvp.action`:
   "invited_collection": "<collection_code>"
 }
 ```
-Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a pop-in / share-link join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection instead of `/welcome`. A plain `/login` magic link has no `target_code`, so the field is omitted.
+Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection instead of `/welcome`. A plain `/login` magic link has no `target_code`, so the field is omitted.
 
 **COLLECTION_INVITE response (200):**
 ```json
@@ -121,15 +121,21 @@ Auth tokens are set as HttpOnly cookies via `_set_auth_cookies()`.
 
 ---
 
-### PopInView
+### JoinView
 
 | | |
 |---|---|
-| **Endpoint** | `POST /api/v1/auth/pop-in/` |
+| **Endpoint** | `POST /api/v1/auth/join/` |
 | **Permission** | `AllowAny` |
-| **Rate limit** | 5 requests/minute per IP |
+| **Rate limit** | 5 requests/minute per IP **and** 5/hour per account (email) |
 
-Open-door onboarding. Allows anyone to join OIUEEI without a prior invitation.
+How a visitor who was pointed at a collection joins it and gets a magic link
+back. Two doors reach it, and both are somebody choosing to let a specific
+person in: an owner's `share_token` (the `/share/{token}` link they handed out)
+and a PUBLIC collection's `collection_code` (login-to-act).
+
+It was `POST /auth/pop-in/` until v0.12.0, when the open demo door left the
+standalone. `RSVP.Origin.POPIN` keeps its name — see the model for why.
 
 **Request body:**
 ```json
@@ -138,18 +144,24 @@ Open-door onboarding. Allows anyone to join OIUEEI without a prior invitation.
 
 **Behaviour:**
 1. Validates email via `RequestLinkSerializer`.
-2. Reads optional `share_token` from the body.
-3. `get_or_create` user by email.
-4. If a valid `share_token` is provided **and** the matching `Collection` is `ACTIVE`, adds the user to that collection's `invites` M2M **and stamps it as the RSVP `target_code`** (so verifying the magic link lands them on the collection, not `/welcome`). Invalid, missing, or pointing-to-INACTIVE tokens are silently ignored (anti-enumeration: response shape is identical regardless).
-5. Otherwise, if a `collection_code` is provided and names a **PUBLIC, ACTIVE** collection, adds the user to that collection's `invites` M2M **and stamps it as `target_code`** — the login-to-act auto-join: a visitor who tries to act on a public collection is added to it on submission, then logs in via the magic link and lands back on it, able to act. A code that is unknown, INACTIVE, or PRIVATE is silently ignored — a code can never be used to enter a private, invite-only collection.
-6. If the user did not join via a token or a public code, falls back to adding them to all `is_onboarding=True` collections (no `target_code` → the magic link lands on `/welcome` / home).
-7. Creates a `MAGIC_LINK` RSVP (carrying any `target_code` from steps 4–5) and sends a magic link email **whose subject names the joined collection** (`"Hello, welcome to '{headline}' - OIUEEI!"`) when the visitor came via a share token or a public code, so they know which collection they are joining. The plain onboarding fallback (and `/login`'s `RequestLinkView`) keep the generic `"Hello, welcome to OIUEEI!"` subject — `_send_magic_link` forwards the resolved headline only on the join paths.
-8. Logs request to `security` logger with IP, whether the user is new, and whether they joined a specific collection.
+2. **Resolves the target first** (`_resolve_target`): a `share_token` naming an ACTIVE collection, else a `collection_code` naming a **PUBLIC, ACTIVE** one. A code is never a way into a PRIVATE collection, and an unknown/revoked/INACTIVE one is silently ignored.
+3. **With no target, nothing is created** — no `User`, no RSVP, no email — and the same 200 is returned. Ordering matters here and is the point: `get_or_create` used to run *first*, so a POST carrying only an email minted a real account that joined nothing, which on any deployment without onboarding collections was an open registration door on an otherwise invite-only product.
+4. `get_or_create` user by email; a **newly created** user is stamped with the `language` from the body (`es`/`ca`/`en`) so their first magic link speaks it. An existing user's saved preference is never overwritten.
+5. Adds them to the collection's `invites` M2M (via `_join_collection`, so first-join side effects — `MEMBER_JOINED`, the welcome PDF — fire exactly once) **and stamps it as the RSVP `target_code`**, so verifying the link lands them on that collection.
+6. Creates the `MAGIC_LINK` RSVP (`origin=POPIN`) and sends the magic link, **whose subject names the joined collection** (`"Hello, welcome to '{headline}' - OIUEEI!"`) and whose language follows the collection's.
+7. Logs to the `security` logger with IP, whether the user is new, and which collection — or that nothing was created.
+
+**The unified response is the anti-enumeration guarantee.** The refusal and the
+success are byte-for-byte identical, which is what stops the endpoint answering
+"does this address / token / collection code exist?". `test_join_hardening.py`
+compares whole responses rather than a message, so a field added to one path and
+not the other fails there.
 
 **Responses:**
 | Status | Condition |
 |--------|-----------|
-| 200 | Always (unified message) |
+| 200 | Always (unified message, whether or not anything was created) |
+| 400 | Malformed email |
 | 429 | Rate limited |
 
 ---
@@ -162,6 +174,18 @@ Open-door onboarding. Allows anyone to join OIUEEI without a prior invitation.
 | **Permission** | `IsAuthenticated` |
 
 Returns the current authenticated user's full profile via `UserSerializer`. Updates `last_activity` on each call.
+
+**Plus `capabilities`** — what this deployment lets that account create:
+
+```json
+"capabilities": {
+  "collection_modes": ["PROPRIETARY", "COMMUNITY"],
+  "thing_types": ["GIFT_THING", "SELL_THING", "RENT_THING", "LEND_THING"],
+  "request_url": null
+}
+```
+
+The standalone answers with everything and a null `request_url` (see [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment)). It is **not** a `UserSerializer` field: what someone may create belongs to the deployment, not to the person, and that serializer is also what `/users/{code}/` returns about somebody else. It rides here because the SPA calls this endpoint on every app load, and it comes from the **same `capabilities()` call the create endpoints refuse with** — that is what stops the UI offering a control the API would 403. `request_url` is where to ask for what was withheld; null means there is nowhere, which is the difference between "this deployment does not do that" and "ask here".
 
 ---
 
@@ -326,6 +350,8 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 
 **Retrieve:** Uses `thing.can_view(user_code)` — owner, or invited to an ACTIVE collection containing the thing (INACTIVE things are only visible to their owner).
 
+**Deployment policy (`CREATOR_POLICY`).** Before anything else, `perform_create` asks whether this deployment offers that verb to this account at all — **403** if not, checked *before* the `collection_code` is resolved so a refusal neither depends on nor reveals which collection was named. `perform_update` asks the same, but **only when the type actually changes**: a thing already under a withheld verb stays editable by its owner. The standalone's policy allows everything, so neither check does anything upstream. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
+
 **Create behaviour:** Optionally accepts `collection_code` in request body. `perform_create` raises DRF exceptions directly (no `{"error": ...}` two-phase protocol): an unknown `collection_code` → **404 NotFound**; a collection the user can't add to → **403 PermissionDenied**; a type/tag rule violation → **400 ValidationError** (field-keyed: `{"type": [...]}` / `{"tags": [...]}`, like `perform_update`). If valid, the thing is automatically added to it. **Per-collection allowlist** (`Collection.allowed_thing_types`): if non-empty, the thing's type must be in it — returns 400 otherwise. Empty list = no per-collection restriction. **Tags**: any `tags` on the thing must belong to the collection's `Collection.tags` vocabulary — returns 400 otherwise (tags require a collection; on update, `ThingUpdateSerializer.validate_tags` checks the union of the thing's collections' tags). Removing a tag from a collection (via `CollectionUpdateSerializer`) cascade-strips it from that collection's things.
 
 **`activate` action:** Sets `status = 'ACTIVE'`. Returns 400 if thing is not INACTIVE.
@@ -352,7 +378,7 @@ Lists things from collections where the current user is invited. Only returns AC
 | **Permission** | `IsAuthenticated` + `collection.can_add_thing()` |
 | **Rate limit** | `10/h` per user |
 
-CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, availability, location, condition, tags, thumbnail, is_endless}, ...]}` (max 100 rows), parsed and previewed client-side by `BulkAddCsv`. Each row is validated with `ThingBulkRowSerializer` (the project's Safe* fields + a `reject_spreadsheet_formula` CSV-injection guard on free-text fields, including each `tags` entry; `thumbnail` uses `ImageIdField`, path-traversal-safe; `fee` accepts a decimal comma — `LocaleDecimalField`, S9 — since a CSV cell has no client `NumberInput` to normalise it first) and `type_validity_error`; `tags` are additionally checked in the view against the target collection's `Collection.tags` vocabulary (mirrors the single-create subset check). **A CSV tag may name a localized vocabulary entry by any of its languages** (S10, `_resolve_tag_aliases`): `{"es": "Crianza", "ca": "Criança"}` in the vocabulary accepts a CSV cell of `Crianza` or `Criança` (case-insensitively) as well as the exact canonical JSON, storing the canonical string either way; a casefolded alias that matches two distinct vocabulary entries is rejected as ambiguous rather than guessed, and an alias matching nothing keeps the existing "not defined by the collection" error. If **any** row fails the request returns `400 {"errors": [{row, errors}]}` and **nothing** is created. On full success every row is created in one `transaction.atomic()` and the response is `201 {"created": N, "codes": [...]}`. **Photos** are importable via the client's ZIP path: `BulkAddCsv` unzips, uploads each image to Cloudinary, and sends the resulting public_id as `thumbnail` — the server only ever receives the validated id, never the binary. Gallery photos are still not bulk-importable.
+CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, availability, location, condition, tags, thumbnail, is_endless}, ...]}` (max 100 rows), parsed and previewed client-side by `BulkAddCsv`. Each row is validated with `ThingBulkRowSerializer` (the project's Safe* fields + a `reject_spreadsheet_formula` CSV-injection guard on free-text fields, including each `tags` entry; `thumbnail` uses `ImageIdField`, path-traversal-safe; `fee` accepts a decimal comma — `LocaleDecimalField`, S9 — since a CSV cell has no client `NumberInput` to normalise it first) , `thing_type_denial` (the deployment's `CREATOR_POLICY` — reported as a row error like every other row failure, since the contract here is that one response names every bad row) and `type_validity_error`; `tags` are additionally checked in the view against the target collection's `Collection.tags` vocabulary (mirrors the single-create subset check). **A CSV tag may name a localized vocabulary entry by any of its languages** (S10, `_resolve_tag_aliases`): `{"es": "Crianza", "ca": "Criança"}` in the vocabulary accepts a CSV cell of `Crianza` or `Criança` (case-insensitively) as well as the exact canonical JSON, storing the canonical string either way; a casefolded alias that matches two distinct vocabulary entries is rejected as ambiguous rather than guessed, and an alias matching nothing keeps the existing "not defined by the collection" error. If **any** row fails the request returns `400 {"errors": [{row, errors}]}` and **nothing** is created. On full success every row is created in one `transaction.atomic()` and the response is `201 {"created": N, "codes": [...]}`. **Photos** are importable via the client's ZIP path: `BulkAddCsv` unzips, uploads each image to Cloudinary, and sends the resulting public_id as `thumbnail` — the server only ever receives the validated id, never the binary. Gallery photos are still not bulk-importable.
 
 ---
 
@@ -384,6 +410,8 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 
 **Queryset:** Own collections only, ordered by `-created`. List and retrieve actions use the module-level `_optimise_collection_queryset()` helper for `select_related`/`prefetch_related` optimisation (also reused by `InvitedCollectionsView`).
 
+**Deployment policy (`CREATOR_POLICY`).** `perform_create` refuses a mode this deployment does not hand out with **403**, judging the **PROPRIETARY default** when the body names no mode. `perform_update` refuses switching an existing collection *into* a withheld mode — only on a real change, so a collection already in one stays editable by its owner. Both are no-ops under the standalone's open policy. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
+
 **Retrieve:** Uses `collection.can_view(user_code)` — owner, or invited user if collection is ACTIVE (INACTIVE collections are only visible to their owner). The `CollectionSerializer.things` field excludes INACTIVE things for non-owners.
 
 **Add thing:** Uses `collection.can_add_thing(user_code)` — owner can always add; in COMMUNITY mode, invited users can add their own things. Validates thing exists, belongs to user, and is not already in collection.
@@ -400,7 +428,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 
 Invites a user to a collection by email. Creates user if they don't exist (`get_or_create`). Returns 400 if the user is already invited (in M2M). Deletes any existing pending RSVPs for the same user+collection before creating new ones (resend-safe). Creates two RSVPs (`COLLECTION_INVITE` for accept and `COLLECTION_REJECT` for decline) and sends invitation email with both links.
 
-**Daily invitation-email quota (shared with the bulk endpoint).** The per-view rate limits count *requests*, so one bulk request could still fan out 100 emails (5/h × 100 rows ≈ 500 owner-authored emails an hour from a free pop-in account — a spam vector riding the platform's sending domain). `INVITE_EMAILS_PER_DAY` counts the invitation *emails* an account sends per day — **operator policy, not a product rule**: it guards a particular deployment's sending reputation, so the standalone ships it **unset (= unlimited)** and each operator sets their own (0 also means unlimited). It is shared between this endpoint and `CollectionBulkInviteView`. Exhausted → **429** `{"error": ...}` before any User/RSVP is created. The counter lives on the shared cache (`invq:{user}:{date}`, ~24h TTL) and follows `RATELIMIT_ENABLE` — off in dev/tests, same switch as the django-ratelimit decorators; its read-then-set shares the DatabaseCache non-atomicity note (I7) in `config/settings/base.py`.
+**Daily invitation-email quota (shared with the bulk endpoint).** The per-view rate limits count *requests*, so one bulk request could still fan out 100 emails (5/h × 100 rows ≈ 500 owner-authored emails an hour from one free account — a spam vector riding the platform's sending domain). `INVITE_EMAILS_PER_DAY` counts the invitation *emails* an account sends per day — **operator policy, not a product rule**: it guards a particular deployment's sending reputation, so the standalone ships it **unset (= unlimited)** and each operator sets their own (0 also means unlimited). It is shared between this endpoint and `CollectionBulkInviteView`. Exhausted → **429** `{"error": ...}` before any User/RSVP is created. The counter lives on the shared cache (`invq:{user}:{date}`, ~24h TTL) and follows `RATELIMIT_ENABLE` — off in dev/tests, same switch as the django-ratelimit decorators; its read-then-set shares the DatabaseCache non-atomicity note (I7) in `config/settings/base.py`.
 
 **Request body:**
 ```json
@@ -491,7 +519,7 @@ Lists pending collection invitations (not yet accepted) for the current user. Re
 | **Permission** | `IsAuthenticated` + collection owner |
 | **Rate limit** | POST: 30 requests/hour per user. DELETE: unrestricted. |
 
-Owner-only management of the public share token. The token is a 22-character URL-safe bearer credential (`secrets.token_urlsafe(16)`); anyone with the resulting `/share/{token}` link can join the collection by completing the pop-in flow. The token is intentionally excluded from `CollectionSerializer` and any other read endpoint — it must never leak.
+Owner-only management of the public share token. The token is a 22-character URL-safe bearer credential (`secrets.token_urlsafe(16)`); anyone with the resulting `/share/{token}` link can join the collection by completing the join flow. The token is intentionally excluded from `CollectionSerializer` and any other read endpoint — it must never leak.
 
 **`POST` behaviour:**
 - Generates a new token if none exists. Returns the existing token unchanged on subsequent calls (idempotent).
@@ -922,13 +950,6 @@ On-demand command (`python manage.py cleanup_orphan_images`) that deletes **orph
 - **Age window:** only assets older than `--min-age-hours` (default 24, so an in-flight upload mid-form isn't mistaken for an orphan) and younger than `--max-age-days` (default 30, keeping it a recent sweep). Run regularly (e.g. weekly) so every orphan is caught within its window.
 - Pages through `cloudinary.api.resources` (prefix `oiueei/`), deletes in batches of 100 via `cloudinary.api.delete_resources`, and prints a per-run summary (scanned / in use / seed / outside window / orphans / deleted).
 
-### Management Command: `stats_summary`
-
-First-party product stats (see the [`Event`](../models/CLAUDE.md#event) and [`DailyActivity`](../models/CLAUDE.md#dailyactivity) models). Computes metrics from three sources — current state (domain tables), accumulated history (`Event`), retention (`DailyActivity`) — and **always prints** them to stdout; it emails them to the operator once a week — the recipient is the `STATS_EMAIL` env var (unset ⇒ the email is skipped and only stdout is written), on the `STATS_EMAIL_WEEKDAY` weekday (0=Monday … 6=Sunday, default Monday; weekday-gated inside the command, mirroring `send_digests`) — or on any day with `--email`. The email goes through `email_service.send_stats_summary_email` (CATEGORY_MANDATORY, escaped via the layout template).
-
-- **Demo never mixes into real numbers**: the five seed users (imported from `seed_data/common.py`), `is_onboarding` collections, and pop-in users who only ever landed in onboarding collections are split into a separate "Demo funnel" section. `build_report()` returns a list of `{title, rows, note?}` sections reused by both the stdout renderer and the email.
-- **Scheduler**: appended to the existing daily 05:00 UTC Heroku Scheduler job (`expire_bookings && cleanup_rsvps && close_transfers && send_reminders && send_digests && stats_summary`).
-
 ### Management Command: `backfill_events`
 
 One-off, idempotent seed of the `Event` log from existing rows (users → `USER_JOINED` at `date_joined`, collections/things/bookings at their `created`; accepted bookings also get `HOLD_ACCEPTED`). Run **once**, the day tracking ships, before forward instrumentation accumulates. Kept out of migrations per repo convention. Re-running never double-counts (skips when an equal event already exists).
@@ -955,7 +976,7 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 
 ### Authentication & Authorisation
 
-1. **Invite-only registration (owner-controlled), with a separate demo gate** — There is no open public self-registration on the main model. Accounts are created when a collection owner invites someone (`POST /collections/{code}/invite/`) or when a visitor uses an owner-enabled public share link (`POST /auth/pop-in/` with a `share_token`, from `/share/{token}`). `/login` (`POST /auth/request-link/`) only mails magic links to already-registered accounts and never creates users. The separate `/popin` endpoint (`POST /auth/pop-in/` with no token) is an intentional open demo/onboarding gate that creates an account for anyone and adds them to the `is_onboarding` demo collections.
+1. **Invite-only registration, owner-controlled, with no open door** — there is no public self-registration. An account is created when a collection owner invites someone (`POST /collections/{code}/invite/`), or when a visitor joins a collection they were pointed at (`POST /auth/join/`, with a `share_token` from `/share/{token}` or the code of a PUBLIC collection). Both are somebody choosing to admit a specific person. `/login` (`POST /auth/request-link/`) only mails links to already-registered accounts and never creates users, and `/auth/join/` creates nothing without a valid target — so no request to this API mints an account that belongs to no group. A deployment that *wants* an open door adds one from its own URLconf (`DEPLOYMENT_URLCONFS`); it is not part of what is distributed.
 2. **Magic link authentication** — Passwordless via email. RSVPs are one-time use and expire per action (magic links 24h; booking accept/reject 72h; collection invites ~30 days — `RSVP.expiry_hours_for`).
 3. **JWT tokens** — HttpOnly cookie-based. Access tokens expire after 1 hour. Refresh tokens expire after 7 days. Tokens are rotated on refresh via `POST /api/v1/auth/refresh/`, old tokens blacklisted.
 4. **CSRF (cookie auth)** — because the access token rides in a cookie, `CookieJWTAuthentication` runs DRF's CSRF check (`enforce_csrf`, mirroring `SessionAuthentication`) for **cookie-authenticated unsafe methods** — defence in depth behind the cookie's `SameSite=Lax`. Bearer-header auth is exempt (the header is never sent cross-site), so API clients and the Bearer-token test suite are unaffected. `MeView` GET sets the `csrftoken` cookie via `@ensure_csrf_cookie` (hit on every app load); the SPA reads it and sends it as `X-CSRFToken` on every unsafe request. The test client disables the check by default (`enforce_csrf_checks=False`), so only `test_csrf.py` (which opts in) exercises it.
@@ -987,7 +1008,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Rate Limiting
 
 - `/auth/request-link/` — 5 requests per minute per IP **and** 5 per hour per account (email)
-- `/auth/pop-in/` — 5 requests per minute per IP **and** 5 per hour per account (email)
+- `/auth/join/` — 5 requests per minute per IP **and** 5 per hour per account (email)
 - `/auth/verify/{token}/` — 10 requests per minute per IP
 - `/collections/{code}/invite/` POST — 30 requests per hour per user
 - Invitation **emails** (single + bulk combined) — **unlimited unless the operator sets `INVITE_EMAILS_PER_DAY`** (counts emails, not requests, so the bulk fan-out can't multiply past it; 0/unset = off)
@@ -1033,6 +1054,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Service Layer
 
 Business logic is extracted into `core/services/`:
+- `creator_policy.py` — Whether this deployment lets an account open a collection in a given mode or offer a thing under a given verb (`CREATOR_POLICY`; open to everyone in the standalone). Enforced at five doors — collection create/update, thing create/update, bulk import — and served to the SPA as `capabilities` on `GET /auth/me/`.
 - `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
 - `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.
 

@@ -39,7 +39,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
 
     await screen.findByText(/We've sent you a magic link to join/);
     const [url, options] = globalThis.fetch.mock.calls[0];
-    expect(url).toBe('/api/v1/auth/pop-in/');
+    expect(url).toBe('/api/v1/auth/join/');
     expect(JSON.parse(options.body)).toEqual({
       email: 'visitor@example.com',
       collection_code: 'PUB001',

@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, BookingPeriod, Collection, Event, User
+from core.models import RSVP, BookingPeriod, Event, User
 
 
 def client_for(user):
@@ -99,20 +99,26 @@ class TestMembershipEvents:
         assert event.actor_code == user2.code
         assert event.collection_code == collection.code
 
-    def test_popin_logs_user_joined_and_member_joined(self, api_client, user):
-        onboarding = Collection.objects.create(
-            code="ONBRD1", owner=user, headline="Welcome", is_onboarding=True
-        )
+    def test_joining_logs_user_joined_and_member_joined(self, api_client, public_collection):
+        """Both events, from one request: an account was born and a group grew.
+
+        They are separate rows because they answer separate questions — how many
+        people arrived, and how many joins each collection got — and a join by
+        someone who already had an account logs only the second.
+        """
         response = api_client.post(
-            "/api/v1/auth/pop-in/", {"email": "popin@test.com"}, format="json"
+            "/api/v1/auth/join/",
+            {"email": "joiner@test.com", "collection_code": public_collection.code},
+            format="json",
         )
+
         assert response.status_code == status.HTTP_200_OK
-        new_user = User.objects.get(email="popin@test.com")
+        new_user = User.objects.get(email="joiner@test.com")
         assert Event.objects.filter(kind=Event.Kind.USER_JOINED, actor_code=new_user.code).exists()
         assert Event.objects.filter(
             kind=Event.Kind.MEMBER_JOINED,
             actor_code=new_user.code,
-            collection_code=onboarding.code,
+            collection_code=public_collection.code,
         ).exists()
 
 

@@ -251,6 +251,36 @@ COLLECTION_THINGS_BLOCK = int(os.environ.get("COLLECTION_THINGS_BLOCK", "0"))
 COLLECTION_INVITES_ALARM = int(os.environ.get("COLLECTION_INVITES_ALARM", "0"))
 COLLECTION_INVITES_BLOCK = int(os.environ.get("COLLECTION_INVITES_BLOCK", "0"))
 
+# Extra URL modules this deployment mounts alongside the product's own routes.
+# The standalone ships **none**: everything OIUEEI does as a product already
+# lives in `core.urls`.
+#
+# It exists so a deployment can add views of its own — an operator's service
+# layer, a self-hoster's intranet page — **without editing `config/urls.py`**.
+# That file is the one both would otherwise have to patch, and re-patch, on
+# every update; naming a module here instead is what lets those routes survive
+# an upgrade untouched.
+#
+# Comma-separated dotted paths, e.g. "operator.urls,intranet.urls". Each is
+# mounted at the root and, deliberately, **before** the SPA catch-all — see
+# `config/urls.py`, where that ordering is the whole point.
+DEPLOYMENT_URLCONFS = [
+    module.strip()
+    for module in os.environ.get("DEPLOYMENT_URLCONFS", "").split(",")
+    if module.strip()
+]
+
+# Who may create which kind of collection, and offer a thing under which verb.
+# The default says **yes to everyone, always**, which is OIUEEI as a product:
+# an account is the only requirement to open a collection or offer a thing.
+#
+# A deployment with a narrower answer — a cooperative where only the board opens
+# COMMUNITY collections, an operator who vets whoever asks to lend — points this
+# at its own subclass instead of editing the serializers. Both the enforcement
+# and the capabilities the SPA reads from `GET /auth/me/` come from it, so the
+# UI can never offer what the API would refuse. See `core/services/creator_policy.py`.
+CREATOR_POLICY = os.environ.get("CREATOR_POLICY", "core.services.creator_policy.OpenCreatorPolicy")
+
 
 # Custom User Model
 AUTH_USER_MODEL = "core.User"

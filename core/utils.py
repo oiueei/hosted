@@ -80,7 +80,7 @@ def get_client_ip(request):
       only honest source. **This is the setting for a deployment that terminates
       connections directly**, where trusting the header would let one caller mint
       a fresh rate-limit bucket per request — every IP limit in the app (magic
-      links, pop-in, contact, CSP reports, the admin login) defeated by a header.
+      links, join, contact, CSP reports, the admin login) defeated by a header.
     - ``N`` — a CDN in front of the router: skip the CDN's own hops.
 
     The chosen entry is **validated** before it is returned. django-ratelimit

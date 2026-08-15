@@ -47,7 +47,7 @@ def share_link_setup(db):
 
 
 URL = "/api/v1/collections/{}/share-link/"
-POP_IN_URL = "/api/v1/auth/pop-in/"
+JOIN_URL = "/api/v1/auth/join/"
 
 
 @pytest.mark.django_db
@@ -145,7 +145,7 @@ class TestShareTokenLeakProtection:
 
 
 @pytest.mark.django_db
-class TestPopInWithShareToken:
+class TestJoinWithShareToken:
     def test_valid_token_adds_user_to_collection(self, share_link_setup):
         collection = share_link_setup["collection"]
         token = (
@@ -153,7 +153,7 @@ class TestPopInWithShareToken:
         )
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "newjoiner@test.com", "share_token": token},
             format="json",
         )
@@ -162,18 +162,25 @@ class TestPopInWithShareToken:
         new_user = User.objects.get(email="newjoiner@test.com")
         assert collection.invites.filter(code=new_user.code).exists()
 
-    def test_invalid_token_falls_back_silently(self, share_link_setup):
-        """Invalid tokens are ignored — we don't reveal whether a token exists."""
+    def test_an_invalid_token_creates_nothing_at_all(self, share_link_setup):
+        """Answered like a valid one, and nothing happens behind it.
+
+        A made-up token used to still create a real account — the endpoint
+        resolved the target *after* `get_or_create`, so anyone could mint
+        accounts by posting an email and any string at all. It now creates no
+        user, no RSVP and sends no mail, while answering exactly as before: the
+        silence is what keeps the token space unprobeable, and the emptiness is
+        what keeps it from being a registration door.
+        """
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "probe@test.com", "share_token": "definitely-not-a-real-token"},
             format="json",
         )
 
         assert resp.status_code == 200
-        # User is created but not added to the share-target collection
-        new_user = User.objects.get(email="probe@test.com")
-        assert not share_link_setup["collection"].invites.filter(code=new_user.code).exists()
+        assert not User.objects.filter(email="probe@test.com").exists()
+        assert not RSVP.objects.filter(user_email="probe@test.com").exists()
 
     def test_revoked_token_does_not_grant_access(self, share_link_setup):
         collection = share_link_setup["collection"]
@@ -183,14 +190,17 @@ class TestPopInWithShareToken:
         owner_client.delete(URL.format(collection.code))
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "afterrevoke@test.com", "share_token": token},
             format="json",
         )
 
         assert resp.status_code == 200
-        new_user = User.objects.get(email="afterrevoke@test.com")
-        assert not collection.invites.filter(code=new_user.code).exists()
+        # Revoking is what the owner reaches for when a link has escaped, so a
+        # token they killed must buy nothing whatsoever — not membership, and
+        # not the account that used to come with it.
+        assert not User.objects.filter(email="afterrevoke@test.com").exists()
+        assert not collection.invites.filter(email="afterrevoke@test.com").exists()
 
     def test_inactive_collection_token_does_not_grant_access(self, share_link_setup):
         collection = share_link_setup["collection"]
@@ -201,14 +211,14 @@ class TestPopInWithShareToken:
         collection.save(update_fields=["status"])
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "inactive@test.com", "share_token": token},
             format="json",
         )
 
         assert resp.status_code == 200
-        new_user = User.objects.get(email="inactive@test.com")
-        assert not collection.invites.filter(code=new_user.code).exists()
+        assert not User.objects.filter(email="inactive@test.com").exists()
+        assert not collection.invites.filter(email="inactive@test.com").exists()
 
     def test_existing_user_can_join_via_share_token(self, share_link_setup):
         collection = share_link_setup["collection"]
@@ -219,7 +229,7 @@ class TestPopInWithShareToken:
         existing = User.objects.create(code="SHEXST", email="existing@test.com", name="Existing")
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "existing@test.com", "share_token": token},
             format="json",
         )
@@ -229,14 +239,14 @@ class TestPopInWithShareToken:
 
     def test_share_token_stamps_target_and_redirects(self, share_link_setup):
         # #6: a private-share join should land on the collection after login, not
-        # the generic /welcome. Pop-in stamps target_code on the magic-link RSVP
+        # the generic new-visitor landing. The join stamps target_code on the RSVP
         # and verifying it returns invited_collection for the SPA to redirect.
         collection = share_link_setup["collection"]
         token = (
             share_link_setup["owner_client"].post(URL.format(collection.code)).data["share_token"]
         )
         share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "redirshare@test.com", "share_token": token},
             format="json",
         )
@@ -257,7 +267,7 @@ class TestPopInWithShareToken:
         )
         mail.outbox.clear()
         share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "sharesubj@test.com", "share_token": token},
             format="json",
         )
@@ -277,9 +287,21 @@ class TestStaleCookieAuth:
         client.cookies["access_token"] = token
         return client
 
-    def test_pop_in_works_with_stale_cookie_for_deleted_user(self):
+    def test_joining_works_with_stale_cookie_for_deleted_user(self, share_link_setup):
+        """The stale cookie must not 401 the join — a real join, so it proves it.
+
+        Carries a valid share token because the endpoint no longer creates an
+        account without a target; posting a bare email would now succeed by
+        doing nothing, and the test would pass without exercising the
+        authentication path it is about.
+        """
+        collection = share_link_setup["collection"]
+        token = (
+            share_link_setup["owner_client"].post(URL.format(collection.code)).data["share_token"]
+        )
+
         resp = self._stale_cookie_client().post(
-            POP_IN_URL, {"email": "freshstart@test.com"}, format="json"
+            JOIN_URL, {"email": "freshstart@test.com", "share_token": token}, format="json"
         )
 
         assert resp.status_code == 200
