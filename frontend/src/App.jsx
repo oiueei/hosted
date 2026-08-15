@@ -40,7 +40,6 @@ const LeaveCollectionPage = lazy(() => import('./pages/LeaveCollectionPage'));
 const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'));
 const OwnerBookingsPage = lazy(() => import('./pages/OwnerBookingsPage'));
 const SharedThingsPage = lazy(() => import('./pages/SharedThingsPage'));
-const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const SharePage = lazy(() => import('./pages/SharePage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -104,7 +103,6 @@ function App() {
         <Route path="/rsvp/:code" element={<VerifyPage />} />
         <Route path="/magic-link/:code" element={<VerifyPage />} />
         <Route path="/me/notifications/:token" element={<NotificationsPage />} />
-        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/legal" element={<LegalPage />} />
         {/* The digest footer's one-click unsubscribe — public by necessity. */}
         <Route path="/digest/mute/:token" element={<DigestMutePage />} />

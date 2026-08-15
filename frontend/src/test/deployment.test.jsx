@@ -36,10 +36,16 @@ afterEach(() => {
 
 describe('the standalone adds nothing', () => {
   test('no extra routes and no extra copy', async () => {
-    const { deploymentRoutes, deploymentI18n } = await import('../deployment');
+    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath } = await import(
+      '../deployment'
+    );
 
     expect(deploymentRoutes).toEqual([]);
     expect(deploymentI18n).toEqual({});
+    // Upstream has neither an open door nor a page saying what it is: an
+    // account arrives by invitation, and what OIUEEI is lives in the README.
+    expect(popInPath).toBeNull();
+    expect(aboutPath).toBeNull();
   });
 });
 
@@ -53,6 +59,7 @@ describe('a deployment that adds a route', () => {
         { path: '/request-access', Component: () => <p>Ask to join</p> },
       ],
       popInPath: null,
+      aboutPath: null,
       deploymentI18n: {},
     }));
     const { default: App } = await import('../App');
@@ -70,6 +77,7 @@ describe('a deployment that adds a route', () => {
         { path: '/request-access', Component: () => <p>Ask to join</p> },
       ],
       popInPath: null,
+      aboutPath: null,
       deploymentI18n: {},
     }));
     const { default: App } = await import('../App');
@@ -95,6 +103,7 @@ describe('the open-door button follows popInPath', () => {
     vi.doMock('../deployment', () => ({
       deploymentRoutes: [],
       popInPath: null,
+      aboutPath: null,
       deploymentI18n: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
@@ -112,6 +121,7 @@ describe('the open-door button follows popInPath', () => {
     vi.doMock('../deployment', () => ({
       deploymentRoutes: [],
       popInPath: '/join-us',
+      aboutPath: null,
       deploymentI18n: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
@@ -122,22 +132,24 @@ describe('the open-door button follows popInPath', () => {
       expect(document.querySelector('a[href="/join-us"]')).not.toBeNull();
     });
   });
+});
 
-  test('welcome sends a signed-out visitor to /login when there is no open door', async () => {
+describe('the about link follows aboutPath', () => {
+  test('the footer links it when the deployment has such a page', async () => {
     vi.doMock('../deployment', () => ({
       deploymentRoutes: [],
       popInPath: null,
+      aboutPath: '/about-us',
       deploymentI18n: {},
     }));
-    const { default: WelcomePage } = await import('../pages/WelcomePage');
+    const { default: SiteFooter } = await import('../components/SiteFooter');
 
-    render(<MemoryRouter><WelcomePage /></MemoryRouter>);
+    render(<MemoryRouter><SiteFooter /></MemoryRouter>);
 
-    // /welcome is the page a stranger is handed. Its call to action must lead
-    // to the door that does exist rather than nowhere.
-    await waitFor(() => {
-      expect(document.querySelector('a[href="/login"]')).not.toBeNull();
-    });
-    expect(document.querySelector('a[href="/popin"]')).toBeNull();
+    // Upstream this link is absent entirely (siteFooter.test.jsx pins that).
+    // Here it exists and points where the deployment put its page — not at a
+    // path this repository hard-codes.
+    expect(document.querySelector('a[href="/about-us"]')).not.toBeNull();
+    expect(document.querySelector('a[href="/legal"]')).not.toBeNull();
   });
 });

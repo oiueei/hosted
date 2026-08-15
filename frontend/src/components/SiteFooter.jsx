@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import useTheeeme from '../hooks/useTheeeme';
+import { aboutPath } from '../deployment';
 
 /**
  * The one-line colophon under every page (i14): "Made with ♥︎ in Zona Franca,
@@ -31,8 +32,16 @@ export default function SiteFooter() {
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
       <nav className="site-footer-links" aria-label={t('footer.navLabel')}>
-        <Link to="/welcome">{t('footer.about')}</Link>
-        <span aria-hidden="true"> · </span>
+        {/* Only where this deployment has a page saying what it is. Upstream
+            there is none, and a footer link to a route that 404s is worse than
+            one link fewer. /legal always exists — it is the page the privacy
+            claims tell you to go and check. */}
+        {aboutPath && (
+          <>
+            <Link to={aboutPath}>{t('footer.about')}</Link>
+            <span aria-hidden="true"> · </span>
+          </>
+        )}
         <Link to="/legal">{t('footer.legal')}</Link>
       </nav>
       {t('footer.madeIn')}

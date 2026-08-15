@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
+import { aboutPath } from '../deployment';
 
 /**
  * The verifying / success / error states share the same form-hero + Koros
@@ -116,19 +117,23 @@ export default function VerifyPage() {
           if (data.user?.code && data.user.code !== prevUserCode) {
             localStorage.removeItem('seenWelcome');
           }
-          // The backend decides where to land (`landing`): the collection the link
-          // was for, /welcome for a genuinely new pop-in visitor, else home (or
-          // their single collection). It used to be decided here from `seenWelcome`
-          // — which logout wipes, so every re-login looked like a first visit and
-          // dumped returning users on /welcome. `invited_collection` still marks an
-          // invitation, which is what the collection's welcome box keys off.
+          // The backend decides where to land (`landing`): the collection the
+          // link was for, the deployment's "what this is" page for a genuinely
+          // new visitor, else home (or their single collection). It used to be
+          // decided here from `seenWelcome` — which logout wipes, so every
+          // re-login looked like a first visit. `invited_collection` still marks
+          // an invitation, which is what the collection's welcome box keys off.
+          //
+          // `landing: "welcome"` only reaches a deployment that produces it (one
+          // with an open door of its own); upstream nothing does, and without an
+          // aboutPath it falls through to home rather than to a 404.
           const target = data.collection || data.invited_collection;
           if (data.landing === 'collection' && target) {
             navigate(`/collections/${target}`, {
               state: { fromInvite: !!data.invited_collection },
             });
-          } else if (data.landing === 'welcome') {
-            navigate('/welcome');
+          } else if (data.landing === 'welcome' && aboutPath) {
+            navigate(aboutPath);
           } else {
             navigate('/');
           }
