@@ -237,6 +237,19 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 
 See [HEROKU.md](HEROKU.md) for a complete step-by-step guide covering buildpacks, config vars, font setup, and the deployment branch workflow.
 
+## Running it for other people
+
+This repository is the whole product, but not the layer an operator wraps around
+it to run OIUEEI as a service: an open sign-up door, a queue of people asking to
+be allowed to lend, a subscription. That is where an operator's judgement lives,
+and it differs for every one of them.
+
+So the mechanism is here and the policy is not. Four extension points let a
+deployment add routes, decide who may create what, tell the frontend so it
+stops offering what would be refused, and replace the SPA's pages and copy —
+**without editing a file this repository also edits**, which is what makes an
+upgrade a merge and not an argument. See [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md).
+
 ## Development
 
 ```bash
