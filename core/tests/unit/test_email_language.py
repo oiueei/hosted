@@ -223,12 +223,22 @@ class TestViralLine:
         email_service.send_magic_link_email(owner.email, "http://x/verify/tok")
         assert "/collections/new" not in mail.outbox[0].body
 
-    def test_line_absent_on_stats_summary(self):
-        # The operator report is never growth copy, regardless of ownership.
-        mail.outbox.clear()
-        email_service.send_stats_summary_email(
-            "oiueei@disroot.org", "Weekly stats", [{"title": "Users", "rows": [("Total", 5)]}]
+    def test_line_absent_on_an_operator_report(self):
+        """Ops mail is never growth copy — it goes to whoever runs the server.
+
+        The capacity alarm is the operator report that remains here; the stats
+        summary, which used to be this test's example, is a deployment's own
+        concern and left with its command.
+        """
+        owner = User.objects.create(code="ALRMOW", email="alarmowner@test.com", name="Owner")
+        collection = Collection.objects.create(
+            code="ALRMC1", owner=owner, headline="Busy", status="ACTIVE"
         )
+        User.objects.create(code="ALRMSU", email="root@test.com", is_superuser=True)
+        mail.outbox.clear()
+
+        email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
+
         assert "/collections/new" not in mail.outbox[0].body
 
     def test_footer_still_after_viral_line(self):

@@ -9,7 +9,7 @@ we care about, written alongside the notification/email each action already fire
 Everything is a **text snapshot**, not a foreign key: ``actor_code`` /
 ``collection_code`` / ``thing_code`` are plain 6-char strings so a row survives the
 object it references being deleted — that's the whole point of keeping this history.
-Consumed only by the ``stats_summary`` management command; never exposed to users
+Consumed only by the operator's own reporting; never exposed to users
 (DESIGN §9 — this is less than the server logs already hold and never leaves our DB).
 """
 
@@ -55,7 +55,7 @@ class Event(models.Model):
         recommendation, and the /popin demo). Every one of them was measured as
         the same undifferentiated join, so "which of these actually works?" —
         the question that decides whether any of them should go — had no answer
-        in the data. Aggregate, first-party, consumed only by stats_summary.
+        in the data. Aggregate, first-party, and read only by whoever runs the server.
         """
 
         INVITE = "INVITE"
@@ -72,7 +72,8 @@ class Event(models.Model):
     thing_code = models.CharField(max_length=6, blank=True, default="")
     thing_type = models.CharField(max_length=17, blank=True, default="")
     # Only set on MEMBER_JOINED; blank everywhere else (and on rows written
-    # before this existed, which is why stats_summary reports an "unknown" bucket
+    # before this existed, which is why any report over this column needs an
+    # "unknown" bucket
     # rather than pretending the history is complete).
     source = models.CharField(max_length=14, choices=Source.choices, blank=True, default="")
     # default=timezone.now (not auto_now_add) so backfill_events can stamp rows with

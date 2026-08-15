@@ -197,7 +197,7 @@ class TestMemberJoinedIsLoggedOncePerJoin:
     The M2M add is idempotent and joining re-runs on every login-to-act visit, so
     logging MEMBER_JOINED unconditionally counted a returning member as a fresh
     join each time — inflating member-join counts and the guest→creator funnel in
-    stats_summary, which reads one MEMBER_JOINED per person as the entry point.
+    any funnel report, which reads one MEMBER_JOINED per person as the entry point.
     """
 
     EMAIL = "rejoin@test.com"

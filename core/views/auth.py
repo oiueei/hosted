@@ -121,13 +121,13 @@ def _join_collection(collection, user, source=""):
     collection re-join, repeat onboarding), so an existing member re-entering
     must be a no-op — they must not be sent the document again, and must not log
     a second MEMBER_JOINED, which would count one person as many joins and
-    inflate the guest→creator funnel in stats_summary.
+    inflate the guest→creator funnel any report over this log measures.
 
     A member who left is out of ``invites``, so a genuine re-join after a
     MEMBER_LEFT logs again — which is what it is.
 
-    ``source`` records which of the six doors this join came through, so
-    stats_summary can answer "which of these actually brings people in?" — the
+    ``source`` records which door this join came through, so a report over the
+    Event log can answer "which of these actually brings people in?" — the
     question that decides whether any of them earns its place. Every caller
     passes one; a blank means a row written before this existed.
     """
