@@ -135,9 +135,9 @@ heroku config:set \
 > caller-supplied and one caller mints a fresh bucket per request, defeating every IP limit in the
 > app), and `2` when a CDN sits in front of the router.
 
-> **Optional — stats report:** `STATS_EMAIL` is where `manage.py stats_summary` mails its weekly
-> product report; unset, the command still prints to stdout and skips the email. `STATS_EMAIL_WEEKDAY`
-> picks the day (0=Monday … 6=Sunday, default Monday). It rides the existing daily scheduler job.
+> **Optional — your own extensions:** `DEPLOYMENT_URLCONFS` mounts URL modules of your own and
+> `CREATOR_POLICY` names the class deciding who may create what. Both are how a deployment adds to
+> OIUEEI without editing files this repository also edits — see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md).
 
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
@@ -175,9 +175,11 @@ The admin also requires 2FA (`django-otp`) — bootstrap a TOTP device for that 
 heroku run --app your-app-name "python manage.py add_totp_device <email>"
 ```
 
-### 8. Seed demo data (optional)
+### 8. Seed demo data (optional — and think before you do)
 
-Populate the database with the demo users (Lala/Lele/Lili/Lolo/Lulu) and their collections. Idempotent — safe to re-run.
+Populates the database with the demo people (Lala/Lele/Lili/Lolo/Lulu) and their collections. Idempotent — safe to re-run.
+
+This is here because it is the fastest way to *see* a populated OIUEEI, which is worth a lot on a local checkout. On a public deployment it puts five fictional people and their things into the same database as your real members, so seed it if you want a guided tour and skip it if you are opening the doors.
 
 ```bash
 heroku run -a your-app-name "python manage.py seed_demo"                  # English (default)
@@ -274,13 +276,13 @@ heroku config:set \
 
 ## Scheduled jobs (cron)
 
-The app relies on six management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). In production they run as **one daily job at 05:00 UTC** chaining all six with `&&`, so any failure stops the chain and surfaces in scheduler-monitor:
+The app relies on five management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice) chaining all five with `&&`, so any failure stops the chain and surfaces in scheduler-monitor:
 
 ```
-python manage.py expire_bookings && python manage.py cleanup_rsvps && python manage.py close_transfers && python manage.py send_reminders && python manage.py send_digests && python manage.py stats_summary
+python manage.py expire_bookings && python manage.py cleanup_rsvps && python manage.py close_transfers && python manage.py send_reminders && python manage.py send_digests
 ```
 
-Heroku Scheduler config lives in the dashboard, so the intended schedule is versioned here — keep the dashboard in sync with this table.
+Heroku Scheduler config lives in the dashboard and nowhere else, so keep the dashboard in sync with this table — it is the only version of the schedule you can read.
 
 | Command | Cadence | What it does |
 |---|---|---|
@@ -289,11 +291,10 @@ Heroku Scheduler config lives in the dashboard, so the intended schedule is vers
 | `python manage.py close_transfers` | daily (chained) | Sets `returned_date` on transfers whose ACCEPTED booking's `end_date` has passed. |
 | `python manage.py send_reminders` | daily (chained) | Return/delivery reminders for bookings due tomorrow. |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
-| `python manage.py stats_summary` | daily (chained) | First-party product stats; prints every day, emails `STATS_EMAIL` once a week on `STATS_EMAIL_WEEKDAY` (0=Monday, default; skipped if `STATS_EMAIL` unset). |
 
 The daily commands are safe to run every day — each checks the date internally and no-ops when there's nothing to do.
 
-`stats_summary`'s weekly email is opt-in — set `STATS_EMAIL` to receive it (`heroku config:set STATS_EMAIL='you@your-domain.com' -a your-app-name`); it always prints to the log regardless. Move the send day with `STATS_EMAIL_WEEKDAY` (0=Monday … 6=Sunday, e.g. `4` for Friday).
+If you want a periodic report on your own numbers, the `Event` log and `DailyActivity` are there to be queried and a command of your own can ride the same chain — this repository ships the instrumentation, not the report.
 
 **Not in the daily chain:** `cleanup_orphan_images` (delete orphaned Cloudinary uploads) is a separate, manual command — dry-run by default, `--commit` to actually delete. It's destructive and gated behind Heroku shell access, so it isn't auto-scheduled; run it by hand roughly weekly. Quote the inner command so the Heroku CLI doesn't eat the flag: `heroku run --app <app> "python manage.py cleanup_orphan_images --commit"`.
 
