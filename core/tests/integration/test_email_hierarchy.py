@@ -112,10 +112,13 @@ class TestSendersSpeakTheRightLanguage:
 
 @pytest.mark.django_db
 class TestLanguagePreferences:
-    def test_pop_in_stores_the_language_of_a_new_user(self, api_client):
+    def test_pop_in_stores_the_language_of_a_new_user(self, api_client, public_collection):
+        # Joins a real PUBLIC collection: the endpoint only creates an account
+        # once it has somewhere to put it, so a bare email would now leave
+        # nothing to assert on and pass for the wrong reason.
         api_client.post(
             "/api/v1/auth/pop-in/",
-            {"email": "nou@test.com", "language": "ca"},
+            {"email": "nou@test.com", "language": "ca", "collection_code": public_collection.code},
             format="json",
         )
 
@@ -136,10 +139,14 @@ class TestLanguagePreferences:
         user.refresh_from_db()
         assert user.language == Language.ES
 
-    def test_an_unknown_language_is_ignored(self, api_client):
+    def test_an_unknown_language_is_ignored(self, api_client, public_collection):
         api_client.post(
             "/api/v1/auth/pop-in/",
-            {"email": "raro@test.com", "language": "klingon"},
+            {
+                "email": "raro@test.com",
+                "language": "klingon",
+                "collection_code": public_collection.code,
+            },
             format="json",
         )
 

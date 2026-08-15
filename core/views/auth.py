@@ -768,6 +768,32 @@ class PopInView(APIView):
         if language not in Language.values:
             language = ""
 
+        # Resolve where this address would be joining BEFORE creating anything.
+        #
+        # `get_or_create` used to run first, so a POST carrying nothing but an
+        # email created a real account whatever happened next. On a deployment
+        # with no onboarding collections — a fresh install, anyone who never ran
+        # `seed_demo` — that account joined nothing and led nowhere: an open
+        # registration door into an empty room, on an otherwise invite-only
+        # product. Nothing about the response ever said so.
+        join_collection, join_source = self._resolve_target(share_token, collection_code)
+        # Only consulted when no specific collection was named, and only to
+        # decide whether there is anywhere at all to put this person.
+        onboarding_collections = (
+            [] if join_collection else list(Collection.objects.filter(is_onboarding=True))
+        )
+
+        if join_collection is None and not onboarding_collections:
+            # Nowhere to join: create no user, no RSVP, send no email — and
+            # answer exactly as if we had. The unified response is the whole
+            # anti-enumeration guarantee, so this branch must be indistinguishable
+            # from the successful one to anyone outside.
+            security_logger.info(
+                f"Pop-in request for {redact_email(email)} from IP {ip} "
+                f"(no target, nothing created)"
+            )
+            return self._unified_response()
+
         user, created = User.objects.get_or_create(email=email)
         if created:
             if language:
@@ -775,10 +801,6 @@ class PopInView(APIView):
                 user.save(update_fields=["language"])
             Event.log(Event.Kind.USER_JOINED, actor=user)
 
-        # Join the relevant collection (if any), else fall back to the onboarding
-        # collections. ``joined`` short-circuits that fallback once we've added
-        # the user to a specific collection.
-        joined = False
         # When the visitor joins a specific collection (owner's share-token link, or
         # a PUBLIC collection by code) stamp it on the magic-link RSVP so
         # VerifyLinkView drops them straight onto that collection after login,
@@ -786,47 +808,12 @@ class PopInView(APIView):
         # ``join_collection`` is that collection: the magic-link subject names it and
         # the email speaks its language. Both stay empty/None for the plain
         # onboarding fallback.
-        target_collection_code = ""
-        join_collection = None
+        joined = join_collection is not None
+        target_collection_code = join_collection.code if joined else ""
 
-        # 1) An owner's share-token link (bearer credential).
-        if share_token:
-            try:
-                shared_collection = Collection.objects.get(
-                    share_token=share_token, status=Collection.Status.ACTIVE
-                )
-            except Collection.DoesNotExist:
-                shared_collection = None
-
-            if shared_collection is not None:
-                _join_collection(shared_collection, user, source=Event.Source.SHARE)
-                joined = True
-                target_collection_code = shared_collection.code
-                join_collection = shared_collection
-
-        # 2) Login-to-act on a PUBLIC collection: the visitor joins it by code.
-        # Strictly PUBLIC + ACTIVE — a code is never a way into a PRIVATE
-        # collection — and an unknown/non-public code is silently ignored so the
-        # unified response can't be used to probe which codes exist.
-        if not joined and collection_code:
-            try:
-                public_collection = Collection.objects.get(
-                    code=collection_code,
-                    status=Collection.Status.ACTIVE,
-                    visibility=Collection.Visibility.PUBLIC,
-                )
-            except Collection.DoesNotExist:
-                public_collection = None
-
-            if public_collection is not None:
-                _join_collection(public_collection, user, source=Event.Source.PUBLIC)
-                joined = True
-                target_collection_code = public_collection.code
-                join_collection = public_collection
-
-        # 3) No specific target — add to the open demo/onboarding collections.
-        if not joined:
-            onboarding_collections = Collection.objects.filter(is_onboarding=True)
+        if joined:
+            _join_collection(join_collection, user, source=join_source)
+        else:
             for collection in onboarding_collections:
                 _join_collection(collection, user, source=Event.Source.ONBOARDING)
 
@@ -851,6 +838,46 @@ class PopInView(APIView):
             f"(new_user={created}, joined_collection={joined})"
         )
 
+        return self._unified_response()
+
+    @staticmethod
+    def _resolve_target(share_token, collection_code):
+        """The collection this request joins, and where it came from — or `(None, None)`.
+
+        Both lookups are deliberately narrow, and both fail silently: an
+        invalid token or an unknown code is answered exactly like a valid one,
+        so neither can be used to probe which collections exist.
+        """
+        # 1) An owner's share-token link (a bearer credential).
+        if share_token:
+            shared = Collection.objects.filter(
+                share_token=share_token, status=Collection.Status.ACTIVE
+            ).first()
+            if shared is not None:
+                return shared, Event.Source.SHARE
+
+        # 2) Login-to-act on a PUBLIC collection: the visitor joins it by code.
+        # Strictly PUBLIC + ACTIVE — a code is never a way into a PRIVATE,
+        # invite-only collection.
+        if collection_code:
+            public = Collection.objects.filter(
+                code=collection_code,
+                status=Collection.Status.ACTIVE,
+                visibility=Collection.Visibility.PUBLIC,
+            ).first()
+            if public is not None:
+                return public, Event.Source.PUBLIC
+
+        return None, None
+
+    @staticmethod
+    def _unified_response():
+        """The one answer this endpoint ever gives.
+
+        Written once, and returned from both the joined and the nothing-to-join
+        paths, so the two cannot drift into being distinguishable — which is the
+        only thing keeping this endpoint from being an account oracle.
+        """
         return Response(
             {"message": "Check your email — we've sent you a magic link to join OIUEEI."},
             status=status.HTTP_200_OK,

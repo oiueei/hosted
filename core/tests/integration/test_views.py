@@ -2038,6 +2038,8 @@ class TestPopInView:
         """Should create a MAGIC_LINK RSVP for the user."""
         from unittest.mock import patch
 
+        self._make_onboarding_collection(user, "ONBD01", "Onboarding Collection")
+
         with patch("core.views.auth.send_magic_link_email"):
             api_client.post(
                 "/api/v1/auth/pop-in/",

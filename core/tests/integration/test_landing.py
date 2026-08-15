@@ -110,8 +110,25 @@ class TestOriginIsStamped:
         rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
         assert rsvp.origin == RSVP.Origin.LOGIN
 
-    def test_pop_in_stamps_popin(self, api_client):
-        api_client.post("/api/v1/auth/pop-in/", {"email": "fresh@test.com"}, format="json")
+    def test_pop_in_stamps_popin(self, api_client, user):
+        """Every join through this endpoint is stamped POPIN, whichever door it came in by.
+
+        Written through a PUBLIC collection rather than a bare email: that is
+        one of the two doors that outlive the demo, and the endpoint now needs
+        a target before it creates anything.
+        """
+        public = Collection.objects.create(
+            code="LANDPB",
+            owner=user,
+            headline="Public",
+            visibility=Collection.Visibility.PUBLIC,
+        )
+
+        api_client.post(
+            "/api/v1/auth/pop-in/",
+            {"email": "fresh@test.com", "collection_code": public.code},
+            format="json",
+        )
 
         rsvp = RSVP.objects.get(user_email="fresh@test.com", action=RSVP.Action.MAGIC_LINK)
         assert rsvp.origin == RSVP.Origin.POPIN
