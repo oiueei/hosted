@@ -34,18 +34,35 @@ afterEach(() => {
   window.history.pushState({}, '', '/');
 });
 
-describe('the standalone adds nothing', () => {
-  test('no extra routes and no extra copy', async () => {
+describe('the module keeps its contract', () => {
+  test('exports the four values App.jsx and the pages read', async () => {
+    /* Asserted as a **shape**, not as this checkout's values.
+
+       The obvious version of this test — `deploymentRoutes` is `[]`, both paths
+       are null — is true upstream and false by design in any deployment that
+       replaces the directory, which is what the directory is *for*. A test that
+       fails on the branch it was built to serve is one that branch has to edit,
+       and editing it is a merge conflict on every release: exactly the cost
+       this whole indirection exists to avoid.
+
+       What matters on both sides is that the four exports still have the shapes
+       App.jsx, LoginPage, SiteFooter, CollectionPage and VerifyPage read. The
+       behaviours themselves are pinned below with the module mocked, which
+       works identically wherever it runs. */
     const { deploymentRoutes, deploymentI18n, popInPath, aboutPath } = await import(
       '../deployment'
     );
 
-    expect(deploymentRoutes).toEqual([]);
-    expect(deploymentI18n).toEqual({});
-    // Upstream has neither an open door nor a page saying what it is: an
-    // account arrives by invitation, and what OIUEEI is lives in the README.
-    expect(popInPath).toBeNull();
-    expect(aboutPath).toBeNull();
+    expect(Array.isArray(deploymentRoutes)).toBe(true);
+    deploymentRoutes.forEach((route) => {
+      expect(typeof route.path).toBe('string');
+      expect(route.Component).toBeTruthy();
+    });
+    expect(typeof deploymentI18n).toBe('object');
+    expect(deploymentI18n).not.toBeNull();
+    [popInPath, aboutPath].forEach((path) => {
+      expect(path === null || typeof path === 'string').toBe(true);
+    });
   });
 });
 

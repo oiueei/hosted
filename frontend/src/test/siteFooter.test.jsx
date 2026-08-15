@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 
 import SiteFooter from '../components/SiteFooter';
 
@@ -22,12 +22,20 @@ describe('SiteFooter', () => {
     expect(screen.getByRole('link', { name: /privacy & legal/i })).toHaveAttribute('href', '/legal');
   });
 
-  test('offers no about link when this deployment has no such page', () => {
-    render(<MemoryRouter><SiteFooter /></MemoryRouter>);
+  test('offers no about link when the deployment has no such page', async () => {
+    /* The module is mocked rather than read, so this holds on a deployment that
+       *does* have an about page — where the real export is a path and asserting
+       its absence would fail on the branch this indirection exists to serve. */
+    vi.resetModules();
+    vi.doMock('../deployment', () => ({ aboutPath: null }));
+    const { default: Footer } = await import('../components/SiteFooter');
+
+    render(<MemoryRouter><Footer /></MemoryRouter>);
 
     // A footer link to a route that 404s is worse than one link fewer.
     expect(screen.queryByRole('link', { name: /what oiueei is/i })).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/welcome"]')).toBeNull();
+    vi.doUnmock('../deployment');
   });
 
   test('still says where it was made', () => {
