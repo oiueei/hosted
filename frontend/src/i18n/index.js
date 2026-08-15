@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import en from './locales/en.json';
+import { deploymentI18n } from '../deployment';
 
 // English (the fallback language) ships in the main bundle so the very first
 // paint is always translated — no key ever flashes and English users fetch
@@ -62,6 +63,23 @@ i18n
     react: { useSuspense: false },
     interpolation: { escapeValue: false },
   });
+
+// Copy this deployment adds (frontend/src/deployment). Empty upstream: every
+// string the product shows is in `locales/*.json`.
+//
+// Applied after each language file lands, not once at startup, because es and
+// ca arrive later as their own chunks and i18next merges an incoming bundle
+// over what is already there — registered only at startup, a deployment's
+// strings would survive in English and vanish the moment the visitor's real
+// language loaded. Deep merge, overwriting: the deployment's copy is the more
+// specific of the two.
+function applyDeploymentBundles() {
+  Object.entries(deploymentI18n).forEach(([language, bundle]) => {
+    i18n.addResourceBundle(language, 'translation', bundle, true, true);
+  });
+}
+applyDeploymentBundles();
+i18n.on('loaded', applyDeploymentBundles);
 
 // Language names shown in their own language (endonyms) for the in-app picker.
 // Order and codes mirror supportedLngs above. Deliberately not i18n keys — a

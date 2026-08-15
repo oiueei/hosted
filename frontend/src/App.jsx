@@ -10,6 +10,7 @@ import i18n from './i18n';
 import RequireAuth from './components/RequireAuth';
 import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
+import { deploymentRoutes } from './deployment';
 import './App.css';
 
 // Pages are lazy-loaded so each route ships as its own chunk: the initial bundle
@@ -151,6 +152,15 @@ function App() {
           <Route path="/shared" element={<SharedThingsPage />} />
           <Route path="/:userCode" element={<UserPage />} />
         </Route>
+
+        {/* Routes this deployment adds (frontend/src/deployment). None upstream.
+            They sit HERE, above the catch-all, for the same reason the backend
+            mounts DEPLOYMENT_URLCONFS before its own: a route declared after a
+            catch-all never matches, and the symptom is a deployment's page
+            rendering as "not found" with nothing else looking wrong. */}
+        {deploymentRoutes.map((route) => (
+          <Route key={route.path} path={route.path} element={<route.Component />} />
+        ))}
 
         <Route path="*" element={<NotFoundPage />} />
         </Routes>

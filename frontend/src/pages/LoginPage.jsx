@@ -5,6 +5,7 @@ import { TextInput, Button, Notification, Koros } from 'hds-react';
 import { getCsrfToken } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
+import { popInPath } from '../deployment';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -140,13 +141,19 @@ export default function LoginPage() {
             {t('login.loginHelp')}
           </Link>
         </p>
-        <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
-          <Link to="/popin">
-            <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
-              {t('login.popIn')}
-            </Button>
-          </Link>
-        </div>
+        {/* Only when this deployment has an open door (frontend/src/deployment).
+            Without one there is nowhere for the button to go, and offering it
+            would send a stranger to a 404 instead of telling them the truth:
+            you get in here by invitation. */}
+        {popInPath && (
+          <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
+            <Link to={popInPath}>
+              <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
+                {t('login.popIn')}
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

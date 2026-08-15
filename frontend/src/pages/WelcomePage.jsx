@@ -7,6 +7,7 @@ import FeedbackLink from "../components/FeedbackLink";
 import { apiFetch } from "../services/api";
 import useTheeeme from "../hooks/useTheeeme";
 import ContactCorner from "../components/ContactCorner";
+import { popInPath } from "../deployment";
 
 // Lele and Lulu keep their story but own no collection, so they carry no link —
 // the render filters by accessibleCodes and simply shows no link row for them.
@@ -142,9 +143,11 @@ export default function WelcomePage() {
               </>
             ) : (
               <>
-                <Link to="/popin">
-                  <Button style={btnStyle}>{t("login.popIn")}</Button>
-                </Link>
+                {popInPath && (
+                  <Link to={popInPath}>
+                    <Button style={btnStyle}>{t("login.popIn")}</Button>
+                  </Link>
+                )}
                 <Link to="/login">
                   <Button variant="secondary" style={btnSecondaryStyle}>
                     {t("login.signIn")}
@@ -253,9 +256,13 @@ export default function WelcomePage() {
         ))}
         <div className="spacer-xl" />
         <div className="button-row-wide">
-          <Link to={isAuthenticated ? "/" : "/popin"}>
+          {/* Signed in: straight home. Signed out: the deployment's open door
+              if it has one, else /login — the door it does have. */}
+          <Link to={isAuthenticated ? "/" : popInPath || "/login"}>
             <Button style={btnStyle}>
-              {isAuthenticated ? t("welcome.enterCta") : t("login.popIn")}
+              {isAuthenticated
+                ? t("welcome.enterCta")
+                : t(popInPath ? "login.popIn" : "login.signIn")}
             </Button>
           </Link>
         </div>
