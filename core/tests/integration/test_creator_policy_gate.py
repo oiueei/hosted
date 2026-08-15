@@ -271,3 +271,85 @@ class TestTheBulkImportObeysTheSamePolicy:
 
         assert response.status_code == status.HTTP_201_CREATED
         assert Thing.objects.filter(headline="Fine").exists()
+
+
+@pytest.mark.django_db
+class TestWhatTheFrontendIsTold:
+    """`GET /auth/me/` carries the capabilities the SPA builds its forms from.
+
+    The endpoint the app already calls on every load, so no extra round-trip —
+    and, more importantly, the same `capabilities()` the create endpoints refuse
+    with. The tests that matter here are the ones that cross both: whatever this
+    endpoint advertises has to be exactly what the create endpoints accept, or
+    the user is offered a control that 403s when pressed.
+    """
+
+    def test_the_standalone_advertises_the_whole_product(self, authenticated_client):
+        response = authenticated_client.get("/api/v1/auth/me/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["capabilities"] == {
+            "collection_modes": list(Collection.Mode.values),
+            "thing_types": list(Thing.Type.values),
+            "request_url": None,
+        }
+
+    def test_the_user_payload_is_unchanged_beside_it(self, authenticated_client, user):
+        """Additive: existing consumers of this endpoint keep working."""
+        response = authenticated_client.get("/api/v1/auth/me/")
+
+        assert response.data["code"] == user.code
+        assert response.data["email"] == user.email
+
+    def test_a_narrowed_deployment_says_so_and_says_where_to_ask(
+        self, authenticated_client, settings
+    ):
+        settings.CREATOR_POLICY = RESTRICTED
+
+        response = authenticated_client.get("/api/v1/auth/me/")
+
+        assert response.data["capabilities"] == {
+            "collection_modes": ["PROPRIETARY"],
+            "thing_types": ["GIFT_THING", "SELL_THING"],
+            "request_url": REQUEST_URL,
+        }
+
+    @pytest.mark.parametrize("policy", [None, RESTRICTED])
+    def test_every_advertised_verb_is_actually_accepted(
+        self, authenticated_client, settings, policy
+    ):
+        """The promise, checked against the door — under both policies.
+
+        A capability list the create endpoint would refuse is worse than no list
+        at all: the UI enables the control and the 403 arrives after the user
+        has filled the form in.
+        """
+        if policy:
+            settings.CREATOR_POLICY = policy
+
+        advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
+
+        for index, thing_type in enumerate(advertised["thing_types"]):
+            response = authenticated_client.post(
+                "/api/v1/things/",
+                {"type": thing_type, "headline": f"Thing {index}", "thumbnail": "img/x"},
+                format="json",
+            )
+            assert response.status_code == status.HTTP_201_CREATED, thing_type
+
+    @pytest.mark.parametrize("policy", [None, RESTRICTED])
+    def test_nothing_left_off_the_list_slips_through(self, authenticated_client, settings, policy):
+        """And the converse — the list is not merely a subset of what is allowed."""
+        if policy:
+            settings.CREATOR_POLICY = policy
+
+        advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
+        withheld = set(Thing.Type.values) - set(advertised["thing_types"])
+
+        for thing_type in withheld:
+            response = authenticated_client.post(
+                "/api/v1/things/",
+                {"type": thing_type, "headline": "Withheld", "thumbnail": "img/x"},
+                format="json",
+            )
+            assert response.status_code == status.HTTP_403_FORBIDDEN, thing_type

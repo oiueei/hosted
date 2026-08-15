@@ -28,6 +28,7 @@ from core.models.notification import InAppNotification
 from core.serializers import RequestLinkSerializer, UserSerializer
 from core.services.account_service import delete_account
 from core.services.booking_service import finalize_booking_decision
+from core.services.creator_policy import get_creator_policy
 from core.services.email_service import (
     resolve_email_language,
     send_account_delete_email,
@@ -859,7 +860,7 @@ class PopInView(APIView):
 class MeView(APIView):
     """
     GET /api/v1/auth/me/
-    Get current authenticated user.
+    Get current authenticated user, and what this deployment lets them create.
     """
 
     permission_classes = [IsAuthenticated]
@@ -872,8 +873,15 @@ class MeView(APIView):
     def get(self, request):
         user = request.user
         user.update_last_activity()
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+        data = UserSerializer(user).data
+        # Not a field on UserSerializer: what someone may create is a property of
+        # the deployment they are on, not of the person — the same account would
+        # get a different answer elsewhere. It rides on this endpoint because the
+        # SPA already calls it on every app load, and it comes from the same
+        # `capabilities()` the create endpoints refuse with, so the UI can only
+        # offer what the API would accept.
+        data["capabilities"] = get_creator_policy().capabilities(user).as_dict()
+        return Response(data)
 
 
 class AccountDeleteRequestView(APIView):
