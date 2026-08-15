@@ -12,7 +12,14 @@ OIUEEI is designed and led by Carlos Alberto, a designer, and co-written with [C
 
 OIUEEI is in **alpha**: nothing is finished, nothing is at 100%, and you'll find rough edges. That's exactly why your hands on it would help.
 
-You can explore a live demo environment at **[oiueei.com/popin](https://www.oiueei.com/popin)** — instant access to a populated account so you can see what collections, things, and the different sharing modes look and feel like.
+**To see a populated OIUEEI in about a minute**, run it locally and sign in as one of the seeded people — no signup, no email server:
+
+```bash
+python manage.py seed_demo          # Lala, Lele, Lili, Lolo, Lulu and their collections
+python manage.py runserver          # then, in frontend/: npm run dev
+```
+
+Open `http://localhost:3000/login`, enter **`lala@mail.com`**, and the magic link is **printed in the terminal running Django** (development uses the console email backend). Click it and you are in, with collections, things and every sharing mode already populated.
 
 What I'm looking for is honest feedback from people willing to poke at it: things that confuse you, flows that break, words that don't make sense, design decisions you'd push back on. If something annoys you, that's signal.
 
@@ -27,7 +34,7 @@ What I'm looking for is honest feedback from people willing to poke at it: thing
 - **Deployment**: Heroku (Procfile + `.python-version` included)
 - **Static files**: WhiteNoise
 - **PWA**: installable web app manifest + icons ("Add to Home Screen"); no service worker yet
-- **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders`, `send_digests` and `stats_summary` (see [HEROKU.md](HEROKU.md))
+- **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders` and `send_digests` (see [HEROKU.md](HEROKU.md))
 
 ## UI & Design System
 
@@ -86,7 +93,6 @@ core/
       close_transfers.py  # Close overdue loan transfers
       send_reminders.py   # Daily booking/delivery reminders
       send_digests.py     # Weekly/monthly digest emails
-      stats_summary.py    # First-party product stats (stdout + Monday email)
       backfill_events.py  # One-off: seed the Event log from existing rows
       seed_demo.py        # Populate demo data (idempotent; --lang=en|es|ca)
       seed_data/
@@ -111,7 +117,7 @@ core/
 | **Theeeme** | Colour palettes (6 HDS colour token names) for customising collections |
 | **RSVP** | One-time-use tokens (24h expiry) for auth and email actions. FK to User |
 | **BookingPeriod** | Unified booking model for all thing types (72h expiry). FKs to Thing, User (requester), User (owner) |
-| **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires; consumed only by `stats_summary`. Never exposed to users |
+| **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires; read only by whatever reporting the deployment runs over it. Never exposed to users |
 | **DailyActivity** | One `(user, date)` row per user per active day, written by `DailyActivityMiddleware` (cache-gated to ≤1 DB write per user per day). Powers WAU/MAU and retention. Records less than the web-server logs already hold and never leaves our DB |
 
 ## Key Relationships
@@ -137,7 +143,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | POST | `/api/v1/auth/request-link/` | Request magic link (rate limited: 5/min) |
-| POST | `/api/v1/auth/pop-in/` | Open-door onboarding: get_or_create user, add to onboarding collections OR (if `share_token` provided) to that shared collection, send magic link (rate limited: 5/min) |
+| POST | `/api/v1/auth/join/` | Join a collection you were pointed at — by `share_token` (an owner's `/share/{token}` link) or by the `collection_code` of a PUBLIC one — and get a magic link. **Creates nothing without a valid target**, and answers identically either way (rate limited: 5/min per IP, 5/h per email) |
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |
 | POST | `/api/v1/auth/refresh/` | Rotate access/refresh tokens via HttpOnly cookies |
@@ -245,7 +251,7 @@ python manage.py makemigrations core
 python manage.py migrate
 
 # 3. Seed demo data — recommended before exploring the app or running the frontend.
-#    Without it the Welcome page example collections and the /popin demo land on empty/404 pages.
+#    Without it the app is empty and there is no account to sign in as.
 #    (Lala, Lele, Lili, Lolo, Lulu and their collections — idempotent.)
 #    Collection/thing text is ALWAYS seeded in all three languages at once
 #    (inline {es,ca,en} maps — every reader sees their own); --lang only picks
@@ -279,7 +285,6 @@ python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
-python manage.py stats_summary     # product stats (prints daily; emails on STATS_EMAIL_WEEKDAY, default Monday)
 
 # One-off: seed the Event analytics log from existing rows (idempotent).
 # Run once, the day tracking ships, before forward events accumulate.
@@ -340,16 +345,17 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `COLLECTION_INVITES_ALARM` | No | The same silent, fire-once alert for a collection's **member** count. **Unset or `0` = off**. |
 | `COLLECTION_INVITES_BLOCK` | No | Per-collection ceiling on members: invitations that would cross it are refused when **sent**, not when accepted. **Unset or `0` = off**. Same `capacity_unblocked` override. |
 | `TRUSTED_PROXY_COUNT` | No | How many proxies in front of the app are trusted to have appended to `X-Forwarded-For`. It decides which entry every per-IP rate limit buckets on, counted from the **right** — only the tail of that header is written by a proxy; the rest is the caller's own text. Default `1` = one trusted proxy (the Heroku/Render/Fly router, or an nginx you run). **Set `0` if nothing trusted sits in front** (gunicorn facing the internet): otherwise the header is caller-supplied and one caller can mint a fresh bucket per request, defeating every rate limit below. `2+` for a CDN in front of the router. |
-| `STATS_EMAIL` | No | Recipient for the weekly `stats_summary` command email (`--email` forces a send). Unset skips the email — third-party deploys don't email metrics anywhere by default. |
-| `STATS_EMAIL_WEEKDAY` | No | Weekday for the weekly `stats_summary` email: 0=Monday (default) … 6=Sunday. |
 
 ## Onboarding & access
 
-OIUEEI has no open public self-registration on its main model — accounts are created only by an owner's action. There are three distinct ways in:
+**There is no public self-registration.** An account exists because somebody chose to admit a specific person, and there are two ways that happens:
 
-- **`/login` — for people who already have an account.** Enter your email and receive a magic link. The endpoint always returns `200` (it never reveals whether an email is registered), but a link is only ever sent to an existing account; it never creates users.
-- **Owner-controlled invites and public share links — the real membership model.** A collection owner either invites someone by email (the account is created when they accept) or enables a public `/share/{token}` link, with an optional QR code, that the owner can rotate or revoke. Anyone with that link joins only that one collection.
-- **`/popin` — a separate, intentional demo gate.** It deliberately lets anyone in: it creates an account on the spot, adds them to the `is_onboarding` demo collections (Lala/Lele/Lili/Lolo/Lulu) and emails a magic link. This is how the live demo at [oiueei.com/popin](https://www.oiueei.com/popin) works; it is not open registration for the main product.
+- **An owner invites you.** By email (the account is created when you accept), or through a public `/share/{token}` link — optionally as a QR — that the owner can rotate or revoke at any time. Either way you join **that one collection**.
+- **You act on a PUBLIC collection.** Anyone can read a collection its owner made public; pressing an action button asks for your email, joins you to that collection and sends the magic link (`POST /auth/join/` with its code). It is login-to-act: reading needs nothing, acting needs an account.
+
+`/login` (`POST /auth/request-link/`) is for people who already have an account. It always answers `200` — it never reveals whether an address is registered — and never creates users. `/auth/join/` likewise **creates nothing** unless the request carries a valid share token or public collection code, and answers identically whether or not it did.
+
+**If your deployment wants an open door**, add one: a view of your own, mounted through `DEPLOYMENT_URLCONFS`, that creates the account and joins it to your `is_onboarding` collections. The mechanism is documented in [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md); the policy is yours, which is why it is not shipped here.
 
 ## Security
 
@@ -359,7 +365,7 @@ OIUEEI has no open public self-registration on its main model — accounts are c
 |----------|---------|-------------|
 | Authentication | Magic Link | Passwordless auth via email (24h expiry, one-time use) |
 | Authentication | JWT | HttpOnly cookie-based. 1-hour access, 7-day refresh with rotation and blacklist |
-| Authentication | Invite-Only | New accounts come from an owner's invitation to a collection or an owner-enabled public share link/QR. The `/popin` demo endpoint is a separate, intentional open onboarding gate. |
+| Authentication | Invite-Only | New accounts come from an owner's invitation, an owner-enabled public share link/QR, or joining a PUBLIC collection to act on it. No endpoint creates an account that belongs to no collection. |
 | Authentication | Admin 2FA | Django admin login requires a verified TOTP device (`django-otp` `OTPAdminSite`), on top of the password. Bootstrap the first device via `manage.py add_totp_device <email>`. |
 | Authorization | DRF Permissions | Custom `IsThingOwner`, `IsCollectionOwner` permission classes |
 | Authorization | IDOR Protection | Profile access only via collection connections |
@@ -425,7 +431,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 | Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and `res.cloudinary.com` (the photos). That is the whole list. |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
-| The metrics are first-party | `core/models/event.py` and `core/models/activity.py` — an append-only event log and one `(user, date)` row, aggregated by `stats_summary` and emailed to the operator. They record *less* than any web server log, and never leave the database. |
+| The metrics are first-party | `core/models/event.py` and `core/models/activity.py` — an append-only event log and one `(user, date)` row. They record *less* than any web server log, and never leave the database. |
 | All of it | The whole codebase is public. Read it. |
 
 ### What does leave the server
