@@ -20,14 +20,9 @@ exactly like the one where it did.
 import pytest
 from django.core import mail
 
-from core.models import RSVP, Collection, User
+from core.models import RSVP, User
 
 URL = "/api/v1/auth/join/"
-
-
-@pytest.fixture
-def onboarding_collection(db, user):
-    return Collection.objects.create(code="ONBHRD", owner=user, headline="Demo", is_onboarding=True)
 
 
 @pytest.mark.django_db
@@ -119,20 +114,4 @@ class TestARealTargetStillWorks:
         joiner = User.objects.get(email="joiner@test.com")
         assert public_collection.invites.filter(code=joiner.code).exists()
         assert RSVP.objects.filter(user_code=joiner, target_code=public_collection.code).exists()
-        assert len(mail.outbox) == 1
-
-    def test_the_onboarding_fallback_still_works_where_there_is_one(
-        self, api_client, onboarding_collection
-    ):
-        """With somewhere to land, a bare email behaves exactly as it always did.
-
-        The ordering changed; the rule did not. What used to run unconditionally
-        now runs when there is a destination — and an onboarding collection is
-        one.
-        """
-        response = api_client.post(URL, {"email": "demo@test.com"}, format="json")
-
-        assert response.status_code == 200
-        demo_user = User.objects.get(email="demo@test.com")
-        assert onboarding_collection.invites.filter(code=demo_user.code).exists()
         assert len(mail.outbox) == 1

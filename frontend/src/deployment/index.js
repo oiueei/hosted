@@ -28,10 +28,10 @@
 
 export const deploymentRoutes = [];
 
-// The open-door page this checkout still ships. Naming it here rather than
-// inline in the two pages is what lets a deployment without one drop the
-// button by setting this to null, and a deployment with its own point it
-// somewhere else — neither of them touching a shared file.
-export const popInPath = '/popin';
+// No open door here: an account arrives by invitation or by a link somebody
+// chose to share, so /login is the whole of the front door and the "new here?"
+// button has nowhere to go. A deployment that runs one points this at its own
+// page — and it is the only file it has to write to do so.
+export const popInPath = null;
 
 export const deploymentI18n = {};

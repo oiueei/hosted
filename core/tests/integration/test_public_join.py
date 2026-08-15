@@ -13,7 +13,7 @@ from rest_framework.test import APIClient
 
 from core.models import RSVP, Collection, Event, User
 
-POP_IN_URL = "/api/v1/auth/join/"
+JOIN_URL = "/api/v1/auth/join/"
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def join_setup(db):
 class TestPublicAutoJoin:
     def test_public_code_adds_user_and_sends_magic_link(self, join_setup):
         resp = join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "visitor@test.com", "collection_code": "JPUB01"},
             format="json",
         )
@@ -72,7 +72,7 @@ class TestPublicAutoJoin:
 
     def test_public_code_does_not_also_join_onboarding(self, join_setup):
         join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "visitor2@test.com", "collection_code": "JPUB01"},
             format="json",
         )
@@ -81,40 +81,45 @@ class TestPublicAutoJoin:
         assert not join_setup["onboarding"].invites.filter(code=user.code).exists()
 
     def test_private_code_does_not_join(self, join_setup):
+        """A PRIVATE collection's code buys nothing — not membership, not an account.
+
+        The code of a private group circulates: it is in every URL its members
+        ever paste. It must never be a way in, and since nothing is created
+        without a valid target, it is not a way to mint an account either.
+        """
         resp = join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "probe@test.com", "collection_code": "JPRV01"},
             format="json",
         )
         assert resp.status_code == 200
-        user = User.objects.get(email="probe@test.com")
-        assert not join_setup["private"].invites.filter(code=user.code).exists()
-        # Falls back to onboarding since no valid public target was given.
-        assert join_setup["onboarding"].invites.filter(code=user.code).exists()
+        assert not User.objects.filter(email="probe@test.com").exists()
+        assert not join_setup["private"].invites.filter(email="probe@test.com").exists()
 
     def test_inactive_public_code_does_not_join(self, join_setup):
         resp = join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "inactive@test.com", "collection_code": "JINA01"},
             format="json",
         )
         assert resp.status_code == 200
-        user = User.objects.get(email="inactive@test.com")
-        assert not join_setup["inactive_public"].invites.filter(code=user.code).exists()
+        assert not User.objects.filter(email="inactive@test.com").exists()
+        assert not join_setup["inactive_public"].invites.filter(email="inactive@test.com").exists()
 
     def test_unknown_code_is_ignored(self, join_setup):
+        """Answered exactly like a real one, and nothing happens behind it."""
         resp = join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "ghost@test.com", "collection_code": "NOPE00"},
             format="json",
         )
         assert resp.status_code == 200
-        assert User.objects.filter(email="ghost@test.com").exists()
+        assert not User.objects.filter(email="ghost@test.com").exists()
 
     def test_existing_user_can_join_via_public_code(self, join_setup):
         existing = User.objects.create(code="JEXST1", email="member@test.com", name="Member")
         resp = join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "member@test.com", "collection_code": "JPUB01"},
             format="json",
         )
@@ -125,7 +130,7 @@ class TestPublicAutoJoin:
         # The magic-link RSVP carries the collection as target_code so that, after
         # verifying, the visitor is redirected straight back to it (login-to-act).
         join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "redir@test.com", "collection_code": "JPUB01"},
             format="json",
         )
@@ -133,23 +138,12 @@ class TestPublicAutoJoin:
         rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
         assert rsvp.target_code == "JPUB01"
 
-    def test_onboarding_fallback_leaves_target_empty(self, join_setup):
-        # No specific public target → no redirect target (lands on home/welcome).
-        join_setup["anon"].post(
-            POP_IN_URL,
-            {"email": "demo@test.com"},
-            format="json",
-        )
-        user = User.objects.get(email="demo@test.com")
-        rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
-        assert rsvp.target_code == ""
-
     def test_verify_public_join_returns_invited_collection(self, join_setup):
         # End-to-end #6: after pop-in via a public code, verifying the magic link
         # returns invited_collection so the SPA drops the visitor straight onto the
         # collection they came to act on — not the generic /welcome.
         join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "roundtrip@test.com", "collection_code": "JPUB01"},
             format="json",
         )
@@ -163,19 +157,24 @@ class TestPublicAutoJoin:
         assert resp.data["landing"] == "collection"
         assert resp.data["collection"] == "JPUB01"
 
-    def test_verify_onboarding_join_lands_on_welcome(self, join_setup):
-        # No specific target + born in the plain /popin → a genuinely new visitor,
-        # so they land on /welcome.
-        join_setup["anon"].post(
-            POP_IN_URL,
-            {"email": "nodest@test.com"},
-            format="json",
+    def test_a_targetless_join_still_lands_on_welcome(self, join_setup, user):
+        """The landing contract a deployment with an open door depends on.
+
+        Nothing in the standalone produces this RSVP any more — every join here
+        carries a collection — so it is built directly rather than through the
+        endpoint. It is kept, and kept tested, because a deployment that adds
+        its own open door (`DEPLOYMENT_URLCONFS`) stamps exactly this shape, and
+        `VerifyLinkView` is a shared file it must never have to edit.
+        """
+        rsvp = RSVP.objects.create(
+            user_code=user,
+            user_email=user.email,
+            action=RSVP.Action.MAGIC_LINK,
+            origin=RSVP.Origin.POPIN,
         )
-        user = User.objects.get(email="nodest@test.com")
-        rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
-        assert rsvp.origin == RSVP.Origin.POPIN
 
         resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+
         assert resp.status_code == 200
         assert "invited_collection" not in resp.data
         assert resp.data["landing"] == "welcome"
@@ -184,28 +183,18 @@ class TestPublicAutoJoin:
         # Joining a PUBLIC collection by code names it in the magic-link subject.
         mail.outbox.clear()
         join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "subj@test.com", "collection_code": "JPUB01"},
             format="json",
         )
         assert "Open community" in mail.outbox[0].subject
-
-    def test_plain_popin_magic_link_subject_stays_generic(self, join_setup):
-        # The onboarding fallback carries no collection → generic subject.
-        mail.outbox.clear()
-        join_setup["anon"].post(
-            POP_IN_URL,
-            {"email": "generic@test.com"},
-            format="json",
-        )
-        assert mail.outbox[0].subject == "Hello, welcome to OIUEEI!"
 
 
 @pytest.mark.django_db
 class TestMemberJoinedIsLoggedOncePerJoin:
     """One person joining once must read as one join.
 
-    The M2M add is idempotent and pop-in re-runs on every login-to-act visit, so
+    The M2M add is idempotent and joining re-runs on every login-to-act visit, so
     logging MEMBER_JOINED unconditionally counted a returning member as a fresh
     join each time — inflating member-join counts and the guest→creator funnel in
     stats_summary, which reads one MEMBER_JOINED per person as the entry point.
@@ -215,7 +204,7 @@ class TestMemberJoinedIsLoggedOncePerJoin:
 
     def _pop_in(self, join_setup):
         return join_setup["anon"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": self.EMAIL, "collection_code": "JPUB01"},
             format="json",
         )

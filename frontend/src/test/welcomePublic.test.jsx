@@ -58,7 +58,6 @@ describe('WelcomePage — readable without an account', () => {
     await screen.findByText(/Welcome to OIUEEI/i);
 
     const hrefs = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toContain('/popin');
     expect(hrefs).toContain('/login');
     // Every one of these is behind RequireAuth: offering them to a signed-out
     // visitor is a link straight back to the login form they came to avoid.

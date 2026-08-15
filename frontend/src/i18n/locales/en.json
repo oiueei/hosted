@@ -95,7 +95,8 @@
     "send": "Send",
     "sending": "Sending...",
     "back": "Back",
-    "formerMember": "Former member"
+    "formerMember": "Former member",
+    "closeThisTab": "You can close this tab now — the link is on its way to your inbox."
   },
   "titles": {
     "home": "Home — OIUEEI",
@@ -153,18 +154,6 @@
     "popIn": "New here? Pop in →",
     "legalLink": "Legal notice & privacy",
     "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →"
-  },
-  "popin": {
-    "title": "Come meet us!",
-    "description": "Enter your email and we'll send you a magic link. One click and you're in — no password, no faff.",
-    "emailLabel": "Email",
-    "emailPlaceholder": "you@email.com",
-    "join": "Pop in",
-    "joining": "Sending…",
-    "magicLinkSent": "Magic link sent! Check your inbox and click the link to join.",
-    "closeThisTab": "You can close this tab now — the link is on its way to your inbox.",
-    "errorSendingLink": "Error sending link.",
-    "alreadyHaveAccount": "Already have an account? Sign in →"
   },
   "verify": {
     "declined": "Declined",

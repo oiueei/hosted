@@ -89,7 +89,8 @@
     "send": "Enviar",
     "sending": "Enviando...",
     "back": "Volver",
-    "formerMember": "Antiguo miembro"
+    "formerMember": "Antiguo miembro",
+    "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada."
   },
   "titles": {
     "home": "Inicio — OIUEEI",
@@ -798,18 +799,6 @@
     "body": "Se ha producido un error inesperado. Prueba a recargar la página o vuelve al inicio.",
     "reload": "Recargar página",
     "home": "Ir al inicio"
-  },
-  "popin": {
-    "title": "¡Ven a conocernos!",
-    "description": "Introduce tu email y te enviaremos un enlace mágico. Un clic y ya estás dentro — sin contraseñas, sin líos.",
-    "emailLabel": "Email",
-    "emailPlaceholder": "tu@email.com",
-    "join": "Pásate",
-    "joining": "Enviando…",
-    "magicLinkSent": "¡Enlace enviado! Revisa tu bandeja de entrada y pulsa el enlace para unirte.",
-    "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.",
-    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión →",
-    "errorSendingLink": "Error al enviar el enlace."
   },
   "rental": {
     "durationsLabel": "Duraciones de alquiler",

@@ -738,19 +738,14 @@ class JoinView(APIView):
     can read joins it on the way in). Without one of those there is nowhere to
     go, and nothing is created; see `_resolve_target`.
 
-    Accepts optional `share_token` (string, 22 chars). If present and valid,
-    the user is added to that collection's invitees instead of (or in
-    addition to) the onboarding collections. Invalid tokens are silently
-    ignored — the unified response prevents probing the token space.
-
-    Also accepts optional `collection_code`: a visitor acting on a PUBLIC
-    collection joins it by code (the public "link" is the collection URL, not a
-    share token). Only PUBLIC, ACTIVE collections qualify — a code can never be
-    used to slip into a PRIVATE, invite-only collection — and an unknown or
-    non-public code is silently ignored, same as an invalid share token.
+    `share_token` (22 chars) is the owner's bearer link. `collection_code` names
+    a PUBLIC, ACTIVE collection — never a PRIVATE one, so a code can't be used
+    to slip into an invite-only group. Either being unknown, revoked or pointing
+    at an INACTIVE collection is silently ignored: the unified response is what
+    keeps the token space and the code space unprobeable.
 
     Accepts optional `language` (`es`/`ca`/`en` — the UI language the visitor is
-    reading the pop-in page in). It is stored on a **newly created** user only, so
+    reading the joining page in). It is stored on a **newly created** user only, so
     their very first magic link already speaks their language; anything else is
     ignored, and an existing user's saved preference is never overwritten by the
     browser they happened to arrive from.
@@ -782,20 +777,14 @@ class JoinView(APIView):
         # registration door into an empty room, on an otherwise invite-only
         # product. Nothing about the response ever said so.
         join_collection, join_source = self._resolve_target(share_token, collection_code)
-        # Only consulted when no specific collection was named, and only to
-        # decide whether there is anywhere at all to put this person.
-        onboarding_collections = (
-            [] if join_collection else list(Collection.objects.filter(is_onboarding=True))
-        )
 
-        if join_collection is None and not onboarding_collections:
+        if join_collection is None:
             # Nowhere to join: create no user, no RSVP, send no email — and
             # answer exactly as if we had. The unified response is the whole
             # anti-enumeration guarantee, so this branch must be indistinguishable
             # from the successful one to anyone outside.
             security_logger.info(
-                f"Pop-in request for {redact_email(email)} from IP {ip} "
-                f"(no target, nothing created)"
+                f"Join request for {redact_email(email)} from IP {ip} (no target, nothing created)"
             )
             return self._unified_response()
 
@@ -806,26 +795,15 @@ class JoinView(APIView):
                 user.save(update_fields=["language"])
             Event.log(Event.Kind.USER_JOINED, actor=user)
 
-        # When the visitor joins a specific collection (owner's share-token link, or
-        # a PUBLIC collection by code) stamp it on the magic-link RSVP so
-        # VerifyLinkView drops them straight onto that collection after login,
-        # instead of the generic /welcome. Empty for the plain onboarding fallback.
-        # ``join_collection`` is that collection: the magic-link subject names it and
-        # the email speaks its language. Both stay empty/None for the plain
-        # onboarding fallback.
-        joined = join_collection is not None
-        target_collection_code = join_collection.code if joined else ""
+        _join_collection(join_collection, user, source=join_source)
 
-        if joined:
-            _join_collection(join_collection, user, source=join_source)
-        else:
-            for collection in onboarding_collections:
-                _join_collection(collection, user, source=Event.Source.ONBOARDING)
-
+        # The collection is stamped on the magic-link RSVP so VerifyLinkView drops
+        # them straight onto it after login. There is always one now: this point
+        # is unreachable without a resolved target.
         rsvp = RSVP.objects.create(
             user_code=user,
             user_email=email,
-            target_code=target_collection_code,
+            target_code=join_collection.code,
             origin=RSVP.Origin.POPIN,
         )
         magic_link_base = getattr(settings, "MAGIC_LINK_BASE_URL", "http://localhost:3000/verify")
@@ -833,14 +811,14 @@ class JoinView(APIView):
         _send_magic_link(
             email,
             magic_link,
-            collection_headline=join_collection.headline if join_collection else None,
+            collection_headline=join_collection.headline,
             user=user,
             collection=join_collection,
         )
 
         security_logger.info(
-            f"Pop-in request for {redact_email(email)} from IP {ip} "
-            f"(new_user={created}, joined_collection={joined})"
+            f"Join request for {redact_email(email)} from IP {ip} "
+            f"(new_user={created}, collection={join_collection.code})"
         )
 
         return self._unified_response()

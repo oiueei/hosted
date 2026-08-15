@@ -15,7 +15,9 @@ import PageLayout from './PageLayout';
  * but the request itself is shared: both call `useJoin`.
  *
  * Props:
- * - `ns`: i18n namespace ('popin' | 'share') for the form strings
+ * - `ns`: i18n namespace for the form strings ('share' here; a deployment
+ *   that adds its own door passes its own, supplying the copy through
+ *   `deploymentI18n` rather than editing the locale files)
  *   (emailLabel/emailPlaceholder/magicLinkSent/errorSendingLink/joining/join/
  *   alreadyHaveAccount) and the email input id (`{ns}-email`).
  * - `docTitleKey` / `titleKey` / `descriptionKey`: full i18n keys for the
@@ -46,7 +48,7 @@ export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descripti
             {message}
           </Notification>
           {status === 'success' && (
-            <p className="section-mt">{t('popin.closeThisTab')}</p>
+            <p className="section-mt">{t('common.closeThisTab')}</p>
           )}
         </>
       ) : (
@@ -68,7 +70,8 @@ export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descripti
           </div>
         </form>
       )}
-      {/* Both doors this component serves (/popin, /share/:token) create a real
+      {/* Every door this component serves (/share/:token, plus any a deployment
+          adds) creates a real
           account from the typed email, so the privacy information has to be
           reachable *here* — at the moment data is collected — not only on
           /login. Reuses login.legalLink: same destination, same words. */}

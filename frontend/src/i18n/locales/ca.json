@@ -89,7 +89,8 @@
     "send": "Enviar",
     "sending": "Enviant...",
     "back": "Tornar",
-    "formerMember": "Antic membre"
+    "formerMember": "Antic membre",
+    "closeThisTab": "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada."
   },
   "titles": {
     "home": "Inici — OIUEEI",
@@ -798,18 +799,6 @@
     "body": "S'ha produït un error inesperat. Prova de recarregar la pàgina o torna a l'inici.",
     "reload": "Recarregar la pàgina",
     "home": "Anar a l'inici"
-  },
-  "popin": {
-    "title": "Vine a conèixer-nos!",
-    "description": "Introdueix el teu correu i t'enviarem un enllaç màgic. Un clic i ja hi ets — sense contrasenya, sense complicacions.",
-    "emailLabel": "Correu",
-    "emailPlaceholder": "tu@correu.com",
-    "join": "Passa",
-    "joining": "Enviant…",
-    "magicLinkSent": "Enllaç enviat! Revisa la safata d'entrada i fes clic a l'enllaç per unir-te.",
-    "closeThisTab": "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada.",
-    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →",
-    "errorSendingLink": "Error en enviar l'enllaç."
   },
   "rental": {
     "durationsLabel": "Durades de lloguer",

@@ -8,7 +8,7 @@ import useTheeeme from '../hooks/useTheeeme';
 /**
  * The shared operator-message form, rendered by `ContactPage` (support,
  * `kind="support"`) and `CollaboratePage` (`kind="collab"`) with their own
- * copy — the same pattern as `MagicLinkJoinPage` for popin/share. Public on
+ * copy — the same pattern as `MagicLinkJoinPage` for the join doors. Public on
  * purpose: the person who most needs the support form is the one who can't
  * sign in. Name (optional), a reply address and the message; the backend
  * forwards it to the operator with Reply-To set and a per-kind subject.

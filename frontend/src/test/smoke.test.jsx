@@ -145,7 +145,6 @@ import EditThingPage from '../pages/EditThingPage';
 import RequestThingPage from '../pages/RequestThingPage';
 import UserPage from '../pages/UserPage';
 import SharePage from '../pages/SharePage';
-import PopInPage from '../pages/PopInPage';
 import JoinPage from '../pages/JoinPage';
 import DeleteCollectionPage from '../pages/DeleteCollectionPage';
 import NotFoundPage from '../pages/NotFoundPage';
@@ -272,7 +271,6 @@ smokeAndAxe('VerifyPage', VerifyPage, {
 
 smokeAndAxe('LogoutPage', LogoutPage);
 
-smokeAndAxe('PopInPage', PopInPage);
 
 smokeAndAxe('SharePage', SharePage, {
   path: '/share/:token',

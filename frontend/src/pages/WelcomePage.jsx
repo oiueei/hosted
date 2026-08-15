@@ -39,7 +39,8 @@ export default function WelcomePage() {
   const [accessibleCodes, setAccessibleCodes] = useState(() => new Set());
   // Read once on mount, like every other page in the app. It decides which doors
   // this page offers: a member gets "create a collection" / "edit profile", a
-  // stranger gets the one door that actually opens for them (/popin). Every
+  // stranger gets whichever door this deployment opens for them (popInPath,
+  // null upstream — then /login, the one that always exists). Every
   // action below used to point at a RequireAuth route, so a visitor who finally
   // reached this page still hit a login form on whatever they clicked.
   const [isAuthenticated] = useState(() => !!localStorage.getItem("userCode"));

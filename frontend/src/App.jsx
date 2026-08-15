@@ -41,7 +41,6 @@ const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'));
 const OwnerBookingsPage = lazy(() => import('./pages/OwnerBookingsPage'));
 const SharedThingsPage = lazy(() => import('./pages/SharedThingsPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
-const PopInPage = lazy(() => import('./pages/PopInPage'));
 const SharePage = lazy(() => import('./pages/SharePage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -111,7 +110,6 @@ function App() {
         <Route path="/digest/mute/:token" element={<DigestMutePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/collaborate" element={<CollaboratePage />} />
-        <Route path="/popin" element={<PopInPage />} />
         <Route path="/share/:token" element={<SharePage />} />
 
         {/* Public read of PUBLIC collections/things — anonymous visitors can

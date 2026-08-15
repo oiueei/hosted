@@ -14,7 +14,7 @@ import useJoin from '../hooks/useJoin';
  * silently ignores it otherwise).
  *
  * The request itself lives in `useJoin`, shared with `MagicLinkJoinPage`
- * (`/popin`, `/share/:token`); only the presentation differs.
+ * (`/share/:token`, and whatever door a deployment adds); only the presentation differs.
  */
 export default function JoinToAct({ collectionCode, collectionHeadline }) {
   const { t } = useTranslation();
@@ -31,7 +31,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
         <Notification label={t('joinToAct.sent')} type="success">
           {message}
         </Notification>
-        <p className="section-mt">{t('popin.closeThisTab')}</p>
+        <p className="section-mt">{t('common.closeThisTab')}</p>
       </>
     );
   }
