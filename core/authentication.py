@@ -35,7 +35,7 @@ class CookieJWTAuthentication(JWTAuthentication):
             # Stale or invalid cookie — a malformed/expired token, or a valid
             # token whose user no longer exists or is inactive (e.g. after a dev
             # ``seed_demo --reset`` leaves a live cookie pointing at a wiped
-            # user). Treat as unauthenticated so AllowAny endpoints (/popin,
+            # user). Treat as unauthenticated so AllowAny endpoints (/auth/join/,
             # /auth/request-link/) still work; protected endpoints just 401.
             return None
         # The cookie authenticated us, so this request is CSRF-eligible — enforce

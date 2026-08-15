@@ -3,7 +3,7 @@ Post-login landing (O3): where VerifyLinkView sends the user after a magic link.
 
 The destination used to be a client-side ``seenWelcome`` localStorage heuristic —
 and since logout clears that key, every re-login looked like a first visit and
-dumped returning users on /welcome. It is now decided server-side from the RSVP's
+dumped returning users on the new-visitor page. It is now decided server-side from the RSVP's
 origin and the user's collections.
 """
 
@@ -31,7 +31,11 @@ def _verify(rsvp):
 
 @pytest.mark.django_db
 class TestMagicLinkLanding:
-    def test_popin_link_lands_on_welcome(self, user):
+    def test_a_targetless_join_link_lands_on_welcome(self, user):
+        """The landing a deployment with its own open door depends on.
+
+        Built directly: nothing here stamps POPIN without a collection any more.
+        """
         res = _verify(_magic_link(user, origin=RSVP.Origin.POPIN))
 
         assert res.status_code == 200
@@ -95,7 +99,7 @@ class TestMagicLinkLanding:
 
     def test_legacy_link_without_an_origin_is_treated_as_a_login(self, user, collection):
         # Magic links minted before RSVP.origin existed have origin="" — they are
-        # returning users, so they follow the login rule, never /welcome.
+        # returning users, so they follow the login rule.
         res = _verify(_magic_link(user, origin=""))
 
         assert res.data["landing"] == "collection"

@@ -1,7 +1,7 @@
 """Integration tests for login-to-act auto-join on PUBLIC collections (#5, phase 3).
 
 A visitor who tries to act on a PUBLIC collection submits their email plus the
-collection code to pop-in; on submission they are added to that collection's
+collection code to the join endpoint; on submission they are added to that collection's
 invitees and emailed a magic link. The code only joins PUBLIC, ACTIVE
 collections — never a PRIVATE one — and an unknown/non-public code is silently
 ignored (same unified response, no enumeration oracle).
@@ -139,9 +139,9 @@ class TestPublicAutoJoin:
         assert rsvp.target_code == "JPUB01"
 
     def test_verify_public_join_returns_invited_collection(self, join_setup):
-        # End-to-end #6: after pop-in via a public code, verifying the magic link
+        # End-to-end #6: after joining via a public code, verifying the magic link
         # returns invited_collection so the SPA drops the visitor straight onto the
-        # collection they came to act on — not the generic /welcome.
+        # collection they came to act on — not the generic new-visitor landing.
         join_setup["anon"].post(
             JOIN_URL,
             {"email": "roundtrip@test.com", "collection_code": "JPUB01"},
@@ -223,7 +223,7 @@ class TestMemberJoinedIsLoggedOncePerJoin:
         assert self._joins(user, join_setup["public"]) == 1
 
     def test_re_entering_as_an_existing_member_logs_nothing_new(self, join_setup):
-        # Three visits, one member: the login-to-act pop-in fires on every attempt
+        # Three visits, one member: the login-to-act join fires on every attempt
         # to act on a public collection, not just the first.
         self._pop_in(join_setup)
         self._pop_in(join_setup)

@@ -50,9 +50,10 @@ class Event(models.Model):
     class Source(models.TextChoices):
         """Which door a MEMBER_JOINED came through.
 
-        OIUEEI has six ways to acquire a member (owner invite, bulk CSV invite,
-        share link/QR, public collection + login-to-act, a member's
-        recommendation, and the /popin demo). Every one of them was measured as
+        OIUEEI has five ways to acquire a member (owner invite, bulk CSV invite,
+        share link/QR, public collection + login-to-act, and a member's
+        recommendation), plus whichever open door a deployment adds — that is
+        what ``ONBOARDING`` records. Every one of them was measured as
         the same undifferentiated join, so "which of these actually works?" —
         the question that decides whether any of them should go — had no answer
         in the data. Aggregate, first-party, and read only by whoever runs the server.

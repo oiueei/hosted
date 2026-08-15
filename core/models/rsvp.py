@@ -87,7 +87,7 @@ class RSVP(models.Model):
     )
     target_code = models.CharField(max_length=6, null=True, blank=True, db_index=True)
 
-    # Where a MAGIC_LINK came from (``/popin`` vs ``/login``). Blank on every other
+    # Where a MAGIC_LINK came from (joining a collection vs ``/login``). Blank on every other
     # action — and on magic links minted before this field existed, which
     # VerifyLinkView reads as LOGIN. See ``core/views/CLAUDE.md`` (VerifyLinkView)
     # for the landing rules it feeds.

@@ -81,7 +81,7 @@ def _set_auth_cookies(response, refresh):
 def _send_magic_link(email, magic_link, collection_headline=None, user=None, collection=None):
     """Send the magic-link email, off the request thread in production.
 
-    ``collection_headline`` (pop-in / share-link join) is forwarded to
+    ``collection_headline`` (set when this is a join) is forwarded to
     ``send_magic_link_email`` so the subject can name the joined collection; it
     is ``None`` for ``/login`` and the plain onboarding pop-in, which keep the
     generic welcome subject.
@@ -202,7 +202,7 @@ class RequestLinkView(APIView):
         security_logger.info(f"Magic link requested for {redact_email(email)} from IP {ip}")
 
         # Create RSVP. ``origin=LOGIN`` tells VerifyLinkView this is a returning
-        # user, not a first visit — they never land on /welcome again.
+        # user, not a first visit — the new-visitor landing never applies again.
         #
         # This INSERT is the timing signal L10 left behind: it only runs for a
         # registered address, so those responses are a hair slower than the early
@@ -429,9 +429,13 @@ class VerifyLinkView(APIView):
         returning users on /welcome. The rules, in order:
 
         1. The link carries a collection (``target_code``: a share-token or
-           public-collection pop-in) → that collection. They joined it to get there.
-        2. Otherwise a link born in the plain ``/popin`` → /welcome. A genuinely
-           new visitor with nothing else to see.
+           public-collection join) → that collection. They joined it to get there.
+        2. Otherwise a link born at an open door with no target → ``"welcome"``.
+           A genuinely new visitor with nothing else to see. **Nothing in this
+           repository produces that RSVP**: every join here carries a collection.
+           It is kept for a deployment that adds an open door of its own, since
+           this file is one it must never have to edit; the SPA resolves the
+           landing against its own ``aboutPath`` and falls through to home.
         3. Otherwise (``/login``, and any legacy magic link with no origin) → their
            single ACTIVE collection when they have exactly one, else home.
         """
@@ -442,13 +446,13 @@ class VerifyLinkView(APIView):
             return result
         user, refresh, user_data = result
 
-        # A pop-in / share-link magic link can carry the collection the visitor
-        # came to join (``target_code``, stamped by PopInView). Drop them straight
-        # onto it after login — they were already added to its invites (private
-        # share) or it is PUBLIC (login-to-act). If the collection went INACTIVE
-        # between the pop-in and the click, this simply doesn't match — the
-        # origin rules below (POPIN -> /welcome, else solo-collection/home) take
-        # over naturally instead of landing the user on a page that 403s.
+        # A join magic link carries the collection the visitor came for
+        # (``target_code``, stamped by JoinView). Drop them straight onto it
+        # after login — they were already added to its invites (private share)
+        # or it is PUBLIC (login-to-act). If the collection went INACTIVE
+        # between the join and the click, this simply doesn't match — the origin
+        # rules below take over naturally instead of landing the user on a page
+        # that 403s.
         invited_collection = None
         if (
             rsvp.target_code

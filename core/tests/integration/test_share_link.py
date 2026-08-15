@@ -239,7 +239,7 @@ class TestJoinWithShareToken:
 
     def test_share_token_stamps_target_and_redirects(self, share_link_setup):
         # #6: a private-share join should land on the collection after login, not
-        # the generic /welcome. Pop-in stamps target_code on the magic-link RSVP
+        # the generic new-visitor landing. The join stamps target_code on the RSVP
         # and verifying it returns invited_collection for the SPA to redirect.
         collection = share_link_setup["collection"]
         token = (
