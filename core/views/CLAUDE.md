@@ -163,6 +163,18 @@ Open-door onboarding. Allows anyone to join OIUEEI without a prior invitation.
 
 Returns the current authenticated user's full profile via `UserSerializer`. Updates `last_activity` on each call.
 
+**Plus `capabilities`** — what this deployment lets that account create:
+
+```json
+"capabilities": {
+  "collection_modes": ["PROPRIETARY", "COMMUNITY"],
+  "thing_types": ["GIFT_THING", "SELL_THING", "RENT_THING", "LEND_THING"],
+  "request_url": null
+}
+```
+
+The standalone answers with everything and a null `request_url` (see [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment)). It is **not** a `UserSerializer` field: what someone may create belongs to the deployment, not to the person, and that serializer is also what `/users/{code}/` returns about somebody else. It rides here because the SPA calls this endpoint on every app load, and it comes from the **same `capabilities()` call the create endpoints refuse with** — that is what stops the UI offering a control the API would 403. `request_url` is where to ask for what was withheld; null means there is nowhere, which is the difference between "this deployment does not do that" and "ask here".
+
 ---
 
 ### LogoutView
@@ -326,6 +338,8 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 
 **Retrieve:** Uses `thing.can_view(user_code)` — owner, or invited to an ACTIVE collection containing the thing (INACTIVE things are only visible to their owner).
 
+**Deployment policy (`CREATOR_POLICY`).** Before anything else, `perform_create` asks whether this deployment offers that verb to this account at all — **403** if not, checked *before* the `collection_code` is resolved so a refusal neither depends on nor reveals which collection was named. `perform_update` asks the same, but **only when the type actually changes**: a thing already under a withheld verb stays editable by its owner. The standalone's policy allows everything, so neither check does anything upstream. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
+
 **Create behaviour:** Optionally accepts `collection_code` in request body. `perform_create` raises DRF exceptions directly (no `{"error": ...}` two-phase protocol): an unknown `collection_code` → **404 NotFound**; a collection the user can't add to → **403 PermissionDenied**; a type/tag rule violation → **400 ValidationError** (field-keyed: `{"type": [...]}` / `{"tags": [...]}`, like `perform_update`). If valid, the thing is automatically added to it. **Per-collection allowlist** (`Collection.allowed_thing_types`): if non-empty, the thing's type must be in it — returns 400 otherwise. Empty list = no per-collection restriction. **Tags**: any `tags` on the thing must belong to the collection's `Collection.tags` vocabulary — returns 400 otherwise (tags require a collection; on update, `ThingUpdateSerializer.validate_tags` checks the union of the thing's collections' tags). Removing a tag from a collection (via `CollectionUpdateSerializer`) cascade-strips it from that collection's things.
 
 **`activate` action:** Sets `status = 'ACTIVE'`. Returns 400 if thing is not INACTIVE.
@@ -352,7 +366,7 @@ Lists things from collections where the current user is invited. Only returns AC
 | **Permission** | `IsAuthenticated` + `collection.can_add_thing()` |
 | **Rate limit** | `10/h` per user |
 
-CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, availability, location, condition, tags, thumbnail, is_endless}, ...]}` (max 100 rows), parsed and previewed client-side by `BulkAddCsv`. Each row is validated with `ThingBulkRowSerializer` (the project's Safe* fields + a `reject_spreadsheet_formula` CSV-injection guard on free-text fields, including each `tags` entry; `thumbnail` uses `ImageIdField`, path-traversal-safe; `fee` accepts a decimal comma — `LocaleDecimalField`, S9 — since a CSV cell has no client `NumberInput` to normalise it first) and `type_validity_error`; `tags` are additionally checked in the view against the target collection's `Collection.tags` vocabulary (mirrors the single-create subset check). **A CSV tag may name a localized vocabulary entry by any of its languages** (S10, `_resolve_tag_aliases`): `{"es": "Crianza", "ca": "Criança"}` in the vocabulary accepts a CSV cell of `Crianza` or `Criança` (case-insensitively) as well as the exact canonical JSON, storing the canonical string either way; a casefolded alias that matches two distinct vocabulary entries is rejected as ambiguous rather than guessed, and an alias matching nothing keeps the existing "not defined by the collection" error. If **any** row fails the request returns `400 {"errors": [{row, errors}]}` and **nothing** is created. On full success every row is created in one `transaction.atomic()` and the response is `201 {"created": N, "codes": [...]}`. **Photos** are importable via the client's ZIP path: `BulkAddCsv` unzips, uploads each image to Cloudinary, and sends the resulting public_id as `thumbnail` — the server only ever receives the validated id, never the binary. Gallery photos are still not bulk-importable.
+CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, availability, location, condition, tags, thumbnail, is_endless}, ...]}` (max 100 rows), parsed and previewed client-side by `BulkAddCsv`. Each row is validated with `ThingBulkRowSerializer` (the project's Safe* fields + a `reject_spreadsheet_formula` CSV-injection guard on free-text fields, including each `tags` entry; `thumbnail` uses `ImageIdField`, path-traversal-safe; `fee` accepts a decimal comma — `LocaleDecimalField`, S9 — since a CSV cell has no client `NumberInput` to normalise it first) , `thing_type_denial` (the deployment's `CREATOR_POLICY` — reported as a row error like every other row failure, since the contract here is that one response names every bad row) and `type_validity_error`; `tags` are additionally checked in the view against the target collection's `Collection.tags` vocabulary (mirrors the single-create subset check). **A CSV tag may name a localized vocabulary entry by any of its languages** (S10, `_resolve_tag_aliases`): `{"es": "Crianza", "ca": "Criança"}` in the vocabulary accepts a CSV cell of `Crianza` or `Criança` (case-insensitively) as well as the exact canonical JSON, storing the canonical string either way; a casefolded alias that matches two distinct vocabulary entries is rejected as ambiguous rather than guessed, and an alias matching nothing keeps the existing "not defined by the collection" error. If **any** row fails the request returns `400 {"errors": [{row, errors}]}` and **nothing** is created. On full success every row is created in one `transaction.atomic()` and the response is `201 {"created": N, "codes": [...]}`. **Photos** are importable via the client's ZIP path: `BulkAddCsv` unzips, uploads each image to Cloudinary, and sends the resulting public_id as `thumbnail` — the server only ever receives the validated id, never the binary. Gallery photos are still not bulk-importable.
 
 ---
 
@@ -383,6 +397,8 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 - Read: `CollectionSerializer`
 
 **Queryset:** Own collections only, ordered by `-created`. List and retrieve actions use the module-level `_optimise_collection_queryset()` helper for `select_related`/`prefetch_related` optimisation (also reused by `InvitedCollectionsView`).
+
+**Deployment policy (`CREATOR_POLICY`).** `perform_create` refuses a mode this deployment does not hand out with **403**, judging the **PROPRIETARY default** when the body names no mode. `perform_update` refuses switching an existing collection *into* a withheld mode — only on a real change, so a collection already in one stays editable by its owner. Both are no-ops under the standalone's open policy. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
 
 **Retrieve:** Uses `collection.can_view(user_code)` — owner, or invited user if collection is ACTIVE (INACTIVE collections are only visible to their owner). The `CollectionSerializer.things` field excludes INACTIVE things for non-owners.
 
@@ -1033,6 +1049,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Service Layer
 
 Business logic is extracted into `core/services/`:
+- `creator_policy.py` — Whether this deployment lets an account open a collection in a given mode or offer a thing under a given verb (`CREATOR_POLICY`; open to everyone in the standalone). Enforced at five doors — collection create/update, thing create/update, bulk import — and served to the SPA as `capabilities` on `GET /auth/me/`.
 - `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
 - `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.
 

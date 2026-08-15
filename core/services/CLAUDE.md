@@ -164,6 +164,39 @@ The **daily invitation-email quota** helpers live here too (`_invite_quota_left`
 
 ---
 
+### `creator_policy.py` — Who May Create What, On This Deployment
+
+The one place a deployment says whether an account is enough to open a collection in either mode and offer a thing under any of the four verbs. Upstream the answer is **yes, to everyone, always** — `OpenCreatorPolicy`, the default of the `CREATOR_POLICY` setting — so a standalone checkout has no gate and behaves exactly as it did before this module existed. A deployment with a narrower rule (only the board opens COMMUNITY collections; lending is vetted first) points the setting at its own subclass instead of editing the serializers, and nothing about that rule needs to live in this repository.
+
+It answers only *may this person bring such a thing into existence here at all*. It is **not** object-level permission (`IsCollectionOwner`), and **not** the owner's per-collection `allowed_thing_types` allowlist (`core.views._helpers.type_validity_error`).
+
+| Function / class | Behaviour |
+|---|---|
+| `Capabilities` | Frozen dataclass: `collection_modes`, `thing_types`, `request_url`. `as_dict()` is the JSON shape served on `GET /auth/me/` (lists, not tuples). `request_url` is where to go and ask; `None` means there is nowhere, which is the standalone's answer because there is nothing to ask for. |
+| `CreatorPolicy` | Base class. A subclass overrides **`capabilities(user)`** and nothing else; `allows_collection_mode()` / `allows_thing_type()` are derived from it, so a policy cannot allow something it does not advertise. Instances are cached and shared across requests — subclasses must be **stateless**. |
+| `OpenCreatorPolicy` | The default. Every mode, every verb, no request URL. Its two lists come from `Collection.Mode.values` / `Thing.Type.values` rather than being spelled out, so a verb added to the model is available the day it is added. |
+| `get_creator_policy()` | The configured policy, instantiated once **per dotted path** (`lru_cache` under the setting lookup, not over it — a module global would pin whichever policy the process loaded first, and `override_settings` in a test would silently not apply). |
+| `collection_mode_denial(user, mode)` | The message explaining why this deployment refuses that mode, else `None`. |
+| `thing_type_denial(user, thing_type)` | The same for a verb, in prose (`"a lend thing"`, not `LEND_THING`) — the text reaches an API client as the 403 body. |
+
+**The module stays free of HTTP**, like `booking_service`: it returns a message and the call site raises the 403. The message carries the request URL when the policy has one, because the API is usable without the SPA and a client that only ever sees the refusal would never learn that asking is possible.
+
+#### Where it is enforced (five doors, not two)
+
+| Call site | Refuses |
+|---|---|
+| `CollectionViewSet.perform_create` | The mode, **including the PROPRIETARY default** when the body names none |
+| `CollectionViewSet.perform_update` | Switching an existing collection **into** a withheld mode |
+| `ThingViewSet.perform_create` | The verb — checked **before** the `collection_code` is looked up, so a refusal never depends on (or reveals) which collection was named |
+| `ThingViewSet.perform_update` | Moving a thing **into** a withheld verb |
+| `ThingBulkCreateView` | The verb of each CSV row — as a **row error (400)**, like the collection's own allowlist, since that endpoint's contract is that one response names every bad row |
+
+**The two edit paths only judge a change.** A collection already in a mode (or a thing already under a verb) the policy has since stopped handing out stays fully editable by its owner: the gate is on bringing that state into existence, never on living in it, so narrowing a deployment cannot freeze what people already own.
+
+**`GET /auth/me/` serves the same `capabilities()`** the doors refuse with (see `MeView`), which is what keeps the UI from offering a control that 403s when pressed.
+
+---
+
 ### `account_service.py` — Account Erasure (Right to Be Forgotten)
 
 One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed); Cloudinary assets are destroyed by the `cloudinary_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
