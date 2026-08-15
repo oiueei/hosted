@@ -26,6 +26,7 @@ from core.serializers import (
     ThingUpdateSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
+from core.services.creator_policy import thing_type_denial
 from core.utils import parse_localized
 from core.views._helpers import type_validity_error, viewer_code
 
@@ -142,6 +143,14 @@ class ThingViewSet(ModelViewSet):
 
         thing_type = serializer.validated_data.get("type", Thing.Type.GIFT_THING)
 
+        # Whether this deployment offers the verb at all, asked before anything
+        # about the collection: the answer is about the person, not the place,
+        # so a refusal must not depend on which collection was named (and must
+        # not leak whether that collection exists).
+        denial = thing_type_denial(self.request.user, thing_type)
+        if denial:
+            raise PermissionDenied(denial)
+
         if collection_code:
             try:
                 collection = Collection.objects.get(code=collection_code)
@@ -212,6 +221,13 @@ class ThingViewSet(ModelViewSet):
         thing = serializer.instance
         new_type = serializer.validated_data.get("type", thing.type)
         if new_type != thing.type:
+            # Only on a change: a thing already offered under a verb the policy
+            # has since stopped handing out stays editable by its owner. The
+            # gate is on creating that state, not on living in it — otherwise
+            # narrowing a deployment would freeze the things people already own.
+            denial = thing_type_denial(self.request.user, new_type)
+            if denial:
+                raise PermissionDenied(denial)
             for collection in list(thing.collections.all()) or [None]:
                 err = type_validity_error(new_type, collection)
                 if err:
@@ -298,6 +314,15 @@ class ThingBulkCreateView(APIView):
                 errors.append({"row": index, "errors": serializer.errors})
                 continue
             thing_type = serializer.validated_data.get("type", Thing.Type.GIFT_THING)
+            # The deployment's own gate, checked per row because the verb is per
+            # row. Reported as a row error rather than a 403 for the batch: this
+            # endpoint's contract is that one response names every bad row, and
+            # an importer who used a withheld verb in row 40 of 100 needs to be
+            # told which rows to fix, not just that something was refused.
+            row_denial = thing_type_denial(request.user, thing_type)
+            if row_denial:
+                errors.append({"row": index, "errors": {"type": [row_denial]}})
+                continue
             type_error = type_validity_error(thing_type, collection)
             if type_error:
                 errors.append({"row": index, "errors": {"type": [type_error]}})
