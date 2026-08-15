@@ -892,5 +892,10 @@
     "empty": "Nothing has been shared in your groups yet.",
     "emptyCta": "Back to my groups",
     "errorLoading": "Couldn't load what's been shared with you."
+  },
+  "capabilities": {
+    "needsApproval": "Some options need approval on this deployment: {{list}}.",
+    "unavailable": "Some options are not available on this deployment: {{list}}.",
+    "requestAccess": "Request access"
   }
 }

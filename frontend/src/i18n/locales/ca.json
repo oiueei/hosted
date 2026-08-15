@@ -892,5 +892,10 @@
     "empty": "Encara no s'ha compartit res als teus grups.",
     "emptyCta": "Tornar als meus grups",
     "errorLoading": "No hem pogut carregar el que s'ha compartit amb tu."
+  },
+  "capabilities": {
+    "needsApproval": "Algunes opcions necessiten aprovació en aquesta instal·lació: {{list}}.",
+    "unavailable": "Algunes opcions no estan disponibles en aquesta instal·lació: {{list}}.",
+    "requestAccess": "Sol·licitar accés"
   }
 }

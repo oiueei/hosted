@@ -1567,6 +1567,22 @@ main:focus {
   text-decoration: underline;
 }
 
+/* A deployment explaining why a list is shorter than the product's
+   (ApprovalNotice). Quiet like .feedback-link, and deliberately NOT an HDS
+   Notification: nothing has gone wrong and nothing was refused — it is a
+   footnote to a field, and an alert box would read as an error the reader
+   caused. Never renders upstream, where nothing is withheld. */
+.approval-notice {
+  margin: var(--spacing-2-xs) 0 0;
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-60);
+}
+
+.approval-notice a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* A member's recommendation awaiting the owner's answer (ManageInvitesPage).
    Card-shaped rather than a table row: it carries a note in the proposer's own
    words, which a cell would squeeze, and it is a decision rather than a record. */

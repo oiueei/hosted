@@ -5,6 +5,8 @@ import { TextInput, TextArea, Select, Button, RadioButton, Notification, Accordi
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
+import ApprovalNotice from '../components/ApprovalNotice';
+import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
@@ -57,10 +59,17 @@ export default function EditCollectionPage() {
     { label: t('editCollection.statusInactive'), value: 'INACTIVE' },
   ];
 
-  const MODE_OPTIONS = [
+  const ALL_MODE_OPTIONS = [
     { label: t('editCollection.modeProprietary'), description: t('createCollection.modeProprietaryDesc'), value: 'PROPRIETARY' },
     { label: t('editCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
   ];
+  // `mode` is passed as the current value, so a collection opened before this
+  // deployment narrowed still shows the mode it is in. The server only judges a
+  // change; a form that hid the current answer would submit a wrong one.
+  const capabilities = useCapabilities();
+  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
+    isOfferable(capabilities, 'collection_modes', opt.value, mode)
+  );
 
   const DIGEST_OPTIONS = [
     { label: t('editCollection.digestNone'), value: 'NONE' },
@@ -287,6 +296,7 @@ export default function EditCollectionPage() {
               </p>
             </div>
           ))}
+          <ApprovalNotice kind="collection_modes" catalogue={ALL_MODE_OPTIONS} />
         </fieldset>
         <CollectionForm
           idPrefix="edit-collection"

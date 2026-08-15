@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ThingForm from '../components/ThingForm';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import { useLocalized, localizedCounter } from '../utils/localized';
 
 export default function EditThingPage() {
@@ -21,6 +22,7 @@ export default function EditThingPage() {
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
 
   const [loading, setLoading] = useState(true);
+  const capabilities = useCapabilities();
   const [thingType, setThingType] = useState('');
   const [headline, setHeadline] = useState('');
   useEffect(() => { document.title = headline ? t('titles.editThing', { headline: L(headline) }) : t('titles.editThingDefault'); }, [headline, t, L]);
@@ -139,7 +141,12 @@ export default function EditThingPage() {
     return <LoadingSpinner />;
   }
 
-  const typeOptions = TYPE_VALUES.map((v) => ({ label: t('types.' + v), value: v }));
+  // `thingType` is the current value: a thing already offered under a verb this
+  // deployment has stopped handing out stays editable, exactly as the server
+  // allows — it only refuses a *change* into a withheld one.
+  const typeOptions = TYPE_VALUES.filter((v) =>
+    isOfferable(capabilities, 'thing_types', v, thingType)
+  ).map((v) => ({ label: t('types.' + v), value: v }));
 
   return (
     <PageLayout backTo={returnPath} backLabel={returnLabel}>
@@ -150,6 +157,7 @@ export default function EditThingPage() {
           theeemeColor01={tc.color_01}
           errors={errors}
           typeOptions={typeOptions}
+          typeCatalogue={TYPE_VALUES.map((v) => ({ label: t('types.' + v), value: v }))}
           type={thingType}
           setType={setThingType}
           isEndless={isEndless}

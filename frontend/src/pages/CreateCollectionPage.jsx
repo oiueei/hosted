@@ -5,6 +5,8 @@ import { TextInput, TextArea, Select, Button, RadioButton, Accordion } from 'hds
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
+import ApprovalNotice from '../components/ApprovalNotice';
+import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
@@ -45,10 +47,17 @@ export default function CreateCollectionPage() {
   const [welcomeDoc, setWelcomeDoc] = useState('');
   const [errors, setErrors] = useState({});
 
-  const MODE_OPTIONS = [
+  const ALL_MODE_OPTIONS = [
     { label: t('createCollection.modeProprietary'), description: t('createCollection.modeProprietaryDesc'), value: 'PROPRIETARY' },
     { label: t('createCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
   ];
+  // Both modes upstream. A deployment that withholds one drops it from the
+  // group rather than disabling it — an unchoosable radio is noise — and
+  // ApprovalNotice below is what says it exists and where to ask for it.
+  const capabilities = useCapabilities();
+  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
+    isOfferable(capabilities, 'collection_modes', opt.value)
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -165,6 +174,7 @@ export default function CreateCollectionPage() {
                 </p>
               </div>
             ))}
+            <ApprovalNotice kind="collection_modes" catalogue={ALL_MODE_OPTIONS} />
           </fieldset>
           <CollectionForm
             idPrefix="create-collection"
