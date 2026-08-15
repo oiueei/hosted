@@ -51,7 +51,17 @@ class RSVP(models.Model):
         PROPOSAL_REJECT = "PROPOSAL_REJECT", "Invitation Proposal Reject"
 
     class Origin(models.TextChoices):
-        """Where a MAGIC_LINK was born — it decides where the user lands after login."""
+        """Where a MAGIC_LINK was born — it decides where the user lands after login.
+
+        ``POPIN`` is a historical name and stays one. The endpoint that stamps it
+        was renamed ``/auth/pop-in/`` → ``/auth/join/``, but this value is
+        **written in production databases**: renaming it would mean either a data
+        migration over rows that decide where people land, or a silent
+        mismatch between what is stored and what the code looks for. It marks
+        "arrived by joining a collection" — a share link or a public
+        collection's code — as against ``LOGIN``, which is someone who already
+        had an account.
+        """
 
         POPIN = "POPIN", "Pop-in"
         LOGIN = "LOGIN", "Login"

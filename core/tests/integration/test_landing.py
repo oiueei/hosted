@@ -38,7 +38,7 @@ class TestMagicLinkLanding:
         assert res.data["landing"] == "welcome"
 
     def test_link_carrying_a_collection_lands_on_it(self, user, collection):
-        # A share-token / public-collection pop-in: they joined that collection to
+        # A share-token / public-collection join: they joined that collection to
         # get here, so the origin doesn't matter — the target wins.
         res = _verify(_magic_link(user, origin=RSVP.Origin.POPIN, target_code=collection.code))
 
@@ -47,7 +47,7 @@ class TestMagicLinkLanding:
         assert res.data["invited_collection"] == collection.code
 
     def test_link_carrying_an_inactive_collection_falls_back(self, user, collection):
-        # The collection went INACTIVE between the pop-in and the click — landing
+        # The collection went INACTIVE between the join and the click — landing
         # there would 403. The origin rule takes over instead (POPIN -> welcome).
         collection.status = Collection.Status.INACTIVE
         collection.save()
@@ -110,7 +110,7 @@ class TestOriginIsStamped:
         rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
         assert rsvp.origin == RSVP.Origin.LOGIN
 
-    def test_pop_in_stamps_popin(self, api_client, user):
+    def test_joining_stamps_popin(self, api_client, user):
         """Every join through this endpoint is stamped POPIN, whichever door it came in by.
 
         Written through a PUBLIC collection rather than a bare email: that is
@@ -125,7 +125,7 @@ class TestOriginIsStamped:
         )
 
         api_client.post(
-            "/api/v1/auth/pop-in/",
+            "/api/v1/auth/join/",
             {"email": "fresh@test.com", "collection_code": public.code},
             format="json",
         )

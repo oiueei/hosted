@@ -13,7 +13,7 @@ from rest_framework.test import APIClient
 
 from core.models import RSVP, Collection, Event, User
 
-POP_IN_URL = "/api/v1/auth/pop-in/"
+POP_IN_URL = "/api/v1/auth/join/"
 
 
 @pytest.fixture

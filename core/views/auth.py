@@ -727,11 +727,16 @@ class VerifyLinkView(APIView):
         return self._handle_booking_action(rsvp, accepted=False)
 
 
-class PopInView(APIView):
+class JoinView(APIView):
     """
-    POST /api/v1/auth/pop-in/
-    Open-door onboarding: get_or_create a user, add them to onboarding
-    collections, and send a magic link. No prior invitation required.
+    POST /api/v1/auth/join/
+    Join a collection you were pointed at, and get a magic link back.
+
+    Two doors reach it, and both are the product: an owner's `share_token`
+    (the `/share/:token` link they handed out) and a PUBLIC collection's
+    `collection_code` (login-to-act — a visitor acting on a collection anyone
+    can read joins it on the way in). Without one of those there is nowhere to
+    go, and nothing is created; see `_resolve_target`.
 
     Accepts optional `share_token` (string, 22 chars). If present and valid,
     the user is added to that collection's invitees instead of (or in

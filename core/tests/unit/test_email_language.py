@@ -210,7 +210,7 @@ class TestViralLine:
         assert "/collections/new" in mail.outbox[0].body
 
     def test_line_present_on_magic_link_for_unregistered_address(self):
-        # Not-yet-registered invitees (PopInView, before the User row exists
+        # Not-yet-registered invitees (JoinView, before the User row exists
         # at send time in some callers) are exactly the growth target too.
         mail.outbox.clear()
         email_service.send_magic_link_email("not-yet-registered@test.com", "http://x/verify/tok")

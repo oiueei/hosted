@@ -51,7 +51,7 @@ class TestAuthViews:
 
     def test_request_link_magic_link_subject_stays_generic(self, api_client, user):
         # /login never carries a collection, so its magic link keeps the generic
-        # welcome subject (only pop-in / share-link joins name the collection).
+        # welcome subject (only a join names the collection).
         mail.outbox.clear()
         api_client.post("/api/v1/auth/request-link/", {"email": user.email}, format="json")
         assert mail.outbox[0].subject == "Hello, welcome to OIUEEI!"
@@ -1986,8 +1986,8 @@ class TestAuthViewEdgeCases:
 
 
 @pytest.mark.django_db
-class TestPopInView:
-    """Tests for the open-door onboarding endpoint."""
+class TestJoinView:
+    """Tests for the join endpoint (`/auth/join/`)."""
 
     def _make_onboarding_collection(self, owner, code, headline):
         """Helper to create an onboarding collection."""
@@ -2006,7 +2006,7 @@ class TestPopInView:
 
         with patch("core.views.auth.send_magic_link_email"):
             response = api_client.post(
-                "/api/v1/auth/pop-in/",
+                "/api/v1/auth/join/",
                 {"email": "newperson@example.com"},
                 format="json",
             )
@@ -2025,7 +2025,7 @@ class TestPopInView:
 
         with patch("core.views.auth.send_magic_link_email") as mock_email:
             response = api_client.post(
-                "/api/v1/auth/pop-in/",
+                "/api/v1/auth/join/",
                 {"email": user.email},
                 format="json",
             )
@@ -2042,7 +2042,7 @@ class TestPopInView:
 
         with patch("core.views.auth.send_magic_link_email"):
             api_client.post(
-                "/api/v1/auth/pop-in/",
+                "/api/v1/auth/join/",
                 {"email": user.email},
                 format="json",
             )
@@ -2060,7 +2060,7 @@ class TestPopInView:
 
         with patch("core.views.auth.send_magic_link_email"):
             api_client.post(
-                "/api/v1/auth/pop-in/",
+                "/api/v1/auth/join/",
                 {"email": user.email},
                 format="json",
             )
@@ -2071,7 +2071,7 @@ class TestPopInView:
     def test_invalid_email_returns_400(self, api_client):
         """Should reject invalid email."""
         response = api_client.post(
-            "/api/v1/auth/pop-in/",
+            "/api/v1/auth/join/",
             {"email": "not-an-email"},
             format="json",
         )
@@ -2083,7 +2083,7 @@ class TestPopInView:
 
         with patch("core.views.auth.send_magic_link_email"):
             response = api_client.post(
-                "/api/v1/auth/pop-in/",
+                "/api/v1/auth/join/",
                 {"email": "anyone@example.com"},
                 format="json",
             )

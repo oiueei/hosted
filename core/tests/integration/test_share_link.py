@@ -47,7 +47,7 @@ def share_link_setup(db):
 
 
 URL = "/api/v1/collections/{}/share-link/"
-POP_IN_URL = "/api/v1/auth/pop-in/"
+JOIN_URL = "/api/v1/auth/join/"
 
 
 @pytest.mark.django_db
@@ -145,7 +145,7 @@ class TestShareTokenLeakProtection:
 
 
 @pytest.mark.django_db
-class TestPopInWithShareToken:
+class TestJoinWithShareToken:
     def test_valid_token_adds_user_to_collection(self, share_link_setup):
         collection = share_link_setup["collection"]
         token = (
@@ -153,7 +153,7 @@ class TestPopInWithShareToken:
         )
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "newjoiner@test.com", "share_token": token},
             format="json",
         )
@@ -173,7 +173,7 @@ class TestPopInWithShareToken:
         what keeps it from being a registration door.
         """
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "probe@test.com", "share_token": "definitely-not-a-real-token"},
             format="json",
         )
@@ -190,7 +190,7 @@ class TestPopInWithShareToken:
         owner_client.delete(URL.format(collection.code))
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "afterrevoke@test.com", "share_token": token},
             format="json",
         )
@@ -211,7 +211,7 @@ class TestPopInWithShareToken:
         collection.save(update_fields=["status"])
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "inactive@test.com", "share_token": token},
             format="json",
         )
@@ -229,7 +229,7 @@ class TestPopInWithShareToken:
         existing = User.objects.create(code="SHEXST", email="existing@test.com", name="Existing")
 
         resp = share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "existing@test.com", "share_token": token},
             format="json",
         )
@@ -246,7 +246,7 @@ class TestPopInWithShareToken:
             share_link_setup["owner_client"].post(URL.format(collection.code)).data["share_token"]
         )
         share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "redirshare@test.com", "share_token": token},
             format="json",
         )
@@ -267,7 +267,7 @@ class TestPopInWithShareToken:
         )
         mail.outbox.clear()
         share_link_setup["anon_client"].post(
-            POP_IN_URL,
+            JOIN_URL,
             {"email": "sharesubj@test.com", "share_token": token},
             format="json",
         )
@@ -287,7 +287,7 @@ class TestStaleCookieAuth:
         client.cookies["access_token"] = token
         return client
 
-    def test_pop_in_works_with_stale_cookie_for_deleted_user(self, share_link_setup):
+    def test_joining_works_with_stale_cookie_for_deleted_user(self, share_link_setup):
         """The stale cookie must not 401 the join — a real join, so it proves it.
 
         Carries a valid share token because the endpoint no longer creates an
@@ -301,7 +301,7 @@ class TestStaleCookieAuth:
         )
 
         resp = self._stale_cookie_client().post(
-            POP_IN_URL, {"email": "freshstart@test.com", "share_token": token}, format="json"
+            JOIN_URL, {"email": "freshstart@test.com", "share_token": token}, format="json"
         )
 
         assert resp.status_code == 200

@@ -78,7 +78,7 @@ def test_thing_bulk_create_answers_400_not_500(authenticated_client, collection)
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("path", ["/api/v1/auth/pop-in/", "/api/v1/auth/request-link/"])
+@pytest.mark.parametrize("path", ["/api/v1/auth/join/", "/api/v1/auth/request-link/"])
 def test_the_public_auth_doors_answer_400_not_500(api_client, path):
     """The two unauthenticated doors — the ones a stranger can reach."""
     res = api_client.post(path, ARRAY_BODY, format="json")
@@ -90,7 +90,7 @@ def test_the_public_auth_doors_answer_400_not_500(api_client, path):
 def test_logout_answers_200_not_500(api_client):
     """The third public door, and the one with no serializer to catch the body.
 
-    `pop-in` and `request-link` both validate through `RequestLinkSerializer`
+    `join` and `request-link` both validate through `RequestLinkSerializer`
     before reading anything, so a list body 400s there on its own. Logout reads
     the body directly — it authenticates nobody and takes no CSRF token — so the
     `.get` was reached and answered 500. Logout must never fail: no refresh token

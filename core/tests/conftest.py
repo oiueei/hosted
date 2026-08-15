@@ -114,7 +114,7 @@ def collection(db, user):
 def public_collection(db, user):
     """A PUBLIC, ACTIVE collection — the one anyone may join by code.
 
-    Its code is the login-to-act door on `/auth/pop-in/`, which is also the
+    Its code is the login-to-act door on `/auth/join/`, which is also the
     simplest way for a test to give that endpoint a real target now that it
     creates nothing without one.
     """

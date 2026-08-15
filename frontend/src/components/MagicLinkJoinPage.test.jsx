@@ -43,7 +43,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
 
     await screen.findByText(/Magic link sent! Check your inbox/);
     const [url, options] = globalThis.fetch.mock.calls[0];
-    expect(url).toBe('/api/v1/auth/pop-in/');
+    expect(url).toBe('/api/v1/auth/join/');
     expect(options.method).toBe('POST');
     // `language` makes the newcomer's FIRST magic link speak the language they
     // were reading this page in; `share_token` targets the shared collection.
@@ -90,12 +90,12 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
   });
 
   test('two submits in the same tick send only one magic link', async () => {
-    // Every accepted pop-in emails a magic link, so a double submit mails a
+    // Every accepted join emails a magic link, so a double submit mails a
     // stranger twice. `disabled={loading}` handles the ordinary double-click —
     // React flushes discrete events synchronously, so the button is already
     // disabled by the second one. What it cannot catch is two submit events
     // dispatched before any re-render: both run the same closure, where the
-    // `loading` state is still false. Only usePopIn's ref guard sees the first
+    // `loading` state is still false. Only useJoin's ref guard sees the first
     // one, which is why it is a ref and not the state.
     let resolveFirst;
     globalThis.fetch = vi.fn().mockReturnValue(

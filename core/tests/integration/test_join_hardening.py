@@ -1,6 +1,6 @@
 """The open-door endpoint creates nothing until it knows where the person is going.
 
-`POST /auth/pop-in/` used to `get_or_create` the user first and work out the
+`POST /auth/join/` used to `get_or_create` the user first and work out the
 destination afterwards. That ordering made it an **open registration endpoint**
 on a product that is otherwise invite-only: a POST carrying nothing but an email
 minted a real account, and on any deployment without onboarding collections — a
@@ -22,7 +22,7 @@ from django.core import mail
 
 from core.models import RSVP, Collection, User
 
-URL = "/api/v1/auth/pop-in/"
+URL = "/api/v1/auth/join/"
 
 
 @pytest.fixture

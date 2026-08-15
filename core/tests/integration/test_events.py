@@ -103,9 +103,7 @@ class TestMembershipEvents:
         onboarding = Collection.objects.create(
             code="ONBRD1", owner=user, headline="Welcome", is_onboarding=True
         )
-        response = api_client.post(
-            "/api/v1/auth/pop-in/", {"email": "popin@test.com"}, format="json"
-        )
+        response = api_client.post("/api/v1/auth/join/", {"email": "popin@test.com"}, format="json")
         assert response.status_code == status.HTTP_200_OK
         new_user = User.objects.get(email="popin@test.com")
         assert Event.objects.filter(kind=Event.Kind.USER_JOINED, actor_code=new_user.code).exists()

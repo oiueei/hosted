@@ -162,7 +162,7 @@ class TestRateLimitClientIp:
     def test_limiter_survives_a_forwarded_header_that_is_not_an_ip(self):
         """django-ratelimit feeds our return value to ipaddress.ip_network(), so
         anything unparseable raised ValueError *inside the decorator* — a 500 on
-        every rate-limited endpoint (request-link, pop-in, contact, csp-report,
+        every rate-limited endpoint (request-link, join, contact, csp-report,
         the admin login) from one header, before the view ever ran."""
         from django_ratelimit.core import _get_ip
 

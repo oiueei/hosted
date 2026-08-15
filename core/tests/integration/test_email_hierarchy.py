@@ -117,7 +117,7 @@ class TestLanguagePreferences:
         # once it has somewhere to put it, so a bare email would now leave
         # nothing to assert on and pass for the wrong reason.
         api_client.post(
-            "/api/v1/auth/pop-in/",
+            "/api/v1/auth/join/",
             {"email": "nou@test.com", "language": "ca", "collection_code": public_collection.code},
             format="json",
         )
@@ -131,7 +131,7 @@ class TestLanguagePreferences:
         user.save()
 
         api_client.post(
-            "/api/v1/auth/pop-in/",
+            "/api/v1/auth/join/",
             {"email": user.email, "language": "ca"},
             format="json",
         )
@@ -141,7 +141,7 @@ class TestLanguagePreferences:
 
     def test_an_unknown_language_is_ignored(self, api_client, public_collection):
         api_client.post(
-            "/api/v1/auth/pop-in/",
+            "/api/v1/auth/join/",
             {
                 "email": "raro@test.com",
                 "language": "klingon",
