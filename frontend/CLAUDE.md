@@ -612,7 +612,7 @@ The project consumes HDS directly from npm and applies three local overrides:
 - **React deduplication** — Aliases `react` and `react-dom` to frontend's `node_modules` to prevent dual-copy hook errors (some HDS internal deps declare React 17 peer dep)
 - **Proxy** — `/api` requests forwarded to `http://localhost:8000`
 - **Dev server** on port 3000
-- **Code splitting** — every page is `React.lazy`-loaded in `App.jsx` (the `Routes` block is wrapped in a `Suspense` whose fallback is `LoadingSpinner`), so each route ships as its own chunk and page-only deps (papaparse, qrcode, jszip) load on demand. `build.rollupOptions.output.manualChunks` further splits `vendor-react` and `vendor-hds` from app code for long-term caching (`chunkSizeWarningLimit` is raised to 600 kB because the shared `hds-react` chunk is ~575 kB raw / ~152 kB gzipped).
+- **Code splitting** — every page is `React.lazy`-loaded in `App.jsx` (the `Routes` block is wrapped in a `Suspense` whose fallback is `LoadingSpinner`), so each route ships as its own chunk and page-only deps (papaparse, qrcode, jszip) load on demand. `build.rollupOptions.output.manualChunks` further splits `vendor-react` and `vendor-hds` from app code for long-term caching (`chunkSizeWarningLimit` is raised to **650 kB** because the shared `hds-react` chunk is **~622 kB raw / ~161 kB gzipped** — measured 2026-08-17, and it grows by a few kB each time a new HDS component is adopted: 585 → 614 on the 6.0.4 → 6.0.5 upgrade, 615 → 622 on taking `SelectionGroup`. Tree-shaking does work — `CookieConsent`, `Hero`, `Footer`, `Pagination`, `Stepper`, `Tabs` and `Breadcrumb` are absent from the built chunk — so the size is what we genuinely use).
 
 ## Authentication Flow
 
