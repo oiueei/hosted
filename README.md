@@ -1,6 +1,6 @@
 ## What is OIUEEI?
 
-A source-available web application (BUSL 1.1 — every line public and auditable; MIT from 2030; self-hosting in production is allowed, offering it as a competing hosted service is not) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
+A source-available web application (BUSL 1.1 — every line of the product public and auditable; MIT from 2030; self-hosting in production is allowed, offering it as a competing hosted service is not) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
 
 No ads, no tracking of any kind, no third-party code running in your browser — and no cookie banner, because there is nothing to consent to. Each of those claims comes with a way to check it: **[→ Privacy](#privacy)**.
 
