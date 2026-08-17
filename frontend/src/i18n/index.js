@@ -11,14 +11,31 @@ import { deploymentI18n } from '../deployment';
 // i18next backend, so only the active language's file is ever downloaded. A
 // Spanish/Catalan visitor sees English for the moment before their chunk lands
 // (fallback already in memory), then it swaps in — no spinner, no blank.
+// One entry per language that really is a chunk, rather than a
+// `./locales/${language}.json` template import. The template also matched
+// en.json — which is statically imported above, and has to be — so every build
+// warned that the dynamic import "will not move module into another chunk". The
+// warning was correct and harmless, which is the worst kind: it never meant
+// anything, and it sat there ready to hide the next one that does.
+//
+// A new language is one more line here, alongside `supportedLngs` and
+// `SUPPORTED_LANGUAGES` at the foot of this file.
+const LAZY_LOCALES = {
+  es: () => import('./locales/es.json'),
+  ca: () => import('./locales/ca.json'),
+};
+
 const lazyLocaleBackend = {
   type: 'backend',
   init() {},
   read(language, namespace, callback) {
-    // en is already in `resources` below, so i18next only asks the backend for
-    // the on-demand languages. The template import lets Vite code-split each
-    // locale JSON into its own chunk.
-    import(`./locales/${language}.json`)
+    // en is already in `resources` below and every retired code resolves through
+    // `fallbackLng`, so this should only ever be asked for es and ca. Anything
+    // else is reported as a failed load rather than answered with an empty
+    // bundle: i18next keeps what it already has, which is English.
+    const load = LAZY_LOCALES[language];
+    if (!load) return callback(new Error(`no lazy locale for ${language}`), false);
+    return load()
       .then((mod) => callback(null, mod.default))
       .catch((err) => callback(err, false));
   },
