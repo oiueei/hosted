@@ -577,7 +577,7 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
     on its own (L10, email-enumeration timing oracle). The viral-line gate does
     add one ``User`` lookup inside ``_send()`` now (S2) — safe here because both
     callers only reach this function after already resolving the recipient
-    (``RequestLinkView`` only for a confirmed-registered address; ``PopInView``
+    (``RequestLinkView`` only for a confirmed-registered address; ``JoinView``
     after ``get_or_create``), so the extra query carries no new
     registered/unregistered timing signal.
     """

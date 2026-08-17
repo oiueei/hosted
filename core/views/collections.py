@@ -341,8 +341,9 @@ class CollectionViewSet(ModelViewSet):
 # Daily cap on invitation *emails* per account, shared by the single and bulk
 # invite endpoints. The per-view rate limits count requests, and one bulk request
 # fans out up to MAX_ROWS emails — 5/h x 100 rows is ~500 owner-authored emails
-# an hour from a free pop-in account, a spam/phishing vector riding the
-# deployment's sending domain. This counts the emails themselves.
+# an hour from one account, a spam/phishing vector riding the deployment's
+# sending domain (and a cheap one wherever a deployment adds an open sign-up
+# door of its own). This counts the emails themselves.
 #
 # **Operator policy, not a product rule.** The cap protects the deployment's own
 # sending reputation, and only the operator knows what their provider tolerates,

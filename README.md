@@ -385,7 +385,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | Input Validation | XSS Prevention | HTML escaped in emails via `django.utils.html.escape()`. Headlines sanitized |
 | Input Validation | Image ID | Alphanumeric validation prevents path traversal |
 | Rate Limiting | Auth | 5 req/min for magic link, 10 req/min for verify, 10 req/min for token refresh |
-| Rate Limiting | Pop-in | 5 req/min per IP + 5 req/hour per email |
+| Rate Limiting | Join (`/auth/join/`) | 5 req/min per IP + 5 req/hour per email |
 | Rate Limiting | Collection invite | 30 req/hour per user |
 | Rate Limiting | Collection bulk invite | 5 req/hour per user |
 | Rate Limiting | Invitation emails | Off by default; set `INVITE_EMAILS_PER_DAY` to cap per account — single, bulk and approved recommendations combined, on both of the owner's routes |

@@ -142,7 +142,7 @@ body {
 }
 
 /* Title replacement (S9): the one hero <h1> whose text is the literal string
-   "OIUEEI" (LoginPage — verified by grep; popin/share/notFound's hero titles
+   "OIUEEI" (LoginPage — verified by grep; share/notFound's hero titles
    turned out to be different copy, not that exact string) renders the logo
    instead, coloured like the title text so it inherits --hero-text-color
    (white on /login). The <h1> keeps aria-label="OIUEEI" so the accessible
@@ -774,8 +774,8 @@ div[class*="Linkbox-module_linkbox"] {
   margin-bottom: var(--spacing-m);
 }
 
-/* The reading measure of the three email-capture doors (/login, /popin,
-   /share/:token, plus JoinToAct's body). Was repeated as an inline
+/* The reading measure of the email-capture doors (/login, /share/:token, any
+   door a deployment adds, plus JoinToAct's body). Was repeated as an inline
    `maxWidth: '400px'` on every paragraph and form in those pages. */
 .measure {
   max-width: 400px;
@@ -1555,7 +1555,7 @@ main:focus {
   overflow-x: auto;
 }
 
-/* Quiet alpha-feedback line (FeedbackLink) at the foot of Home and Welcome. */
+/* Quiet alpha-feedback line (FeedbackLink) at the foot of Home. */
 .feedback-link {
   margin-top: var(--spacing-2-xl);
   font-size: var(--fontsize-body-m);
