@@ -261,7 +261,7 @@ COLLECTION_INVITES_BLOCK = int(os.environ.get("COLLECTION_INVITES_BLOCK", "0"))
 # every update; naming a module here instead is what lets those routes survive
 # an upgrade untouched.
 #
-# Comma-separated dotted paths, e.g. "operator.urls,intranet.urls". Each is
+# Comma-separated dotted paths, e.g. "deployment.urls,intranet.urls". Each is
 # mounted at the root and, deliberately, **before** the SPA catch-all — see
 # `config/urls.py`, where that ordering is the whole point.
 DEPLOYMENT_URLCONFS = [

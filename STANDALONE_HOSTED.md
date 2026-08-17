@@ -28,11 +28,11 @@ A comma-separated list of dotted paths to Django URLconf modules, mounted at the
 root:
 
 ```bash
-DEPLOYMENT_URLCONFS=operator.urls,intranet.urls
+DEPLOYMENT_URLCONFS=deployment.urls,intranet.urls
 ```
 
 ```python
-# operator/urls.py
+# deployment/urls.py
 from django.urls import path
 from . import views
 
@@ -47,16 +47,23 @@ nothing about it looks broken.
 
 Upstream ships none: every route the product serves is already in `core.urls`.
 
+Name that app of yours anything **except** a module Python already has.
+`operator`, `types`, `platform` and `email` are all in the standard library and
+are imported before any of your code runs, so `INSTALLED_APPS += ["operator"]`
+installs the stdlib module and `operator.urls` raises `ModuleNotFoundError:
+'operator' is not a package` — a failure that names the collision nowhere near
+where you would look for it.
+
 ## 2. `CREATOR_POLICY` — who may create what
 
 A dotted path to a class, the way `AUTH_USER_MODEL` is a dotted path to a model:
 
 ```bash
-CREATOR_POLICY=operator.policy.VettedCreatorPolicy
+CREATOR_POLICY=deployment.policy.VettedCreatorPolicy
 ```
 
 ```python
-# operator/policy.py
+# deployment/policy.py
 from core.models import Collection, Thing
 from core.services.creator_policy import Capabilities, CreatorPolicy
 
