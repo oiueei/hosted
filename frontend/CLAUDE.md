@@ -579,6 +579,16 @@ Four non-obvious behaviours:
 3. **`disabled + checked` renders light grey by default.** Overridden to `--color-black-90` in `App.css` via `.toggle-left button[aria-pressed="true"][disabled]`.
 4. **Multi-line labels (title + `<br/>` + long helper) wrap the pill onto a new row.** HDS's inline container allows wrap by default; a long helper makes the label wider than the available row and the pill drops below. Fixed in `.toggle-left` with `flex-wrap: nowrap; align-items: flex-start` on the container plus `flex-shrink: 0` on the inner button.
 
+### Links — three kinds, and why HDS `Link` is not used yet
+
+HDS ships a `Link` component and this app imports it **nowhere**, which under DESIGN §1 needs a reason rather than a silence. Reviewed 2026-08-17; the reason is that "link" here means three different things:
+
+1. **Internal navigation** — react-router's `Link`, and it has to be: an HDS `<a>` would reload the SPA. This is the overwhelming majority, and it is not a deviation at all (HDS has no router).
+2. **Generated HTML** — `MarkdownText` builds `<a href=…>` as a **string** and injects it. A React component cannot go there without rewriting the whole renderer, and that renderer is where the escaping invariant lives (see `MarkdownText`). Off the table.
+3. **External links in JSX** — 6 sites (`FeedbackLink`, `ApprovalNotice`, `PdfUpload`, `LoginPage` ×2, `EditProfilePage`), all `<a target="_blank" rel="noopener noreferrer">`. **This is the one HDS `Link` should own**, and the one place it would add something real: `external` + `openInNewTab` render the outbound icon and announce the new tab, which none of the six do today.
+
+What has kept (3) from happening is not the component, it is that it is a **copy change in three languages**: HDS's `openInNewTabLabel` defaults to Finnish (`"(avautuu uudessa välilehdessä)"`, the same trap as `Select`'s `language="fi"`), so adopting it means three new i18n keys ×3 locales plus a visible label and icon appearing next to six links — including two inside `<Trans>` placeholders. That is a design decision with visible consequences, not a refactor, so it belongs to a design pass with someone looking at it, not to a pre-release cleanup.
+
 ### HDS SelectionGroup quirks
 
 Two, and the first one fails **silently** — both learned the expensive way while replacing the hand-rolled `<fieldset>` in `CollectionModeField`:
