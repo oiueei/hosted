@@ -424,6 +424,10 @@ Detail page for a thing with full information and FAQs section.
 
 - `apiFetch(url, options)` — Centralised fetch wrapper. Uses `credentials: 'include'` for cookie-based auth, sets `Content-Type: application/json` for requests with body. On 401: silently attempts token refresh via `POST /api/v1/auth/refresh/`. Only `userCode` is stored in localStorage (for ownership checks).
 
+### File downloads (`src/utils/downloadBlob.js`)
+
+`downloadBlob(blob, filename)` — hands an already-fetched `Blob` to the browser as a download. There is no declarative way to do it (a `<a download>` needs a URL that exists only after the response), so it is a dozen lines of imperative DOM, and both ways a copy of them drifts are invisible in the happy path: an object URL that is never revoked pins the blob in memory for the life of the tab, and an anchor left in the body is a stray focusable element between the page's real controls. **The caller keeps the request and its failure copy** — what a 429 should say differs per page, and this function never sees the response. Used by `EditCollectionPage` (the stats CSV) and by anything else that offers a file.
+
 ### Owner content in one text per language (`src/utils/localized.js`)
 
 The mirror of `core/utils.py::parse_localized` / `resolve_localized` — and it must **stay** a mirror: if the two sides disagreed on what counts as a map, a card would show raw braces for content whose email reads as words. `parseLocalized(value)` returns the `{lang: text}` map or `null` (strict: a JSON object, keys ⊆ `es`/`ca`/`en`, all values non-empty strings — everything else is prose and renders verbatim). `localizedText(value, lang)` resolves it (`lang` → `es` → the first language written, so nobody ever faces JSON), and **`useLocalized()`** binds it to the reader's language — the frontend twin of the email service's `L`:

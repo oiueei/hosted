@@ -6,6 +6,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
+import downloadBlob from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
@@ -222,15 +223,7 @@ export default function EditCollectionPage() {
     try {
       const res = await apiFetch(`/api/v1/collections/${code}/stats/`);
       if (!res.ok) throw new Error('stats');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${code}-stats.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(await res.blob(), `${code}-stats.csv`);
     } catch {
       setStatsError(true);
     }
