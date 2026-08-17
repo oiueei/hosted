@@ -28,9 +28,21 @@ export function loadCapabilities() {
   if (cached.promise && cached.userCode === userCode) return cached.promise;
 
   const promise = apiFetch('/api/v1/auth/me/')
-    .then((res) => (res.ok ? res.json() : null))
+    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`me ${res.status}`))))
+    // An answer without the field is still an answer — an older or narrower
+    // backend saying "no restrictions" — so it caches like any other.
     .then((data) => data?.capabilities ?? null)
-    .catch(() => null);
+    .catch(() => {
+      // A request that never got an answer is **not** cached. Failing open is
+      // deliberate (the server is the gate), but *remembering* the failure is
+      // not: one offline blip on the first form of a session would otherwise
+      // keep every later form offering what this deployment refuses, for the
+      // rest of that session, and send the user to a 403 at the end of a form
+      // they had no reason to distrust. Guarded on identity so a retry already
+      // in flight for the same account is never discarded.
+      if (cached.promise === promise) cached = { userCode: null, promise: null };
+      return null;
+    });
 
   cached = { userCode, promise };
   return promise;
