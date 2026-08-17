@@ -575,6 +575,15 @@ Four non-obvious behaviours:
 3. **`disabled + checked` renders light grey by default.** Overridden to `--color-black-90` in `App.css` via `.toggle-left button[aria-pressed="true"][disabled]`.
 4. **Multi-line labels (title + `<br/>` + long helper) wrap the pill onto a new row.** HDS's inline container allows wrap by default; a long helper makes the label wider than the available row and the pill drops below. Fixed in `.toggle-left` with `flex-wrap: nowrap; align-items: flex-start` on the container plus `flex-shrink: 0` on the inner button.
 
+### HDS SelectionGroup quirks
+
+Two, and the first one fails **silently** — both learned the expensive way while replacing the hand-rolled `<fieldset>` in `CollectionModeField`:
+
+1. **It does not flatten its children.** `{options.map(...)}` arrives as a single child that *is* an array, `isValidElement` rejects it, and the whole group renders empty — a fieldset with a legend and no radios, no error anywhere. Pass one flat array instead: `{[...optionFields, <Extra key="…" />]}`.
+2. **It re-wraps every child in a `<div key={child.props.id}>`.** A child without an `id` prop gets `key: undefined`, so React logs a missing-key error for each one. Children that are wrappers rather than HDS controls therefore carry an `id` they have no other use for.
+
+It also owns the vertical rhythm (`--spacing-row`, a grid `gap`), so per-option margins are its job, not the caller's.
+
 ## OIUEEI Customization Layer
 
 The project consumes HDS directly from npm and applies three local overrides:

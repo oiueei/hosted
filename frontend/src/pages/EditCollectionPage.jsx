@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { TextInput, TextArea, Select, Button, RadioButton, Notification, Accordion } from 'hds-react';
+import { TextInput, TextArea, Select, Button, Notification, Accordion } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
-import ApprovalNotice from '../components/ApprovalNotice';
+import CollectionModeField from '../components/CollectionModeField';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
@@ -276,28 +276,14 @@ export default function EditCollectionPage() {
             }
           }}
         />
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontWeight: 700, fontSize: 'var(--fontsize-body-m)', marginBottom: 'var(--spacing-2-xs)', padding: 0 }}>
-            {t('editCollection.modeLabel')}
-          </legend>
-          {MODE_OPTIONS.map((opt) => (
-            <div key={opt.value} style={{ marginBottom: 'var(--spacing-xs)' }}>
-              <RadioButton
-                id={`edit-collection-mode-${opt.value.toLowerCase()}`}
-                name="edit-collection-mode"
-                value={opt.value}
-                label={opt.label}
-                checked={mode === opt.value}
-                onChange={() => handleModeChange(opt.value)}
-                aria-describedby={`edit-collection-mode-${opt.value.toLowerCase()}-desc`}
-              />
-              <p id={`edit-collection-mode-${opt.value.toLowerCase()}-desc`} style={{ margin: '0 0 0 var(--spacing-l)', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-70)' }}>
-                {opt.description}
-              </p>
-            </div>
-          ))}
-          <ApprovalNotice kind="collection_modes" catalogue={ALL_MODE_OPTIONS} />
-        </fieldset>
+        <CollectionModeField
+          idPrefix="edit-collection"
+          label={t('editCollection.modeLabel')}
+          options={MODE_OPTIONS}
+          catalogue={ALL_MODE_OPTIONS}
+          value={mode}
+          onChange={handleModeChange}
+        />
         <CollectionForm
           idPrefix="edit-collection"
           allowedThingTypes={allowedThingTypes}
