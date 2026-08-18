@@ -98,3 +98,54 @@ describe('Journey timeline', () => {
     expect(screen.queryByText(/Due back on/)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * An empty name in the journey means two different things.
+ *
+ * For a signed-in reader it is a deleted account — the hop stays, the name goes
+ * (right to erasure) — and "Former member" is the truth. For a signed-out one
+ * the API withheld *every* name, because a thing in a PUBLIC collection is
+ * readable with no account and a group's membership is not for the open web.
+ * Reusing "Former member" there would tell a stranger that everyone who has
+ * held this thing has left, which is a claim about real people they have no way
+ * to check.
+ */
+describe('Journey names, signed out', () => {
+  const anonymousJourney = {
+    ...journey(false),
+    original_owner_name: null,
+    transfers: [{ ...journey(false).transfers[0], from_user_name: '', to_user_name: '' }],
+  };
+
+  const setAnonymousApi = () => {
+    apiFetch.mockImplementation((url) => {
+      if (url.includes('/transfers/')) return ok(anonymousJourney);
+      if (url.includes('/faq/')) return ok({ results: [] });
+      if (url.includes('/calendar/')) return ok([]);
+      if (url.includes('/things/')) return ok(THING);
+      return ok({});
+    });
+  };
+
+  test('withheld names read as a neutral member, never as former ones', async () => {
+    localStorage.clear(); // no userCode: an anonymous reader of a public collection
+    setAnonymousApi();
+    renderThing();
+
+    // The journey is still told — it is only the people who are anonymous.
+    const hop = await screen.findByText(/A member/);
+    expect(screen.queryByText(/Former member/)).not.toBeInTheDocument();
+    // Scoped to the hop: the *thing owner's* name is still shown elsewhere on
+    // the page, and deliberately so — they chose to publish. It is the members
+    // the thing passed through who did not.
+    expect(hop.textContent).not.toMatch(/Lili|Lele/);
+  });
+
+  test('a signed-in reader still gets "Former member" for a deleted account', async () => {
+    setAnonymousApi(); // same empty names, but this reader has an account
+    localStorage.setItem('userCode', 'SOMEBODY');
+    renderThing();
+
+    expect(await screen.findByText(/Former member/)).toBeInTheDocument();
+  });
+});

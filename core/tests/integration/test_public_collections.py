@@ -172,6 +172,45 @@ def test_anonymous_can_read_transfers_on_public_thing(api_client, user, user2):
     assert res.json()["total_transfers"] == 1
 
 
+def test_anonymous_reader_gets_the_journey_but_not_who_held_the_thing(api_client, user, user2):
+    # The loan chain names every member the thing passed through. Reading it on
+    # a PUBLIC collection's thing was a way to enumerate a group's membership
+    # from the open web without an account — the same exposure the collection's
+    # own member list already closed. The travel story survives; the names go.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    ThingTransfer.objects.create(
+        code="TR0002", thing=thing, from_user=user, to_user=user2, lent_date="2026-01-01"
+    )
+
+    data = api_client.get(f"/api/v1/things/{thing.code}/transfers/").json()
+
+    assert data["total_transfers"] == 1
+    assert data["unique_homes"] == 2
+    assert data["current_holder_name"] is None
+    assert data["original_owner_name"] is None
+    assert data["transfers"][0]["from_user_name"] == ""
+    assert data["transfers"][0]["to_user_name"] == ""
+    assert user.name not in str(data)
+    assert user2.name not in str(data)
+
+
+def test_signed_in_reader_still_sees_the_whole_journey(authenticated_client, user, user2):
+    # The counterpart: this is about the open web, not about the feature.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    ThingTransfer.objects.create(
+        code="TR0003", thing=thing, from_user=user, to_user=user2, lent_date="2026-01-01"
+    )
+
+    data = authenticated_client.get(f"/api/v1/things/{thing.code}/transfers/").json()
+
+    assert data["current_holder_name"] == user2.name
+    assert data["original_owner_name"] == user.name
+    assert data["transfers"][0]["from_user_name"] == user.name
+    assert data["transfers"][0]["to_user_name"] == user2.name
+
+
 def test_anonymous_can_read_calendar_on_public_thing(api_client, user):
     coll = _collection(user, Collection.Visibility.PUBLIC)
     thing = _thing(user, coll)

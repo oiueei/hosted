@@ -599,7 +599,7 @@ Owner-only usage statistics for a collection, returned as a `metric,value` CSV d
 
 Lists FAQs for a thing. Owner sees all FAQs (including hidden). Invited users see only visible FAQs.
 
-**Response fields:** `code`, `thing`, `created`, `questioner` (user code), `questioner_name` (user display name), `question`, `answer`, `is_visible`.
+**Response fields:** `code`, `thing`, `created`, `questioner` (user code), `questioner_name` (user display name — **empty for a reader who is not signed in**; see the anonymous-read note under Security), `question`, `answer`, `is_visible`.
 
 | | |
 |---|---|
@@ -871,7 +871,7 @@ If all active collections containing the thing have a non-empty `pause_message` 
 | **Endpoint** | `GET /api/v1/things/{thing_code}/transfers/` |
 | **Permission** | `AllowAny` + `get_viewable_thing()` (public read on a viewable thing) |
 
-Returns the transfer history (Loan Chain) and aggregate stats for a thing.
+Returns the transfer history (Loan Chain) and aggregate stats for a thing. **The four name fields are empty/null for a reader who is not signed in** (`` per hop, `null` for the two aggregates) — the counts and dates are the public story, the people are not; see the anonymous-read note under Security. The sample below is what a signed-in reader gets.
 
 **Response (200):**
 ```json
@@ -995,6 +995,8 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 5. **IDOR protection** — `can_view_user()` ensures users can only view profiles of people connected via collections.
 6. **Custom DRF permissions** — `IsThingOwner` and `IsCollectionOwner` in `core/permissions.py`.
 7. **Public collections (anonymous read)** — a collection with `visibility=PUBLIC` (and ACTIVE) is readable without authentication. The read endpoints `CollectionViewSet.retrieve`, `ThingViewSet.retrieve`, the FAQ list (GET on `ThingFAQListView`), `ThingTransferView` and `ThingCalendarView` are `AllowAny`, each gated by an **anonymous-safe** `can_view` (a `viewer_code(request)` helper passes the user's code, or `None` for a visitor, into the model guard — `None` matches PUBLIC collections only). Every *write/act* endpoint (reserve, ask a question, answer, add a thing, manage invites/visibility) still requires authentication plus membership/ownership, so an anonymous visitor may browse a public collection but must log in to act. INACTIVE things are excluded from the serialised `things` for any non-owner, the member roster serialises **codes only** for anonymous readers (names are for logged-in members; emails for the owner), and the collection *list* (`GET /collections/`) stays private (it returns only the caller's own collections).
+
+**No member is named to an anonymous reader, by any of these endpoints.** The roster rule above is the whole rule, and it took three passes to actually be: the FAQ list still carried `questioner_name` and the journey still carried the name of everyone who had held the thing, so a group's membership stayed legible from the open web through a thing rather than through the collection. Both now withhold (`FAQSerializer.get_questioner_name`, `core/serializers/transfer.py::_may_read_names`), both fail closed on a request-less context, and both keep the *content* public — the question, the hop count, the travel story. The one name an anonymous reader still gets is the **thing owner's** (`owner_name`), and that is deliberate: they chose to publish the listing; the people who asked about it or borrowed it did not.
 
 ### Input Validation
 
