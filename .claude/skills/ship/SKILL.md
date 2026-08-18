@@ -18,7 +18,18 @@ You are about to help the user ship their work. Work through each phase below in
 
 ## Phase 1 — Review Recent Changes
 
-Run `git diff HEAD` (or `git diff main..HEAD` if there are multiple commits) to understand what changed. Summarise:
+Understand what changed. Which range depends on the shape Phase 7 will find:
+
+- **Uncommitted work in the tree** — `git diff HEAD`.
+- **Work already committed this session** (the common case — see Phase 7A) — review the
+  commits themselves with **`git diff @{push}..HEAD`**. The user drives every push in this
+  repo, so "not yet pushed" *is* the work in flight — the same range `solid-testing` audits by
+  default. **Not the last tag** (`$(git describe --tags --abbrev=0)..HEAD`): that is the whole
+  release round including work already pushed and reviewed, which is `/prerelease`'s range,
+  not this one. **Not `main..HEAD`** either: `main` is a release branch, so where it sits says
+  nothing about what this session did — it can coincide with the push ref, and equally can not.
+
+Then summarise:
 - Which files were modified and why
 - What features, fixes, or refactors were introduced
 - Any obvious concerns (commented-out code, debug prints, TODO left in, hardcoded secrets)
@@ -91,17 +102,44 @@ Verify the current branch is `development`. If it is not, stop and warn the user
 
 ## Phase 7 — Commit
 
-Once all phases above are green (or the user has explicitly approved any exceptions):
+Once all phases above are green (or the user has explicitly approved any exceptions). There
+are two shapes here, and **this phase is not always a commit**.
 
-1. Stage all relevant changes: `git add` specific files — never `git add -A` blindly.
-2. Write a commit message in **British English** that:
-   - Uses the imperative mood in the subject line (e.g. "Add", "Fix", "Update", not "Added")
-   - Has a concise subject (≤ 72 characters)
-   - Has a body that explains *what* changed and *why*, covering all meaningful changes
-   - Ends with the co-author line using your actual current model name, e.g.:
+### A — The tree is already clean
+
+This repo commits **one concern per commit, as each lands**, so a session that worked that way
+arrives here with nothing staged. That is the convention working, not a step skipped: a commit
+made the moment its concern was finished and its suite was green is better evidence than one
+assembled at the end from whatever the tree happened to hold.
+
+So commit nothing. Confirm the tree is clean, list the commits the session produced
+(`git log --oneline <range>`), and say plainly that Phase 7 was a no-op. Phases 1–6 are the
+value of `/ship` in this case — they are the verification, not the paperwork around a commit.
+
+### B — There are uncommitted changes
+
+1. **Split by concern first, then stage.** One concern per commit, *not* one commit per
+   session. If the tree holds two unrelated concerns, that is two commits, staged separately.
+   A commit mixing them cannot be reverted without dragging the other out with it, which is
+   the entire reason the convention exists.
+2. **Stage explicitly**: `git add <paths>` — never `git add -A` blindly. Check `git status`
+   between commits so nothing rides along uninvited.
+3. **Keep the lockstep.** Docs (`README.md`, the `CLAUDE.md` files, `HEROKU.md`), seed data
+   and **all three locales** (`ca`/`en`/`es`) travel in the *same* commit as the change they
+   describe. A doc update landing one commit later means the earlier commit was wrong at the
+   moment it was made, and a locale landing later means a language was briefly broken.
+4. **Write the message in British English:**
+   - Imperative subject (e.g. "Add", "Fix", "Update", not "Added"), ≤ 72 characters
+   - A body explaining *what* changed and *why* — the why is the part the diff cannot show
+   - The co-author line with your actual current model name, e.g.:
      ```
      Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
      ```
      (Replace "Opus 4.6" with whatever model you currently are.)
-3. Run the commit using a HEREDOC to preserve formatting.
-4. Confirm the commit was created successfully with `git log -1 --oneline`.
+   - **No "Para revisar (CA)" block** — visual-QA notes go in the chat, never in the message.
+5. Run each commit using a HEREDOC to preserve formatting.
+6. Confirm with `git log --oneline -<n>`, where *n* is the number of commits just made.
+
+**Pushing is never part of this.** `/ship` commits; the push, the merge, the tag and the
+deploy are the user's, on every branch including `development`. Do not offer to push as a
+next step — say what is committed and stop there.
