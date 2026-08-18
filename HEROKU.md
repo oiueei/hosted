@@ -138,6 +138,14 @@ heroku config:set \
 > **Optional — your own extensions:** `DEPLOYMENT_URLCONFS` mounts URL modules of your own and
 > `CREATOR_POLICY` names the class deciding who may create what. Both are how a deployment adds to
 > OIUEEI without editing files this repository also edits — see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md).
+>
+> **Both are checked before the dyno boots.** They name code by dotted path and are resolved
+> lazily, so a typo used to pass every gate and surface as a 500 — for `CREATOR_POLICY`, on
+> `GET /auth/me/`, which the SPA calls on every load, i.e. the whole frontend down after a deploy
+> that reported success. A Django system check (`core/checks.py`) now imports and instantiates the
+> policy, and Django's own URLconf check covers the URL modules. The `release` command runs
+> `migrate`, which runs system checks, so a bad value **fails the release phase and Heroku keeps
+> the previous release** rather than promoting a broken one.
 
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 

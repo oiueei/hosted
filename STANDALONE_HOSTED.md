@@ -94,6 +94,12 @@ A subclass overrides **one method**. `allows_collection_mode()` and
 `allows_thing_type()` are derived from it, so a policy cannot enforce something
 it does not advertise — which is the failure mode of every gate written twice.
 
+**A wrong path here fails the deploy, not the first request.** The setting is
+resolved lazily, so a typo used to boot cleanly and then 500 `GET /auth/me/` —
+the endpoint the SPA calls on every load. A system check now imports and
+instantiates the policy at check time, and `manage.py migrate` runs system
+checks, so a Heroku release phase aborts on it and keeps the previous release.
+
 Enforced at five doors: collection create and update, thing create and update,
 and the bulk CSV import. The two edit paths only judge a **change**, so
 narrowing a deployment never freezes what people already own — an owner who
