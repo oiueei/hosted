@@ -26,7 +26,7 @@ from core.serializers import (
     ThingUpdateSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
-from core.services.creator_policy import thing_type_denial
+from core.services.creator_policy import capabilities_for, thing_type_denial
 from core.utils import parse_localized
 from core.views._helpers import type_validity_error, viewer_code
 
@@ -308,6 +308,13 @@ class ThingBulkCreateView(APIView):
         # nothing unless the whole batch is valid (all-or-nothing).
         validated = []
         errors = []
+        # Resolved once for the batch, not once per row. What a deployment lets
+        # someone offer is a fact about the person, not about the line of CSV
+        # they are on, so re-asking per row buys nothing — and a policy that
+        # reaches the database (the kind this setting exists for) would run one
+        # query per row, up to MAX_ROWS of them, on an endpoint whose whole
+        # point is importing a hundred things at once.
+        capabilities = capabilities_for(request.user)
         for index, row in enumerate(rows):
             serializer = ThingBulkRowSerializer(data=row)
             if not serializer.is_valid():
@@ -319,7 +326,7 @@ class ThingBulkCreateView(APIView):
             # endpoint's contract is that one response names every bad row, and
             # an importer who used a withheld verb in row 40 of 100 needs to be
             # told which rows to fix, not just that something was refused.
-            row_denial = thing_type_denial(request.user, thing_type)
+            row_denial = thing_type_denial(request.user, thing_type, capabilities=capabilities)
             if row_denial:
                 errors.append({"row": index, "errors": {"type": [row_denial]}})
                 continue

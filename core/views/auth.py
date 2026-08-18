@@ -28,7 +28,7 @@ from core.models.notification import InAppNotification
 from core.serializers import RequestLinkSerializer, UserSerializer
 from core.services.account_service import delete_account
 from core.services.booking_service import finalize_booking_decision
-from core.services.creator_policy import get_creator_policy
+from core.services.creator_policy import capabilities_for
 from core.services.email_service import (
     resolve_email_language,
     send_account_delete_email,
@@ -894,7 +894,7 @@ class MeView(APIView):
         # SPA already calls it on every app load, and it comes from the same
         # `capabilities()` the create endpoints refuse with, so the UI can only
         # offer what the API would accept.
-        data["capabilities"] = get_creator_policy().capabilities(user).as_dict()
+        data["capabilities"] = capabilities_for(user).as_dict()
         return Response(data)
 
 

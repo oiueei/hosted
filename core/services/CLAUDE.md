@@ -175,8 +175,11 @@ It answers only *may this person bring such a thing into existence here at all*.
 | `CreatorPolicy` | Base class. A subclass overrides **`capabilities(user)`** and nothing else; `allows_collection_mode()` / `allows_thing_type()` are derived from it, so a policy cannot allow something it does not advertise. Instances are cached and shared across requests — subclasses must be **stateless**. |
 | `OpenCreatorPolicy` | The default. Every mode, every verb, no request URL. Its two lists come from `Collection.Mode.values` / `Thing.Type.values` rather than being spelled out, so a verb added to the model is available the day it is added. |
 | `get_creator_policy()` | The configured policy, instantiated once **per dotted path** (`lru_cache` under the setting lookup, not over it — a module global would pin whichever policy the process loaded first, and `override_settings` in a test would silently not apply). |
-| `collection_mode_denial(user, mode)` | The message explaining why this deployment refuses that mode, else `None`. |
-| `thing_type_denial(user, thing_type)` | The same for a verb, in prose (`"a lend thing"`, not `LEND_THING`) — the text reaches an API client as the 403 body. |
+| `capabilities_for(user)` | This deployment's answer for one user — the single way to ask, used by both denial helpers and by `MeView`. **Not cached**: a caller in a loop must hoist it and pass it down (see `ThingBulkCreateView`). |
+| `collection_mode_denial(user, mode, capabilities=None)` | The message explaining why this deployment refuses that mode, else `None`. |
+| `thing_type_denial(user, thing_type, capabilities=None)` | The same for a verb, in prose (`"a lend thing"`, not `LEND_THING`) — the text reaches an API client as the 403 body. |
+
+**A policy is consulted exactly once per decision.** Both helpers resolve `capabilities()` a single time and read the allowed list *and* the `request_url` off it — the refusal needs both, and asking twice used to make every denial cost double. Both also accept an already-resolved `capabilities=`, which is how `ThingBulkCreateView` judges up to 100 CSV rows with one evaluation instead of 100: the verb is per row, whether this deployment offers it is not. `CreatorPolicy` requires subclasses to be **stateless, not cheap** — the policies this setting exists for are the ones that go and look something up — so the call count is part of the contract, pinned by `TestThePolicyIsConsultedOnce`.
 
 **The module stays free of HTTP**, like `booking_service`: it returns a message and the call site raises the 403. The message carries the request URL when the policy has one, because the API is usable without the SPA and a client that only ever sees the refusal would never learn that asking is possible.
 

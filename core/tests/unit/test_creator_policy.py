@@ -18,6 +18,7 @@ from django.conf import settings
 from django.test import override_settings
 
 from core.models import Collection, Thing
+from core.services import creator_policy
 from core.services.creator_policy import (
     Capabilities,
     CreatorPolicy,
@@ -170,3 +171,70 @@ class TestThePolicyContract:
         assert payload["collection_modes"] == list(Collection.Mode.values)
         assert payload["thing_types"] == list(Thing.Type.values)
         assert payload["request_url"] is None
+
+
+class CountingPolicy(CreatorPolicy):
+    """Records how often it is consulted. Everything is withheld, so every ask
+    takes the denial path — the expensive one, and the one that used to ask twice."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def capabilities(self, user):
+        self.calls += 1
+        return Capabilities(
+            collection_modes=(),
+            thing_types=(),
+            request_url="https://example.org/request-access/",
+        )
+
+
+@pytest.mark.django_db
+class TestThePolicyIsConsultedOnce:
+    """How *often* a policy is asked is part of its contract.
+
+    `CreatorPolicy` requires subclasses to be stateless, not cheap — and the
+    policies this setting exists for are the ones that go and look something up.
+    Upstream the answer is two tuples off the model choices, so nothing here is
+    visible in the standalone; on the deployment that narrows, it is the
+    difference between one query and a hundred.
+    """
+
+    @pytest.fixture
+    def policy(self, monkeypatch):
+        instance = CountingPolicy()
+        monkeypatch.setattr(creator_policy, "get_creator_policy", lambda: instance)
+        return instance
+
+    def test_a_refusal_asks_once_though_it_needs_two_answers(self, policy, user):
+        """The denial needs the list *and* the request URL. That is one question.
+
+        It used to be two: `allows_collection_mode()` resolved the capabilities,
+        then `_denial` resolved them again for the URL — so the refusal path
+        cost double the allow path, on exactly the deployments that pay for it.
+        """
+        assert creator_policy.collection_mode_denial(user, Collection.Mode.COMMUNITY)
+
+        assert policy.calls == 1
+
+    def test_a_thing_refusal_likewise(self, policy, user):
+        assert creator_policy.thing_type_denial(user, Thing.Type.LEND_THING)
+
+        assert policy.calls == 1
+
+    def test_a_caller_holding_the_answer_is_not_made_to_ask_again(self, policy, user):
+        """What lets `ThingBulkCreateView` judge a hundred rows with one question.
+
+        The verb is per row; whether this deployment offers it is not. Without
+        the hoist, a CSV import ran one policy evaluation per line — and a
+        policy backed by a table would have run one query per line.
+        """
+        capabilities = creator_policy.capabilities_for(user)
+        assert policy.calls == 1
+
+        for _ in range(100):
+            assert creator_policy.thing_type_denial(
+                user, Thing.Type.LEND_THING, capabilities=capabilities
+            )
+
+        assert policy.calls == 1

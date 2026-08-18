@@ -94,6 +94,14 @@ A subclass overrides **one method**. `allows_collection_mode()` and
 `allows_thing_type()` are derived from it, so a policy cannot enforce something
 it does not advertise — which is the failure mode of every gate written twice.
 
+It must be **stateless** — one instance is built with no arguments and shared
+across requests — but it need not be cheap. The example above hits the database
+on every call, which is the normal shape for a real policy, so OIUEEI asks it
+**once per decision**: a refusal reads both the allowed list and the request URL
+off a single `capabilities()` call, and the bulk CSV import resolves it once for
+the whole file rather than once per row (whether the deployment offers a verb is
+a fact about the person, not about line 40 of the spreadsheet).
+
 **A wrong path here fails the deploy, not the first request.** The setting is
 resolved lazily, so a typo used to boot cleanly and then 500 `GET /auth/me/` —
 the endpoint the SPA calls on every load. A system check now imports and
