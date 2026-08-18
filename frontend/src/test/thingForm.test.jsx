@@ -187,3 +187,75 @@ describe('EditThingPage', () => {
     });
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// EditThingPage — a deployment that has narrowed since the thing was offered
+// ════════════════════════════════════════════════════════════════════════
+
+describe('EditThingPage — the stored verb stays offered', () => {
+  /* A thing offered as a loan, on a deployment that has since stopped handing
+     out LEND. The server judges only a **change**, so its owner may still save
+     it as it stands — and the type Select has to keep saying so.
+
+     The bug this pins: the option list was filtered against the live `thingType`
+     state rather than the stored one, so the moment the owner opened the Select
+     and picked something else to compare, LEND stopped counting as "current",
+     failed `isOfferable`, and left the list. There was then no way back to the
+     verb the thing was actually offered under without reloading. The twin of
+     EditCollectionPage's `savedMode`; invisible upstream, where nothing is
+     withheld, which is why it needs a test.
+
+     `openTypes()` reads the option list the way a user sees it — the Select
+     renders its options only while open, so each read opens it first. */
+  const LENT_THING = { code: 'THG001', type: 'LEND_THING', headline: 'Drill', tags: [], gallery_urls: [] };
+
+  function narrowedApi() {
+    apiFetch.mockImplementation((url) => {
+      if (url.includes('/auth/me/')) {
+        return Promise.resolve(mockResponse({
+          capabilities: {
+            collection_modes: ['PROPRIETARY'],
+            thing_types: ['GIFT_THING', 'SELL_THING'],
+            request_url: null,
+          },
+        }));
+      }
+      return Promise.resolve(mockResponse(LENT_THING));
+    });
+  }
+
+  beforeEach(() => {
+    // The capabilities cache is module-scope and keyed by account; a fresh code
+    // keeps this independent of the tests above, which answer /auth/me/ with {}.
+    localStorage.setItem('userCode', `NARROW${Math.random()}`);
+    narrowedApi();
+  });
+
+  test('it survives the owner trying another verb first', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/things/THG001/edit']}>
+        <Routes>
+          <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
+
+    // Opens only when closed: the trigger is a toggle, so a helper that clicked
+    // unconditionally would shut the list it was about to read.
+    const openTypes = () => {
+      const trigger = container.querySelector('#edit-thing-type-main-button');
+      if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
+      return [...container.querySelectorAll('[role="option"]')];
+    };
+
+    // Offered to begin with, because the thing is offered under it.
+    await waitFor(() => expect(openTypes().map((o) => o.textContent)).toContain('Lend'));
+
+    // The owner compares: picks a verb the deployment does allow...
+    fireEvent.click(openTypes().find((o) => o.textContent === 'Gift'));
+
+    // ...and can still change their mind. This is the assertion that failed.
+    expect(openTypes().map((o) => o.textContent)).toContain('Lend');
+  });
+});

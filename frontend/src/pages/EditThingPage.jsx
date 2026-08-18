@@ -24,6 +24,9 @@ export default function EditThingPage() {
   const [loading, setLoading] = useState(true);
   const capabilities = useCapabilities();
   const [thingType, setThingType] = useState('');
+  // The verb as the server has it — see EditCollectionPage's `savedMode` for
+  // why the live form value cannot play this role.
+  const [savedType, setSavedType] = useState(null);
   const [headline, setHeadline] = useState('');
   useEffect(() => { document.title = headline ? t('titles.editThing', { headline: L(headline) }) : t('titles.editThingDefault'); }, [headline, t, L]);
   const [description, setDescription] = useState('');
@@ -50,6 +53,7 @@ export default function EditThingPage() {
         if (res.ok) {
           const data = await res.json();
           setThingType(data.type);
+          setSavedType(data.type);
           setHeadline(data.headline || '');
           setDescription(data.description || '');
           setThumbnail(data.thumbnail || '');
@@ -141,11 +145,12 @@ export default function EditThingPage() {
     return <LoadingSpinner />;
   }
 
-  // `thingType` is the current value: a thing already offered under a verb this
+  // `savedType` is the current value: a thing already offered under a verb this
   // deployment has stopped handing out stays editable, exactly as the server
-  // allows — it only refuses a *change* into a withheld one.
+  // allows — it only refuses a *change* into a withheld one, so the stored verb
+  // stays offered however the owner rearranges the form before saving.
   const typeOptions = TYPE_VALUES.filter((v) =>
-    isOfferable(capabilities, 'thing_types', v, thingType)
+    isOfferable(capabilities, 'thing_types', v, savedType)
   ).map((v) => ({ label: t('types.' + v), value: v }));
 
   return (

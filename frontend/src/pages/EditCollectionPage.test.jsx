@@ -197,3 +197,61 @@ describe('EditCollectionPage — the stats download', () => {
     await waitFor(() => expect(screen.queryByText("Couldn't download the stats.")).toBeNull());
   });
 });
+
+describe('EditCollectionPage — a deployment that has narrowed since', () => {
+  /* A collection opened while COMMUNITY was on offer, on a deployment that has
+     since stopped handing it out. The server judges only a **change**, so this
+     owner may still save it as it stands — and the form has to keep saying so.
+
+     The bug this pins: the filter keyed on the live `mode` state rather than
+     the stored one, so the moment the owner clicked the other radio to compare,
+     COMMUNITY stopped being "current", failed `isOfferable`, and unmounted.
+     There was then no way back to the mode the collection was actually in
+     without reloading the page — a form that had quietly become unable to
+     express the row it was editing. Invisible upstream, where nothing is
+     withheld, which is exactly why it needs a test. */
+  const COMMUNITY_COLLECTION = { ...COLLECTION, mode: 'COMMUNITY' };
+
+  function mockNarrowedApi() {
+    apiFetch.mockImplementation((url) => {
+      if (url.includes('/auth/me/')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            capabilities: {
+              collection_modes: ['PROPRIETARY'],
+              thing_types: ['GIFT_THING', 'SELL_THING'],
+              request_url: 'https://example.org/request-access/',
+            },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => COMMUNITY_COLLECTION });
+    });
+  }
+
+  beforeEach(() => {
+    // The capabilities cache is module-scope and keyed by account; a fresh code
+    // keeps these independent of the tests above without a reset export.
+    localStorage.setItem('userCode', `NARROW${Math.random()}`);
+    mockNarrowedApi();
+  });
+
+  test('the stored mode stays on offer after the owner tries the other one', async () => {
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    const community = () => screen.queryByRole('radio', { name: /community/i });
+    // It is offered to begin with, because the collection is in it.
+    await waitFor(() => expect(community()).not.toBeNull());
+
+    // The owner compares: clicks the mode the deployment does allow...
+    fireEvent.click(screen.getByRole('radio', { name: /just mine|proprietary/i }));
+
+    // ...and can still change their mind. This is the assertion that failed.
+    expect(community()).not.toBeNull();
+    fireEvent.click(community());
+    expect(community()).toBeChecked();
+  });
+});

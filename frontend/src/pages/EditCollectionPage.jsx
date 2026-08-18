@@ -34,6 +34,13 @@ export default function EditCollectionPage() {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [mode, setMode] = useState('PROPRIETARY');
+  // The mode as the server has it, which is **not** `mode` once the user starts
+  // picking. It is what `isOfferable` needs: the server judges only a *change*,
+  // so the stored mode is always submittable, while the one currently selected
+  // in the form carries no such promise. Keying the filter on `mode` made a
+  // withheld-but-stored option vanish the moment anything else was clicked,
+  // stranding the owner on a form that could no longer express what they had.
+  const [savedMode, setSavedMode] = useState(null);
   const [visibility, setVisibility] = useState('PRIVATE');
   const [allowProposals, setAllowProposals] = useState(true);
   const [digestFrequency, setDigestFrequency] = useState('NONE');
@@ -64,12 +71,13 @@ export default function EditCollectionPage() {
     { label: t('editCollection.modeProprietary'), description: t('createCollection.modeProprietaryDesc'), value: 'PROPRIETARY' },
     { label: t('editCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
   ];
-  // `mode` is passed as the current value, so a collection opened before this
-  // deployment narrowed still shows the mode it is in. The server only judges a
-  // change; a form that hid the current answer would submit a wrong one.
+  // `savedMode` — not `mode` — is the current value here: a collection opened
+  // before this deployment narrowed still shows the mode it is in, and keeps
+  // showing it while the owner tries the alternatives. The server only judges a
+  // change; a form that hid the stored answer would submit a wrong one.
   const capabilities = useCapabilities();
   const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
-    isOfferable(capabilities, 'collection_modes', opt.value, mode)
+    isOfferable(capabilities, 'collection_modes', opt.value, savedMode)
   );
 
   const DIGEST_OPTIONS = [
@@ -101,6 +109,7 @@ export default function EditCollectionPage() {
           setDescription(data.description || '');
           setStatus(data.status || 'ACTIVE');
           setMode(data.mode || 'PROPRIETARY');
+          setSavedMode(data.mode || 'PROPRIETARY');
           setVisibility(data.visibility || 'PRIVATE');
           // `?? true` rather than `||`: the field is a boolean, and a genuine
           // `false` (the owner turned recommendations off) must survive the load
