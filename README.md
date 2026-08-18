@@ -147,7 +147,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |
 | POST | `/api/v1/auth/refresh/` | Rotate access/refresh tokens via HttpOnly cookies |
-| GET | `/api/v1/auth/me/` | Get authenticated user |
+| GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url}`, what this deployment lets them create (see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything and `request_url` is `null` |
 | POST | `/api/v1/auth/logout/` | Log out (clears auth cookies) |
 | POST | `/api/v1/auth/delete-account/` | Request account deletion (rate limited: 3/h): emails a 24h single-use confirmation link; the deletion itself commits via a POST on the verify endpoint (GET only previews) |
 

@@ -88,7 +88,7 @@ Routes to the appropriate handler based on `rsvp.action`:
   "invited_collection": "<collection_code>"
 }
 ```
-Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection instead of `/welcome`. A plain `/login` magic link has no `target_code`, so the field is omitted.
+Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection rather than the default landing (home, or their single collection). A plain `/login` magic link has no `target_code`, so the field is omitted.
 
 **COLLECTION_INVITE response (200):**
 ```json
@@ -156,6 +156,18 @@ success are byte-for-byte identical, which is what stops the endpoint answering
 "does this address / token / collection code exist?". `test_join_hardening.py`
 compares whole responses rather than a message, so a field added to one path and
 not the other fails there.
+
+**It is a guarantee about the *body*, not the clock.** Since the no-target path
+was made to create nothing, it also returns without the writes the joining path
+does — so the two differ in *duration* even though they are identical in
+content. What keeps the spaces unwalkable is therefore not constant time but
+their size and the rate limits: a 22-character share token, a 6-character code
+(36⁶ ≈ 2.2 × 10⁹), and 5/min per IP + 5/h per email. Timing is the weaker of the
+two properties and always was; the fix that removed the account creation
+improved the endpoint and narrowed this claim at the same time. **Don't add
+sleeps to "even it out"** — padding to the slow path would slow every real join
+for a threat the rate limit already bounds, and padding accurately is a much
+harder problem than it looks.
 
 **Responses:**
 | Status | Condition |

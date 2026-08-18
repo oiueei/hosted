@@ -746,7 +746,13 @@ class JoinView(APIView):
     a PUBLIC, ACTIVE collection — never a PRIVATE one, so a code can't be used
     to slip into an invite-only group. Either being unknown, revoked or pointing
     at an INACTIVE collection is silently ignored: the unified response is what
-    keeps the token space and the code space unprobeable.
+    stops a single answer distinguishing the two cases.
+
+    That guarantee covers the **body**, not the clock — the nothing-to-join path
+    creates nothing, so it also returns faster than the one that writes. What
+    keeps the spaces unwalkable is their size (22 chars; 36^6 codes) and the two
+    rate limits below, not constant time. See `core/views/CLAUDE.md` for why
+    padding this is the wrong fix.
 
     Accepts optional `language` (`es`/`ca`/`en` — the UI language the visitor is
     reading the joining page in). It is stored on a **newly created** user only, so
@@ -784,9 +790,9 @@ class JoinView(APIView):
 
         if join_collection is None:
             # Nowhere to join: create no user, no RSVP, send no email — and
-            # answer exactly as if we had. The unified response is the whole
-            # anti-enumeration guarantee, so this branch must be indistinguishable
-            # from the successful one to anyone outside.
+            # answer exactly as if we had. The response body must stay
+            # indistinguishable from the successful one; that it returns sooner
+            # is a known and accepted difference (see the class docstring).
             security_logger.info(
                 f"Join request for {redact_email(email)} from IP {ip} (no target, nothing created)"
             )
