@@ -118,6 +118,21 @@ heroku config:set \
 > a deployment that never sets it has no ceiling on invitation fan-out. A free account can otherwise
 > send 100 owner-authored emails per bulk request, riding your domain. Set it before opening sign-ups.
 
+> **Recommended — joins per collection:** `COLLECTION_JOINS_PER_DAY` caps how many people **one
+> collection** may be joined by per day through `POST /auth/join/`, e.g. `heroku config:set
+> COLLECTION_JOINS_PER_DAY=200 -a your-app-name`. The cap above guards what an *account* sends; this
+> guards the door that needs no account at all, and the two are not interchangeable. **Neither way in
+> is a secret**: a PUBLIC collection's code is printed in that collection's own URL, and a share token
+> exists to be passed around — so without this, anyone can ask your app to mail a magic link to any
+> address they type, from your domain. The per-IP rate limit does not reach it: it caps one caller
+> asking often, not many callers each mailing a different stranger once, which is the shape of the
+> abuse. **Unset or `0` means no limit**, deliberately — a share link pasted into a group chat can
+> legitimately bring in hundreds in one evening, and only you know how big a link you handed out.
+> Counted per collection, so an abused public code costs that group its day and leaves every other
+> collection working. A refusal looks exactly like a success to the caller (the endpoint's unified
+> response is what stops it being used to probe which codes are real); you see it in the `security`
+> log — `grep` your dyno logs for `COLLECTION_JOINS_PER_DAY` if joins go quiet.
+
 > **Recommended — mass-upload guards:** four per-collection thresholds, all **off unless set**
 > (`COLLECTION_THINGS_ALARM` / `_BLOCK`, `COLLECTION_INVITES_ALARM` / `_BLOCK`). The `_ALARM` pair
 > emails your superusers once per collection and changes nothing else — a tripwire you watch. The
