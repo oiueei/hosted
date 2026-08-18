@@ -126,6 +126,33 @@ def test_anonymous_can_read_faqs_on_public_thing(api_client, user, user2):
     assert len(_items(res)) == 1
 
 
+def test_anonymous_reader_gets_the_question_but_not_who_asked_it(api_client, user, user2):
+    # Same rule as the member list on the collection itself: the question is
+    # public because the thing is, but the member who asked it published
+    # nothing, and their name does not belong to the open web.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    FAQ.objects.create(code="FQ0003", thing=thing, questioner=user2, question="Available?")
+
+    res = api_client.get(f"/api/v1/things/{thing.code}/faq/")
+
+    faq = _items(res)[0]
+    assert faq["question"] == "Available?"
+    assert faq["questioner_name"] == ""
+
+
+def test_signed_in_reader_still_sees_who_asked(authenticated_client, user, user2):
+    # The counterpart: withholding is about the open web, not about the feature.
+    # Anyone with an account who can read the thing still sees the asker.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    FAQ.objects.create(code="FQ0004", thing=thing, questioner=user2, question="Available?")
+
+    res = authenticated_client.get(f"/api/v1/things/{thing.code}/faq/")
+
+    assert _items(res)[0]["questioner_name"] == user2.name
+
+
 def test_anonymous_cannot_read_faqs_on_private_thing(api_client, user, user2):
     coll = _collection(user, Collection.Visibility.PRIVATE)
     thing = _thing(user, coll)

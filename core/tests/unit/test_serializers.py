@@ -300,25 +300,50 @@ class TestThingCreateSerializer:
 class TestFAQSerializer:
     """Tests for FAQSerializer."""
 
-    def test_serialize_faq(self):
-        """Should serialize FAQ with all fields."""
+    def _faq(self):
         owner = User.objects.create(code="OWNER1", email="owner@example.com")
         thing = Thing.objects.create(code="THNG01", owner=owner, headline="Thing")
         questioner = User.objects.create(code="USR001", email="usr001@example.com", name="Ana")
-        faq = FAQ.objects.create(
+        return FAQ.objects.create(
             code="FAQ001",
             thing=thing,
             questioner=questioner,
             question="Is this available?",
             answer="Yes!",
         )
-        serializer = FAQSerializer(faq)
-        data = serializer.data
+
+    def test_serialize_faq(self):
+        """Should serialize FAQ with all fields."""
+        from rest_framework.test import APIRequestFactory
+
+        faq = self._faq()
+        request = APIRequestFactory().get("/")
+        request.user = faq.questioner
+        data = FAQSerializer(faq, context={"request": request}).data
 
         assert data["code"] == "FAQ001"
         assert data["question"] == "Is this available?"
         assert data["answer"] == "Yes!"
         assert data["questioner_name"] == "Ana"
+
+    def test_asker_name_is_withheld_from_a_reader_who_is_not_signed_in(self):
+        """A thing in a PUBLIC collection is readable with no account, and the
+        member who asked published nothing — so the name goes only to signed-in
+        readers (the rule `CollectionSerializer.get_invites` already applies to
+        the member list). Request-less use withholds too: fail closed, so a call
+        site that forgets the context cannot leak."""
+        from django.contrib.auth.models import AnonymousUser
+        from rest_framework.test import APIRequestFactory
+
+        faq = self._faq()
+
+        anonymous = APIRequestFactory().get("/")
+        anonymous.user = AnonymousUser()
+        assert FAQSerializer(faq, context={"request": anonymous}).data["questioner_name"] == ""
+        assert FAQSerializer(faq).data["questioner_name"] == ""
+
+        # The question itself is still public — it is only the asker who isn't.
+        assert FAQSerializer(faq).data["question"] == "Is this available?"
 
 
 class TestFAQCreateSerializer:

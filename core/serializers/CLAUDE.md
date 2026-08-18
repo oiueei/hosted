@@ -117,7 +117,7 @@ Foreign keys are exposed as 6-character alphanumeric codes, not database IDs:
 
 | Serializer | Fields | Notes |
 |------------|--------|-------|
-| `FAQSerializer` | code, thing, created, questioner, questioner_name, question, answer, is_visible | Full FAQ read representation. |
+| `FAQSerializer` | code, thing, created, questioner, questioner_name, question, answer, is_visible | Full FAQ read representation. **`questioner_name` is withheld from a reader who is not signed in** — a thing in a PUBLIC collection is readable with no account, and the member who asked published nothing (unlike the thing's owner, who chose to); this is the rule `CollectionSerializer.get_invites` already applies to a group's member list, reached through a different endpoint. It reads `context["request"]` and **fails closed**: request-less use withholds too, so a call site that forgets the context cannot leak. Every construction in `core/views/faq.py` therefore passes `context={"request": request}`. The question, answer and `questioner` code stay public. |
 | `FAQCreateSerializer` | question | Plain `Serializer`. Uses `SafeHeadlineField` (max 64 chars). |
 | `FAQAnswerSerializer` | answer | Plain `Serializer`. Uses `SafeTextField` (max 256 chars). |
 

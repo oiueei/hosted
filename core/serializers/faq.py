@@ -35,6 +35,20 @@ class FAQSerializer(serializers.ModelSerializer):
         ]
 
     def get_questioner_name(self, obj):
+        # Withheld from a reader who is not signed in. A thing sitting in a
+        # PUBLIC collection is readable with no account at all, and the person
+        # who asked the question is a third party who published nothing — unlike
+        # the thing's owner, who chose to. `CollectionSerializer.get_invites`
+        # already made this call for a group's member list ("real names of a
+        # group's members don't belong to the open web"); these are the same
+        # people, reached through a different endpoint.
+        #
+        # Fail-closed on a missing request, exactly like that method: a call
+        # site that forgets to pass the context withholds the name rather than
+        # leaking it.
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated):
+            return ""
         # A deleted account keeps its questions but sheds its name (right to
         # erasure — FAQ.questioner is SET_NULL); the frontend renders its own
         # "former member" label for the empty value.
