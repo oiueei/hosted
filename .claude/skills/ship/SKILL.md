@@ -27,22 +27,36 @@ Run `git diff HEAD` (or `git diff main..HEAD` if there are multiple commits) to 
 
 Run:
 ```
-pytest -v --cov=core --cov-report=term-missing --cov-fail-under=80
+pytest -v --cov=core --cov-report=term-missing --cov-fail-under=95
 ```
 
 - If tests fail, stop and report the failures to the user. Do not proceed to the commit.
-- If coverage drops below 80%, stop and report it to the user.
-- If all tests pass and coverage is ≥ 80%, report the result and continue.
+- If coverage drops below the gate, stop and report it to the user.
+- If all tests pass and the gate is met, report the result and continue.
+
+> **The gate must match CI, and CI is the source of truth** — `.github/workflows/tests.yml`,
+> mirrored in `CLAUDE.md`. It is a **ratchet**: it sits ~2 points under the suite's real
+> coverage and is raised as coverage grows, so the number above goes stale by design. Check
+> the workflow if in doubt, and never lower it here to make a run green. This file said `80`
+> long after CI had moved to `95`, which meant a `/ship` could report success on a commit the
+> build would reject — the one failure mode a pre-commit checklist exists to prevent.
 
 ## Phase 3 — Run Frontend Tests
 
 Run:
 ```
-cd frontend && npm test
+cd frontend && npm run test:coverage
 ```
 
 - If tests fail, stop and report the failures to the user. Do not proceed to the commit.
 - If all tests pass, report the result and continue.
+
+> **`test:coverage`, not `test`** — that is what CI runs. The bare `npm test` skips coverage
+> entirely, so the frontend ratchet (statements/branches/functions/lines) is never checked and
+> a regression ships green. The thresholds live in `frontend/vite.config.js` under
+> `coverage.thresholds`, so the command **enforces them itself** and fails on its own: there
+> are no numbers to compare by hand here. They are a ratchet like the backend's — raise as
+> coverage grows, never lower to pass.
 
 ## Phase 4 — Check for Missing Tests
 
