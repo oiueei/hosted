@@ -31,6 +31,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.doUnmock('../deployment');
+  vi.doUnmock('../services/api');
   window.history.pushState({}, '', '/');
 });
 
@@ -168,5 +169,88 @@ describe('the about link follows aboutPath', () => {
     // path this repository hard-codes.
     expect(document.querySelector('a[href="/about-us"]')).not.toBeNull();
     expect(document.querySelector('a[href="/legal"]')).not.toBeNull();
+  });
+});
+
+describe("the dashboard's second button follows aboutPath", () => {
+  /* The first screen a brand-new account sees: no collections yet, so the empty
+     state offers "create your first" and — where there is something to read —
+     "learn how".
+
+     This is the one site the /welcome sweep missed. The route left with the
+     demo, the footer got a test pinning its absence, and this button kept a
+     hard-coded `to="/welcome"` that quietly resolved to the 404 page, on the
+     screen least able to afford it. Hence a guard on both halves. */
+  const ok = (body) =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+
+  function mockEmptyDashboard() {
+    vi.doMock('../services/api', () => ({
+      apiFetch: vi.fn((url) => {
+        if (url.startsWith('/api/v1/auth/me/')) {
+          return ok({ code: 'ABC123', name: 'Ada', koro: 'basic' });
+        }
+        // An account that owns nothing yet — the empty state under test.
+        // Note the two shapes: /collections/ is paginated (`.results`) while
+        // /invited-collections/ and /my-invitations/ answer a bare array, and
+        // HomePage reads each accordingly.
+        if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
+        return ok([]);
+      }),
+      getCsrfToken: vi.fn(() => 'mock-csrf'),
+      extractApiError: vi.fn(() => ''),
+    }));
+  }
+
+  const renderHome = async () => {
+    const { default: HomePage } = await import('../pages/HomePage');
+    localStorage.setItem('userCode', 'ABC123');
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+  };
+
+  test('no about page, no button — and nothing pointing at the route that left', async () => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      deploymentI18n: {},
+    }));
+    mockEmptyDashboard();
+    await renderHome();
+
+    // The empty state has rendered: it is the "create your first" button that
+    // proves we are looking at it and not at a loading or error branch.
+    await waitFor(() =>
+      expect(document.querySelector('a[href="/collections/new"]')).not.toBeNull()
+    );
+    expect(document.querySelector('a[href="/welcome"]')).toBeNull();
+    // Scoped to the empty state by its own copy: HomePage has a second
+    // `.button-row-wide` up in the hero, and a document-wide selector would be
+    // asserting about that one too. Exactly one link here, and it is the only
+    // one this screen can honestly offer — no dangling second button however
+    // the href had been spelled.
+    const emptyState = screen.getByText('You have no active collections yet.').parentElement;
+    const links = [...emptyState.querySelectorAll('a')];
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/collections/new']);
+    expect(screen.queryByText('See how it works')).not.toBeInTheDocument();
+  });
+
+  test('points wherever the deployment put its page', async () => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: '/about-us',
+      deploymentI18n: {},
+    }));
+    mockEmptyDashboard();
+    await renderHome();
+
+    await waitFor(() =>
+      expect(document.querySelector('a[href="/about-us"]')).not.toBeNull()
+    );
   });
 });
