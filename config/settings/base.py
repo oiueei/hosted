@@ -231,6 +231,22 @@ TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "1"))
 # the whole rate-limiting layer off in development and tests.
 INVITE_EMAILS_PER_DAY = int(os.environ.get("INVITE_EMAILS_PER_DAY", "0"))
 
+# How many people one collection may be joined by per day through
+# `POST /auth/join/`. The invitation cap above guards the doors an *account*
+# sends through; this guards the one that needs no account, where the address
+# mailed is whatever a stranger typed and the collection code is public by
+# construction. Without it the per-IP limit is all that stands between the
+# operator's sending domain and a hundred IPs mailing a hundred strangers each.
+#
+# Keyed per collection so abusing one group's public code costs that group its
+# day and leaves every other collection working — a deployment-wide counter
+# would hand the attacker a way to shut joining off for everyone.
+#
+# 0 (or unset) means no limit, and that is the standalone default: a share link
+# pasted into a group chat can legitimately bring in two hundred people in an
+# evening. Also gated by RATELIMIT_ENABLE. See `core/services/join_quota.py`.
+COLLECTION_JOINS_PER_DAY = int(os.environ.get("COLLECTION_JOINS_PER_DAY", "0"))
+
 # Per-collection capacity guards against mass upload. Same reasoning as the
 # invitation cap above: this is the operator protecting their own storage,
 # Cloudinary bill and moderation load, so the standalone default is **off** and

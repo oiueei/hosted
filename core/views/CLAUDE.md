@@ -127,7 +127,7 @@ Auth tokens are set as HttpOnly cookies via `_set_auth_cookies()`.
 |---|---|
 | **Endpoint** | `POST /api/v1/auth/join/` |
 | **Permission** | `AllowAny` |
-| **Rate limit** | 5 requests/minute per IP **and** 5/hour per account (email) |
+| **Rate limit** | 5 requests/minute per IP **and** 5/hour per account (email), plus the per-collection daily join cap (below) |
 
 How a visitor who was pointed at a collection joins it and gets a magic link
 back. Two doors reach it, and both are somebody choosing to let a specific
@@ -151,11 +151,32 @@ standalone. `RSVP.Origin.POPIN` keeps its name — see the model for why.
 6. Creates the `MAGIC_LINK` RSVP (`origin=POPIN`) and sends the magic link, **whose subject names the joined collection** (`"Hello, welcome to '{headline}' - OIUEEI!"`) and whose language follows the collection's.
 7. Logs to the `security` logger with IP, whether the user is new, and which collection — or that nothing was created.
 
+**The per-collection daily cap (`COLLECTION_JOINS_PER_DAY`).** Neither door here
+is a secret — a PUBLIC collection's code is printed in its own URL and a share
+token exists to be passed around — so anyone may ask this deployment to mail a
+magic link to any address they type. That is a relay pointed at the operator's
+sending domain, and the two rate limits above do not reach it: they cap how often
+**one IP** asks and how often **one victim** is mailed, not many IPs each mailing
+a different stranger once, which is the shape of the abuse. `INVITE_EMAILS_PER_DAY`
+did not cover it either — that counts what an *account* sends through the owner's
+invite routes, and this door has no account behind it.
+
+So `join_quota_exhausted()` is checked **after** the target resolves and
+**before** anything is created; `consume_join_quota()` charges one after the send
+is dispatched. It is keyed per collection, never per deployment: a single global
+counter would let anyone shut joining off for every group on the instance by
+spending it on one. A refusal creates nothing, sends nothing, returns the
+**unified response** — telling the visitor "over its limit" would confirm the
+code names a real, joinable collection — and writes a `security` warning, the
+same shape as the capacity alarms, where the tripwire reports to whoever set it
+and never to whoever tripped it. Off by default; see
+[`join_quota`](../services/CLAUDE.md).
+
 **The unified response is the anti-enumeration guarantee.** The refusal and the
 success are byte-for-byte identical, which is what stops the endpoint answering
 "does this address / token / collection code exist?". `test_join_hardening.py`
 compares whole responses rather than a message, so a field added to one path and
-not the other fails there.
+not the other fails there — and it now does the same for the quota refusal.
 
 **It is a guarantee about the *body*, not the clock.** Since the no-target path
 was made to create nothing, it also returns without the writes the joining path
@@ -1023,6 +1044,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 
 - `/auth/request-link/` — 5 requests per minute per IP **and** 5 per hour per account (email)
 - `/auth/join/` — 5 requests per minute per IP **and** 5 per hour per account (email)
+- Joins per **collection** — **unlimited unless the operator sets `COLLECTION_JOINS_PER_DAY`** (0/unset = off). The one door that needs no account, reached by a public collection code or a shared token; the two IP/email limits above cap one caller and one victim, this caps the relay
 - `/auth/verify/{token}/` — 10 requests per minute per IP
 - `/collections/{code}/invite/` POST — 30 requests per hour per user
 - Invitation **emails** (single + bulk combined) — **unlimited unless the operator sets `INVITE_EMAILS_PER_DAY`** (counts emails, not requests, so the bulk fan-out can't multiply past it; 0/unset = off)
@@ -1068,6 +1090,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Service Layer
 
 Business logic is extracted into `core/services/`:
+- `join_quota.py` — The per-collection daily cap on `POST /auth/join/` (`COLLECTION_JOINS_PER_DAY`), the one door that needs no account. Off by default.
 - `creator_policy.py` — Whether this deployment lets an account open a collection in a given mode or offer a thing under a given verb (`CREATOR_POLICY`; open to everyone in the standalone). Enforced at five doors — collection create/update, thing create/update, bulk import — and served to the SPA as `capabilities` on `GET /auth/me/`.
 - `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
 - `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.

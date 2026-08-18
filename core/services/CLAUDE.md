@@ -163,6 +163,27 @@ The **daily invitation-email quota** helpers live here too (`_invite_quota_left`
 
 ---
 
+### `join_quota.py` — The daily cap on the door that needs no account
+
+`POST /auth/join/` mails a magic link to whatever address is typed into it, and **neither door that reaches it is a secret**: a PUBLIC collection's `collection_code` is printed in that collection's own URL, and a share token exists to be passed around. So without a cap, anyone may ask a deployment to send mail to anyone — a relay pointed at the operator's own sending domain, ending in complaints against it and genuine magic links landing in spam.
+
+The view's own rate limits never closed this and were not meant to: they cap how often **one IP** asks (5/min) and how often **one victim** is mailed (5/hour), which says nothing about a hundred IPs mailing a hundred different strangers once each. `INVITE_EMAILS_PER_DAY` did not either — it counts what an *account* sends through the owner's invite routes, and this is the one door with no account behind it.
+
+| Function | Behaviour |
+|---|---|
+| `join_quota_exhausted(collection_code)` | Whether this collection has already taken today's joins. `False` when the cap is off. Checked in `JoinView` **after** the target resolves and **before** anything is created, so a refusal leaves no `User`, no RSVP and no mail. |
+| `consume_join_quota(collection_code)` | Records one join against today's allowance. Called after the send is dispatched, so a join that failed earlier costs the collection nothing. |
+
+**Keyed per collection, deliberately.** Per IP is what already failed. Per *deployment* would be worse than nothing here: one abused collection would deny every other collection its joins, handing the attacker a denial of service against the whole instance in the name of stopping a relay. Per collection, abusing a group's public code costs that group its own day.
+
+**Off unless the operator sets `COLLECTION_JOINS_PER_DAY`**, like every other abuse guard — and for the usual reason plus one of its own: a share link pasted into a group chat can legitimately bring in two hundred people in an evening, which upstream has no business calling abuse. It follows `RATELIMIT_ENABLE` (the same switch as the invitation quota, so an operator turning limits off does not have to find two places to do it), and shares the DatabaseCache read-then-set non-atomicity note (I7) — a burst can slip a few past the line, which is the right trade for coarse reputation protection.
+
+A refusal returns the endpoint's **unified response** and writes a `security` warning. It cannot say why: "over its limit" would confirm that the token or code names a real, joinable collection, which is exactly what that response exists to withhold. The operator is told instead — the same shape as the capacity alarms, where the tripwire reports to whoever set it and never to whoever tripped it.
+
+Each join sends one magic link, and a **first** join also sends the collection's welcome document when the owner set one, so the mail this permits is at most twice the configured number. It caps joins because that is the event worth counting; the emails follow from it.
+
+---
+
 ### `creator_policy.py` — Who May Create What, On This Deployment
 
 The one place a deployment says whether an account is enough to open a collection in either mode and offer a thing under any of the four verbs. Upstream the answer is **yes, to everyone, always** — `OpenCreatorPolicy`, the default of the `CREATOR_POLICY` setting — so a standalone checkout has no gate and behaves exactly as it did before this module existed. A deployment with a narrower rule (only the board opens COMMUNITY collections; lending is vetted first) points the setting at its own subclass instead of editing the serializers, and nothing about that rule needs to live in this repository.

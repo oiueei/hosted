@@ -19,8 +19,10 @@ exactly like the one where it did.
 
 import pytest
 from django.core import mail
+from django.core.cache import caches
+from django.test import override_settings
 
-from core.models import RSVP, User
+from core.models import RSVP, Collection, User
 
 URL = "/api/v1/auth/join/"
 
@@ -115,3 +117,106 @@ class TestARealTargetStillWorks:
         assert public_collection.invites.filter(code=joiner.code).exists()
         assert RSVP.objects.filter(user_code=joiner, target_code=public_collection.code).exists()
         assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+class TestOneCollectionCannotBeUsedAsAMailRelay:
+    """`COLLECTION_JOINS_PER_DAY` — the cap on the door that needs no account.
+
+    Neither way in here is secret: a PUBLIC collection's code is printed in its
+    own URL, and a share token exists to be passed around. So anyone could ask
+    the deployment to mail a magic link to any address they typed, which is a
+    relay pointed at the operator's sending domain — and the two rate limits on
+    the view do not reach it. They cap one IP (5/min) and one victim (5/hour);
+    the attack is a hundred IPs mailing a hundred strangers once each.
+
+    `INVITE_EMAILS_PER_DAY` did not cover it either: that counts what an
+    *account* sends through the owner's invite routes, and this door has no
+    account behind it. These tests are about the counter that finally does.
+    """
+
+    # RATELIMIT_ENABLE is off in the test settings and the quota follows it, so
+    # switch it on with a local-memory cache the way test_invite_quota.py does.
+    # Every test below stays under the view's own 5/min per-IP limit.
+    QUOTA_SETTINGS = {
+        "RATELIMIT_ENABLE": True,
+        "CACHES": {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "join-quota-test",
+            }
+        },
+    }
+
+    @staticmethod
+    def _join(client, collection, email):
+        return client.post(URL, {"email": email, "collection_code": collection.code}, format="json")
+
+    @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=2)
+    def test_a_collection_stops_admitting_people_once_its_day_is_spent(
+        self, api_client, public_collection
+    ):
+        caches["default"].clear()
+        for email in ("first@test.com", "second@test.com"):
+            assert self._join(api_client, public_collection, email).status_code == 200
+        assert len(mail.outbox) == 2
+
+        self._join(api_client, public_collection, "third@test.com")
+
+        # Nothing created and nothing sent — the whole point is that the third
+        # stranger is never mailed from the operator's domain.
+        assert len(mail.outbox) == 2
+        assert not User.objects.filter(email="third@test.com").exists()
+        assert not RSVP.objects.filter(user_email="third@test.com").exists()
+        assert not public_collection.invites.filter(email="third@test.com").exists()
+
+    @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
+    def test_the_refusal_is_indistinguishable_from_a_join(self, api_client, public_collection):
+        """It has to be, or the cap becomes the oracle the endpoint avoids.
+
+        "This collection is over its limit" would confirm that the code names a
+        real, joinable collection — exactly what every other refusal here
+        withholds. Compared as whole responses, like the no-target case.
+        """
+        caches["default"].clear()
+        joined = self._join(api_client, public_collection, "joiner@test.com")
+
+        refused = self._join(api_client, public_collection, "refused@test.com")
+
+        assert refused.status_code == joined.status_code
+        assert refused.data == joined.data
+
+    @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
+    def test_one_collection_running_out_does_not_close_another(self, api_client, user):
+        """Why the counter is keyed per collection and not per deployment.
+
+        A deployment-wide counter would let anyone shut joining off for every
+        group on the instance by spending it on one — a denial of service handed
+        to the attacker in the name of stopping a relay.
+        """
+        caches["default"].clear()
+        abused = Collection.objects.create(
+            code="ABUSED", owner=user, headline="A", visibility=Collection.Visibility.PUBLIC
+        )
+        bystander = Collection.objects.create(
+            code="OTHERC", owner=user, headline="B", visibility=Collection.Visibility.PUBLIC
+        )
+
+        self._join(api_client, abused, "one@test.com")
+        self._join(api_client, abused, "two@test.com")  # spent: refused
+        self._join(api_client, bystander, "three@test.com")
+
+        assert not User.objects.filter(email="two@test.com").exists()
+        assert bystander.invites.filter(email="three@test.com").exists()
+
+    @override_settings(**QUOTA_SETTINGS)
+    def test_unset_means_no_cap_at_all(self, api_client, public_collection):
+        """The standalone default. A share link pasted into a group chat can
+        legitimately bring in far more people than any number we could pick, so
+        upstream picks none and the operator sets their own."""
+        caches["default"].clear()
+        for email in ("a@test.com", "b@test.com", "c@test.com"):
+            assert self._join(api_client, public_collection, email).status_code == 200
+
+        assert len(mail.outbox) == 3
+        assert public_collection.invites.count() == 3

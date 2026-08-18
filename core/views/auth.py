@@ -41,6 +41,7 @@ from core.services.invitation_service import (
     proposal_approval_blocked,
     reject_proposal,
 )
+from core.services.join_quota import consume_join_quota, join_quota_exhausted
 from core.utils import cloudinary_doc_url, get_client_ip, redact_email
 from core.views._helpers import body_dict
 
@@ -754,6 +755,16 @@ class JoinView(APIView):
     rate limits below, not constant time. See `core/views/CLAUDE.md` for why
     padding this is the wrong fix.
 
+    **Neither door is a secret, and that is what `COLLECTION_JOINS_PER_DAY`
+    guards.** A PUBLIC collection's code sits in its own URL and a share token is
+    passed around by design, so anyone may ask this deployment to mail a magic
+    link to any address they type — a relay pointed at the operator's sending
+    domain. The two limits below cap one IP and one victim; they say nothing
+    about many IPs mailing many strangers once each, which is the actual shape.
+    The per-collection daily cap does, and a refusal returns the same unified
+    response as everything else here. Off by default; see
+    `core/services/join_quota.py`.
+
     Accepts optional `language` (`es`/`ca`/`en` — the UI language the visitor is
     reading the joining page in). It is stored on a **newly created** user only, so
     their very first magic link already speaks their language; anything else is
@@ -798,6 +809,22 @@ class JoinView(APIView):
             )
             return self._unified_response()
 
+        if join_quota_exhausted(join_collection.code):
+            # This collection has taken its day's joins. Create nothing, send
+            # nothing — and answer exactly as if we had, for the same reason the
+            # no-target path does: "that collection is over its limit" would
+            # confirm that this token or code names a real, joinable collection,
+            # which is the one thing the unified response exists to withhold.
+            #
+            # So the visitor cannot be told, and the operator is told instead —
+            # the same shape as the capacity alarms, where the tripwire reports
+            # to whoever set it and never to whoever tripped it.
+            security_logger.warning(
+                f"Join refused for {redact_email(email)} from IP {ip}: "
+                f"collection {join_collection.code} is over COLLECTION_JOINS_PER_DAY"
+            )
+            return self._unified_response()
+
         user, created = User.objects.get_or_create(email=email)
         if created:
             if language:
@@ -825,6 +852,10 @@ class JoinView(APIView):
             user=user,
             collection=join_collection,
         )
+        # Charged after the send is dispatched, so a join that raised before
+        # reaching it costs the collection nothing. In production the send is a
+        # daemon thread, so "dispatched" is as far as this can honestly count.
+        consume_join_quota(join_collection.code)
 
         security_logger.info(
             f"Join request for {redact_email(email)} from IP {ip} "
