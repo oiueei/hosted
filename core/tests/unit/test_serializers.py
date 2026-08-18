@@ -449,3 +449,72 @@ class TestCoMemberNameLeak:
         data = MyBookingSerializer(booking).data
         assert data["owner_name"] == ""
         assert "owner-nameless@example.com" not in str(data)
+
+
+@pytest.mark.django_db
+class TestJourneyNamesFailClosed:
+    """The journey withholds member names when there is no request to judge.
+
+    `_may_read_names` treats a missing request as "not signed in", so an
+    internal or request-less caller gets the same empty values an anonymous
+    reader does. Every other test of this reaches the serializer *through the
+    view*, which always supplies a request — so nothing pinned the one branch
+    the docstring actually promises.
+
+    That gap is invisible in the worst way. Rewriting the guard as
+    `return not request or request.user.is_authenticated` — an inversion that
+    reads like a tidy-up — would leave all 1155 tests green and quietly hand
+    every name back to any caller that forgot the context. The FAQ twin is
+    pinned this way in `TestFAQSerializer`; this is the other half.
+    """
+
+    def _stats(self, from_user, to_user):
+        from core.models.transfer import ThingTransfer
+        from core.serializers.transfer import ThingTransferStatsSerializer
+
+        thing = Thing.objects.create(code="JTH001", owner=from_user, headline="A drill")
+        transfer = ThingTransfer.objects.create(
+            code="JTR001",
+            thing=thing,
+            from_user=from_user,
+            to_user=to_user,
+            lent_date="2026-01-01",
+        )
+        # The shape the view builds, minus the context — which is the point.
+        return ThingTransferStatsSerializer(
+            {
+                "total_transfers": 1,
+                "unique_homes": 2,
+                "current_holder": to_user.code,
+                "current_holder_name": to_user.name,
+                "original_owner": from_user.code,
+                "original_owner_name": from_user.name,
+                "transfers": [transfer],
+            }
+        ).data
+
+    def test_a_serializer_with_no_request_names_nobody(self):
+        lender = User.objects.create(code="JLEND1", email="lender@example.com", name="Lila")
+        borrower = User.objects.create(code="JBORR1", email="borrower@example.com", name="Bea")
+
+        data = self._stats(lender, borrower)
+
+        assert data["current_holder_name"] is None
+        assert data["original_owner_name"] is None
+        assert data["transfers"][0]["from_user_name"] == ""
+        assert data["transfers"][0]["to_user_name"] == ""
+        assert "Lila" not in str(data)
+        assert "Bea" not in str(data)
+
+    def test_the_journey_itself_still_comes_through(self):
+        """Withholding the people must not withhold the story — the counts and
+        the codes are what the public journey is for."""
+        lender = User.objects.create(code="JLEND2", email="lender2@example.com", name="Lila")
+        borrower = User.objects.create(code="JBORR2", email="borrower2@example.com", name="Bea")
+
+        data = self._stats(lender, borrower)
+
+        assert data["total_transfers"] == 1
+        assert data["unique_homes"] == 2
+        assert data["current_holder"] == "JBORR2"
+        assert data["transfers"][0]["lent_date"] == "2026-01-01"
