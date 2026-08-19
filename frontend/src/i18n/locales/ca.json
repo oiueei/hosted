@@ -676,7 +676,8 @@
     "messageLabel": "Missatge",
     "sendButton": "Enviar difusió",
     "sending": "Enviant...",
-    "sent": "Difusió enviada a {{count}} convidats."
+    "sent": "Difusió enviada a {{count}} convidats.",
+    "replyToNotice": "Qui el rebi podrà respondre't directament: veurà la teva adreça de correu."
   },
   "notifications": {
     "pageTitle": "Preferències d'email",

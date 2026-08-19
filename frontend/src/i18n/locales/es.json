@@ -676,7 +676,8 @@
     "messageLabel": "Mensaje",
     "sendButton": "Enviar difusión",
     "sending": "Enviando...",
-    "sent": "Difusión enviada a {{count}} invitados."
+    "sent": "Difusión enviada a {{count}} invitados.",
+    "replyToNotice": "Quien lo reciba podrá responderte directamente: verá tu dirección de correo."
   },
   "notifications": {
     "pageTitle": "Preferencias de email",

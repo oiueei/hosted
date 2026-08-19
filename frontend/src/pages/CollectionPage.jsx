@@ -499,9 +499,18 @@ export default function CollectionPage() {
             </Button>
           ) : (
             <div className="form-grid">
+              {/* The one place in the product where a member learns an address
+                  the API takes care never to serve them: the broadcast carries
+                  the owner's own email as Reply-To, so replying to the group
+                  message is one tap. Worth keeping — without it a broadcast is
+                  a megaphone with no way back, and the replies would land on a
+                  noreply — but not worth doing without saying so first
+                  (DESIGN §6). Their own address, their own send: disclosure is
+                  what consent needs here, not a switch. */}
               <TextArea
                 id="broadcast-message"
                 label={t('broadcast.messageLabel')}
+                helperText={t('broadcast.replyToNotice')}
                 value={broadcastMessage}
                 onChange={(e) => setBroadcastMessage(e.target.value)}
                 maxLength={256}

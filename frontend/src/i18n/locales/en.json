@@ -682,7 +682,8 @@
     "messageLabel": "Message",
     "sendButton": "Send broadcast",
     "sending": "Sending...",
-    "sent": "Broadcast sent to {{count}} guests."
+    "sent": "Broadcast sent to {{count}} guests.",
+    "replyToNotice": "Anyone who receives it can reply to you directly: they'll see your email address."
   },
   "notifications": {
     "pageTitle": "Email preferences",
