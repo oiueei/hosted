@@ -23,10 +23,11 @@ import importlib
 import os
 from unittest import mock
 
-# Enough to get past production.py's own fail-fast checks (`_require_env`, the
-# SECRET_KEY length floor). None of it is what the tests are about.
+# Enough to get past production.py's own `_require_env` fail-fast checks. None of
+# it is what the tests are about. The SECRET_KEY floor is deliberately **not**
+# here — see `BOOT_SECRET_KEY` and `_production_settings` for why no environment
+# variable can satisfy it.
 BOOT_ENV = {
-    "DJANGO_SECRET_KEY": "x" * 60,
     "DATABASE_URL": "postgres://u:p@localhost:5432/d",
     "DEFAULT_FROM_EMAIL": "noreply@example.org",
     "MAGIC_LINK_BASE_URL": "https://example.org/verify",
@@ -36,6 +37,10 @@ BOOT_ENV = {
 }
 
 ORIGIN_VARS = ("CSRF_TRUSTED_ORIGINS", "CORS_ALLOWED_ORIGINS")
+
+# Long enough for the floor, and not the placeholder prefix production.py refuses
+# by name.
+BOOT_SECRET_KEY = "x" * 60
 
 
 def _production_settings(env=None):
@@ -53,11 +58,26 @@ def _production_settings(env=None):
     would push another WhiteNoise entry into the live middleware chain and the
     damage would surface somewhere else entirely, in a test that never mentioned
     settings.
+
+    **`SECRET_KEY` is patched on `base`, not in the environment**, and that is the
+    difference between a test that boots anywhere and one that boots only on the
+    author's laptop. `production.py` never reads `DJANGO_SECRET_KEY`: it checks
+    the `SECRET_KEY` name that arrives through `from .base import *`, and
+    `base.py` read the environment **once**, when the test session imported it.
+    Reloading `production` re-binds names from the already-imported `base`
+    module — it does not re-execute `base.py` — so an env patch here lands long
+    after the only read that mattered, and the module sees whichever key the
+    machine started with. A developer's `.env` has a strong one and CI has a
+    deliberately weak placeholder, so this passed where it was written and failed
+    where it counted.
     """
     import config.settings.base as base
 
     original_middleware = list(base.MIDDLEWARE)
-    with mock.patch.dict(os.environ, {**BOOT_ENV, **(env or {})}, clear=False):
+    with (
+        mock.patch.dict(os.environ, {**BOOT_ENV, **(env or {})}, clear=False),
+        mock.patch.object(base, "SECRET_KEY", BOOT_SECRET_KEY),
+    ):
         for key in ORIGIN_VARS:
             if not env or key not in env:
                 os.environ.pop(key, None)
