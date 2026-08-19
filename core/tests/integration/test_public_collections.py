@@ -302,3 +302,62 @@ def test_owner_still_sees_their_own_private_collection_on_their_thing(authentica
     assert res.status_code == 200
     assert res.json()["collection_code"] == private.code
     assert "secreto" in res.json()["collection_tags"]
+
+
+# --- who contributed a thing (owner_name) ---------------------------------
+
+
+def _community_with_contribution(owner, member):
+    """A PUBLIC COMMUNITY collection whose thing was contributed by a member."""
+    coll = Collection.objects.create(
+        code="PUB900",
+        owner=owner,
+        headline="Bibliocosas",
+        visibility=Collection.Visibility.PUBLIC,
+        mode=Collection.Mode.COMMUNITY,
+    )
+    coll.invites.add(member)
+    return coll, _thing(member, coll, code="THG900")
+
+
+def test_anonymous_reader_is_not_told_which_member_contributed_a_thing(api_client, user, user2):
+    """The third name a group leaked to the open web, after the FAQ asker and the
+    journey's past holders: in COMMUNITY mode every card carries the name of the
+    member who put the thing there. That member consented to a group, not to the
+    web, and the visibility switch is the curator's — so the name goes and the
+    contribution stays."""
+    coll, thing = _community_with_contribution(user, user2)
+
+    grid = api_client.get(f"/api/v1/collections/{coll.code}/").json()
+    detail = api_client.get(f"/api/v1/things/{thing.code}/").json()
+
+    assert grid["things"][0]["owner_name"] == ""
+    assert detail["owner_name"] == ""
+    # What the reader keeps: the thing itself, and that it belongs to someone
+    # other than the curator (the code, which names nobody).
+    assert detail["owner"] == user2.code
+    assert detail["headline"] == "A thing"
+
+
+def test_anonymous_reader_is_still_told_who_published_the_collection(api_client, user):
+    """The curator is not a third party: they chose to publish, and the
+    collection header already serves their name to the very same reader.
+    Withholding it on their own listings would be theatre, not privacy."""
+    coll, _ = _community_with_contribution(user, user)
+    own = _thing(user, coll, code="THG901")
+
+    detail = api_client.get(f"/api/v1/things/{own.code}/").json()
+
+    assert detail["owner_name"] == user.name
+
+
+def test_signed_in_reader_still_sees_who_contributed(authenticated_client, user, user2):
+    """Attribution to the contributing member is half the point of a COMMUNITY
+    collection. It is withheld from the open web, never from the group."""
+    coll, thing = _community_with_contribution(user2, user)
+
+    grid = authenticated_client.get(f"/api/v1/collections/{coll.code}/").json()
+    detail = authenticated_client.get(f"/api/v1/things/{thing.code}/").json()
+
+    assert grid["things"][0]["owner_name"] == user.name
+    assert detail["owner_name"] == user.name

@@ -173,7 +173,14 @@ export default function ThingPage() {
 
         <p className="thing-card-meta">
           {new Date(thing.created).toLocaleDateString(i18n.language)}
-          {thing.owner_name && ` — ${thing.owner_name}`}
+          {/* Withheld from a reader with no account when the owner is not the
+              person who published the collection (see the card's meta line).
+              Only that reader gets the generic stand-in: an empty name for a
+              signed-in one means the owner never set one, and they are not
+              "a member" in the anonymous sense — they are simply unnamed. */}
+          {thing.owner_name
+            ? ` — ${thing.owner_name}`
+            : !isAuthenticated && ` — ${t('common.aMember')}`}
         </p>
 
         <h1 className="page-title">{headline}</h1>

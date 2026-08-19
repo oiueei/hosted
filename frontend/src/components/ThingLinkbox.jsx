@@ -105,10 +105,16 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
       <div className="thing-card-body">
         {collectionMode === 'COMMUNITY' && (
           <p className="thing-card-meta">
-            {thing.owner ? (
+            {/* The contributing member. A reader with no account is told there
+                *is* one — which is what the COMMUNITY grid exists to show —
+                but not who: the API withholds the name from them
+                (`ThingComputedFieldsMixin.get_owner_name`). No link either:
+                the profile behind it is `IsAuthenticated`, so for that reader
+                it was only ever a door onto a 403. */}
+            {thing.owner_name && thing.owner ? (
               <Link to={`/${thing.owner}`} className="thing-card-owner-link">{thing.owner_name}</Link>
             ) : (
-              thing.owner_name
+              thing.owner_name || t('common.aMember')
             )}
             {thing.created && ` · ${new Date(thing.created).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })}`}
           </p>
