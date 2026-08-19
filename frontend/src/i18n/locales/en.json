@@ -257,7 +257,10 @@
     "errorLoading": "Error loading collection.",
     "curator": "Curator.",
     "showMoreThings_one": "Show 1 more thing",
-    "showMoreThings_other": "Show {{count}} more things"
+    "showMoreThings_other": "Show {{count}} more things",
+    "visitorIntro": "You're browsing this group as a visitor.",
+    "visitorJoin": "Join this group",
+    "visitorJoinError": "We couldn't add you to the group. Please try again."
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",

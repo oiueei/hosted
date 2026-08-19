@@ -251,7 +251,10 @@
     "errorLoading": "Error al cargar la colección.",
     "curator": "Curador.",
     "showMoreThings_one": "Ver 1 cosa más",
-    "showMoreThings_other": "Ver {{count}} cosas más"
+    "showMoreThings_other": "Ver {{count}} cosas más",
+    "visitorIntro": "Estás viendo este grupo como visitante.",
+    "visitorJoin": "Unirme al grupo",
+    "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo."
   },
   "digestMute": {
     "pageTitle": "Resúmenes por correo — OIUEEI",

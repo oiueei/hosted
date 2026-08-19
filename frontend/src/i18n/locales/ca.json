@@ -251,7 +251,10 @@
     "errorLoading": "Error en carregar la col·lecció.",
     "curator": "Curador.",
     "showMoreThings_one": "Veure 1 cosa més",
-    "showMoreThings_other": "Veure {{count}} coses més"
+    "showMoreThings_other": "Veure {{count}} coses més",
+    "visitorIntro": "Estàs veient aquest grup com a visitant.",
+    "visitorJoin": "Unir-me al grup",
+    "visitorJoinError": "No hem pogut afegir-te al grup. Torna-ho a provar."
   },
   "digestMute": {
     "pageTitle": "Resums per correu — OIUEEI",

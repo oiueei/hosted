@@ -176,6 +176,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner only) |
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
+| POST | `/api/v1/collections/{code}/join/` | Join a PUBLIC collection you are browsing while signed in (self-join) — the half of login-to-act the anonymous `/auth/join/` can't serve, since a magic link is no use to a live session. Honours the same `COLLECTION_JOINS_PER_DAY` ceiling. Rate limited: 30/h |
 | POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) |
 | POST | `/api/v1/collections/{code}/invite/propose/` | Members only: recommend a guest to the owner. Nothing reaches the proposed address until the owner approves. Rate limited: 30/day |
 | POST | `/api/v1/proposals/{code}/{approve\|reject}/` | The owner's answer to a member's recommendation (owner only) |

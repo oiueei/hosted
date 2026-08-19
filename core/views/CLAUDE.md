@@ -480,6 +480,18 @@ Removes a user from the collection's invite list. If the invite is still pending
 { "user_code": "ABC123" }
 ```
 
+### CollectionJoinView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/join/` |
+| **Permission** | `IsAuthenticated` + the collection must be readable (`can_view`) and PUBLIC |
+| **Rate limit** | 30/h per user, plus the operator's `COLLECTION_JOINS_PER_DAY` ceiling |
+
+Lets a **signed-in** reader join a PUBLIC collection themselves — the mirror of `CollectionLeaveView`, and the half of login-to-act that was missing. The anonymous funnel (`POST /auth/join/`, reached from `/collections/{code}/join`) takes an email and answers with a magic link, which is no use to a session that already exists; so the one reader with an account and the most intent had no way into a public group, while `CollectionPage` offered them "Add thing" — an action `Collection.can_add_thing` refuses without an invite, after the form was filled and the photos uploaded.
+
+Answers **404** whenever `can_view()` says no, so a PRIVATE or INACTIVE collection never confirms it exists; **400** for the owner ("You already own this collection."); **403** for a collection that is readable but not PUBLIC; **429** once the collection has spent its day's joins. An existing member gets a plain `200` and nothing happens twice. On success it goes through `_join_collection` — the single funnel every join path shares — so it logs one `MEMBER_JOINED` (`Event.Source.PUBLIC`, the same door the anonymous half records), sends the welcome document if the owner set one, and consumes one of the day's joins. The ceiling applies here for the reason it exists: one that only stopped strangers would be a cap anyone with an account could walk around.
+
 ### CollectionLeaveView
 
 | | |
@@ -1057,6 +1069,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
 - `/collections/` POST (single create) — 30 requests per hour per user
 - `/collections/{code}/add-thing/` POST — 60 requests per hour per user
+- `/collections/{code}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling)
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user
 - `/contact/` POST — 5 requests per hour per IP
