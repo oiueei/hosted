@@ -215,7 +215,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/api/v1/things/{code}/faq/` | List FAQs for a thing |
-| POST | `/api/v1/things/{code}/faq/` | Ask question (invited users only, not owner) |
+| POST | `/api/v1/things/{code}/faq/` | Ask question — any signed-in reader who can view the thing, except its owner. On a PUBLIC collection that is anyone with an account, not only invitees (`thing.can_view()`, the same guard the read uses) |
 | GET | `/api/v1/faq/{code}/` | View FAQ |
 | POST | `/api/v1/faq/{code}/answer/` | Answer FAQ (owner only) |
 | POST | `/api/v1/faq/{code}/hide/` | Hide FAQ (owner only) |

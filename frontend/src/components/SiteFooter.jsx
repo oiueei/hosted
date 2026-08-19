@@ -13,14 +13,18 @@ import { aboutPath } from '../deployment';
  * The heart is U+2665 + U+FE0E (text presentation) so it inherits the text
  * colour instead of turning into a red emoji.
  *
- * **Two links, added in the 2026-08 design round.** `/welcome` was made public
- * precisely so a stranger could read what OIUEEI is, and `/legal` is the page
- * the privacy claims say to go and check — yet every link to either of them sat
- * behind a login (Home's empty state, the invite-only Welcome Linkbox) or on a
- * page only a joiner sees (LoginPage, the pop-in doors). Someone reading a
- * public collection, which is the top of the whole funnel, could reach neither.
- * They stay two plain text links: this is still a colophon, not the HDS
- * `Footer` site-map OIUEEI has no content for (DESIGN §3).
+ * **The links, added in the 2026-08 design round.** `/legal` is the page the
+ * privacy claims tell you to go and check, and a deployment's "what is this?"
+ * page answers the question a stranger asks first — yet every link to either
+ * sat behind a login (Home's empty state) or on a page only a joiner sees
+ * (LoginPage, a deployment's own doors). Someone reading a public collection,
+ * which is the top of the whole funnel, could reach neither. They stay plain
+ * text links: this is still a colophon, not the HDS `Footer` site-map OIUEEI
+ * has no content for (DESIGN §3).
+ *
+ * The about link is conditional because upstream there is no such page —
+ * `/welcome` left with the demo, and what OIUEEI is gets told in the README.
+ * A deployment that has one supplies it through `frontend/src/deployment/`.
  */
 export default function SiteFooter() {
   useLocation();
