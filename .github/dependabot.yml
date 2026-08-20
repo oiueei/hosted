@@ -1,16 +1,32 @@
 version: 2
 updates:
+  # One PR per ecosystem per week, instead of one per package. Ten arrived every
+  # Friday and the cost was not the reviewing — it was that a runtime bump sat in
+  # the same undifferentiated pile as nine tooling ones, so the pile got triaged
+  # as a pile.
+  #
+  # Grouping applies to **version** updates only: a security update still opens
+  # its own PR, which is the one that should never wait behind a group.
   - package-ecosystem: "pip"
     directory: "/requirements"
     schedule:
       interval: "weekly"
+    groups:
+      python:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      frontend:
+        patterns: ["*"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
