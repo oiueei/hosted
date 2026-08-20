@@ -1,7 +1,14 @@
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["**/migrations/**"]
+# `*.md` because ruff 0.16 started formatting the Python inside Markdown code
+# blocks, and this repo's Markdown is explanation: CLAUDE.md files, DESIGN.md and
+# the skills under `.claude/`, full of snippets that exist to be *read* — several
+# of them deliberately wrong, since that is what a bad→good pair is. Letting the
+# formatter own the documentation is a policy worth choosing on purpose; it
+# arrived instead as a side effect of a patch-level bump, turning CI red on two
+# skill files. Delete this pattern if we ever decide we want it.
+extend-exclude = ["**/migrations/**", "*.md"]
 
 [tool.ruff.lint]
 # E/W (pycodestyle) + F (pyflakes) cover what flake8 enforced; I adds isort.
