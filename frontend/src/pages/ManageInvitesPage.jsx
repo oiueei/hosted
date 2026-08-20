@@ -68,6 +68,15 @@ export default function ManageInvitesPage() {
   }, [code, t]);
 
   useEffect(() => {
+    // `react-hooks/set-state-in-effect` reads this as a setState in the effect
+    // body, and here it is wrong: `fetchCollection` is async and its first
+    // statement is the `await`, so every setState it makes happens in a
+    // continuation the network schedules long after this render has painted —
+    // there is no cascade to avoid. The rule cannot see past the `useCallback`,
+    // and the shapes that would satisfy it (an inline copy of the fetch, or
+    // bouncing the call through a resolved promise) each cost more than they
+    // buy: this same function is what the approve/resend handlers re-run.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCollection();
   }, [fetchCollection]);
 
