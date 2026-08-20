@@ -13,6 +13,8 @@ traceback at request time.
 
 import pytest
 from django.core.checks import Error
+from django.core.management import call_command
+from django.core.management.base import SystemCheckError
 from django.test import override_settings
 
 from core.checks import check_creator_policy
@@ -88,3 +90,35 @@ class TestCreatorPolicyCheck:
         # It says how to get the default back, since "unset it" is the fix and
         # is not guessable from the error alone.
         assert "OpenCreatorPolicy" in errors[0].hint
+
+
+@pytest.mark.django_db
+class TestTheCheckActuallyRunsAtCheckTime:
+    """Registered, not merely written — the half every test above is blind to.
+
+    They all call `check_creator_policy` directly, which pins what it returns
+    and says nothing about whether anything ever calls it. Drop the `@register()`
+    decorator and all of them stay green while `manage.py check` reports no
+    issues: the deploy gate this whole module exists to be simply stops existing,
+    and the 500 on `/auth/me/` it was written to prevent ships exactly as before,
+    after a deploy that declared itself successful.
+
+    So these ask the framework instead, through the entry point that actually
+    runs it — management commands run the system checks, which is how the Heroku
+    release phase (`migrate`) fails before the dyno boots.
+    """
+
+    def test_a_broken_policy_fails_the_command_the_release_phase_runs(self):
+        """The whole point: a typo in a config var is a failed deploy."""
+        with override_settings(CREATOR_POLICY="deployment.policy.Typo"):
+            with pytest.raises(SystemCheckError) as raised:
+                call_command("check")
+
+        # The id, so this cannot pass on somebody else's unrelated check failing.
+        assert "core.E002" in str(raised.value)
+        assert "CREATOR_POLICY" in str(raised.value)
+
+    def test_the_shipped_default_does_not_fail_a_deploy_that_is_fine(self):
+        """A gate that failed the standalone would be worse than no gate — it
+        would be turned off, and take the real check with it."""
+        call_command("check")
