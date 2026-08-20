@@ -159,6 +159,7 @@
     "holdRejected": "La reserva ha estat rebutjada.",
     "invalidOrExpired": "Enllaç no vàlid o caducat.",
     "expiredHelp": "Si el teu enllaç ha caducat, demana a qui t'ha convidat que t'en enviï un de nou, o sol·licita un nou enllaç màgic.",
+    "refusalHelp": "No s'ha decidit res i aquest enllaç continua funcionant: torna-ho a provar més tard.",
     "goToHomepage": "Anar a l'inici",
     "goToLogin": "Anar a entrar",
     "accountDeleteTitle": "Vols esborrar el teu compte?",

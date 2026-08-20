@@ -123,3 +123,77 @@ describe('VerifyPage auto-commit', () => {
     expect(postCalls(globalThis.fetch)).toHaveLength(1);
   });
 });
+
+/**
+ * Every refusal this page can meet consumes its RSVP — the booking is already
+ * decided, the suggestion is already answered — except one. An approval the
+ * deployment's daily invitation cap or the group's member ceiling turns down
+ * leaves the proposal pending and both links alive **on purpose**: "not now",
+ * so the owner can answer tomorrow. The page showed that as "Invalid or expired
+ * link", which is the one thing it is not, and the owner it was telling to stop
+ * clicking had no other route back to the decision.
+ *
+ * `retryable` is the server's word for which of the two this is (it is not
+ * inferable from the status: a full collection and a settled suggestion both
+ * answer 400), so both halves are pinned here — the one that survives and the
+ * one that really is over.
+ */
+describe('a refusal the link survives', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  const previewApprove = { requires_confirmation: true, action: 'PROPOSAL_APPROVE' };
+
+  function mockRefusal(body, status) {
+    globalThis.fetch = vi.fn((url, opts = {}) =>
+      opts.method === 'POST'
+        ? Promise.resolve(mockResponse(body, false, status))
+        : Promise.resolve(mockResponse(previewApprove)),
+    );
+  }
+
+  test('shows the server’s reason and says the link still works', async () => {
+    mockRefusal(
+      { error: 'Daily invitation limit reached. Try again tomorrow.', retryable: true },
+      429,
+    );
+
+    renderVerify();
+
+    expect(
+      await screen.findByText('Daily invitation limit reached. Try again tomorrow.'),
+    ).toBeInTheDocument();
+    // Not "your link died": the owner is meant to come back to this same one.
+    expect(screen.getByText(/this link still works/i)).toBeInTheDocument();
+    expect(screen.queryByText('Invalid or expired link.')).toBeNull();
+    expect(screen.queryByText(/ask the person who invited you/i)).toBeNull();
+  });
+
+  test('a full group is a reason too, not an expiry, on the same 400 as a dead link', async () => {
+    mockRefusal(
+      { error: 'This collection has reached its limit of 2 guests.', retryable: true },
+      400,
+    );
+
+    renderVerify();
+
+    expect(
+      await screen.findByText('This collection has reached its limit of 2 guests.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/this link still works/i)).toBeInTheDocument();
+  });
+
+  test('a suggestion that is genuinely over is still called a dead link', async () => {
+    // Same 400, same shape, no `retryable`: this RSVP was consumed and the
+    // decision already stands, so the old copy is the right one — and keeping
+    // it right is what stops "the link still works" from being said always.
+    mockRefusal({ error: 'This suggestion is no longer pending' }, 400);
+
+    renderVerify();
+
+    expect(await screen.findByText('Invalid or expired link.')).toBeInTheDocument();
+    expect(screen.getByText(/ask the person who invited you/i)).toBeInTheDocument();
+    expect(screen.queryByText(/this link still works/i)).toBeNull();
+  });
+});

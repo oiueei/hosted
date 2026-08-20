@@ -43,6 +43,10 @@ export default function VerifyPage() {
   const { t } = useTranslation();
   useEffect(() => { document.title = t('titles.verify'); }, [t]);
   const [error, setError] = useState('');
+  // Set when the refusal on screen is one the backend deliberately survives
+  // (`retryable`): the link still works, so the error screen owes a different
+  // way out than "ask whoever invited you for a new one".
+  const [linkAlive, setLinkAlive] = useState(false);
   const [success, setSuccess] = useState('');
   const [title, setTitle] = useState('');
   // ACCOUNT_DELETE preview data — unlike a booking decision, account deletion
@@ -102,6 +106,18 @@ export default function VerifyPage() {
             } else if (commit.ok && done.action === 'PROPOSAL_REJECT') {
               setTitle(t('verify.declined'));
               setSuccess(t('verify.proposalDeclined'));
+            } else if (done.retryable) {
+              // "Not now", not "never". An approval the deployment's daily
+              // invitation cap or the group's member ceiling refuses leaves the
+              // suggestion pending and both links alive on purpose — the owner
+              // is meant to come back tomorrow. Every other refusal here
+              // consumes its RSVP, so `invalidOrExpired` is right for them and
+              // was flatly wrong for this one: it told the owner the link was
+              // dead while it was still good, and nothing would bring them back.
+              // The reason is the server's own sentence, the same one the
+              // in-app approval shows (see ManageInvitesPage).
+              setLinkAlive(true);
+              setError(done.error || t('verify.invalidOrExpired'));
             } else {
               setError(t('verify.invalidOrExpired'));
             }
@@ -229,7 +245,7 @@ export default function VerifyPage() {
           {error}
         </Notification>
         <p className="section-mt">
-          {t('verify.expiredHelp')}
+          {t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}
         </p>
       </VerifyScreen>
     );
