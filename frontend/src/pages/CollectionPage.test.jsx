@@ -516,3 +516,78 @@ describe('sending a message to the whole group', () => {
     expect(await screen.findByText('Broadcast sent to 1 guests.')).toBeInTheDocument();
   });
 });
+
+describe('a broadcast the server turns down', () => {
+  /* Separate from the round above because this one changed the page rather than
+     covering it. The daily cap (5/day, `key="user"`) is the only refusal an
+     owner meets in practice, and it does not arrive in the shape this handler
+     was reading: `@ratelimit(block=True)` raises, and `api_exception_handler`
+     answers `{detail: …}` with a 429. The page read `data.error` alone, so the
+     owner got "Error" — while the message sat unsent and nothing said that
+     tomorrow would work. */
+  const OWNED_WITH_GUESTS = {
+    code: 'COL001',
+    headline: 'Kitchen Collection',
+    description: 'Things from the kitchen',
+    status: 'ACTIVE',
+    visibility: 'PRIVATE',
+    mode: 'PROPRIETARY',
+    owner: 'ABC123',
+    owner_name: 'Test User',
+    thumbnail_url: '',
+    tags: [],
+    things: [],
+    invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+    is_paused: false,
+    allowed_thing_types: [],
+    digest_frequency: 'NONE',
+    allow_member_proposals: false,
+  };
+
+  async function sendUnder(response) {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST'
+        ? Promise.resolve(response)
+        : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(OWNED_WITH_GUESTS) }),
+    );
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.change(screen.getByLabelText(/Message/), {
+      target: { value: 'The library is closed on Monday' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+  }
+
+  test('names the daily cap instead of saying "Error"', async () => {
+    await sendUnder({
+      ok: false,
+      status: 429,
+      json: () =>
+        Promise.resolve({ detail: 'Too many requests. Please slow down and try again later.' }),
+    });
+
+    expect(
+      await screen.findByText('Too many requests. Please slow down and try again later.'),
+    ).toBeInTheDocument();
+    // The words are still there to send tomorrow.
+    expect(screen.getByLabelText(/Message/)).toHaveValue('The library is closed on Monday');
+  });
+
+  test('still names the view’s own refusals', async () => {
+    // `{error}` is what this endpoint answers when it refuses on its own terms,
+    // and reordering must not cost that.
+    await sendUnder({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'No invitees to broadcast to' }),
+    });
+
+    expect(await screen.findByText('No invitees to broadcast to')).toBeInTheDocument();
+  });
+});

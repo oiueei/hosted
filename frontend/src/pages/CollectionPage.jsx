@@ -128,7 +128,17 @@ export default function CollectionPage() {
         setBroadcastResult({ type: 'success', message: t('broadcast.sent', { count: data.recipients }) });
         setBroadcastMessage('');
       } else {
-        setBroadcastResult({ type: 'error', message: data.error || t('common.error') });
+        // `detail` first, then `error`, the same order `extractApiError` reads
+        // them in: this view answers `{error}` on its own refusals, but the one
+        // an owner actually meets is the daily cap (5/day), and that arrives
+        // from the rate-limit handler as `{detail}`. Reading only `error` turned
+        // "slow down and try again later" into a bare "Error" — no reason, no
+        // hint that tomorrow works, on the one screen where the owner is left
+        // wondering whether the group got the message.
+        setBroadcastResult({
+          type: 'error',
+          message: data.detail || data.error || t('common.error'),
+        });
       }
     } catch {
       setBroadcastResult({ type: 'error', message: t('common.connectionError') });
