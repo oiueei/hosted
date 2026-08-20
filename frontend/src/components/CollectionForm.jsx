@@ -59,7 +59,6 @@ export default function CollectionForm({
       </div>
       <div>
         <Select
-          language="en"
           multiSelect
           id={`${idPrefix}-allowed-thing-types`}
           texts={{
@@ -69,6 +68,7 @@ export default function CollectionForm({
               return t('createCollection.allowedTypesHelper');
             })(),
             error: errors.allowedThingTypes,
+            language: 'en',
           }}
           options={allowedTypesOptions}
           value={allowedThingTypes.map((v) => ({

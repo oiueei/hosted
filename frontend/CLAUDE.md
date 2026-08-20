@@ -567,9 +567,29 @@ Four transitive pins, all security patches for packages we don't depend on direc
 
 Never run `npm audit fix --force` in this repo: its "fixes" include major downgrades of `hds-react`.
 
-### HDS Select quirks (v5)
+### HDS Select quirks
 
-All `<Select>` components must include `language="en"` — the HDS default is `"fi"` which produces Finnish placeholder text ("Valitse yksi"). Additional API notes: `value` is an array (`[{ label, value }]`), `onChange` receives an array (`(sel) => sel[0].value`), error text uses the `error` prop (string), not `errorText`.
+Every `<Select>` must say which language HDS should speak, because its own
+assistive wording ("choose one", "2 selected options", "clear current
+selection") defaults to **Finnish**. In HDS 5 that was the `language="en"` prop,
+and this file said so for a year. **HDS 6 moved it inside `texts`** —
+`texts={{ label: …, language: 'en' }}` — and ignores the prop silently: the
+component still renders, the page still looks right, and the only thing that
+changes is what a screen reader reads out. Fourteen Selects spent the HDS 6
+upgrade announcing themselves in Finnish, and no axe rule catches it (none
+compares the language of an `aria-label` against the page's). `src/test/
+selectLanguage.test.jsx` now renders one such form *and* sweeps the source for
+the dead prop, since the failure is invisible on screen.
+
+`'en'` is the honest value everywhere: HDS ships fi/sv/en, and none of this
+product's three locales is among the other two.
+
+`language="en"` is still right on `DateInput` and `Accordion`, which do honour
+it — verified, not assumed.
+
+Additional API notes: `value` is an array (`[{ label, value }]`), `onChange`
+receives an array (`(sel) => sel[0].value`), error text uses the `error` prop
+(string), not `errorText`.
 
 ### HDS ToggleButton quirks (v5)
 

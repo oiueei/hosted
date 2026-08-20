@@ -74,9 +74,8 @@ export default function ThingForm({
       {showTypeSelector && (
         <>
           <Select
-            language="en"
             id={`${idPrefix}-type`}
-            texts={{ label: t('addThing.typeLabel') }}
+            texts={{ label: t('addThing.typeLabel'), language: 'en' }}
             options={typeOptions}
             value={type}
             onChange={(selectedOptions) => {
@@ -151,18 +150,16 @@ export default function ThingForm({
       {showDetailFields && (
         <>
           <Select
-            language="en"
             id={`${idPrefix}-availability`}
-            texts={{ label: t('addThing.availabilityLabel') }}
+            texts={{ label: t('addThing.availabilityLabel'), language: 'en' }}
             options={AVAILABILITY_VALUES.map((v) => ({ label: t('availability.' + v), value: v }))}
             value={availability}
             onChange={(sel) => setAvailability(sel.length > 0 ? sel[0].value : '')}
             clearable
           />
           <Select
-            language="en"
             id={`${idPrefix}-condition`}
-            texts={{ label: t('addThing.conditionLabel') }}
+            texts={{ label: t('addThing.conditionLabel'), language: 'en' }}
             options={CONDITION_VALUES.map((v) => ({ label: t('condition.' + v), value: v }))}
             value={condition}
             onChange={(sel) => setCondition(sel.length > 0 ? sel[0].value : '')}
@@ -181,13 +178,13 @@ export default function ThingForm({
       )}
       {collectionTags.length > 0 && (
         <Select
-          language="en"
           multiSelect
           id={`${idPrefix}-tags`}
           texts={{
             label: t('addThing.tagsLabel'),
             placeholder: t('addThing.tagsPlaceholder'),
             assistive: t('addThing.tagsHelper'),
+            language: 'en',
           }}
           options={collectionTags.map((tg) => ({ label: L(tg), value: tg }))}
           value={tags.map((tg) => ({ label: L(tg), value: tg }))}

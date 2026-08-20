@@ -34,13 +34,13 @@ export default function RentalRulesFields({
   return (
     <>
       <Select
-        language="en"
         multiSelect
         id={`${idPrefix}-rental-durations`}
         texts={{
           label: t('rental.durationsLabel'),
           placeholder: t('rental.durationsPlaceholder'),
           assistive: t('rental.durationsHelper'),
+          language: 'en',
         }}
         options={RENTAL_DURATION_PRESETS.map((p) => ({ label: t(p.key), value: String(p.days) }))}
         value={rentalDurations.map((d) => ({ label: durationLabel(d, t), value: String(d) }))}

@@ -196,12 +196,12 @@ export default function RequestThingPage() {
       {isDateBased && isConstrainedRental && (
         <div className="summary-grid section-mt">
           <Select
-            language="en"
             id="request-duration"
             texts={{
               label: t('rental.chooseDuration'),
               placeholder: t('rental.chooseDurationPlaceholder'),
               error: attempted && !duration ? t('rental.durationRequired') : undefined,
+              language: 'en',
             }}
             options={rentalDurations.map((d) => ({ label: durationLabel(d, t), value: String(d) }))}
             value={duration ? [{ label: durationLabel(Number(duration), t), value: duration }] : []}
