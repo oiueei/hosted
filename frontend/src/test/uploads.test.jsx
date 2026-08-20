@@ -95,6 +95,62 @@ describe('ImageUpload', () => {
     expect(fileInput(container)).not.toBeNull();
   });
 
+  test('a new saved image replaces the one on screen', async () => {
+    // The parent loads its data *after* this mounts, and can load a different
+    // thing later, so the preview follows `currentUrl` when it changes — but not
+    // over an upload or a removal this component owns, which is the whole reason
+    // the preview is state and not the prop.
+    const { rerender } = render(
+      <ImageUpload id="thumb" label="Thumbnail" onChange={vi.fn()} currentUrl="" />
+    );
+    expect(screen.queryByAltText('Image preview')).toBeNull();
+
+    rerender(
+      <ImageUpload
+        id="thumb"
+        label="Thumbnail"
+        onChange={vi.fn()}
+        currentUrl="https://res.cloudinary.com/demo/first.jpg"
+      />
+    );
+    expect(screen.getByAltText('Image preview')).toHaveAttribute(
+      'src',
+      'https://res.cloudinary.com/demo/first.jpg'
+    );
+
+    rerender(
+      <ImageUpload
+        id="thumb"
+        label="Thumbnail"
+        onChange={vi.fn()}
+        currentUrl="https://res.cloudinary.com/demo/second.jpg"
+      />
+    );
+    expect(screen.getByAltText('Image preview')).toHaveAttribute(
+      'src',
+      'https://res.cloudinary.com/demo/second.jpg'
+    );
+  });
+
+  test('a re-render with the same saved image does not undo a removal', async () => {
+    // The parent re-renders for its own reasons — a sibling field changing, a
+    // toast opening — and each one must not put back the photo the owner just
+    // took off, which is exactly what re-reading the prop every render would do.
+    const props = {
+      id: 'thumb',
+      label: 'Thumbnail',
+      onChange: vi.fn(),
+      currentUrl: 'https://res.cloudinary.com/demo/saved.jpg',
+    };
+    const { rerender, container } = render(<ImageUpload {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    rerender(<ImageUpload {...props} />);
+
+    expect(screen.queryByAltText('Image preview')).toBeNull();
+    expect(fileInput(container)).not.toBeNull();
+  });
+
   test('a failed upload shows the error and reports no value', async () => {
     uploadImageToCloudinary.mockRejectedValue(new Error('upload_failed'));
     const onChange = vi.fn();
@@ -175,6 +231,30 @@ describe('PdfUpload', () => {
     expect(onChange).toHaveBeenCalledWith('');
     expect(screen.queryByRole('link', { name: 'View the document' })).toBeNull();
     expect(fileInput(container)).not.toBeNull();
+  });
+
+  test('a new saved document replaces the link, and a re-render does not undo a removal', async () => {
+    const props = {
+      id: 'doc',
+      label: 'Welcome document',
+      onChange: vi.fn(),
+      currentUrl: 'https://res.cloudinary.com/demo/first.pdf',
+    };
+    const { rerender } = render(<PdfUpload {...props} />);
+    expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
+      'href',
+      'https://res.cloudinary.com/demo/first.pdf'
+    );
+
+    rerender(<PdfUpload {...props} currentUrl="https://res.cloudinary.com/demo/second.pdf" />);
+    expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
+      'href',
+      'https://res.cloudinary.com/demo/second.pdf'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    rerender(<PdfUpload {...props} currentUrl="https://res.cloudinary.com/demo/second.pdf" />);
+    expect(screen.queryByRole('link', { name: /view/i })).toBeNull();
   });
 
   test('a failed upload shows the error and reports no value', async () => {

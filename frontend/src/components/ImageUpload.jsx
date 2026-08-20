@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import { uploadImageToCloudinary } from '../utils/uploadImage';
@@ -27,10 +27,21 @@ export default function ImageUpload({ id, label, onChange, currentUrl, folder = 
   const [fileInputKey, setFileInputKey] = useState(0);
   const [previewUrl, setPreviewUrl] = useState(currentUrl || null);
 
-  // Sync preview when the parent reloads with a new currentUrl
-  useEffect(() => {
+  // The preview is the saved image until this component uploads or removes one,
+  // so it is local state that a *fresh* `currentUrl` has to win back — otherwise
+  // a parent that reloads a different thing keeps showing the previous photo.
+  //
+  // Adjusted during render rather than from an effect: an effect renders the
+  // stale preview, commits it, and only then corrects itself, which is the
+  // cascade `react-hooks/set-state-in-effect` is about. Comparing against the
+  // last value we synced is react.dev's own answer to "adjust state when a prop
+  // changes" — React re-runs this component before touching the DOM, so nobody
+  // sees the intermediate state.
+  const [syncedUrl, setSyncedUrl] = useState(currentUrl);
+  if (currentUrl !== syncedUrl) {
+    setSyncedUrl(currentUrl);
     setPreviewUrl(currentUrl || null);
-  }, [currentUrl]);
+  }
 
   const handleRemove = () => {
     setPreviewUrl(null);
