@@ -377,3 +377,142 @@ describe('A signed-in visitor on a public group', () => {
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The broadcast emails every member of the group, and an email cannot be
+ * unsent. Its only test until now was an axe scan of the opened form
+ * (a11yInteractive) — nothing had ever pressed the button, so nothing said when
+ * it fires, when it must not, or what it reports afterwards.
+ */
+describe('sending a message to the whole group', () => {
+  const OWNED_WITH_GUESTS = {
+    code: 'COL001',
+    headline: 'Kitchen Collection',
+    description: 'Things from the kitchen',
+    status: 'ACTIVE',
+    visibility: 'PRIVATE',
+    mode: 'PROPRIETARY',
+    owner: 'ABC123',
+    owner_name: 'Test User',
+    thumbnail_url: '',
+    tags: [],
+    things: [],
+    invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+    is_paused: false,
+    allowed_thing_types: [],
+    digest_frequency: 'NONE',
+    allow_member_proposals: false,
+  };
+
+  const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+
+  /** The collection loads; the POST answers however this test needs it to. */
+  function mockPost(post) {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST' ? post() : ok(OWNED_WITH_GUESTS),
+    );
+  }
+
+  const broadcastPosts = () =>
+    apiFetch.mock.calls.filter(([url, opts]) => opts?.method === 'POST' && url.endsWith('/broadcast/'));
+
+  const renderPage = () =>
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  async function openComposer() {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    return screen.getByLabelText(/Message/);
+  }
+
+  test('opening it and writing sends nothing, and names the cost first', async () => {
+    mockPost(() => ok({}));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+
+    expect(broadcastPosts()).toHaveLength(0);
+    // DESIGN §6: the broadcast carries the owner's own address as Reply-To, and
+    // that is said on the way in — before the send, not in the confirmation.
+    expect(screen.getByText(/see your email address/i)).toBeInTheDocument();
+  });
+
+  test('an empty message — or one made of spaces — cannot be sent', async () => {
+    // Not a validation nicety: a blank group email costs every member's
+    // attention and the owner's standing to ask for it again.
+    mockPost(() => ok({}));
+
+    const message = await openComposer();
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).toBeDisabled();
+
+    fireEvent.change(message, { target: { value: '   ' } });
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).toBeDisabled();
+
+    fireEvent.change(message, { target: { value: 'Real words' } });
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).not.toBeDisabled();
+  });
+
+  test('the confirmation reports the server’s own count, not the roster on screen', async () => {
+    // The page knows of one invitee; the server says it reached twelve. Only the
+    // server counts who was actually emailed, so a confirmation built from the
+    // invite list would be a number the owner cannot act on.
+    mockPost(() => ok({ message: 'Broadcast sent', recipients: 12 }));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+
+    expect(await screen.findByText('Broadcast sent to 12 guests.')).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalledWith(
+      '/api/v1/collections/COL001/broadcast/',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ message: 'The library is closed on Monday' }),
+      })
+    );
+    // Emptied, so the next click cannot repeat the send that just went out.
+    expect(screen.getByLabelText(/Message/)).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).toBeDisabled();
+  });
+
+  test('a send that fails keeps the words the owner wrote', async () => {
+    // Losing the text would be the second cost of one failure: they typed it
+    // once, the network dropped it, and retyping is what makes people give up.
+    mockPost(() => Promise.reject(new Error('network down')));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Message/)).toHaveValue('The library is closed on Monday');
+    expect(screen.queryByText(/Broadcast sent/)).toBeNull();
+  });
+
+  test('an impatient second press cannot send it twice', async () => {
+    // The window between the click and the answer, on the one control here
+    // whose double-fire mails everybody a second copy.
+    let deliver;
+    mockPost(() => new Promise((resolve) => {
+      deliver = () => resolve({ ok: true, status: 200, json: () => Promise.resolve({ recipients: 1 }) });
+    }));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+
+    const busy = await screen.findByRole('button', { name: 'Sending...' });
+    expect(busy).toBeDisabled();
+    fireEvent.click(busy);
+    expect(broadcastPosts()).toHaveLength(1);
+
+    deliver();
+    expect(await screen.findByText('Broadcast sent to 1 guests.')).toBeInTheDocument();
+  });
+});
