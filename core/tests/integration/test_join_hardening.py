@@ -220,3 +220,41 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
 
         assert len(mail.outbox) == 3
         assert public_collection.invites.count() == 3
+
+    @override_settings(
+        RATELIMIT_ENABLE=False,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "join-quota-layer-off",
+            }
+        },
+        COLLECTION_JOINS_PER_DAY=1,
+    )
+    def test_turning_the_rate_limiting_layer_off_turns_this_cap_off_with_it(
+        self, api_client, public_collection
+    ):
+        """One switch, not two — the promise `_join_quota_cap` makes in prose.
+
+        `RATELIMIT_ENABLE` is what a developer or a test run flips to stop every
+        counter in the product; the join cap follows it deliberately, so nobody
+        has to discover that this one guard needs disabling separately. The
+        combination below — layer off, a cap still configured — is a real
+        deployment state (an operator turning limits off for an afternoon
+        without editing every var) and no test covered it.
+
+        A scoped mutation run is what surfaced it: three mutants that made the
+        cap ignore `RATELIMIT_ENABLE` entirely all survived a suite with this
+        module at 100% line coverage, because every test that set a cap also had
+        the layer on.
+        """
+        caches["default"].clear()
+
+        for email in ("first@test.com", "second@test.com", "third@test.com"):
+            assert self._join(api_client, public_collection, email).status_code == 200
+
+        # A cap of 1 would have stopped the second. The layer is off, so it does
+        # not apply and all three are genuinely admitted — not merely answered
+        # with the unified 200, which a refusal returns too.
+        assert public_collection.invites.count() == 3
+        assert len(mail.outbox) == 3
