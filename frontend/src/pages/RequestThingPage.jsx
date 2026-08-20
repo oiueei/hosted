@@ -51,15 +51,25 @@ export default function RequestThingPage() {
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(false);
+  // Which thing the load failed for — same reason as the delete pages: a boolean
+  // needs clearing at the top of the effect, which is a render spent undoing the
+  // previous one.
+  const [failedCode, setFailedCode] = useState(null);
+  const error = failedCode === thingCode;
 
   useEffect(() => {
     if (!userCode) return;
-    setError(false);
     apiFetch(`/api/v1/things/${thingCode}/`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => (data ? setThing(data) : setError(true)))
-      .catch(() => setError(true));
+      .then((data) => {
+        if (data) {
+          setThing(data);
+          setFailedCode(null);
+        } else {
+          setFailedCode(thingCode);
+        }
+      })
+      .catch(() => setFailedCode(thingCode));
   }, [userCode, thingCode, code]);
 
   // With a single fixed rental length there is nothing to choose — preselect it
