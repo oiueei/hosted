@@ -92,6 +92,14 @@ i18n
 // specific of the two.
 function applyDeploymentBundles() {
   Object.entries(deploymentI18n).forEach(([language, bundle]) => {
+    // **Only for a language whose own file is already in memory.** Registering a
+    // bundle for one that has not loaded yet makes i18next consider that
+    // language present and never ask the backend for its chunk — so a
+    // deployment that translated three strings into Spanish got those three and
+    // the rest of the interface in English, permanently. `en` is in `resources`
+    // from the start, es and ca qualify once their chunk lands, which is what
+    // the `loaded` handler below is for.
+    if (!i18n.hasResourceBundle(language, 'translation')) return;
     i18n.addResourceBundle(language, 'translation', bundle, true, true);
   });
 }
