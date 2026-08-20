@@ -79,14 +79,21 @@ export default defineConfig(({ mode }) => ({
       // drifted to ~4.4 points of slack and branches to ~3.9 — the same widening
       // that triggered the last raise. All four are back inside the band.
       //
+      // Raised a fourth time after the 2026-08-21 round on the four files that
+      // were sitting under the ratchet — VerifyPage (the proposal decisions, the
+      // magic-link landing, the stall timeout), the collection broadcast and the
+      // ways a collection fails to load, the share menu's delivery half, and the
+      // two thing-form controls that carry logic. The suite reads 87.6 / 79.9 /
+      // 79.7 / 90.7, so every metric had drifted to 3.7-4.9 points of slack.
+      //
       // The floor is not the goal — it only catches a drop. New code still owes
       // tests that name a behaviour; a change that lands under this line means
       // the code needs covering, never that the line needs lowering.
       thresholds: {
-        statements: 83,
-        branches: 75,
-        functions: 76,
-        lines: 86,
+        statements: 85,
+        branches: 77,
+        functions: 77,
+        lines: 88,
       },
     },
   },
