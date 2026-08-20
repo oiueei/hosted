@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 expect.extend(toHaveNoViolations);
@@ -375,5 +375,387 @@ describe('A signed-in visitor on a public group', () => {
 
     expect(await screen.findByText('Add thing')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The broadcast emails every member of the group, and an email cannot be
+ * unsent. Its only test until now was an axe scan of the opened form
+ * (a11yInteractive) — nothing had ever pressed the button, so nothing said when
+ * it fires, when it must not, or what it reports afterwards.
+ */
+describe('sending a message to the whole group', () => {
+  const OWNED_WITH_GUESTS = {
+    code: 'COL001',
+    headline: 'Kitchen Collection',
+    description: 'Things from the kitchen',
+    status: 'ACTIVE',
+    visibility: 'PRIVATE',
+    mode: 'PROPRIETARY',
+    owner: 'ABC123',
+    owner_name: 'Test User',
+    thumbnail_url: '',
+    tags: [],
+    things: [],
+    invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+    is_paused: false,
+    allowed_thing_types: [],
+    digest_frequency: 'NONE',
+    allow_member_proposals: false,
+  };
+
+  const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+
+  /** The collection loads; the POST answers however this test needs it to. */
+  function mockPost(post) {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST' ? post() : ok(OWNED_WITH_GUESTS),
+    );
+  }
+
+  const broadcastPosts = () =>
+    apiFetch.mock.calls.filter(([url, opts]) => opts?.method === 'POST' && url.endsWith('/broadcast/'));
+
+  const renderPage = () =>
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  async function openComposer() {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    return screen.getByLabelText(/Message/);
+  }
+
+  test('opening it and writing sends nothing, and names the cost first', async () => {
+    mockPost(() => ok({}));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+
+    expect(broadcastPosts()).toHaveLength(0);
+    // DESIGN §6: the broadcast carries the owner's own address as Reply-To, and
+    // that is said on the way in — before the send, not in the confirmation.
+    expect(screen.getByText(/see your email address/i)).toBeInTheDocument();
+  });
+
+  test('an empty message — or one made of spaces — cannot be sent', async () => {
+    // Not a validation nicety: a blank group email costs every member's
+    // attention and the owner's standing to ask for it again.
+    mockPost(() => ok({}));
+
+    const message = await openComposer();
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).toBeDisabled();
+
+    fireEvent.change(message, { target: { value: '   ' } });
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).toBeDisabled();
+
+    fireEvent.change(message, { target: { value: 'Real words' } });
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).not.toBeDisabled();
+  });
+
+  test('the confirmation reports the server’s own count, not the roster on screen', async () => {
+    // The page knows of one invitee; the server says it reached twelve. Only the
+    // server counts who was actually emailed, so a confirmation built from the
+    // invite list would be a number the owner cannot act on.
+    mockPost(() => ok({ message: 'Broadcast sent', recipients: 12 }));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+
+    expect(await screen.findByText('Broadcast sent to 12 guests.')).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalledWith(
+      '/api/v1/collections/COL001/broadcast/',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ message: 'The library is closed on Monday' }),
+      })
+    );
+    // Emptied, so the next click cannot repeat the send that just went out.
+    expect(screen.getByLabelText(/Message/)).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Send broadcast' })).toBeDisabled();
+  });
+
+  test('a send that fails keeps the words the owner wrote', async () => {
+    // Losing the text would be the second cost of one failure: they typed it
+    // once, the network dropped it, and retyping is what makes people give up.
+    mockPost(() => Promise.reject(new Error('network down')));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Message/)).toHaveValue('The library is closed on Monday');
+    expect(screen.queryByText(/Broadcast sent/)).toBeNull();
+  });
+
+  test('an impatient second press cannot send it twice', async () => {
+    // The window between the click and the answer, on the one control here
+    // whose double-fire mails everybody a second copy.
+    let deliver;
+    mockPost(() => new Promise((resolve) => {
+      deliver = () => resolve({ ok: true, status: 200, json: () => Promise.resolve({ recipients: 1 }) });
+    }));
+
+    const message = await openComposer();
+    fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+
+    const busy = await screen.findByRole('button', { name: 'Sending...' });
+    expect(busy).toBeDisabled();
+    fireEvent.click(busy);
+    expect(broadcastPosts()).toHaveLength(1);
+
+    deliver();
+    expect(await screen.findByText('Broadcast sent to 1 guests.')).toBeInTheDocument();
+  });
+});
+
+describe('a broadcast the server turns down', () => {
+  /* Separate from the round above because this one changed the page rather than
+     covering it. The daily cap (5/day, `key="user"`) is the only refusal an
+     owner meets in practice, and it does not arrive in the shape this handler
+     was reading: `@ratelimit(block=True)` raises, and `api_exception_handler`
+     answers `{detail: …}` with a 429. The page read `data.error` alone, so the
+     owner got "Error" — while the message sat unsent and nothing said that
+     tomorrow would work. */
+  const OWNED_WITH_GUESTS = {
+    code: 'COL001',
+    headline: 'Kitchen Collection',
+    description: 'Things from the kitchen',
+    status: 'ACTIVE',
+    visibility: 'PRIVATE',
+    mode: 'PROPRIETARY',
+    owner: 'ABC123',
+    owner_name: 'Test User',
+    thumbnail_url: '',
+    tags: [],
+    things: [],
+    invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+    is_paused: false,
+    allowed_thing_types: [],
+    digest_frequency: 'NONE',
+    allow_member_proposals: false,
+  };
+
+  async function sendUnder(response) {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST'
+        ? Promise.resolve(response)
+        : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(OWNED_WITH_GUESTS) }),
+    );
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.change(screen.getByLabelText(/Message/), {
+      target: { value: 'The library is closed on Monday' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
+  }
+
+  test('names the daily cap instead of saying "Error"', async () => {
+    await sendUnder({
+      ok: false,
+      status: 429,
+      json: () =>
+        Promise.resolve({ detail: 'Too many requests. Please slow down and try again later.' }),
+    });
+
+    expect(
+      await screen.findByText('Too many requests. Please slow down and try again later.'),
+    ).toBeInTheDocument();
+    // The words are still there to send tomorrow.
+    expect(screen.getByLabelText(/Message/)).toHaveValue('The library is closed on Monday');
+  });
+
+  test('still names the view’s own refusals', async () => {
+    // `{error}` is what this endpoint answers when it refuses on its own terms,
+    // and reordering must not cost that.
+    await sendUnder({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'No invitees to broadcast to' }),
+    });
+
+    expect(await screen.findByText('No invitees to broadcast to')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Four ways this page can fail to open, and the reader does something different
+ * with each: a 403 is "your access changed, go and check", a 404 is "this URL
+ * is wrong", a 500 is "not your fault, try later", and a dead connection is
+ * "you are offline". Only the 404 had ever been rendered by the suite, so three
+ * of the four could have collapsed into any other and nothing would have said
+ * so — least of all to the member who was quietly removed from a group and
+ * would read "not found" as a typo.
+ */
+describe('the ways a collection fails to load', () => {
+  const renderAfter = (response) => {
+    apiFetch.mockImplementation(() => Promise.resolve(response));
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  const refused = (status) => ({ ok: false, status, json: () => Promise.resolve({}) });
+
+  test('access you no longer have says so, and where to look', async () => {
+    renderAfter(refused(403));
+
+    expect(await screen.findByText(/your access may have changed/i)).toBeInTheDocument();
+  });
+
+  test('a collection that is not there says only that', async () => {
+    renderAfter(refused(404));
+
+    expect(await screen.findByText('Collection not found.')).toBeInTheDocument();
+  });
+
+  test('a server fault is not dressed up as a permission problem', async () => {
+    renderAfter(refused(500));
+
+    expect(await screen.findByText('Error loading collection.')).toBeInTheDocument();
+    expect(screen.queryByText(/your access may have changed/i)).toBeNull();
+  });
+
+  test('being offline says so rather than blaming the collection', async () => {
+    apiFetch.mockImplementation(() => Promise.reject(new Error('network down')));
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+  });
+});
+
+describe('a join that does not take', () => {
+  /* The happy path is covered above. These are the three ways it can fail, and
+     they matter because the page deliberately re-fetches instead of flipping
+     `is_member` locally: a visitor who is told nothing, or shown the member
+     controls anyway, would go on to act on a group they never joined and meet a
+     403 from an API that is right. */
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'VISITOR1');
+  });
+
+  const renderPublic = () =>
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  const page = () =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) });
+
+  async function pressJoin() {
+    renderPublic();
+    fireEvent.click(await screen.findByRole('button', { name: 'Join this group' }));
+  }
+
+  test('a refused join says so and leaves the door where it was', async () => {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST'
+        ? Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) })
+        : page(),
+    );
+
+    await pressJoin();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
+    expect(screen.getByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+  });
+
+  test('a join whose re-fetch fails is not reported as a success', async () => {
+    // The subtle one: the server did add them, but the page cannot prove what
+    // that changed. Claiming membership on a payload it never received is how a
+    // page ends up showing controls the API will refuse.
+    let getCalls = 0;
+    apiFetch.mockImplementation((url, options) => {
+      if (options?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      getCalls += 1;
+      return getCalls === 1 ? page() : Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+    });
+
+    await pressJoin();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
+  });
+
+  test('a connection lost mid-join says so too', async () => {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST' ? Promise.reject(new Error('network down')) : page(),
+    );
+
+    await pressJoin();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
+  });
+});
+
+describe('arriving from an invitation is a one-time fact', () => {
+  /* `fromInvite` is navigation state, and navigation state survives a reload and
+     a back-button — so the first-time welcome box would greet the same person
+     on every visit to the collection they were invited to. The page scrubs it
+     on arrival, which is the only reason "first time" means anything here.
+
+     Asserted on the router state rather than on the box itself: the box needs a
+     deployment with a page to point at (`aboutPath`, null upstream), while the
+     scrub happens for every checkout. */
+  function StateProbe() {
+    const { state } = useLocation();
+    return <p data-testid="nav-state">{JSON.stringify(state)}</p>;
+  }
+
+  test('the invitation flag is cleared off the history entry', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(COLLECTION_WITH_PHOTO) })
+    );
+
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/collections/COL001', state: { fromInvite: true } }]}
+      >
+        <Routes>
+          <Route
+            path="/collections/:code"
+            element={
+              <>
+                <CollectionPage />
+                <StateProbe />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('nav-state')).toHaveTextContent(/^\{\}$/)
+    );
   });
 });

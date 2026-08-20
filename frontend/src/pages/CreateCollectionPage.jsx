@@ -204,9 +204,8 @@ export default function CreateCollectionPage() {
             {/* Same order and same `editCollection.*` keys as EditCollectionPage,
                 so the one field doesn't read differently on the two screens. */}
             <Select
-              language="en"
               id="create-collection-digest"
-              texts={{ label: t('editCollection.digestLabel') }}
+              texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
               helper={t('editCollection.digestHelper')}
               options={[
                 { label: t('editCollection.digestNone'), value: 'NONE' },
@@ -219,9 +218,8 @@ export default function CreateCollectionPage() {
               }}
             />
             <Select
-              language="en"
               id="create-collection-language"
-              texts={{ label: t('collectionLanguage.label') }}
+              texts={{ label: t('collectionLanguage.label'), language: 'en' }}
               helper={t('collectionLanguage.helper')}
               options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
               value={language}

@@ -695,7 +695,14 @@ class VerifyLinkView(APIView):
             blocked = proposal_approval_blocked(proposal)
             if blocked:
                 reason, code = blocked
-                return Response({"error": reason}, status=code)
+                # ``retryable`` is the difference between this refusal and every
+                # other one this view can give: the RSVP above is still alive, so
+                # the owner's link works tomorrow. Without it the SPA has no way
+                # to tell the two apart — a 400 here and a 400 for a suggestion
+                # that is genuinely gone look identical — and it showed both as
+                # "invalid or expired link", telling the owner to stop clicking
+                # a link that was still good.
+                return Response({"error": reason, "retryable": True}, status=code)
             approve_proposal(proposal)
             message = "Invitation sent"
         else:

@@ -24,7 +24,11 @@ export default function DeleteThingPage() {
   const [thing, setThing] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState(null);
-  const [error, setError] = useState(false);
+  // Which thing the load failed for — see DeleteCollectionPage: a boolean needs
+  // clearing at the top of the effect, and that reset is a setState in an effect
+  // body. Tying the failure to its code needs no reset at all.
+  const [failedCode, setFailedCode] = useState(null);
+  const error = failedCode === thingCode;
 
   useEffect(() => {
     document.title = thing ? t('titles.deleteThing', { headline: L(thing.headline) }) : t('titles.deleteThingDefault');
@@ -32,11 +36,17 @@ export default function DeleteThingPage() {
 
   useEffect(() => {
     if (!userCode) return;
-    setError(false);
     apiFetch(`/api/v1/things/${thingCode}/`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => (data ? setThing(data) : setError(true)))
-      .catch(() => setError(true));
+      .then((data) => {
+        if (data) {
+          setThing(data);
+          setFailedCode(null);
+        } else {
+          setFailedCode(thingCode);
+        }
+      })
+      .catch(() => setFailedCode(thingCode));
   }, [userCode, thingCode]);
 
   const handleDelete = async () => {

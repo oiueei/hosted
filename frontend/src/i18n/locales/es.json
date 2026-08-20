@@ -159,6 +159,7 @@
     "holdRejected": "La reserva ha sido rechazada.",
     "invalidOrExpired": "Enlace inválido o caducado.",
     "expiredHelp": "Si tu enlace ha caducado, pide a quien te invitó que te envíe uno nuevo, o solicita un nuevo enlace mágico.",
+    "refusalHelp": "No se ha decidido nada y este enlace sigue funcionando: inténtalo de nuevo más tarde.",
     "goToHomepage": "Ir al inicio",
     "goToLogin": "Ir a entrar",
     "accountDeleteTitle": "¿Borrar tu cuenta?",

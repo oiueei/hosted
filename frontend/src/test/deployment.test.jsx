@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
@@ -252,5 +252,63 @@ describe("the dashboard's second button follows aboutPath", () => {
     await waitFor(() =>
       expect(document.querySelector('a[href="/about-us"]')).not.toBeNull()
     );
+  });
+});
+
+describe('a "welcome" landing follows aboutPath', () => {
+  /* The backend answers `landing: "welcome"` only for a deployment with an open
+     door of its own — nothing upstream produces it, and verifyPage.test.jsx
+     pins what a checkout without such a page does with it (goes home rather
+     than to a 404). This is the other side: where the page exists, the brand-new
+     visitor's very first click after signing in has to reach it. */
+  function Landing() {
+    const { pathname } = useLocation();
+    return <p>{`landed on ${pathname}`}</p>;
+  }
+
+  async function renderVerifyAt(aboutPath) {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath,
+      deploymentI18n: {},
+    }));
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            action: 'MAGIC_LINK',
+            landing: 'welcome',
+            user: { code: 'USR001', name: 'Lala', email: 'lala@test.com' },
+          }),
+      })
+    );
+    const { default: VerifyPage } = await import('../pages/VerifyPage');
+
+    render(
+      <MemoryRouter initialEntries={['/verify/TOKEN123']}>
+        <Routes>
+          <Route path="/verify/:code" element={<VerifyPage />} />
+          <Route path="*" element={<Landing />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  test('lands on the deployment’s own page when it has one', async () => {
+    await renderVerifyAt('/about-us');
+
+    expect(await screen.findByText('landed on /about-us')).toBeInTheDocument();
+  });
+
+  test('falls through to home when it has none', async () => {
+    // The upstream shape, asserted through the same mock so the two answers sit
+    // side by side: null is a value the field is allowed to hold, not an
+    // oversight, and it must never navigate to a page that isn't there.
+    await renderVerifyAt(null);
+
+    expect(await screen.findByText('landed on /')).toBeInTheDocument();
   });
 });

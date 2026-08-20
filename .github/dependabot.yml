@@ -1,16 +1,43 @@
 version: 2
 updates:
+  # One PR per ecosystem per week for the routine bumps, instead of one per
+  # package. Ten arrived every Friday and the cost was not the reviewing — it was
+  # that a runtime bump sat in the same undifferentiated pile as nine tooling
+  # ones, so the pile got triaged as a pile.
+  #
+  # **Majors are deliberately left out of the groups** (`update-types`), so each
+  # one arrives alone with its own CI answer. The first grouped run showed why:
+  # `patterns: ["*"]` alone pulled Django 5→6 and eslint 9→10 in with everything
+  # else, and those two — a dropped `EmailMessage` attribute and a peer range
+  # jsx-a11y has not caught up with — held ~25 harmless minor and patch bumps
+  # red behind them, the DRF one included. A major is a piece of work; a patch
+  # sweep is a chore, and they do not belong in the same PR.
+  #
+  # Grouping applies to **version** updates only: a security update still opens
+  # its own PR, which is the one that should never wait behind a group.
   - package-ecosystem: "pip"
     directory: "/requirements"
     schedule:
       interval: "weekly"
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      frontend:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

@@ -51,24 +51,26 @@ export default function RequestThingPage() {
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(false);
+  // Which thing the load failed for — same reason as the delete pages: a boolean
+  // needs clearing at the top of the effect, which is a render spent undoing the
+  // previous one.
+  const [failedCode, setFailedCode] = useState(null);
+  const error = failedCode === thingCode;
 
   useEffect(() => {
     if (!userCode) return;
-    setError(false);
     apiFetch(`/api/v1/things/${thingCode}/`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => (data ? setThing(data) : setError(true)))
-      .catch(() => setError(true));
+      .then((data) => {
+        if (data) {
+          setThing(data);
+          setFailedCode(null);
+        } else {
+          setFailedCode(thingCode);
+        }
+      })
+      .catch(() => setFailedCode(thingCode));
   }, [userCode, thingCode, code]);
-
-  // With a single fixed rental length there is nothing to choose — preselect it
-  // so the pickup picker is usable straight away (#4).
-  useEffect(() => {
-    if (thing && DATE_TYPES.includes(thing.type) && (thing.rental_durations || []).length === 1) {
-      setDuration(String(thing.rental_durations[0]));
-    }
-  }, [thing]);
 
   useEffect(() => {
     if (!userCode || !thing || !DATE_TYPES.includes(thing.type)) return;
@@ -83,10 +85,22 @@ export default function RequestThingPage() {
   const rentalWeekdays = thing?.rental_weekdays || [];
   const isConstrainedRental = !!thing && DATE_TYPES.includes(thing.type) && rentalDurations.length > 0;
 
+  // With a single fixed length there is nothing to choose, so it *is* the answer
+  // until the renter picks otherwise — the pickup picker is usable straight away
+  // (#4). Derived rather than written into state once the thing loads: that
+  // effect rendered an empty picker, committed it, and only then filled it in,
+  // and in between the form's own validation called itself incomplete. What the
+  // renter picks always wins; the single option only stands in before they have
+  // touched the control.
+  const soleDuration = isConstrainedRental && rentalDurations.length === 1
+    ? String(rentalDurations[0])
+    : '';
+  const chosenDuration = duration || soleDuration;
+
   // Pickup validity and blocked-date checks are pure, timezone-safe, unit-tested
   // helpers in utils/rental.js; bind them to the current rental state here.
   const pickupDisabled = (date) =>
-    isPickupDisabled(date, { rentalWeekdays, blockedPeriods, duration });
+    isPickupDisabled(date, { rentalWeekdays, blockedPeriods, duration: chosenDuration });
   const dateBlocked = (date) => isDateBlocked(date, blockedPeriods);
 
   const handleSubmit = async () => {
@@ -100,8 +114,8 @@ export default function RequestThingPage() {
         // Renter picks a fixed length + a pickup date; the return date is derived
         // as pickup + length (a week rental comes back on the same weekday).
         const startIso = displayToIso(startDate);
-        if (!duration || !startIso) return;
-        const end = derivedReturnDate(startIso, duration);
+        if (!chosenDuration || !startIso) return;
+        const end = derivedReturnDate(startIso, chosenDuration);
         body = { start_date: startIso, end_date: end };
       } else {
         const startIso = displayToIso(startDate);
@@ -196,17 +210,19 @@ export default function RequestThingPage() {
       {isDateBased && isConstrainedRental && (
         <div className="summary-grid section-mt">
           <Select
-            language="en"
             id="request-duration"
             texts={{
               label: t('rental.chooseDuration'),
               placeholder: t('rental.chooseDurationPlaceholder'),
-              error: attempted && !duration ? t('rental.durationRequired') : undefined,
+              error: attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
+              language: 'en',
             }}
             options={rentalDurations.map((d) => ({ label: durationLabel(d, t), value: String(d) }))}
-            value={duration ? [{ label: durationLabel(Number(duration), t), value: duration }] : []}
+            value={chosenDuration
+              ? [{ label: durationLabel(Number(chosenDuration), t), value: chosenDuration }]
+              : []}
             onChange={(opts) => { setDuration(opts.length ? opts[0].value : ''); setStartDate(''); }}
-            invalid={attempted && !duration}
+            invalid={attempted && !chosenDuration}
           />
           <div className="spacer-xxxs" />
           <DateInput
@@ -217,7 +233,7 @@ export default function RequestThingPage() {
             dateFormat={DISPLAY_DATE_FORMAT}
             language="en"
             required
-            disabled={!duration}
+            disabled={!chosenDuration}
             invalid={attempted && !startDate}
             errorText={attempted && !startDate ? t('request.startRequired') : undefined}
             minDate={TODAY}
@@ -226,9 +242,9 @@ export default function RequestThingPage() {
             isDateDisabledBy={pickupDisabled}
             malformedDateErrorText={t('request.dateOverlap')}
           />
-          {duration && displayToIso(startDate) && (
+          {chosenDuration && displayToIso(startDate) && (
             <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-              {t('rental.returnBy', { date: isoToDisplay(derivedReturnDate(displayToIso(startDate), duration)) })}
+              {t('rental.returnBy', { date: isoToDisplay(derivedReturnDate(displayToIso(startDate), chosenDuration)) })}
             </p>
           )}
         </div>

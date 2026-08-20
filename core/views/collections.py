@@ -744,7 +744,10 @@ class CollectionProposalActionView(APIView):
             blocked = proposal_approval_blocked(proposal)
             if blocked:
                 reason, code = blocked
-                return Response({"error": reason}, status=code)
+                # Same refusal, same shape as the emailed link's (see
+                # ``VerifyLinkView._handle_proposal_action``): the suggestion
+                # stays pending and the owner may answer later.
+                return Response({"error": reason, "retryable": True}, status=code)
             approve_proposal(proposal)
             return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
 

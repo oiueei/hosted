@@ -383,6 +383,9 @@ class TestTheEmailLinks:
 
         assert resp.status_code == 400
         assert "no longer pending" in str(resp.data)
+        # The other 400: this one really is over, and must not invite the owner
+        # to try again — the link is gone and the decision already stands.
+        assert "retryable" not in resp.data
         proposal.refresh_from_db()
         assert proposal.status == InvitationProposal.Status.REJECTED
         assert mail.outbox == [], "a settled suggestion must not invite anybody"
@@ -474,7 +477,14 @@ def test_an_exhausted_daily_quota_refuses_the_approval(approve, group, member):
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=1)
 def test_a_refused_approval_leaves_the_owner_a_way_back(approve, group, member):
     """ "Not now", not "never": the suggestion and both its links survive, so the
-    owner can answer tomorrow instead of asking the member to suggest again."""
+    owner can answer tomorrow instead of asking the member to suggest again.
+
+    And the answer has to *say* so. The owner reading it is looking at a screen,
+    not at the database: a refusal that keeps the link alive and one that
+    consumes it both arrive as a 4xx with a sentence in it, so without
+    ``retryable`` the SPA cannot tell them apart — and the emailed-link screen
+    called this one "invalid or expired link", which is the one thing it is not.
+    """
     caches["default"].clear()
     proposal = _proposal_for(group, member)
     with patch("core.services.invitation_service.send_collection_invite_email"):
@@ -482,7 +492,10 @@ def test_a_refused_approval_leaves_the_owner_a_way_back(approve, group, member):
             f"/api/v1/collections/{group.code}/invite/", {"email": "a@test.com"}, "json"
         )
 
-    assert approve(group, proposal).status_code == 429
+    resp = approve(group, proposal)
+
+    assert resp.status_code == 429
+    assert resp.data["retryable"] is True, "the owner must be told to come back, not to give up"
 
     assert RSVP.objects.filter(
         target_code=proposal.code, action=RSVP.Action.PROPOSAL_APPROVE
@@ -507,6 +520,9 @@ def test_a_full_collection_refuses_the_approval(approve, group, member):
 
     assert resp.status_code == 400
     assert "reached its limit" in str(resp.data)
+    # A 400 that the owner can retry, unlike the 400 a settled suggestion gives:
+    # the seat may free up, and the link is still theirs to use when it does.
+    assert resp.data["retryable"] is True
     proposal.refresh_from_db()
     assert proposal.status == InvitationProposal.Status.PENDING
     assert not User.objects.filter(email="friend@test.com").exists()

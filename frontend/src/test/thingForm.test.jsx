@@ -259,3 +259,77 @@ describe('EditThingPage — the stored verb stays offered', () => {
     expect(openTypes().map((o) => o.textContent)).toContain('Lend');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// ThingForm — the two controls that do more than copy a keystroke
+// ════════════════════════════════════════════════════════════════════════
+
+describe('AddThingPage — picking one of the collection’s tags', () => {
+  /* A tag label may itself be one text per language, and the reader picks from
+     the *resolved* labels while the vocabulary — and the thing — stores the raw
+     value. Saving what the owner read instead of what they picked would put a
+     string outside the collection's vocabulary onto the thing (the server
+     checks tags against it), and would freeze one language into data every
+     other member reads in theirs. */
+  const KITCHEN = '{"es":"Cocina","ca":"Cuina","en":"Kitchen"}';
+
+  test('stores the tag’s own value, not the label it was read as', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'PROPRIETARY', tags: [KITCHEN, 'garden'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    fireEvent.change(container.querySelector('#add-thing-headline'), {
+      target: { value: 'Blue pan' },
+    });
+
+    // The list offers the reader's language …
+    fireEvent.click(container.querySelector('#add-thing-tags-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Kitchen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST'
+      );
+      expect(call).toBeTruthy();
+      // … and the thing keeps the value every language resolves from.
+      expect(JSON.parse(call[1].body).tags).toEqual([KITCHEN]);
+    });
+  });
+});
+
+describe('AddThingPage — clearing a detail select', () => {
+  /* Both selects are `clearable`, and clearing hands the change back an empty
+     array. Reading `[0].value` off it throws inside the render tree, which in
+     this app means the whole add-a-thing form disappears — for someone whose
+     only mistake was changing their mind about "Immediate". */
+  test('changing your mind about availability empties it instead of breaking', async () => {
+    const { container } = renderAdd({ collection: { mode: 'PROPRIETARY' } });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    fireEvent.change(container.querySelector('#add-thing-headline'), {
+      target: { value: 'Blue pan' },
+    });
+
+    fireEvent.click(container.querySelector('#add-thing-availability-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Immediate' }));
+    // The clear control is found by the choice it would undo, because HDS's own
+    // wording for it is not in the reader's language here — `language="en"` as a
+    // prop stopped being honoured in HDS 6 (see ShareCollectionMenu, which puts
+    // it inside `texts`), so this button currently announces itself in Finnish.
+    // Matching the quoted option instead keeps this test true either way.
+    fireEvent.click(screen.getByRole('button', { name: /"Immediate"/ }));
+
+    // Still standing, still submittable — and nothing was carried over.
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST'
+      );
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).availability).toBeUndefined();
+    });
+  });
+});

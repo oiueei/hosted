@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import { uploadPdfToCloudinary, PDF_MAX_BYTES } from '../utils/uploadPdf';
@@ -34,9 +34,14 @@ export default function PdfUpload({
   const [fileInputKey, setFileInputKey] = useState(0);
   const [docUrl, setDocUrl] = useState(currentUrl || null);
 
-  useEffect(() => {
+  // Same shape as ImageUpload's preview, and same reason for adjusting it during
+  // render instead of from an effect: the document shown is the saved one until
+  // this component replaces or removes it, and a new `currentUrl` has to win.
+  const [syncedUrl, setSyncedUrl] = useState(currentUrl);
+  if (currentUrl !== syncedUrl) {
+    setSyncedUrl(currentUrl);
     setDocUrl(currentUrl || null);
-  }, [currentUrl]);
+  }
 
   const handleRemove = () => {
     setDocUrl(null);

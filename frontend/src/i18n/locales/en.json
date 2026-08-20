@@ -165,6 +165,7 @@
     "holdRejected": "The hold has been rejected.",
     "invalidOrExpired": "Invalid or expired link.",
     "expiredHelp": "If your link has expired, ask the person who invited you to send a new one, or request a new magic link.",
+    "refusalHelp": "Nothing has been decided, and this link still works — try it again later.",
     "goToHomepage": "Go to homepage",
     "goToLogin": "Go to login",
     "accountDeleteTitle": "Delete your account?",

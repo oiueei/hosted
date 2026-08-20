@@ -198,6 +198,23 @@ describe('DeleteCollectionPage', () => {
 
     expect(mutations()).toEqual([]);
   });
+
+  test('a collection it cannot load gets no confirm at all', async () => {
+    // The failure mode this page must not have: a Delete button rendered beside
+    // an empty warning, for a collection nobody could read. It is the one screen
+    // where "something went wrong, try again" has to win over showing anything.
+    apiFetch.mockImplementation((url, opts) =>
+      opts?.method
+        ? Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
+        : Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('Error loading collection.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(mutations()).toEqual([]);
+  });
 });
 
 describe('RemoveGuestPage', () => {

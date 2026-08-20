@@ -1,5 +1,13 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+
+// The QR image is a picture a test cannot read, and what this component owns is
+// not the drawing — it is *which string* it hands the library. Standing in for
+// `qrcode.react` is what turns "a dialog appeared" into "the invite link is the
+// thing being encoded"; without it the assertion below passes on an empty code.
+vi.mock('qrcode.react', () => ({
+  QRCodeSVG: ({ value, title }) => <div data-testid="qr" data-value={value} aria-label={title} />,
+}));
 
 vi.mock('../services/api', () => ({
   apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
@@ -139,3 +147,134 @@ describe('a failed revoke or rotate must not claim it worked', () => {
    same hour. The behaviour is visible in the browser and cheap to check by hand:
    open the menu, copy the link, reopen it, copy again — one request in the
    network panel, and the same token both times. */
+
+/**
+ * The other half of this menu — the one that actually hands the link over — had
+ * no tests at all: `ensureShareUrl` and the four deliveries behind it. The
+ * revoke/rotate pair above is guarded because a false success there tells an
+ * owner they closed a door that is standing open; these carry two risks of
+ * their own. A PUBLIC collection must not be given a bearer token it has no way
+ * to take back, and a delivery that silently failed leaves the owner believing
+ * a link is on its way to somebody who never got one.
+ */
+describe('handing the link over', () => {
+  let originalLocation;
+  let openSpy;
+
+  beforeEach(() => {
+    originalLocation = window.location;
+    // A plain object, so `mailto:` is recorded instead of navigating jsdom.
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: '', origin: 'http://localhost:3000' },
+    });
+    openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    vi.restoreAllMocks();
+  });
+
+  function pick(name) {
+    openMenu();
+    fireEvent.click(screen.getByRole('option', { name }));
+  }
+
+  test('a PUBLIC group is shared by its own address, and mints no token', async () => {
+    // Anyone can read it without an account, so there is nothing to gate — and
+    // a share token here would be a credential in the wild that this menu
+    // deliberately offers no way to pull back (PUBLIC hides rotate/revoke).
+    render(<ShareCollectionMenu {...props} isPublic />);
+
+    pick('Copy invite link');
+
+    await waitFor(() =>
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'http://localhost:3000/collections/COL001'
+      )
+    );
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('a PRIVATE group hands out the token the server minted', async () => {
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    pick('Copy invite link');
+
+    await waitFor(() =>
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://x/share/NEWTOKEN')
+    );
+    expect(apiFetch).toHaveBeenCalledWith(
+      '/api/v1/collections/COL001/share-link/',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(await screen.findByText(/copied to clipboard/i)).toBeInTheDocument();
+  });
+
+  test('a clipboard that refuses is never reported as a copy', async () => {
+    // It refuses for real reasons — no permission, an insecure context, a
+    // browser that wants a gesture it didn't see. The owner then pastes
+    // whatever was there before into a message to a friend.
+    navigator.clipboard.writeText.mockRejectedValue(new Error('denied'));
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    pick('Copy invite link');
+
+    expect(await screen.findByText(/couldn't copy the link/i)).toBeInTheDocument();
+    expect(screen.queryByText(/copied to clipboard/i)).toBeNull();
+  });
+
+  test('a link that cannot be minted shares nothing at all', async () => {
+    // Not merely "shows an error": the mail draft must not open with a blank or
+    // stale link in it, which is the version the recipient would actually get.
+    apiFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    pick('Email');
+
+    expect(await screen.findByText(/couldn't generate the invite link/i)).toBeInTheDocument();
+    expect(window.location.href).toBe('');
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  test('the email draft carries the link and names the collection', async () => {
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    pick('Email');
+
+    await waitFor(() => expect(window.location.href).toMatch(/^mailto:\?subject=/));
+    const draft = decodeURIComponent(window.location.href);
+    expect(draft).toContain('http://x/share/NEWTOKEN');
+    expect(draft).toContain('My Collection');
+  });
+
+  test('the WhatsApp hand-off carries the link and cannot reach back', async () => {
+    // `noopener` is the load-bearing argument: without it the opened page gets a
+    // handle on this one through `window.opener`.
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    pick('WhatsApp');
+
+    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    const [url, target, features] = openSpy.mock.calls[0];
+    expect(decodeURIComponent(url)).toContain('http://x/share/NEWTOKEN');
+    expect(target).toBe('_blank');
+    expect(features).toBe('noopener,noreferrer');
+  });
+
+  test('the QR encodes the invite link, and prints it underneath', async () => {
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    pick('QR code');
+
+    // What the camera would read …
+    expect(await screen.findByTestId('qr')).toHaveAttribute('data-value', 'http://x/share/NEWTOKEN');
+    // … and what the person holding the phone up can check against it.
+    expect(screen.getByText('http://x/share/NEWTOKEN')).toBeInTheDocument();
+  });
+});

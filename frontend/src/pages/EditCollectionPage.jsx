@@ -266,9 +266,8 @@ export default function EditCollectionPage() {
         />
         <LocalizedInfo id="edit-collection-localized-info" />
         <Select
-                language="en"
           id="edit-collection-status"
-          texts={{ label: t('editCollection.statusLabel') }}
+          texts={{ label: t('editCollection.statusLabel'), language: 'en' }}
           helper={t('editCollection.statusHelper')}
           options={STATUS_OPTIONS}
           value={status}
@@ -326,9 +325,8 @@ export default function EditCollectionPage() {
               theeemeColor01={tc.color_01}
             />
           <Select
-            language="en"
             id="edit-collection-digest"
-            texts={{ label: t('editCollection.digestLabel') }}
+            texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
             helper={t('editCollection.digestHelper')}
             options={DIGEST_OPTIONS}
             value={digestFrequency}
@@ -339,9 +337,8 @@ export default function EditCollectionPage() {
             }}
           />
           <Select
-            language="en"
             id="edit-collection-language"
-            texts={{ label: t('collectionLanguage.label') }}
+            texts={{ label: t('collectionLanguage.label'), language: 'en' }}
             helper={t('collectionLanguage.helper')}
             options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
             value={language}

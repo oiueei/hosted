@@ -142,7 +142,7 @@ The app ships a web app manifest (`public/manifest.webmanifest`) plus icons (`pu
 - **ACCOUNT_DELETE is the exception to the auto-commit**: when the GET preview's `action` is `ACCOUNT_DELETE`, the page renders a dedicated confirmation screen (account email, owned collection/thing counts, the what-stays line) and the committing POST only fires from the explicit **"Delete my account forever"** danger button — never from the load effect. On success it clears `userCode`/`seenWelcome`/`theeemeColors`/`koro` from localStorage and shows the goodbye screen (`verify.accountDeleted*`); a Cancel button exits to home/login.
 - On `COLLECTION_REJECT` action: shows success `Notification` confirming the invitation was declined and the owner was notified. Shows "Go to login" button. No login/redirect.
 - On success: stores `userCode` in `localStorage`. Auth tokens are set as HttpOnly cookies by the backend. **The destination comes from the backend's `landing` field** (see `core/views/CLAUDE.md` → VerifyLinkView): `collection` ⇒ `/collections/{data.collection}` (with `{ state: { fromInvite: true } }` when `data.invited_collection` is also present — i.e. the landing came from an invitation, which is what shows the collection's welcome box), `welcome` ⇒ `deployment/aboutPath` (upstream null, so it falls through to `/` — nothing here produces that landing anyway), anything else ⇒ `/`. It used to be decided here from `seenWelcome`, but `LogoutPage` clears that key, so every re-login looked like a first visit. `seenWelcome` now only suppresses `CollectionPage`'s first-time Welcome Linkbox.
-- On failure: shows error `Notification` with helpful guidance and "Go to login" button (resolves dead-end for expired links).
+- On failure: shows error `Notification` with helpful guidance and "Go to login" button (resolves dead-end for expired links). **A refusal carrying `retryable` is not one of those**: an approval blocked by the invitation quota or the member ceiling leaves the link working, so the page shows the server's own reason and `verify.refusalHelp` ("this link still works") instead of `verify.invalidOrExpired` + `expiredHelp`. Every other refusal here consumes its RSVP, which is why the expiry copy stays right for them.
 
 ### HomePage (`src/pages/HomePage.jsx`)
 
@@ -567,9 +567,29 @@ Four transitive pins, all security patches for packages we don't depend on direc
 
 Never run `npm audit fix --force` in this repo: its "fixes" include major downgrades of `hds-react`.
 
-### HDS Select quirks (v5)
+### HDS Select quirks
 
-All `<Select>` components must include `language="en"` — the HDS default is `"fi"` which produces Finnish placeholder text ("Valitse yksi"). Additional API notes: `value` is an array (`[{ label, value }]`), `onChange` receives an array (`(sel) => sel[0].value`), error text uses the `error` prop (string), not `errorText`.
+Every `<Select>` must say which language HDS should speak, because its own
+assistive wording ("choose one", "2 selected options", "clear current
+selection") defaults to **Finnish**. In HDS 5 that was the `language="en"` prop,
+and this file said so for a year. **HDS 6 moved it inside `texts`** —
+`texts={{ label: …, language: 'en' }}` — and ignores the prop silently: the
+component still renders, the page still looks right, and the only thing that
+changes is what a screen reader reads out. Fourteen Selects spent the HDS 6
+upgrade announcing themselves in Finnish, and no axe rule catches it (none
+compares the language of an `aria-label` against the page's). `src/test/
+selectLanguage.test.jsx` now renders one such form *and* sweeps the source for
+the dead prop, since the failure is invisible on screen.
+
+`'en'` is the honest value everywhere: HDS ships fi/sv/en, and none of this
+product's three locales is among the other two.
+
+`language="en"` is still right on `DateInput` and `Accordion`, which do honour
+it — verified, not assumed.
+
+Additional API notes: `value` is an array (`[{ label, value }]`), `onChange`
+receives an array (`(sel) => sel[0].value`), error text uses the `error` prop
+(string), not `errorText`.
 
 ### HDS ToggleButton quirks (v5)
 

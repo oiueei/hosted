@@ -24,7 +24,14 @@ export default function DeleteCollectionPage() {
   const [collection, setCollection] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState(null);
-  const [error, setError] = useState(false);
+  // Which collection the load failed for, rather than a bare boolean. The effect
+  // below re-runs when the route's code changes, and a boolean had to be cleared
+  // synchronously at the top of it so the previous collection's failure did not
+  // sit over the new one — a setState in an effect body, and a render spent
+  // undoing the last one. Derived, there is nothing to clear: a failure about a
+  // code you are no longer on simply stops being true.
+  const [failedCode, setFailedCode] = useState(null);
+  const error = failedCode === code;
 
   useEffect(() => {
     document.title = collection
@@ -34,11 +41,17 @@ export default function DeleteCollectionPage() {
 
   useEffect(() => {
     if (!userCode) return;
-    setError(false);
     apiFetch(`/api/v1/collections/${code}/`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => (data ? setCollection(data) : setError(true)))
-      .catch(() => setError(true));
+      .then((data) => {
+        if (data) {
+          setCollection(data);
+          setFailedCode(null);
+        } else {
+          setFailedCode(code);
+        }
+      })
+      .catch(() => setFailedCode(code));
   }, [userCode, code]);
 
   const handleDelete = async () => {

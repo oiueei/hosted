@@ -141,4 +141,51 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Delete my account forever' }));
     expect(await screen.findByText('Invalid or expired link.')).toBeInTheDocument();
   });
+
+  test('a connection lost mid-confirm keeps the account, and says so', async () => {
+    // The one refusal that is not the server's answer: nothing was decided, so
+    // the page must not clear this browser's session or say goodbye. Somebody
+    // who reads "Account deleted" after a request that never arrived stops
+    // looking — and their account is still there, with their things in it.
+    localStorage.setItem('userCode', 'USER01');
+    globalThis.fetch = vi.fn((url, opts = {}) =>
+      opts.method === 'POST'
+        ? Promise.reject(new Error('network down'))
+        : Promise.resolve(mockResponse(preview)),
+    );
+
+    renderVerify();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete my account forever' }));
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.queryByText('Account deleted')).toBeNull();
+    expect(localStorage.getItem('userCode')).toBe('USER01');
+  });
+
+  test('the confirm says it is working and cannot be pressed a second time', async () => {
+    // The window between the click and the answer is the whole risk here: a
+    // button that still reads "Delete my account forever" invites the second
+    // press that a slow network makes feel necessary. It names what it is doing
+    // and refuses the second press instead.
+    let commit;
+    globalThis.fetch = vi.fn((url, opts = {}) =>
+      opts.method === 'POST'
+        ? new Promise((resolve) => {
+            commit = () => resolve(mockResponse({ action: 'ACCOUNT_DELETE' }));
+          })
+        : Promise.resolve(mockResponse(preview)),
+    );
+
+    renderVerify();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete my account forever' }));
+
+    const busy = await screen.findByRole('button', { name: 'Deleting…' });
+    expect(busy).toBeDisabled();
+    fireEvent.click(busy);
+    expect(postCalls(globalThis.fetch)).toHaveLength(1);
+
+    commit();
+    expect(await screen.findByText('Account deleted')).toBeInTheDocument();
+  });
 });

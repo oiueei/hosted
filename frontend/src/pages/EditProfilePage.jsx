@@ -201,9 +201,8 @@ export default function EditProfilePage() {
           />
           <KoroSelector value={koro} onChange={setKoro} />
           <Select
-            language="en"
             id="edit-profile-language"
-            texts={{ label: t('editProfile.languageLabel') }}
+            texts={{ label: t('editProfile.languageLabel'), language: 'en' }}
             helper={t('editProfile.languageHelper')}
             options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
             value={language || i18n.resolvedLanguage || i18n.language}
@@ -221,9 +220,8 @@ export default function EditProfilePage() {
         <p style={{ marginBottom: 'var(--spacing-m)' }}>{t('communityProfile.helper')}</p>
         <div className="form-grid">
           <Select
-            language="en"
             id="edit-profile-age"
-            texts={{ label: t('communityProfile.ageLabel') }}
+            texts={{ label: t('communityProfile.ageLabel'), language: 'en' }}
             options={[
               { label: t('communityProfile.ageUnset'), value: '' },
               ...AGE_RANGES.map((c) => ({ label: t(`ageRange.${c}`), value: c })),
