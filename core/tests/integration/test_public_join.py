@@ -9,6 +9,8 @@ ignored (same unified response, no enumeration oracle).
 
 import pytest
 from django.core import mail
+from django.core.cache import caches
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from core.models import RSVP, Collection, Event, User
@@ -242,3 +244,127 @@ class TestMemberJoinedIsLoggedOncePerJoin:
         self._pop_in(join_setup)
 
         assert self._joins(user, join_setup["public"]) == 2
+
+
+@pytest.mark.django_db
+class TestSignedInJoin:
+    """`POST /collections/{code}/join/` — the same door, for a reader who
+    already has an account.
+
+    The login-to-act funnel converts an **anonymous** reader: they type an email
+    and get a magic link. Someone already signed in fell straight through it —
+    a magic link is no use to a live session — so the one reader with an account
+    and the most intent had no way into a PUBLIC group at all. In COMMUNITY mode
+    the page then offered them "Add thing", which the API refuses.
+    """
+
+    URL = "/api/v1/collections/{}/join/"
+
+    def _join(self, client, collection):
+        return client.post(self.URL.format(collection.code))
+
+    def test_a_signed_in_visitor_can_join_a_public_collection(
+        self, authenticated_client, user, join_setup
+    ):
+        public = join_setup["public"]
+
+        res = self._join(authenticated_client, public)
+
+        assert res.status_code == 200
+        assert public.invites.filter(code=user.code).exists()
+        # Same door as the anonymous one, so it is counted as the same door.
+        joined = Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, collection_code=public.code, actor_code=user.code
+        )
+        assert joined.count() == 1
+        assert joined.first().source == Event.Source.PUBLIC
+
+    def test_joining_twice_counts_one_person_once(self, authenticated_client, user, join_setup):
+        """The funnel is idempotent by design — a double tap must not make one
+        person look like two joins in the log any report reads."""
+        public = join_setup["public"]
+
+        assert self._join(authenticated_client, public).status_code == 200
+        assert self._join(authenticated_client, public).status_code == 200
+
+        assert (
+            Event.objects.filter(
+                kind=Event.Kind.MEMBER_JOINED, collection_code=public.code, actor_code=user.code
+            ).count()
+            == 1
+        )
+
+    def test_a_private_collection_does_not_confirm_it_exists(
+        self, authenticated_client, user, join_setup
+    ):
+        """ "You may not join" would answer the question the 404 exists to
+        refuse: whether that code names a real group."""
+        private = join_setup["private"]
+
+        res = self._join(authenticated_client, private)
+
+        assert res.status_code == 404
+        assert not private.invites.filter(code=user.code).exists()
+
+    def test_a_member_of_a_private_collection_is_told_they_are_already_in(
+        self, authenticated_client, user, join_setup
+    ):
+        """The other half of the invariant the view's 403 rests on.
+
+        Together with the 404 above, this is what makes "not open to join"
+        unreachable: `can_view` admits a non-owner to a PRIVATE collection only
+        when they are invited, and an invited member is answered by the
+        membership line before the public check is ever consulted. Neither test
+        can enter that branch — these two are why, and they are what would go
+        red if `can_view` were ever widened without revisiting it.
+        """
+        private = join_setup["private"]
+        private.invites.add(user)
+
+        res = self._join(authenticated_client, private)
+
+        assert res.status_code == 200
+        assert res.data == {"message": "You are a member of this collection"}
+
+    def test_an_archived_collection_cannot_be_joined(self, authenticated_client, join_setup):
+        res = self._join(authenticated_client, join_setup["inactive_public"])
+
+        assert res.status_code == 404
+
+    def test_the_owner_is_not_offered_a_way_into_their_own_collection(self, api_client, join_setup):
+        owner = join_setup["public"].owner
+        api_client.force_authenticate(user=owner)
+
+        res = self._join(api_client, join_setup["public"])
+
+        assert res.status_code == 400
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "signed-in-join-quota",
+            }
+        },
+        COLLECTION_JOINS_PER_DAY=1,
+    )
+    def test_the_operators_daily_ceiling_applies_here_too(self, user, user2, join_setup):
+        """A cap that only stopped strangers would be a cap anyone with an
+        account could walk around — and an account costs one free mailbox.
+
+        Two *different* people, each with their own client: the conftest's two
+        authenticated fixtures share one `APIClient`, so the second
+        `force_authenticate` would silently rebind the first.
+        """
+        caches["default"].clear()
+        public = join_setup["public"]
+        first, second = APIClient(), APIClient()
+        first.force_authenticate(user=user)
+        second.force_authenticate(user=user2)
+
+        assert self._join(first, public).status_code == 200
+        res = self._join(second, public)
+
+        assert res.status_code == 429
+        assert not public.invites.filter(code=user2.code).exists()

@@ -50,6 +50,8 @@ export default function CollectionPage() {
   const [shownCount, setShownCount] = useState(CARDS_PER_PAGE);
   const [digestSaving, setDigestSaving] = useState(false);
   const [digestError, setDigestError] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(false);
   // The owner may have written the collection's text once per language; every
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
@@ -155,6 +157,31 @@ export default function CollectionPage() {
     setDigestSaving(false);
   };
 
+  // Join a PUBLIC group you are only browsing. The signed-in half of
+  // login-to-act: an anonymous reader gets `/collections/:code/join`, which
+  // takes an email and mails a magic link — no use at all to a session that
+  // already exists, so the reader with the most intent had no way in. Re-fetches
+  // rather than patching `is_member` locally: joining changes several fields at
+  // once (the member roster, the digest switch, what the cards may offer), and
+  // the server is the only thing that knows all of them.
+  const handleJoin = async () => {
+    setJoining(true);
+    setJoinError(false);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/join/`, { method: 'POST' });
+      if (res.ok) {
+        const fresh = await apiFetch(`/api/v1/collections/${code}/`);
+        if (fresh.ok) setCollection(await fresh.json());
+        else setJoinError(true);
+      } else {
+        setJoinError(true);
+      }
+    } catch {
+      setJoinError(true);
+    }
+    setJoining(false);
+  };
+
   const userCode = localStorage.getItem('userCode');
   const isOwner = userCode === collection.owner;
   const isAuthenticated = !!userCode;
@@ -217,6 +244,28 @@ export default function CollectionPage() {
               </Link>
             </p>
           )}
+          {/* The same invitation for a reader who is already signed in. They
+              cannot be sent down the anonymous funnel — it asks for an email and
+              answers with a magic link — so they get the action itself. Only on
+              a PUBLIC collection: a private one is unreachable without an
+              invitation, and this is exactly where the page used to offer
+              "Add thing" to someone the API would refuse. */}
+          {isAuthenticated && !isOwner && !collection.is_member
+            && collection.visibility === 'PUBLIC' && (
+            <div className="invite-nudge">
+              <p style={{ margin: 0 }}>{t('collectionPage.visitorIntro')}</p>
+              <div style={{ marginTop: 'var(--spacing-xs)' }}>
+                <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
+                  {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
+                </Button>
+              </div>
+              {joinError && (
+                <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
+                  {t('collectionPage.visitorJoinError')}
+                </p>
+              )}
+            </div>
+          )}
           {isOwner && (
             <>
             <div className="spacer-m"></div>
@@ -254,10 +303,19 @@ export default function CollectionPage() {
             )}
             </>
           )}
-          {isAuthenticated && !isOwner && (collection.mode === 'COMMUNITY' || collection.is_member) && (
+          {/* Everything in here is a member's control — contributing a thing,
+              recommending a guest, silencing the digest — so membership is the
+              single condition. It used to admit any signed-in reader of a
+              COMMUNITY collection, which is how the dead-end button got here. */}
+          {isAuthenticated && !isOwner && collection.is_member && (
             <>
             <div className="spacer-m"></div>
-            {collection.mode === 'COMMUNITY' && (
+            {/* Membership, not just mode: `Collection.can_add_thing` requires
+                an invite, so offering this to a signed-in non-member sent them
+                through the whole form — photos uploaded to Cloudinary and all —
+                to collect a 403 at the end. They get the join button above
+                instead, which is the thing that actually unlocks this. */}
+            {collection.mode === 'COMMUNITY' && collection.is_member && (
               <div className="button-row-wide">
                 <Link to={`/collections/${code}/add`}>
                   <Button variant="secondary" style={btnSecondaryStyle}>{t('collectionPage.addThing')}</Button>
@@ -441,9 +499,18 @@ export default function CollectionPage() {
             </Button>
           ) : (
             <div className="form-grid">
+              {/* The one place in the product where a member learns an address
+                  the API takes care never to serve them: the broadcast carries
+                  the owner's own email as Reply-To, so replying to the group
+                  message is one tap. Worth keeping — without it a broadcast is
+                  a megaphone with no way back, and the replies would land on a
+                  noreply — but not worth doing without saying so first
+                  (DESIGN §6). Their own address, their own send: disclosure is
+                  what consent needs here, not a switch. */}
               <TextArea
                 id="broadcast-message"
                 label={t('broadcast.messageLabel')}
+                helperText={t('broadcast.replyToNotice')}
                 value={broadcastMessage}
                 onChange={(e) => setBroadcastMessage(e.target.value)}
                 maxLength={256}

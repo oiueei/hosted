@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Prefetch
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -62,6 +62,7 @@ from core.services.invitation_service import (
     proposal_approval_blocked,
     reject_proposal,
 )
+from core.services.join_quota import consume_join_quota, join_quota_exhausted
 from core.utils import redact_email
 from core.validators import SafeHeadlineField
 from core.views._helpers import (
@@ -70,6 +71,11 @@ from core.views._helpers import (
     type_validity_error,
     viewer_code,
 )
+
+# The single funnel every join path goes through (invite acceptance, share
+# token, public login-to-act, onboarding). Imported rather than reimplemented
+# so this door cannot drift from the others on what a join means.
+from core.views.auth import _join_collection
 
 logger = logging.getLogger(__name__)
 
@@ -341,8 +347,9 @@ class CollectionViewSet(ModelViewSet):
 # Daily cap on invitation *emails* per account, shared by the single and bulk
 # invite endpoints. The per-view rate limits count requests, and one bulk request
 # fans out up to MAX_ROWS emails — 5/h x 100 rows is ~500 owner-authored emails
-# an hour from a free pop-in account, a spam/phishing vector riding the
-# deployment's sending domain. This counts the emails themselves.
+# an hour from one account, a spam/phishing vector riding the deployment's
+# sending domain (and a cheap one wherever a deployment adds an open sign-up
+# door of its own). This counts the emails themselves.
 #
 # **Operator policy, not a product rule.** The cap protects the deployment's own
 # sending reputation, and only the operator knows what their provider tolerates,
@@ -539,6 +546,83 @@ class CollectionLeaveView(APIView):
             {"message": "You have left the collection"},
             status=status.HTTP_200_OK,
         )
+
+
+class CollectionJoinView(APIView):
+    """
+    POST /api/v1/collections/{collection_code}/join/
+    Lets a signed-in visitor join a PUBLIC collection themselves.
+
+    The mirror of ``CollectionLeaveView``, and it was the missing half. A
+    PUBLIC collection is readable with no account, and the login-to-act funnel
+    turns an **anonymous** reader into a member: they type an email at
+    ``/collections/{code}/join``, ``POST /auth/join/`` adds them and mails a
+    magic link. Someone who is *already signed in* fell through that funnel —
+    the page assumes an anonymous visitor, and a magic link is no use to a
+    session that already exists — so the one reader with an account and the
+    most intent had no way in at all. In COMMUNITY mode the collection page
+    then offered them "Add thing", which `Collection.can_add_thing` refuses:
+    they filled the form, uploaded the photos, and collected a 403.
+
+    Same door as the anonymous one, so the same rules: PUBLIC and ACTIVE only,
+    the join funnel that logs MEMBER_JOINED once and sends the welcome document,
+    and the operator's per-collection daily ceiling — a cap that only stopped
+    strangers would be a cap anyone with an account could walk around.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    def post(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        # Existence is answered by the same guard that decides whether they may
+        # read it at all: a PRIVATE collection must not confirm it exists to
+        # someone who cannot see it, and "you may not join" would do exactly
+        # that.
+        if not collection.can_view(request.user.code):
+            raise Http404
+
+        if collection.is_owner(request.user.code):
+            return Response(
+                {"detail": "You already own this collection."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Idempotent, like the funnel below: a double-tap, or a member who
+        # somehow lands here, gets the same answer and nothing happens twice.
+        if collection.invites.filter(code=request.user.code).exists():
+            return Response({"message": "You are a member of this collection"})
+
+        # Belt and braces, and **unreachable as the guards above stand**: a
+        # non-owner only gets past `can_view` on a PUBLIC ACTIVE collection or
+        # one they are invited to, and `is_invited` is the very query the
+        # membership line just ran. So nothing can arrive here non-public, which
+        # is why no test covers this branch and none can — the two that pin the
+        # invariant instead are `test_a_private_collection_does_not_confirm_it_
+        # exists` (404) and `test_a_member_of_a_private_collection_is_told_they_
+        # are_already_in` (200).
+        #
+        # It stays because the invariant lives in another file: widen `can_view`
+        # one day — a network of federated groups, a "readable by link" tier —
+        # and this is what keeps a readable-but-not-public collection from being
+        # joinable by anyone who can see it.
+        if not collection.is_public():
+            return Response(
+                {"detail": "This collection is not open to join."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if join_quota_exhausted(collection.code):
+            return Response(
+                {"detail": "This collection has taken today's joins. Try again tomorrow."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        _join_collection(collection, request.user, source=Event.Source.PUBLIC)
+        consume_join_quota(collection.code)
+
+        return Response({"message": "You have joined the collection"})
 
 
 class CollectionProposeInviteView(APIView):

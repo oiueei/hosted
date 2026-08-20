@@ -18,6 +18,7 @@ from django.conf import settings
 from django.test import override_settings
 
 from core.models import Collection, Thing
+from core.services import creator_policy
 from core.services.creator_policy import (
     Capabilities,
     CreatorPolicy,
@@ -55,13 +56,31 @@ class TestTheStandaloneIsUngated:
     def test_there_is_nowhere_to_request_access_because_there_is_nothing_to_request(self, user):
         assert OpenCreatorPolicy().capabilities(user).request_url is None
 
-    def test_the_answer_does_not_depend_on_who_is_asking(self, user, user2):
-        """No user is more equal: same answer for a second account, and for one
-        that would fail every other check in the product (inactive, unverified)."""
-        user2.is_active = False
-        stranger = OpenCreatorPolicy().capabilities(user2)
+    def test_the_answer_does_not_depend_on_who_is_asking(
+        self, user, user2, django_assert_num_queries
+    ):
+        """No user is more equal — and upstream reaches nothing to find out.
 
-        assert stranger == OpenCreatorPolicy().capabilities(user)
+        `user2` is genuinely deactivated (saved, not just set on the instance):
+        a policy that had quietly started consulting something about the person
+        would be free to answer differently for an account in that state, and
+        the equality below is what would catch it.
+
+        The query count is the same promise from the other side, and the half
+        that cannot be satisfied vacuously. `capabilities_for` is deliberately
+        uncached and `/auth/me/` calls it on every app load, so the standalone's
+        answer has to come off the model choices and cost nothing. A subclass or
+        a refactor that reached for the database here — the shape every policy
+        this setting exists for has — would fail here rather than on the
+        deployment paying for it.
+        """
+        user2.is_active = False
+        user2.save(update_fields=["is_active"])
+
+        with django_assert_num_queries(0):
+            stranger = OpenCreatorPolicy().capabilities(user2)
+
+            assert stranger == OpenCreatorPolicy().capabilities(user)
 
     def test_it_is_the_default_when_nothing_is_configured(self, user):
         """The setting's default — what a self-hoster gets without an .env entry."""
@@ -170,3 +189,141 @@ class TestThePolicyContract:
         assert payload["collection_modes"] == list(Collection.Mode.values)
         assert payload["thing_types"] == list(Thing.Type.values)
         assert payload["request_url"] is None
+
+
+class CountingPolicy(CreatorPolicy):
+    """Records how often it is consulted. Everything is withheld, so every ask
+    takes the denial path — the expensive one, and the one that used to ask twice."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def capabilities(self, user):
+        self.calls += 1
+        return Capabilities(
+            collection_modes=(),
+            thing_types=(),
+            request_url="https://example.org/request-access/",
+        )
+
+
+@pytest.mark.django_db
+class TestThePolicyIsConsultedOnce:
+    """How *often* a policy is asked is part of its contract.
+
+    `CreatorPolicy` requires subclasses to be stateless, not cheap — and the
+    policies this setting exists for are the ones that go and look something up.
+    Upstream the answer is two tuples off the model choices, so nothing here is
+    visible in the standalone; on the deployment that narrows, it is the
+    difference between one query and a hundred.
+    """
+
+    @pytest.fixture
+    def policy(self, monkeypatch):
+        instance = CountingPolicy()
+        monkeypatch.setattr(creator_policy, "get_creator_policy", lambda: instance)
+        return instance
+
+    def test_a_refusal_asks_once_though_it_needs_two_answers(self, policy, user):
+        """The denial needs the list *and* the request URL. That is one question.
+
+        It used to be two: `allows_collection_mode()` resolved the capabilities,
+        then `_denial` resolved them again for the URL — so the refusal path
+        cost double the allow path, on exactly the deployments that pay for it.
+        """
+        assert creator_policy.collection_mode_denial(user, Collection.Mode.COMMUNITY)
+
+        assert policy.calls == 1
+
+    def test_a_thing_refusal_likewise(self, policy, user):
+        assert creator_policy.thing_type_denial(user, Thing.Type.LEND_THING)
+
+        assert policy.calls == 1
+
+    def test_a_caller_holding_the_answer_is_not_made_to_ask_again(self, policy, user):
+        """What lets `ThingBulkCreateView` judge a hundred rows with one question.
+
+        The verb is per row; whether this deployment offers it is not. Without
+        the hoist, a CSV import ran one policy evaluation per line — and a
+        policy backed by a table would have run one query per line.
+        """
+        capabilities = creator_policy.capabilities_for(user)
+        assert policy.calls == 1
+
+        for _ in range(100):
+            assert creator_policy.thing_type_denial(
+                user, Thing.Type.LEND_THING, capabilities=capabilities
+            )
+
+        assert policy.calls == 1
+
+
+class PerUserPolicy(CreatorPolicy):
+    """Answers differently depending on who is asking — the whole reason the
+    setting takes a class instead of a list.
+
+    Every other policy in this file, and both samples, ignore `user` and return
+    a constant. That is honest for what they test, and it left the argument
+    itself unguarded: nothing proved the person actually reaches the policy.
+    """
+
+    ALLOWED_EMAIL = "vetted@example.com"
+
+    def capabilities(self, user):
+        vetted = getattr(user, "email", None) == self.ALLOWED_EMAIL
+        return Capabilities(
+            collection_modes=tuple(Collection.Mode.values) if vetted else ("PROPRIETARY",),
+            thing_types=tuple(Thing.Type.values) if vetted else (Thing.Type.GIFT_THING,),
+            request_url="https://example.test/vetting/",
+        )
+
+
+PER_USER = "core.tests.unit.test_creator_policy.PerUserPolicy"
+
+
+@pytest.mark.django_db
+class TestThePolicyIsAskedAboutThePersonAsking:
+    """`user` reaches the policy — at every door, not just the first.
+
+    The deployments this setting exists for decide **per person**: a co-op whose
+    board opens COMMUNITY collections, an operator who vets before lending is on
+    offer. Every policy in the test suite answered a constant, so passing the
+    wrong user — or none — was invisible: a scoped mutation run replaced `user`
+    with `None` in `allows_collection_mode`, `allows_thing_type`,
+    `capabilities_for` and both denial helpers, and **all five mutants lived**
+    through a suite that has this module at 100% line coverage.
+
+    On a real vetting policy that bug reads as "nobody is vetted" (or, worse,
+    "everybody is"), for every account at once.
+    """
+
+    @pytest.fixture
+    def vetted(self, user):
+        user.email = PerUserPolicy.ALLOWED_EMAIL
+        user.save(update_fields=["email"])
+        return user
+
+    def test_capabilities_for_answers_for_the_user_it_was_given(self, vetted, user2):
+        with override_settings(CREATOR_POLICY=PER_USER):
+            assert creator_policy.capabilities_for(vetted).collection_modes == tuple(
+                Collection.Mode.values
+            )
+            assert creator_policy.capabilities_for(user2).collection_modes == ("PROPRIETARY",)
+
+    def test_the_two_allows_helpers_carry_the_user_through(self, vetted, user2):
+        with override_settings(CREATOR_POLICY=PER_USER):
+            policy = get_creator_policy()
+
+            assert policy.allows_collection_mode(vetted, Collection.Mode.COMMUNITY)
+            assert not policy.allows_collection_mode(user2, Collection.Mode.COMMUNITY)
+            assert policy.allows_thing_type(vetted, Thing.Type.LEND_THING)
+            assert not policy.allows_thing_type(user2, Thing.Type.LEND_THING)
+
+    def test_both_denials_judge_the_person_in_front_of_them(self, vetted, user2):
+        """The refusal path too — it resolves the capabilities itself."""
+        with override_settings(CREATOR_POLICY=PER_USER):
+            assert collection_mode_denial(vetted, Collection.Mode.COMMUNITY) is None
+            assert collection_mode_denial(user2, Collection.Mode.COMMUNITY) is not None
+
+            assert thing_type_denial(vetted, Thing.Type.LEND_THING) is None
+            assert thing_type_denial(user2, Thing.Type.LEND_THING) is not None

@@ -118,6 +118,21 @@ heroku config:set \
 > a deployment that never sets it has no ceiling on invitation fan-out. A free account can otherwise
 > send 100 owner-authored emails per bulk request, riding your domain. Set it before opening sign-ups.
 
+> **Recommended — joins per collection:** `COLLECTION_JOINS_PER_DAY` caps how many people **one
+> collection** may be joined by per day through `POST /auth/join/`, e.g. `heroku config:set
+> COLLECTION_JOINS_PER_DAY=200 -a your-app-name`. The cap above guards what an *account* sends; this
+> guards the door that needs no account at all, and the two are not interchangeable. **Neither way in
+> is a secret**: a PUBLIC collection's code is printed in that collection's own URL, and a share token
+> exists to be passed around — so without this, anyone can ask your app to mail a magic link to any
+> address they type, from your domain. The per-IP rate limit does not reach it: it caps one caller
+> asking often, not many callers each mailing a different stranger once, which is the shape of the
+> abuse. **Unset or `0` means no limit**, deliberately — a share link pasted into a group chat can
+> legitimately bring in hundreds in one evening, and only you know how big a link you handed out.
+> Counted per collection, so an abused public code costs that group its day and leaves every other
+> collection working. A refusal looks exactly like a success to the caller (the endpoint's unified
+> response is what stops it being used to probe which codes are real); you see it in the `security`
+> log — `grep` your dyno logs for `COLLECTION_JOINS_PER_DAY` if joins go quiet.
+
 > **Recommended — mass-upload guards:** four per-collection thresholds, all **off unless set**
 > (`COLLECTION_THINGS_ALARM` / `_BLOCK`, `COLLECTION_INVITES_ALARM` / `_BLOCK`). The `_ALARM` pair
 > emails your superusers once per collection and changes nothing else — a tripwire you watch. The
@@ -138,6 +153,14 @@ heroku config:set \
 > **Optional — your own extensions:** `DEPLOYMENT_URLCONFS` mounts URL modules of your own and
 > `CREATOR_POLICY` names the class deciding who may create what. Both are how a deployment adds to
 > OIUEEI without editing files this repository also edits — see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md).
+>
+> **Both are checked before the dyno boots.** They name code by dotted path and are resolved
+> lazily, so a typo used to pass every gate and surface as a 500 — for `CREATOR_POLICY`, on
+> `GET /auth/me/`, which the SPA calls on every load, i.e. the whole frontend down after a deploy
+> that reported success. A Django system check (`core/checks.py`) now imports and instantiates the
+> policy, and Django's own URLconf check covers the URL modules. The `release` command runs
+> `migrate`, which runs system checks, so a bad value **fails the release phase and Heroku keeps
+> the previous release** rather than promoting a broken one.
 
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 

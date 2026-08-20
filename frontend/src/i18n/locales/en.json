@@ -96,6 +96,7 @@
     "sending": "Sending...",
     "back": "Back",
     "formerMember": "Former member",
+    "aMember": "A member",
     "closeThisTab": "You can close this tab now — the link is on its way to your inbox."
   },
   "titles": {
@@ -145,7 +146,7 @@
     "errorSendingLink": "Error sending link.",
     "pitch": "Share what you have with the people you trust — no ads, no strangers.",
     "description": "OIUEEI is an open-source app for sharing what you own with the people around you. Create a collection — things to give away, sell, rent or lend — and share it with your circle: they can browse, reserve and ask.",
-    "openSource": "OIUEEI's code is public — source-available under BUSL 1.1, MIT from 2030. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there. New here? The Pop in button below is the door.",
+    "openSource": "OIUEEI's code is public — source-available under BUSL 1.1, MIT from 2030. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there.",
     "manifesto": "No ads, no trackers. Your data is not the product.",
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
@@ -256,7 +257,10 @@
     "errorLoading": "Error loading collection.",
     "curator": "Curator.",
     "showMoreThings_one": "Show 1 more thing",
-    "showMoreThings_other": "Show {{count}} more things"
+    "showMoreThings_other": "Show {{count}} more things",
+    "visitorIntro": "You're browsing this group as a visitor.",
+    "visitorJoin": "Join this group",
+    "visitorJoinError": "We couldn't add you to the group. Please try again."
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",
@@ -678,7 +682,8 @@
     "messageLabel": "Message",
     "sendButton": "Send broadcast",
     "sending": "Sending...",
-    "sent": "Broadcast sent to {{count}} guests."
+    "sent": "Broadcast sent to {{count}} guests.",
+    "replyToNotice": "Anyone who receives it can reply to you directly: they'll see your email address."
   },
   "notifications": {
     "pageTitle": "Email preferences",

@@ -28,7 +28,7 @@ from core.models.notification import InAppNotification
 from core.serializers import RequestLinkSerializer, UserSerializer
 from core.services.account_service import delete_account
 from core.services.booking_service import finalize_booking_decision
-from core.services.creator_policy import get_creator_policy
+from core.services.creator_policy import capabilities_for
 from core.services.email_service import (
     resolve_email_language,
     send_account_delete_email,
@@ -41,6 +41,7 @@ from core.services.invitation_service import (
     proposal_approval_blocked,
     reject_proposal,
 )
+from core.services.join_quota import consume_join_quota, join_quota_exhausted
 from core.utils import cloudinary_doc_url, get_client_ip, redact_email
 from core.views._helpers import body_dict
 
@@ -746,7 +747,23 @@ class JoinView(APIView):
     a PUBLIC, ACTIVE collection — never a PRIVATE one, so a code can't be used
     to slip into an invite-only group. Either being unknown, revoked or pointing
     at an INACTIVE collection is silently ignored: the unified response is what
-    keeps the token space and the code space unprobeable.
+    stops a single answer distinguishing the two cases.
+
+    That guarantee covers the **body**, not the clock — the nothing-to-join path
+    creates nothing, so it also returns faster than the one that writes. What
+    keeps the spaces unwalkable is their size (22 chars; 36^6 codes) and the two
+    rate limits below, not constant time. See `core/views/CLAUDE.md` for why
+    padding this is the wrong fix.
+
+    **Neither door is a secret, and that is what `COLLECTION_JOINS_PER_DAY`
+    guards.** A PUBLIC collection's code sits in its own URL and a share token is
+    passed around by design, so anyone may ask this deployment to mail a magic
+    link to any address they type — a relay pointed at the operator's sending
+    domain. The two limits below cap one IP and one victim; they say nothing
+    about many IPs mailing many strangers once each, which is the actual shape.
+    The per-collection daily cap does, and a refusal returns the same unified
+    response as everything else here. Off by default; see
+    `core/services/join_quota.py`.
 
     Accepts optional `language` (`es`/`ca`/`en` — the UI language the visitor is
     reading the joining page in). It is stored on a **newly created** user only, so
@@ -784,11 +801,27 @@ class JoinView(APIView):
 
         if join_collection is None:
             # Nowhere to join: create no user, no RSVP, send no email — and
-            # answer exactly as if we had. The unified response is the whole
-            # anti-enumeration guarantee, so this branch must be indistinguishable
-            # from the successful one to anyone outside.
+            # answer exactly as if we had. The response body must stay
+            # indistinguishable from the successful one; that it returns sooner
+            # is a known and accepted difference (see the class docstring).
             security_logger.info(
                 f"Join request for {redact_email(email)} from IP {ip} (no target, nothing created)"
+            )
+            return self._unified_response()
+
+        if join_quota_exhausted(join_collection.code):
+            # This collection has taken its day's joins. Create nothing, send
+            # nothing — and answer exactly as if we had, for the same reason the
+            # no-target path does: "that collection is over its limit" would
+            # confirm that this token or code names a real, joinable collection,
+            # which is the one thing the unified response exists to withhold.
+            #
+            # So the visitor cannot be told, and the operator is told instead —
+            # the same shape as the capacity alarms, where the tripwire reports
+            # to whoever set it and never to whoever tripped it.
+            security_logger.warning(
+                f"Join refused for {redact_email(email)} from IP {ip}: "
+                f"collection {join_collection.code} is over COLLECTION_JOINS_PER_DAY"
             )
             return self._unified_response()
 
@@ -819,6 +852,10 @@ class JoinView(APIView):
             user=user,
             collection=join_collection,
         )
+        # Charged after the send is dispatched, so a join that raised before
+        # reaching it costs the collection nothing. In production the send is a
+        # daemon thread, so "dispatched" is as far as this can honestly count.
+        consume_join_quota(join_collection.code)
 
         security_logger.info(
             f"Join request for {redact_email(email)} from IP {ip} "
@@ -894,7 +931,7 @@ class MeView(APIView):
         # SPA already calls it on every app load, and it comes from the same
         # `capabilities()` the create endpoints refuse with, so the UI can only
         # offer what the API would accept.
-        data["capabilities"] = get_creator_policy().capabilities(user).as_dict()
+        data["capabilities"] = capabilities_for(user).as_dict()
         return Response(data)
 
 

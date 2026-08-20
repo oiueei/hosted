@@ -7,10 +7,10 @@ import useJoin from '../hooks/useJoin';
 import PageLayout from './PageLayout';
 
 /**
- * Shared pop-in landing page: an email form that POSTs to `/auth/join/` and
- * swaps into a sent/error Notification. `PopInPage` and `SharePage` are this
- * page with different copy and payload (`extraBody` carries SharePage's
- * `share_token`). JoinPage's variant (`JoinToAct`) stays separate on purpose —
+ * Shared join landing page: an email form that POSTs to `/auth/join/` and
+ * swaps into a sent/error Notification. `SharePage` — and any door a deployment
+ * adds — is this page with different copy and payload (`extraBody` carries
+ * SharePage's `share_token`). JoinPage's variant (`JoinToAct`) stays separate on purpose —
  * it renders unboxed inside another page's hero and reports errors inline —
  * but the request itself is shared: both call `useJoin`.
  *

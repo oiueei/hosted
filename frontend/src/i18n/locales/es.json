@@ -90,6 +90,7 @@
     "sending": "Enviando...",
     "back": "Volver",
     "formerMember": "Antiguo miembro",
+    "aMember": "Un miembro",
     "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada."
   },
   "titles": {
@@ -139,7 +140,7 @@
     "errorSendingLink": "Error al enviar el enlace.",
     "pitch": "Comparte lo que tienes con la gente en la que confías — sin anuncios, sin desconocidos.",
     "description": "OIUEEI es una aplicación de código abierto para compartir lo que tienes con la gente que te rodea. Crea una colección — cosas para regalar, vender, alquilar o prestar — y compártela con tu círculo: podrán mirar, reservar y preguntar.",
-    "openSource": "El código de OIUEEI es público — disponible bajo licencia BUSL 1.1, MIT a partir de 2030. El proyecto vive en <1>GitHub</1>: ideas, propuestas y colaboración, allí. ¿Nuevo por aquí? El botón «Pop in» de abajo es la puerta.",
+    "openSource": "El código de OIUEEI es público — disponible bajo licencia BUSL 1.1, MIT a partir de 2030. El proyecto vive en <1>GitHub</1>: ideas, propuestas y colaboración, allí.",
     "manifesto": "Sin anuncios, sin rastreadores. Tus datos no son el producto.",
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
     "operator": "",
@@ -250,7 +251,10 @@
     "errorLoading": "Error al cargar la colección.",
     "curator": "Curador.",
     "showMoreThings_one": "Ver 1 cosa más",
-    "showMoreThings_other": "Ver {{count}} cosas más"
+    "showMoreThings_other": "Ver {{count}} cosas más",
+    "visitorIntro": "Estás viendo este grupo como visitante.",
+    "visitorJoin": "Unirme al grupo",
+    "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo."
   },
   "digestMute": {
     "pageTitle": "Resúmenes por correo — OIUEEI",
@@ -672,7 +676,8 @@
     "messageLabel": "Mensaje",
     "sendButton": "Enviar difusión",
     "sending": "Enviando...",
-    "sent": "Difusión enviada a {{count}} invitados."
+    "sent": "Difusión enviada a {{count}} invitados.",
+    "replyToNotice": "Quien lo reciba podrá responderte directamente: verá tu dirección de correo."
   },
   "notifications": {
     "pageTitle": "Preferencias de email",

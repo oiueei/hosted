@@ -57,6 +57,25 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF trusted origins: same shape as CORS above, and for the same reason.
+#
+# base.py defaults this to `http://localhost:3000,http://127.0.0.1:3000` so a
+# developer needs no .env to run the SPA, and production inherited that default
+# whenever the config var was unset — quietly trusting a developer's laptop as a
+# CSRF origin against the live site. CORS was already rebuilt here to fail
+# closed; this was the one place the pattern wasn't applied, and an inconsistency
+# in fail-closed defaults is exactly the kind that survives review.
+#
+# Empty is the right default. Django checks the Origin against the request's own
+# host first, so a same-origin SPA — which is how this is served — needs nothing
+# here at all; the list only matters for a frontend on another domain, and that
+# deployment knows to set it (see .env.example, alongside CORS_ALLOWED_ORIGINS).
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 # Email: Configure for production (e.g., SendGrid, Mailgun)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.sendgrid.net")

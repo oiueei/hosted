@@ -141,7 +141,7 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 - **`from_email=None`**: Uses Django's `DEFAULT_FROM_EMAIL` setting.
 - **Booking email variants**: `send_booking_request_email` and `send_booking_decision_email` adapt their content based on booking type — date-based (start/end) or simple (no extra fields).
 - **Per-type action nouns**: the three generic booking emails (request/confirmation/decision) interpolate `{action}` from `_action_noun(thing)` (`T(f"action_noun_{thing.type}")`) so the wording mirrors the frontend's per-type vocabulary — a SELL request reads "purchase request" / "solicitud de compra", a LEND request "loan request" / "solicitud de préstamo", etc. Four nouns live in each catalogue (`action_noun_{GIFT,SELL,LEND,RENT}_THING`) — one per type, and a missing key would be a `KeyError` mid-decision, after the booking already committed (guarded by `test_every_bookable_type_has_an_action_noun`). **Catalan caveat**: in `ca.py` the noun values carry the preposition (`"de compra"`) and the templates read `sol·licitud {action}` — Catalan elides "de" before a vowel, so the en/es template shape (`de {action}`) can't work there; a new type starting with one needs `d'` in the value. The owner confirm/cancel button verbs (`hold_confirm_cta`/`hold_cancel_cta`) stay generic by design.
-- **Reply-To header**: `send_broadcast_email()` uses `EmailMultiAlternatives` with `reply_to` so invitees can respond directly to the collection owner (routed through `_send(..., reply_to=[owner_email])`). The visible body links to the collection (`/collections/{code}`) — the object that originated the message — rather than promising an email reply.
+- **Reply-To header**: `send_broadcast_email()` uses `EmailMultiAlternatives` with `reply_to` so invitees can respond directly to the collection owner (routed through `_send(..., reply_to=[owner_email])`). The visible body links to the collection (`/collections/{code}`) — the object that originated the message — rather than promising an email reply. **The owner is told before they send**: the broadcast box's helper line says that whoever receives it can reply directly and will see their address (`broadcast.replyToNotice`). It is the one place in the product where a member learns an address the API takes care never to serve them, and it is the owner's own — so the answer is disclosure, not a switch: dropping the header would turn a group message into a megaphone whose replies land on a noreply.
 - **Digest emails**: `send_digest_email()` lists new thing headlines in both plain text (bulleted) and HTML (`<ul>/<li>`) formats.
 - **Direct collection links**: `send_digest_email()` links straight to `{frontend_base}/collections/{code}`. Per DESIGN.md §9 we do not track email engagement — links are never wrapped in a redirect or tracking pixel.
 - **Preference pipeline**: every send goes through `_send()` → `_should_send()` + `_with_viral_line()` + `_with_footer()`. Never build an `EmailMultiAlternatives` directly from outside this module — the preference check, viral CTA, footer and logo attachment would all be bypassed.
@@ -163,6 +163,27 @@ The **daily invitation-email quota** helpers live here too (`_invite_quota_left`
 
 ---
 
+### `join_quota.py` — The daily cap on the door that needs no account
+
+`POST /auth/join/` mails a magic link to whatever address is typed into it, and **neither door that reaches it is a secret**: a PUBLIC collection's `collection_code` is printed in that collection's own URL, and a share token exists to be passed around. So without a cap, anyone may ask a deployment to send mail to anyone — a relay pointed at the operator's own sending domain, ending in complaints against it and genuine magic links landing in spam.
+
+The view's own rate limits never closed this and were not meant to: they cap how often **one IP** asks (5/min) and how often **one victim** is mailed (5/hour), which says nothing about a hundred IPs mailing a hundred different strangers once each. `INVITE_EMAILS_PER_DAY` did not either — it counts what an *account* sends through the owner's invite routes, and this is the one door with no account behind it.
+
+| Function | Behaviour |
+|---|---|
+| `join_quota_exhausted(collection_code)` | Whether this collection has already taken today's joins. `False` when the cap is off. Checked in `JoinView` **after** the target resolves and **before** anything is created, so a refusal leaves no `User`, no RSVP and no mail. |
+| `consume_join_quota(collection_code)` | Records one join against today's allowance. Called after the send is dispatched, so a join that failed earlier costs the collection nothing. |
+
+**Keyed per collection, deliberately.** Per IP is what already failed. Per *deployment* would be worse than nothing here: one abused collection would deny every other collection its joins, handing the attacker a denial of service against the whole instance in the name of stopping a relay. Per collection, abusing a group's public code costs that group its own day.
+
+**Off unless the operator sets `COLLECTION_JOINS_PER_DAY`**, like every other abuse guard — and for the usual reason plus one of its own: a share link pasted into a group chat can legitimately bring in two hundred people in an evening, which upstream has no business calling abuse. It follows `RATELIMIT_ENABLE` (the same switch as the invitation quota, so an operator turning limits off does not have to find two places to do it), and shares the DatabaseCache read-then-set non-atomicity note (I7) — a burst can slip a few past the line, which is the right trade for coarse reputation protection.
+
+A refusal returns the endpoint's **unified response** and writes a `security` warning. It cannot say why: "over its limit" would confirm that the token or code names a real, joinable collection, which is exactly what that response exists to withhold. The operator is told instead — the same shape as the capacity alarms, where the tripwire reports to whoever set it and never to whoever tripped it.
+
+Each join sends one magic link, and a **first** join also sends the collection's welcome document when the owner set one, so the mail this permits is at most twice the configured number. It caps joins because that is the event worth counting; the emails follow from it.
+
+---
+
 ### `creator_policy.py` — Who May Create What, On This Deployment
 
 The one place a deployment says whether an account is enough to open a collection in either mode and offer a thing under any of the four verbs. Upstream the answer is **yes, to everyone, always** — `OpenCreatorPolicy`, the default of the `CREATOR_POLICY` setting — so a standalone checkout has no gate and behaves exactly as it did before this module existed. A deployment with a narrower rule (only the board opens COMMUNITY collections; lending is vetted first) points the setting at its own subclass instead of editing the serializers, and nothing about that rule needs to live in this repository.
@@ -175,8 +196,11 @@ It answers only *may this person bring such a thing into existence here at all*.
 | `CreatorPolicy` | Base class. A subclass overrides **`capabilities(user)`** and nothing else; `allows_collection_mode()` / `allows_thing_type()` are derived from it, so a policy cannot allow something it does not advertise. Instances are cached and shared across requests — subclasses must be **stateless**. |
 | `OpenCreatorPolicy` | The default. Every mode, every verb, no request URL. Its two lists come from `Collection.Mode.values` / `Thing.Type.values` rather than being spelled out, so a verb added to the model is available the day it is added. |
 | `get_creator_policy()` | The configured policy, instantiated once **per dotted path** (`lru_cache` under the setting lookup, not over it — a module global would pin whichever policy the process loaded first, and `override_settings` in a test would silently not apply). |
-| `collection_mode_denial(user, mode)` | The message explaining why this deployment refuses that mode, else `None`. |
-| `thing_type_denial(user, thing_type)` | The same for a verb, in prose (`"a lend thing"`, not `LEND_THING`) — the text reaches an API client as the 403 body. |
+| `capabilities_for(user)` | This deployment's answer for one user — the single way to ask, used by both denial helpers and by `MeView`. **Not cached**: a caller in a loop must hoist it and pass it down (see `ThingBulkCreateView`). |
+| `collection_mode_denial(user, mode, capabilities=None)` | The message explaining why this deployment refuses that mode, else `None`. |
+| `thing_type_denial(user, thing_type, capabilities=None)` | The same for a verb, in prose (`"a lend thing"`, not `LEND_THING`) — the text reaches an API client as the 403 body. |
+
+**A policy is consulted exactly once per decision.** Both helpers resolve `capabilities()` a single time and read the allowed list *and* the `request_url` off it — the refusal needs both, and asking twice used to make every denial cost double. Both also accept an already-resolved `capabilities=`, which is how `ThingBulkCreateView` judges up to 100 CSV rows with one evaluation instead of 100: the verb is per row, whether this deployment offers it is not. `CreatorPolicy` requires subclasses to be **stateless, not cheap** — the policies this setting exists for are the ones that go and look something up — so the call count is part of the contract, pinned by `TestThePolicyIsConsultedOnce`.
 
 **The module stays free of HTTP**, like `booking_service`: it returns a message and the call site raises the 403. The message carries the request URL when the policy has one, because the API is usable without the SPA and a client that only ever sees the refusal would never learn that asking is possible.
 

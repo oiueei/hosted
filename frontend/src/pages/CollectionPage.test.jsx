@@ -291,3 +291,89 @@ describe('CollectionPage digest switch', () => {
     expect(screen.queryByRole('button', { name: /leave the group/i })).toBeNull();
   });
 });
+
+const PUBLIC_COMMUNITY = {
+  ...COLLECTION_WITH_PHOTO,
+  visibility: 'PUBLIC',
+  mode: 'COMMUNITY',
+  is_member: false,
+  digest_frequency: 'NONE',
+  allow_member_proposals: false,
+};
+
+/**
+ * The signed-in half of login-to-act.
+ *
+ * A PUBLIC collection is readable with no account, and an anonymous reader who
+ * wants to act is sent to `/collections/:code/join` — which takes an email and
+ * answers with a magic link. A reader who is *already signed in* fell straight
+ * through that funnel: no join page could help them, and no endpoint existed to
+ * ask. Meanwhile the page offered them "Add thing" whenever the collection was
+ * COMMUNITY, an action `can_add_thing` refuses without an invite — so the reader
+ * with the most intent filled the form, uploaded the photos, and got a 403.
+ */
+describe('A signed-in visitor on a public group', () => {
+  const renderPage = () =>
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'VISITOR1');
+  });
+
+  test('is offered a way in, and not an action the API would refuse', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+    expect(screen.queryByText('Add thing')).not.toBeInTheDocument();
+  });
+
+  test('joining unlocks the member controls', async () => {
+    apiFetch.mockImplementation((url, options) => {
+      if (options?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      // The refetch after a successful join sees the membership it created.
+      const joined = apiFetch.mock.calls.some((c) => c[1]?.method === 'POST');
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ...PUBLIC_COMMUNITY, is_member: joined }),
+      });
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Join this group' }));
+
+    expect(await screen.findByText('Add thing')).toBeInTheDocument();
+    expect(
+      apiFetch.mock.calls.some(
+        ([url, options]) => url === '/api/v1/collections/COL001/join/' && options?.method === 'POST'
+      )
+    ).toBe(true);
+  });
+
+  test('a member is not asked to join again', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ...PUBLIC_COMMUNITY, is_member: true }),
+      })
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('Add thing')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+});

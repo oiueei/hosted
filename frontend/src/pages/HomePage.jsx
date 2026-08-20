@@ -9,6 +9,7 @@ import CollectionLinkbox from '../components/CollectionLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
+import { aboutPath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 
 export default function HomePage() {
@@ -243,9 +244,17 @@ export default function HomePage() {
               <Link to="/collections/new">
                 <Button style={btnStyle}>{t('userPage.createFirst')}</Button>
               </Link>
-              <Link to="/welcome">
-                <Button variant="secondary" style={btnSecondaryStyle}>{t('userPage.learnHow')}</Button>
-              </Link>
+              {/* Only where this deployment has a page saying what it is.
+                  Upstream there is none — /welcome left with the demo — and this
+                  sits on the first screen a brand-new account sees, so a second
+                  button that 404s is worse here than anywhere else in the app.
+                  Same rule as the footer's about link and the collection's
+                  welcome box: no page, no link. */}
+              {aboutPath && (
+                <Link to={aboutPath}>
+                  <Button variant="secondary" style={btnSecondaryStyle}>{t('userPage.learnHow')}</Button>
+                </Link>
+              )}
             </div>
           </div>
         ) : (

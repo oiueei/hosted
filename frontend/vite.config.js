@@ -52,7 +52,14 @@ export default defineConfig(({ mode }) => ({
         'src/test/**',
         'src/**/*.test.{js,jsx}',
         'src/stubs/**',
-        'src/i18n/**',
+        // `src/i18n/locales/**` is data, not logic — three JSON catalogues whose
+        // parity is pinned by `i18nParity.test.js`. `src/i18n/index.js` itself is
+        // measured: it stopped being pure configuration when the deployment
+        // bundles and the lazy-locale map landed there, and while the whole
+        // directory was excluded a real bug in it (a deployment's copy
+        // suppressing its own language chunk) was invisible to both the suite
+        // and the ratchet.
+        'src/i18n/locales/**',
       ],
       // Ratchet floor: set ~2-3 points below the suite's current coverage so it
       // guards against regression without blocking. Raise it as coverage grows.
@@ -66,13 +73,19 @@ export default defineConfig(({ mode }) => ({
       // suite to 84.9 / 77.0 / 77.2 / 88.3: branches and functions had drifted
       // to ~4 points of slack, which is wider than this band is meant to be.
       //
+      // Raised a third time at the close of the 2026-08 pre-release **testing**
+      // round, which took the suite to 85.6 / 77.9 / 78.4 / 88.8 (the i18n
+      // bootstrap, the thing-type edit door, the signed-in join). Functions had
+      // drifted to ~4.4 points of slack and branches to ~3.9 — the same widening
+      // that triggered the last raise. All four are back inside the band.
+      //
       // The floor is not the goal — it only catches a drop. New code still owes
       // tests that name a behaviour; a change that lands under this line means
       // the code needs covering, never that the line needs lowering.
       thresholds: {
-        statements: 82,
-        branches: 74,
-        functions: 74,
+        statements: 83,
+        branches: 75,
+        functions: 76,
         lines: 86,
       },
     },

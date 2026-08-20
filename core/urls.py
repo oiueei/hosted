@@ -32,6 +32,7 @@ from .views.collections import (
     CollectionBulkInviteView,
     CollectionDigestPrefView,
     CollectionInviteView,
+    CollectionJoinView,
     CollectionLeaveView,
     CollectionProposalActionView,
     CollectionProposeInviteView,
@@ -144,6 +145,11 @@ urlpatterns = [
         "collections/<str:collection_code>/invite/",
         CollectionInviteView.as_view(),
         name="collection-invite",
+    ),
+    path(
+        "collections/<str:collection_code>/join/",
+        CollectionJoinView.as_view(),
+        name="collection-join",
     ),
     path(
         "collections/<str:collection_code>/leave/",

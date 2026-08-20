@@ -63,10 +63,10 @@ class ThingFAQListView(APIView):
         paginator = StandardResultsPagination()
         page = paginator.paginate_queryset(faqs, request)
         if page is not None:
-            serializer = FAQSerializer(page, many=True)
+            serializer = FAQSerializer(page, many=True, context={"request": request})
             return paginator.get_paginated_response(serializer.data)
 
-        serializer = FAQSerializer(faqs, many=True)
+        serializer = FAQSerializer(faqs, many=True, context={"request": request})
         return Response(serializer.data)
 
     @method_decorator(ratelimit(key="user", rate="20/h", method="POST", block=True))
@@ -108,7 +108,7 @@ class ThingFAQListView(APIView):
             )
 
         return Response(
-            FAQSerializer(faq).data,
+            FAQSerializer(faq, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -140,7 +140,7 @@ class FAQDetailView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-        serializer = FAQSerializer(faq)
+        serializer = FAQSerializer(faq, context={"request": request})
         return Response(serializer.data)
 
 
@@ -180,7 +180,7 @@ class FAQAnswerView(APIView):
                 payload={"thing_headline": thing.headline, "owner_name": owner_name},
             )
 
-        return Response(FAQSerializer(faq).data)
+        return Response(FAQSerializer(faq, context={"request": request}).data)
 
 
 class FAQVisibilityView(APIView):
@@ -222,11 +222,21 @@ class FAQVisibilityView(APIView):
                     payload={"thing_headline": thing.headline, "owner_name": owner_name},
                 )
 
-            return Response({"message": "FAQ hidden", "faq": FAQSerializer(faq).data})
+            return Response(
+                {
+                    "message": "FAQ hidden",
+                    "faq": FAQSerializer(faq, context={"request": request}).data,
+                }
+            )
         elif action == "show":
             faq.is_visible = True
             faq.save(update_fields=["is_visible"])
-            return Response({"message": "FAQ shown", "faq": FAQSerializer(faq).data})
+            return Response(
+                {
+                    "message": "FAQ shown",
+                    "faq": FAQSerializer(faq, context={"request": request}).data,
+                }
+            )
         else:
             return Response(
                 {"error": "Invalid action"},

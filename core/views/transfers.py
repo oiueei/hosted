@@ -76,5 +76,8 @@ class ThingTransferView(APIView):
             "transfers": transfers,
         }
 
-        serializer = ThingTransferStatsSerializer(stats_data)
+        # The context is what lets the serializer withhold the member names from
+        # a reader with no account (see `_may_read_names`); nesting propagates it
+        # to the per-hop rows.
+        serializer = ThingTransferStatsSerializer(stats_data, context={"request": request})
         return Response(serializer.data)

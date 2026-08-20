@@ -28,11 +28,11 @@ A comma-separated list of dotted paths to Django URLconf modules, mounted at the
 root:
 
 ```bash
-DEPLOYMENT_URLCONFS=operator.urls,intranet.urls
+DEPLOYMENT_URLCONFS=deployment.urls,intranet.urls
 ```
 
 ```python
-# operator/urls.py
+# deployment/urls.py
 from django.urls import path
 from . import views
 
@@ -47,16 +47,23 @@ nothing about it looks broken.
 
 Upstream ships none: every route the product serves is already in `core.urls`.
 
+Name that app of yours anything **except** a module Python already has.
+`operator`, `types`, `platform` and `email` are all in the standard library and
+are imported before any of your code runs, so `INSTALLED_APPS += ["operator"]`
+installs the stdlib module and `operator.urls` raises `ModuleNotFoundError:
+'operator' is not a package` — a failure that names the collision nowhere near
+where you would look for it.
+
 ## 2. `CREATOR_POLICY` — who may create what
 
 A dotted path to a class, the way `AUTH_USER_MODEL` is a dotted path to a model:
 
 ```bash
-CREATOR_POLICY=operator.policy.VettedCreatorPolicy
+CREATOR_POLICY=deployment.policy.VettedCreatorPolicy
 ```
 
 ```python
-# operator/policy.py
+# deployment/policy.py
 from core.models import Collection, Thing
 from core.services.creator_policy import Capabilities, CreatorPolicy
 
@@ -86,6 +93,20 @@ product, and it is what an upstream checkout runs.
 A subclass overrides **one method**. `allows_collection_mode()` and
 `allows_thing_type()` are derived from it, so a policy cannot enforce something
 it does not advertise — which is the failure mode of every gate written twice.
+
+It must be **stateless** — one instance is built with no arguments and shared
+across requests — but it need not be cheap. The example above hits the database
+on every call, which is the normal shape for a real policy, so OIUEEI asks it
+**once per decision**: a refusal reads both the allowed list and the request URL
+off a single `capabilities()` call, and the bulk CSV import resolves it once for
+the whole file rather than once per row (whether the deployment offers a verb is
+a fact about the person, not about line 40 of the spreadsheet).
+
+**A wrong path here fails the deploy, not the first request.** The setting is
+resolved lazily, so a typo used to boot cleanly and then 500 `GET /auth/me/` —
+the endpoint the SPA calls on every load. A system check now imports and
+instantiates the policy at check time, and `manage.py migrate` runs system
+checks, so a Heroku release phase aborts on it and keeps the previous release.
 
 Enforced at five doors: collection create and update, thing create and update,
 and the bulk CSV import. The two edit paths only judge a **change**, so

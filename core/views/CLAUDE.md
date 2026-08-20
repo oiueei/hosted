@@ -88,7 +88,7 @@ Routes to the appropriate handler based on `rsvp.action`:
   "invited_collection": "<collection_code>"
 }
 ```
-Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection instead of `/welcome`. A plain `/login` magic link has no `target_code`, so the field is omitted.
+Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection rather than the default landing (home, or their single collection). A plain `/login` magic link has no `target_code`, so the field is omitted.
 
 **COLLECTION_INVITE response (200):**
 ```json
@@ -127,7 +127,7 @@ Auth tokens are set as HttpOnly cookies via `_set_auth_cookies()`.
 |---|---|
 | **Endpoint** | `POST /api/v1/auth/join/` |
 | **Permission** | `AllowAny` |
-| **Rate limit** | 5 requests/minute per IP **and** 5/hour per account (email) |
+| **Rate limit** | 5 requests/minute per IP **and** 5/hour per account (email), plus the per-collection daily join cap (below) |
 
 How a visitor who was pointed at a collection joins it and gets a magic link
 back. Two doors reach it, and both are somebody choosing to let a specific
@@ -151,11 +151,44 @@ standalone. `RSVP.Origin.POPIN` keeps its name — see the model for why.
 6. Creates the `MAGIC_LINK` RSVP (`origin=POPIN`) and sends the magic link, **whose subject names the joined collection** (`"Hello, welcome to '{headline}' - OIUEEI!"`) and whose language follows the collection's.
 7. Logs to the `security` logger with IP, whether the user is new, and which collection — or that nothing was created.
 
+**The per-collection daily cap (`COLLECTION_JOINS_PER_DAY`).** Neither door here
+is a secret — a PUBLIC collection's code is printed in its own URL and a share
+token exists to be passed around — so anyone may ask this deployment to mail a
+magic link to any address they type. That is a relay pointed at the operator's
+sending domain, and the two rate limits above do not reach it: they cap how often
+**one IP** asks and how often **one victim** is mailed, not many IPs each mailing
+a different stranger once, which is the shape of the abuse. `INVITE_EMAILS_PER_DAY`
+did not cover it either — that counts what an *account* sends through the owner's
+invite routes, and this door has no account behind it.
+
+So `join_quota_exhausted()` is checked **after** the target resolves and
+**before** anything is created; `consume_join_quota()` charges one after the send
+is dispatched. It is keyed per collection, never per deployment: a single global
+counter would let anyone shut joining off for every group on the instance by
+spending it on one. A refusal creates nothing, sends nothing, returns the
+**unified response** — telling the visitor "over its limit" would confirm the
+code names a real, joinable collection — and writes a `security` warning, the
+same shape as the capacity alarms, where the tripwire reports to whoever set it
+and never to whoever tripped it. Off by default; see
+[`join_quota`](../services/CLAUDE.md).
+
 **The unified response is the anti-enumeration guarantee.** The refusal and the
 success are byte-for-byte identical, which is what stops the endpoint answering
 "does this address / token / collection code exist?". `test_join_hardening.py`
 compares whole responses rather than a message, so a field added to one path and
-not the other fails there.
+not the other fails there — and it now does the same for the quota refusal.
+
+**It is a guarantee about the *body*, not the clock.** Since the no-target path
+was made to create nothing, it also returns without the writes the joining path
+does — so the two differ in *duration* even though they are identical in
+content. What keeps the spaces unwalkable is therefore not constant time but
+their size and the rate limits: a 22-character share token, a 6-character code
+(36⁶ ≈ 2.2 × 10⁹), and 5/min per IP + 5/h per email. Timing is the weaker of the
+two properties and always was; the fix that removed the account creation
+improved the endpoint and narrowed this claim at the same time. **Don't add
+sleeps to "even it out"** — padding to the slow path would slow every real join
+for a threat the rate limit already bounds, and padding accurately is a much
+harder problem than it looks.
 
 **Responses:**
 | Status | Condition |
@@ -447,6 +480,18 @@ Removes a user from the collection's invite list. If the invite is still pending
 { "user_code": "ABC123" }
 ```
 
+### CollectionJoinView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/join/` |
+| **Permission** | `IsAuthenticated` + the collection must be readable (`can_view`) and PUBLIC |
+| **Rate limit** | 30/h per user, plus the operator's `COLLECTION_JOINS_PER_DAY` ceiling |
+
+Lets a **signed-in** reader join a PUBLIC collection themselves — the mirror of `CollectionLeaveView`, and the half of login-to-act that was missing. The anonymous funnel (`POST /auth/join/`, reached from `/collections/{code}/join`) takes an email and answers with a magic link, which is no use to a session that already exists; so the one reader with an account and the most intent had no way into a public group, while `CollectionPage` offered them "Add thing" — an action `Collection.can_add_thing` refuses without an invite, after the form was filled and the photos uploaded.
+
+Answers **404** whenever `can_view()` says no, so a PRIVATE or INACTIVE collection never confirms it exists; **400** for the owner ("You already own this collection."); **429** once the collection has spent its day's joins. There is also a **403** for a collection that is readable but not PUBLIC, and it is **unreachable as the guards stand** — `can_view` admits a non-owner only to a PUBLIC ACTIVE collection or one they are invited to, and `is_invited` is the same query the membership check above it runs. It is kept because that invariant lives in another file: widen `can_view` (a federated tier, a "readable by link" mode) and it is what stops a readable-but-not-public collection becoming joinable. The two tests that pin the invariant instead of the branch are `test_a_private_collection_does_not_confirm_it_exists` and `test_a_member_of_a_private_collection_is_told_they_are_already_in`. An existing member gets a plain `200` and nothing happens twice. On success it goes through `_join_collection` — the single funnel every join path shares — so it logs one `MEMBER_JOINED` (`Event.Source.PUBLIC`, the same door the anonymous half records), sends the welcome document if the owner set one, and consumes one of the day's joins. The ceiling applies here for the reason it exists: one that only stopped strangers would be a cap anyone with an account could walk around.
+
 ### CollectionLeaveView
 
 | | |
@@ -587,7 +632,7 @@ Owner-only usage statistics for a collection, returned as a `metric,value` CSV d
 
 Lists FAQs for a thing. Owner sees all FAQs (including hidden). Invited users see only visible FAQs.
 
-**Response fields:** `code`, `thing`, `created`, `questioner` (user code), `questioner_name` (user display name), `question`, `answer`, `is_visible`.
+**Response fields:** `code`, `thing`, `created`, `questioner` (user code), `questioner_name` (user display name — **empty for a reader who is not signed in**; see the anonymous-read note under Security), `question`, `answer`, `is_visible`.
 
 | | |
 |---|---|
@@ -859,7 +904,7 @@ If all active collections containing the thing have a non-empty `pause_message` 
 | **Endpoint** | `GET /api/v1/things/{thing_code}/transfers/` |
 | **Permission** | `AllowAny` + `get_viewable_thing()` (public read on a viewable thing) |
 
-Returns the transfer history (Loan Chain) and aggregate stats for a thing.
+Returns the transfer history (Loan Chain) and aggregate stats for a thing. **The four name fields are empty/null for a reader who is not signed in** (`` per hop, `null` for the two aggregates) — the counts and dates are the public story, the people are not; see the anonymous-read note under Security. The sample below is what a signed-in reader gets.
 
 **Response (200):**
 ```json
@@ -984,6 +1029,8 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 6. **Custom DRF permissions** — `IsThingOwner` and `IsCollectionOwner` in `core/permissions.py`.
 7. **Public collections (anonymous read)** — a collection with `visibility=PUBLIC` (and ACTIVE) is readable without authentication. The read endpoints `CollectionViewSet.retrieve`, `ThingViewSet.retrieve`, the FAQ list (GET on `ThingFAQListView`), `ThingTransferView` and `ThingCalendarView` are `AllowAny`, each gated by an **anonymous-safe** `can_view` (a `viewer_code(request)` helper passes the user's code, or `None` for a visitor, into the model guard — `None` matches PUBLIC collections only). Every *write/act* endpoint (reserve, ask a question, answer, add a thing, manage invites/visibility) still requires authentication plus membership/ownership, so an anonymous visitor may browse a public collection but must log in to act. INACTIVE things are excluded from the serialised `things` for any non-owner, the member roster serialises **codes only** for anonymous readers (names are for logged-in members; emails for the owner), and the collection *list* (`GET /collections/`) stays private (it returns only the caller's own collections).
 
+**No member is named to an anonymous reader, by any of these endpoints.** The roster rule above is the whole rule, and it took three passes to actually be: the FAQ list still carried `questioner_name` and the journey still carried the name of everyone who had held the thing, so a group's membership stayed legible from the open web through a thing rather than through the collection. Both now withhold (`FAQSerializer.get_questioner_name`, `core/serializers/transfer.py::_may_read_names`), both fail closed on a request-less context, and both keep the *content* public — the question, the hop count, the travel story. The third door was the grid itself: in COMMUNITY mode every card carries `owner_name`, the member who **contributed** the thing, so a group's membership stayed enumerable from the open web after both other doors had closed. `ThingComputedFieldsMixin.get_owner_name` now withholds it from a signed-out reader **whenever the thing's owner is not the collection's owner** — the leak stated exactly, with no mode check to drift. The one name such a reader still gets is the **curator's**, the person who published the collection: `CollectionSerializer.get_owner_name` already serves it to them in the page header, so withholding it on that person's own listings would be theatre. They chose to publish; the member who contributed, the person who asked and the people who borrowed did not.
+
 ### Input Validation
 
 1. **Image IDs** — Only alphanumeric characters, underscores, and hyphens allowed.
@@ -1009,6 +1056,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 
 - `/auth/request-link/` — 5 requests per minute per IP **and** 5 per hour per account (email)
 - `/auth/join/` — 5 requests per minute per IP **and** 5 per hour per account (email)
+- Joins per **collection** — **unlimited unless the operator sets `COLLECTION_JOINS_PER_DAY`** (0/unset = off). The one door that needs no account, reached by a public collection code or a shared token; the two IP/email limits above cap one caller and one victim, this caps the relay
 - `/auth/verify/{token}/` — 10 requests per minute per IP
 - `/collections/{code}/invite/` POST — 30 requests per hour per user
 - Invitation **emails** (single + bulk combined) — **unlimited unless the operator sets `INVITE_EMAILS_PER_DAY`** (counts emails, not requests, so the bulk fan-out can't multiply past it; 0/unset = off)
@@ -1021,6 +1069,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
 - `/collections/` POST (single create) — 30 requests per hour per user
 - `/collections/{code}/add-thing/` POST — 60 requests per hour per user
+- `/collections/{code}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling)
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user
 - `/contact/` POST — 5 requests per hour per IP
@@ -1054,6 +1103,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 ### Service Layer
 
 Business logic is extracted into `core/services/`:
+- `join_quota.py` — The per-collection daily cap on `POST /auth/join/` (`COLLECTION_JOINS_PER_DAY`), the one door that needs no account. Off by default.
 - `creator_policy.py` — Whether this deployment lets an account open a collection in a given mode or offer a thing under a given verb (`CREATOR_POLICY`; open to everyone in the standalone). Enforced at five doors — collection create/update, thing create/update, bulk import — and served to the SPA as `capabilities` on `GET /auth/me/`.
 - `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
 - `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.

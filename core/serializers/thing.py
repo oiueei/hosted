@@ -81,25 +81,59 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     available_today = serializers.SerializerMethodField()
     next_available = serializers.SerializerMethodField()
 
+    def _reading_collection(self, obj):
+        """The collection this thing is being read *through*, or ``None``.
+
+        Two call sites, two ways of knowing: the collection grid passes the
+        collection it is rendering as ``parent_collection``; the thing endpoints
+        resolve it per viewer (``ThingSerializer._viewable_collection``, absent
+        from the summary serializer). Used to tell the person who published the
+        listing apart from a member who contributed to someone else's group.
+        """
+        collection = self.context.get("parent_collection")
+        if collection is not None:
+            return collection
+        resolver = getattr(self, "_viewable_collection", None)
+        return resolver(obj) if resolver else None
+
     def get_owner_name(self, obj):
+        # Withheld from readers with no account when the owner is *not* the
+        # person who published the collection — i.e. a member who contributed a
+        # thing to someone else's group, which only happens in COMMUNITY mode.
+        # That member is a third party exactly like the FAQ asker and the
+        # journey's past holders: they consented to a group, not to the open
+        # web, and the visibility switch belongs to the curator, not to them.
+        # A group's membership stayed legible from the open web through the
+        # cards of the things it shares.
+        #
+        # The curator's own name is *not* withheld: they chose to publish, and
+        # `CollectionSerializer.get_owner_name` already serves it to the same
+        # reader in the page header — hiding it here would be theatre.
+        # Comparing the two owners says exactly that, and needs no mode check.
+        #
+        # Withheld is `""`, the value a nameless owner already produced, so no
+        # client meets a kind of value it did not have to handle. Fail-closed on
+        # a request-less context and on a collection we cannot resolve, like
+        # `core.serializers.transfer._may_read_names`.
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated):
+            collection = self._reading_collection(obj)
+            if collection is None or collection.owner_id != obj.owner_id:
+                return ""
+            return obj.owner.name
         # Bare name by default — never the email — because this is shown to
-        # co-members (and to anonymous visitors on PUBLIC collections) in the
-        # community grid, where an email fallback would leak it (L2).
-        # Exception: the collection owner already sees co-members' emails
-        # (owner-only `invites`), so when the viewer owns the collection being
-        # serialised (``parent_collection`` is only set on the collection grid)
-        # we fall back to the email for owners who haven't set a name. Standalone
-        # thing endpoints have no ``parent_collection`` → email is never exposed.
+        # co-members in the community grid, where an email fallback would leak
+        # it (L2). Exception: the collection owner already sees co-members'
+        # emails (owner-only `invites`), so when the viewer owns the collection
+        # being serialised (``parent_collection`` is only set on the collection
+        # grid) we fall back to the email for owners who haven't set a name.
+        # Standalone thing endpoints have no ``parent_collection`` → email is
+        # never exposed.
         if obj.owner.name:
             return obj.owner.name
-        request = self.context.get("request")
+        # Authentication is already guaranteed by the early return above.
         collection = self.context.get("parent_collection")
-        if (
-            request
-            and request.user.is_authenticated
-            and collection is not None
-            and collection.is_owner(request.user.code)
-        ):
+        if collection is not None and collection.is_owner(request.user.code):
             return obj.owner.email
         return obj.owner.name
 

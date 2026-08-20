@@ -101,3 +101,36 @@ def test_logout_answers_200_not_500(api_client):
     assert res.status_code == 200
     assert res.cookies["access_token"].value == ""
     assert res.cookies["refresh_token"].value == ""
+
+
+@pytest.mark.parametrize(
+    "body, expected",
+    [
+        ({"email": "  Someone@Example.COM "}, "someone@example.com"),
+        ({"email": None}, ""),
+        ({}, ""),
+        (ARRAY_BODY, ""),  # the list body: `.get` does not exist on it
+        ("not a dict at all", ""),
+    ],
+)
+def test_the_rate_limit_key_survives_any_body_shape(rf, body, expected):
+    """The key function is asked for a bucket *before* the view runs.
+
+    Unit-tested rather than driven through the endpoint because rate limits are
+    off in this suite (`RATELIMIT_ENABLE`), so the decorator never calls this —
+    which is exactly why its `except` branch had no coverage while the two
+    endpoint tests above passed. A malformed body reaching a `.get` here raises
+    inside django-ratelimit's own machinery, *outside* DRF's exception handler:
+    a 500 on the two doors a stranger can reach, on the deployment where limits
+    are actually on — the one place nothing in this file was checking.
+
+    Everything unparseable shares one bucket rather than getting a fresh
+    allowance, which is the safe direction: a caller cannot mint a new quota by
+    sending rubbish.
+    """
+    from core.views.auth import email_ratelimit_key
+
+    request = rf.post("/api/v1/auth/request-link/")
+    request.data = body
+
+    assert email_ratelimit_key("group", request) == expected

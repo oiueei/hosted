@@ -147,7 +147,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |
 | POST | `/api/v1/auth/refresh/` | Rotate access/refresh tokens via HttpOnly cookies |
-| GET | `/api/v1/auth/me/` | Get authenticated user |
+| GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url}`, what this deployment lets them create (see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything and `request_url` is `null` |
 | POST | `/api/v1/auth/logout/` | Log out (clears auth cookies) |
 | POST | `/api/v1/auth/delete-account/` | Request account deletion (rate limited: 3/h): emails a 24h single-use confirmation link; the deletion itself commits via a POST on the verify endpoint (GET only previews) |
 
@@ -176,6 +176,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner only) |
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
+| POST | `/api/v1/collections/{code}/join/` | Join a PUBLIC collection you are browsing while signed in (self-join) — the half of login-to-act the anonymous `/auth/join/` can't serve, since a magic link is no use to a live session. Honours the same `COLLECTION_JOINS_PER_DAY` ceiling. Rate limited: 30/h |
 | POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) |
 | POST | `/api/v1/collections/{code}/invite/propose/` | Members only: recommend a guest to the owner. Nothing reaches the proposed address until the owner approves. Rate limited: 30/day |
 | POST | `/api/v1/proposals/{code}/{approve\|reject}/` | The owner's answer to a member's recommendation (owner only) |
@@ -214,7 +215,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/api/v1/things/{code}/faq/` | List FAQs for a thing |
-| POST | `/api/v1/things/{code}/faq/` | Ask question (invited users only, not owner) |
+| POST | `/api/v1/things/{code}/faq/` | Ask question — any signed-in reader who can view the thing, except its owner. On a PUBLIC collection that is anyone with an account, not only invitees (`thing.can_view()`, the same guard the read uses) |
 | GET | `/api/v1/faq/{code}/` | View FAQ |
 | POST | `/api/v1/faq/{code}/answer/` | Answer FAQ (owner only) |
 | POST | `/api/v1/faq/{code}/hide/` | Hide FAQ (owner only) |
@@ -357,6 +358,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `COLLECTION_THINGS_BLOCK` | No | Per-collection ceiling on things: adds that would cross it are refused, including whole CSV batches. **Unset or `0` = off** (the default). A superuser lifts it per collection with `capacity_unblocked` in the admin. |
 | `COLLECTION_INVITES_ALARM` | No | The same silent, fire-once alert for a collection's **member** count. **Unset or `0` = off**. |
 | `COLLECTION_INVITES_BLOCK` | No | Per-collection ceiling on members: invitations that would cross it are refused when **sent**, not when accepted. **Unset or `0` = off**. Same `capacity_unblocked` override. |
+| `COLLECTION_JOINS_PER_DAY` | No | Cap on how many people **one collection** may be joined by per day through `POST /auth/join/` — the door that needs no account. `INVITE_EMAILS_PER_DAY` guards what an *account* sends; this guards the one anybody can push, where the address mailed is whatever a stranger typed and the collection code is public by construction. Without it the per-IP limit is all that stands between your sending domain and many IPs each mailing a different stranger once. Counted **per collection**, so abusing one group's public code costs that group its day and leaves the rest working — a deployment-wide counter would let one abuser switch joining off for everyone. A refusal answers with the endpoint's usual unified response (the operator gets a `security` log line; the visitor is never told, or the cap becomes a way to probe which codes are real). **Unset or `0` = no limit**, the standalone default: a share link pasted into a group chat can legitimately bring in hundreds in an evening. Ignored when `RATELIMIT_ENABLE` is off. |
 | `TRUSTED_PROXY_COUNT` | No | How many proxies in front of the app are trusted to have appended to `X-Forwarded-For`. It decides which entry every per-IP rate limit buckets on, counted from the **right** — only the tail of that header is written by a proxy; the rest is the caller's own text. Default `1` = one trusted proxy (the Heroku/Render/Fly router, or an nginx you run). **Set `0` if nothing trusted sits in front** (gunicorn facing the internet): otherwise the header is caller-supplied and one caller can mint a fresh bucket per request, defeating every rate limit below. `2+` for a CDN in front of the router. |
 
 ## Onboarding & access
@@ -367,6 +369,8 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 - **You act on a PUBLIC collection.** Anyone can read a collection its owner made public; pressing an action button asks for your email, joins you to that collection and sends the magic link (`POST /auth/join/` with its code). It is login-to-act: reading needs nothing, acting needs an account.
 
 `/login` (`POST /auth/request-link/`) is for people who already have an account. It always answers `200` — it never reveals whether an address is registered — and never creates users. `/auth/join/` likewise **creates nothing** unless the request carries a valid share token or public collection code, and answers identically whether or not it did.
+
+Note what the second bullet means before you go public: **a PUBLIC collection's code is in its own URL**, so anyone who can read the collection can also ask your deployment to mail a magic link to any address they type. That is your sending domain, not theirs. `COLLECTION_JOINS_PER_DAY` caps how many people one collection may be joined by in a day and is the guard for it; it ships **off**, because only you know how big a share link you handed out.
 
 **If your deployment wants an open door**, add one: a view of your own, mounted through `DEPLOYMENT_URLCONFS`, that creates the account and joins it to your `is_onboarding` collections. The mechanism is documented in [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md); the policy is yours, which is why it is not shipped here.
 
@@ -385,7 +389,8 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | Input Validation | XSS Prevention | HTML escaped in emails via `django.utils.html.escape()`. Headlines sanitized |
 | Input Validation | Image ID | Alphanumeric validation prevents path traversal |
 | Rate Limiting | Auth | 5 req/min for magic link, 10 req/min for verify, 10 req/min for token refresh |
-| Rate Limiting | Pop-in | 5 req/min per IP + 5 req/hour per email |
+| Rate Limiting | Join (`/auth/join/`) | 5 req/min per IP + 5 req/hour per email |
+| Rate Limiting | Joins per collection | Off by default; set `COLLECTION_JOINS_PER_DAY` to cap how many people **one collection** may be joined by per day. The two limits above cap one IP and one victim; this is what stops many IPs each mailing a different stranger once, using a public collection code as a relay onto the operator's sending domain. A refusal returns the endpoint's usual unified response, so the cap can't be used to probe which codes are real |
 | Rate Limiting | Collection invite | 30 req/hour per user |
 | Rate Limiting | Collection bulk invite | 5 req/hour per user |
 | Rate Limiting | Invitation emails | Off by default; set `INVITE_EMAILS_PER_DAY` to cap per account — single, bulk and approved recommendations combined, on both of the owner's routes |

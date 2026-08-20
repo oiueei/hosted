@@ -206,3 +206,93 @@ class TestAddThingRespectsAllowlist:
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.django_db
+class TestChangingAnExistingThingsType:
+    """The allowlist governs the **edit** door too, not only the add door.
+
+    `ThingViewSet.perform_update` re-runs `type_validity_error` against every
+    collection the thing lives in whenever the verb changes — and no test in the
+    suite ever reached that code. The three PATCHes that touched `type` all
+    stopped short of it: one names a retired type (refused by the serializer),
+    one names a type this deployment withholds (refused by `CREATOR_POLICY`, one
+    line above), and one re-sends the type the thing already has (no change, so
+    the block is skipped entirely).
+
+    So the whole re-validation was live and unguarded, on the path where it
+    matters most: adding a thing of the wrong type is caught by a form that only
+    offers the right ones, while *editing* is where an owner arrives with a verb
+    already chosen and a collection that has since narrowed underneath it.
+    """
+
+    def _collection(self, owner, allowed, code="EDT001"):
+        return Collection.objects.create(
+            code=code, owner=owner, headline="Editables", allowed_thing_types=allowed
+        )
+
+    def _thing(self, owner, collection, thing_type=Thing.Type.GIFT_THING):
+        thing = Thing.objects.create(
+            code="EDTH01", type=thing_type, owner=owner, headline="A blender"
+        )
+        collection.things.add(thing)
+        return thing
+
+    def test_an_owner_may_move_a_thing_to_another_type_the_collection_allows(
+        self, authenticated_client, user
+    ):
+        """The happy path, which had no test at all: a gift becomes a sale."""
+        collection = self._collection(user, ["GIFT_THING", "SELL_THING"])
+        thing = self._thing(user, collection)
+
+        response = authenticated_client.patch(
+            f"/api/v1/things/{thing.code}/", {"type": "SELL_THING"}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        thing.refresh_from_db()
+        assert thing.type == Thing.Type.SELL_THING
+
+    def test_a_type_the_collection_does_not_allow_is_refused_on_edit_too(
+        self, authenticated_client, user
+    ):
+        """Otherwise the allowlist is a rule you obey once and then edit around.
+
+        The add door refuses `LEND_THING` here; without this the owner could
+        create the thing as a gift and immediately PATCH it into a loan, landing
+        exactly the row the collection said it would not hold.
+        """
+        collection = self._collection(user, ["GIFT_THING", "SELL_THING"])
+        thing = self._thing(user, collection)
+
+        response = authenticated_client.patch(
+            f"/api/v1/things/{thing.code}/", {"type": "LEND_THING"}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "type" in response.data
+        # Refused *and* unchanged — a 400 that had already written the row would
+        # be worse than no check, since the owner is told it did not happen.
+        thing.refresh_from_db()
+        assert thing.type == Thing.Type.GIFT_THING
+
+    def test_every_collection_the_thing_lives_in_gets_a_vote(self, authenticated_client, user):
+        """The loop is over `thing.collections.all()`, and this is why.
+
+        A thing shared with two groups must satisfy both: the drill lent to the
+        neighbourhood *and* the family group cannot become a sale because one of
+        them permits sales. A check that looked only at the first collection
+        would pass here and quietly break the other group's rule.
+        """
+        permissive = self._collection(user, ["GIFT_THING", "SELL_THING"], code="EDT002")
+        strict = self._collection(user, ["GIFT_THING"], code="EDT003")
+        thing = self._thing(user, permissive)
+        strict.things.add(thing)
+
+        response = authenticated_client.patch(
+            f"/api/v1/things/{thing.code}/", {"type": "SELL_THING"}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        thing.refresh_from_db()
+        assert thing.type == Thing.Type.GIFT_THING

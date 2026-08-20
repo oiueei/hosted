@@ -126,6 +126,33 @@ def test_anonymous_can_read_faqs_on_public_thing(api_client, user, user2):
     assert len(_items(res)) == 1
 
 
+def test_anonymous_reader_gets_the_question_but_not_who_asked_it(api_client, user, user2):
+    # Same rule as the member list on the collection itself: the question is
+    # public because the thing is, but the member who asked it published
+    # nothing, and their name does not belong to the open web.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    FAQ.objects.create(code="FQ0003", thing=thing, questioner=user2, question="Available?")
+
+    res = api_client.get(f"/api/v1/things/{thing.code}/faq/")
+
+    faq = _items(res)[0]
+    assert faq["question"] == "Available?"
+    assert faq["questioner_name"] == ""
+
+
+def test_signed_in_reader_still_sees_who_asked(authenticated_client, user, user2):
+    # The counterpart: withholding is about the open web, not about the feature.
+    # Anyone with an account who can read the thing still sees the asker.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    FAQ.objects.create(code="FQ0004", thing=thing, questioner=user2, question="Available?")
+
+    res = authenticated_client.get(f"/api/v1/things/{thing.code}/faq/")
+
+    assert _items(res)[0]["questioner_name"] == user2.name
+
+
 def test_anonymous_cannot_read_faqs_on_private_thing(api_client, user, user2):
     coll = _collection(user, Collection.Visibility.PRIVATE)
     thing = _thing(user, coll)
@@ -143,6 +170,45 @@ def test_anonymous_can_read_transfers_on_public_thing(api_client, user, user2):
     res = api_client.get(f"/api/v1/things/{thing.code}/transfers/")
     assert res.status_code == 200
     assert res.json()["total_transfers"] == 1
+
+
+def test_anonymous_reader_gets_the_journey_but_not_who_held_the_thing(api_client, user, user2):
+    # The loan chain names every member the thing passed through. Reading it on
+    # a PUBLIC collection's thing was a way to enumerate a group's membership
+    # from the open web without an account — the same exposure the collection's
+    # own member list already closed. The travel story survives; the names go.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    ThingTransfer.objects.create(
+        code="TR0002", thing=thing, from_user=user, to_user=user2, lent_date="2026-01-01"
+    )
+
+    data = api_client.get(f"/api/v1/things/{thing.code}/transfers/").json()
+
+    assert data["total_transfers"] == 1
+    assert data["unique_homes"] == 2
+    assert data["current_holder_name"] is None
+    assert data["original_owner_name"] is None
+    assert data["transfers"][0]["from_user_name"] == ""
+    assert data["transfers"][0]["to_user_name"] == ""
+    assert user.name not in str(data)
+    assert user2.name not in str(data)
+
+
+def test_signed_in_reader_still_sees_the_whole_journey(authenticated_client, user, user2):
+    # The counterpart: this is about the open web, not about the feature.
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    ThingTransfer.objects.create(
+        code="TR0003", thing=thing, from_user=user, to_user=user2, lent_date="2026-01-01"
+    )
+
+    data = authenticated_client.get(f"/api/v1/things/{thing.code}/transfers/").json()
+
+    assert data["current_holder_name"] == user2.name
+    assert data["original_owner_name"] == user.name
+    assert data["transfers"][0]["from_user_name"] == user.name
+    assert data["transfers"][0]["to_user_name"] == user2.name
 
 
 def test_anonymous_can_read_calendar_on_public_thing(api_client, user):
@@ -236,3 +302,62 @@ def test_owner_still_sees_their_own_private_collection_on_their_thing(authentica
     assert res.status_code == 200
     assert res.json()["collection_code"] == private.code
     assert "secreto" in res.json()["collection_tags"]
+
+
+# --- who contributed a thing (owner_name) ---------------------------------
+
+
+def _community_with_contribution(owner, member):
+    """A PUBLIC COMMUNITY collection whose thing was contributed by a member."""
+    coll = Collection.objects.create(
+        code="PUB900",
+        owner=owner,
+        headline="Bibliocosas",
+        visibility=Collection.Visibility.PUBLIC,
+        mode=Collection.Mode.COMMUNITY,
+    )
+    coll.invites.add(member)
+    return coll, _thing(member, coll, code="THG900")
+
+
+def test_anonymous_reader_is_not_told_which_member_contributed_a_thing(api_client, user, user2):
+    """The third name a group leaked to the open web, after the FAQ asker and the
+    journey's past holders: in COMMUNITY mode every card carries the name of the
+    member who put the thing there. That member consented to a group, not to the
+    web, and the visibility switch is the curator's — so the name goes and the
+    contribution stays."""
+    coll, thing = _community_with_contribution(user, user2)
+
+    grid = api_client.get(f"/api/v1/collections/{coll.code}/").json()
+    detail = api_client.get(f"/api/v1/things/{thing.code}/").json()
+
+    assert grid["things"][0]["owner_name"] == ""
+    assert detail["owner_name"] == ""
+    # What the reader keeps: the thing itself, and that it belongs to someone
+    # other than the curator (the code, which names nobody).
+    assert detail["owner"] == user2.code
+    assert detail["headline"] == "A thing"
+
+
+def test_anonymous_reader_is_still_told_who_published_the_collection(api_client, user):
+    """The curator is not a third party: they chose to publish, and the
+    collection header already serves their name to the very same reader.
+    Withholding it on their own listings would be theatre, not privacy."""
+    coll, _ = _community_with_contribution(user, user)
+    own = _thing(user, coll, code="THG901")
+
+    detail = api_client.get(f"/api/v1/things/{own.code}/").json()
+
+    assert detail["owner_name"] == user.name
+
+
+def test_signed_in_reader_still_sees_who_contributed(authenticated_client, user, user2):
+    """Attribution to the contributing member is half the point of a COMMUNITY
+    collection. It is withheld from the open web, never from the group."""
+    coll, thing = _community_with_contribution(user2, user)
+
+    grid = authenticated_client.get(f"/api/v1/collections/{coll.code}/").json()
+    detail = authenticated_client.get(f"/api/v1/things/{thing.code}/").json()
+
+    assert grid["things"][0]["owner_name"] == user.name
+    assert detail["owner_name"] == user.name

@@ -90,6 +90,7 @@
     "sending": "Enviant...",
     "back": "Tornar",
     "formerMember": "Antic membre",
+    "aMember": "Un membre",
     "closeThisTab": "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada."
   },
   "titles": {
@@ -139,7 +140,7 @@
     "errorSendingLink": "Error en enviar l'enllaç.",
     "pitch": "Comparteix el que tens amb la gent en qui confies — sense anuncis, sense desconeguts.",
     "description": "OIUEEI és una aplicació de codi obert per compartir el que tens amb la gent que t'envolta. Crea una col·lecció — coses per regalar, vendre, llogar o deixar — i comparteix-la amb el teu cercle: podran mirar, reservar i preguntar.",
-    "openSource": "El codi d'OIUEEI és públic — disponible sota llicència BUSL 1.1, MIT a partir de 2030. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà. Nou per aquí? El botó «Pop in» de sota és la porta.",
+    "openSource": "El codi d'OIUEEI és públic — disponible sota llicència BUSL 1.1, MIT a partir de 2030. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà.",
     "manifesto": "Sense anuncis, sense rastrejadors. Les teves dades no són el producte.",
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
@@ -250,7 +251,10 @@
     "errorLoading": "Error en carregar la col·lecció.",
     "curator": "Curador.",
     "showMoreThings_one": "Veure 1 cosa més",
-    "showMoreThings_other": "Veure {{count}} coses més"
+    "showMoreThings_other": "Veure {{count}} coses més",
+    "visitorIntro": "Estàs veient aquest grup com a visitant.",
+    "visitorJoin": "Unir-me al grup",
+    "visitorJoinError": "No hem pogut afegir-te al grup. Torna-ho a provar."
   },
   "digestMute": {
     "pageTitle": "Resums per correu — OIUEEI",
@@ -672,7 +676,8 @@
     "messageLabel": "Missatge",
     "sendButton": "Enviar difusió",
     "sending": "Enviant...",
-    "sent": "Difusió enviada a {{count}} convidats."
+    "sent": "Difusió enviada a {{count}} convidats.",
+    "replyToNotice": "Qui el rebi podrà respondre't directament: veurà la teva adreça de correu."
   },
   "notifications": {
     "pageTitle": "Preferències d'email",

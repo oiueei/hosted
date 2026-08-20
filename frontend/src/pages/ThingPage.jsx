@@ -150,6 +150,14 @@ export default function ThingPage() {
     ? `/collections/${code}/things/${thing.code}/delete`
     : `/things/${thing.code}/delete`;
 
+  // An empty name in the journey means two different things, and only the
+  // viewer's own session tells them apart: for a signed-in reader it is a
+  // deleted account (right to erasure), so "Former member" is the truth; for a
+  // signed-out one the API withheld every name, and calling people who are
+  // still here former members would be a lie the reader has no way to check.
+  const holderLabel = (name) =>
+    name || t(isAuthenticated ? 'common.formerMember' : 'common.aMember');
+
   return (
     <PageLayout backTo={backPath} backLabel={backLabel}>
 
@@ -165,7 +173,14 @@ export default function ThingPage() {
 
         <p className="thing-card-meta">
           {new Date(thing.created).toLocaleDateString(i18n.language)}
-          {thing.owner_name && ` — ${thing.owner_name}`}
+          {/* Withheld from a reader with no account when the owner is not the
+              person who published the collection (see the card's meta line).
+              Only that reader gets the generic stand-in: an empty name for a
+              signed-in one means the owner never set one, and they are not
+              "a member" in the anonymous sense — they are simply unnamed. */}
+          {thing.owner_name
+            ? ` — ${thing.owner_name}`
+            : !isAuthenticated && ` — ${t('common.aMember')}`}
         </p>
 
         <h1 className="page-title">{headline}</h1>
@@ -309,8 +324,8 @@ export default function ThingPage() {
             <ul className="thing-card-bookings">
               {transfers.transfers.map((tr) => (
                 <li key={tr.code}>
-                  {tr.from_user_name || t('common.formerMember')} {t('transfers.to')}{' '}
-                  {tr.to_user_name || t('common.formerMember')}
+                  {holderLabel(tr.from_user_name)} {t('transfers.to')}{' '}
+                  {holderLabel(tr.to_user_name)}
                   {' — '}
                   {t('transfers.lentOn', { date: new Date(tr.lent_date).toLocaleDateString(i18n.language) })}
                   {/* `auto_closed` means the daily command wrote this date when

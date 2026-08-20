@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { TextInput, TextArea, Select, Button, RadioButton, Notification, Accordion } from 'hds-react';
+import { TextInput, TextArea, Select, Button, Notification, Accordion } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
-import ApprovalNotice from '../components/ApprovalNotice';
+import CollectionModeField from '../components/CollectionModeField';
+import downloadBlob from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
@@ -33,6 +34,13 @@ export default function EditCollectionPage() {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [mode, setMode] = useState('PROPRIETARY');
+  // The mode as the server has it, which is **not** `mode` once the user starts
+  // picking. It is what `isOfferable` needs: the server judges only a *change*,
+  // so the stored mode is always submittable, while the one currently selected
+  // in the form carries no such promise. Keying the filter on `mode` made a
+  // withheld-but-stored option vanish the moment anything else was clicked,
+  // stranding the owner on a form that could no longer express what they had.
+  const [savedMode, setSavedMode] = useState(null);
   const [visibility, setVisibility] = useState('PRIVATE');
   const [allowProposals, setAllowProposals] = useState(true);
   const [digestFrequency, setDigestFrequency] = useState('NONE');
@@ -63,12 +71,13 @@ export default function EditCollectionPage() {
     { label: t('editCollection.modeProprietary'), description: t('createCollection.modeProprietaryDesc'), value: 'PROPRIETARY' },
     { label: t('editCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
   ];
-  // `mode` is passed as the current value, so a collection opened before this
-  // deployment narrowed still shows the mode it is in. The server only judges a
-  // change; a form that hid the current answer would submit a wrong one.
+  // `savedMode` — not `mode` — is the current value here: a collection opened
+  // before this deployment narrowed still shows the mode it is in, and keeps
+  // showing it while the owner tries the alternatives. The server only judges a
+  // change; a form that hid the stored answer would submit a wrong one.
   const capabilities = useCapabilities();
   const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
-    isOfferable(capabilities, 'collection_modes', opt.value, mode)
+    isOfferable(capabilities, 'collection_modes', opt.value, savedMode)
   );
 
   const DIGEST_OPTIONS = [
@@ -100,6 +109,7 @@ export default function EditCollectionPage() {
           setDescription(data.description || '');
           setStatus(data.status || 'ACTIVE');
           setMode(data.mode || 'PROPRIETARY');
+          setSavedMode(data.mode || 'PROPRIETARY');
           setVisibility(data.visibility || 'PRIVATE');
           // `?? true` rather than `||`: the field is a boolean, and a genuine
           // `false` (the owner turned recommendations off) must survive the load
@@ -222,15 +232,7 @@ export default function EditCollectionPage() {
     try {
       const res = await apiFetch(`/api/v1/collections/${code}/stats/`);
       if (!res.ok) throw new Error('stats');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${code}-stats.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(await res.blob(), `${code}-stats.csv`);
     } catch {
       setStatsError(true);
     }
@@ -276,28 +278,14 @@ export default function EditCollectionPage() {
             }
           }}
         />
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontWeight: 700, fontSize: 'var(--fontsize-body-m)', marginBottom: 'var(--spacing-2-xs)', padding: 0 }}>
-            {t('editCollection.modeLabel')}
-          </legend>
-          {MODE_OPTIONS.map((opt) => (
-            <div key={opt.value} style={{ marginBottom: 'var(--spacing-xs)' }}>
-              <RadioButton
-                id={`edit-collection-mode-${opt.value.toLowerCase()}`}
-                name="edit-collection-mode"
-                value={opt.value}
-                label={opt.label}
-                checked={mode === opt.value}
-                onChange={() => handleModeChange(opt.value)}
-                aria-describedby={`edit-collection-mode-${opt.value.toLowerCase()}-desc`}
-              />
-              <p id={`edit-collection-mode-${opt.value.toLowerCase()}-desc`} style={{ margin: '0 0 0 var(--spacing-l)', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-70)' }}>
-                {opt.description}
-              </p>
-            </div>
-          ))}
-          <ApprovalNotice kind="collection_modes" catalogue={ALL_MODE_OPTIONS} />
-        </fieldset>
+        <CollectionModeField
+          idPrefix="edit-collection"
+          label={t('editCollection.modeLabel')}
+          options={MODE_OPTIONS}
+          catalogue={ALL_MODE_OPTIONS}
+          value={mode}
+          onChange={handleModeChange}
+        />
         <CollectionForm
           idPrefix="edit-collection"
           allowedThingTypes={allowedThingTypes}

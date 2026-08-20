@@ -73,9 +73,16 @@ class CreatorPolicy:
     from it on purpose — a policy that could answer "yes" to a mode it left out
     of its own capabilities would be a policy the UI misreports.
 
+    They are **readable conveniences, not the enforcement path**: the denial
+    functions below read `capabilities()` directly, because a refusal needs the
+    allowed list and the request URL together and going through `allows_*` would
+    ask the policy twice for the two halves of one answer. Same single source
+    either way — which is the property that matters.
+
     Instances are cached per dotted path (see `get_creator_policy`) and shared
     across requests, so a subclass must be **stateless**: everything it needs
-    arrives in `user`.
+    arrives in `user`. Stateless, not cheap — it is consulted once per decision,
+    and callers in a loop hoist the answer rather than asking per iteration.
     """
 
     def capabilities(self, user) -> Capabilities:
@@ -119,31 +126,57 @@ def get_creator_policy() -> CreatorPolicy:
     return _policy_instance(settings.CREATOR_POLICY)
 
 
-def collection_mode_denial(user, mode) -> str | None:
+def capabilities_for(user) -> Capabilities:
+    """This deployment's answer for one user — the single way to ask.
+
+    Every door and `MeView` go through here rather than reaching for
+    `get_creator_policy().capabilities(...)` themselves, so there is one place
+    to look when asking what a policy costs to consult.
+
+    **It is not cached, and a caller in a loop must hoist it.** Upstream the
+    answer is two tuples off the model choices, but the policies this setting
+    exists for are the ones that go and look something up — a vetting table, a
+    membership list — and `CreatorPolicy` requires them to be stateless, not
+    cheap. See `ThingBulkCreateView`, which resolves this once for a CSV of up
+    to a hundred rows.
+    """
+    return get_creator_policy().capabilities(user)
+
+
+def collection_mode_denial(user, mode, capabilities=None) -> str | None:
     """Why this deployment won't let `user` create a `mode` collection, else `None`.
 
     A message rather than an exception: `core/services` stays free of HTTP, the
     way `booking_service` does, and each call site raises the 403 itself. The
-    wording lives here so the four enforcement points can't drift apart.
+    wording lives here so the five enforcement points can't drift apart.
+
+    `capabilities` is this user's already-resolved answer, for a caller that
+    holds one; omitted, it is resolved here. Either way it is consulted
+    **once** — the refusal needs both the list and the request URL, and asking
+    twice for the two halves would double the cost of every denial.
     """
-    policy = get_creator_policy()
-    if policy.allows_collection_mode(user, mode):
+    caps = capabilities_for(user) if capabilities is None else capabilities
+    if mode in caps.collection_modes:
         return None
     return _denial(
         f"This deployment does not allow you to create {mode} collections.",
-        policy.capabilities(user).request_url,
+        caps.request_url,
     )
 
 
-def thing_type_denial(user, thing_type) -> str | None:
-    """Why this deployment won't let `user` offer a `thing_type`, else `None`."""
-    policy = get_creator_policy()
-    if policy.allows_thing_type(user, thing_type):
+def thing_type_denial(user, thing_type, capabilities=None) -> str | None:
+    """Why this deployment won't let `user` offer a `thing_type`, else `None`.
+
+    `capabilities` as above: pass one when calling in a loop over a single
+    user, omit it otherwise.
+    """
+    caps = capabilities_for(user) if capabilities is None else capabilities
+    if thing_type in caps.thing_types:
         return None
     label = thing_type.replace("_", " ").lower()
     return _denial(
         f"This deployment does not allow you to offer a {label}.",
-        policy.capabilities(user).request_url,
+        caps.request_url,
     )
 
 
