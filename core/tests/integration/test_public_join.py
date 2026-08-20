@@ -306,6 +306,26 @@ class TestSignedInJoin:
         assert res.status_code == 404
         assert not private.invites.filter(code=user.code).exists()
 
+    def test_a_member_of_a_private_collection_is_told_they_are_already_in(
+        self, authenticated_client, user, join_setup
+    ):
+        """The other half of the invariant the view's 403 rests on.
+
+        Together with the 404 above, this is what makes "not open to join"
+        unreachable: `can_view` admits a non-owner to a PRIVATE collection only
+        when they are invited, and an invited member is answered by the
+        membership line before the public check is ever consulted. Neither test
+        can enter that branch — these two are why, and they are what would go
+        red if `can_view` were ever widened without revisiting it.
+        """
+        private = join_setup["private"]
+        private.invites.add(user)
+
+        res = self._join(authenticated_client, private)
+
+        assert res.status_code == 200
+        assert res.data == {"message": "You are a member of this collection"}
+
     def test_an_archived_collection_cannot_be_joined(self, authenticated_client, join_setup):
         res = self._join(authenticated_client, join_setup["inactive_public"])
 

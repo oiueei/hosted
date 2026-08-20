@@ -594,6 +594,19 @@ class CollectionJoinView(APIView):
         if collection.invites.filter(code=request.user.code).exists():
             return Response({"message": "You are a member of this collection"})
 
+        # Belt and braces, and **unreachable as the guards above stand**: a
+        # non-owner only gets past `can_view` on a PUBLIC ACTIVE collection or
+        # one they are invited to, and `is_invited` is the very query the
+        # membership line just ran. So nothing can arrive here non-public, which
+        # is why no test covers this branch and none can — the two that pin the
+        # invariant instead are `test_a_private_collection_does_not_confirm_it_
+        # exists` (404) and `test_a_member_of_a_private_collection_is_told_they_
+        # are_already_in` (200).
+        #
+        # It stays because the invariant lives in another file: widen `can_view`
+        # one day — a network of federated groups, a "readable by link" tier —
+        # and this is what keeps a readable-but-not-public collection from being
+        # joinable by anyone who can see it.
         if not collection.is_public():
             return Response(
                 {"detail": "This collection is not open to join."},
