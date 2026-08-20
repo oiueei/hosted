@@ -95,6 +95,32 @@ class TestWelcomeDocOnJoin:
         assert sent[0].to == ["shared@test.com"]
         assert User.objects.filter(email="shared@test.com").exists()
 
+    def test_the_signed_in_door_sends_it_like_every_other(
+        self, authenticated_client, user, user2, collection
+    ):
+        """The fourth way in, added this round, and the one nothing checked.
+
+        `POST /collections/{code}/join/` reaches `_join_collection` by import
+        rather than by reimplementation, which is exactly why it is worth one
+        test and not four: what it has to prove is that it really does go
+        through the shared funnel. A door that grew its own `invites.add()` —
+        the obvious way to write it — would admit the member correctly and
+        silently never send them the rules.
+        """
+        # Owned by somebody else: the owner of a collection cannot join it, so
+        # the joiner has to be the *other* account for this door to open at all.
+        collection.owner = user2
+        collection.welcome_doc = DOC_ID
+        collection.visibility = Collection.Visibility.PUBLIC
+        collection.save()
+
+        res = authenticated_client.post(f"/api/v1/collections/{collection.code}/join/")
+
+        assert res.status_code == 200
+        sent = _doc_emails()
+        assert len(sent) == 1
+        assert sent[0].to == [user.email]
+
 
 @pytest.mark.django_db
 class TestDocumentSignature:
