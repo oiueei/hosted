@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 expect.extend(toHaveNoViolations);
@@ -589,5 +589,173 @@ describe('a broadcast the server turns down', () => {
     });
 
     expect(await screen.findByText('No invitees to broadcast to')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Four ways this page can fail to open, and the reader does something different
+ * with each: a 403 is "your access changed, go and check", a 404 is "this URL
+ * is wrong", a 500 is "not your fault, try later", and a dead connection is
+ * "you are offline". Only the 404 had ever been rendered by the suite, so three
+ * of the four could have collapsed into any other and nothing would have said
+ * so — least of all to the member who was quietly removed from a group and
+ * would read "not found" as a typo.
+ */
+describe('the ways a collection fails to load', () => {
+  const renderAfter = (response) => {
+    apiFetch.mockImplementation(() => Promise.resolve(response));
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  const refused = (status) => ({ ok: false, status, json: () => Promise.resolve({}) });
+
+  test('access you no longer have says so, and where to look', async () => {
+    renderAfter(refused(403));
+
+    expect(await screen.findByText(/your access may have changed/i)).toBeInTheDocument();
+  });
+
+  test('a collection that is not there says only that', async () => {
+    renderAfter(refused(404));
+
+    expect(await screen.findByText('Collection not found.')).toBeInTheDocument();
+  });
+
+  test('a server fault is not dressed up as a permission problem', async () => {
+    renderAfter(refused(500));
+
+    expect(await screen.findByText('Error loading collection.')).toBeInTheDocument();
+    expect(screen.queryByText(/your access may have changed/i)).toBeNull();
+  });
+
+  test('being offline says so rather than blaming the collection', async () => {
+    apiFetch.mockImplementation(() => Promise.reject(new Error('network down')));
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+  });
+});
+
+describe('a join that does not take', () => {
+  /* The happy path is covered above. These are the three ways it can fail, and
+     they matter because the page deliberately re-fetches instead of flipping
+     `is_member` locally: a visitor who is told nothing, or shown the member
+     controls anyway, would go on to act on a group they never joined and meet a
+     403 from an API that is right. */
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'VISITOR1');
+  });
+
+  const renderPublic = () =>
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  const page = () =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) });
+
+  async function pressJoin() {
+    renderPublic();
+    fireEvent.click(await screen.findByRole('button', { name: 'Join this group' }));
+  }
+
+  test('a refused join says so and leaves the door where it was', async () => {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST'
+        ? Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) })
+        : page(),
+    );
+
+    await pressJoin();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
+    expect(screen.getByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+  });
+
+  test('a join whose re-fetch fails is not reported as a success', async () => {
+    // The subtle one: the server did add them, but the page cannot prove what
+    // that changed. Claiming membership on a payload it never received is how a
+    // page ends up showing controls the API will refuse.
+    let getCalls = 0;
+    apiFetch.mockImplementation((url, options) => {
+      if (options?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      getCalls += 1;
+      return getCalls === 1 ? page() : Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+    });
+
+    await pressJoin();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
+  });
+
+  test('a connection lost mid-join says so too', async () => {
+    apiFetch.mockImplementation((url, options) =>
+      options?.method === 'POST' ? Promise.reject(new Error('network down')) : page(),
+    );
+
+    await pressJoin();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
+  });
+});
+
+describe('arriving from an invitation is a one-time fact', () => {
+  /* `fromInvite` is navigation state, and navigation state survives a reload and
+     a back-button — so the first-time welcome box would greet the same person
+     on every visit to the collection they were invited to. The page scrubs it
+     on arrival, which is the only reason "first time" means anything here.
+
+     Asserted on the router state rather than on the box itself: the box needs a
+     deployment with a page to point at (`aboutPath`, null upstream), while the
+     scrub happens for every checkout. */
+  function StateProbe() {
+    const { state } = useLocation();
+    return <p data-testid="nav-state">{JSON.stringify(state)}</p>;
+  }
+
+  test('the invitation flag is cleared off the history entry', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(COLLECTION_WITH_PHOTO) })
+    );
+
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/collections/COL001', state: { fromInvite: true } }]}
+      >
+        <Routes>
+          <Route
+            path="/collections/:code"
+            element={
+              <>
+                <CollectionPage />
+                <StateProbe />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('nav-state')).toHaveTextContent(/^\{\}$/)
+    );
   });
 });
