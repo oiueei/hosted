@@ -20,7 +20,16 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from core.management.commands.purge_expired_data import months_ago
-from core.models import DailyActivity, Event, InAppNotification, Report, Thing
+from core.models import (
+    RSVP,
+    Collection,
+    DailyActivity,
+    Event,
+    InAppNotification,
+    Report,
+    Thing,
+    User,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -181,3 +190,99 @@ class TestTheSafetyRails:
 
     def test_a_quiet_database_says_so_and_stops(self, user):
         assert "Nothing past its retention period." in _run(commit=True)
+
+
+class TestTheGuestsWhoNeverCameIn:
+    """T6. An owner typing an address creates the row, so an invitation nobody
+    answers leaves a stranger's email here forever.
+
+    Every test below the first one is about **not** deleting somebody: this step
+    erases accounts, and each condition it checks is a different way of being
+    wrong about a person.
+    """
+
+    def _guest(self, code, days_old=90, **kwargs):
+        guest = User.objects.create(code=code, email=f"{code.lower()}@example.com", **kwargs)
+        User.objects.filter(pk=guest.pk).update(
+            created=(timezone.now() - timedelta(days=days_old)).date()
+        )
+        guest.refresh_from_db()
+        return guest
+
+    def test_an_invitation_nobody_ever_answered_is_erased(self):
+        guest = self._guest("GHOST1")
+
+        _run(commit=True)
+
+        assert not User.objects.filter(pk=guest.pk).exists()
+
+    def test_somebody_invited_last_week_is_left_alone(self):
+        recent = self._guest("FRESH1", days_old=10)
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=recent.pk).exists()
+
+    def test_somebody_whose_invitation_is_still_open_is_left_alone(self, collection):
+        pending = self._guest("WAIT01")
+        RSVP.objects.create(
+            code="RSVWT1",
+            user_code=pending,
+            user_email=pending.email,
+            action=RSVP.Action.COLLECTION_INVITE,
+            target_code=collection.code,
+        )
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=pending.pk).exists()
+
+    def test_somebody_who_accepted_and_never_came_back_is_left_alone(self, collection):
+        # The trap. Membership is written on accept, so a row in `invites` is a
+        # real member of a real group, activity column or not.
+        member = self._guest("JOIN01")
+        collection.invites.add(member)
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=member.pk).exists()
+
+    def test_somebody_who_owns_a_collection_is_left_alone(self):
+        owner = self._guest("OWNS01")
+        Collection.objects.create(code="GHCOL1", owner=owner, headline="Theirs")
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=owner.pk).exists()
+
+    def test_somebody_who_owns_a_thing_is_left_alone(self):
+        owner = self._guest("OWNS02")
+        Thing.objects.create(code="GHTHG1", owner=owner, headline="Theirs")
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=owner.pk).exists()
+
+    def test_somebody_who_has_signed_in_even_once_is_left_alone(self):
+        visitor = self._guest("SEEN01")
+        User.objects.filter(pk=visitor.pk).update(last_activity=timezone.now().date())
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=visitor.pk).exists()
+
+    def test_the_superuser_who_never_used_the_app_is_left_alone(self):
+        # `createsuperuser` writes a row that matches every other condition here.
+        admin = self._guest("ADMIN1", is_staff=True, is_superuser=True)
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=admin.pk).exists()
+
+    def test_a_dry_run_erases_nobody(self):
+        guest = self._guest("GHOST2")
+
+        output = _run()
+
+        assert User.objects.filter(pk=guest.pk).exists()
+        assert "Guest accounts never used, deleted (>60d): 1" in output

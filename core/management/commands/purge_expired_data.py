@@ -24,18 +24,20 @@ Two shapes of expiry, and the difference is the whole point:
   (``actor_code``), not the fact that something happened. The series survives as
   aggregate and stops being personal data, which is what art. 5.1.e asks for;
   deleting it would throw away the history to achieve the same thing.
-- **Deleted** — ``DailyActivity``, ``InAppNotification``, ``Report``. There is
-  no version of these that stops being about somebody.
+- **Deleted** — the guest accounts nobody ever answered for, ``DailyActivity``,
+  ``InAppNotification``, ``Report``. There is no version of these that stops
+  being about somebody.
 """
 
 import calendar
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import DailyActivity, Event, InAppNotification, Report
+from core.models import RSVP, DailyActivity, Event, InAppNotification, Report, User
 
 security_logger = logging.getLogger("security")
 
@@ -70,6 +72,7 @@ class Command(BaseCommand):
         commit = options["commit"]
         now = timezone.now()
         steps = [
+            self._unvisited_guests,
             self._events,
             self._daily_activity,
             self._notifications,
@@ -95,6 +98,58 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING(f"{total} rows are past their period. Re-run with --commit.")
             )
+
+    def _unvisited_guests(self, now, commit):
+        """Accounts created by somebody else's invitation that were never used.
+
+        ``User.objects.get_or_create(email=...)`` writes a row the moment an
+        owner types an address, so an invitation nobody answers leaves a
+        stranger's email in the database indefinitely. That address came from a
+        third party (art. 14) and was used for exactly one thing: sending an
+        invitation that went unanswered.
+
+        Each condition is a distinct way of being wrong about somebody, which is
+        why each has its own negative test:
+
+        - ``last_activity`` is null — they never came in. Accepting an
+          invitation means signing in, which writes it.
+        - in no collection's ``invites`` — the membership M2M is written on
+          **accept**, not on invite, so a row here is somebody who did answer
+          and simply hasn't been back. Sweeping them would remove a real member
+          from a real group.
+        - owns no collection and no thing — content means a person, whatever the
+          activity column says.
+        - has no live ``COLLECTION_INVITE`` RSVP — their invitation is still
+          open and may yet be accepted. **Not** "an expired RSVP": ``cleanup_rsvps``
+          runs daily and deletes those, so by the time this looks there is no
+          expired row to find. Absence is what expiry looks like from here, and
+          ``User.created`` is what dates it.
+        - not staff or superuser — an admin account created with
+          ``createsuperuser`` and never used through the SPA matches every
+          condition above.
+        """
+        days = settings.RETENTION_UNVISITED_GUEST_DAYS
+        if not days:
+            return None
+        codes = list(
+            User.objects.filter(
+                last_activity__isnull=True,
+                created__lt=(now - timedelta(days=days)).date(),
+                is_staff=False,
+                is_superuser=False,
+                invited_to_collections__isnull=True,
+                owned_collections__isnull=True,
+                owned_things__isnull=True,
+            )
+            .exclude(rsvps__action=RSVP.Action.COLLECTION_INVITE)
+            .values_list("code", flat=True)
+        )
+        if commit and codes:
+            # Erased in bulk, counted in the log and not named there: once the
+            # row is gone, writing the codes into a file that outlives it would
+            # be an odd way to honour a retention period.
+            User.objects.filter(code__in=codes).delete()
+        return (f"Guest accounts never used, deleted (>{days}d)", len(codes))
 
     def _events(self, now, commit):
         """Cut the link to a person; keep the fact.
