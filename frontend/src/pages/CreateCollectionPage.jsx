@@ -34,6 +34,7 @@ export default function CreateCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   // The group's email language. Defaults to whatever the owner is reading the app
@@ -109,6 +110,7 @@ export default function CreateCollectionPage() {
       welcome_doc: welcomeDoc || '',
     };
     if (description.trim()) body.description = description.trim();
+    if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
     try {
       const res = await apiFetch('/api/v1/collections/', {
         method: 'POST',
@@ -199,6 +201,8 @@ export default function CreateCollectionPage() {
                 setRentalDurations={setRentalDurations}
                 rentalWeekdays={rentalWeekdays}
                 setRentalWeekdays={setRentalWeekdays}
+                depositPolicy={depositPolicy}
+                setDepositPolicy={setDepositPolicy}
                 theeemeColor01={theeemeColors.color_01}
               />
             {/* Same order and same `editCollection.*` keys as EditCollectionPage,

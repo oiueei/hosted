@@ -209,6 +209,47 @@ describe('EditCollectionPage — the stats download', () => {
   });
 });
 
+describe('EditCollectionPage — the deposit policy (S6)', () => {
+  test('a stored policy pre-fills the field, once "More options" is open', async () => {
+    mockApi();
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'PATCH') return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      if (url.includes('/stats/') || url.includes('/export/')) {
+        return Promise.resolve({ ok: true, status: 200, blob: async () => new Blob(['x']) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...COLLECTION, deposit_policy: '50 €, back when it comes home' }),
+      });
+    });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    expect(screen.getByLabelText(/deposit policy/i).value).toBe('50 €, back when it comes home');
+  });
+
+  test('an edited policy reaches the PATCH body', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.change(screen.getByLabelText(/deposit policy/i), {
+      target: { value: 'No deposits in this group.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).deposit_policy).toBe('No deposits in this group.');
+    });
+  });
+});
+
 describe('EditCollectionPage — the collection export', () => {
   test('downloading names the file after the one the server set, not a guess', async () => {
     mockApi();

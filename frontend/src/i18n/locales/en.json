@@ -794,6 +794,8 @@
     "durationsHelper": "For lending/renting items. Renters pick one of these. Empty = any length.",
     "weekdaysLabel": "Pickup / return days",
     "weekdaysHelper": "Both pickup and return must fall on these days. Empty = any day.",
+    "depositPolicyLabel": "Deposit policy (optional)",
+    "depositPolicyHelper": "How deposits work in this group — the amount is set per thing, this explains the condition for getting it back. Leave empty if this group doesn't use deposits.",
     "d1": "1 day",
     "d2": "2 days",
     "d3": "3 days",
@@ -821,6 +823,8 @@
     "infoTitle": "One text per language",
     "infoBody": "If your group reads in two languages, write the title or the description as a small map — copy this and change the words. Everyone then reads it in their own language, in the app and in their emails.",
     "tagsInfoBody": "A tag label works the same way — write it as a map and each member sees their own.",
+    "policyHint": "The deposit policy can hold one text per language too.",
+    "policyInfoBody": "It works the same way — write it as a small map and each member reads their own.",
     "infoFallback": "Languages: es (Spanish), ca (Catalan), en (English). Write in one only if you prefer — anything that isn't a map is shown exactly as you typed it."
   },
   "deleteAccount": {

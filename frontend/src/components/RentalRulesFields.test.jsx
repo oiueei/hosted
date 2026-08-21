@@ -14,6 +14,8 @@ function renderFields(over = {}) {
     setRentalDurations: vi.fn(),
     rentalWeekdays: [],
     setRentalWeekdays: vi.fn(),
+    depositPolicy: '',
+    setDepositPolicy: vi.fn(),
     ...over,
   };
   return { ...render(<RentalRulesFields {...props} />), props };
@@ -93,5 +95,33 @@ describe('RentalRulesFields durations', () => {
     fireEvent.click(screen.getByRole('option', { name: '1 week' }));
     expect(props.setRentalDurations).toHaveBeenCalledWith([7]);
     expect(props.setRentalDurations.mock.calls[0][0].every((d) => typeof d === 'number')).toBe(true);
+  });
+});
+
+describe('RentalRulesFields deposit policy (S6)', () => {
+  test('starts empty — no suggested amount or wording (DESIGN §6)', () => {
+    renderFields();
+    expect(screen.getByLabelText(/deposit policy/i).value).toBe('');
+  });
+
+  test('typing calls setDepositPolicy with the raw text, one keystroke at a time', () => {
+    const { props } = renderFields();
+    fireEvent.change(screen.getByLabelText(/deposit policy/i), {
+      target: { value: '50 €, back when the drill comes home' },
+    });
+    expect(props.setDepositPolicy).toHaveBeenCalledWith('50 €, back when the drill comes home');
+  });
+
+  test('a stored policy shows when the form loads', () => {
+    renderFields({ depositPolicy: 'No deposits in this group.' });
+    expect(screen.getByLabelText(/deposit policy/i).value).toBe('No deposits in this group.');
+  });
+
+  test('the localized-content hint is its own, not the headline/description one', () => {
+    // A bilingual group can write this as a {lang: text} map too — the hint
+    // has to say so without naming "the title or the description", which is
+    // what the shared `text` variant says and would read as a typo here.
+    renderFields();
+    expect(screen.getByText(/deposit policy can hold one text per language/i)).toBeInTheDocument();
   });
 });

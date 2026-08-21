@@ -794,6 +794,8 @@
     "durationsHelper": "Per a objectes de préstec/lloguer. Qui lloga en tria una. Buit = qualsevol durada.",
     "weekdaysLabel": "Dies de recollida i devolució",
     "weekdaysHelper": "Recollida i devolució han de caure en aquests dies. Buit = qualsevol dia.",
+    "depositPolicyLabel": "Política de fiances (opcional)",
+    "depositPolicyHelper": "Com funcionen les fiances en aquest grup — l'import es posa a cada cosa, això explica la condició per retornar-la. Deixa-ho buit si el grup no fa servir fiances.",
     "d1": "1 dia",
     "d2": "2 dies",
     "d3": "3 dies",
@@ -821,6 +823,8 @@
     "infoTitle": "Un text per idioma",
     "infoBody": "Si el teu grup llegeix en dos idiomes, escriu el títol o la descripció com un petit mapa: copia això i canvia les paraules. Cadascú ho llegirà en el seu idioma, al web i als seus correus.",
     "tagsInfoBody": "Una etiqueta funciona igual: escriu-la com un mapa i cada membre veurà la seva.",
+    "policyHint": "La política de fiances també admet un text per idioma.",
+    "policyInfoBody": "Funciona igual: escriu-la com un petit mapa i cada membre llegirà la seva.",
     "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
   },
   "deleteAccount": {

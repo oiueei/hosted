@@ -794,6 +794,8 @@
     "durationsHelper": "Para objetos de préstamo/alquiler. Quien alquila elige una. Vacío = cualquier duración.",
     "weekdaysLabel": "Días de recogida y devolución",
     "weekdaysHelper": "Recogida y devolución deben caer en estos días. Vacío = cualquier día.",
+    "depositPolicyLabel": "Política de fianzas (opcional)",
+    "depositPolicyHelper": "Cómo funcionan las fianzas en este grupo — el importe se pone en cada cosa, esto explica la condición para devolverla. Déjalo vacío si el grupo no usa fianzas.",
     "d1": "1 día",
     "d2": "2 días",
     "d3": "3 días",
@@ -821,6 +823,8 @@
     "infoTitle": "Un texto por idioma",
     "infoBody": "Si tu grupo lee en dos idiomas, escribe el título o la descripción como un pequeño mapa: copia esto y cambia las palabras. Cada persona lo leerá en su idioma, en la web y en sus correos.",
     "tagsInfoBody": "Una etiqueta funciona igual: escríbela como un mapa y cada miembro verá la suya.",
+    "policyHint": "La política de fianzas también admite un texto por idioma.",
+    "policyInfoBody": "Funciona igual: escríbela como un pequeño mapa y cada miembro leerá la suya.",
     "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
   },
   "deleteAccount": {

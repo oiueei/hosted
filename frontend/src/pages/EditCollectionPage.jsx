@@ -47,6 +47,7 @@ export default function EditCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -121,6 +122,7 @@ export default function EditCollectionPage() {
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
+          setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
           setThumbnailUrl(data.thumbnail_url || '');
@@ -170,6 +172,7 @@ export default function EditCollectionPage() {
       allowed_thing_types: allowedThingTypes,
       rental_durations: rentalDurations,
       rental_weekdays: rentalWeekdays,
+      deposit_policy: depositPolicy.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -343,6 +346,8 @@ export default function EditCollectionPage() {
               setRentalDurations={setRentalDurations}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
+              depositPolicy={depositPolicy}
+              setDepositPolicy={setDepositPolicy}
               theeemeColor01={tc.color_01}
             />
           <Select
