@@ -399,6 +399,7 @@ Detail page for a thing with full information and FAQs section.
   - Both actions are independent PATCHes from the main Save; no page reload.
   - Shows success toast on pause/resume.
 - **Stats download** below the Pause section (same border/spacer pattern, design round): a secondary "Download stats (CSV)" button (`GET /api/v1/collections/{code}/stats/` → blob → `{code}-stats.csv`), with an inline error `Notification` on failure. Moved here from the CollectionPage hero — an admin tool belongs with the collection's other owner-only settings, not in a hero button slot shown on every visit.
+- **Collection data export** directly under the stats download (S5, 2026-08): a second secondary button, `GET /api/v1/collections/{code}/export/` → blob → the server-set filename (via `filenameFromResponse`, `src/utils/downloadBlob.js`), same 429/error handling shape. A copy line under it says out loud that this is the whole group, not the CSV summary above, and that it carries other members' emails — an owner should know what they're about to have on their laptop before they click. Owner-only server-side; a member reaching this page by URL gets the same 403 the endpoint always returns.
 - Pre-populates all fields from the current collection data, including existing `thumbnail_url` for preview.
 - On save: navigates to `/collections/{code}`.
 
@@ -436,9 +437,9 @@ Detail page for a thing with full information and FAQs section.
 
 ### File downloads (`src/utils/downloadBlob.js`)
 
-`downloadBlob(blob, filename)` — hands an already-fetched `Blob` to the browser as a download. There is no declarative way to do it (a `<a download>` needs a URL that exists only after the response), so it is a dozen lines of imperative DOM, and both ways a copy of them drifts are invisible in the happy path: an object URL that is never revoked pins the blob in memory for the life of the tab, and an anchor left in the body is a stray focusable element between the page's real controls. **The caller keeps the request and its failure copy** — what a 429 should say differs per page, and this function never sees the response. Used by `EditCollectionPage` (the stats CSV) and by anything else that offers a file.
+`downloadBlob(blob, filename)` — hands an already-fetched `Blob` to the browser as a download. There is no declarative way to do it (a `<a download>` needs a URL that exists only after the response), so it is a dozen lines of imperative DOM, and both ways a copy of them drifts are invisible in the happy path: an object URL that is never revoked pins the blob in memory for the life of the tab, and an anchor left in the body is a stray focusable element between the page's real controls. **The caller keeps the request and its failure copy** — what a 429 should say differs per page, and this function never sees the response. Used by `EditCollectionPage` (the stats CSV, the collection export) and by anything else that offers a file.
 
-`filenameFromResponse(res, fallback)` (S5, 2026-08) — reads the `Content-Disposition` filename off a response, or `fallback` if it's missing. Introduced for `DataExportPage`'s download, so the server-set `oiueei-{code}-{date}.json` name is read the same way any future export download will need it read.
+`filenameFromResponse(res, fallback)` (S5, 2026-08) — reads the `Content-Disposition` filename off a response, or `fallback` if it's missing. Shared so the two data-export downloads (`DataExportPage`, `EditCollectionPage`'s collection export) read the server-set `oiueei-{code}-{date}.json` name identically rather than each guessing their own — the stats CSV still builds its own name client-side (`{code}-stats.csv`), since that endpoint never set the header.
 
 ### Owner content in one text per language (`src/utils/localized.js`)
 

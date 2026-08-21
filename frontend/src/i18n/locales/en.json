@@ -3,6 +3,12 @@
     "downloadStats": "Download stats (CSV)",
     "downloadStatsError": "Couldn't download the stats."
   },
+  "collectionExport": {
+    "downloadButton": "Download the whole collection (JSON)",
+    "downloading": "Preparing the file…",
+    "notice": "The whole group — every thing, every member's email, the full history. Not the summary above: it carries other people's data, so keep it somewhere safe and don't forward it.",
+    "error": "Couldn't build the export. Please try again in a moment."
+  },
   "ageRange": {
     "PRE_1946": "1945 or earlier",
     "BOOMER": "Boomers (1946–1964)",

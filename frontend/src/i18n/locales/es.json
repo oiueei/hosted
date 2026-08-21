@@ -3,6 +3,12 @@
     "downloadStats": "Descargar estadísticas (CSV)",
     "downloadStatsError": "No se pudieron descargar las estadísticas."
   },
+  "collectionExport": {
+    "downloadButton": "Descargar la colección entera (JSON)",
+    "downloading": "Preparando el fichero…",
+    "notice": "El grupo entero — cada cosa, el correo de cada miembro, el historial completo. No es el resumen de arriba: lleva datos de otras personas, guárdalo en un sitio seguro y no lo reenvíes.",
+    "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
+  },
   "ageRange": {
     "PRE_1946": "1945 o antes",
     "BOOMER": "Boomers (1946–1964)",

@@ -39,7 +39,7 @@ const COLLECTION = {
   is_paused: false,
 };
 
-function mockApi({ save = { ok: true }, stats = { ok: true } } = {}) {
+function mockApi({ save = { ok: true }, stats = { ok: true }, collectionExport = { ok: true } } = {}) {
   apiFetch.mockImplementation((url, opts) => {
     if (opts?.method === 'PATCH') {
       return Promise.resolve({
@@ -53,6 +53,17 @@ function mockApi({ save = { ok: true }, stats = { ok: true } } = {}) {
         ok: stats.ok,
         status: stats.ok ? 200 : 500,
         blob: async () => new Blob(['metric,value\nmembers,3\n'], { type: 'text/csv' }),
+      });
+    }
+    if (url.includes('/export/')) {
+      return Promise.resolve({
+        ok: collectionExport.ok,
+        status: collectionExport.status ?? (collectionExport.ok ? 200 : 500),
+        headers: {
+          get: (name) =>
+            name === 'Content-Disposition' ? 'attachment; filename="oiueei-COL001-2026-08-21.json"' : null,
+        },
+        blob: async () => new Blob(['{}'], { type: 'application/json' }),
       });
     }
     return Promise.resolve({ ok: true, status: 200, json: async () => COLLECTION });
@@ -195,6 +206,54 @@ describe('EditCollectionPage — the stats download', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
 
     await waitFor(() => expect(screen.queryByText("Couldn't download the stats.")).toBeNull());
+  });
+});
+
+describe('EditCollectionPage — the collection export', () => {
+  test('downloading names the file after the one the server set, not a guess', async () => {
+    mockApi();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
+
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    const anchor = click.mock.contexts[0];
+    expect(anchor.download).toBe('oiueei-COL001-2026-08-21.json');
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake'));
+  });
+
+  test('the warning that it carries other members\' data is always on the page', async () => {
+    mockApi();
+    renderPage();
+
+    expect(
+      await screen.findByText(/carries other people's data/i)
+    ).toBeInTheDocument();
+  });
+
+  test('a 429 says "too many attempts", the same message every rate-limited action uses', async () => {
+    mockApi({ collectionExport: { ok: false, status: 429 } });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
+
+    expect(await screen.findByText('Too many attempts — please wait a moment and try again.')).toBeInTheDocument();
+  });
+
+  test('any other failure says so instead of doing nothing', async () => {
+    mockApi({ collectionExport: { ok: false, status: 500 } });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
+
+    expect(
+      await screen.findByText("Couldn't build the export. Please try again in a moment.")
+    ).toBeInTheDocument();
   });
 });
 

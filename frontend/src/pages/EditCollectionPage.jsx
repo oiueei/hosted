@@ -6,7 +6,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
-import downloadBlob from '../utils/downloadBlob';
+import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
@@ -57,6 +57,8 @@ export default function EditCollectionPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [pauseSubmitting, setPauseSubmitting] = useState(false);
   const [statsError, setStatsError] = useState(false);
+  const [collectionExportError, setCollectionExportError] = useState(null);
+  const [collectionExportDownloading, setCollectionExportDownloading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -235,6 +237,25 @@ export default function EditCollectionPage() {
       downloadBlob(await res.blob(), `${code}-stats.csv`);
     } catch {
       setStatsError(true);
+    }
+  };
+
+  const handleDownloadCollectionExport = async () => {
+    setCollectionExportError(null);
+    setCollectionExportDownloading(true);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/export/`);
+      if (res.ok) {
+        downloadBlob(await res.blob(), filenameFromResponse(res, `${code}.json`));
+      } else if (res.status === 429) {
+        setCollectionExportError(t('common.tooManyAttempts'));
+      } else {
+        setCollectionExportError(t('collectionExport.error'));
+      }
+    } catch {
+      setCollectionExportError(t('common.connectionError'));
+    } finally {
+      setCollectionExportDownloading(false);
     }
   };
 
@@ -435,6 +456,30 @@ export default function EditCollectionPage() {
             {t('stats.downloadStatsError')}
           </Notification>
         )}
+        {/* The whole group, not the summary above — a different download, so the
+            label and the copy beside it have to say so: it carries other
+            members' data, and whoever downloads it is who answers for it. */}
+        <div style={{ marginTop: 'var(--spacing-s)' }}>
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={collectionExportDownloading}
+            onClick={handleDownloadCollectionExport}
+            style={btnSecondaryStyle}
+          >
+            {collectionExportDownloading
+              ? t('collectionExport.downloading')
+              : t('collectionExport.downloadButton')}
+          </Button>
+          <p style={{ marginTop: 'var(--spacing-2-xs)', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)' }}>
+            {t('collectionExport.notice')}
+          </p>
+          {collectionExportError && (
+            <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
+              {collectionExportError}
+            </Notification>
+          )}
+        </div>
       </div>
       <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
