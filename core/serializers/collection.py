@@ -129,6 +129,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "deposit_policy",
             "tags",
             "thumbnail",
             "thumbnail_url",
@@ -299,6 +300,11 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    # Localized like every other owner text (D5): a deposit policy that could
+    # only be written in one language would be the single piece of group prose
+    # that a bilingual group cannot say twice. 256 visible per language, 1024
+    # stored — the same arithmetic as `description`.
+    deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -313,6 +319,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "deposit_policy",
             "tags",
             "thumbnail",
             "welcome_doc",
@@ -405,6 +412,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    # Localized like every other owner text (D5): a deposit policy that could
+    # only be written in one language would be the single piece of group prose
+    # that a bilingual group cannot say twice. 256 visible per language, 1024
+    # stored — the same arithmetic as `description`.
+    deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -420,6 +432,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "deposit_policy",
             "tags",
             "thumbnail",
             "welcome_doc",
