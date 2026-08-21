@@ -16,6 +16,7 @@ from datetime import timedelta
 from io import StringIO
 
 import pytest
+from django.core import mail
 from django.core.management import call_command
 from django.utils import timezone
 
@@ -286,3 +287,128 @@ class TestTheGuestsWhoNeverCameIn:
 
         assert User.objects.filter(pk=guest.pk).exists()
         assert "Guest accounts never used, deleted (>60d): 1" in output
+
+
+class TestTheWarningThatComesFirst:
+    """Nobody's account disappears without being told, and not on the same day.
+
+    This step only sends and marks. What it says matters as much as who it
+    reaches: an account that will not be deleted must not be told that it will.
+    """
+
+    def _dormant(self, code, months=30, **kwargs):
+        person = User.objects.create(code=code, email=f"{code.lower()}@example.com", **kwargs)
+        User.objects.filter(pk=person.pk).update(
+            last_activity=months_ago(months).date(), created=months_ago(months + 1).date()
+        )
+        person.refresh_from_db()
+        return person
+
+    def test_somebody_who_has_not_been_seen_in_two_years_hears_about_it(self):
+        person = self._dormant("QUIET1")
+
+        _run(commit=True)
+
+        person.refresh_from_db()
+        assert person.inactivity_notified == timezone.localdate()
+        assert len(mail.outbox) == 1
+        assert "30 days" in mail.outbox[0].body or "30" in mail.outbox[0].body
+
+    def test_somebody_who_was_here_last_month_hears_nothing(self):
+        person = self._dormant("SEEN02", months=2)
+
+        _run(commit=True)
+
+        person.refresh_from_db()
+        assert person.inactivity_notified is None
+        assert mail.outbox == []
+
+    def test_the_owner_of_a_group_people_use_is_told_the_truth_instead(self, user2):
+        # Their account is not going anywhere, so the email must not say it is.
+        owner = self._dormant("KEEPS1")
+        collection = Collection.objects.create(code="LIVE01", owner=owner, headline="The library")
+        collection.invites.add(user2)
+
+        _run(commit=True)
+
+        body = mail.outbox[0].body
+        assert "permanently" not in body
+        assert "not taking that away" in body
+
+    def test_an_owner_with_nobody_in_their_group_is_warned_like_anyone_else(self):
+        owner = self._dormant("ALONE1")
+        Collection.objects.create(code="EMPT01", owner=owner, headline="Just mine")
+
+        _run(commit=True)
+
+        assert "permanently" in mail.outbox[0].body
+
+    def test_nobody_is_warned_twice(self):
+        self._dormant("QUIET2")
+        _run(commit=True)
+        mail.outbox.clear()
+
+        _run(commit=True)
+
+        assert mail.outbox == []
+
+    def test_coming_back_cancels_the_warning(self):
+        person = self._dormant("BACK01")
+        _run(commit=True)
+
+        person.refresh_from_db()
+        assert person.inactivity_notified is not None
+        person.update_last_activity()
+
+        person.refresh_from_db()
+        assert person.inactivity_notified is None
+        assert person.last_activity == timezone.localdate()
+
+    def test_somebody_invited_this_week_is_not_told_their_account_is_expiring(self, collection):
+        # True and useless: they were invited days ago.
+        newcomer = self._dormant("INVI01")
+        RSVP.objects.create(
+            code="RSVIV1",
+            user_code=newcomer,
+            user_email=newcomer.email,
+            action=RSVP.Action.COLLECTION_INVITE,
+            target_code=collection.code,
+        )
+
+        _run(commit=True)
+
+        newcomer.refresh_from_db()
+        assert newcomer.inactivity_notified is None
+        assert mail.outbox == []
+
+    def test_the_superuser_is_never_warned(self):
+        admin = self._dormant("ADMIN2", is_staff=True, is_superuser=True)
+
+        _run(commit=True)
+
+        admin.refresh_from_db()
+        assert admin.inactivity_notified is None
+
+    def test_a_dry_run_sends_nothing_and_marks_nobody(self):
+        person = self._dormant("QUIET3")
+
+        output = _run()
+
+        person.refresh_from_db()
+        assert person.inactivity_notified is None
+        assert mail.outbox == []
+        assert "Inactive accounts warned (>24m): 1" in output
+
+    def test_a_send_that_fails_does_not_start_the_clock(self, monkeypatch):
+        # The grace period counts from the mark, so a mark written for an email
+        # that never arrived would delete somebody who was never told.
+        person = self._dormant("FAIL01")
+        monkeypatch.setattr(
+            "core.management.commands.purge_expired_data.send_inactivity_warning_email",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("smtp down")),
+        )
+
+        call_command("purge_expired_data", "--commit", stdout=StringIO(), stderr=StringIO())
+
+        person.refresh_from_db()
+        assert person.inactivity_notified is None

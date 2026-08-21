@@ -774,6 +774,57 @@ def send_account_delete_email(user, delete_link):
     )
 
 
+def send_inactivity_warning_email(user, months, days, will_delete=True):
+    """Tell somebody their account has gone quiet, before anything happens (Cat. 1).
+
+    Mandatory, like the erasure confirmation and for the same reason: it is
+    about whether the account continues to exist, so it has to reach people who
+    opted out of everything else. ``include_viral=False`` too — a growth line on
+    "we are about to delete you" would be grotesque.
+
+    **Two bodies, because two things can happen.** Most accounts are deleted
+    when the grace period runs out. An account that owns a group other people
+    are still using never is, so it must not be told that it will be: it gets
+    the true version instead — nothing is being taken away, but nobody has
+    looked after this in two years, and leaving is yours to choose.
+
+    Nothing here nags. The version that ends "if you would rather it went, you
+    don't have to do anything at all" is the honest one (DESIGN §6): the exit
+    must not be made harder than the entrance, and an inactive account is
+    somebody who already left.
+    """
+    lang = resolve_email_language(user=user)
+    T = _texts(lang)
+    login_url = f"{_frontend_base_url()}/login"
+    if will_delete:
+        plain = T("inactivity_plain").format(months=months, days=days, link=login_url)
+        blocks = [
+            _para(T("inactivity_intro").format(months=months)),
+            _para(T("inactivity_deletes").format(days=days)),
+            _para(T("inactivity_keep")),
+            _links((login_url, T("inactivity_cta"))),
+            _para(T("inactivity_outro")),
+        ]
+    else:
+        plain = T("inactivity_kept_plain").format(months=months, link=login_url)
+        blocks = [
+            _para(T("inactivity_intro").format(months=months)),
+            _para(T("inactivity_kept")),
+            _links((login_url, T("inactivity_cta"))),
+            _para(T("inactivity_kept_outro")),
+        ]
+    _send(
+        user.email,
+        T("inactivity_subject"),
+        plain,
+        _render_email(blocks),
+        CATEGORY_MANDATORY,
+        user=user,
+        include_viral=False,
+        lang=lang,
+    )
+
+
 def send_contact_email(name, email, message, kind="support"):
     """Forward a contact-form message to the operator (the support channel).
 

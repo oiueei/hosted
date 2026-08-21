@@ -79,6 +79,43 @@ TEXTS = {
         "L'enllaç funciona durant 24 hores i a la pàgina confirmaràs un cop més. "
         "Si no ho has demanat tu, ignora aquest correu — no passarà res."
     ),
+    # Avís d'inactivitat (abans d'esborrar un compte sense fer servir)
+    "inactivity_subject": "El teu compte d'OIUEEI fa temps que calla",
+    "inactivity_intro": (
+        "Fa {months} mesos que no entres a OIUEEI. No guardem comptes que ningú fa "
+        "servir, així que aquest és l'avís que va abans."
+    ),
+    "inactivity_deletes": (
+        "D'aquí a {days} dies el teu compte desapareix, per sempre, i amb ell les teves "
+        "col·leccions, les teves coses i les seves fotos."
+    ),
+    "inactivity_keep": "Amb entrar-hi un cop n'hi ha prou per conservar-lo. No cal fer res més.",
+    "inactivity_cta": "Entrar",
+    "inactivity_outro": "I si prefereixes que se'n vagi, no cal que facis absolutament res.",
+    "inactivity_plain": (
+        "Fa {months} mesos que no entres a OIUEEI, i no guardem comptes que ningú fa "
+        "servir. D'aquí a {days} dies el teu compte desapareix, per sempre, amb les "
+        "teves col·leccions, les teves coses i les seves fotos. Amb entrar-hi un cop "
+        "n'hi ha prou per conservar-lo: {link} — i si prefereixes que se'n vagi, no cal "
+        "que facis res."
+    ),
+    # El mateix avís per a un compte que NO s'esborrarà perquè hi ha un grup que
+    # en depèn. No pot amenaçar amb una cosa que no passarà.
+    "inactivity_kept": (
+        "El teu compte es queda: hi ha gent fent servir una col·lecció teva i no els la "
+        "traurem mentre tu no hi ets. Però en tot aquest temps no l'ha cuidada ningú, i "
+        "és teva."
+    ),
+    "inactivity_kept_outro": (
+        "Si prefereixes marxar, pots esborrar el teu compte tu mateix, des del teu "
+        "perfil, quan vulguis."
+    ),
+    "inactivity_kept_plain": (
+        "Fa {months} mesos que no entres a OIUEEI. El teu compte es queda —hi ha gent "
+        "fent servir una col·lecció teva i no els la traurem mentre tu no hi ets— però "
+        "en tot aquest temps no l'ha cuidada ningú. Pots reprendre'l aquí: {link} — o "
+        "esborrar el teu compte tu mateix, des del teu perfil, quan vulguis."
+    ),
     # Contact form (support channel, to the operator)
     "contact_subject": "Contacte OIUEEI: {sender}",
     "collab_subject": "Col·laboració OIUEEI: {sender}",

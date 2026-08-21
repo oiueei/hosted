@@ -35,9 +35,11 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
-from core.models import RSVP, DailyActivity, Event, InAppNotification, Report, User
+from core.models import RSVP, Collection, DailyActivity, Event, InAppNotification, Report, User
+from core.services.email_service import send_inactivity_warning_email
 
 security_logger = logging.getLogger("security")
 
@@ -73,12 +75,19 @@ class Command(BaseCommand):
         now = timezone.now()
         steps = [
             self._unvisited_guests,
+            self._warn_inactive_accounts,
             self._events,
             self._daily_activity,
             self._notifications,
             self._reports,
         ]
-        results = [result for result in (step(now, commit) for step in steps) if result]
+        results = []
+        for step in steps:
+            outcome = step(now, commit)
+            if outcome:
+                # A step may report more than one line (warning somebody is not
+                # the same event as deleting them).
+                results.extend(outcome if isinstance(outcome, list) else [outcome])
 
         self.stdout.write("Retention sweep — " + ("COMMITTED" if commit else "DRY RUN"))
         for label, count in results:
@@ -150,6 +159,60 @@ class Command(BaseCommand):
             # be an odd way to honour a retention period.
             User.objects.filter(code__in=codes).delete()
         return (f"Guest accounts never used, deleted (>{days}d)", len(codes))
+
+    def _warn_inactive_accounts(self, now, commit):
+        """The email that comes before anything is taken away.
+
+        An account nobody has signed into for the retention period is deleted —
+        but not without being told, and not on the same day. This step only ever
+        sends and marks; the deletion counts its grace period from the mark.
+
+        Who is skipped, and why each one is its own mistake:
+
+        - anyone already warned — the mark is what makes this idempotent, and a
+          second email would restart nothing but the recipient's alarm.
+        - staff and superusers, as everywhere in this command.
+        - anyone holding a live ``COLLECTION_INVITE`` — they were invited days
+          ago; telling them in the same week that their account of two years is
+          about to be deleted would be true and useless.
+
+        Owning a group other people use does **not** skip the warning: that
+        person hears from us, they simply hear the truthful version, because
+        their account is not going anywhere (see the retention table). The
+        deletion step is where that exception is enforced.
+
+        A failed send leaves the mark unwritten on purpose. The grace period
+        must not start from an email that never arrived, so that account is
+        picked up again by the next run instead.
+        """
+        months = settings.RETENTION_INACTIVE_ACCOUNT_MONTHS
+        if not months:
+            return None
+        grace = settings.RETENTION_INACTIVE_WARNING_DAYS
+        cutoff = months_ago(months, now).date()
+        candidates = list(
+            User.objects.filter(
+                inactivity_notified__isnull=True,
+                is_staff=False,
+                is_superuser=False,
+            )
+            .filter(Q(last_activity__lt=cutoff) | Q(last_activity__isnull=True, created__lt=cutoff))
+            .exclude(rsvps__action=RSVP.Action.COLLECTION_INVITE)
+        )
+        label = f"Inactive accounts warned (>{months}m)"
+        if not commit:
+            return (label, len(candidates))
+        warned = 0
+        for user in candidates:
+            keeps_a_group = Collection.objects.filter(owner=user, invites__isnull=False).exists()
+            try:
+                send_inactivity_warning_email(user, months, grace, will_delete=not keeps_a_group)
+            except Exception as exc:
+                self.stderr.write(f"  inactivity warning failed for {user.code}: {exc}")
+                continue
+            User.objects.filter(pk=user.pk).update(inactivity_notified=timezone.localdate())
+            warned += 1
+        return (label, warned)
 
     def _events(self, now, commit):
         """Cut the link to a person; keep the fact.
