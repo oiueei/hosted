@@ -102,6 +102,20 @@ class Collection(models.Model):
     #   Python weekday() numbering (0=Mon … 6=Sun). Empty = any day.
     rental_durations = models.JSONField(default=list, blank=True)
     rental_weekdays = models.JSONField(default=list, blank=True)
+    # How deposits work in this group, in the owner's own words — "50 €, back
+    # when the drill comes home in one piece". A bare number is the beginning of
+    # an argument: the condition for getting it back is the actual rule, and that
+    # rule belongs to the group rather than to each thing.
+    #
+    # No on/off switch beside it, on purpose: **writing the policy is the
+    # switch**, the same shape as `digest_muted` below, where the presence of a
+    # row means something and the absence costs no data. A group that wants no
+    # deposits simply has no policy and no thing carrying one; a boolean beside
+    # it would be a second door that can disagree with the first.
+    #
+    # 256/1024 like `description`, for the same reason: the visible limit is per
+    # language and the column has to hold all three plus the JSON scaffolding.
+    deposit_policy = models.CharField(max_length=1024, blank=True, default="")
     allowed_thing_types = models.JSONField(default=list, blank=True)
     tags = models.JSONField(
         default=list,
