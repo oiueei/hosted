@@ -278,6 +278,7 @@ The `BookingPeriod` model is the unified reservation/booking model for all thing
 | `created` | DateTimeField | Auto | Timestamp when booking was created |
 | `thing_code` | ForeignKey(Thing) | **Yes** | The thing being booked |
 | `thing_type` | CharField(17) | No | Type of thing (default: GIFT_THING) |
+| `deposit_amount` | DecimalField | No | **Snapshot** of `Thing.deposit` at the moment the reservation was made, copied beside `thing_type` for the same reason: an owner editing the listing in June must not rewrite what a March loan said. One snapshot covers the whole handover — every `ThingTransfer` is created with its booking attached, so a journey reaches the agreed amount through `transfer.booking` and there is no second copy to drift. **Nothing renders it yet**: it is the record, and the column has to exist from the first reservation that carries a deposit or the history starts with a hole. |
 | `requester_code` | ForeignKey(User) | **Yes** | User who made the request |
 | `requester_email` | CharField(64) | **Yes** | Email of the requester |
 | `owner_code` | ForeignKey(User) | **Yes** | Owner of the thing |

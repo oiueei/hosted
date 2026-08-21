@@ -42,6 +42,7 @@ The payload keys that make this work (`booking_code`, `thing_code`, `collection_
 
 #### Patterns
 
+- **Snapshots, not lookups**: both `request_*` functions copy the thing's `type` **and** its `deposit` onto the booking (`thing_type`, `deposit_amount`). The reservation is a record of what was agreed, so editing the listing afterwards cannot rewrite it — and since `accept_booking` always attaches the booking to the `ThingTransfer` it creates, the journey reads the agreed amount through `transfer.booking` rather than keeping a second copy that could disagree.
 - **Atomic transactions**: Every function wraps its work in `transaction.atomic()` to ensure `BookingPeriod` and `Thing` are updated together or not at all.
 - **Row-level locking**: Uses `Thing.objects.select_for_update()` to prevent race conditions when two concurrent requests try to modify the same thing's status.
 - **Single-use type check**: Only GIFT and SELL things (`SINGLE_USE_TYPES` from `core.models.booking`) change thing status on accept/reject/cancel. Date-based types (LEND, RENT) leave thing status unchanged because multiple bookings can coexist.

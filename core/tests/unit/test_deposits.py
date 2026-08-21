@@ -15,10 +15,12 @@ wider than it. Both halves are pinned.
 """
 
 import json
+from datetime import date, timedelta
 
 import pytest
 
 from core.models import Collection, Thing
+from core.models.transfer import ThingTransfer
 from core.serializers import (
     CollectionCreateSerializer,
     CollectionSerializer,
@@ -28,6 +30,11 @@ from core.serializers import (
     ThingUpdateSerializer,
 )
 from core.serializers.thing import ThingBulkRowSerializer
+from core.services.booking_service import (
+    accept_booking,
+    request_date_based_booking,
+    request_standard_booking,
+)
 from core.utils import parse_localized
 
 pytestmark = pytest.mark.django_db
@@ -216,3 +223,72 @@ class TestTheGroupsPolicy:
         )
 
         assert not serializer.is_valid()
+
+
+class TestWhatAReservationRemembers:
+    """The test that justifies the column.
+
+    A deposit that lived only on the thing would let an owner rewrite the past:
+    edit the listing in June and a loan agreed in March starts saying June's
+    number. `thing_type` is already copied for exactly this reason, so the
+    snapshot sits beside it.
+    """
+
+    def _lent_thing(self, owner, deposit="50.00"):
+        return Thing.objects.create(
+            code="RENT01",
+            owner=owner,
+            headline="A projector",
+            type=Thing.Type.RENT_THING,
+            fee="10.00",
+            deposit=deposit,
+        )
+
+    def _book(self, thing, requester):
+        return request_date_based_booking(
+            thing,
+            requester,
+            thing.owner.email,
+            date.today() + timedelta(days=1),
+            date.today() + timedelta(days=3),
+        )
+
+    def test_the_amount_is_the_one_that_was_agreed(self, user, user2):
+        booking = self._book(self._lent_thing(user), user2)
+
+        assert str(booking.deposit_amount) == "50.00"
+
+    def test_editing_the_listing_afterwards_does_not_rewrite_it(self, user, user2):
+        thing = self._lent_thing(user)
+        booking = self._book(thing, user2)
+
+        thing.deposit = "500.00"
+        thing.save(update_fields=["deposit"])
+
+        booking.refresh_from_db()
+        assert str(booking.deposit_amount) == "50.00"
+
+    def test_a_thing_that_asks_for_nothing_reserves_nothing(self, user, user2):
+        booking = self._book(self._lent_thing(user, deposit=None), user2)
+
+        assert booking.deposit_amount is None
+
+    def test_a_gift_carries_none_through_the_other_reservation_path(self, user, user2):
+        gift = Thing.objects.create(
+            code="GIFT01", owner=user, headline="A lamp", type=Thing.Type.GIFT_THING
+        )
+
+        booking = request_standard_booking(gift, user2, user.email)
+
+        assert booking.deposit_amount is None
+
+    def test_the_handover_finds_it_without_a_second_copy(self, user, user2):
+        # Why ThingTransfer needs no column of its own: every transfer is
+        # created with its booking attached, so the agreed amount is one
+        # relation away and can never disagree with itself.
+        thing = self._lent_thing(user)
+        booking = self._book(thing, user2)
+        accept_booking(booking)
+
+        transfer = ThingTransfer.objects.get(booking=booking)
+        assert str(transfer.booking.deposit_amount) == "50.00"
