@@ -91,7 +91,7 @@ export default defineConfig(({ mode }) => ({
       // the code needs covering, never that the line needs lowering.
       thresholds: {
         statements: 85,
-        branches: 77,
+        branches: 78,
         functions: 77,
         lines: 88,
       },
