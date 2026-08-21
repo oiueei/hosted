@@ -178,3 +178,38 @@ def test_the_invitation_source_note_is_translated_too():
         )
 
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_every_email_declares_its_language_on_the_html_tag():
+    """A4: a screen reader picks its pronunciation from `<html lang>`, and
+    every email already speaks a specific, known language
+    (`resolve_email_language`) — leaving the attribute blank was never
+    "unknown", only unstated."""
+    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert '<html lang="en">' in html
+
+
+@pytest.mark.django_db
+def test_the_html_lang_attribute_follows_the_recipients_own_language():
+    email_service.send_magic_link_email(
+        "someone@example.com", "http://localhost:3000/verify/tok", lang="ca"
+    )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert '<html lang="ca">' in html
+
+
+@pytest.mark.django_db
+def test_a_sender_with_no_lang_in_scope_still_declares_the_deployment_default():
+    # `lang` unset here reaches `_render_email(blocks, lang=None)` for real —
+    # the same path an operator-only sender like send_collection_capacity_alarm
+    # takes on purpose (no recipient to speak for) — and the tag still has to
+    # name a real language, not render lang="".
+    with override_settings(EMAIL_LANGUAGE="es"):
+        email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/x")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert '<html lang="es">' in html

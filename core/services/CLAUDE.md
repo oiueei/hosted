@@ -83,6 +83,8 @@ Every email belongs to one of three categories. Each function routes through the
 
 **`send_collection_invite_email` carries a second, specific disclosure** (`invite_source_note`, all three catalogues): the invitee's address didn't come from them, it came from whoever invited them, which is exactly the case art. 14 exists for. The sentence says where the address came from, what it's used for, and that declining or ignoring the email ends it — appended to **both** the HTML blocks and the plain body, since this is the one email in the catalogue sent to somebody who never asked OIUEEI for anything directly.
 
+**`<html lang="...">` itself follows the same resolved language** (A4, 2026-08): `_render_email` computes `lang or EMAIL_LANGUAGE` once and passes it to the template as `lang`, so a screen reader pronounces the body in the language it's actually written in rather than whatever the browser/client's own default assumes. Every email already speaks a specific, known language by the time it's composed (`resolve_email_language`), so this was never genuinely unknown — only unstated.
+
 #### Email language — the hierarchy (`EMAIL_LANGUAGE` + `Collection.language` + `User.language`)
 
 Which language an email speaks is decided per **recipient**, by three levels, weakest to strongest:

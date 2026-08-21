@@ -535,12 +535,19 @@ def _render_email(blocks, lang=None):
     footer in ``_with_footer``, which only appears on the categories a
     recipient can opt out of). ``lang`` here only picks the label's language;
     ``T`` already falls back to the deployment default when it is ``None``.
+
+    The resolved ``lang`` also lands on ``<html lang="...">`` itself (A4) — a
+    screen reader picks its pronunciation from that attribute, and every email
+    already speaks a specific, known language (``resolve_email_language``), so
+    leaving the tag blank was never "unknown", only unstated.
     """
+    resolved_lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
     return render_to_string(
         "email/layout.html",
         {
             "blocks": blocks,
             "has_logo": _logo_bytes() is not None,
+            "lang": resolved_lang,
             "legal_url": f"{_frontend_base_url()}/legal",
             "legal_label": T("footer_legal", lang=lang),
         },
