@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES } from '../constants/things';
+import { TYPE_VALUES, FEE_TYPES, DATE_TYPES, DETAIL_TYPES } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -33,6 +33,7 @@ export default function EditThingPage() {
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [fee, setFee] = useState('');
+  const [deposit, setDeposit] = useState('');
   const [availability, setAvailability] = useState('');
   const [location, setLocation] = useState('');
   const [condition, setCondition] = useState('');
@@ -59,6 +60,7 @@ export default function EditThingPage() {
           setThumbnail(data.thumbnail || '');
           setThumbnailUrl(data.thumbnail_url || '');
           setFee(data.fee != null ? data.fee : '');
+          setDeposit(data.deposit != null ? data.deposit : '');
           setAvailability(data.availability || '');
           setLocation(data.location || '');
           setCondition(data.condition || '');
@@ -110,6 +112,11 @@ export default function EditThingPage() {
     if (FEE_TYPES.includes(thingType) && fee !== '') {
       body.fee = fee;
     }
+    // Always explicit, never omitted: the server judges the row that lands, so
+    // switching the type away from LEND/RENT while a deposit is still stored
+    // has to clear it in the same request or the backend refuses the whole
+    // save (core/serializers/CLAUDE.md — "the one field with a type rule").
+    body.deposit = DATE_TYPES.includes(thingType) && deposit !== '' ? deposit : null;
     if (DETAIL_TYPES.includes(thingType)) {
       body.availability = availability || '';
       body.location = location.trim();
@@ -174,6 +181,9 @@ export default function EditThingPage() {
           fee={fee}
           setFee={setFee}
           feeStep={0.01}
+          deposit={deposit}
+          setDeposit={setDeposit}
+          depositStep={0.01}
           availability={availability}
           setAvailability={setAvailability}
           condition={condition}

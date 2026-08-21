@@ -333,3 +333,123 @@ describe('AddThingPage — clearing a detail select', () => {
     });
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Deposit (S6) — LEND/RENT only, and never left ambiguous across an edit
+// ════════════════════════════════════════════════════════════════════════
+
+describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {
+  test('a GIFT thing never sees a deposit input', async () => {
+    const { container } = renderAdd({ collection: { headline: 'Plain', mode: 'PROPRIETARY' } });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    expect(container.querySelector('#add-thing-deposit')).toBeNull();
+  });
+
+  test('a LEND thing gets the field, with no default and never labelled as part of the price', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    // Empty, never pre-filled (DESIGN §6 — no suggested amount).
+    expect(container.querySelector('#add-thing-deposit').value).toBe('');
+    // A price row for LEND would be wrong regardless — but if it ever appeared,
+    // a shared euro icon with no other cue is exactly how "10 + 50" becomes "60 €".
+    expect(container.querySelector('#add-thing-fee')).toBeNull();
+  });
+
+  test('a RENT thing carries both fields, distinctly labelled', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['RENT_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
+    expect(container.querySelector('#add-thing-deposit')).toBeTruthy();
+    // Two different labels, not the same word twice — otherwise "10" next to
+    // "50" reads as one 60 € cost instead of a price plus a returnable deposit.
+    const feeLabel = container.querySelector('label[for="add-thing-fee"]');
+    const depositLabel = container.querySelector('label[for="add-thing-deposit"]');
+    expect(feeLabel.textContent).not.toBe(depositLabel.textContent);
+    expect(depositLabel.textContent).toMatch(/deposit/i);
+  });
+
+  test('a deposit typed for a LEND thing reaches the POST body', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    fireEvent.change(container.querySelector('#add-thing-headline'), { target: { value: 'Drill' } });
+    fireEvent.change(container.querySelector('#add-thing-deposit'), { target: { value: '50' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body)).toMatchObject({ deposit: '50', type: 'LEND_THING' });
+    });
+  });
+
+  test('leaving it empty never sends the field at all — nothing to clear on a brand-new thing', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    fireEvent.change(container.querySelector('#add-thing-headline'), { target: { value: 'Drill' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body)).not.toHaveProperty('deposit');
+    });
+  });
+});
+
+describe('EditThingPage — deposit follows the type, explicitly', () => {
+  test('a stored deposit pre-fills the field', async () => {
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+    });
+
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-deposit').value).toBe('50');
+  });
+
+  test('switching the type away from LEND/RENT clears the deposit in the same PATCH', async () => {
+    // The server judges the row that lands (core/serializers/CLAUDE.md): an
+    // untouched field keeps its stored value, so this can't be left implicit —
+    // the client has to say `deposit: null` itself or the save 400s.
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+
+    fireEvent.click(container.querySelector('#edit-thing-type-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).deposit).toBeNull();
+    });
+  });
+
+  test('keeping the type as LEND/RENT keeps sending the amount', async () => {
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).deposit).toBe('50.00');
+    });
+  });
+});

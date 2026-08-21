@@ -389,6 +389,8 @@
     "titleLabel": "Título",
     "descriptionLabel": "Descripción",
     "priceLabel": "Precio",
+    "depositLabel": "Fianza (opcional)",
+    "depositHelper": "Una garantía que devuelves cuando la cosa vuelve — no forma parte del precio.",
     "availabilityLabel": "Disponibilidad",
     "conditionLabel": "Estado",
     "locationLabel": "Ubicación",

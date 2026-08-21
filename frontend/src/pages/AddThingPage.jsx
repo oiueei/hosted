@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DETAIL_TYPES } from '../constants/things';
+import { TYPE_VALUES, FEE_TYPES, DATE_TYPES, DETAIL_TYPES } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -36,6 +36,7 @@ export default function AddThingPage() {
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [fee, setFee] = useState('');
+  const [deposit, setDeposit] = useState('');
   const [availability, setAvailability] = useState('');
   const [location, setLocation] = useState('');
   const [condition, setCondition] = useState('');
@@ -99,6 +100,9 @@ export default function AddThingPage() {
     if (description.trim()) body.description = description.trim();
     if (FEE_TYPES.includes(type) && fee !== '') {
       body.fee = fee;
+    }
+    if (DATE_TYPES.includes(type) && deposit !== '') {
+      body.deposit = deposit;
     }
     if (DETAIL_TYPES.includes(type)) {
       if (availability) body.availability = availability;
@@ -177,6 +181,8 @@ export default function AddThingPage() {
             setDescription={setDescription}
             fee={fee}
             setFee={setFee}
+            deposit={deposit}
+            setDeposit={setDeposit}
             availability={availability}
             setAvailability={setAvailability}
             condition={condition}

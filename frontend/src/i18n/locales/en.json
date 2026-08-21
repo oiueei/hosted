@@ -395,6 +395,8 @@
     "titleLabel": "Title",
     "descriptionLabel": "Description",
     "priceLabel": "Price",
+    "depositLabel": "Deposit (optional)",
+    "depositHelper": "A guarantee you give back when the thing does — not part of the price.",
     "availabilityLabel": "Availability",
     "conditionLabel": "Condition",
     "locationLabel": "Location",
