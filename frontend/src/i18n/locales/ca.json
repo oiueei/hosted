@@ -278,6 +278,8 @@
   "thingPage": {
     "typeLabel": "Tipus.",
     "priceLabel": "Preu.",
+    "depositLabel": "Fiança.",
+    "depositRefundableNote": "(es retorna)",
     "availabilityLabel": "Disponibilitat.",
     "locationLabel": "Ubicació.",
     "conditionLabel": "Estat.",

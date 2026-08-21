@@ -284,6 +284,8 @@
   "thingPage": {
     "typeLabel": "Type.",
     "priceLabel": "Price.",
+    "depositLabel": "Deposit.",
+    "depositRefundableNote": "(refundable)",
     "availabilityLabel": "Availability.",
     "locationLabel": "Location.",
     "conditionLabel": "Condition.",
