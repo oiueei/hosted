@@ -44,6 +44,7 @@ from .views.collections import (
 )
 from .views.contact import ContactView
 from .views.csp import csp_report
+from .views.export import AccountDataExportView, CollectionDataExportView
 from .views.faq import FAQAnswerView, FAQDetailView, FAQVisibilityView, ThingFAQListView
 from .views.inbox import InboxView
 from .views.notifications import DigestMuteByTokenView, NotificationsByTokenView
@@ -108,6 +109,8 @@ urlpatterns = [
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/delete-account/", AccountDeleteRequestView.as_view(), name="delete-account"),
+    # Its complement: read your copy before you erase it (art. 20)
+    path("auth/export/", AccountDataExportView.as_view(), name="account-export"),
     # Support channel — anonymous on purpose (a locked-out user is the main case)
     path("contact/", ContactView.as_view(), name="contact"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
@@ -180,6 +183,11 @@ urlpatterns = [
         "collections/<str:collection_code>/stats/",
         CollectionStatsView.as_view(),
         name="collection-stats",
+    ),
+    path(
+        "collections/<str:collection_code>/export/",
+        CollectionDataExportView.as_view(),
+        name="collection-export",
     ),
     path(
         "collections/<str:collection_code>/broadcast/",

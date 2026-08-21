@@ -141,6 +141,7 @@ OIUEEI ships with **no third-party analytics**. We don't load a tracking SDK, we
 
 - **Operational error and performance monitoring** (Sentry-style), if added. Scrub user content from stack traces and breadcrumbs; PII never leaves our servers.
 - **Server-side aggregate counters** for things we genuinely need to operate the service — e.g. counting how many bookings were created last week. Computed from existing data, never by sending events to a third party.
+- **A person's own rows of that log, in their own data export.** The rule above protects the analytics log as an aggregate *product* surface: nothing in the app lets anyone read how other people behave. It was never meant to withhold from someone the observed data we hold about *them*, which is exactly what a data-portability copy is for. Scoped to `actor_code == request.user.code`, in a file only they can ask for (`core/services/export_service.py`).
 
 If at any point we find ourselves about to add a third-party analytics SDK, that is a signal to stop and ask: what specific question does it answer that we can't answer from our own database? If the answer is vague, the SDK does not get added.
 

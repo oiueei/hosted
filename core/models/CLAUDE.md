@@ -490,6 +490,8 @@ A `Report` is a logged-in member's flag on a `Thing` (content moderation, #12). 
 
 An `Event` is one row in an **append-only, first-party analytics log**. The domain tables can't answer historical questions on their own: Collections and Things are **hard-deleted**, `Collection.invites` has no join timestamp, and there is no session concept. `Event` records the handful of actions we care about so accumulated counts and funnels survive those deletes. Read only by whatever reporting the deployment runs over it — never exposed to any read endpoint (DESIGN §9).
 
+**The one exception: your own rows, in your own data export.** `GET /api/v1/auth/export/` carries the `Event` rows whose `actor_code` is the requester's, and nobody else's. DESIGN §9 protects this log as an *aggregate product surface* — no endpoint that lets anyone read how other people behave — while GDPR arts. 15/20 still cover one person's own rows, which are observed data about them. Narrowly scoped and worth writing down here rather than leaving as an apparent contradiction between the rule and the export.
+
 ### Fields
 
 | Field | Type | Required | Description |

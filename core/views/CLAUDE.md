@@ -1003,6 +1003,38 @@ One-off, idempotent seed of the `Event` log from existing rows (users → `USER_
 
 ---
 
+## Data Export Views (`core/views/export.py`)
+
+Two downloads, one service. Both return a plain `HttpResponse` attachment rather than a DRF `Response`: what these serve is a **file** — it has a name, a disposition and a caching rule that a rendered JSON body doesn't carry. The tree itself, and the reasoning about what never leaves it, lives in [`export_service`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); these views are the HTTP layer around it — who may ask, how often, and what the browser may do with the answer.
+
+Both set `Content-Disposition: attachment; filename="oiueei-{code}-{date}.json"` and `Cache-Control: private, no-store`, and both log to the `security` logger with the size of what they served: a sudden change in what an export weighs is the first sign it started carrying something new.
+
+### AccountDataExportView
+
+| | |
+|---|---|
+| **Endpoint** | `GET /api/v1/auth/export/` |
+| **Permission** | `IsAuthenticated` |
+| **Rate limit** | 10 requests per day per user |
+
+Your own data, as one JSON file — the self-service half of the right the privacy policy used to answer with "write to me" (GDPR art. 20). The twin of [`AccountDeleteRequestView`](#accountdeleterequestview): the same account page offers both, in that order, because reading your copy before erasing it is the sane sequence and the legally solid one.
+
+### CollectionDataExportView
+
+| | |
+|---|---|
+| **Endpoint** | `GET /api/v1/collections/{collection_code}/export/` |
+| **Permission** | `IsAuthenticated` + collection owner (`require_collection_owner`) |
+| **Rate limit** | 10 requests per day per user |
+
+A whole group as its owner runs it, other members' things included. **A member gets 403, not a smaller file**: there is no partial export by design — "some of the group, depending on who asks" is a second access-control model to keep correct forever, and what a member is entitled to is their own account copy.
+
+Deliberately not folded into the account export: a collection of 4,000 things would bloat every personal download, this button belongs beside the stats CSV, and keeping them apart lets the account copy stay honestly framed as *your* data while this one is what it is — an operational copy of a group, carrying other people's details, which the page has to say out loud.
+
+**Query budgets.** `test_query_counts.py` pins both exports as constant in what they carry (a 200-thing group costs the same queries as a 5-thing one) plus a size ceiling on the 200-thing case — the half a query count can't see, and the reason photos travel as URLs rather than bytes. An N+1 here isn't a slow page; it's a 30-second Heroku timeout on the one request somebody makes when they're already unhappy enough to be leaving.
+
+---
+
 ## Middleware (`core/middleware.py`)
 
 - **`SecurityHeadersMiddleware`** — adds CSP + Permissions-Policy to every response (all environments). The CSP names a violation collector in both syntaxes (`report-uri` and `report-to`, the latter resolved by the `Reporting-Endpoints` header) pointing at `csp_report` below.
@@ -1074,6 +1106,8 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/collections/{code}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling)
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user
+- `/auth/export/` GET — 10 requests per day per user
+- `/collections/{code}/export/` GET — 10 requests per day per user. Building an export is the heaviest read in the app; the cap is what keeps "download my data" from being a way to walk a server out one file at a time
 - `/contact/` POST — 5 requests per hour per IP
 - `/csp-report/` POST — 30 requests per hour per IP (violation reports; browser extensions make these noisy)
 - `/health/` GET+HEAD — 60 requests per minute per IP. The only anonymous endpoint that reaches the database on every hit, so uncapped it is DB amplification rather than a monitor. Far above a real monitor's cadence (5 minutes = 0.2/m). It is a plain Django view, so it answers **429 itself** (`block=False` + `request.limited`) rather than letting `Ratelimited` surface as Django's 403 — DRF's exception handler doesn't run here
@@ -1087,6 +1121,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 3. **RSVP obfuscation + high-entropy links** — Email/magic links carry the RSVP's 26-char (~134-bit) `token` via `generate_token()`, never the 6-char PK or real object codes, so they resist both enumeration and brute force.
 4. **Security logging** — Auth events logged with IP addresses.
 5. **Production hardening** — HSTS, secure cookies, SSL redirect, custom admin path, JSON-only renderer.
+6. **Data exports carry no credentials** — the two endpoints in `core/views/export.py` serve files people forward and leave on laptops, so `Collection.share_token` and every `RSVP.token` are absent from the bytes (pinned by tests that read the raw bytes, not the tree). They are `no-store` and owner-scoped: an account copy is only ever your own, and a collection copy is owner-only with no partial variant.
 
 ---
 

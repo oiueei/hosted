@@ -5,6 +5,7 @@ reintroduce a per-thing query (N+1) on transfer_count / my_pending_booking /
 the nested-things serialisation.
 """
 
+import json
 from datetime import date, timedelta
 
 import pytest
@@ -259,3 +260,79 @@ class TestNPlusOneGuards:
         assert len(big) == len(small), (
             f"N+1 on collection-list pending_invites: {len(small)} vs {len(big)}"
         )
+
+
+@pytest.mark.django_db
+class TestDataExportQueryBudgets:
+    """An export walks every table a person appears in, so an N+1 here is not a
+    slow page — it is a 30-second Heroku timeout on the one request somebody
+    makes when they are already unhappy enough to be leaving."""
+
+    def test_account_export_is_constant_in_what_it_carries(self, authenticated_client, user):
+        def grow():
+            coll = CollectionFactory(owner=user)
+            _make_things(user, coll, 3)
+            coll.invites.add(UserFactory(), UserFactory())
+            RSVPFactory(
+                user_code=UserFactory(),
+                action=RSVP.Action.COLLECTION_INVITE,
+                target_code=coll.code,
+            )
+            for thing in ThingFactory.create_batch(2, owner=user):
+                BookingPeriodFactory(thing_code=thing)
+                ThingTransferFactory(thing=thing, from_user=user)
+
+        _warm_activity(authenticated_client)
+        grow()
+        with CaptureQueriesContext(connection) as small:
+            r1 = authenticated_client.get("/api/v1/auth/export/")
+        assert r1.status_code == 200
+
+        for _ in range(3):
+            grow()
+        with CaptureQueriesContext(connection) as big:
+            r2 = authenticated_client.get("/api/v1/auth/export/")
+        assert r2.status_code == 200
+        assert len(big) == len(small), (
+            f"N+1 in the account export: {len(small)} queries for one group, {len(big)} for four"
+        )
+
+    def test_collection_export_is_constant_in_the_size_of_the_group(
+        self, authenticated_client, user
+    ):
+        coll = CollectionFactory(owner=user)
+        url = f"/api/v1/collections/{coll.code}/export/"
+        _warm_activity(authenticated_client)
+        _make_things(user, coll, 5)
+        coll.invites.add(*UserFactory.create_batch(3))
+        with CaptureQueriesContext(connection) as small:
+            r1 = authenticated_client.get(url)
+        assert r1.status_code == 200
+
+        _make_things(user, coll, 195)
+        coll.invites.add(*UserFactory.create_batch(20))
+        with CaptureQueriesContext(connection) as big:
+            r2 = authenticated_client.get(url)
+        assert r2.status_code == 200
+        assert len(json.loads(r2.content)["things"]) == 200
+        assert len(big) == len(small), (
+            f"N+1 in the collection export: {len(small)} queries for 5 things, {len(big)} for 200"
+        )
+
+    def test_a_two_hundred_thing_group_is_still_a_file_and_not_a_disk(
+        self, authenticated_client, user
+    ):
+        """The other half of the budget, which query counts can't see.
+
+        `assertNumQueries` catches the N+1; it says nothing about the megabytes
+        assembled in memory before the response is written. Photos travel as
+        Cloudinary URLs precisely so this stays bounded — the day somebody
+        inlines an image as base64 "for convenience", this is what notices.
+        """
+        coll = CollectionFactory(owner=user)
+        _make_things(user, coll, 200)
+
+        res = authenticated_client.get(f"/api/v1/collections/{coll.code}/export/")
+
+        assert res.status_code == 200
+        assert len(res.content) < 1_000_000, f"200 things weighed {len(res.content)} bytes"
