@@ -128,7 +128,8 @@
     "contact": "Contacte — OIUEEI",
     "collaborate": "Col·labora — OIUEEI",
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
-    "sharedThings": "Compartit amb mi — OIUEEI"
+    "sharedThings": "Compartit amb mi — OIUEEI",
+    "dataExport": "Exportar dades — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -438,6 +439,7 @@
     "photoHelper": "Es mostra al teu perfil, opcional",
     "maxAbout": "Màxim 2000 caràcters.",
     "languageHelper": "OIUEEI també t'escriu en aquesta llengua (correus inclosos).",
+    "downloadData": "Descarregar una còpia de les teves dades",
     "deleteAccount": "Esborrar el compte",
     "nameHelper": "El teu nom, un àlies, el que vulguis. Apareix al costat de les preguntes que fas, al recorregut de les coses que has tingut i a la llista de membres dels teus grups — en públic, si el grup comparteix en públic."
   },
@@ -814,6 +816,8 @@
   "deleteAccount": {
     "pageTitle": "Esborrar el teu compte",
     "intro": "Esborrar el teu compte és immediat i irreversible un cop ho confirmis. Aquesta pàgina t'explica exactament què s'esborra i què es conserva.",
+    "exportFirst": "Abans d'esborrar: descarrega primer una còpia de les teves dades — és la teva última oportunitat.",
+    "exportFirstLink": "Descarregar les meves dades",
     "whatGoesTitle": "Què s'esborra",
     "whatGoes": "El teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds pendents — per sempre.",
     "whatStaysTitle": "Què es conserva",
@@ -862,5 +866,37 @@
     "needsApproval": "Algunes opcions necessiten aprovació en aquesta instal·lació: {{list}}.",
     "unavailable": "Algunes opcions no estan disponibles en aquesta instal·lació: {{list}}.",
     "requestAccess": "Sol·licitar accés"
+  },
+  "dataExport": {
+    "pageTitle": "Descarrega les teves dades",
+    "intro": "Una còpia de tot el que OIUEEI guarda de tu, en un únic fitxer JSON — llegeix-la abans de decidir, o abans d'esborrar el teu compte.",
+    "whatYouTakeTitle": "Què t'emportes",
+    "take": {
+      "profile": "El teu perfil",
+      "collectionsOwned": "Els grups que gestiones — amb els seus membres i les seves coses",
+      "collectionsMemberOf": "Els grups als quals pertanys",
+      "things": "Les teves coses",
+      "bookings": "Les teves reserves, fetes i rebudes",
+      "faqs": "Preguntes que has fet, i les que has respost a les teves coses",
+      "proposals": "Persones que has suggerit per a un grup",
+      "transfers": "El recorregut de les coses que han passat per les teves mans",
+      "notifications": "Les teves notificacions",
+      "reports": "Les denúncies que has presentat",
+      "activity": "El teu propi historial d'activitat"
+    },
+    "whatYouDontTakeTitle": "Què NO t'emportes",
+    "dontTake": {
+      "credentials": "Credencials. L'enllaç públic de les teves col·leccions, els tokens dels teus enllaços màgics i les teves galetes de sessió — qui tingués aquest fitxer podria entrar als teus grups.",
+      "othersData": "Dades d'altres persones, més enllà del que ja veus. Correus només dels grups que gestiones; ni l'any de naixement ni el codi postal de ningú més.",
+      "othersThings": "La fitxa completa de les coses d'altres persones als teus grups — només el seu codi, títol i el nom del seu propietari. Gestiones el grup? Descarrega la còpia de la col·lecció.",
+      "reports": "Les denúncies sobre les teves coses. Són anònimes per disseny — ni l'app ni aquest fitxer diuen qui va denunciar. Les que tu has presentat sí que hi són.",
+      "photos": "Fotos i documents, que viatgen com a enllaços, no com a fitxers. Esborrar el teu compte trenca aquests enllaços — descarrega les teves imatges abans.",
+      "emails": "Còpies dels correus que t'hem enviat, ni dels missatges del formulari de contacte, que no guardem.",
+      "logs": "Registres del servidor. El seu tractament és a la política de privacitat.",
+      "deleted": "El que ja has esborrat. No hi ha paperera."
+    },
+    "downloadButton": "Descarregar les meves dades",
+    "downloading": "Preparant el teu fitxer…",
+    "error": "No hem pogut preparar la teva exportació. Torna-ho a provar d'aquí un moment."
   }
 }

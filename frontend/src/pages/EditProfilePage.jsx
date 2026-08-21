@@ -284,10 +284,18 @@ export default function EditProfilePage() {
             {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
+        {/* Portability before erasure, in that order: reading your own copy
+            first is the sane sequence and the legally solid one, and it's why
+            this link sits above deleteAccount's rather than below it. */}
+        <div style={{ marginTop: 'var(--spacing-xl)', borderTop: '1px solid var(--color-black-20)', paddingTop: 'var(--spacing-m)' }}>
+          <Link to="/me/data" style={{ color: 'var(--color-black-60)', textDecoration: 'underline' }}>
+            {t('editProfile.downloadData')}
+          </Link>
+        </div>
         {/* Right to erasure — a quiet link, not a red button: deletion has its
             own page that explains everything and still requires an email
             confirmation, so this is an entrance, not the trigger. */}
-        <div style={{ marginTop: 'var(--spacing-xl)', borderTop: '1px solid var(--color-black-20)', paddingTop: 'var(--spacing-m)' }}>
+        <div style={{ marginTop: 'var(--spacing-xs)' }}>
           <Link to="/me/delete" style={{ color: 'var(--color-black-60)', textDecoration: 'underline' }}>
             {t('editProfile.deleteAccount')}
           </Link>

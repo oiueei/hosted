@@ -16,7 +16,8 @@ React frontend using HDS (Helsinki Design System) from npm with OIUEEI customiza
 | `/magic-link/:code` | `VerifyPage` | Alias for /verify/:code |
 | `/me` | `UserPage` | Own profile (fetches userCode from `/auth/me/` if needed) |
 | `/me/edit` | `EditProfilePage` | Edit own profile |
-| `/me/delete` | `DeleteAccountPage` | Right-to-erasure entry: states what is deleted / what stays, then emails the 24h confirmation link (`POST /auth/delete-account/`). Nothing is deleted here |
+| `/me/data` | `DataExportPage` | Self-service data portability (GDPR art. 20): states what the download carries and what it deliberately leaves out (the mirror of `DeleteAccountPage`), then one button — `GET /auth/export/` → blob → download, no confirmation step (unlike erasure, a copy is reversible by construction). Linked from `EditProfilePage` next to "delete account", and from the top of `DeleteAccountPage` itself — read before you erase is the sane order and the legally solid one |
+| `/me/delete` | `DeleteAccountPage` | Right-to-erasure entry: states what is deleted / what stays, then emails the 24h confirmation link (`POST /auth/delete-account/`). Nothing is deleted here. Leads with a quiet notice pointing at `/me/data` first (S5, 2026-08) |
 | `/me/notifications/:token` | `NotificationsPage` | Manage email preferences via a signed (`TimestampSigner`, ~1y TTL) token from the email footer link. Without `:token` redirects to `/me/edit`. |
 | `/collections/new` | `CreateCollectionPage` | Create a new collection |
 | `/collections/:code` | `CollectionPage` | Collection detail with things and invites. **Public route** — anonymous read when the collection is PUBLIC (gated server-side by `can_view`). |
@@ -339,6 +340,7 @@ Detail page for a thing with full information and FAQs section.
   - **The profile-load effect is mount-once, deliberately** (S7): its dependency array is `[userCode, navigate]`, not `[userCode, navigate, t, i18n]` — `t`/`i18n` get a new identity on every `i18n.changeLanguage()` call (fired by this same Select), so including them re-ran the effect on every language change, re-fetched `/auth/me/`, and clobbered every unsaved field — including the language pick itself — with the server's stale copy (the user couldn't leave their saved language). An `eslint-disable-next-line react-hooks/exhaustive-deps` documents why.
   - **Email preferences section** (h2 heading + `notifications.intro` paragraph + `form-grid`): three HDS `ToggleButton` components (wrapped in `.toggle-left`) — "Sign-in links and invitations" (always checked, `disabled`, renders black pill, Cat. 1), "Activity between users" (`notify_activity`, Cat. 2), and "News and announcements" (`notify_news`, Cat. 3). Each has a sub-label helper text rendered as a `<span>` inside the label prop. Preferences are saved together with profile fields via a single Save button.
   - "Save" button below the preferences section.
+  - **Download my data** — a quiet muted link above the delete-account one, to `/me/data` (S5, 2026-08). Portability before erasure, in that order.
   - **Delete account** — a quiet muted link (border-top separated, below Save) to `/me/delete`. An entrance, not a trigger: the deletion has its own page and still requires the emailed confirmation.
 - Pre-populates all fields (including `notify_activity`/`notify_news`) from the current user profile.
 - On success: navigates to `/`.
@@ -350,6 +352,14 @@ Detail page for a thing with full information and FAQs section.
 - `PageLayout` page that states the erasure map before anything happens: **what is deleted** (account, collections, things + photos, pending requests — permanently) and **what stays** (questions on other people's things and transfer-history hops, anonymised as "Former member" — `deleteAccount.*` i18n namespace).
 - One HDS `Button variant="danger"` ("Send me the confirmation email") requests the emailed 24h link and swaps into a success `Notification` ("Check your email"). Errors (429 / server / network) render inline and keep the button.
 - **Nothing is deleted on this page.** The deletion commits on `VerifyPage` when the emailed link is opened and its explicit confirm button pressed (see VerifyPage's ACCOUNT_DELETE note).
+
+### DataExportPage (`src/pages/DataExportPage.jsx`)
+
+- **API:** `GET /api/v1/auth/export/` (rate limited 10/day server-side).
+- Accessible from `/me/data` (protected route), reached from `EditProfilePage` (a quiet link above "delete account") and from the top of `DeleteAccountPage` (a notice pointing here first).
+- `PageLayout` page mirroring `DeleteAccountPage`'s shape: **what you take** (11 items, one per top-level export key — profile, the groups you own, the groups you're in, your things, bookings, questions, proposals, transfers, notifications, reports, activity) and **what you don't** (the 8 points `EXPORT_TOOL.md` specifies — credentials, other people's data, other people's things beyond a name, reports about your things, photos-as-links, emails, server logs, anything already deleted).
+- One HDS `Button` ("Download my data") calls the endpoint, then `downloadBlob` under the server-set filename (`filenameFromResponse`). 429 → `common.tooManyAttempts`; any other failure → `dataExport.error`; a thrown request → `common.connectionError`. No confirmation step: unlike erasure this is reversible by construction.
+- **No confirmation dialog, unlike DeleteAccountPage** — downloading a copy takes nothing away from anyone, so the extra step that erasure needs (an emailed link, an explicit second click) would only be friction here.
 
 ### NotificationsPage (`src/pages/NotificationsPage.jsx`)
 
@@ -427,6 +437,8 @@ Detail page for a thing with full information and FAQs section.
 ### File downloads (`src/utils/downloadBlob.js`)
 
 `downloadBlob(blob, filename)` — hands an already-fetched `Blob` to the browser as a download. There is no declarative way to do it (a `<a download>` needs a URL that exists only after the response), so it is a dozen lines of imperative DOM, and both ways a copy of them drifts are invisible in the happy path: an object URL that is never revoked pins the blob in memory for the life of the tab, and an anchor left in the body is a stray focusable element between the page's real controls. **The caller keeps the request and its failure copy** — what a 429 should say differs per page, and this function never sees the response. Used by `EditCollectionPage` (the stats CSV) and by anything else that offers a file.
+
+`filenameFromResponse(res, fallback)` (S5, 2026-08) — reads the `Content-Disposition` filename off a response, or `fallback` if it's missing. Introduced for `DataExportPage`'s download, so the server-set `oiueei-{code}-{date}.json` name is read the same way any future export download will need it read.
 
 ### Owner content in one text per language (`src/utils/localized.js`)
 

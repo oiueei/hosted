@@ -128,7 +128,8 @@
     "contact": "Contacto — OIUEEI",
     "collaborate": "Colabora — OIUEEI",
     "ownerBookings": "Solicitudes para mí — OIUEEI",
-    "sharedThings": "Compartido conmigo — OIUEEI"
+    "sharedThings": "Compartido conmigo — OIUEEI",
+    "dataExport": "Exportar datos — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -438,6 +439,7 @@
     "photoHelper": "Se muestra en tu perfil, opcional",
     "maxAbout": "Máximo 2000 caracteres.",
     "languageHelper": "OIUEEI también te escribe en este idioma (correos incluidos).",
+    "downloadData": "Descargar una copia de tus datos",
     "deleteAccount": "Borrar cuenta",
     "nameHelper": "Tu nombre, un apodo, lo que quieras. Aparece junto a las preguntas que haces, en el recorrido de las cosas que has tenido y en la lista de miembros de tus grupos — en público, si el grupo comparte en público."
   },
@@ -814,6 +816,8 @@
   "deleteAccount": {
     "pageTitle": "Borrar tu cuenta",
     "intro": "Borrar tu cuenta es inmediato e irreversible una vez lo confirmes. Esta página te cuenta exactamente qué se borra y qué se conserva.",
+    "exportFirst": "Antes de borrar: descarga primero una copia de tus datos — es tu última oportunidad.",
+    "exportFirstLink": "Descargar mis datos",
     "whatGoesTitle": "Qué se borra",
     "whatGoes": "Tu cuenta, tus colecciones, tus cosas con sus fotos y tus solicitudes pendientes — para siempre.",
     "whatStaysTitle": "Qué se conserva",
@@ -862,5 +866,37 @@
     "needsApproval": "Algunas opciones necesitan aprobación en esta instalación: {{list}}.",
     "unavailable": "Algunas opciones no están disponibles en esta instalación: {{list}}.",
     "requestAccess": "Solicitar acceso"
+  },
+  "dataExport": {
+    "pageTitle": "Descarga tus datos",
+    "intro": "Una copia de todo lo que OIUEEI guarda de ti, en un único fichero JSON — léela antes de decidir, o antes de borrar tu cuenta.",
+    "whatYouTakeTitle": "Qué llevas",
+    "take": {
+      "profile": "Tu perfil",
+      "collectionsOwned": "Los grupos que gestionas — con sus miembros y sus cosas",
+      "collectionsMemberOf": "Los grupos a los que perteneces",
+      "things": "Tus cosas",
+      "bookings": "Tus reservas, hechas y recibidas",
+      "faqs": "Preguntas que has hecho, y las que has respondido en tus cosas",
+      "proposals": "Personas que has sugerido para un grupo",
+      "transfers": "El recorrido de las cosas que han pasado por tus manos",
+      "notifications": "Tus notificaciones",
+      "reports": "Las denuncias que has presentado",
+      "activity": "Tu propio historial de actividad"
+    },
+    "whatYouDontTakeTitle": "Qué NO llevas",
+    "dontTake": {
+      "credentials": "Credenciales. El enlace público de tus colecciones, los tokens de tus enlaces mágicos y tus cookies de sesión — quien tuviera este fichero podría entrar en tus grupos.",
+      "othersData": "Datos de otras personas, más allá de lo que ya ves. Correos solo de los grupos que gestionas; ni el año de nacimiento ni el código postal de nadie más.",
+      "othersThings": "La ficha completa de las cosas de otras personas en tus grupos — solo su código, título y el nombre de su dueño. ¿Gestionas el grupo? Descarga la copia de la colección.",
+      "reports": "Las denuncias sobre tus cosas. Son anónimas por diseño — ni la app ni este fichero dicen quién denunció. Las que tú has presentado sí están.",
+      "photos": "Fotos y documentos, que viajan como enlaces, no como archivos. Borrar tu cuenta rompe esos enlaces — descarga tus imágenes antes.",
+      "emails": "Copias de los correos que te hemos enviado, ni de los mensajes del formulario de contacto, que no guardamos.",
+      "logs": "Registros del servidor. Su tratamiento está en la política de privacidad.",
+      "deleted": "Lo que ya has borrado. No hay papelera."
+    },
+    "downloadButton": "Descargar mis datos",
+    "downloading": "Preparando tu fichero…",
+    "error": "No hemos podido preparar tu exportación. Prueba de nuevo en un momento."
   }
 }

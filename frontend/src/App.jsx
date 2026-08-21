@@ -28,6 +28,7 @@ const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
 const EditCollectionPage = lazy(() => import('./pages/EditCollectionPage'));
 const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
 const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage'));
+const DataExportPage = lazy(() => import('./pages/DataExportPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ManageInvitesPage = lazy(() => import('./pages/ManageInvitesPage'));
 const LogoutPage = lazy(() => import('./pages/LogoutPage'));
@@ -123,6 +124,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/me" element={<UserPage />} />
           <Route path="/me/edit" element={<EditProfilePage />} />
+          <Route path="/me/data" element={<DataExportPage />} />
           <Route path="/me/delete" element={<DeleteAccountPage />} />
           <Route path="/collections/new" element={<CreateCollectionPage />} />
           <Route path="/collections/:code/edit" element={<EditCollectionPage />} />

@@ -134,7 +134,8 @@
     "contact": "Contact — OIUEEI",
     "collaborate": "Collaborate — OIUEEI",
     "ownerBookings": "Requests to me — OIUEEI",
-    "sharedThings": "Shared with me — OIUEEI"
+    "sharedThings": "Shared with me — OIUEEI",
+    "dataExport": "Data export — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -444,6 +445,7 @@
     "photoHelper": "Shown on your profile, optional",
     "maxAbout": "Maximum 2000 characters.",
     "languageHelper": "OIUEEI also writes to you in this language (emails included).",
+    "downloadData": "Download a copy of your data",
     "deleteAccount": "Delete account",
     "nameHelper": "Your name, a nickname, anything you like. It appears beside the questions you ask, in the journey of anything you have held, and in your groups’ member lists — publicly, if the group shares publicly."
   },
@@ -814,6 +816,8 @@
   "deleteAccount": {
     "pageTitle": "Delete your account",
     "intro": "Deleting your account is immediate and irreversible once you confirm it. This page tells you exactly what goes and what stays.",
+    "exportFirst": "Before you delete: download a copy of your data first — it's your last chance to.",
+    "exportFirstLink": "Download my data",
     "whatGoesTitle": "What is deleted",
     "whatGoes": "Your account, your collections, your things and their photos, and your pending requests — permanently.",
     "whatStaysTitle": "What stays",
@@ -862,5 +866,37 @@
     "needsApproval": "Some options need approval on this deployment: {{list}}.",
     "unavailable": "Some options are not available on this deployment: {{list}}.",
     "requestAccess": "Request access"
+  },
+  "dataExport": {
+    "pageTitle": "Download your data",
+    "intro": "A copy of everything OIUEEI holds about you, as one JSON file — read here before you decide, or before you delete your account.",
+    "whatYouTakeTitle": "What you take",
+    "take": {
+      "profile": "Your profile",
+      "collectionsOwned": "The groups you own — members, things and all",
+      "collectionsMemberOf": "The groups you belong to",
+      "things": "Your things",
+      "bookings": "Your reservations, made and received",
+      "faqs": "Questions you've asked, and answered on your own things",
+      "proposals": "People you've suggested for a group",
+      "transfers": "The journey of things that have passed through your hands",
+      "notifications": "Your notifications",
+      "reports": "Reports you've filed",
+      "activity": "Your own activity history"
+    },
+    "whatYouDontTakeTitle": "What you don't take",
+    "dontTake": {
+      "credentials": "Credentials. Your collections' public link, your magic-link tokens and your session cookies — someone holding this file could otherwise walk into your groups.",
+      "othersData": "Other people's data, beyond what you already see. Emails only for groups you own; no one else's birth range or postal code.",
+      "othersThings": "The full record of other people's things in your groups — just their code, title and owner's name. Managing the group? Download the collection copy instead.",
+      "reports": "Reports about your things. They're anonymous by design — neither the app nor this file says who reported. The ones you filed are here.",
+      "photos": "Photos and documents, which travel as links, not files. Deleting your account breaks those links — download your images first.",
+      "emails": "Copies of the emails we've sent you, or of contact-form messages, which we don't keep.",
+      "logs": "Server logs. Their handling is in the privacy policy.",
+      "deleted": "Anything you've already deleted. There's no bin."
+    },
+    "downloadButton": "Download my data",
+    "downloading": "Preparing your file…",
+    "error": "Couldn't build your export. Please try again in a moment."
   }
 }
