@@ -148,6 +148,7 @@ export const deploymentRoutes = [
 
 export const popInPath = '/join';        // the "new here?" button on /login
 export const aboutPath = '/about';       // the footer's "what this is" link
+export const faqPath = '/faq';           // the help link under /login's form
 
 export const deploymentI18n = {
   en: { join: { title: 'Come and see' } },
@@ -156,8 +157,9 @@ export const deploymentI18n = {
 ```
 
 Upstream exports the empty values: no extra routes, no open door, no about page,
-no extra copy. `App.jsx`, `LoginPage.jsx`, `SiteFooter.jsx`, `CollectionPage.jsx`
-and `VerifyPage.jsx` read them and are **byte-identical in both**.
+no FAQ link, no extra copy. `App.jsx`, `LoginPage.jsx`, `SiteFooter.jsx`,
+`CollectionPage.jsx` and `VerifyPage.jsx` read them and are **byte-identical in
+both**.
 
 `deploymentI18n` is deep-merged into the `translation` namespace every time a
 language file lands, so a deployment's strings stay out of

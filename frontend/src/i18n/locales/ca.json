@@ -146,7 +146,8 @@
     "operator": "",
     "popIn": "Nou per aquí? Passa →",
     "legalLink": "Avís legal i privadesa",
-    "loginHelp": "Problemes per entrar? Explica'ns-ho i intentem ajudar-te tan aviat com puguem →"
+    "loginHelp": "Problemes per entrar? Explica'ns-ho i intentem ajudar-te tan aviat com puguem →",
+    "faqLink": "Dubtes sobre aquest lloc? →"
   },
   "verify": {
     "declined": "Rebutjat",

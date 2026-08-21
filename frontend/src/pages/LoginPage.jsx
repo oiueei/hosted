@@ -5,7 +5,7 @@ import { TextInput, Button, Notification, Koros } from 'hds-react';
 import { getCsrfToken } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
-import { popInPath } from '../deployment';
+import { popInPath, faqPath } from '../deployment';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -141,6 +141,16 @@ export default function LoginPage() {
             {t('login.loginHelp')}
           </Link>
         </p>
+        {/* Only when this deployment has a help page (frontend/src/deployment).
+            Upstream there is no FAQ content to link to — same reasoning as
+            aboutPath: a link to a 404 is worse than one link fewer. */}
+        {faqPath && (
+          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+            <Link to={faqPath} style={{ textDecoration: 'underline' }}>
+              {t('login.faqLink')}
+            </Link>
+          </p>
+        )}
         {/* Only when this deployment has an open door (frontend/src/deployment).
             Without one there is nowhere for the button to go, and offering it
             would send a stranger to a 404 instead of telling them the truth:

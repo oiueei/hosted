@@ -146,7 +146,8 @@
     "operator": "",
     "popIn": "¿Nuevo por aquí? Pásate →",
     "legalLink": "Aviso legal y privacidad",
-    "loginHelp": "¿Problemas para entrar? Cuéntanoslo e intentamos ayudarte lo antes posible →"
+    "loginHelp": "¿Problemas para entrar? Cuéntanoslo e intentamos ayudarte lo antes posible →",
+    "faqLink": "¿Dudas sobre este sitio? →"
   },
   "verify": {
     "declined": "Rechazado",

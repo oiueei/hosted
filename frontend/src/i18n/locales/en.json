@@ -152,7 +152,8 @@
     "operator": "",
     "popIn": "New here? Pop in →",
     "legalLink": "Legal notice & privacy",
-    "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →"
+    "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →",
+    "faqLink": "Questions about this site? →"
   },
   "verify": {
     "declined": "Declined",
