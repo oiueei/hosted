@@ -29,7 +29,7 @@ OIUEEI es software de código público (licencia BUSL 1.1; MIT a partir de 2030)
 
 # Términos básicos
 
-OIUEEI se encuentra en fase alfa y se ofrece «tal cual», sin garantías, en la medida en que la ley lo permita. El contenido que publicas es tuyo y respondes de él; no publiques nada ilegal o dañino. Los intercambios (regalos, ventas, préstamos, alquileres) son acuerdos entre personas: la plataforma no es parte de ellos ni procesa pagos. Existe un botón para denunciar contenido, y el operador puede retirar lo que incumpla estas normas.
+OIUEEI se encuentra en fase alfa y se ofrece «tal cual», sin garantías, en la medida en que la ley lo permita. El contenido que publicas es tuyo y respondes de él; no publiques nada ilegal o dañino. Los intercambios (regalos, ventas, préstamos, alquileres) son acuerdos entre personas: la plataforma no es parte de ellos ni procesa pagos — una fianza que aparezca en una ficha es información que acuerdan las dos personas entre sí, y OIUEEI nunca la retiene, la mueve ni garantiza su devolución. Existe un botón para denunciar contenido, y el operador puede retirar lo que incumpla estas normas.
 
 # Para operadores (self-hosting)
 
