@@ -189,6 +189,38 @@ class TestTheSafetyRails:
 
         assert InAppNotification.objects.filter(pk=notification.pk).exists()
 
+    def test_an_operator_who_switches_everything_off_gets_a_command_that_does_nothing(
+        self, user, thing, settings
+    ):
+        # A deployment may be under a regime that forbids some of this, or may
+        # want to run its own sweep. Every period off has to mean every category
+        # kept — not "kept except the ones nobody wrote a test for".
+        for name in (
+            "RETENTION_INACTIVE_ACCOUNT_MONTHS",
+            "RETENTION_UNVISITED_GUEST_DAYS",
+            "RETENTION_EVENT_ANONYMISE_MONTHS",
+            "RETENTION_DAILY_ACTIVITY_MONTHS",
+            "RETENTION_NOTIFICATION_MONTHS",
+            "RETENTION_REPORT_MONTHS",
+        ):
+            setattr(settings, name, 0)
+        guest = User.objects.create(code="OFFGH1", email="offgh1@example.com")
+        User.objects.filter(pk=guest.pk).update(created=months_ago(9).date())
+        event = _aged(
+            Event, "created", 99, code="OFFEV1", kind=Event.Kind.THING_ADDED, actor_code=user.code
+        )
+        day = DailyActivity.objects.create(code="OFFDA1", user=user, date=months_ago(99).date())
+        report = _aged(Report, "created", 99, code="OFFRP1", thing=thing, reporter=user)
+
+        output = _run(commit=True)
+
+        assert "Nothing past its retention period." in output
+        assert User.objects.filter(pk=guest.pk).exists()
+        event.refresh_from_db()
+        assert event.actor_code == user.code
+        assert DailyActivity.objects.filter(pk=day.pk).exists()
+        assert Report.objects.filter(pk=report.pk).exists()
+
     def test_a_quiet_database_says_so_and_stops(self, user):
         assert "Nothing past its retention period." in _run(commit=True)
 
@@ -412,3 +444,96 @@ class TestTheWarningThatComesFirst:
 
         person.refresh_from_db()
         assert person.inactivity_notified is None
+
+
+class TestTheErasureTheWarningAnnounced:
+    """Irreversible, and running at night with nobody watching. Every test here
+    except the first is a way of not doing it."""
+
+    def _warned(self, code, warned_days_ago=40, inactive_months=30, **kwargs):
+        person = User.objects.create(code=code, email=f"{code.lower()}@example.com", **kwargs)
+        User.objects.filter(pk=person.pk).update(
+            last_activity=months_ago(inactive_months).date(),
+            created=months_ago(inactive_months + 1).date(),
+            inactivity_notified=timezone.localdate() - timedelta(days=warned_days_ago),
+        )
+        person.refresh_from_db()
+        return person
+
+    def test_an_account_warned_a_month_ago_and_still_silent_is_erased(self):
+        person = self._warned("GONE01")
+
+        _run(commit=True)
+
+        assert not User.objects.filter(pk=person.pk).exists()
+
+    def test_the_grace_period_is_honoured_to_the_day(self):
+        early = self._warned("WAIT02", warned_days_ago=29)
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=early.pk).exists()
+
+    def test_somebody_who_came_back_is_saved_twice_over(self):
+        person = self._warned("BACK02")
+        person.update_last_activity()
+
+        _run(commit=True)
+
+        # The stamp is cleared AND last_activity is fresh: either alone is enough.
+        assert User.objects.filter(pk=person.pk).exists()
+
+    def test_the_owner_of_a_group_people_use_is_never_erased_by_a_nightly_job(self, user2):
+        # Collection.owner is CASCADE: erasing them takes the library, its
+        # things and its photos from everyone who was still using it.
+        owner = self._warned("LIBR01")
+        collection = Collection.objects.create(code="LIVE02", owner=owner, headline="The library")
+        collection.invites.add(user2)
+
+        output = _run(commit=True)
+
+        assert User.objects.filter(pk=owner.pk).exists()
+        assert Collection.objects.filter(pk=collection.pk).exists()
+        assert "LIBR01" in output
+        assert "Inactive owners left for a human decision: 1" in output
+
+    def test_an_owner_whose_group_is_empty_is_erased_like_anyone_else(self):
+        owner = self._warned("ALONE2")
+        Collection.objects.create(code="EMPT02", owner=owner, headline="Just mine")
+
+        _run(commit=True)
+
+        assert not User.objects.filter(pk=owner.pk).exists()
+        assert not Collection.objects.filter(code="EMPT02").exists()
+
+    def test_somebody_who_was_never_warned_is_never_erased(self):
+        # No stamp, no clock: the email is not optional.
+        person = User.objects.create(code="NOTLD1", email="notold@example.com")
+        User.objects.filter(pk=person.pk).update(last_activity=months_ago(30).date())
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=person.pk).exists()
+
+    def test_the_superuser_is_never_erased(self):
+        admin = self._warned("ADMIN3", is_staff=True, is_superuser=True)
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=admin.pk).exists()
+
+    def test_a_dry_run_erases_nobody(self):
+        person = self._warned("GONE02")
+
+        output = _run()
+
+        assert User.objects.filter(pk=person.pk).exists()
+        assert "Inactive accounts deleted (30d after the warning): 1" in output
+
+    def test_switching_the_period_off_stops_the_erasure_too(self, settings):
+        settings.RETENTION_INACTIVE_ACCOUNT_MONTHS = 0
+        person = self._warned("OFF001")
+
+        _run(commit=True)
+
+        assert User.objects.filter(pk=person.pk).exists()

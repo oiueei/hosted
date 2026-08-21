@@ -39,6 +39,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from core.models import RSVP, Collection, DailyActivity, Event, InAppNotification, Report, User
+from core.services.account_service import delete_account
 from core.services.email_service import send_inactivity_warning_email
 
 security_logger = logging.getLogger("security")
@@ -73,9 +74,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         commit = options["commit"]
         now = timezone.now()
+        # Lines a step wants said after the table rather than in it — a count is
+        # not always the whole story.
+        self.notes = []
         steps = [
             self._unvisited_guests,
             self._warn_inactive_accounts,
+            self._delete_inactive_accounts,
             self._events,
             self._daily_activity,
             self._notifications,
@@ -92,6 +97,8 @@ class Command(BaseCommand):
         self.stdout.write("Retention sweep — " + ("COMMITTED" if commit else "DRY RUN"))
         for label, count in results:
             self.stdout.write(f"  {label}: {count}")
+        for note in self.notes:
+            self.stdout.write(note)
         total = sum(count for _, count in results)
         if not total:
             self.stdout.write(self.style.SUCCESS("Nothing past its retention period."))
@@ -213,6 +220,59 @@ class Command(BaseCommand):
             User.objects.filter(pk=user.pk).update(inactivity_notified=timezone.localdate())
             warned += 1
         return (label, warned)
+
+    def _delete_inactive_accounts(self, now, commit):
+        """The erasure the warning announced, once its grace period has run out.
+
+        Two independent things have to still be true, and either one saves an
+        account: the stamp from the warning must be at least ``grace`` days old,
+        **and** the account must still be inactive. Coming back clears the stamp
+        *and* refreshes ``last_activity``, so somebody who did what the email
+        asked is out of this queryset twice over. That redundancy is deliberate:
+        this step is irreversible.
+
+        **An account that owns a group other people are using is never deleted
+        here.** ``Collection.owner`` is CASCADE, so erasing the founder of a
+        working neighbourhood library takes the collection, its things and its
+        photos with them — a harm done to everyone except the person who was
+        actually inactive, decided by a job running at night. Those accounts are
+        listed instead, for a person to look at. The retention table says so out
+        loud; this is where it is enforced.
+
+        Erasure goes through ``account_service.delete_account`` rather than a
+        bulk delete: it is the one written-down map of what dies with an account,
+        and it leaves the same audit line a user-requested erasure does. (The
+        unused-guest sweep above deletes in bulk and logs only a count — those
+        rows were never an account anybody used, and there can be hundreds.)
+        """
+        months = settings.RETENTION_INACTIVE_ACCOUNT_MONTHS
+        if not months:
+            return None
+        grace = settings.RETENTION_INACTIVE_WARNING_DAYS
+        cutoff = months_ago(months, now).date()
+        candidates = User.objects.filter(
+            inactivity_notified__lte=timezone.localdate() - timedelta(days=grace),
+            is_staff=False,
+            is_superuser=False,
+        ).filter(Q(last_activity__lt=cutoff) | Q(last_activity__isnull=True, created__lt=cutoff))
+        kept = set(
+            Collection.objects.filter(owner__in=candidates, invites__isnull=False).values_list(
+                "owner_id", flat=True
+            )
+        )
+        codes = [code for code in candidates.values_list("code", flat=True) if code not in kept]
+        if kept:
+            self.notes.append(
+                "  Kept for a person to decide (they own a group people are using): "
+                + ", ".join(sorted(kept))
+            )
+        if commit and codes:
+            for user in User.objects.filter(code__in=codes):
+                delete_account(user)
+        return [
+            (f"Inactive accounts deleted ({grace}d after the warning)", len(codes)),
+            ("Inactive owners left for a human decision", len(kept)),
+        ]
 
     def _events(self, now, commit):
         """Cut the link to a person; keep the fact.
