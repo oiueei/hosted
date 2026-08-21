@@ -447,6 +447,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 - **No tracking, of any kind.** No analytics SDK, no tag manager, no fingerprinting, no session replay, no heatmaps, no A/B-testing service, no "anonymous" telemetry that phones home.
 - **No third-party code running in your browser.** The app ships 12 runtime dependencies (React, HDS, i18next, a router, a QR renderer, a CSV/ZIP parser) — all rendering and parsing libraries, none of which talks to anyone. No script from another origin is loaded, ever.
 - **No cookie banner, because there is nothing to consent to.** The only cookies are the technical ones that keep you signed in (auth + CSRF). There is no third-party cookie, no advertising cookie, no tracker to ask permission for — so asking would be theatre.
+- **No unnecessary browser storage either.** LSSI-CE art. 22.2 covers more than cookies — `localStorage`, `sessionStorage`, IndexedDB — so "no banner" has to be true of all of it, not just of what a cookie table shows.
 - **No tracking pixels or wrapped links in emails.** Links go where they say they go; there is no open-tracking pixel, no click-redirect domain.
 - **No sale, sharing, profiling or automated decisions** on user data. [DESIGN.md §9](DESIGN.md#9-user-data-is-never-a-product) lists what is forbidden here under any justification — it is a design rule, not a policy page.
 
@@ -458,6 +459,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 | Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and `res.cloudinary.com` (the photos). That is the whole list. |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
+| Browser storage is strictly necessary, nothing more | **Inventoried 2026-08-21.** Four `localStorage` keys, all session/preference, none observed behaviour: `userCode` (which account is signed in), `theeemeColors` + `koro` (your own display preferences), `seenWelcome` (whether you've seen the first-visit box). `sessionStorage` is unused. One more key exists but isn't ours to name in code: `i18next-browser-languagedetector` caches your chosen UI language as `i18nextLng` under its own default — same category, a dependency's own write. `frontend/src/test/browserStorage.test.jsx` sweeps every source file and fails the build if a key outside this list ever appears — a public claim like this one needs a test that breaks when it stops being true, not just a paragraph. |
 | The metrics are first-party | `core/models/event.py` and `core/models/activity.py` — an append-only event log and one `(user, date)` row. They record *less* than any web server log, and never leave the database. |
 | All of it | The whole codebase is public. Read it. |
 
