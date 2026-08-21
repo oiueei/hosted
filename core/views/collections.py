@@ -5,7 +5,6 @@ Collection views for OIUEEI.
 import csv
 import logging
 import threading
-from collections import Counter
 from datetime import timedelta
 
 from django.conf import settings
@@ -25,11 +24,9 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from core.models import RSVP, Collection, InvitationProposal, Thing, User
-from core.models.booking import BookingPeriod
 from core.models.collection import generate_share_token
 from core.models.event import Event
 from core.models.notification import InAppNotification
-from core.models.transfer import ThingTransfer
 from core.permissions import IsCollectionOwner
 from core.serializers import (
     CollectionAddThingSerializer,
@@ -52,6 +49,7 @@ from core.services.email_service import (
     send_collection_invite_email,
     send_collection_revoke_email,
 )
+from core.services.export_service import collection_stats_rows
 from core.services.invitation_service import (
     _INVITE_QUOTA_MESSAGE,
     _consume_invite_quota,
@@ -1023,7 +1021,6 @@ class CollectionStatsView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
-    WINDOW_DAYS = 90
 
     def get(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
@@ -1033,92 +1030,9 @@ class CollectionStatsView(APIView):
         if denied:
             return denied
 
-        win = self.WINDOW_DAYS
-        since = timezone.now() - timedelta(days=win)
-        since_date = since.date()
-        members = list(collection.invites.all())
-        member_codes = [u.code for u in members]
-
-        rows = [["metric", "value"]]
-        rows.append(["Members", len(members)])
-        rows.append(
-            [
-                "Pending invitations",
-                RSVP.objects.filter(
-                    action=RSVP.Action.COLLECTION_INVITE, target_code=collection_code
-                ).count(),
-            ]
-        )
-        rows.append(["Things total", collection.things.count()])
-        rows.append(["Things active", collection.things.filter(status=Thing.Status.ACTIVE).count()])
-        rows.append(
-            ["Things reserved", collection.things.filter(status=Thing.Status.TAKEN).count()]
-        )
-        rows.append(
-            [f"Things added ({win}d)", collection.things.filter(created__gte=since).count()]
-        )
-        rows.append(
-            [
-                f"Bookings ({win}d)",
-                BookingPeriod.objects.filter(thing_code__collections=collection, created__gte=since)
-                .distinct()
-                .count(),
-            ]
-        )
-        rows.append(
-            [
-                f"Handovers ({win}d)",
-                ThingTransfer.objects.filter(
-                    thing__collections=collection, lent_date__gte=since_date
-                )
-                .distinct()
-                .count(),
-            ]
-        )
-        rows.append(
-            [
-                f"Invitations sent ({win}d)",
-                RSVP.objects.filter(
-                    action=RSVP.Action.COLLECTION_INVITE,
-                    target_code=collection_code,
-                    created__gte=since,
-                ).count(),
-            ]
-        )
-        active = set(
-            Thing.objects.filter(
-                collections=collection, created__gte=since, owner_id__in=member_codes
-            ).values_list("owner_id", flat=True)
-        ) | set(
-            BookingPeriod.objects.filter(
-                thing_code__collections=collection,
-                created__gte=since,
-                requester_code_id__in=member_codes,
-            ).values_list("requester_code_id", flat=True)
-        )
-        rows.append([f"Active members ({win}d)", len(active)])
-
-        age_labels = {
-            "PRE_1946": "Born 1945 or earlier",
-            "BOOMER": "Born 1946-1964 (Boomers)",
-            "GEN_X": "Born 1965-1980 (Gen X)",
-            "GEN_Y": "Born 1981-1996 (Millennials)",
-            "GEN_Z": "Born 1997-2012 (Gen Z)",
-            "GEN_A": "Born 2013-2024 (Gen Alpha)",
-            "GEN_B": "Born 2025-2039 (Gen Beta)",
-        }
-        age_counts = Counter(u.age_range for u in members if u.age_range)
-        for age_code, label in age_labels.items():
-            rows.append([label, age_counts.get(age_code, 0)])
-        rows.append(["Birth year not specified", sum(1 for u in members if not u.age_range)])
-
-        postal_counts = Counter(u.postal_code for u in members if u.postal_code)
-        for postal, count in postal_counts.most_common(10):
-            # The code follows the literal "Postal " label, so the cell never
-            # starts with =, +, - or @ — no spreadsheet-formula injection.
-            rows.append([f"Postal {postal}", count])
-        rows.append(["Postal not specified", sum(1 for u in members if not u.postal_code)])
-
+        # Every metric is defined once, in the service: this renders it as a CSV,
+        # the collection export carries the same rows as a dict.
+        rows = [["metric", "value"], *collection_stats_rows(collection)]
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="{collection_code}-stats.csv"'
         csv.writer(response).writerows(rows)

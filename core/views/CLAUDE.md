@@ -618,6 +618,8 @@ Invites many guests at once from a client-parsed CSV (`{"invites": [{"email": ..
 
 Owner-only usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only).
 
+The metrics themselves live in [`export_service.collection_stats_rows()`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); this view only wraps them in a CSV. The collection export renders the same rows as a dict, so the two can't drift.
+
 ---
 
 ## FAQ Views (`core/views/faq.py`)

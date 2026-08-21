@@ -226,6 +226,39 @@ One function, `delete_account(user)`: a `user.delete()` inside `transaction.atom
 
 ---
 
+### `export_service.py` — Data Portability (Right to a Copy)
+
+The mirror of `account_service`: *what dies with you is what you get to take with you*. Read the two docstrings together — when a new model arrives, both are wrong until both are updated.
+
+#### Public API
+
+| Function | Returns |
+|----------|---------|
+| `build_account_export(user)` | The whole of one person's data as a JSON-serialisable tree: `_manifest`, `_readme`, `profile`, `collections_owned`, `collections_member_of`, `things`, `bookings`, `faqs`, `proposals_made`, `transfers`, `notifications`, `reports_filed`, `activity`. One private helper per key, each with its own `select_related`/`prefetch_related`. |
+| `build_collection_export(collection)` | An **operational** copy of a group, other members' things included: `collection`, `members`, `pending_invitations`, `proposals`, `things`, `bookings`, `faqs`, `transfers`, `stats`. Not art. 20 and doesn't pretend to be — it is what makes a library of things portable. **Owner-only; the caller enforces that** (`require_collection_owner`), this function trusts it. |
+| `export_bytes(payload)` | `json.dumps(..., ensure_ascii=False, indent=2, default=str)` encoded UTF-8. `default=str` is the safety net, not the plan: every builder already returns JSON-native values, so a type reaching it means a new column arrived without a decision. |
+| `export_filename(code)` | `oiueei-ABC123-2026-08-21.json` — the code says which copy, the date says when it stopped being true. |
+| `collection_stats_rows(collection)` | `[(metric, value)]` — **the** definition of every usage metric, rendered two ways: `CollectionStatsView` writes it as CSV, the collection export carries it as a dict under `stats`. Public despite living among the private helpers, because a view in another module imports it. `STATS_WINDOW_DAYS` (90) is the window every `(90d)` metric measures. |
+
+`_manifest.counts` indexes every key that holds rows (nested one level for the keys holding two lists), so the top-level data keys are exactly `profile` + the keys of `counts`. `_readme` ships the file's own explanation in the reader's language, resolved through **`resolve_email_language`** — the recipient's preference over the group's over `EMAIL_LANGUAGE`; an unknown language falls back to English rather than raising. The catalogue is `README_TEXTS` (en/es/ca), kept in parity by a test, and it exists because a JSON tree can't explain its own omissions: someone who finds no reports about their things should learn *here* that they are anonymous by design, not conclude the export is broken.
+
+#### What never leaves — each pinned by a test, most against the raw bytes
+
+| Omission | Why |
+|----------|-----|
+| `Collection.share_token`, every `RSVP.token` | A file gets forwarded; a token inside it is a group — or an account — forwarded with it. |
+| Co-members' emails from groups the exporter merely **joined** | Member emails ride along only in collections they **own**, which is the roster the guests page already shows them. |
+| `age_range` / `postal_code` of anyone else, unless the group is COMMUNITY | Mirrors `CollectionSerializer.get_invites` exactly. *(The aggregate breakdown inside `stats` is a different thing and stays: it is the stats CSV, unchanged, which any collection owner can already download.)* |
+| Reports **about** the exporter's things (both exports) | Reporting is anonymous by design; the export must not become the leak the notification avoids. |
+| `BookingPeriod.requester_email`, third parties' demographics, other members' notifications and activity | Third-party data with no reason to be in this file — a counterpart is a code and a public name. |
+| The `deal` M2M, `password`, `is_staff`/`is_superuser`, the `*_alarm_sent` / `capacity_unblocked` flags | Not the person's content: the first is third parties, the last is this deployment's moderation ledger. |
+
+**Owner text stays raw.** A localized `headline` (`{"es": …, "ca": …}`) exports as the map the owner wrote, never resolved to one language: the file is for machines, and resolving would silently drop two thirds of it.
+
+**Photos and the welcome PDF travel as Cloudinary URLs, not bytes.** It keeps the response inside Heroku's 30-second window — and it is why the page offering the download has to say that deleting the account breaks those links.
+
+---
+
 ### `cloudinary_cleanup.py` — Delete Cloudinary Assets on Delete
 
 Frees the Cloudinary images a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned assets piling up (storage cost + clutter).
