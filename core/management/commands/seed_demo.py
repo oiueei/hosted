@@ -204,6 +204,7 @@ class Command(BaseCommand):
                 "thumbnail": _seed_image(data.get("thumbnail", "")),
                 "tags": data.get("tags", []),
                 "allowed_thing_types": data.get("allowed_thing_types", []),
+                "deposit_policy": data.get("deposit_policy", ""),
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))
@@ -218,6 +219,7 @@ class Command(BaseCommand):
                 "description": data.get("description", ""),
                 "status": "ACTIVE",
                 "fee": data.get("fee", None),
+                "deposit": data.get("deposit", None),
                 "condition": data.get("condition", ""),
                 "availability": data.get("availability", ""),
                 "location": data.get("location", ""),
