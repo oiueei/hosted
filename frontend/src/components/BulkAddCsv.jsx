@@ -20,8 +20,8 @@ const MIME_BY_EXT = {
 };
 // Shown in the format InfoPopover. Language-agnostic, so it lives here rather
 // than in the i18n bundles (matches BulkInviteCsv's EXAMPLE_CSV).
-const EXAMPLE_CSV = `headline,type,fee,location,condition,tags,photo
-Cazo de acero,RENT_THING,1,LC (08038),GOOD,Cocina,cazo.jpg`;
+const EXAMPLE_CSV = `headline,type,fee,location,condition,tags,photo,deposit
+Cazo de acero,RENT_THING,1,LC (08038),GOOD,Cocina,cazo.jpg,10`;
 
 function basename(path) {
   return path.split('/').pop();
@@ -252,6 +252,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
                 {row.headline}
                 {row.type ? ` — ${t(`types.${row.type}`, row.type)}` : ''}
                 {row.fee ? ` · ${row.fee}` : ''}
+                {row.deposit ? ` · 🔒${row.deposit}` : ''}
                 {row.tags ? ` · ${row.tags.join(', ')}` : ''}
                 {row.photo ? ` · 📷 ${row.photo}` : ''}
               </li>

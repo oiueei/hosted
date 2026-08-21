@@ -753,7 +753,7 @@
     "heading": "Afegir-ne diversos alhora (CSV)",
     "help": "Afegeix diverses coses des d'un CSV — o un ZIP amb les fotos incloses.",
     "formatTitle": "Format del CSV/ZIP",
-    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\".",
+    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només LEND/RENT). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\".",
     "fileLabel": "Fitxer CSV o ZIP",
     "empty": "No s'han trobat files al fitxer.",
     "tooMany": "Pots importar fins a {{max}} elements alhora.",
@@ -769,7 +769,7 @@
     "zipError": "No hem pogut llegir aquest ZIP. Revisa el fitxer i torna-ho a provar.",
     "imageUploadError": "No s'han pogut pujar algunes fotos. Revisa les imatges i torna-ho a provar.",
     "uploadingImages": "Pujant fotos… ({{done}}/{{total}})",
-    "formatBody": "Els tags van en una cel·la separats per | (i han d'estar definits a la col·lecció — escriu l'etiqueta en qualsevol dels seus idiomes, per exemple \"Crianza\" o \"Criança\"). La columna fee accepta tant 1.5 com 1,5. Per a les fotos, comprimeix el CSV juntament amb les imatges i posa el nom de cada foto a la columna \"photo\" — així:",
+    "formatBody": "Els tags van en una cel·la separats per | (i han d'estar definits a la col·lecció — escriu l'etiqueta en qualsevol dels seus idiomes, per exemple \"Crianza\" o \"Criança\"). Les columnes fee i deposit accepten tant 1.5 com 1,5, i deposit només es fa servir en files LEND/RENT — un valor en un altre tipus es rebutja. Per a les fotos, comprimeix el CSV juntament amb les imatges i posa el nom de cada foto a la columna \"photo\" — així:",
     "downloadExample": "Baixar exemple (ZIP)"
   },
   "gallery": {

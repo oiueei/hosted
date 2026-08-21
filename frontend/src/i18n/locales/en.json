@@ -759,7 +759,7 @@
     "heading": "Add many at once (CSV)",
     "help": "Add multiple things from a CSV — or a ZIP with the photos included.",
     "formatTitle": "CSV/ZIP format",
-    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column.",
+    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column.",
     "fileLabel": "CSV or ZIP file",
     "empty": "No rows found in that file.",
     "tooMany": "You can import up to {{max}} items at once.",
@@ -775,7 +775,7 @@
     "zipError": "We couldn't read that ZIP. Check the file and try again.",
     "imageUploadError": "Some photos couldn't be uploaded. Check the images and try again.",
     "uploadingImages": "Uploading photos… ({{done}}/{{total}})",
-    "formatBody": "Tags go in one cell separated by | (and must be defined in the collection — write the tag in any of its languages, e.g. \"Crianza\" or \"Criança\"). The fee column accepts either 1.5 or 1,5. For photos, zip the CSV together with the image files and name each photo in the \"photo\" column — like this:",
+    "formatBody": "Tags go in one cell separated by | (and must be defined in the collection — write the tag in any of its languages, e.g. \"Crianza\" or \"Criança\"). The fee and deposit columns both accept either 1.5 or 1,5, and deposit is only used for LEND/RENT rows — a value on any other type is rejected. For photos, zip the CSV together with the image files and name each photo in the \"photo\" column — like this:",
     "downloadExample": "Download example (ZIP)"
   },
   "gallery": {

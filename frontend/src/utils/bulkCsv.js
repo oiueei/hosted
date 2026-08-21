@@ -12,7 +12,11 @@ export const MAX_ROWS = 100;
 
 // The plain text/scalar columns a CSV can carry. `tags` is a single
 // `|`-separated cell and `photo` is a filename — both handled separately.
-const COLUMNS = ['type', 'headline', 'description', 'fee', 'availability', 'location', 'condition'];
+// `deposit` sits last on purpose (S6): a new column has to land at the end
+// of the list, mirroring where it lands in EXAMPLE_CSV's header below — an
+// existing CSV missing it simply never sets `raw.deposit`, safely skipped by
+// the same `undefined` check every other column already gets.
+const COLUMNS = ['type', 'headline', 'description', 'fee', 'availability', 'location', 'condition', 'deposit'];
 
 /**
  * Map one parsed CSV record to a row payload. `withPhoto` keeps the `photo`
