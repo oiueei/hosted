@@ -8,6 +8,9 @@ wording, which the email content tests assert)."""
 TEXTS = {
     # Shared
     "footer_manage": "Manage your email preferences",
+    # Art. 14 GDPR: every email — mandatory ones included — links to the
+    # legal page, since this is a disclosure duty and not a preference.
+    "footer_legal": "Legal & privacy",
     "dates_label": "Dates",
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
@@ -33,6 +36,12 @@ TEXTS = {
     "invite_recommended_by": "{proposer} suggested you for this group.",
     "invite_accept_cta": "Accept invitation",
     "invite_decline_cta": "Decline invitation",
+    # Art. 14 GDPR: this address came from whoever invited you, not from you.
+    "invite_source_note": (
+        "You got this because someone invited you — that's where we got your "
+        "address, and it's only used to send you this invitation. Decline it or "
+        "do nothing, and you won't hear from us again."
+    ),
     # Collection access revoked
     "revoke_subject": "Your access has been revoked",
     "revoke_plain": "{owner} has revoked your access to '{collection}'.",

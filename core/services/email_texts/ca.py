@@ -6,6 +6,9 @@ matching the app's Catalan UI vocabulary (reservar, petició, intercanvi)."""
 TEXTS = {
     # Shared
     "footer_manage": "Gestiona les teves preferències de correu",
+    # Art. 14 RGPD: tot correu -- també els obligatoris -- enllaça a la
+    # pàgina legal: és una obligació d'informació, no una preferència.
+    "footer_legal": "Legal i privacitat",
     "dates_label": "Dates",
     "view_collection_cta": "Veure la col·lecció",
     # Substantius d'acció per als correus de reserva — calquen el vocabulari del
@@ -36,6 +39,12 @@ TEXTS = {
     "invite_recommended_by": "{proposer} t'ha proposat per a aquest grup.",
     "invite_accept_cta": "Acceptar la invitació",
     "invite_decline_cta": "Rebutjar la invitació",
+    # Art. 14 RGPD: aquest correu el va donar qui convida, no la persona convidada.
+    "invite_source_note": (
+        "Si has arribat aquí per una invitació, el teu correu ens el va donar qui "
+        "et va convidar, i només es fa servir per enviar-te aquesta invitació. Si "
+        "la rebutges o no fas res, no tornes a rebre res nostre."
+    ),
     # Collection access revoked
     "revoke_subject": "S'ha revocat el teu accés",
     "revoke_plain": "{owner} ha revocat el teu accés a '{collection}'.",

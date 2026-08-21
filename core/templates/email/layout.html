@@ -19,4 +19,5 @@ a one-line hash comment, so the multi-line note is stripped from the render.{% e
 {% elif b.type == "links" %}
 <p>{% for l in b.links %}<a href="{{ l.url }}">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
 {% endif %}{% endfor %}
+<p style="color:#666;font-size:12px;margin-top:24px;"><a href="{{ legal_url }}">{{ legal_label }}</a></p>
 </html>

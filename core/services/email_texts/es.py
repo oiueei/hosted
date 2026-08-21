@@ -6,6 +6,9 @@ matching the app's Spanish UI vocabulary (reservar, pedido, intercambio)."""
 TEXTS = {
     # Shared
     "footer_manage": "Gestiona tus preferencias de correo",
+    # Art. 14 RGPD: todo correo -- también los obligatorios -- enlaza a la
+    # página legal: es una obligación de información, no una preferencia.
+    "footer_legal": "Legal y privacidad",
     "dates_label": "Fechas",
     "view_collection_cta": "Ver la colección",
     # Sustantivos de acción por tipo para los correos de reserva — calcan el
@@ -31,6 +34,12 @@ TEXTS = {
     "invite_recommended_by": "{proposer} te ha propuesto para este grupo.",
     "invite_accept_cta": "Aceptar la invitación",
     "invite_decline_cta": "Rechazar la invitación",
+    # Art. 14 RGPD: este correo lo dio quien invita, no la persona invitada.
+    "invite_source_note": (
+        "Si has llegado aquí por una invitación, tu correo nos lo dio quien te "
+        "invitó, y solo se usa para enviarte esta invitación. Si la rechazas o "
+        "no haces nada, no vuelves a recibir nada nuestro."
+    ),
     # Collection access revoked
     "revoke_subject": "Tu acceso ha sido revocado",
     "revoke_plain": "{owner} ha revocado tu acceso a '{collection}'.",

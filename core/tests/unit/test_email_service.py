@@ -1,8 +1,12 @@
-"""Unit tests for email service resilience.
+"""Unit tests for the email service: resilience and legally-required content.
 
 A failing/slow SMTP provider must never propagate out of the email layer:
 user actions whose DB work has already committed must not 500, and
 multi-recipient loops must not abort on one bad recipient.
+
+The MIME-structure and legal-footer tests below protect obligations that no
+other test in the suite would notice going missing: nothing else renders a
+real message and inspects it, so a regression here is silent everywhere else.
 """
 
 import smtplib
@@ -10,6 +14,7 @@ from unittest.mock import patch
 
 import pytest
 from django.core import mail
+from django.test import override_settings
 
 from core.services import email_service
 
@@ -102,3 +107,74 @@ def test_logo_send_uses_multipart_related():
     # The logo is still inline by CID, now a related sibling of the alternative.
     logo = next(part for part in msg.get_payload() if part["Content-ID"] == "<oiueei-logo>")
     assert logo.get_content_type() == "image/png"
+
+
+@pytest.mark.django_db
+def test_every_email_links_to_the_legal_page():
+    """Art. 14 GDPR: every email carries a link to /legal, mandatory ones
+    included — this is a disclosure duty, not an opt-out preference, so it
+    can't live behind the same category gate as the "manage your emails"
+    footer. Proven on a mandatory-category send (the magic link) precisely
+    because that is the one category the preferences footer skips."""
+    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert 'href="http://localhost:3000/legal"' in html
+
+
+@pytest.mark.django_db
+def test_the_legal_link_follows_the_deployments_own_frontend_url():
+    """Not hardcoded to localhost: a deployment sets MAGIC_LINK_BASE_URL to its
+    real domain, and every derived link — this one included — has to follow."""
+    with override_settings(MAGIC_LINK_BASE_URL="https://oiueei.example/verify"):
+        email_service.send_magic_link_email(
+            "someone@example.com", "https://oiueei.example/verify/x"
+        )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert 'href="https://oiueei.example/legal"' in html
+
+
+@pytest.mark.django_db
+def test_the_legal_link_label_is_translated():
+    with override_settings(EMAIL_LANGUAGE="es"):
+        email_service.send_magic_link_email(
+            "someone@example.com", "http://localhost:3000/verify/tok"
+        )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert ">Legal y privacidad<" in html
+
+
+@pytest.mark.django_db
+def test_the_invitation_email_tells_the_recipient_where_their_address_came_from():
+    """Art. 14: this address was given to us by the inviter, not by its owner,
+    so the invitation — the recipient's first contact with OIUEEI — has to say
+    where it came from, what it's for, and that doing nothing ends it. Checked
+    in both formats: a client that renders the plain body must not lose it."""
+    email_service.send_collection_invite_email(
+        "Lala",
+        "Tools for the block",
+        "invitee@example.com",
+        "http://localhost:3000/rsvp/accept",
+        "http://localhost:3000/rsvp/reject",
+    )
+
+    msg = mail.outbox[0]
+    note = "someone invited you"
+    assert note in msg.body
+    assert note in msg.alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_the_invitation_source_note_is_translated_too():
+    with override_settings(EMAIL_LANGUAGE="ca"):
+        email_service.send_collection_invite_email(
+            "Lala",
+            "Coses del barri",
+            "invitee@example.com",
+            "http://localhost:3000/rsvp/accept",
+            "http://localhost:3000/rsvp/reject",
+        )
+
+    assert "no tornes a rebre res nostre" in mail.outbox[0].body

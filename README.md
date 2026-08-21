@@ -480,6 +480,8 @@ For the official deployment at **www.oiueei.com**, the verified locations are: a
 
 **Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are what www.oiueei.com decided, and a self-hoster under a different regime sets their own.
 
+**If somebody else's address reached you, you're told so in the same email.** Being invited to a collection means somebody else typed your address in, not you — art. 14 GDPR requires that to be disclosed the first time it happens, so the invitation email says where the address came from and that declining or ignoring it ends the relationship. Every email, that one included, links to [`/legal`](https://www.oiueei.com/legal) in its footer, whether or not you can opt out of the category it belongs to (`core/services/email_service.py`, `_render_email`).
+
 For access, rectification, objection or restriction, write to the operator — for www.oiueei.com, the address on the [`/legal`](https://www.oiueei.com/legal) page.
 
 
