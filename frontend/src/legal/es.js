@@ -25,6 +25,8 @@ OIUEEI es software de código público (licencia BUSL 1.1; MIT a partir de 2030)
 
 **Borrar tu cuenta:** desde tu perfil (Editar perfil → Borrar cuenta), con confirmación por correo. Es inmediato e irreversible: tu cuenta, tus colecciones, tus cosas y sus fotos y tus solicitudes se eliminan. Las preguntas que hiciste en cosas de otras personas y el historial de manos se conservan **sin tu nombre** («Antiguo miembro»).
 
+**Llevarte una copia de tus datos:** también en autoservicio, desde tu perfil — descarga todo en un fichero, cuando quieras, sin confirmación por correo. Si administras un grupo, también puedes descargar el grupo entero: miembros, cosas, todo el historial. Ese segundo fichero lleva datos de otras personas, así que guárdalo bien y no lo reenvíes.
+
 # Términos básicos
 
 OIUEEI se encuentra en fase alfa y se ofrece «tal cual», sin garantías, en la medida en que la ley lo permita. El contenido que publicas es tuyo y respondes de él; no publiques nada ilegal o dañino. Los intercambios (regalos, ventas, préstamos, alquileres) son acuerdos entre personas: la plataforma no es parte de ellos ni procesa pagos. Existe un botón para denunciar contenido, y el operador puede retirar lo que incumpla estas normas.

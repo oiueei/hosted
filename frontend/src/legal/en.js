@@ -25,6 +25,8 @@ OIUEEI is source-available software (BUSL 1.1 licence; MIT from 2030). This page
 
 **Deleting your account:** from your profile (Edit profile → Delete account), with email confirmation. It is immediate and irreversible: your account, your collections, your things and their photos, and your requests are erased. Questions you asked on other people's things and the transfer history stay **without your name** ("Former member").
 
+**Getting a copy of your data:** also self-service, from your profile — download everything as one file, any time, no confirmation needed. If you manage a group, you can download the whole thing too: members, things, the full history. That second file carries other people's data, so keep it safe and don't forward it.
+
 # Basic terms
 
 OIUEEI is in alpha and offered "as is", without warranties, to the extent the law allows. The content you publish is yours and you are responsible for it; don't publish anything illegal or harmful. Exchanges (gifts, sales, loans, rentals) are agreements between people: the platform is not a party to them and processes no payments. There is a report button, and the operator may remove content that breaks these rules.

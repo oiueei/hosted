@@ -25,6 +25,8 @@ OIUEEI és programari de codi públic (llicència BUSL 1.1; MIT a partir de 2030
 
 **Esborrar el teu compte:** des del teu perfil (Editar perfil → Esborrar el compte), amb confirmació per correu. És immediat i irreversible: el teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds s'eliminen. Les preguntes que vas fer en coses d'altres persones i l'historial de mans es conserven **sense el teu nom** («Antic membre»).
 
+**Emportar-te una còpia de les teves dades:** també en autoservei, des del teu perfil — descarrega-ho tot en un fitxer, quan vulguis, sense confirmació per correu. Si administres un grup, també pots descarregar el grup sencer: membres, coses, tot l'historial. Aquest segon fitxer porta dades d'altres persones, així que desa'l bé i no el reenviïs.
+
 # Termes bàsics
 
 OIUEEI es troba en fase alfa i s'ofereix «tal com és», sense garanties, en la mesura que la llei ho permeti. El contingut que publiques és teu i n'ets responsable; no publiquis res il·legal o nociu. Els intercanvis (regals, vendes, préstecs, lloguers) són acords entre persones: la plataforma no n'és part ni processa pagaments. Hi ha un botó per denunciar contingut, i l'operador pot retirar el que incompleixi aquestes normes.
