@@ -365,15 +365,12 @@ describe('where a magic link lands', () => {
     expect(await screen.findByText('landed on / fromInvite=false')).toBeInTheDocument();
   });
 
-  test('a "welcome" landing falls through to home where there is no such page', async () => {
-    // Upstream has no page explaining what the deployment is (`aboutPath` is
-    // null), and nothing here produces this landing either — but a deployment
-    // that does hands it to every checkout. Home is the honest fallback; the
-    // alternative is navigating to a 404.
-    renderMagicLink({ landing: 'welcome' });
-
-    expect(await screen.findByText('landed on / fromInvite=false')).toBeInTheDocument();
-  });
+  /* A `landing: "welcome"` case belongs in `deployment.test.jsx`, not here: where
+     it lands depends on `aboutPath`, which is null upstream and a real page on a
+     deployment that replaces `src/deployment/`. Asserting this checkout's value
+     writes one branch's configuration into a test the other branch then has to
+     edit — a merge conflict every release, which is the trap that file opens by
+     naming. Both answers are pinned there, with the module mocked. */
 
   test('a second person on this browser does not inherit the first one’s welcome', async () => {
     // A shared laptop. `seenWelcome` says "you have already been shown around",
