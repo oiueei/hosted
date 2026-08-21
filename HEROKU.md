@@ -109,7 +109,7 @@ heroku config:set \
 
 > **Cloudinary:** `CLOUDINARY_URL` powers image uploads. Create a free account at [cloudinary.com](https://cloudinary.com) and copy the value of *API environment variable* from your dashboard (Settings → API Keys). Format: `cloudinary://api_key:api_secret@cloud_name`. Without it the app runs, but image uploads fail.
 
-> **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home/Welcome) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. Defaults to the project's Tally form.
+> **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. **No default any more** (2026-08, S2): without it the component renders nothing rather than quietly forwarding your users' feedback to the upstream project's own form, which they'd have had no way to know about or to name as a processor in their own legal text.
 
 > **Recommended — invitation-email cap:** `INVITE_EMAILS_PER_DAY` caps the invitation emails one
 > account may send per day (single + bulk combined), e.g. `heroku config:set INVITE_EMAILS_PER_DAY=150

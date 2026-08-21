@@ -356,7 +356,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `EMAIL_HOST_PASSWORD` | Prod | SMTP password |
 | `EMAIL_TIMEOUT` | No | SMTP socket timeout in seconds (default: `10`) — caps a slow/hung provider so it can't stall a web dyno |
 | `EMAIL_LANGUAGE` | No | **Default** language for outbound email (`en`\|`es`\|`ca`; default `en`) — the weakest level of the hierarchy **deployment → collection (`Collection.language`) → recipient (`User.language`)**, so it only speaks when neither the group nor the member has chosen. Catalogues live in `core/services/email_texts/`; unknown codes fall back to English |
-| `VITE_FEEDBACK_URL` | No | Frontend build-time: points the in-app feedback link at your own form (default: the project's Tally form) |
+| `VITE_FEEDBACK_URL` | No | Frontend build-time: points the in-app feedback link at your own form. **No default** — without it the link is not rendered at all, rather than quietly forwarding your users' feedback to the upstream project's own form |
 | `DEFAULT_FROM_EMAIL` | Prod | Sender email address |
 | `RSVP_BASE_URL` | Prod | Base URL for RSVP action links in emails (default in dev: `http://localhost:3000/rsvp`) |
 | `SHARE_LINK_BASE_URL` | Prod | Base URL for public collection share links (default in dev: `http://localhost:3000/share`) |
