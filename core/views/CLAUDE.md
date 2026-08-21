@@ -997,6 +997,19 @@ On-demand command (`python manage.py cleanup_orphan_images`) that deletes **orph
 - **Age window:** only assets older than `--min-age-hours` (default 24, so an in-flight upload mid-form isn't mistaken for an orphan) and younger than `--max-age-days` (default 30, keeping it a recent sweep). Run regularly (e.g. weekly) so every orphan is caught within its window.
 - Pages through `cloudinary.api.resources` (prefix `oiueei/`), deletes in batches of 100 via `cloudinary.api.delete_resources`, and prints a per-run summary (scanned / in use / seed / outside window / orphans / deleted).
 
+### Management Command: `purge_expired_data`
+
+Enforces the retention table (GDPR art. 5.1.e): one period per category of data, each a `RETENTION_*` setting, **0 = keep indefinitely**. Deliberately **not** part of the daily chain — it deletes real rows, so it is meant to be looked at first.
+
+- **Dry-run by default**, like `cleanup_orphan_images`; `--commit` applies it. The dry-run prints exactly the counts the commit would take.
+- **Idempotent**: every step selects only rows still in the "before" state, so a second run is a no-op and a half-finished run can just be run again.
+- **`Event` is anonymised, not deleted** (`actor_code` blanked at 14 months). What expires is the link to a person, not the fact — the series survives as aggregate and stops being personal data, which is what art. 5.1.e asks for. Deleting it would throw away the history to achieve the same thing.
+- **Deleted**: `DailyActivity` (26m), `InAppNotification` (12m), `Report` (12m from `created` — the model has no "resolved" state to date from, and adding one would be a moderation feature rather than a retention decision).
+- Periods are counted in **calendar months**, not 30-day blocks (`months_ago()`, day clamped to the target month's length). A person whose data goes six days early has a point.
+- A commit run logs its counts to the `security` logger: automated erasure leaves the same trail a user-requested one does.
+
+---
+
 ### Management Command: `backfill_events`
 
 One-off, idempotent seed of the `Event` log from existing rows (users → `USER_JOINED` at `date_joined`, collections/things/bookings at their `created`; accepted bookings also get `HOLD_ACCEPTED`). Run **once**, the day tracking ships, before forward instrumentation accumulates. Kept out of migrations per repo convention. Re-running never double-counts (skips when an equal event already exists).

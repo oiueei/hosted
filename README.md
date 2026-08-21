@@ -35,6 +35,7 @@ What I'm looking for is honest feedback from people willing to poke at it: thing
 - **Static files**: WhiteNoise
 - **PWA**: installable web app manifest + icons ("Add to Home Screen"); no service worker yet
 - **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders` and `send_digests` (see [HEROKU.md](HEROKU.md))
+- **Retention**: `purge_expired_data` enforces a period per category of data (`RETENTION_*` settings; 0 = keep indefinitely). Dry-run by default
 
 ## UI & Design System
 
@@ -302,6 +303,12 @@ python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
+# Retention sweep (GDPR art. 5.1.e) — DRY-RUN BY DEFAULT, --commit to apply.
+# Not part of the daily chain above: it deletes real rows, so it is worth
+# looking at before it is trusted. Weekly is plenty.
+python manage.py purge_expired_data           # count what is past its period
+python manage.py purge_expired_data --commit  # anonymise / delete it
+
 # One-off: seed the Event analytics log from existing rows (idempotent).
 # Run once, the day tracking ships, before forward events accumulate.
 python manage.py backfill_events
@@ -470,6 +477,8 @@ For the official deployment at **www.oiueei.com**, the verified locations are: a
 **Right to erasure is self-service, not a support ticket**: delete your own account from your profile (Edit profile → Delete account). Once confirmed via an emailed 24-hour link it is immediate and irreversible — the account, its collections, things, photos and pending requests are permanently deleted, Cloudinary assets included (`core/services/cloudinary_cleanup.py` runs on the delete). Questions you asked on other people's things and an item's transfer history survive **anonymised**: the content stays with the thing, your name goes ("former member").
 
 **Portability is self-service too**: `GET /api/v1/auth/export/` hands you your whole account as a single JSON file — profile, collections, things, bookings, questions, handovers, notifications and your own activity rows. It carries no credentials (no `share_token`, no RSVP tokens) and no third-party data beyond what the app already shows you; photos and PDFs travel as links rather than bytes, which is why deleting the account breaks them — **download your images before you erase**. Collection owners get a second, separate download (`GET /api/v1/collections/{code}/export/`) with the whole group in it, so a library of things can be carried out rather than only deleted. That file holds other people's details, and whoever downloads it is the one answering for it.
+
+**Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are what www.oiueei.com decided, and a self-hoster under a different regime sets their own.
 
 For access, rectification, objection or restriction, write to the operator — for www.oiueei.com, the address on the [`/legal`](https://www.oiueei.com/legal) page.
 

@@ -298,6 +298,27 @@ DEPLOYMENT_URLCONFS = [
 CREATOR_POLICY = os.environ.get("CREATOR_POLICY", "core.services.creator_policy.OpenCreatorPolicy")
 
 
+# Retention periods (GDPR art. 5.1.e), in months unless the name says otherwise.
+#
+# Nothing here happens on its own: `python manage.py purge_expired_data` is what
+# enforces them, and it has to be scheduled (see README §Scheduled jobs). The
+# defaults are the ones www.oiueei.com decided in its retention table, and they
+# are shipped ON because a period that protects the people in the database is a
+# better default than "forever" — but they are still **operator policy**, and a
+# deployment under a different regime overrides any of them. **0 means keep
+# indefinitely**, the same "0 = off" idiom as the quota settings above.
+#
+# `Event` is anonymised rather than deleted: what expires is the link to a
+# person (`actor_code`), not the fact, so the history survives as aggregate.
+RETENTION_INACTIVE_ACCOUNT_MONTHS = int(os.environ.get("RETENTION_INACTIVE_ACCOUNT_MONTHS", "24"))
+RETENTION_INACTIVE_WARNING_DAYS = int(os.environ.get("RETENTION_INACTIVE_WARNING_DAYS", "30"))
+RETENTION_UNVISITED_GUEST_DAYS = int(os.environ.get("RETENTION_UNVISITED_GUEST_DAYS", "60"))
+RETENTION_EVENT_ANONYMISE_MONTHS = int(os.environ.get("RETENTION_EVENT_ANONYMISE_MONTHS", "14"))
+RETENTION_DAILY_ACTIVITY_MONTHS = int(os.environ.get("RETENTION_DAILY_ACTIVITY_MONTHS", "26"))
+RETENTION_NOTIFICATION_MONTHS = int(os.environ.get("RETENTION_NOTIFICATION_MONTHS", "12"))
+RETENTION_REPORT_MONTHS = int(os.environ.get("RETENTION_REPORT_MONTHS", "12"))
+
+
 # Custom User Model
 AUTH_USER_MODEL = "core.User"
 
