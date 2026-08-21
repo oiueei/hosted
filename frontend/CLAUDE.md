@@ -545,6 +545,7 @@ Smoke tests and automated accessibility checks using vitest + testing-library + 
 - **Setup:** `src/test/setup.js` — imports `@testing-library/jest-dom`, initialises i18n mock, provides `localStorage`, `CSS.supports`, and `ResizeObserver` polyfills for jsdom.
 - **Smoke tests:** `src/test/smoke.test.jsx` — renders every page component with mocked API responses and runs `jest-axe` to detect WCAG violations. Covers all 29 page components.
 - **i18n mock:** `src/test/i18n-mock.js` — initialises i18next with the real `en.json` for test rendering.
+- **Linting (A5, 2026-08):** `eslint.config.js` runs `jsx-a11y.flatConfigs.strict`, not `recommended` — matching the ratchet culture elsewhere in this repo (coverage, dependency audit): a stricter floor than the framework default, checked automatically rather than hoped for. Switching it turned up exactly two findings, both `no-static-element-interactions` on the same deliberate idiom: `InfoPopover` and `TooltipButton` wrap a real, fully keyboard-accessible HDS `Button`/`<button>` in a plain `<span>`/`<div>` that only listens for the child's focus/blur bubbling up, to control a hover/focus-revealed panel's visibility. The wrapper is never itself a keyboard target, so the rule's fix (give it a role and full keyboard support) would be solving a problem that isn't there; both carry a scoped `eslint-disable-next-line` immediately above the tag, with the reasoning inline rather than silent.
 
 ---
 

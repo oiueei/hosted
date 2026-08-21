@@ -20,6 +20,11 @@ export default function InfoPopover({ title, children, id }) {
   const [open, setOpen] = useState(false);
 
   return (
+    // The span is a passive wrapper, not an interactive target: the real
+    // button below does all the keyboard/aria work, and its own focus/blur
+    // bubble up here to control visibility, so nothing here needs independent
+    // keyboard support of its own.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <span
       className="info-popover"
       onMouseEnter={() => setOpen(true)}

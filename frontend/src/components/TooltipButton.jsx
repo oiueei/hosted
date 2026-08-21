@@ -44,6 +44,10 @@ export default function TooltipButton({ tooltip, onClick, disabled, children }) 
   }, [visible, dismissed]);
 
   return (
+    // The div is a passive wrapper, not an interactive target: the real
+    // Button below carries all the keyboard/aria semantics, and its own
+    // focus/blur bubble up here to control the bubble's visibility.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className="tooltip-button"
       onMouseEnter={show}
