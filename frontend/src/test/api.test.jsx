@@ -118,9 +118,9 @@ describe('apiFetch', () => {
         : Promise.resolve({ ok: false, status: 401 })
     );
 
-    await expect(
-      apiFetch('/api/v1/things/', { method: 'POST', body: '{}' })
-    ).rejects.toThrow('Unauthorised');
+    await expect(apiFetch('/api/v1/things/', { method: 'POST', body: '{}' })).rejects.toThrow(
+      'Unauthorised'
+    );
     expect(localStorage.getItem('userCode')).toBeNull();
     expect(window.location.href).toBe('/login');
   });

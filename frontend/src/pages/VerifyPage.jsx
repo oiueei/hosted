@@ -19,9 +19,19 @@ function VerifyScreen({ tc, koro, title, action, children }) {
     >
       <div
         className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
           <ContactCorner />
           <h1 className="form-hero-title">{title}</h1>
           {action}
@@ -41,7 +51,9 @@ export default function VerifyPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  useEffect(() => { document.title = t('titles.verify'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.verify');
+  }, [t]);
   const [error, setError] = useState('');
   // Set when the refusal on screen is one the backend deliberately survives
   // (`retryable`): the link still works, so the error screen owes a different
@@ -128,7 +140,8 @@ export default function VerifyPage() {
         } else if (res.ok && data.user) {
           const prevUserCode = localStorage.getItem('userCode');
           if (data.user?.code) localStorage.setItem('userCode', data.user.code);
-          if (data.user?.theeeme_colors) localStorage.setItem('theeemeColors', JSON.stringify(data.user.theeeme_colors));
+          if (data.user?.theeeme_colors)
+            localStorage.setItem('theeemeColors', JSON.stringify(data.user.theeeme_colors));
           if (data.user?.koro) localStorage.setItem('koro', data.user.koro);
           if (data.user?.code && data.user.code !== prevUserCode) {
             localStorage.removeItem('seenWelcome');
@@ -172,7 +185,9 @@ export default function VerifyPage() {
   const exitAction = (
     <div>
       <Link to={isLoggedIn ? '/' : '/login'}>
-        <Button style={btnStyle}>{isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}</Button>
+        <Button style={btnStyle}>
+          {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
+        </Button>
       </Link>
     </div>
   );
@@ -216,7 +231,10 @@ export default function VerifyPage() {
           })}
         </p>
         <p className="section-mt">{t('deleteAccount.whatStays')}</p>
-        <div className="section-mt" style={{ display: 'flex', gap: 'var(--spacing-s)', flexWrap: 'wrap' }}>
+        <div
+          className="section-mt"
+          style={{ display: 'flex', gap: 'var(--spacing-s)', flexWrap: 'wrap' }}
+        >
           <Button variant="danger" disabled={deleting} onClick={handleAccountDelete}>
             {deleting ? t('verify.accountDeleting') : t('verify.accountDeleteConfirm')}
           </Button>
@@ -244,9 +262,7 @@ export default function VerifyPage() {
         <Notification label={t('common.error')} type="error">
           {error}
         </Notification>
-        <p className="section-mt">
-          {t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}
-        </p>
+        <p className="section-mt">{t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}</p>
       </VerifyScreen>
     );
   }

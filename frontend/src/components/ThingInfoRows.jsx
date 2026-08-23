@@ -1,5 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { IconTicket, IconEuroSign, IconCalendar, IconLocation, IconShield } from 'hds-react';
+import {
+  IconTicket,
+  IconEuroSign,
+  IconLock,
+  IconCalendar,
+  IconLocation,
+  IconShield,
+} from 'hds-react';
 
 /**
  * The `thing-card-info` rows shared by ThingPage and ThingLinkbox: type, fee,
@@ -27,6 +34,19 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
           <span>{thing.fee} €</span>
         </div>
       )}
+      {/* A distinct icon and a qualifying word, on purpose: a RENT thing shows
+          both a price and a deposit, and without something to tell them apart
+          "10 €" next to "50 €" reads as one 60 € cost instead of a rental fee
+          plus a guarantee that comes back (DEPOSIT_PLAN.md §10). */}
+      {thing.deposit && (
+        <div className="thing-card-info-row">
+          <IconLock size="m" aria-hidden="true" />
+          <span className="thing-card-info-label">{t('thingPage.depositLabel')}</span>
+          <span>
+            {thing.deposit} € {t('thingPage.depositRefundableNote')}
+          </span>
+        </div>
+      )}
       {/* Live availability (date-based things): computed from the booking calendar */}
       {isDateBased && (
         <div className="thing-card-info-row">
@@ -36,7 +56,12 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
             {thing.available_today
               ? t('availability.IMMEDIATE')
               : thing.next_available
-                ? t('availability.nextAvailable', { date: new Date(thing.next_available).toLocaleDateString(i18n.language, { day: 'numeric', month: 'numeric' }) })
+                ? t('availability.nextAvailable', {
+                    date: new Date(thing.next_available).toLocaleDateString(i18n.language, {
+                      day: 'numeric',
+                      month: 'numeric',
+                    }),
+                  })
                 : t('availability.noneSoon')}
           </span>
         </div>

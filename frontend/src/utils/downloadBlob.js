@@ -1,4 +1,17 @@
 /**
+ * The filename OIUEEI's own export endpoints set via `Content-Disposition`,
+ * or `fallback` when it's missing (a network layer that stripped the header,
+ * never the server in normal operation). Shared rather than parsed per page
+ * so the two export downloads (account, collection) can't drift in how they
+ * read it.
+ */
+export function filenameFromResponse(res, fallback) {
+  const header = res.headers.get('Content-Disposition') || '';
+  const match = header.match(/filename="?([^"]+)"?/);
+  return match ? match[1] : fallback;
+}
+
+/**
  * Hand an already-fetched `Blob` to the browser as a file download.
  *
  * There is no declarative way to do this: a plain `<a download>` needs a URL

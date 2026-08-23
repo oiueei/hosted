@@ -44,6 +44,7 @@ from .views.collections import (
 )
 from .views.contact import ContactView
 from .views.csp import csp_report
+from .views.export import AccountDataExportView, CollectionDataExportView
 from .views.faq import FAQAnswerView, FAQDetailView, FAQVisibilityView, ThingFAQListView
 from .views.inbox import InboxView
 from .views.notifications import DigestMuteByTokenView, NotificationsByTokenView
@@ -56,7 +57,7 @@ from .views.things import (
     ThingViewSet,
 )
 from .views.transfers import ThingTransferView
-from .views.upload import CloudinarySignatureView
+from .views.upload import UploadTicketView
 from .views.users import UserDetailView
 
 
@@ -108,6 +109,8 @@ urlpatterns = [
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/delete-account/", AccountDeleteRequestView.as_view(), name="delete-account"),
+    # Its complement: read your copy before you erase it (art. 20)
+    path("auth/export/", AccountDataExportView.as_view(), name="account-export"),
     # Support channel — anonymous on purpose (a locked-out user is the main case)
     path("contact/", ContactView.as_view(), name="contact"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
@@ -182,6 +185,11 @@ urlpatterns = [
         name="collection-stats",
     ),
     path(
+        "collections/<str:collection_code>/export/",
+        CollectionDataExportView.as_view(),
+        name="collection-export",
+    ),
+    path(
         "collections/<str:collection_code>/broadcast/",
         CollectionBroadcastView.as_view(),
         name="collection-broadcast",
@@ -197,7 +205,7 @@ urlpatterns = [
         name="collection-things-bulk",
     ),
     # Upload
-    path("upload/signature/", CloudinarySignatureView.as_view(), name="upload-signature"),
+    path("upload/ticket/", UploadTicketView.as_view(), name="upload-ticket"),
     # Theeemes
     path("theeemes/", TheeemeListView.as_view(), name="theeeme-list"),
     # Things (non-viewset)

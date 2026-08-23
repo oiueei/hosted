@@ -3,6 +3,12 @@
     "downloadStats": "Baixar estadístiques (CSV)",
     "downloadStatsError": "No s'han pogut baixar les estadístiques."
   },
+  "collectionExport": {
+    "downloadButton": "Descarregar tota la col·lecció (JSON)",
+    "downloading": "Preparant el fitxer…",
+    "notice": "Tot el grup — cada cosa, el correu de cada membre, l'historial complet. No és el resum de dalt: porta dades d'altres persones, desa'l en un lloc segur i no el reenviïs.",
+    "error": "No hem pogut preparar l'exportació. Torna-ho a provar d'aquí un moment."
+  },
   "ageRange": {
     "PRE_1946": "1945 o abans",
     "BOOMER": "Boomers (1946–1964)",
@@ -128,7 +134,8 @@
     "contact": "Contacte — OIUEEI",
     "collaborate": "Col·labora — OIUEEI",
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
-    "sharedThings": "Compartit amb mi — OIUEEI"
+    "sharedThings": "Compartit amb mi — OIUEEI",
+    "dataExport": "Exportar dades — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -146,7 +153,8 @@
     "operator": "",
     "popIn": "Nou per aquí? Passa →",
     "legalLink": "Avís legal i privadesa",
-    "loginHelp": "Problemes per entrar? Explica'ns-ho i intentem ajudar-te tan aviat com puguem →"
+    "loginHelp": "Problemes per entrar? Explica'ns-ho i intentem ajudar-te tan aviat com puguem →",
+    "faqLink": "Dubtes sobre aquest lloc? →"
   },
   "verify": {
     "declined": "Rebutjat",
@@ -270,6 +278,8 @@
   "thingPage": {
     "typeLabel": "Tipus.",
     "priceLabel": "Preu.",
+    "depositLabel": "Fiança.",
+    "depositRefundableNote": "(es retorna)",
     "availabilityLabel": "Disponibilitat.",
     "locationLabel": "Ubicació.",
     "conditionLabel": "Estat.",
@@ -381,6 +391,8 @@
     "titleLabel": "Títol",
     "descriptionLabel": "Descripció",
     "priceLabel": "Preu",
+    "depositLabel": "Fiança (opcional)",
+    "depositHelper": "Una garantia que retornes quan la cosa torna — no forma part del preu.",
     "availabilityLabel": "Disponibilitat",
     "conditionLabel": "Estat",
     "locationLabel": "Ubicació",
@@ -437,6 +449,7 @@
     "photoHelper": "Es mostra al teu perfil, opcional",
     "maxAbout": "Màxim 2000 caràcters.",
     "languageHelper": "OIUEEI també t'escriu en aquesta llengua (correus inclosos).",
+    "downloadData": "Descarregar una còpia de les teves dades",
     "deleteAccount": "Esborrar el compte",
     "nameHelper": "El teu nom, un àlies, el que vulguis. Apareix al costat de les preguntes que fas, al recorregut de les coses que has tingut i a la llista de membres dels teus grups — en públic, si el grup comparteix en públic."
   },
@@ -740,7 +753,7 @@
     "heading": "Afegir-ne diversos alhora (CSV)",
     "help": "Afegeix diverses coses des d'un CSV — o un ZIP amb les fotos incloses.",
     "formatTitle": "Format del CSV/ZIP",
-    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\".",
+    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només LEND/RENT). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\".",
     "fileLabel": "Fitxer CSV o ZIP",
     "empty": "No s'han trobat files al fitxer.",
     "tooMany": "Pots importar fins a {{max}} elements alhora.",
@@ -756,7 +769,7 @@
     "zipError": "No hem pogut llegir aquest ZIP. Revisa el fitxer i torna-ho a provar.",
     "imageUploadError": "No s'han pogut pujar algunes fotos. Revisa les imatges i torna-ho a provar.",
     "uploadingImages": "Pujant fotos… ({{done}}/{{total}})",
-    "formatBody": "Els tags van en una cel·la separats per | (i han d'estar definits a la col·lecció — escriu l'etiqueta en qualsevol dels seus idiomes, per exemple \"Crianza\" o \"Criança\"). La columna fee accepta tant 1.5 com 1,5. Per a les fotos, comprimeix el CSV juntament amb les imatges i posa el nom de cada foto a la columna \"photo\" — així:",
+    "formatBody": "Els tags van en una cel·la separats per | (i han d'estar definits a la col·lecció — escriu l'etiqueta en qualsevol dels seus idiomes, per exemple \"Crianza\" o \"Criança\"). Les columnes fee i deposit accepten tant 1.5 com 1,5, i deposit només es fa servir en files LEND/RENT — un valor en un altre tipus es rebutja. Per a les fotos, comprimeix el CSV juntament amb les imatges i posa el nom de cada foto a la columna \"photo\" — així:",
     "downloadExample": "Baixar exemple (ZIP)"
   },
   "gallery": {
@@ -781,6 +794,8 @@
     "durationsHelper": "Per a objectes de préstec/lloguer. Qui lloga en tria una. Buit = qualsevol durada.",
     "weekdaysLabel": "Dies de recollida i devolució",
     "weekdaysHelper": "Recollida i devolució han de caure en aquests dies. Buit = qualsevol dia.",
+    "depositPolicyLabel": "Política de fiances (opcional)",
+    "depositPolicyHelper": "Com funcionen les fiances en aquest grup — l'import es posa a cada cosa, això explica la condició per retornar-la. Deixa-ho buit si el grup no fa servir fiances.",
     "d1": "1 dia",
     "d2": "2 dies",
     "d3": "3 dies",
@@ -808,11 +823,15 @@
     "infoTitle": "Un text per idioma",
     "infoBody": "Si el teu grup llegeix en dos idiomes, escriu el títol o la descripció com un petit mapa: copia això i canvia les paraules. Cadascú ho llegirà en el seu idioma, al web i als seus correus.",
     "tagsInfoBody": "Una etiqueta funciona igual: escriu-la com un mapa i cada membre veurà la seva.",
+    "policyHint": "La política de fiances també admet un text per idioma.",
+    "policyInfoBody": "Funciona igual: escriu-la com un petit mapa i cada membre llegirà la seva.",
     "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
   },
   "deleteAccount": {
     "pageTitle": "Esborrar el teu compte",
     "intro": "Esborrar el teu compte és immediat i irreversible un cop ho confirmis. Aquesta pàgina t'explica exactament què s'esborra i què es conserva.",
+    "exportFirst": "Abans d'esborrar: descarrega primer una còpia de les teves dades — és la teva última oportunitat.",
+    "exportFirstLink": "Descarregar les meves dades",
     "whatGoesTitle": "Què s'esborra",
     "whatGoes": "El teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds pendents — per sempre.",
     "whatStaysTitle": "Què es conserva",
@@ -861,5 +880,37 @@
     "needsApproval": "Algunes opcions necessiten aprovació en aquesta instal·lació: {{list}}.",
     "unavailable": "Algunes opcions no estan disponibles en aquesta instal·lació: {{list}}.",
     "requestAccess": "Sol·licitar accés"
+  },
+  "dataExport": {
+    "pageTitle": "Descarrega les teves dades",
+    "intro": "Una còpia de tot el que OIUEEI guarda de tu, en un únic fitxer JSON — llegeix-la abans de decidir, o abans d'esborrar el teu compte.",
+    "whatYouTakeTitle": "Què t'emportes",
+    "take": {
+      "profile": "El teu perfil",
+      "collectionsOwned": "Els grups que gestiones — amb els seus membres i les seves coses",
+      "collectionsMemberOf": "Els grups als quals pertanys",
+      "things": "Les teves coses",
+      "bookings": "Les teves reserves, fetes i rebudes",
+      "faqs": "Preguntes que has fet, i les que has respost a les teves coses",
+      "proposals": "Persones que has suggerit per a un grup",
+      "transfers": "El recorregut de les coses que han passat per les teves mans",
+      "notifications": "Les teves notificacions",
+      "reports": "Les denúncies que has presentat",
+      "activity": "El teu propi historial d'activitat"
+    },
+    "whatYouDontTakeTitle": "Què NO t'emportes",
+    "dontTake": {
+      "credentials": "Credencials. L'enllaç públic de les teves col·leccions, els tokens dels teus enllaços màgics i les teves galetes de sessió — qui tingués aquest fitxer podria entrar als teus grups.",
+      "othersData": "Dades d'altres persones, més enllà del que ja veus. Correus només dels grups que gestiones; ni l'any de naixement ni el codi postal de ningú més.",
+      "othersThings": "La fitxa completa de les coses d'altres persones als teus grups — només el seu codi, títol i el nom del seu propietari. Gestiones el grup? Descarrega la còpia de la col·lecció.",
+      "reports": "Les denúncies sobre les teves coses. Són anònimes per disseny — ni l'app ni aquest fitxer diuen qui va denunciar. Les que tu has presentat sí que hi són.",
+      "photos": "Fotos i documents, que viatgen com a enllaços, no com a fitxers. Esborrar el teu compte trenca aquests enllaços — descarrega les teves imatges abans.",
+      "emails": "Còpies dels correus que t'hem enviat, ni dels missatges del formulari de contacte, que no guardem.",
+      "logs": "Registres del servidor. El seu tractament és a la política de privacitat.",
+      "deleted": "El que ja has esborrat. No hi ha paperera."
+    },
+    "downloadButton": "Descarregar les meves dades",
+    "downloading": "Preparant el teu fitxer…",
+    "error": "No hem pogut preparar la teva exportació. Torna-ho a provar d'aquí un moment."
   }
 }

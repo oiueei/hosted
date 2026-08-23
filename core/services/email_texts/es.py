@@ -6,6 +6,9 @@ matching the app's Spanish UI vocabulary (reservar, pedido, intercambio)."""
 TEXTS = {
     # Shared
     "footer_manage": "Gestiona tus preferencias de correo",
+    # Art. 14 RGPD: todo correo -- también los obligatorios -- enlaza a la
+    # página legal: es una obligación de información, no una preferencia.
+    "footer_legal": "Legal y privacidad",
     "dates_label": "Fechas",
     "view_collection_cta": "Ver la colección",
     # Sustantivos de acción por tipo para los correos de reserva — calcan el
@@ -31,6 +34,12 @@ TEXTS = {
     "invite_recommended_by": "{proposer} te ha propuesto para este grupo.",
     "invite_accept_cta": "Aceptar la invitación",
     "invite_decline_cta": "Rechazar la invitación",
+    # Art. 14 RGPD: este correo lo dio quien invita, no la persona invitada.
+    "invite_source_note": (
+        "Si has llegado aquí por una invitación, tu correo nos lo dio quien te "
+        "invitó, y solo se usa para enviarte esta invitación. Si la rechazas o "
+        "no haces nada, no vuelves a recibir nada nuestro."
+    ),
     # Collection access revoked
     "revoke_subject": "Tu acceso ha sido revocado",
     "revoke_plain": "{owner} ha revocado tu acceso a '{collection}'.",
@@ -72,6 +81,41 @@ TEXTS = {
     "account_delete_outro": (
         "El enlace funciona durante 24 horas y en la página confirmarás una vez "
         "más. Si no lo has pedido tú, ignora este correo — no pasará nada."
+    ),
+    # Aviso de inactividad (antes de borrar una cuenta sin usar)
+    "inactivity_subject": "Tu cuenta de OIUEEI lleva tiempo en silencio",
+    "inactivity_intro": (
+        "Hace {months} meses que no entras en OIUEEI. No guardamos cuentas que nadie "
+        "usa, así que este es el aviso que va antes."
+    ),
+    "inactivity_deletes": (
+        "Dentro de {days} días tu cuenta desaparece, para siempre, y con ella tus "
+        "colecciones, tus cosas y sus fotos."
+    ),
+    "inactivity_keep": "Con entrar una vez basta para conservarla. No hay que hacer nada más.",
+    "inactivity_cta": "Entrar",
+    "inactivity_outro": "Y si prefieres que se vaya, no tienes que hacer absolutamente nada.",
+    "inactivity_plain": (
+        "Hace {months} meses que no entras en OIUEEI, y no guardamos cuentas que nadie "
+        "usa. Dentro de {days} días tu cuenta desaparece, para siempre, con tus "
+        "colecciones, tus cosas y sus fotos. Con entrar una vez basta para "
+        "conservarla: {link} — y si prefieres que se vaya, no tienes que hacer nada."
+    ),
+    # El mismo aviso para una cuenta que NO se va a borrar porque hay un grupo
+    # que depende de ella. No puede amenazar con algo que no va a pasar.
+    "inactivity_kept": (
+        "Tu cuenta se queda: hay gente usando una colección tuya y no vamos a "
+        "quitársela mientras tú no estás. Pero en todo este tiempo no la ha cuidado "
+        "nadie, y es tuya."
+    ),
+    "inactivity_kept_outro": (
+        "Si prefieres marcharte, puedes borrar tu cuenta tú, desde tu perfil, cuando quieras."
+    ),
+    "inactivity_kept_plain": (
+        "Hace {months} meses que no entras en OIUEEI. Tu cuenta se queda —hay gente "
+        "usando una colección tuya y no vamos a quitársela mientras tú no estás— pero "
+        "en todo este tiempo no la ha cuidado nadie. Puedes retomarla aquí: {link} — o "
+        "borrar tu cuenta tú, desde tu perfil, cuando quieras."
     ),
     # Contact form (support channel, to the operator)
     "contact_subject": "Contacto OIUEEI: {sender}",

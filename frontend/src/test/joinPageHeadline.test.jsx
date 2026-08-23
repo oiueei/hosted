@@ -21,7 +21,7 @@ function renderJoin(state) {
       <Routes>
         <Route path="/collections/:code/join" element={<JoinPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 

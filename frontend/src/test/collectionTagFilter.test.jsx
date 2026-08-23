@@ -5,7 +5,9 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 window.scrollTo = vi.fn();
 
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
@@ -134,19 +136,23 @@ describe('CollectionPage card cap', () => {
     expect(cards()).toHaveLength(24);
   });
 
-  test('Show more appends the rest without reshuffling what was already there', { timeout: 40000 }, async () => {
-    renderBig();
+  test(
+    'Show more appends the rest without reshuffling what was already there',
+    { timeout: 40000 },
+    async () => {
+      renderBig();
 
-    await screen.findByRole('button', { name: /show 3 more things/i });
-    const first = cards()[0].textContent;
-    fireEvent.click(screen.getByRole('button', { name: /show 3 more things/i }));
+      await screen.findByRole('button', { name: /show 3 more things/i });
+      const first = cards()[0].textContent;
+      fireEvent.click(screen.getByRole('button', { name: /show 3 more things/i }));
 
-    // Wait on one cheap text query rather than re-running a 30-node role query.
-    await screen.findByText('Thing 0');
-    expect(cards()).toHaveLength(27);
-    expect(cards()[0].textContent).toBe(first);
-    expect(screen.queryByRole('button', { name: /more things/i })).not.toBeInTheDocument();
-  });
+      // Wait on one cheap text query rather than re-running a 30-node role query.
+      await screen.findByText('Thing 0');
+      expect(cards()).toHaveLength(27);
+      expect(cards()[0].textContent).toBe(first);
+      expect(screen.queryByRole('button', { name: /more things/i })).not.toBeInTheDocument();
+    }
+  );
 
   test('the tag chips count the whole collection, not just the painted cards', async () => {
     renderBig();

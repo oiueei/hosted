@@ -1,73 +1,110 @@
 """
-Upload views — generates Cloudinary signed upload parameters.
+Upload views — hands the browser a short-lived ticket to write one object.
 
-The frontend calls this endpoint to get a short-lived signature, then posts the
-file directly to Cloudinary's API. Django never handles the binary file data.
+The client asks for a ticket, then PUTs the file straight to the bucket. Django
+never handles the binary, which is the property this endpoint has always had and
+keeps.
 
-The signature binds every upload parameter, so a client cannot change them
-without breaking it (verified against the live account):
+What changed with the move off Cloudinary is who enforces the rules. Before, the
+server computed an HMAC over a set of upload parameters and the client echoed
+them back; the storage provider then applied them. Now the rules are signed into
+a presigned URL, and the storage provider refuses the upload — with
+``SignatureDoesNotMatch`` — if a single one of them is altered in flight:
 
-- ``public_id`` is generated server-side, so a client cannot choose an arbitrary
-  id (which could overwrite another asset) — only store the id Cloudinary
-  returns.
-- ``allowed_formats`` restricts what Cloudinary will accept: raster photo formats
-  only (SVG is excluded — it can carry script), or ``pdf`` alone in document mode.
-- ``resource_type`` is always ``image`` (never trusted from the client). A PDF is
-  a page-based image to Cloudinary, so it lives under the same resource type.
-
-Note: ``max_file_size`` is not a signable Cloudinary upload parameter — its own
-signature computation excludes it, so signing it here made ours diverge from
-Cloudinary's and every document upload failed with "Invalid Signature" (S3, prod
-outage). The per-file size cap stays a client-side check (``PdfUpload``).
+- the **key** is generated here (``secrets.token_urlsafe(16)``), so a client
+  cannot name its own object and overwrite somebody else's;
+- the **folder** is constrained to a known set, and forced in document mode, so
+  an image can never be written into the documents folder (S4);
+- the **content type** is picked from an allowlist and signed exactly. Raster
+  photo types only — SVG is not among them, so an ``<img>``-rendered upload can
+  never carry script — or ``application/pdf`` alone in document mode. Because it
+  is signed rather than sniffed, the type the bucket later serves is the type
+  decided here;
+- the **size** is signed too, and this one is new. Cloudinary's own signature
+  computation excluded ``max_file_size``, so signing it made ours diverge from
+  theirs and every document upload failed with "Invalid Signature" — the S3
+  outage. The cap then had to live in the browser (``PdfUpload``), where anyone
+  could skip it. There is no such exclusion here: the client declares the length,
+  this view refuses anything over the limit, and the exact number is signed.
 """
 
 import secrets
-import time
 
-import cloudinary
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.services import storage
 from core.views._helpers import body_dict
 
 # Image-mode folders only — "oiueei/documents" is document-mode-only (forced
 # below, never client-chosen) and deliberately absent from this set.
 IMAGE_FOLDERS = {"oiueei/users", "oiueei/things", "oiueei/collections"}
+DOCUMENT_FOLDER = "oiueei/documents"
 
-# Raster photo formats only — SVG and other script-bearing/non-photo formats are
+# Raster photo types only. SVG and other script-bearing or non-photo formats are
 # excluded so an <img>-rendered upload can never carry active content.
-IMAGE_FORMATS = "jpg,jpeg,png,webp,gif,heic,heif,avif,bmp,tif,tiff"
+IMAGE_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/heic",
+    "image/heif",
+    "image/avif",
+    "image/bmp",
+    "image/tiff",
+}
 
 # Document mode (the collection welcome doc): PDF and nothing else.
-DOCUMENT_FORMATS = "pdf"
+DOCUMENT_TYPES = {"application/pdf"}
+
+# The welcome doc's long-standing 5 MB limit, now enforced where it cannot be
+# skipped. Images are capped an order of magnitude above what they should ever
+# be: the browser downscales to 1216px first, so a legitimate upload lands in the
+# hundreds of kilobytes and this is a backstop against abuse, not a UX limit.
+DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
+IMAGE_MAX_BYTES = 10 * 1024 * 1024
 
 
-class CloudinarySignatureView(APIView):
+class UploadTicketView(APIView):
     """
-    POST /api/v1/upload/signature/
+    POST /api/v1/upload/ticket/
 
-    Returns a signed set of upload parameters for a direct browser-to-Cloudinary
-    upload. The client must send back the signed parameters verbatim (folder,
-    public_id, allowed_formats) alongside the file.
+    Returns a one-object, short-lived upload ticket. The client sends the file as
+    the raw body of a ``PUT`` to ``url`` with exactly the headers given, then
+    stores ``key`` — the value that goes in the model field.
 
     Request body:
-        { "folder": "oiueei/things" }              # image (default)
-        { "kind": "document" }                      # PDF — folder is forced, see below
+        {                                            # image (default)
+            "folder": "oiueei/things",
+            "content_type": "image/webp",
+            "content_length": 183422
+        }
+        {                                            # PDF — folder is forced
+            "kind": "document",
+            "content_type": "application/pdf",
+            "content_length": 812004
+        }
 
     Response:
         {
-            "signature": "...",
-            "timestamp": 1234567890,
-            "api_key": "...",
-            "cloud_name": "...",
-            "folder": "oiueei/things",
-            "public_id": "<server-generated>",
-            "allowed_formats": "jpg,jpeg,png,...",   # or "pdf" in document mode
-            "resource_type": "image"
+            "url": "https://<bucket>.<endpoint>/<key>?X-Amz-...",
+            "method": "PUT",
+            "headers": {"x-amz-acl": ..., "Content-Type": ..., "Cache-Control": ...},
+            "key": "oiueei/things/<random>",
+            "public_url": "https://<media base>/oiueei/things/<random>"
         }
+
+    ``public_url`` is where the object will be readable once the PUT succeeds, and
+    it is answered here rather than derived by the client because the two can
+    differ: the presigned URL always names the bucket, while reads go through
+    whatever ``MEDIA_PUBLIC_BASE_URL`` points at — a CDN or a custom domain, on a
+    deployment that has one. Stripping the query off ``url`` would quietly bypass
+    it.
     """
 
     permission_classes = [IsAuthenticated]
@@ -80,45 +117,32 @@ class CloudinarySignatureView(APIView):
         is_document = body.get("kind") == "document"
 
         if is_document:
-            # Document mode always signs the documents folder — an image-mode
+            # Document mode always uses the documents folder — an image-mode
             # request may not choose it, keeping images out of it (S4).
-            folder = "oiueei/documents"
+            folder = DOCUMENT_FOLDER
+            allowed_types, max_bytes = DOCUMENT_TYPES, DOCUMENT_MAX_BYTES
         else:
             folder = body.get("folder", "oiueei/users")
             # oiueei/documents isn't in IMAGE_FOLDERS, so naming it here falls
             # back like any other value the image mode doesn't recognise.
             if folder not in IMAGE_FOLDERS:
                 folder = "oiueei/users"
+            allowed_types, max_bytes = IMAGE_TYPES, IMAGE_MAX_BYTES
 
-        # Always image: Cloudinary treats a PDF as a page-based image, so both kinds
-        # share the resource type. Only the accepted formats differ.
-        resource_type = "image"
-        allowed_formats = DOCUMENT_FORMATS if is_document else IMAGE_FORMATS
-        # Random id within the folder; `folder` is sent separately, so the public_id
-        # itself carries no folder prefix (Cloudinary prepends `folder`).
-        public_id = secrets.token_urlsafe(16)
-        timestamp = int(time.time())
+        content_type = body.get("content_type")
+        if content_type not in allowed_types:
+            raise ValidationError({"content_type": "Unsupported file type."})
 
-        params_to_sign = {
-            "allowed_formats": allowed_formats,
-            "folder": folder,
-            "public_id": public_id,
-            "timestamp": timestamp,
-        }
+        content_length = body.get("content_length")
+        if not isinstance(content_length, int) or isinstance(content_length, bool):
+            raise ValidationError({"content_length": "A byte count is required."})
+        if not 1 <= content_length <= max_bytes:
+            raise ValidationError({"content_length": f"Must be between 1 and {max_bytes} bytes."})
 
-        signature = cloudinary.utils.api_sign_request(
-            params_to_sign, cloudinary.config().api_secret
+        # Random name within the folder. The key is the value stored on the model,
+        # and its 128 bits of entropy are what keep a public object unguessable.
+        key = f"{folder}/{secrets.token_urlsafe(16)}"
+        ticket = storage.presign_upload(
+            key, content_type=content_type, content_length=content_length, max_bytes=max_bytes
         )
-
-        response = {
-            "signature": signature,
-            "timestamp": timestamp,
-            "api_key": cloudinary.config().api_key,
-            "cloud_name": cloudinary.config().cloud_name,
-            "folder": folder,
-            "public_id": public_id,
-            "allowed_formats": allowed_formats,
-            "resource_type": resource_type,
-        }
-
-        return Response(response)
+        return Response({**ticket, "key": key, "public_url": storage.public_url(key)})

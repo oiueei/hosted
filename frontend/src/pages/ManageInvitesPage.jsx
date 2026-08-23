@@ -29,7 +29,9 @@ export default function ManageInvitesPage() {
   const [answering, setAnswering] = useState(null);
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const headline = L(collectionHeadline);
-  useEffect(() => { document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault'); }, [headline, t]);
+  useEffect(() => {
+    document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault');
+  }, [headline, t]);
   const [isOwner, setIsOwner] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -55,9 +57,7 @@ export default function ManageInvitesPage() {
         // empty list — "no guests, and you can't invite anyone" — which is not
         // what happened. Every other data page in the app stops and says so.
         setLoadError(
-          res.status === 403
-            ? t('manageInvites.noPermission')
-            : t('manageInvites.errorLoading'),
+          res.status === 403 ? t('manageInvites.noPermission') : t('manageInvites.errorLoading')
         );
       }
     } catch {
@@ -90,9 +90,8 @@ export default function ManageInvitesPage() {
         setProposals((prev) => prev.filter((p) => p.code !== proposalCode));
         setToast({
           type: 'success',
-          message: decision === 'approve'
-            ? t('recommend.ownerApproved')
-            : t('recommend.ownerDeclined'),
+          message:
+            decision === 'approve' ? t('recommend.ownerApproved') : t('recommend.ownerDeclined'),
         });
         // An approval creates a pending invitation — reload so the guest list
         // shows it rather than looking as though nothing happened.
@@ -169,9 +168,17 @@ export default function ManageInvitesPage() {
         backTo={`/collections/${code}`}
         backLabel={t('common.collection')}
       >
-        <Notification label={t('common.error')} type="error">{loadError}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {loadError}
+        </Notification>
         <div className="spacer-m" />
-        <Button variant="secondary" onClick={() => { setLoading(true); fetchCollection(); }}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setLoading(true);
+            fetchCollection();
+          }}
+        >
           {t('common.retry')}
         </Button>
       </PageLayout>
@@ -200,7 +207,8 @@ export default function ManageInvitesPage() {
               <p className="proposal-who">
                 <strong>{p.email}</strong>
                 <span className="proposal-by">
-                  {' '}{t('recommend.ownerBy', { name: p.proposer_name })}
+                  {' '}
+                  {t('recommend.ownerBy', { name: p.proposer_name })}
                 </span>
               </p>
               {p.note && <p className="proposal-note">“{p.note}”</p>}
@@ -227,108 +235,135 @@ export default function ManageInvitesPage() {
       )}
 
       {invites.length === 0 && pendingInvites.length === 0 ? (
-        <p>{t('manageInvites.noGuests')} {isOwner && t('manageInvites.noGuestsCta')}</p>
-      ) : (() => {
-        const tableRows = [
-          ...invites.map((inv) => ({
-            _id: inv.code,
-            guest: inv.name ? `${inv.name} (${inv.email})` : inv.email,
-            status: t('manageInvites.accepted'),
-            _isPending: false,
-            _email: inv.email,
-            _code: inv.code,
-            _name: inv.name || inv.email,
-            _ageRange: inv.age_range || '',
-            _postal: inv.postal_code || '',
-          })),
-          ...pendingInvites.map((p) => ({
-            _id: p.code || `pending-${p.email}`,
-            guest: p.email,
-            status: t('manageInvites.pending'),
-            _isPending: true,
-            _email: p.email,
-            _code: p.code,
-            _name: p.email,
-          })),
-        ];
-        const cols = [
-          {
-            key: 'guest',
-            headerName: t('manageInvites.colGuest'),
-            transform: (row) => (
-              <div>
-                <div>{row.guest}</div>
-                {(row._ageRange || row._postal) && (
-                  <div style={{ fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)' }}>
-                    {[row._ageRange ? t(`ageRange.${row._ageRange}`) : null, row._postal]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </div>
-                )}
-              </div>
-            ),
-          },
-          { key: 'status', headerName: t('manageInvites.colStatus') },
-          ...(isOwner ? [{
-            key: '_actions',
-            headerName: '',
-            transform: (row) => (
-              <div style={{ display: 'flex', gap: 'var(--spacing-xs)', alignItems: 'center', justifyContent: 'flex-end' }}>
-                {row._isPending && (
-                  <TooltipButton
-                    tooltip={t('manageInvites.resendTooltip')}
-                    onClick={() => handleResend(row._email)}
-                    disabled={resending === row._email}
-                  >
-                    <IconEnvelope aria-hidden />
-                  </TooltipButton>
-                )}
-                <TooltipButton
-                  tooltip={t('manageInvites.removeTooltip')}
-                  onClick={() => navigate(`/collections/${code}/invites/remove`, {
-                    state: { guestCode: row._code, guestName: row._name, backLabel: headline || 'Guests' },
-                  })}
-                >
-                  <IconCrossCircle aria-hidden />
-                </TooltipButton>
-              </div>
-            ),
-          }] : []),
-        ];
-        return (
-          <Table
-            cols={cols}
-            rows={tableRows}
-            indexKey="_id"
-            renderIndexCol={false}
-            theme={tc.color_03 ? { '--header-background-color': `var(--color-${tc.color_03})` } : undefined}
-          />
-        );
-      })()}
+        <p>
+          {t('manageInvites.noGuests')} {isOwner && t('manageInvites.noGuestsCta')}
+        </p>
+      ) : (
+        (() => {
+          const tableRows = [
+            ...invites.map((inv) => ({
+              _id: inv.code,
+              guest: inv.name ? `${inv.name} (${inv.email})` : inv.email,
+              status: t('manageInvites.accepted'),
+              _isPending: false,
+              _email: inv.email,
+              _code: inv.code,
+              _name: inv.name || inv.email,
+              _ageRange: inv.age_range || '',
+              _postal: inv.postal_code || '',
+            })),
+            ...pendingInvites.map((p) => ({
+              _id: p.code || `pending-${p.email}`,
+              guest: p.email,
+              status: t('manageInvites.pending'),
+              _isPending: true,
+              _email: p.email,
+              _code: p.code,
+              _name: p.email,
+            })),
+          ];
+          const cols = [
+            {
+              key: 'guest',
+              headerName: t('manageInvites.colGuest'),
+              transform: (row) => (
+                <div>
+                  <div>{row.guest}</div>
+                  {(row._ageRange || row._postal) && (
+                    <div
+                      style={{ fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)' }}
+                    >
+                      {[row._ageRange ? t(`ageRange.${row._ageRange}`) : null, row._postal]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            { key: 'status', headerName: t('manageInvites.colStatus') },
+            ...(isOwner
+              ? [
+                  {
+                    key: '_actions',
+                    headerName: '',
+                    transform: (row) => (
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 'var(--spacing-xs)',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                        }}
+                      >
+                        {row._isPending && (
+                          <TooltipButton
+                            tooltip={t('manageInvites.resendTooltip')}
+                            onClick={() => handleResend(row._email)}
+                            disabled={resending === row._email}
+                          >
+                            <IconEnvelope aria-hidden />
+                          </TooltipButton>
+                        )}
+                        <TooltipButton
+                          tooltip={t('manageInvites.removeTooltip')}
+                          onClick={() =>
+                            navigate(`/collections/${code}/invites/remove`, {
+                              state: {
+                                guestCode: row._code,
+                                guestName: row._name,
+                                backLabel: headline || 'Guests',
+                              },
+                            })
+                          }
+                        >
+                          <IconCrossCircle aria-hidden />
+                        </TooltipButton>
+                      </div>
+                    ),
+                  },
+                ]
+              : []),
+          ];
+          return (
+            <Table
+              cols={cols}
+              rows={tableRows}
+              indexKey="_id"
+              renderIndexCol={false}
+              theme={
+                tc.color_03
+                  ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                  : undefined
+              }
+            />
+          );
+        })()
+      )}
 
       {isOwner && (
         <>
-        <div className="spacer-xl" />
-        <div className="form-grid section-mt">
-          <TextInput
-            id="manage-invites-email"
-            label={t('manageInvites.emailLabel')}
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder={t('manageInvites.emailPlaceholder')}
-          />
-          <Button
-            disabled={inviteLoading || !inviteEmail.trim()}
-            onClick={handleInvite}
-            style={{ ...btnStyle, width: '100%' }}
-          >
-            {inviteLoading ? t('common.sending') : t('manageInvites.invite')}
-          </Button>
-        </div>
-        <div className="spacer-m" />
-        <h2>{t('bulkInvite.heading')}</h2>
-        <BulkInviteCsv collectionCode={code} onInvited={fetchCollection} />
+          <div className="spacer-xl" />
+          <div className="form-grid section-mt">
+            <TextInput
+              id="manage-invites-email"
+              label={t('manageInvites.emailLabel')}
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder={t('manageInvites.emailPlaceholder')}
+            />
+            <Button
+              disabled={inviteLoading || !inviteEmail.trim()}
+              onClick={handleInvite}
+              style={{ ...btnStyle, width: '100%' }}
+            >
+              {inviteLoading ? t('common.sending') : t('manageInvites.invite')}
+            </Button>
+          </div>
+          <div className="spacer-m" />
+          <h2>{t('bulkInvite.heading')}</h2>
+          <BulkInviteCsv collectionCode={code} onInvited={fetchCollection} />
         </>
       )}
 

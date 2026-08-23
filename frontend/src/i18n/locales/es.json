@@ -3,6 +3,12 @@
     "downloadStats": "Descargar estadísticas (CSV)",
     "downloadStatsError": "No se pudieron descargar las estadísticas."
   },
+  "collectionExport": {
+    "downloadButton": "Descargar la colección entera (JSON)",
+    "downloading": "Preparando el fichero…",
+    "notice": "El grupo entero — cada cosa, el correo de cada miembro, el historial completo. No es el resumen de arriba: lleva datos de otras personas, guárdalo en un sitio seguro y no lo reenvíes.",
+    "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
+  },
   "ageRange": {
     "PRE_1946": "1945 o antes",
     "BOOMER": "Boomers (1946–1964)",
@@ -128,7 +134,8 @@
     "contact": "Contacto — OIUEEI",
     "collaborate": "Colabora — OIUEEI",
     "ownerBookings": "Solicitudes para mí — OIUEEI",
-    "sharedThings": "Compartido conmigo — OIUEEI"
+    "sharedThings": "Compartido conmigo — OIUEEI",
+    "dataExport": "Exportar datos — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -146,7 +153,8 @@
     "operator": "",
     "popIn": "¿Nuevo por aquí? Pásate →",
     "legalLink": "Aviso legal y privacidad",
-    "loginHelp": "¿Problemas para entrar? Cuéntanoslo e intentamos ayudarte lo antes posible →"
+    "loginHelp": "¿Problemas para entrar? Cuéntanoslo e intentamos ayudarte lo antes posible →",
+    "faqLink": "¿Dudas sobre este sitio? →"
   },
   "verify": {
     "declined": "Rechazado",
@@ -270,6 +278,8 @@
   "thingPage": {
     "typeLabel": "Tipo.",
     "priceLabel": "Precio.",
+    "depositLabel": "Fianza.",
+    "depositRefundableNote": "(se devuelve)",
     "availabilityLabel": "Disponibilidad.",
     "locationLabel": "Ubicación.",
     "conditionLabel": "Estado.",
@@ -381,6 +391,8 @@
     "titleLabel": "Título",
     "descriptionLabel": "Descripción",
     "priceLabel": "Precio",
+    "depositLabel": "Fianza (opcional)",
+    "depositHelper": "Una garantía que devuelves cuando la cosa vuelve — no forma parte del precio.",
     "availabilityLabel": "Disponibilidad",
     "conditionLabel": "Estado",
     "locationLabel": "Ubicación",
@@ -437,6 +449,7 @@
     "photoHelper": "Se muestra en tu perfil, opcional",
     "maxAbout": "Máximo 2000 caracteres.",
     "languageHelper": "OIUEEI también te escribe en este idioma (correos incluidos).",
+    "downloadData": "Descargar una copia de tus datos",
     "deleteAccount": "Borrar cuenta",
     "nameHelper": "Tu nombre, un apodo, lo que quieras. Aparece junto a las preguntas que haces, en el recorrido de las cosas que has tenido y en la lista de miembros de tus grupos — en público, si el grupo comparte en público."
   },
@@ -740,7 +753,7 @@
     "heading": "Añadir varios a la vez (CSV)",
     "help": "Añade varias cosas desde un CSV — o un ZIP con las fotos incluidas.",
     "formatTitle": "Formato del CSV/ZIP",
-    "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\".",
+    "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo LEND/RENT). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\".",
     "fileLabel": "Archivo CSV o ZIP",
     "empty": "No se encontraron filas en el archivo.",
     "tooMany": "Puedes importar hasta {{max}} elementos a la vez.",
@@ -756,7 +769,7 @@
     "zipError": "No pudimos leer ese ZIP. Revisa el archivo e inténtalo de nuevo.",
     "imageUploadError": "Algunas fotos no se pudieron subir. Revisa las imágenes e inténtalo de nuevo.",
     "uploadingImages": "Subiendo fotos… ({{done}}/{{total}})",
-    "formatBody": "Los tags van en una celda separados por | (y deben estar definidos en la colección — escribe la etiqueta en cualquiera de sus idiomas, por ejemplo \"Crianza\" o \"Criança\"). La columna fee acepta tanto 1.5 como 1,5. Para las fotos, comprime el CSV junto con las imágenes y pon el nombre de cada foto en la columna \"photo\" — así:",
+    "formatBody": "Los tags van en una celda separados por | (y deben estar definidos en la colección — escribe la etiqueta en cualquiera de sus idiomas, por ejemplo \"Crianza\" o \"Criança\"). Las columnas fee y deposit aceptan tanto 1.5 como 1,5, y deposit solo se usa en filas LEND/RENT — un valor en otro tipo se rechaza. Para las fotos, comprime el CSV junto con las imágenes y pon el nombre de cada foto en la columna \"photo\" — así:",
     "downloadExample": "Descargar ejemplo (ZIP)"
   },
   "gallery": {
@@ -781,6 +794,8 @@
     "durationsHelper": "Para objetos de préstamo/alquiler. Quien alquila elige una. Vacío = cualquier duración.",
     "weekdaysLabel": "Días de recogida y devolución",
     "weekdaysHelper": "Recogida y devolución deben caer en estos días. Vacío = cualquier día.",
+    "depositPolicyLabel": "Política de fianzas (opcional)",
+    "depositPolicyHelper": "Cómo funcionan las fianzas en este grupo — el importe se pone en cada cosa, esto explica la condición para devolverla. Déjalo vacío si el grupo no usa fianzas.",
     "d1": "1 día",
     "d2": "2 días",
     "d3": "3 días",
@@ -808,11 +823,15 @@
     "infoTitle": "Un texto por idioma",
     "infoBody": "Si tu grupo lee en dos idiomas, escribe el título o la descripción como un pequeño mapa: copia esto y cambia las palabras. Cada persona lo leerá en su idioma, en la web y en sus correos.",
     "tagsInfoBody": "Una etiqueta funciona igual: escríbela como un mapa y cada miembro verá la suya.",
+    "policyHint": "La política de fianzas también admite un texto por idioma.",
+    "policyInfoBody": "Funciona igual: escríbela como un pequeño mapa y cada miembro leerá la suya.",
     "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
   },
   "deleteAccount": {
     "pageTitle": "Borrar tu cuenta",
     "intro": "Borrar tu cuenta es inmediato e irreversible una vez lo confirmes. Esta página te cuenta exactamente qué se borra y qué se conserva.",
+    "exportFirst": "Antes de borrar: descarga primero una copia de tus datos — es tu última oportunidad.",
+    "exportFirstLink": "Descargar mis datos",
     "whatGoesTitle": "Qué se borra",
     "whatGoes": "Tu cuenta, tus colecciones, tus cosas con sus fotos y tus solicitudes pendientes — para siempre.",
     "whatStaysTitle": "Qué se conserva",
@@ -861,5 +880,37 @@
     "needsApproval": "Algunas opciones necesitan aprobación en esta instalación: {{list}}.",
     "unavailable": "Algunas opciones no están disponibles en esta instalación: {{list}}.",
     "requestAccess": "Solicitar acceso"
+  },
+  "dataExport": {
+    "pageTitle": "Descarga tus datos",
+    "intro": "Una copia de todo lo que OIUEEI guarda de ti, en un único fichero JSON — léela antes de decidir, o antes de borrar tu cuenta.",
+    "whatYouTakeTitle": "Qué llevas",
+    "take": {
+      "profile": "Tu perfil",
+      "collectionsOwned": "Los grupos que gestionas — con sus miembros y sus cosas",
+      "collectionsMemberOf": "Los grupos a los que perteneces",
+      "things": "Tus cosas",
+      "bookings": "Tus reservas, hechas y recibidas",
+      "faqs": "Preguntas que has hecho, y las que has respondido en tus cosas",
+      "proposals": "Personas que has sugerido para un grupo",
+      "transfers": "El recorrido de las cosas que han pasado por tus manos",
+      "notifications": "Tus notificaciones",
+      "reports": "Las denuncias que has presentado",
+      "activity": "Tu propio historial de actividad"
+    },
+    "whatYouDontTakeTitle": "Qué NO llevas",
+    "dontTake": {
+      "credentials": "Credenciales. El enlace público de tus colecciones, los tokens de tus enlaces mágicos y tus cookies de sesión — quien tuviera este fichero podría entrar en tus grupos.",
+      "othersData": "Datos de otras personas, más allá de lo que ya ves. Correos solo de los grupos que gestionas; ni el año de nacimiento ni el código postal de nadie más.",
+      "othersThings": "La ficha completa de las cosas de otras personas en tus grupos — solo su código, título y el nombre de su dueño. ¿Gestionas el grupo? Descarga la copia de la colección.",
+      "reports": "Las denuncias sobre tus cosas. Son anónimas por diseño — ni la app ni este fichero dicen quién denunció. Las que tú has presentado sí están.",
+      "photos": "Fotos y documentos, que viajan como enlaces, no como archivos. Borrar tu cuenta rompe esos enlaces — descarga tus imágenes antes.",
+      "emails": "Copias de los correos que te hemos enviado, ni de los mensajes del formulario de contacto, que no guardamos.",
+      "logs": "Registros del servidor. Su tratamiento está en la política de privacidad.",
+      "deleted": "Lo que ya has borrado. No hay papelera."
+    },
+    "downloadButton": "Descargar mis datos",
+    "downloading": "Preparando tu fichero…",
+    "error": "No hemos podido preparar tu exportación. Prueba de nuevo en un momento."
   }
 }

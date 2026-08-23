@@ -48,7 +48,7 @@ _LANG_ORDER = ["es", "ca", "en"]
 # User codes that identify demo accounts — used by --reset to scope deletion.
 DEMO_USER_CODES = ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh", "1u1ucs"]
 
-# Demo fixture images live in their own Cloudinary folder, cleanly separated from
+# Demo fixture images live in their own storage folder, cleanly separated from
 # real user uploads (which land in oiueei/{users,things,collections,documents}/).
 # The seed stores bare ids (see common.py); this prefix is applied at seed time so
 # the stored public_id resolves to the fixture. Re-point here if the folder moves.
@@ -56,7 +56,7 @@ SEED_IMAGE_FOLDER = "oiueei/seed/"
 
 
 def _seed_image(public_id):
-    """Prefix a bare demo image id with its Cloudinary folder (empty stays empty)."""
+    """Prefix a bare demo image id with its storage folder (empty stays empty)."""
     return f"{SEED_IMAGE_FOLDER}{public_id}" if public_id else public_id
 
 
@@ -161,12 +161,12 @@ class Command(BaseCommand):
     # ---- helpers ----
 
     def _reset(self):
-        # The demo reuses fixed, shared Cloudinary public ids — suspend the
-        # delete-time cleanup so wiping demo rows doesn't destroy the images the
-        # immediate re-seed points back at.
-        from core.services import cloudinary_cleanup
+        # The demo reuses fixed, shared storage keys — suspend the delete-time
+        # cleanup so wiping demo rows doesn't destroy the images the immediate
+        # re-seed points back at.
+        from core.services import asset_cleanup
 
-        with cloudinary_cleanup.suspended():
+        with asset_cleanup.suspended():
             Thing.objects.filter(owner_id__in=DEMO_USER_CODES).delete()
             Collection.objects.filter(owner_id__in=DEMO_USER_CODES).delete()
             User.objects.filter(code__in=DEMO_USER_CODES).delete()
@@ -204,6 +204,7 @@ class Command(BaseCommand):
                 "thumbnail": _seed_image(data.get("thumbnail", "")),
                 "tags": data.get("tags", []),
                 "allowed_thing_types": data.get("allowed_thing_types", []),
+                "deposit_policy": data.get("deposit_policy", ""),
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))
@@ -218,6 +219,7 @@ class Command(BaseCommand):
                 "description": data.get("description", ""),
                 "status": "ACTIVE",
                 "fee": data.get("fee", None),
+                "deposit": data.get("deposit", None),
                 "condition": data.get("condition", ""),
                 "availability": data.get("availability", ""),
                 "location": data.get("location", ""),

@@ -28,6 +28,7 @@ const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
 const EditCollectionPage = lazy(() => import('./pages/EditCollectionPage'));
 const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
 const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage'));
+const DataExportPage = lazy(() => import('./pages/DataExportPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ManageInvitesPage = lazy(() => import('./pages/ManageInvitesPage'));
 const LogoutPage = lazy(() => import('./pages/LogoutPage'));
@@ -84,82 +85,87 @@ function App() {
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
-    const handleLangChange = (lng) => { document.documentElement.lang = lng; };
+    const handleLangChange = (lng) => {
+      document.documentElement.lang = lng;
+    };
     i18n.on('languageChanged', handleLangChange);
     return () => i18n.off('languageChanged', handleLangChange);
   }, []);
 
   return (
     <BrowserRouter>
-      <a href="#main" className="skip-link">{t('common.skipToContent')}</a>
+      <a href="#main" className="skip-link">
+        {t('common.skipToContent')}
+      </a>
       <RouteFocusReset />
       <main id="main" tabIndex={-1}>
         <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-        {/* Public routes — reachable without signing in */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/logout" element={<LogoutPage />} />
-        <Route path="/verify/:code" element={<VerifyPage />} />
-        <Route path="/rsvp/:code" element={<VerifyPage />} />
-        <Route path="/magic-link/:code" element={<VerifyPage />} />
-        <Route path="/me/notifications/:token" element={<NotificationsPage />} />
-        <Route path="/legal" element={<LegalPage />} />
-        {/* The digest footer's one-click unsubscribe — public by necessity. */}
-        <Route path="/digest/mute/:token" element={<DigestMutePage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/collaborate" element={<CollaboratePage />} />
-        <Route path="/share/:token" element={<SharePage />} />
+          <Routes>
+            {/* Public routes — reachable without signing in */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/logout" element={<LogoutPage />} />
+            <Route path="/verify/:code" element={<VerifyPage />} />
+            <Route path="/rsvp/:code" element={<VerifyPage />} />
+            <Route path="/magic-link/:code" element={<VerifyPage />} />
+            <Route path="/me/notifications/:token" element={<NotificationsPage />} />
+            <Route path="/legal" element={<LegalPage />} />
+            {/* The digest footer's one-click unsubscribe — public by necessity. */}
+            <Route path="/digest/mute/:token" element={<DigestMutePage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/collaborate" element={<CollaboratePage />} />
+            <Route path="/share/:token" element={<SharePage />} />
 
-        {/* Public read of PUBLIC collections/things — anonymous visitors can
+            {/* Public read of PUBLIC collections/things — anonymous visitors can
             browse; can_view() gates it server-side (PUBLIC + ACTIVE only) and the
             pages hide every owner/member action behind an auth check. */}
-        <Route path="/collections/:code" element={<CollectionPage />} />
-        <Route path="/collections/:code/things/:thingCode" element={<ThingPage />} />
-        <Route path="/things/:thingCode" element={<ThingPage />} />
-        <Route path="/collections/:code/join" element={<JoinPage />} />
+            <Route path="/collections/:code" element={<CollectionPage />} />
+            <Route path="/collections/:code/things/:thingCode" element={<ThingPage />} />
+            <Route path="/things/:thingCode" element={<ThingPage />} />
+            <Route path="/collections/:code/join" element={<JoinPage />} />
 
-        {/* Protected routes — RequireAuth redirects to /login when signed out */}
-        <Route element={<RequireAuth />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/me" element={<UserPage />} />
-          <Route path="/me/edit" element={<EditProfilePage />} />
-          <Route path="/me/delete" element={<DeleteAccountPage />} />
-          <Route path="/collections/new" element={<CreateCollectionPage />} />
-          <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
-          <Route path="/collections/:code/delete" element={<DeleteCollectionPage />} />
-          <Route path="/collections/:code/invites" element={<ManageInvitesPage />} />
-          <Route path="/collections/:code/leave" element={<LeaveCollectionPage />} />
-          <Route path="/collections/:code/add" element={<AddThingPage />} />
-          <Route path="/collections/:code/things/:thingCode/edit" element={<EditThingPage />} />
-          <Route
-            path="/collections/:code/things/:thingCode/request"
-            element={<RequestThingPage />}
-          />
-          <Route
-            path="/collections/:code/things/:thingCode/delete"
-            element={<DeleteThingPage />}
-          />
-          <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
-          <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
-          <Route path="/things/:thingCode/request" element={<RequestThingPage />} />
-          <Route path="/things/:thingCode/delete" element={<DeleteThingPage />} />
-          <Route path="/my-bookings" element={<MyBookingsPage />} />
-          <Route path="/owner-bookings" element={<OwnerBookingsPage />} />
-          <Route path="/shared" element={<SharedThingsPage />} />
-          <Route path="/:userCode" element={<UserPage />} />
-        </Route>
+            {/* Protected routes — RequireAuth redirects to /login when signed out */}
+            <Route element={<RequireAuth />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/me" element={<UserPage />} />
+              <Route path="/me/edit" element={<EditProfilePage />} />
+              <Route path="/me/data" element={<DataExportPage />} />
+              <Route path="/me/delete" element={<DeleteAccountPage />} />
+              <Route path="/collections/new" element={<CreateCollectionPage />} />
+              <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
+              <Route path="/collections/:code/delete" element={<DeleteCollectionPage />} />
+              <Route path="/collections/:code/invites" element={<ManageInvitesPage />} />
+              <Route path="/collections/:code/leave" element={<LeaveCollectionPage />} />
+              <Route path="/collections/:code/add" element={<AddThingPage />} />
+              <Route path="/collections/:code/things/:thingCode/edit" element={<EditThingPage />} />
+              <Route
+                path="/collections/:code/things/:thingCode/request"
+                element={<RequestThingPage />}
+              />
+              <Route
+                path="/collections/:code/things/:thingCode/delete"
+                element={<DeleteThingPage />}
+              />
+              <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
+              <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
+              <Route path="/things/:thingCode/request" element={<RequestThingPage />} />
+              <Route path="/things/:thingCode/delete" element={<DeleteThingPage />} />
+              <Route path="/my-bookings" element={<MyBookingsPage />} />
+              <Route path="/owner-bookings" element={<OwnerBookingsPage />} />
+              <Route path="/shared" element={<SharedThingsPage />} />
+              <Route path="/:userCode" element={<UserPage />} />
+            </Route>
 
-        {/* Routes this deployment adds (frontend/src/deployment). None upstream.
+            {/* Routes this deployment adds (frontend/src/deployment). None upstream.
             They sit HERE, above the catch-all, for the same reason the backend
             mounts DEPLOYMENT_URLCONFS before its own: a route declared after a
             catch-all never matches, and the symptom is a deployment's page
             rendering as "not found" with nothing else looking wrong. */}
-        {deploymentRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={<route.Component />} />
-        ))}
+            {deploymentRoutes.map((route) => (
+              <Route key={route.path} path={route.path} element={<route.Component />} />
+            ))}
 
-        <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
         </Suspense>
       </main>
       <SiteFooter />

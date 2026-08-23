@@ -298,6 +298,27 @@ DEPLOYMENT_URLCONFS = [
 CREATOR_POLICY = os.environ.get("CREATOR_POLICY", "core.services.creator_policy.OpenCreatorPolicy")
 
 
+# Retention periods (GDPR art. 5.1.e), in months unless the name says otherwise.
+#
+# Nothing here happens on its own: `python manage.py purge_expired_data` is what
+# enforces them, and it has to be scheduled (see README §Scheduled jobs). The
+# defaults are the ones www.oiueei.com decided in its retention table, and they
+# are shipped ON because a period that protects the people in the database is a
+# better default than "forever" — but they are still **operator policy**, and a
+# deployment under a different regime overrides any of them. **0 means keep
+# indefinitely**, the same "0 = off" idiom as the quota settings above.
+#
+# `Event` is anonymised rather than deleted: what expires is the link to a
+# person (`actor_code`), not the fact, so the history survives as aggregate.
+RETENTION_INACTIVE_ACCOUNT_MONTHS = int(os.environ.get("RETENTION_INACTIVE_ACCOUNT_MONTHS", "24"))
+RETENTION_INACTIVE_WARNING_DAYS = int(os.environ.get("RETENTION_INACTIVE_WARNING_DAYS", "30"))
+RETENTION_UNVISITED_GUEST_DAYS = int(os.environ.get("RETENTION_UNVISITED_GUEST_DAYS", "60"))
+RETENTION_EVENT_ANONYMISE_MONTHS = int(os.environ.get("RETENTION_EVENT_ANONYMISE_MONTHS", "14"))
+RETENTION_DAILY_ACTIVITY_MONTHS = int(os.environ.get("RETENTION_DAILY_ACTIVITY_MONTHS", "26"))
+RETENTION_NOTIFICATION_MONTHS = int(os.environ.get("RETENTION_NOTIFICATION_MONTHS", "12"))
+RETENTION_REPORT_MONTHS = int(os.environ.get("RETENTION_REPORT_MONTHS", "12"))
+
+
 # Custom User Model
 AUTH_USER_MODEL = "core.User"
 
@@ -333,6 +354,31 @@ import cloudinary  # noqa: E402
 
 cloudinary.config(cloudinary_url=os.environ.get("CLOUDINARY_URL", ""), secure=True)
 CLOUDINARY_CLOUD_NAME = cloudinary.config().cloud_name or ""
+
+
+# Object storage (S3-compatible) — replacing Cloudinary, which served the images
+# from the United States. See `core/services/storage.py`, the only module that
+# talks to it.
+#
+# Unset, the app starts and serves fine; uploads and asset deletion are what
+# fail. Same contract CLOUDINARY_URL has above, and what keeps a checkout
+# runnable without an account.
+OBJECT_STORAGE_ENDPOINT = os.environ.get("OBJECT_STORAGE_ENDPOINT", "")
+OBJECT_STORAGE_BUCKET = os.environ.get("OBJECT_STORAGE_BUCKET", "")
+OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION", "")
+OBJECT_STORAGE_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_ACCESS_KEY", "")
+OBJECT_STORAGE_SECRET_KEY = os.environ.get("OBJECT_STORAGE_SECRET_KEY", "")
+
+# Where assets are read from. Defaults to the bucket's own virtual-host URL, and
+# is deliberately **overridable**: pointing it at a CDN or a custom domain is
+# then a config var, not a patch. It is also what feeds the CSP, so a deployment
+# using its own bucket doesn't have to edit middleware.
+_endpoint_host = OBJECT_STORAGE_ENDPOINT.split("://", 1)[-1].strip("/")
+MEDIA_PUBLIC_BASE_URL = os.environ.get("MEDIA_PUBLIC_BASE_URL", "") or (
+    f"https://{OBJECT_STORAGE_BUCKET}.{_endpoint_host}"
+    if OBJECT_STORAGE_BUCKET and _endpoint_host
+    else ""
+)
 
 
 # Security Headers

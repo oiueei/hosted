@@ -3,16 +3,17 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 import JSZip from 'jszip';
 
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
-// The signed Cloudinary path is covered in src/utils/uploadImage.test.js; here it
+// The ticketed upload path is covered in src/utils/uploadImage.test.js; here it
 // only has to receive the right File and hand back a public_id.
-vi.mock('../utils/uploadImage', () => ({ uploadImageToCloudinary: vi.fn() }));
+vi.mock('../utils/uploadImage', () => ({ uploadImage: vi.fn() }));
 
 import { apiFetch } from '../services/api';
-import { uploadImageToCloudinary } from '../utils/uploadImage';
+import { uploadImage } from '../utils/uploadImage';
 import BulkAddCsv from '../components/BulkAddCsv';
 
 const fileInput = (container) => container.querySelector('input[type="file"]');
-const pick = (container, file) => fireEvent.change(fileInput(container), { target: { files: [file] } });
+const pick = (container, file) =>
+  fireEvent.change(fileInput(container), { target: { files: [file] } });
 
 const csvFile = (text) => new File([text], 'things.csv', { type: 'text/csv' });
 
@@ -106,11 +107,17 @@ describe('BulkAddCsv — guards', () => {
 
 describe('BulkAddCsv — ZIP', () => {
   test('uploads each referenced photo and sends its public_id as the thumbnail', async () => {
-    uploadImageToCloudinary.mockResolvedValue({ publicId: 'oiueei/things/cazo' });
+    uploadImage.mockResolvedValue({ publicId: 'oiueei/things/cazo' });
     apiFetch.mockResolvedValue(jsonResponse({ created: 1 }));
     const { container, onImported } = renderBulkAdd();
 
-    pick(container, await zipFile({ 'things.csv': 'headline,photo\nCazo,cazo.jpg', 'cazo.jpg': 'fake-jpeg-bytes' }));
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo\nCazo,cazo.jpg',
+        'cazo.jpg': 'fake-jpeg-bytes',
+      })
+    );
 
     expect(await screen.findByText('Preview (1)')).toBeInTheDocument();
     expect(screen.getByText('Cazo · 📷 cazo.jpg')).toBeInTheDocument();
@@ -120,8 +127,8 @@ describe('BulkAddCsv — ZIP', () => {
     await waitFor(() => expect(onImported).toHaveBeenCalledWith(1));
 
     // The photo travels the same signed upload path as any other image.
-    expect(uploadImageToCloudinary).toHaveBeenCalledTimes(1);
-    const [uploaded, folder] = uploadImageToCloudinary.mock.calls[0];
+    expect(uploadImage).toHaveBeenCalledTimes(1);
+    const [uploaded, folder] = uploadImage.mock.calls[0];
     expect(uploaded.name).toBe('cazo.jpg');
     expect(uploaded.type).toBe('image/jpeg');
     expect(folder).toBe('oiueei/things');
@@ -139,7 +146,9 @@ describe('BulkAddCsv — ZIP', () => {
     pick(container, await zipFile({ 'things.csv': 'headline,photo\nCazo,cazo.jpg' }));
 
     expect(
-      await screen.findByText('These photos are named in the CSV but missing from the ZIP: cazo.jpg')
+      await screen.findByText(
+        'These photos are named in the CSV but missing from the ZIP: cazo.jpg'
+      )
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Preview/)).toBeNull();
   });
@@ -153,10 +162,16 @@ describe('BulkAddCsv — ZIP', () => {
   });
 
   test('a failed photo upload stops the import and says so', async () => {
-    uploadImageToCloudinary.mockRejectedValue(new Error('upload_failed'));
+    uploadImage.mockRejectedValue(new Error('upload_failed'));
     const { container, onImported } = renderBulkAdd();
 
-    pick(container, await zipFile({ 'things.csv': 'headline,photo\nCazo,cazo.jpg', 'cazo.jpg': 'fake-jpeg-bytes' }));
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo\nCazo,cazo.jpg',
+        'cazo.jpg': 'fake-jpeg-bytes',
+      })
+    );
     fireEvent.click(await screen.findByText('Add 1 items'));
 
     expect(
@@ -171,7 +186,9 @@ describe('BulkAddCsv — ZIP', () => {
 // the user has to be told which rows to fix.
 describe('BulkAddCsv — server rejections', () => {
   test('surfaces the error detail from a 400', async () => {
-    apiFetch.mockResolvedValue(jsonResponse({ error: 'Tag "Cocina" is not in this collection.' }, false));
+    apiFetch.mockResolvedValue(
+      jsonResponse({ error: 'Tag "Cocina" is not in this collection.' }, false)
+    );
     const { container, onImported } = renderBulkAdd();
 
     pick(container, csvFile('headline\nCazo'));

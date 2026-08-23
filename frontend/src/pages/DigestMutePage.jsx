@@ -29,7 +29,9 @@ export default function DigestMutePage() {
   const [headline, setHeadline] = useState('');
   const sentRef = useRef(false);
 
-  useEffect(() => { document.title = t('digestMute.pageTitle'); }, [t]);
+  useEffect(() => {
+    document.title = t('digestMute.pageTitle');
+  }, [t]);
 
   useEffect(() => {
     if (sentRef.current) return;
@@ -37,7 +39,10 @@ export default function DigestMutePage() {
     (async () => {
       try {
         const res = await fetch(`/api/v1/digest/mute/${token}/`, { method: 'POST' });
-        if (!res.ok) { setStatus('error'); return; }
+        if (!res.ok) {
+          setStatus('error');
+          return;
+        }
         const data = await res.json().catch(() => ({}));
         setHeadline(data.collection_headline || '');
         setStatus('done');
@@ -54,9 +59,19 @@ export default function DigestMutePage() {
     >
       <div
         className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
           <ContactCorner />
           <h1 className="form-hero-title">{t('digestMute.title')}</h1>
         </div>

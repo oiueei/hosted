@@ -156,29 +156,36 @@ def resolve_localized(value, lang=None):
     return next(iter(localized.values()))
 
 
-def cloudinary_url(image_id):
-    """Build Cloudinary URL from a stored public_id."""
-    if not image_id:
-        return None
-    import cloudinary.utils
+def asset_url(key):
+    """Public URL of a stored image key, or ``None`` if there is no key.
 
-    url, _ = cloudinary.utils.cloudinary_url(image_id, fetch_format="auto", quality="auto")
-    return url
-
-
-def cloudinary_doc_url(public_id):
-    """Build the delivery URL of an uploaded PDF (``Collection.welcome_doc``).
-
-    Cloudinary stores a PDF under ``resource_type=image`` (it treats it as a
-    page-based image), so the id lives in the same namespace as the photos — but
-    the URL must carry the ``.pdf`` extension and **no** ``f_auto``/``q_auto``:
-    those are photo transformations and would ask Cloudinary to re-encode the
-    document instead of serving it. Delivery also requires "Allow delivery of PDF
-    and ZIP files" to be on in the account's security settings (it is).
+    Thin on purpose: the key stored on the model *is* the path in the bucket, so
+    there is nothing to build beyond the base URL. The Cloudinary version this
+    replaces asked for ``f_auto,q_auto`` — automatic format and quality — which
+    an object store does not do. That work moved to where the bytes are: the
+    browser resizes and encodes to WebP before uploading, so the object served
+    here is already the one we want served.
     """
-    if not public_id:
-        return None
-    import cloudinary.utils
+    from core.services import storage
 
-    url, _ = cloudinary.utils.cloudinary_url(public_id, resource_type="image", format="pdf")
-    return url
+    return storage.public_url(key)
+
+
+def doc_asset_url(key):
+    """Public URL of an uploaded PDF (``Collection.welcome_doc``).
+
+    Identical to :func:`asset_url` today, and kept separate anyway. Under
+    Cloudinary a PDF needed its own URL shape — it lived under
+    ``resource_type=image`` and had to be asked for with a ``.pdf`` extension and
+    without the photo transformations. That peculiarity is gone: the object store
+    serves the ``Content-Type`` that was signed at upload.
+
+    What has not gone is the reason for a separate function. A document is the
+    one asset that travels by email and gets opened weeks later, so it is the one
+    most likely to need a ``Content-Disposition``, or a signed URL, or an
+    expiring link. When that day comes there is already a place to put it, and
+    the photos do not follow it there.
+    """
+    from core.services import storage
+
+    return storage.public_url(key)

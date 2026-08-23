@@ -47,10 +47,14 @@ function mockApi(pages, { postOk = true } = {}) {
   });
 }
 
-const renderPage = () => render(<MemoryRouter><OwnerBookingsPage /></MemoryRouter>);
+const renderPage = () =>
+  render(
+    <MemoryRouter>
+      <OwnerBookingsPage />
+    </MemoryRouter>
+  );
 
-const postUrls = () =>
-  apiFetch.mock.calls.filter(([, o]) => o?.method === 'POST').map(([u]) => u);
+const postUrls = () => apiFetch.mock.calls.filter(([, o]) => o?.method === 'POST').map(([u]) => u);
 
 beforeEach(() => {
   localStorage.clear();
@@ -61,13 +65,20 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('OwnerBookingsPage listing', () => {
   test('names who is waiting and on what, and splits pending from settled', async () => {
-    mockApi([{
-      results: [
-        booking(),
-        booking({ code: 'BKG002', status: 'ACCEPTED', thing_headline: 'Ladder', requester_name: 'Lili' }),
-      ],
-      next: null,
-    }]);
+    mockApi([
+      {
+        results: [
+          booking(),
+          booking({
+            code: 'BKG002',
+            status: 'ACCEPTED',
+            thing_headline: 'Ladder',
+            requester_name: 'Lili',
+          }),
+        ],
+        next: null,
+      },
+    ]);
     renderPage();
 
     // The column an owner needs that the requester's page doesn't have: who asked.
@@ -93,7 +104,9 @@ describe('OwnerBookingsPage listing', () => {
     mockApi([{ results: [], next: null }]);
     renderPage();
 
-    expect(await screen.findByText('Nobody has requested anything from you yet.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Nobody has requested anything from you yet.')
+    ).toBeInTheDocument();
     // The owner's own way forward, not the requester page's "Browse
     // collections" — nobody has asked for anything, so the useful next move is
     // to put the collection in front of someone.
@@ -128,9 +141,7 @@ describe('OwnerBookingsPage deciding', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Decline this request' }));
 
-    await waitFor(() =>
-      expect(postUrls()).toEqual(['/api/v1/bookings/BKG001/reject/'])
-    );
+    await waitFor(() => expect(postUrls()).toEqual(['/api/v1/bookings/BKG001/reject/']));
     expect(screen.queryByRole('dialog')).toBeNull();
     // The decision is reflected without a refetch, and the row leaves "Waiting
     // on you" — an answered request must stop looking like a question.

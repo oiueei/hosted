@@ -1,22 +1,22 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadPdfToCloudinary, PDF_MAX_BYTES } from '../utils/uploadPdf';
+import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
 /**
- * Single-PDF upload backed by the same signed Cloudinary direct upload as
+ * Single-PDF upload backed by the same ticketed direct-to-bucket upload as
  * ImageUpload — no resize (a document is not a photo) and a 5 MB client-side cap.
  * Once a file is present it shows a link to it plus a Remove button; removing
- * clears the field without deleting from Cloudinary.
+ * clears the field without deleting the stored object.
  *
  * Props:
  *   id          – HTML id for the FileInput
  *   label       – visible label text
  *   onChange    – called with the new public_id (or '') on upload / remove
  *   currentUrl  – full URL of the current saved PDF (for the initial link)
- *   folder      – Cloudinary upload folder (default 'oiueei/documents')
+ *   folder      – upload folder (default 'oiueei/documents')
  *   helperText  – optional helper text shown below the input
  */
 export default function PdfUpload({
@@ -62,7 +62,7 @@ export default function PdfUpload({
 
     setUploading(true);
     try {
-      const { publicId, url } = await uploadPdfToCloudinary(file, folder);
+      const { publicId, url } = await uploadPdf(file, folder);
       setDocUrl(url);
       onChange(publicId);
     } catch {

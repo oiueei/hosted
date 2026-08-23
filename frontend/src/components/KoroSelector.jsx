@@ -8,7 +8,9 @@ export default function KoroSelector({ value, onChange }) {
 
   return (
     <div className="koro-selector">
-      <span id="koro-selector-label" className="koro-selector-label">{t('editProfile.koroLabel')}</span>
+      <span id="koro-selector-label" className="koro-selector-label">
+        {t('editProfile.koroLabel')}
+      </span>
       <div className="koro-selector-grid" role="group" aria-labelledby="koro-selector-label">
         {KORO_TYPES.map((type) => {
           const selected = type === value;

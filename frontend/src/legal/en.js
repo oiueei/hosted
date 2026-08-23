@@ -19,17 +19,19 @@ OIUEEI is source-available software (BUSL 1.1 licence; MIT from 2030). This page
 
 **What the app stores, by design:** your email (to sign in with magic links — no passwords), your name and optional profile (bio, photo, language), the content you publish (collections, things and their photos, questions and answers, requests), your email preferences, and **optional** demographics (birth-year generation and postal code) visible only to the people who run your communities, in aggregate — never public.
 
-**Where it goes:** email leaves through whatever SMTP provider the operator configured, and images are hosted on Cloudinary. Nothing else leaves the instance: no third-party SDKs, no events sent anywhere. Usage metrics are first-party, pseudonymised and never shared.
+**Where it goes:** email leaves through whatever SMTP provider the operator configured, and images and documents are stored in the operator's own object-storage bucket. Nothing else leaves the instance: no third-party SDKs, no events sent anywhere. Usage metrics are first-party, pseudonymised and never shared.
 
 **Cookies:** technical only (session and security). There are no third-party or advertising cookies, which is why there is no banner.
 
 **Deleting your account:** from your profile (Edit profile → Delete account), with email confirmation. It is immediate and irreversible: your account, your collections, your things and their photos, and your requests are erased. Questions you asked on other people's things and the transfer history stay **without your name** ("Former member").
 
+**Getting a copy of your data:** also self-service, from your profile — download everything as one file, any time, no confirmation needed. If you manage a group, you can download the whole thing too: members, things, the full history. That second file carries other people's data, so keep it safe and don't forward it.
+
 # Basic terms
 
-OIUEEI is in alpha and offered "as is", without warranties, to the extent the law allows. The content you publish is yours and you are responsible for it; don't publish anything illegal or harmful. Exchanges (gifts, sales, loans, rentals) are agreements between people: the platform is not a party to them and processes no payments. There is a report button, and the operator may remove content that breaks these rules.
+OIUEEI is in alpha and offered "as is", without warranties, to the extent the law allows. The content you publish is yours and you are responsible for it; don't publish anything illegal or harmful. Exchanges (gifts, sales, loans, rentals) are agreements between people: the platform is not a party to them and processes no payments — a deposit shown on a listing is information the two people agree between themselves, and OIUEEI never holds it, moves it or guarantees its return. There is a report button, and the operator may remove content that breaks these rules.
 
 # For operators (self-hosting)
 
-If you deploy OIUEEI, you are the data controller: complete this page with your identity, your purposes and your processors (email provider, Cloudinary, hosting), and honour your users' rights. The BUSL 1.1 licence allows production use; the one thing it does not allow is offering OIUEEI to third parties as a hosted service that competes with the licensor's paid offering.
+If you deploy OIUEEI, you are the data controller: complete this page with your identity, your purposes and your processors (email provider, object storage, hosting), and honour your users' rights. The BUSL 1.1 licence allows production use; the one thing it does not allow is offering OIUEEI to third parties as a hosted service that competes with the licensor's paid offering.
 `;

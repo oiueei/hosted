@@ -33,14 +33,18 @@ export default function JoinPage() {
   // keep the generic copy rather than inventing a name.
   const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
 
-  useEffect(() => { document.title = `${t('joinToAct.heading')} — OIUEEI`; }, [t]);
+  useEffect(() => {
+    document.title = `${t('joinToAct.heading')} — OIUEEI`;
+  }, [t]);
 
   useEffect(() => {
     if (!code) return undefined;
     const controller = new AbortController();
     apiFetch(`/api/v1/collections/${code}/`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => { if (data?.headline) setHeadline(L(data.headline)); })
+      .then((data) => {
+        if (data?.headline) setHeadline(L(data.headline));
+      })
       .catch(() => {});
     return () => controller.abort();
     // `L` is rebuilt on every language change; re-running for that would only
@@ -55,9 +59,19 @@ export default function JoinPage() {
     >
       <div
         className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
           <ContactCorner />
           <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
           <h1 className="form-hero-title">{t('joinToAct.heading')}</h1>

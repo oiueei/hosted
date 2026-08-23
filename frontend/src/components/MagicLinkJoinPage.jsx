@@ -24,9 +24,17 @@ import PageLayout from './PageLayout';
  *   document title, hero title and intro paragraph (their names differ per page).
  * - `extraBody`: extra fields merged into the POST body.
  */
-export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descriptionKey, extraBody }) {
+export default function MagicLinkJoinPage({
+  ns,
+  docTitleKey,
+  titleKey,
+  descriptionKey,
+  extraBody,
+}) {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t(docTitleKey); }, [t, docTitleKey]);
+  useEffect(() => {
+    document.title = t(docTitleKey);
+  }, [t, docTitleKey]);
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: `${ns}.magicLinkSent`,
     errorMessageKey: `${ns}.errorSendingLink`,
@@ -47,9 +55,7 @@ export default function MagicLinkJoinPage({ ns, docTitleKey, titleKey, descripti
           >
             {message}
           </Notification>
-          {status === 'success' && (
-            <p className="section-mt">{t('common.closeThisTab')}</p>
-          )}
+          {status === 'success' && <p className="section-mt">{t('common.closeThisTab')}</p>}
         </>
       ) : (
         <form onSubmit={submit} className="measure">

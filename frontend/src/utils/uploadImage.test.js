@@ -1,30 +1,27 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
-// The scaling itself is covered by resizeImage.test.js; here it only has to run
-// first and hand its output to the upload.
+// The scaling and the re-encode are covered by resizeImage.test.js; here it only
+// has to run first and hand its output to the upload.
 vi.mock('./resizeImage', () => ({ resizeImage: vi.fn() }));
 
 import { apiFetch } from '../services/api';
 import { resizeImage } from './resizeImage';
-import { uploadImageToCloudinary } from './uploadImage';
+import { uploadImage } from './uploadImage';
 
-// What the server signs (core/views/upload.py): every parameter, including the
-// public_id and the folder, so the client can only echo them back.
-const SIGNATURE = {
-  signature: 'sig-abc',
-  timestamp: 1720000000,
-  api_key: 'key-123',
-  cloud_name: 'demo-cloud',
-  folder: 'oiueei/things',
-  public_id: 'oiueei/things/server-generated',
-  allowed_formats: 'jpg,jpeg,png,webp,gif,heic,heif,avif,bmp,tif,tiff',
-  resource_type: 'image',
-};
-
-const UPLOADED = {
-  public_id: 'oiueei/things/server-generated',
-  secure_url: 'https://res.cloudinary.com/demo-cloud/image/upload/v1/server-generated.jpg',
+// What the server hands back (core/views/upload.py). Everything that constrains
+// the upload — key, type, cache policy, byte length — is already inside `url`'s
+// signature; the client's job is to send exactly what it was told to.
+const TICKET = {
+  url: 'https://bucket.fsn1.example-storage.com/oiueei/things/abc?X-Amz-Signature=sig',
+  method: 'PUT',
+  headers: {
+    'x-amz-acl': 'public-read',
+    'Content-Type': 'image/webp',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  },
+  key: 'oiueei/things/abc',
+  public_url: 'https://bucket.fsn1.example-storage.com/oiueei/things/abc',
 };
 
 function jsonResponse(data, ok = true) {
@@ -38,10 +35,11 @@ let resized;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  resized = new File(['smaller bytes'], 'photo.jpg', { type: 'image/jpeg' });
+  resized = new File(['smaller bytes'], 'photo.webp', { type: 'image/webp' });
   resizeImage.mockResolvedValue(resized);
-  apiFetch.mockResolvedValue(jsonResponse(SIGNATURE));
-  fetchMock = vi.fn(() => Promise.resolve(jsonResponse(UPLOADED)));
+  apiFetch.mockResolvedValue(jsonResponse(TICKET));
+  // The store answers an empty body — there is nothing to read back from it.
+  fetchMock = vi.fn(() => Promise.resolve({ ok: true, status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -49,56 +47,68 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('uploadImageToCloudinary', () => {
-  test('resizes first, then uploads the resized file with the signed parameters', async () => {
+describe('uploadImage', () => {
+  test('resizes first, then PUTs the resized file with the headers it was given', async () => {
     const original = photo();
 
-    const result = await uploadImageToCloudinary(original);
+    const result = await uploadImage(original);
 
     expect(resizeImage).toHaveBeenCalledWith(original);
-    expect(apiFetch).toHaveBeenCalledWith('/api/v1/upload/signature/', {
-      method: 'POST',
-      body: JSON.stringify({ folder: 'oiueei/things' }),
-    });
 
     const [url, options] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://api.cloudinary.com/v1_1/demo-cloud/image/upload');
-    expect(options.method).toBe('POST');
+    expect(url).toBe(TICKET.url);
+    expect(options.method).toBe('PUT');
+    expect(options.headers).toEqual(TICKET.headers);
+    // The raw file is the body — not form-data, which is what the old
+    // Cloudinary path sent and what the presigned URL would refuse.
+    expect(options.body).toBe(resized);
 
-    // What goes up is the resize output, never the original.
-    const sent = options.body;
-    expect(sent.get('file')).toBe(resized);
-    // Every signed parameter is echoed back verbatim — changing any breaks the
-    // signature, so this is the contract with the server.
-    expect(sent.get('api_key')).toBe('key-123');
-    expect(sent.get('timestamp')).toBe('1720000000');
-    expect(sent.get('signature')).toBe('sig-abc');
-    expect(sent.get('folder')).toBe('oiueei/things');
-    expect(sent.get('public_id')).toBe('oiueei/things/server-generated');
-    expect(sent.get('allowed_formats')).toBe(SIGNATURE.allowed_formats);
-
-    expect(result).toEqual({ publicId: UPLOADED.public_id, url: UPLOADED.secure_url });
+    expect(result).toEqual({ publicId: TICKET.key, url: TICKET.public_url });
   });
 
-  test('asks for a signature on the caller-chosen folder', async () => {
-    await uploadImageToCloudinary(photo(), 'oiueei/users');
+  test('declares the type and length of what it is actually about to send', async () => {
+    await uploadImage(photo());
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/v1/upload/signature/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/v1/upload/ticket/', {
       method: 'POST',
-      body: JSON.stringify({ folder: 'oiueei/users' }),
+      body: JSON.stringify({
+        folder: 'oiueei/things',
+        content_type: 'image/webp',
+        content_length: resized.size,
+      }),
     });
   });
 
-  test('throws signature_failed and uploads nothing when the server refuses to sign', async () => {
+  test('declares the resize output, never the original file', async () => {
+    // The whole point of reading them off the resize result: the server signs
+    // these two values, so declaring the original's would fail at the bucket.
+    resized = new File(['x'], 'photo.png', { type: 'image/png' });
+    resizeImage.mockResolvedValue(resized);
+
+    await uploadImage(photo());
+
+    const body = JSON.parse(apiFetch.mock.calls[0][1].body);
+    expect(body.content_type).toBe('image/png');
+    expect(body.content_length).toBe(resized.size);
+  });
+
+  test('asks for a ticket on the caller-chosen folder', async () => {
+    await uploadImage(photo(), 'oiueei/users');
+
+    expect(JSON.parse(apiFetch.mock.calls[0][1].body).folder).toBe('oiueei/users');
+  });
+
+  test('throws signature_failed and uploads nothing when the server refuses a ticket', async () => {
     apiFetch.mockResolvedValue(jsonResponse({ detail: 'no' }, false));
 
-    await expect(uploadImageToCloudinary(photo())).rejects.toThrow('signature_failed');
+    await expect(uploadImage(photo())).rejects.toThrow('signature_failed');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test('throws upload_failed when Cloudinary rejects the upload', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ error: 'nope' }, false));
+  test('throws upload_failed when the store rejects the upload', async () => {
+    // What a tampered length or type looks like from here: 403 from the bucket.
+    fetchMock.mockResolvedValue({ ok: false, status: 403 });
 
-    await expect(uploadImageToCloudinary(photo())).rejects.toThrow('upload_failed');
+    await expect(uploadImage(photo())).rejects.toThrow('upload_failed');
   });
 });

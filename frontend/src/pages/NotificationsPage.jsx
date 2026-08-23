@@ -13,7 +13,9 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const { token } = useParams();
 
-  useEffect(() => { document.title = t('titles.notifications'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.notifications');
+  }, [t]);
 
   const { tc: theeemeColors, btnStyle } = useTheeeme();
 
@@ -81,61 +83,121 @@ export default function NotificationsPage() {
 
   return (
     <PageLayout backTo="/" backLabel={t('common.home')}>
-        <h1 className="page-title-xl">{t('notifications.pageTitle')}</h1>
+      <h1 className="page-title-xl">{t('notifications.pageTitle')}</h1>
 
-        {invalidToken ? (
-          <Notification type="error" label={t('common.error')}>
-            {t('notifications.invalidLink')}
-          </Notification>
-        ) : (
-          <>
-            <p>{t('notifications.intro')}</p>
-            <div className="form-grid">
-              <div className="toggle-left">
-                <ToggleButton
-                  id="notify-magic"
-                  label={<>{t('notifications.magicLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('notifications.magicHelper')}</span></>}
-                  checked
-                  disabled
-                  onChange={() => {}}
-                  variant="inline"
-                  theme={theeemeColors.color_01 ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` } : undefined}
-                />
-              </div>
-              <div className="toggle-left">
-                <ToggleButton
-                  id="notify-activity"
-                  label={<>{t('notifications.activityLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('notifications.activityHelper')}</span></>}
-                  checked={notifyActivity}
-                  onChange={(val) => { setNotifyActivity(!val); setSaved(false); }}
-                  variant="inline"
-                  theme={theeemeColors.color_01 ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` } : undefined}
-                />
-              </div>
-              <div className="toggle-left">
-                <ToggleButton
-                  id="notify-news"
-                  label={<>{t('notifications.newsLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('notifications.newsHelper')}</span></>}
-                  checked={notifyNews}
-                  onChange={(val) => { setNotifyNews(!val); setSaved(false); }}
-                  variant="inline"
-                  theme={theeemeColors.color_01 ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` } : undefined}
-                />
-              </div>
+      {invalidToken ? (
+        <Notification type="error" label={t('common.error')}>
+          {t('notifications.invalidLink')}
+        </Notification>
+      ) : (
+        <>
+          <p>{t('notifications.intro')}</p>
+          <div className="form-grid">
+            <div className="toggle-left">
+              <ToggleButton
+                id="notify-magic"
+                label={
+                  <>
+                    {t('notifications.magicLabel')}
+                    <br />
+                    <span
+                      style={{
+                        fontSize: 'var(--fontsize-body-s)',
+                        fontWeight: 400,
+                        color: 'var(--color-black-70)',
+                      }}
+                    >
+                      {t('notifications.magicHelper')}
+                    </span>
+                  </>
+                }
+                checked
+                disabled
+                onChange={() => {}}
+                variant="inline"
+                theme={
+                  theeemeColors.color_01
+                    ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                    : undefined
+                }
+              />
             </div>
-            {saved && (
-              <Notification type="success" label={t('common.done')}>
-                {t('notifications.saved')}
-              </Notification>
-            )}
-            <div className="form-actions">
-              <Button fullWidth disabled={submitting} onClick={handleSave} style={btnStyle}>
-                {submitting ? t('common.saving') : t('common.save')}
-              </Button>
+            <div className="toggle-left">
+              <ToggleButton
+                id="notify-activity"
+                label={
+                  <>
+                    {t('notifications.activityLabel')}
+                    <br />
+                    <span
+                      style={{
+                        fontSize: 'var(--fontsize-body-s)',
+                        fontWeight: 400,
+                        color: 'var(--color-black-70)',
+                      }}
+                    >
+                      {t('notifications.activityHelper')}
+                    </span>
+                  </>
+                }
+                checked={notifyActivity}
+                onChange={(val) => {
+                  setNotifyActivity(!val);
+                  setSaved(false);
+                }}
+                variant="inline"
+                theme={
+                  theeemeColors.color_01
+                    ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                    : undefined
+                }
+              />
             </div>
-          </>
-        )}
-        <Toast toast={toast} onClose={() => setToast(null)} />
+            <div className="toggle-left">
+              <ToggleButton
+                id="notify-news"
+                label={
+                  <>
+                    {t('notifications.newsLabel')}
+                    <br />
+                    <span
+                      style={{
+                        fontSize: 'var(--fontsize-body-s)',
+                        fontWeight: 400,
+                        color: 'var(--color-black-70)',
+                      }}
+                    >
+                      {t('notifications.newsHelper')}
+                    </span>
+                  </>
+                }
+                checked={notifyNews}
+                onChange={(val) => {
+                  setNotifyNews(!val);
+                  setSaved(false);
+                }}
+                variant="inline"
+                theme={
+                  theeemeColors.color_01
+                    ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+          {saved && (
+            <Notification type="success" label={t('common.done')}>
+              {t('notifications.saved')}
+            </Notification>
+          )}
+          <div className="form-actions">
+            <Button fullWidth disabled={submitting} onClick={handleSave} style={btnStyle}>
+              {submitting ? t('common.saving') : t('common.save')}
+            </Button>
+          </div>
+        </>
+      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
   );
 }

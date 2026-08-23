@@ -301,7 +301,7 @@ Returns user profile. Own profile returns full data (`UserSerializer`), other pr
 | **Endpoint** | `PUT /api/v1/users/{user_code}/` |
 | **Permission** | `IsAuthenticated` + own profile only |
 
-Updates own profile via `UserUpdateSerializer` (partial update). Accepts optional `name`, `headline`, `about` (Markdown bio, max 2000, HTML rejected), `photo` (Cloudinary public_id), `koro`, `theeeme` (Theeeme code), `notify_activity`, and `notify_news`. Returns the full `UserSerializer` (including `photo_url`). Returns 403 if attempting to update another user.
+Updates own profile via `UserUpdateSerializer` (partial update). Accepts optional `name`, `headline`, `about` (Markdown bio, max 2000, HTML rejected), `photo` (storage key), `koro`, `theeeme` (Theeeme code), `notify_activity`, and `notify_news`. Returns the full `UserSerializer` (including `photo_url`). Returns 403 if attempting to update another user.
 
 ---
 
@@ -411,7 +411,7 @@ Lists things from collections where the current user is invited. Only returns AC
 | **Permission** | `IsAuthenticated` + `collection.can_add_thing()` |
 | **Rate limit** | `10/h` per user |
 
-CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, availability, location, condition, tags, thumbnail, is_endless}, ...]}` (max 100 rows), parsed and previewed client-side by `BulkAddCsv`. Each row is validated with `ThingBulkRowSerializer` (the project's Safe* fields + a `reject_spreadsheet_formula` CSV-injection guard on free-text fields, including each `tags` entry; `thumbnail` uses `ImageIdField`, path-traversal-safe; `fee` accepts a decimal comma — `LocaleDecimalField`, S9 — since a CSV cell has no client `NumberInput` to normalise it first) , `thing_type_denial` (the deployment's `CREATOR_POLICY` — reported as a row error like every other row failure, since the contract here is that one response names every bad row) and `type_validity_error`; `tags` are additionally checked in the view against the target collection's `Collection.tags` vocabulary (mirrors the single-create subset check). **A CSV tag may name a localized vocabulary entry by any of its languages** (S10, `_resolve_tag_aliases`): `{"es": "Crianza", "ca": "Criança"}` in the vocabulary accepts a CSV cell of `Crianza` or `Criança` (case-insensitively) as well as the exact canonical JSON, storing the canonical string either way; a casefolded alias that matches two distinct vocabulary entries is rejected as ambiguous rather than guessed, and an alias matching nothing keeps the existing "not defined by the collection" error. If **any** row fails the request returns `400 {"errors": [{row, errors}]}` and **nothing** is created. On full success every row is created in one `transaction.atomic()` and the response is `201 {"created": N, "codes": [...]}`. **Photos** are importable via the client's ZIP path: `BulkAddCsv` unzips, uploads each image to Cloudinary, and sends the resulting public_id as `thumbnail` — the server only ever receives the validated id, never the binary. Gallery photos are still not bulk-importable.
+CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, availability, location, condition, tags, thumbnail, is_endless}, ...]}` (max 100 rows), parsed and previewed client-side by `BulkAddCsv`. Each row is validated with `ThingBulkRowSerializer` (the project's Safe* fields + a `reject_spreadsheet_formula` CSV-injection guard on free-text fields, including each `tags` entry; `thumbnail` uses `ImageIdField`, path-traversal-safe; `fee` accepts a decimal comma — `LocaleDecimalField`, S9 — since a CSV cell has no client `NumberInput` to normalise it first) , `thing_type_denial` (the deployment's `CREATOR_POLICY` — reported as a row error like every other row failure, since the contract here is that one response names every bad row) and `type_validity_error`; `tags` are additionally checked in the view against the target collection's `Collection.tags` vocabulary (mirrors the single-create subset check). **A CSV tag may name a localized vocabulary entry by any of its languages** (S10, `_resolve_tag_aliases`): `{"es": "Crianza", "ca": "Criança"}` in the vocabulary accepts a CSV cell of `Crianza` or `Criança` (case-insensitively) as well as the exact canonical JSON, storing the canonical string either way; a casefolded alias that matches two distinct vocabulary entries is rejected as ambiguous rather than guessed, and an alias matching nothing keeps the existing "not defined by the collection" error. If **any** row fails the request returns `400 {"errors": [{row, errors}]}` and **nothing** is created. On full success every row is created in one `transaction.atomic()` and the response is `201 {"created": N, "codes": [...]}`. **Photos** are importable via the client's ZIP path: `BulkAddCsv` unzips, uploads each image to the bucket through the same ticketed path as every other upload, and sends the resulting storage key as `thumbnail` — the server only ever receives the validated key, never the binary. Gallery photos are still not bulk-importable.
 
 ---
 
@@ -618,6 +618,8 @@ Invites many guests at once from a client-parsed CSV (`{"invites": [{"email": ..
 
 Owner-only usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only).
 
+The metrics themselves live in [`export_service.collection_stats_rows()`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); this view only wraps them in a CSV. The collection export renders the same rows as a dict, so the two can't drift.
+
 ---
 
 ## FAQ Views (`core/views/faq.py`)
@@ -716,44 +718,88 @@ Both report shapes are understood: the legacy `{"csp-report": {...}}` and a `rep
 
 ## Upload Views (`core/views/upload.py`)
 
-### CloudinarySignatureView
+### UploadTicketView
 
 | | |
 |---|---|
-| **Endpoint** | `POST /api/v1/upload/signature/` |
+| **Endpoint** | `POST /api/v1/upload/ticket/` |
 | **Permission** | `IsAuthenticated` |
+| **Rate limit** | 30 requests/hour per user |
 
-Generates a short-lived Cloudinary signed upload signature so the frontend can upload images directly to Cloudinary without routing the binary data through Django. The signature binds every parameter, so a client cannot tamper with them: the **`public_id` is generated server-side** (preventing arbitrary ids / overwrites), `allowed_formats` restricts accepted formats (raster photo formats only — SVG excluded), and `resource_type` is always `image` (not client-trusted). `max_file_size` is **not** a signable Cloudinary upload parameter — its own signature computation excludes it, so signing it made ours diverge from Cloudinary's and every document upload failed with "Invalid Signature" (S3, prod outage before this fix). The per-file size cap stays a client-side check.
+Hands the browser a short-lived ticket to write **one** object to the media
+bucket, so the binary never routes through Django. That property is unchanged
+from the Cloudinary signature endpoint this replaces; what changed is who
+enforces the rules. Before, the server computed an HMAC over a set of upload
+parameters and the client echoed them back. Now the rules are signed into a
+presigned `PUT` URL, and the storage provider refuses the upload with
+`SignatureDoesNotMatch` if any of them is altered in flight.
 
-**Document mode (the collection welcome PDF).** `{"kind": "document"}` narrows `allowed_formats` to **`pdf` alone**; the real cap is `PdfUpload`'s client-side check. Everything else is unchanged, including the server-generated `public_id` and `resource_type: image` — Cloudinary treats a PDF as a page-based image, so both kinds share the resource type. Any `kind` other than the literal `"document"` is an image upload, so an unknown value can only ever narrow to the existing defaults. **The folder is forced, not client-chosen** (S4): document mode always signs `oiueei/documents`, ignoring whatever `folder` the body sent. `oiueei/documents` is document-only — an image-mode request naming it explicitly falls back to `oiueei/users` like any other disallowed value, so photos can never land in the documents folder.
+Four things are decided here and cannot be moved by the client:
+
+- **the key** — `secrets.token_urlsafe(16)` inside the folder, so a client can't
+  name its own object and overwrite somebody else's. The key's entropy is also
+  what keeps a *public* object unguessable: the bucket is private and does not
+  list, so knowing the key is the only way to reach the object;
+- **the folder** — one of `oiueei/users`, `oiueei/things`, `oiueei/collections`
+  in image mode, and `oiueei/documents` **forced** in document mode. Anything
+  else falls back to `oiueei/users`, `oiueei/documents` included, so an image can
+  never be written where documents live (S4);
+- **the content type** — from an allowlist, signed exactly. Raster photo types
+  only in image mode (**SVG is excluded** — it can carry script, and an
+  `<img>`-rendered upload must never carry active content), `application/pdf`
+  alone in document mode. Because it is signed rather than sniffed at read time,
+  the type the bucket later serves is the type decided here — which is also what
+  stops an upload coming back as `text/html` and turning the bucket into an XSS
+  origin. It is not optional: an object stored without one is served as
+  `binary/octet-stream`, and the welcome PDF then downloads instead of opening;
+- **the size** — and this one is new. Cloudinary's signature computation
+  *excluded* `max_file_size`, so signing it made ours diverge from theirs and
+  every document upload failed with "Invalid Signature" (S3, a production
+  outage). The cap had to live in `PdfUpload`, in the browser, where anyone could
+  skip it. There is no such exclusion here: the client declares
+  `content_length`, this view refuses anything over the limit, and the exact
+  number is signed into the URL. Declaring one size and sending another — in
+  either direction — fails the signature, and JavaScript cannot forge it because
+  it may not set `Content-Length`. Limits: **5 MB** documents (the welcome doc's
+  long-standing figure, now enforced where it can't be skipped), **10 MB**
+  images — a backstop against abuse rather than a UX limit, since the browser
+  downscales to 1216px first and a real upload lands in the hundreds of kB.
+
+Any `kind` other than the literal `"document"` is an image upload, so an unknown
+value can only ever narrow to the image defaults.
 
 **Request body:**
 ```json
-{ "folder": "oiueei/things" }
-{ "kind": "document" }
+{ "folder": "oiueei/things", "content_type": "image/webp", "content_length": 183422 }
+{ "kind": "document", "content_type": "application/pdf", "content_length": 812004 }
 ```
-
-Allowed folder values (image mode): `oiueei/users`, `oiueei/things`, `oiueei/collections`. Any other value — including `oiueei/documents`, document-only — falls back to `oiueei/users`. Document mode ignores any `folder` in the body and always signs `oiueei/documents`.
 
 **Response:**
 ```json
 {
-    "signature": "abc123...",
-    "timestamp": 1234567890,
-    "api_key": "...",
-    "cloud_name": "...",
-    "folder": "oiueei/things",
-    "public_id": "<server-generated>",
-    "allowed_formats": "jpg,jpeg,png,...",
-    "resource_type": "image"
+    "url": "https://<bucket>.<endpoint>/<key>?X-Amz-Algorithm=...&X-Amz-Signature=...",
+    "method": "PUT",
+    "headers": {
+        "x-amz-acl": "public-read",
+        "Content-Type": "image/webp",
+        "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "key": "oiueei/things/<random>"
 }
 ```
 
+`Cache-Control` is signed with the upload because there is no CDN in front of
+the bucket — without it every visit is another round trip to the storage region.
+It is safe to make it `immutable`: keys are random and an object is never
+rewritten.
+
 **Frontend upload flow:**
-1. Call this endpoint to get the signed parameters.
-2. POST the file directly to `https://api.cloudinary.com/v1_1/{cloud_name}/image/upload`, sending the signed parameters back verbatim (`folder`, `public_id`, `allowed_formats`).
-3. Cloudinary returns the final `public_id` (folder-prefixed) — store **that** returned value.
-4. Save the `public_id` to the relevant Django model field (`thumbnail` cover, the `User.photo` profile photo, or append to a Thing's `gallery`).
+1. Call this endpoint with the file's type and byte length.
+2. `PUT` the file as the **raw request body** (not multipart) to `url`, with
+   exactly the `headers` given.
+3. Store `key` in the relevant model field (`thumbnail`, `User.photo`, an entry
+   in a Thing's `gallery`, or `Collection.welcome_doc`) — the response has no
+   body to read a name out of, because the key was decided before the upload.
 
 ---
 
@@ -987,17 +1033,66 @@ Daily command (`python manage.py send_digests`) that sends digest emails:
 
 ### Management Command: `cleanup_orphan_images`
 
-On-demand command (`python manage.py cleanup_orphan_images`) that deletes **orphaned Cloudinary images** (#9) — uploads whose form was never submitted, so no DB row ever referenced them (the complement to `core.services.cloudinary_cleanup`, which handles record *deletes*). Superuser-run (there is no in-app endpoint — the shell/Heroku access is the gate).
+On-demand command (`python manage.py cleanup_orphan_images`) that deletes **orphaned images from object storage** (#9) — uploads whose form was never submitted, so no DB row ever referenced them (the complement to `core.services.asset_cleanup`, which handles record *deletes*). Superuser-run (there is no in-app endpoint — the shell/Heroku access is the gate).
 
 - **Dry-run by default.** It only lists what it would delete; pass `--commit` to actually delete. On Heroku, quote the inner command so the CLI doesn't eat the flag: `heroku run --app <app> "python manage.py cleanup_orphan_images --commit"`.
 - **Cross-references every DB image field** — `Thing.thumbnail` + `Thing.gallery`, `User.photo`, `Collection.thumbnail` — so anything in use is kept.
 - **Never touches `oiueei/seed/`** (the demo's shared image pool), even if unreferenced.
 - **Age window:** only assets older than `--min-age-hours` (default 24, so an in-flight upload mid-form isn't mistaken for an orphan) and younger than `--max-age-days` (default 30, keeping it a recent sweep). Run regularly (e.g. weekly) so every orphan is caught within its window.
-- Pages through `cloudinary.api.resources` (prefix `oiueei/`), deletes in batches of 100 via `cloudinary.api.delete_resources`, and prints a per-run summary (scanned / in use / seed / outside window / orphans / deleted).
+- Pages through `storage.iter_objects` (prefix `oiueei/`), deletes in batches of 100 via `storage.delete_many`, and prints a per-run summary (scanned / in use / seed / outside window / orphans / deleted). The batch is kept well under S3's own limit of 1000 so a failed batch costs a hundred orphans rather than a thousand; a failure is reported and the run continues.
+- The age window reads S3's `LastModified`, which for these objects **is** the upload time — a key is random, written once and never rewritten. That is why an object must never be overwritten in place: it would reset the clock and hide the object from the sweep for another day.
+
+### Management Command: `purge_expired_data`
+
+Enforces the retention table (GDPR art. 5.1.e): one period per category of data, each a `RETENTION_*` setting, **0 = keep indefinitely**. Deliberately **not** part of the daily chain — it deletes real rows, so it is meant to be looked at first.
+
+- **Dry-run by default**, like `cleanup_orphan_images`; `--commit` applies it. The dry-run prints exactly the counts the commit would take.
+- **Idempotent**: every step selects only rows still in the "before" state, so a second run is a no-op and a half-finished run can just be run again.
+- **`Event` is anonymised, not deleted** (`actor_code` blanked at 14 months). What expires is the link to a person, not the fact — the series survives as aggregate and stops being personal data, which is what art. 5.1.e asks for. Deleting it would throw away the history to achieve the same thing.
+- **Warned before anything happens — inactive accounts** (24m): sends the inactivity email and stamps `User.inactivity_notified`, from which the grace period is later counted. Skips anyone already warned (the stamp is what makes it idempotent), staff/superusers, and anyone holding a live `COLLECTION_INVITE` — telling somebody invited three days ago that their two-year-old account is expiring is true and useless. **A failed send leaves the stamp unwritten** so the clock never starts from an email that never arrived. Owning a live group does *not* skip the warning; it changes what the warning says (`send_inactivity_warning_email(..., will_delete=False)`), because an account that will not be deleted must not be told that it will. Coming back clears the stamp — `User.update_last_activity()` does it, which is the whole promise of the email.
+- **Deleted — inactive accounts**, once the grace period from the warning has run out. Two independent things must still be true and either one saves the account: the stamp is at least `RETENTION_INACTIVE_WARNING_DAYS` old **and** the account is still inactive. Coming back clears the stamp *and* refreshes `last_activity`, so somebody who did what the email asked is out of the queryset twice over — deliberate redundancy on an irreversible step. **An account that owns a collection with members is never deleted here**: `Collection.owner` is CASCADE, so erasing the founder of a working library takes the collection, its things and its photos from everyone who was still using it — a harm to everybody except the person who was actually inactive, decided by a nightly job. Those codes are printed for a human instead. Erasure goes through `account_service.delete_account`, the one written-down map of what dies with an account, so it leaves the same audit line a user-requested erasure does.
+- **Deleted — guest accounts nobody ever answered for** (60d, T6): `get_or_create(email=...)` writes a `User` row the moment an owner types an address, so an unanswered invitation leaves a stranger's email here indefinitely. Five conditions, each with its own negative test: no `last_activity`, in no collection's `invites` (membership is written on **accept**, so a row there is a real member who simply hasn't been back — the trap this step is most likely to fall into), owns no collection and no thing, has no live `COLLECTION_INVITE` RSVP, and is not staff/superuser (a `createsuperuser` account that never used the SPA matches everything else). Note the RSVP condition is *absence*, not expiry: `cleanup_rsvps` deletes expired rows daily, so by the time this looks there is nothing expired to find and `User.created` is what dates it.
+- **Deleted**: `DailyActivity` (26m), `InAppNotification` (12m), `Report` (12m from `created` — the model has no "resolved" state to date from, and adding one would be a moderation feature rather than a retention decision).
+- Periods are counted in **calendar months**, not 30-day blocks (`months_ago()`, day clamped to the target month's length). A person whose data goes six days early has a point.
+- A commit run logs its counts to the `security` logger: automated erasure leaves the same trail a user-requested one does.
+
+---
 
 ### Management Command: `backfill_events`
 
 One-off, idempotent seed of the `Event` log from existing rows (users → `USER_JOINED` at `date_joined`, collections/things/bookings at their `created`; accepted bookings also get `HOLD_ACCEPTED`). Run **once**, the day tracking ships, before forward instrumentation accumulates. Kept out of migrations per repo convention. Re-running never double-counts (skips when an equal event already exists).
+
+---
+
+## Data Export Views (`core/views/export.py`)
+
+Two downloads, one service. Both return a plain `HttpResponse` attachment rather than a DRF `Response`: what these serve is a **file** — it has a name, a disposition and a caching rule that a rendered JSON body doesn't carry. The tree itself, and the reasoning about what never leaves it, lives in [`export_service`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); these views are the HTTP layer around it — who may ask, how often, and what the browser may do with the answer.
+
+Both set `Content-Disposition: attachment; filename="oiueei-{code}-{date}.json"` and `Cache-Control: private, no-store`, and both log to the `security` logger with the size of what they served: a sudden change in what an export weighs is the first sign it started carrying something new.
+
+### AccountDataExportView
+
+| | |
+|---|---|
+| **Endpoint** | `GET /api/v1/auth/export/` |
+| **Permission** | `IsAuthenticated` |
+| **Rate limit** | 10 requests per day per user |
+
+Your own data, as one JSON file — the self-service half of the right the privacy policy used to answer with "write to me" (GDPR art. 20). The twin of [`AccountDeleteRequestView`](#accountdeleterequestview): the same account page offers both, in that order, because reading your copy before erasing it is the sane sequence and the legally solid one.
+
+### CollectionDataExportView
+
+| | |
+|---|---|
+| **Endpoint** | `GET /api/v1/collections/{collection_code}/export/` |
+| **Permission** | `IsAuthenticated` + collection owner (`require_collection_owner`) |
+| **Rate limit** | 10 requests per day per user |
+
+A whole group as its owner runs it, other members' things included. **A member gets 403, not a smaller file**: there is no partial export by design — "some of the group, depending on who asks" is a second access-control model to keep correct forever, and what a member is entitled to is their own account copy.
+
+Deliberately not folded into the account export: a collection of 4,000 things would bloat every personal download, this button belongs beside the stats CSV, and keeping them apart lets the account copy stay honestly framed as *your* data while this one is what it is — an operational copy of a group, carrying other people's details, which the page has to say out loud.
+
+**Query budgets.** `test_query_counts.py` pins both exports as constant in what they carry (a 200-thing group costs the same queries as a 5-thing one) plus a size ceiling on the 200-thing case — the half a query count can't see, and the reason photos travel as URLs rather than bytes. An N+1 here isn't a slow page; it's a 30-second Heroku timeout on the one request somebody makes when they're already unhappy enough to be leaving.
 
 ---
 
@@ -1072,6 +1167,8 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/collections/{code}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling)
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user
+- `/auth/export/` GET — 10 requests per day per user
+- `/collections/{code}/export/` GET — 10 requests per day per user. Building an export is the heaviest read in the app; the cap is what keeps "download my data" from being a way to walk a server out one file at a time
 - `/contact/` POST — 5 requests per hour per IP
 - `/csp-report/` POST — 30 requests per hour per IP (violation reports; browser extensions make these noisy)
 - `/health/` GET+HEAD — 60 requests per minute per IP. The only anonymous endpoint that reaches the database on every hit, so uncapped it is DB amplification rather than a monitor. Far above a real monitor's cadence (5 minutes = 0.2/m). It is a plain Django view, so it answers **429 itself** (`block=False` + `request.limited`) rather than letting `Ratelimited` surface as Django's 403 — DRF's exception handler doesn't run here
@@ -1085,6 +1182,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 3. **RSVP obfuscation + high-entropy links** — Email/magic links carry the RSVP's 26-char (~134-bit) `token` via `generate_token()`, never the 6-char PK or real object codes, so they resist both enumeration and brute force.
 4. **Security logging** — Auth events logged with IP addresses.
 5. **Production hardening** — HSTS, secure cookies, SSL redirect, custom admin path, JSON-only renderer.
+6. **Data exports carry no credentials** — the two endpoints in `core/views/export.py` serve files people forward and leave on laptops, so `Collection.share_token` and every `RSVP.token` are absent from the bytes (pinned by tests that read the raw bytes, not the tree). They are `no-store` and owner-scoped: an account copy is only ever your own, and a collection copy is owner-only with no partial variant.
 
 ---
 
@@ -1110,7 +1208,7 @@ Business logic is extracted into `core/services/`:
 
 ### Utilities
 
-- `core/utils.py`: `generate_id()`, `get_client_ip()`, `cloudinary_url()` — `cloudinary_url(public_id)` now uses the Cloudinary Python SDK (`cloudinary.utils.cloudinary_url`) with `fetch_format=auto` and `quality=auto`, replacing the previous hardcoded URL template.
+- `core/utils.py`: `generate_id()`, `get_client_ip()`, `asset_url()` — `asset_url(key)` joins the stored key onto `MEDIA_PUBLIC_BASE_URL` via `core.services.storage.public_url`. It replaced a Cloudinary SDK call that asked for `fetch_format=auto`/`quality=auto`; an object store does not transform, so that job moved to the browser, which encodes to WebP before uploading.
 - `core/validators.py`: `ImageIdField`, `SafeHeadlineField`, `SafeTextField`, `validate_image_id()`, `validate_headline()`
 - `core/pagination.py`: `StandardResultsPagination` (max 100 items)
 - `core/views/_helpers.py`: `viewer_code()`, `deny_if_cannot_view()`, `get_viewable_thing()`, `type_validity_error()`, `require_collection_owner()`, and **`body_dict(request)`** — `request.data` when the body is a JSON object, else `{}`. DRF parses a JSON *array* body into a `list`, which has no `.get`, so any view reading `request.data.get(...)` **before a serializer has run** answers 500 where it owes a 400. Use it on every such read; a non-object body then means "no fields given" and falls through to the view's own validation. Pinned by `core/tests/integration/test_array_body.py`.

@@ -141,7 +141,11 @@ describe('MyBookingsPage cancelling', () => {
   test('cancelling posts to the booking and moves the row to Cancelled', async () => {
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ results: [booking()] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ results: [booking()] }),
+      })
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
     renderPage();
 
@@ -161,7 +165,11 @@ describe('MyBookingsPage cancelling', () => {
     // owner still holds it, and the user stops waiting for an answer.
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ results: [booking()] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ results: [booking()] }),
+      })
       .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) });
     renderPage();
 
@@ -171,9 +179,7 @@ describe('MyBookingsPage cancelling', () => {
     expect(screen.queryByText('Cancelled')).not.toBeInTheDocument();
     expect(screen.queryByText('No pending requests.')).not.toBeInTheDocument();
     // Still cancellable — the user has to be able to try again.
-    expect(
-      screen.getByRole('button', { name: 'Cancel this booking request' })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel this booking request' })).toBeInTheDocument();
   });
 });
 
@@ -194,7 +200,10 @@ describe('MyBookingsPage pagination', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ results: [booking({ code: 'B2', thing_headline: 'Tent' })], next: null }),
+        json: async () => ({
+          results: [booking({ code: 'B2', thing_headline: 'Tent' })],
+          next: null,
+        }),
       });
     renderPage();
 

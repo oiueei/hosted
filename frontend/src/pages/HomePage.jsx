@@ -16,7 +16,9 @@ export default function HomePage() {
   const { t } = useTranslation();
   // Owner content (invitation headlines) may carry one text per language.
   const L = useLocalized();
-  useEffect(() => { document.title = t('titles.home'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.home');
+  }, [t]);
   const [user, setUser] = useState(null);
   const [myCollections, setMyCollections] = useState(null);
   const [invitedCollections, setInvitedCollections] = useState(null);
@@ -46,7 +48,8 @@ export default function HomePage() {
           const data = await res.json();
           if (signal?.aborted) return;
           if (data.code) localStorage.setItem('userCode', data.code);
-          if (data.theeeme_colors) localStorage.setItem('theeemeColors', JSON.stringify(data.theeeme_colors));
+          if (data.theeeme_colors)
+            localStorage.setItem('theeemeColors', JSON.stringify(data.theeeme_colors));
           if (data.koro) localStorage.setItem('koro', data.koro);
           localStorage.setItem('seenWelcome', 'true');
           setUser(data);
@@ -61,11 +64,16 @@ export default function HomePage() {
         const res = await apiFetch('/api/v1/collections/', { signal });
         if (res.ok) {
           const data = await res.json();
-          if (!signal?.aborted) { setMyCollections(data.results); setMyCollectionsError(false); }
+          if (!signal?.aborted) {
+            setMyCollections(data.results);
+            setMyCollectionsError(false);
+          }
         } else if (!signal?.aborted) {
           setMyCollectionsError(true);
         }
-      } catch (err) { onNetworkError(err); }
+      } catch (err) {
+        onNetworkError(err);
+      }
     };
 
     const fetchInvitedCollections = async () => {
@@ -73,11 +81,16 @@ export default function HomePage() {
         const res = await apiFetch('/api/v1/invited-collections/', { signal });
         if (res.ok) {
           const data = await res.json();
-          if (!signal?.aborted) { setInvitedCollections(data); setInvitedError(false); }
+          if (!signal?.aborted) {
+            setInvitedCollections(data);
+            setInvitedError(false);
+          }
         } else if (!signal?.aborted) {
           setInvitedError(true);
         }
-      } catch (err) { onNetworkError(err); }
+      } catch (err) {
+        onNetworkError(err);
+      }
     };
 
     const fetchPendingInvitations = async () => {
@@ -87,7 +100,9 @@ export default function HomePage() {
           const data = await res.json();
           if (!signal?.aborted) setPendingInvitations(data);
         }
-      } catch (err) { onNetworkError(err); }
+      } catch (err) {
+        onNetworkError(err);
+      }
     };
 
     fetchMe();
@@ -124,10 +139,16 @@ export default function HomePage() {
   };
 
   const offlineBanner = (
-    <Notification type="alert" label={t('home.offlineLabel')} style={{ marginBottom: 'var(--spacing-s)' }}>
+    <Notification
+      type="alert"
+      label={t('home.offlineLabel')}
+      style={{ marginBottom: 'var(--spacing-s)' }}
+    >
       {t('home.offlineBody')}
       <div style={{ marginTop: 'var(--spacing-xs)' }}>
-        <Button size="small" onClick={reloadDashboard}>{t('common.retry')}</Button>
+        <Button size="small" onClick={reloadDashboard}>
+          {t('common.retry')}
+        </Button>
       </div>
     </Notification>
   );
@@ -138,12 +159,20 @@ export default function HomePage() {
   // while the refetch is in flight. Network errors stay the offline banner's
   // job via onNetworkError.
   const sectionError = (
-    <Notification type="error" label={t('home.loadErrorLabel')} style={{ marginBottom: 'var(--spacing-s)' }}>
+    <Notification
+      type="error"
+      label={t('home.loadErrorLabel')}
+      style={{ marginBottom: 'var(--spacing-s)' }}
+    >
       {t('home.loadErrorBody')}
       <div style={{ marginTop: 'var(--spacing-xs)' }}>
         <Button
           size="small"
-          onClick={() => { setMyCollectionsError(false); setInvitedError(false); reloadDashboard(); }}
+          onClick={() => {
+            setMyCollectionsError(false);
+            setInvitedError(false);
+            reloadDashboard();
+          }}
         >
           {t('common.retry')}
         </Button>
@@ -167,21 +196,37 @@ export default function HomePage() {
     >
       <div
         className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
           <ContactCorner />
-          <h1 className="form-hero-title" style={{ paddingTop: 'var(--spacing-xl)' }}>{t('home.greeting', { name: user.name || user.email })}</h1>
+          <h1 className="form-hero-title" style={{ paddingTop: 'var(--spacing-xl)' }}>
+            {t('home.greeting', { name: user.name || user.email })}
+          </h1>
           {user.headline && <p className="form-hero-text">{user.headline}</p>}
           <div className="button-row-wide">
             <Link to="/collections/new">
               <Button style={btnStyle}>{t('home.createCollection')}</Button>
             </Link>
             <Link to="/me">
-              <Button variant="secondary" style={btnSecondaryStyle}>{t('home.myProfile')}</Button>
+              <Button variant="secondary" style={btnSecondaryStyle}>
+                {t('home.myProfile')}
+              </Button>
             </Link>
             <Link to="/my-bookings">
-              <Button variant="secondary" style={btnSecondaryStyle}>{t('home.myRequests')}</Button>
+              <Button variant="secondary" style={btnSecondaryStyle}>
+                {t('home.myRequests')}
+              </Button>
             </Link>
             {/* Only for people who can actually receive requests — owning a
                 *thing* is the test, not owning a collection: in a COMMUNITY
@@ -189,7 +234,9 @@ export default function HomePage() {
                 be asked for it there. */}
             {user.things?.length > 0 && (
               <Link to="/owner-bookings">
-                <Button variant="secondary" style={btnSecondaryStyle}>{t('home.requestsToMe')}</Button>
+                <Button variant="secondary" style={btnSecondaryStyle}>
+                  {t('home.requestsToMe')}
+                </Button>
               </Link>
             )}
           </div>
@@ -201,7 +248,6 @@ export default function HomePage() {
         />
       </div>
       <div className="page-container">
-
         {offline && offlineBanner}
 
         <InboxNotifications reloadKey={inboxReloads} onNetworkError={handleNetworkError} />
@@ -219,7 +265,14 @@ export default function HomePage() {
                 style={{ marginBottom: 'var(--spacing-s)' }}
               >
                 <strong>{L(inv.collection_headline)}</strong>
-                <div style={{ marginTop: 'var(--spacing-xs)', display: 'flex', gap: 'var(--spacing-s)', flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    marginTop: 'var(--spacing-xs)',
+                    display: 'flex',
+                    gap: 'var(--spacing-s)',
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <Link to={`/verify/${inv.accept_code}`}>{t('home.acceptInvitation')}</Link>
                   <Link to={`/verify/${inv.reject_code}`}>{t('home.declineInvitation')}</Link>
                 </div>
@@ -252,31 +305,38 @@ export default function HomePage() {
                   welcome box: no page, no link. */}
               {aboutPath && (
                 <Link to={aboutPath}>
-                  <Button variant="secondary" style={btnSecondaryStyle}>{t('userPage.learnHow')}</Button>
+                  <Button variant="secondary" style={btnSecondaryStyle}>
+                    {t('userPage.learnHow')}
+                  </Button>
                 </Link>
               )}
             </div>
           </div>
         ) : (
           <div className="collections-grid">
-            {myCollections.filter((c) => c.status === 'ACTIVE').map((c) => (
-              <CollectionLinkbox key={c.code} collection={c} showInfo />
-            ))}
+            {myCollections
+              .filter((c) => c.status === 'ACTIVE')
+              .map((c) => (
+                <CollectionLinkbox key={c.code} collection={c} showInfo />
+              ))}
           </div>
         )}
 
-        {myCollections !== null && myCollections.filter((c) => c.status === 'INACTIVE').length > 0 && (
-          <>
-            <div className="spacer-xl" />
-            <h2>{t('userPage.inactiveCollections')}</h2>
-            <div className="spacer-m" />
-            <div className="collections-grid">
-              {myCollections.filter((c) => c.status === 'INACTIVE').map((c) => (
-                <CollectionLinkbox key={c.code} collection={c} showInfo />
-              ))}
-            </div>
-          </>
-        )}
+        {myCollections !== null &&
+          myCollections.filter((c) => c.status === 'INACTIVE').length > 0 && (
+            <>
+              <div className="spacer-xl" />
+              <h2>{t('userPage.inactiveCollections')}</h2>
+              <div className="spacer-m" />
+              <div className="collections-grid">
+                {myCollections
+                  .filter((c) => c.status === 'INACTIVE')
+                  .map((c) => (
+                    <CollectionLinkbox key={c.code} collection={c} showInfo />
+                  ))}
+              </div>
+            </>
+          )}
 
         <div className="spacer-xl" />
         <h2>{t('userPage.sharedWithMe')}</h2>
@@ -299,7 +359,9 @@ export default function HomePage() {
                 question it answers ("what's in all of these?") only exists once
                 you're in more than one. */}
             <p className="invite-nudge">
-              <Link to="/shared" className="owner-link">{t('sharedThings.homeLink')}</Link>
+              <Link to="/shared" className="owner-link">
+                {t('sharedThings.homeLink')}
+              </Link>
             </p>
           </>
         )}

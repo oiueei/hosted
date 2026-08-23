@@ -20,7 +20,7 @@ function renderAt(path) {
           <Route path="/secret" element={<div>Secret Page</div>} />
         </Route>
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -47,7 +47,11 @@ describe('RequireAuth', () => {
   });
 
   test('recovers the session when cookies are valid but userCode was missing', async () => {
-    apiFetch.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ code: 'ABC123' }) });
+    apiFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ code: 'ABC123' }),
+    });
     renderAt('/secret');
     expect(await screen.findByText('Secret Page')).toBeInTheDocument();
     // userCode is re-seeded so downstream ownership checks work.

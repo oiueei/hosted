@@ -32,7 +32,7 @@ describe('DeleteAccountPage', () => {
           <Route path="/me/delete" element={<DeleteAccountPage />} />
           <Route path="*" element={<div data-testid="navigated" />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
   }
 
@@ -59,10 +59,10 @@ describe('DeleteAccountPage', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Send me the confirmation email' }));
     expect(
-      await screen.findByText("We couldn't send the email. Please try again."),
+      await screen.findByText("We couldn't send the email. Please try again.")
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Send me the confirmation email' }),
+      screen.getByRole('button', { name: 'Send me the confirmation email' })
     ).toBeInTheDocument();
   });
 });
@@ -79,7 +79,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
           <Route path="/verify/:code" element={<VerifyPage />} />
           <Route path="*" element={<div data-testid="navigated" />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
   }
 
@@ -96,7 +96,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'ACCOUNT_DELETE' }))
-        : Promise.resolve(mockResponse(preview)),
+        : Promise.resolve(mockResponse(preview))
     );
 
     renderVerify();
@@ -104,9 +104,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     expect(await screen.findByText('Delete your account?')).toBeInTheDocument();
     // Unlike a booking decision, NO POST fired from the load effect.
     expect(postCalls(globalThis.fetch)).toHaveLength(0);
-    expect(
-      screen.getByRole('button', { name: 'Delete my account forever' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete my account forever' })).toBeInTheDocument();
   });
 
   test('the explicit confirm commits, clears local state and says goodbye', async () => {
@@ -115,7 +113,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'ACCOUNT_DELETE' }))
-        : Promise.resolve(mockResponse(preview)),
+        : Promise.resolve(mockResponse(preview))
     );
 
     renderVerify();
@@ -133,7 +131,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({}, false, 401))
-        : Promise.resolve(mockResponse(preview)),
+        : Promise.resolve(mockResponse(preview))
     );
 
     renderVerify();
@@ -151,7 +149,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.reject(new Error('network down'))
-        : Promise.resolve(mockResponse(preview)),
+        : Promise.resolve(mockResponse(preview))
     );
 
     renderVerify();
@@ -173,7 +171,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
         ? new Promise((resolve) => {
             commit = () => resolve(mockResponse({ action: 'ACCOUNT_DELETE' }));
           })
-        : Promise.resolve(mockResponse(preview)),
+        : Promise.resolve(mockResponse(preview))
     );
 
     renderVerify();

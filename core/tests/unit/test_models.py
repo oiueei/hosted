@@ -10,7 +10,7 @@ import time_machine
 from django.utils import timezone
 
 from core.models import FAQ, RSVP, Collection, Theeeme, Thing, User
-from core.utils import cloudinary_url, generate_id
+from core.utils import asset_url, doc_asset_url, generate_id
 
 
 class TestGenerateId:
@@ -32,19 +32,33 @@ class TestGenerateId:
         assert len(set(ids)) == 100
 
 
-class TestCloudinaryUrl:
-    """Tests for cloudinary_url utility."""
+class TestAssetUrl:
+    """The contract every serializer leans on: a key in, a URL or None out.
 
-    def test_cloudinary_url_with_id(self):
-        """Should return valid Cloudinary URL."""
-        url = cloudinary_url("abc123")
-        assert "cloudinary.com" in url
-        assert "abc123" in url
+    The URL itself is `core.services.storage`'s business and is tested there.
+    What matters here is the None: serializers pass unset image fields straight
+    through and render whatever comes back, so a helper that returned "" or a
+    base URL with nothing after it would put a broken <img> on the page instead
+    of no image at all.
+    """
 
-    def test_cloudinary_url_without_id(self):
-        """Should return None for empty ID."""
-        assert cloudinary_url(None) is None
-        assert cloudinary_url("") is None
+    def test_a_key_becomes_a_url_containing_it(self, settings):
+        settings.MEDIA_PUBLIC_BASE_URL = "https://bucket.example.com"
+        assert (
+            asset_url("oiueei/things/abc123") == "https://bucket.example.com/oiueei/things/abc123"
+        )
+
+    def test_an_unset_field_has_no_url(self):
+        assert asset_url(None) is None
+        assert asset_url("") is None
+
+    def test_a_document_key_resolves_the_same_way(self, settings):
+        """Same answer as asset_url today; separate function, so pin both."""
+        settings.MEDIA_PUBLIC_BASE_URL = "https://bucket.example.com"
+        assert (
+            doc_asset_url("oiueei/documents/w") == "https://bucket.example.com/oiueei/documents/w"
+        )
+        assert doc_asset_url("") is None
 
 
 @pytest.mark.django_db

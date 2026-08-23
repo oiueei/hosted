@@ -42,6 +42,7 @@ The payload keys that make this work (`booking_code`, `thing_code`, `collection_
 
 #### Patterns
 
+- **Snapshots, not lookups**: both `request_*` functions copy the thing's `type` **and** its `deposit` onto the booking (`thing_type`, `deposit_amount`). The reservation is a record of what was agreed, so editing the listing afterwards cannot rewrite it — and since `accept_booking` always attaches the booking to the `ThingTransfer` it creates, the journey reads the agreed amount through `transfer.booking` rather than keeping a second copy that could disagree.
 - **Atomic transactions**: Every function wraps its work in `transaction.atomic()` to ensure `BookingPeriod` and `Thing` are updated together or not at all.
 - **Row-level locking**: Uses `Thing.objects.select_for_update()` to prevent race conditions when two concurrent requests try to modify the same thing's status.
 - **Single-use type check**: Only GIFT and SELL things (`SINGLE_USE_TYPES` from `core.models.booking`) change thing status on accept/reject/cancel. Date-based types (LEND, RENT) leave thing status unchanged because multiple bookings can coexist.
@@ -60,7 +61,7 @@ Every email belongs to one of three categories. Each function routes through the
 
 | Category | Constant | User flag | Scope |
 |----------|----------|-----------|-------|
-| **Cat. 1 — Mandatory** | `CATEGORY_MANDATORY` | (ignored — always sent) | `send_magic_link_email`, `send_collection_invite_email`, `send_collection_welcome_doc_email`, `send_collection_revoke_email`, `send_account_delete_email` |
+| **Cat. 1 — Mandatory** | `CATEGORY_MANDATORY` | (ignored — always sent) | `send_magic_link_email`, `send_collection_invite_email`, `send_collection_welcome_doc_email`, `send_collection_revoke_email`, `send_account_delete_email`, `send_inactivity_warning_email` |
 | **Cat. 2 — Activity** | `CATEGORY_ACTIVITY` | `User.notify_activity` | `send_booking_request_email`, `send_booking_decision_email`, `send_booking_confirmation_email`, `send_invite_rejected_email`, `send_faq_question_email`, `send_faq_answer_email`, `send_faq_hide_email`, `send_thing_reported_email`, `send_return_reminder_email`, `send_return_due_email`, `send_broadcast_email`, `send_invitation_proposal_email`, `send_proposal_declined_email` |
 | **Cat. 3 — News** | `CATEGORY_NEWS` | `User.notify_news` **and** `Collection.digest_muted` | `send_digest_email` |
 
@@ -73,8 +74,16 @@ Every email belongs to one of three categories. Each function routes through the
 
 - **Lookup fallback**: if no `User` matches the recipient email (e.g. a not-yet-registered invitee), `_should_send` returns `True` — all emails reach non-users by default.
 - **Multi-recipient**: functions that take `emails=[...]` (digest, broadcast) use `_filter_recipients()` for a bulk query that drops opted-out addresses before iterating. `_send_per_language` also accepts an **`extra_footer(user, lang)`** hook for a line that must be built *per recipient* rather than per language — the digest's mute link carries a token signed for one user, so it cannot join the language-cached body.
-- **Footer**: Cat. 2 and Cat. 3 emails get an auto-appended footer with a link to `/me/notifications/{token}` (see below). Cat. 1 has no footer — nothing to manage.
+- **Preferences footer**: Cat. 2 and Cat. 3 emails get an auto-appended footer with a link to `/me/notifications/{token}` (see below). Cat. 1 skips it — nothing to manage. **Separately, every category including Cat. 1 gets a legal footer** — see the art. 14 note below, which is not preference-gated because it is a disclosure duty, not an opt-out.
 - **Viral CTA**: every send except the operator's own ops mail (which passes `include_viral=False` — a report, not growth copy) prepends one random growth blurb from the per-language `VIRAL_LINES` catalogue (`email_texts/{lang}.py`, read via `viral_lines()`) above the footer — the CTA is always the plain `{frontend_base}/collections/new` link, never tracking-wrapped (DESIGN §9). It is suppressed for recipients who already own ≥1 collection (the `_owns_collection` flag is folded into the existing `_lookup_user`/`_lookup_users` query via an `Exists` annotation — no extra round-trip), and for an empty list. So the bottom order is always: body → viral line (when shown) → preferences footer (when present). **`send_magic_link_email` carries it too since S2** (CA decided: the magic link is the one email every user gets, so suppressing growth copy there starved the loop) — this makes `_send()` do one extra `User` lookup for magic-link sends it used to skip, but both its callers only ever reach it after the recipient is already resolved (`RequestLinkView` for a confirmed-registered address, `JoinView` after `get_or_create`), so the lookup adds no new registered/unregistered timing signal (L10 stays about language resolution, not this gate — see below).
+
+#### The legal footer (art. 14 GDPR) — every email, no exceptions
+
+`_render_email()` (the shared HTML renderer every sender's `html = _render_email(...)` goes through) always injects a link to `{frontend_base}/legal`, rendered by `core/templates/email/layout.html` after the last content block. Unlike the preferences footer above, this one is **not gated by category** — an unsubscribe link is a courtesy the recipient can decline; a controller's identity and the terms under which their data is processed are not. `lang` (the same value senders already thread through `T`/`L`) picks the label's language via the `footer_legal` key; a caller that omits it falls back to the deployment default, same as `T()` everywhere else.
+
+**`send_collection_invite_email` carries a second, specific disclosure** (`invite_source_note`, all three catalogues): the invitee's address didn't come from them, it came from whoever invited them, which is exactly the case art. 14 exists for. The sentence says where the address came from, what it's used for, and that declining or ignoring the email ends it — appended to **both** the HTML blocks and the plain body, since this is the one email in the catalogue sent to somebody who never asked OIUEEI for anything directly.
+
+**`<html lang="...">` itself follows the same resolved language** (A4, 2026-08): `_render_email` computes `lang or EMAIL_LANGUAGE` once and passes it to the template as `lang`, so a screen reader pronounces the body in the language it's actually written in rather than whatever the browser/client's own default assumes. Every email already speaks a specific, known language by the time it's composed (`resolve_email_language`), so this was never genuinely unknown — only unstated.
 
 #### Email language — the hierarchy (`EMAIL_LANGUAGE` + `Collection.language` + `User.language`)
 
@@ -119,9 +128,10 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 | `send_booking_decision_email(booking, thing, accepted)` | Owner accepts or rejects a booking | Requester |
 | `send_collection_invite_email(inviter_name, collection_headline, email, accept_link, reject_link)` | Owner invites a user to a collection | Invitee |
 | `send_invite_rejected_email(invitee_name, collection_headline, owner_email)` | Invitee declines a collection invitation | Collection owner |
-| `send_collection_welcome_doc_email(collection_headline, doc_url, email)` | A user becomes a member of a collection **for the first time** (any join path — invite, share token, public-collection join) and the owner has set a welcome PDF | The new member. The PDF travels as a **link** (Cloudinary), never an attachment. Membership lifecycle ⇒ Cat. 1: a member who never sees the rules can't follow them |
+| `send_collection_welcome_doc_email(collection_headline, doc_url, email)` | A user becomes a member of a collection **for the first time** (any join path — invite, share token, public-collection join) and the owner has set a welcome PDF | The new member. The PDF travels as a **link** to the bucket, never an attachment. Membership lifecycle ⇒ Cat. 1: a member who never sees the rules can't follow them |
 | `send_collection_revoke_email(owner_name, collection_headline, email)` | Owner removes a user from a collection | Revoked user |
 | `send_account_delete_email(user, delete_link)` | User requests account deletion (`AccountDeleteRequestView`) | The account owner. States what is deleted and what stays anonymised; the link previews on GET and commits on POST (24h, single-use). `include_viral=False` — a growth CTA on an erasure email would be grotesque |
+| `send_inactivity_warning_email(user, months, days, will_delete=True)` | `purge_expired_data`, before an unused account is erased for retention | The account owner. Mandatory for the same reason as the erasure confirmation — it is about whether the account continues to exist — and `include_viral=False` for the same one. **Two bodies:** the default says the account goes in `days` days and that signing in once keeps it; `will_delete=False` is the version for an account that owns a group other people are using, which is never auto-deleted and therefore must not be told that it will be. Neither nags — the first ends "if you would rather it went, you don't have to do anything at all" (DESIGN §6: an inactive account is somebody who already left) |
 | `send_contact_email(name, email, message, kind)` | Anonymous-capable contact/collaborate form (`ContactView`; `kind` picks the subject — support/collab) | The operator (`CONTACT_EMAIL` env, default `DEFAULT_FROM_EMAIL`), with the sender as `Reply-To`. Operator mail: mandatory category, `include_viral=False`, deployment language |
 | `send_faq_question_email(questioner_name, thing, question, owner_email)` | Guest asks a question on a thing | Thing owner |
 | `send_faq_answer_email(owner_name, thing, question, answer, questioner_email)` | Owner answers a FAQ | Questioner (the email links the thing — label is the thing headline, via `_thing_url`) |
@@ -222,13 +232,46 @@ It answers only *may this person bring such a thing into existence here at all*.
 
 ### `account_service.py` — Account Erasure (Right to Be Forgotten)
 
-One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed); Cloudinary assets are destroyed by the `cloudinary_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
+One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed); stored files are deleted by the `asset_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
 
 ---
 
-### `cloudinary_cleanup.py` — Delete Cloudinary Assets on Delete
+### `export_service.py` — Data Portability (Right to a Copy)
 
-Frees the Cloudinary images a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned assets piling up (storage cost + clutter).
+The mirror of `account_service`: *what dies with you is what you get to take with you*. Read the two docstrings together — when a new model arrives, both are wrong until both are updated.
+
+#### Public API
+
+| Function | Returns |
+|----------|---------|
+| `build_account_export(user)` | The whole of one person's data as a JSON-serialisable tree: `_manifest`, `_readme`, `profile`, `collections_owned`, `collections_member_of`, `things`, `bookings`, `faqs`, `proposals_made`, `transfers`, `notifications`, `reports_filed`, `activity`. One private helper per key, each with its own `select_related`/`prefetch_related`. |
+| `build_collection_export(collection)` | An **operational** copy of a group, other members' things included: `collection`, `members`, `pending_invitations`, `proposals`, `things`, `bookings`, `faqs`, `transfers`, `stats`. Not art. 20 and doesn't pretend to be — it is what makes a library of things portable. **Owner-only; the caller enforces that** (`require_collection_owner`), this function trusts it. |
+| `export_bytes(payload)` | `json.dumps(..., ensure_ascii=False, indent=2, default=str)` encoded UTF-8. `default=str` is the safety net, not the plan: every builder already returns JSON-native values, so a type reaching it means a new column arrived without a decision. |
+| `export_filename(code)` | `oiueei-ABC123-2026-08-21.json` — the code says which copy, the date says when it stopped being true. |
+| `collection_stats_rows(collection)` | `[(metric, value)]` — **the** definition of every usage metric, rendered two ways: `CollectionStatsView` writes it as CSV, the collection export carries it as a dict under `stats`. Public despite living among the private helpers, because a view in another module imports it. `STATS_WINDOW_DAYS` (90) is the window every `(90d)` metric measures. |
+
+`_manifest.counts` indexes every key that holds rows (nested one level for the keys holding two lists), so the top-level data keys are exactly `profile` + the keys of `counts`. `_readme` ships the file's own explanation in the reader's language, resolved through **`resolve_email_language`** — the recipient's preference over the group's over `EMAIL_LANGUAGE`; an unknown language falls back to English rather than raising. The catalogue is `README_TEXTS` (en/es/ca), kept in parity by a test, and it exists because a JSON tree can't explain its own omissions: someone who finds no reports about their things should learn *here* that they are anonymous by design, not conclude the export is broken.
+
+#### What never leaves — each pinned by a test, most against the raw bytes
+
+| Omission | Why |
+|----------|-----|
+| `Collection.share_token`, every `RSVP.token` | A file gets forwarded; a token inside it is a group — or an account — forwarded with it. |
+| Co-members' emails from groups the exporter merely **joined** | Member emails ride along only in collections they **own**, which is the roster the guests page already shows them. |
+| `age_range` / `postal_code` of anyone else, unless the group is COMMUNITY | Mirrors `CollectionSerializer.get_invites` exactly. *(The aggregate breakdown inside `stats` is a different thing and stays: it is the stats CSV, unchanged, which any collection owner can already download.)* |
+| Reports **about** the exporter's things (both exports) | Reporting is anonymous by design; the export must not become the leak the notification avoids. |
+| `BookingPeriod.requester_email`, third parties' demographics, other members' notifications and activity | Third-party data with no reason to be in this file — a counterpart is a code and a public name. |
+| The `deal` M2M, `password`, `is_staff`/`is_superuser`, the `*_alarm_sent` / `capacity_unblocked` flags | Not the person's content: the first is third parties, the last is this deployment's moderation ledger. |
+
+**Owner text stays raw.** A localized `headline` (`{"es": …, "ca": …}`) exports as the map the owner wrote, never resolved to one language: the file is for machines, and resolving would silently drop two thirds of it.
+
+**Photos and the welcome PDF travel as URLs, not bytes.** It keeps the response inside Heroku's 30-second window — and it is why the page offering the download has to say that deleting the account breaks those links.
+
+---
+
+### `asset_cleanup.py` — Delete Stored Files on Delete
+
+Frees the stored objects a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned files piling up (storage cost + clutter). The bucket has no notion of a foreign key, so nothing else would ever notice they had become unreachable.
 
 #### How it's wired
 
@@ -245,4 +288,4 @@ Frees the Cloudinary images a record owns when the record itself is deleted, so 
 
 #### Suspension (the demo-seed guard)
 
-`suspended()` is a context manager that disables the cleanup for deletes inside the block. **`seed_demo._reset()` wraps its deletes in it**: the demo reuses a fixed pool of shared Cloudinary public ids, so wiping them on `--reset` would destroy the very images the immediate re-seed points back at. Any other bulk delete that must not touch Cloudinary can reuse the same guard.
+`suspended()` is a context manager that disables the cleanup for deletes inside the block. **`seed_demo._reset()` wraps its deletes in it**: the demo reuses a fixed pool of shared storage keys, so wiping them on `--reset` would destroy the very images the immediate re-seed points back at. Any other bulk delete that must not touch the bucket can reuse the same guard.

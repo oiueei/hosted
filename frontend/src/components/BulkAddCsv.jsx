@@ -4,24 +4,32 @@ import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
 import { apiFetch } from '../services/api';
-import { uploadImageToCloudinary } from '../utils/uploadImage';
+import { uploadImage } from '../utils/uploadImage';
 import { MAX_ROWS, mapRow, validateRows } from '../utils/bulkCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
 
 // Image extensions recognised inside a ZIP — kept in sync with the backend's
-// Cloudinary `IMAGE_FORMATS` allow-list (core/views/upload.py).
+// The server's `IMAGE_TYPES` allow-list (core/views/upload.py).
 const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif)$/i;
 const MIME_BY_EXT = {
-  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
-  gif: 'image/gif', bmp: 'image/bmp', tif: 'image/tiff', tiff: 'image/tiff',
-  avif: 'image/avif', heic: 'image/heic', heif: 'image/heif',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  bmp: 'image/bmp',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  avif: 'image/avif',
+  heic: 'image/heic',
+  heif: 'image/heif',
 };
 // Shown in the format InfoPopover. Language-agnostic, so it lives here rather
 // than in the i18n bundles (matches BulkInviteCsv's EXAMPLE_CSV).
-const EXAMPLE_CSV = `headline,type,fee,location,condition,tags,photo
-Cazo de acero,RENT_THING,1,LC (08038),GOOD,Cocina,cazo.jpg`;
+const EXAMPLE_CSV = `headline,type,fee,location,condition,tags,photo,deposit
+Cazo de acero,RENT_THING,1,LC (08038),GOOD,Cocina,cazo.jpg,10`;
 
 function basename(path) {
   return path.split('/').pop();
@@ -37,7 +45,7 @@ function mimeFromName(name) {
  *
  * Plain `.csv`: text-only rows. `.zip` (CSV + image files): each row may name its
  * cover photo by filename in a `photo` column; on import the referenced images are
- * uploaded to Cloudinary (reusing the secure signed-upload path) and their
+ * uploaded to the bucket (reusing the ticketed upload path) and their
  * public_ids are sent as `thumbnail`. Server-side validators reject HTML, line
  * breaks and spreadsheet-formula (CSV) injection per field.
  *
@@ -83,7 +91,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
     Papa.parse(file, {
       ...CSV_PARSE_OPTIONS,
       complete: (result) => {
-        const parsed = (result.data || []).map((raw) => mapRow(raw, false))
+        const parsed = (result.data || [])
+          .map((raw) => mapRow(raw, false))
           .filter((row) => Object.keys(row).length > 0);
         const err = validate(parsed);
         if (err) setError(err);
@@ -114,7 +123,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
       Papa.parse(text, {
         ...CSV_PARSE_OPTIONS,
         complete: (result) => {
-          const parsed = (result.data || []).map((raw) => mapRow(raw, true))
+          const parsed = (result.data || [])
+            .map((raw) => mapRow(raw, true))
             .filter((row) => Object.keys(row).length > 0);
           const err = validate(parsed);
           if (err) {
@@ -122,8 +132,9 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
             return;
           }
           // Every referenced photo must actually be in the ZIP.
-          const missing = [...new Set(parsed.filter((r) => r.photo).map((r) => r.photo))]
-            .filter((name) => !images.has(name.toLowerCase()));
+          const missing = [...new Set(parsed.filter((r) => r.photo).map((r) => r.photo))].filter(
+            (name) => !images.has(name.toLowerCase())
+          );
           if (missing.length > 0) {
             setError(t('bulkAdd.zipMissingImages', { files: missing.join(', ') }));
             return;
@@ -147,7 +158,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
       const entry = zipImages.get(name.toLowerCase());
       const blob = await entry.async('blob');
       const imgFile = new File([blob], name, { type: blob.type || mimeFromName(name) });
-      const { publicId } = await uploadImageToCloudinary(imgFile, 'oiueei/things');
+      const { publicId } = await uploadImage(imgFile, 'oiueei/things');
       idByName.set(name, publicId);
       setUploadProgress((p) => ({ done: p.done + 1, total: p.total }));
     }
@@ -169,7 +180,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         }
         // Swap the `photo` filename for the uploaded `thumbnail` public_id.
         payloadRows = rows.map(({ photo, ...rest }) =>
-          photo ? { ...rest, thumbnail: idByName.get(photo) } : rest);
+          photo ? { ...rest, thumbnail: idByName.get(photo) } : rest
+        );
       } else {
         payloadRows = rows;
       }
@@ -208,7 +220,9 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
   };
 
   const importLabel = importing
-    ? (uploadProgress ? t('bulkAdd.uploadingImages', uploadProgress) : t('bulkAdd.importing'))
+    ? uploadProgress
+      ? t('bulkAdd.uploadingImages', uploadProgress)
+      : t('bulkAdd.importing')
     : t('bulkAdd.import', { count: rows.length });
 
   return (
@@ -252,6 +266,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
                 {row.headline}
                 {row.type ? ` — ${t(`types.${row.type}`, row.type)}` : ''}
                 {row.fee ? ` · ${row.fee}` : ''}
+                {row.deposit ? ` · 🔒${row.deposit}` : ''}
                 {row.tags ? ` · ${row.tags.join(', ')}` : ''}
                 {row.photo ? ` · 📷 ${row.photo}` : ''}
               </li>

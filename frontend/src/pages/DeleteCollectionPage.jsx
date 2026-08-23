@@ -93,7 +93,9 @@ export default function DeleteCollectionPage() {
           collection is this one), along with their questions and history. The
           owner is the only person who can do this and the only one warned, so
           the warning has to name what leaves that isn't theirs. */}
-      <p><strong>{t('deleteCollection.warning')}</strong></p>
+      <p>
+        <strong>{t('deleteCollection.warning')}</strong>
+      </p>
       <div className="spacer-s" />
       <p>{t('deleteCollection.whatGoesTitle')}</p>
       <ul className="measure">
@@ -104,13 +106,26 @@ export default function DeleteCollectionPage() {
       <div className="spacer-s" />
       <p className="measure">{t('deleteCollection.staysShared')}</p>
       <div className="spacer-s" />
-      <p className="measure"><strong>{t('deleteCollection.backupNote')}</strong></p>
+      <p className="measure">
+        <strong>{t('deleteCollection.backupNote')}</strong>
+      </p>
       <div className="spacer-s" />
       <div className="form-grid">
-        <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle} iconStart={<IconTrash aria-hidden="true" />}>
+        <Button
+          fullWidth
+          disabled={deleting}
+          onClick={handleDelete}
+          style={btnStyle}
+          iconStart={<IconTrash aria-hidden="true" />}
+        >
           {deleting ? t('common.deleting') : t('common.delete')}
         </Button>
-        <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => navigate(backPath)}
+          style={btnSecondaryStyle}
+        >
           {t('common.cancel')}
         </Button>
       </div>

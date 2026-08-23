@@ -20,7 +20,9 @@ import useTheeeme from '../hooks/useTheeeme';
 export default function CreateCollectionPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  useEffect(() => { document.title = t('titles.newCollection'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.newCollection');
+  }, [t]);
   const location = useLocation();
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');
@@ -34,6 +36,7 @@ export default function CreateCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   // The group's email language. Defaults to whatever the owner is reading the app
@@ -48,8 +51,16 @@ export default function CreateCollectionPage() {
   const [errors, setErrors] = useState({});
 
   const ALL_MODE_OPTIONS = [
-    { label: t('createCollection.modeProprietary'), description: t('createCollection.modeProprietaryDesc'), value: 'PROPRIETARY' },
-    { label: t('createCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
+    {
+      label: t('createCollection.modeProprietary'),
+      description: t('createCollection.modeProprietaryDesc'),
+      value: 'PROPRIETARY',
+    },
+    {
+      label: t('createCollection.modeCommunity'),
+      description: t('createCollection.modeCommunityDesc'),
+      value: 'COMMUNITY',
+    },
   ];
   // Both modes upstream. A deployment that withholds one drops it from the
   // group rather than disabling it — an unchoosable radio is noise — and
@@ -65,9 +76,10 @@ export default function CreateCollectionPage() {
 
   // Live "pick at least one" feedback once a submit has been attempted (P1-5):
   // the error clears the moment the user picks a type, without nagging earlier.
-  const allowedTypesError = submitAttempted && allowedThingTypes.length === 0
-    ? t('createCollection.allowedTypesAtLeastOne')
-    : '';
+  const allowedTypesError =
+    submitAttempted && allowedThingTypes.length === 0
+      ? t('createCollection.allowedTypesAtLeastOne')
+      : '';
 
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
@@ -83,7 +95,8 @@ export default function CreateCollectionPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('createCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('createCollection.maxHeadline');
-    if (localizedCounter(description, 256).over) newErrors.description = t('createCollection.maxDescription');
+    if (localizedCounter(description, 256).over)
+      newErrors.description = t('createCollection.maxDescription');
     setErrors(newErrors);
     const allowedTypesOk = allowedThingTypes.length > 0;
     return Object.keys(newErrors).length === 0 && allowedTypesOk;
@@ -109,6 +122,7 @@ export default function CreateCollectionPage() {
       welcome_doc: welcomeDoc || '',
     };
     if (description.trim()) body.description = description.trim();
+    if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
     try {
       const res = await apiFetch('/api/v1/collections/', {
         method: 'POST',
@@ -132,129 +146,130 @@ export default function CreateCollectionPage() {
 
   return (
     <PageLayout backTo={backPath} backLabel={backLabel}>
-        <h1 className="page-title-xl">{t('createCollection.pageTitle')}</h1>
+      <h1 className="page-title-xl">{t('createCollection.pageTitle')}</h1>
+      <div className="form-grid">
+        <TextInput
+          id="create-collection-headline"
+          label={t('createCollection.titleLabel')}
+          value={headline}
+          onChange={(e) => setHeadline(e.target.value)}
+          required
+          invalid={!!errors.headline}
+          errorText={errors.headline}
+          helperText={localizedCounter(headline, 64).text}
+        />
+        <TextArea
+          id="create-collection-description"
+          label={t('createCollection.descriptionLabel')}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          invalid={!!errors.description}
+          errorText={errors.description}
+          helperText={localizedCounter(description, 256).text}
+        />
+        <LocalizedInfo id="create-collection-localized-info" />
+        <CollectionModeField
+          idPrefix="create-collection"
+          label={t('createCollection.modeLabel')}
+          options={MODE_OPTIONS}
+          catalogue={ALL_MODE_OPTIONS}
+          value={mode}
+          onChange={handleModeChange}
+        />
+        <CollectionForm
+          idPrefix="create-collection"
+          allowedThingTypes={allowedThingTypes}
+          setAllowedThingTypes={setAllowedThingTypes}
+          visibility={visibility}
+          setVisibility={setVisibility}
+          allowProposals={allowProposals}
+          setAllowProposals={setAllowProposals}
+          errors={{ ...errors, allowedThingTypes: allowedTypesError }}
+          theeemeColor01={theeemeColors.color_01}
+        />
+      </div>
+      {/* Everything optional, with a safe default, folds away so the happy path
+            (title, mode, who can add) reads at a glance (DESIGN §3, O1). */}
+      <Accordion
+        heading={t('createCollection.advancedTitle')}
+        language="en"
+        headingLevel={2}
+        theme={
+          theeemeColors.color_04
+            ? { '--header-color': `var(--color-${theeemeColors.color_04})` }
+            : undefined
+        }
+      >
         <div className="form-grid">
-          <TextInput
-            id="create-collection-headline"
-            label={t('createCollection.titleLabel')}
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
-            required
-            invalid={!!errors.headline}
-            errorText={errors.headline}
-            helperText={localizedCounter(headline, 64).text}
-          />
-          <TextArea
-            id="create-collection-description"
-            label={t('createCollection.descriptionLabel')}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            invalid={!!errors.description}
-            errorText={errors.description}
-            helperText={localizedCounter(description, 256).text}
-          />
-          <LocalizedInfo id="create-collection-localized-info" />
-          <CollectionModeField
+          <div>
+            <TagInput
+              tags={tags}
+              onChange={setTags}
+              label={t('createCollection.tagsLabel')}
+              placeholder={t('createCollection.tagsPlaceholder')}
+              helperText={t('createCollection.tagsHelper')}
+            />
+            <LocalizedInfo id="create-collection-tags-info" variant="tags" />
+          </div>
+          <RentalRulesFields
             idPrefix="create-collection"
-            label={t('createCollection.modeLabel')}
-            options={MODE_OPTIONS}
-            catalogue={ALL_MODE_OPTIONS}
-            value={mode}
-            onChange={handleModeChange}
-          />
-          <CollectionForm
-            idPrefix="create-collection"
-            allowedThingTypes={allowedThingTypes}
-            setAllowedThingTypes={setAllowedThingTypes}
-            visibility={visibility}
-            setVisibility={setVisibility}
-            allowProposals={allowProposals}
-            setAllowProposals={setAllowProposals}
-            errors={{ ...errors, allowedThingTypes: allowedTypesError }}
+            rentalDurations={rentalDurations}
+            setRentalDurations={setRentalDurations}
+            rentalWeekdays={rentalWeekdays}
+            setRentalWeekdays={setRentalWeekdays}
+            depositPolicy={depositPolicy}
+            setDepositPolicy={setDepositPolicy}
             theeemeColor01={theeemeColors.color_01}
           />
-        </div>
-        {/* Everything optional, with a safe default, folds away so the happy path
-            (title, mode, who can add) reads at a glance (DESIGN §3, O1). */}
-        <Accordion
-          heading={t('createCollection.advancedTitle')}
-          language="en"
-          headingLevel={2}
-          theme={theeemeColors.color_04 ? { '--header-color': `var(--color-${theeemeColors.color_04})` } : undefined}
-        >
-          <div className="form-grid">
-            <div>
-              <TagInput
-                tags={tags}
-                onChange={setTags}
-                label={t('createCollection.tagsLabel')}
-                placeholder={t('createCollection.tagsPlaceholder')}
-                helperText={t('createCollection.tagsHelper')}
-              />
-              <LocalizedInfo id="create-collection-tags-info" variant="tags" />
-            </div>
-              <RentalRulesFields
-                idPrefix="create-collection"
-                rentalDurations={rentalDurations}
-                setRentalDurations={setRentalDurations}
-                rentalWeekdays={rentalWeekdays}
-                setRentalWeekdays={setRentalWeekdays}
-                theeemeColor01={theeemeColors.color_01}
-              />
-            {/* Same order and same `editCollection.*` keys as EditCollectionPage,
+          {/* Same order and same `editCollection.*` keys as EditCollectionPage,
                 so the one field doesn't read differently on the two screens. */}
-            <Select
-              id="create-collection-digest"
-              texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
-              helper={t('editCollection.digestHelper')}
-              options={[
-                { label: t('editCollection.digestNone'), value: 'NONE' },
-                { label: t('editCollection.digestWeekly'), value: 'WEEKLY' },
-                { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
-              ]}
-              value={digestFrequency}
-              onChange={(selectedOptions) => {
-                if (selectedOptions.length > 0) setDigestFrequency(selectedOptions[0].value);
-              }}
-            />
-            <Select
-              id="create-collection-language"
-              texts={{ label: t('collectionLanguage.label'), language: 'en' }}
-              helper={t('collectionLanguage.helper')}
-              options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
-              value={language}
-              onChange={(selectedOptions) => {
-                if (selectedOptions.length > 0) {
-                  setLanguage(selectedOptions[0].value);
-                }
-              }}
-            />
-            <ImageUpload
-              id="create-collection-thumbnail"
-              label={t('upload.thumbnailLabel')}
-              value={thumbnail}
-              onChange={setThumbnail}
-              folder="oiueei/collections"
-            />
-            <PdfUpload
-              id="create-collection-welcome-doc"
-              label={t('upload.welcomeDocLabel')}
-              onChange={setWelcomeDoc}
-              helperText={t('upload.welcomeDocHelper')}
-            />
-          </div>
-        </Accordion>
-        <div className="form-actions">
-          <Button
-            fullWidth
-            disabled={submitting}
-            onClick={handleSubmit}
-            style={btnStyle}
-          >
-            {submitting ? t('common.creating') : t('common.create')}
-          </Button>
+          <Select
+            id="create-collection-digest"
+            texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
+            helper={t('editCollection.digestHelper')}
+            options={[
+              { label: t('editCollection.digestNone'), value: 'NONE' },
+              { label: t('editCollection.digestWeekly'), value: 'WEEKLY' },
+              { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
+            ]}
+            value={digestFrequency}
+            onChange={(selectedOptions) => {
+              if (selectedOptions.length > 0) setDigestFrequency(selectedOptions[0].value);
+            }}
+          />
+          <Select
+            id="create-collection-language"
+            texts={{ label: t('collectionLanguage.label'), language: 'en' }}
+            helper={t('collectionLanguage.helper')}
+            options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
+            value={language}
+            onChange={(selectedOptions) => {
+              if (selectedOptions.length > 0) {
+                setLanguage(selectedOptions[0].value);
+              }
+            }}
+          />
+          <ImageUpload
+            id="create-collection-thumbnail"
+            label={t('upload.thumbnailLabel')}
+            value={thumbnail}
+            onChange={setThumbnail}
+            folder="oiueei/collections"
+          />
+          <PdfUpload
+            id="create-collection-welcome-doc"
+            label={t('upload.welcomeDocLabel')}
+            onChange={setWelcomeDoc}
+            helperText={t('upload.welcomeDocHelper')}
+          />
         </div>
-        <Toast toast={toast} onClose={() => setToast(null)} />
+      </Accordion>
+      <div className="form-actions">
+        <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
+          {submitting ? t('common.creating') : t('common.create')}
+        </Button>
+      </div>
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
   );
 }

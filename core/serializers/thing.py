@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from core.models import Thing
 from core.models.booking import BookingPeriod
-from core.utils import cloudinary_url
+from core.utils import asset_url
 from core.validators import (
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
@@ -16,6 +16,33 @@ from core.validators import (
     SafeHeadlineField,
     reject_spreadsheet_formula,
 )
+
+# The only two verbs a deposit can mean anything under: you get back what you
+# left because the thing itself comes back. A gift or a sale ends the
+# relationship — nothing to hold, nothing to return.
+DEPOSIT_TYPES = (Thing.Type.LEND_THING, Thing.Type.RENT_THING)
+
+
+def validate_deposit_for_type(thing_type, deposit):
+    """Reject a deposit on a type with nothing to give back (D4).
+
+    Enforced here rather than by hiding the input, because the JSON API and the
+    CSV import are two more doors into the same column — `fee` has no such rule
+    and that is exactly why this one is worth writing down.
+
+    The check is on the **resulting** row, not on the payload: turning a loan
+    that carries a deposit into a gift has to clear the amount in the same
+    request, or the row that lands is a gift asking for security.
+    """
+    if deposit is not None and thing_type not in DEPOSIT_TYPES:
+        raise serializers.ValidationError(
+            {
+                "deposit": (
+                    "Only loans and rentals can ask for a deposit — a gift or a sale has "
+                    "nothing to give back. Clear the amount to change the type."
+                )
+            }
+        )
 
 
 def optimise_thing_queryset(queryset, *, with_collections=False):
@@ -138,7 +165,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         return obj.owner.name
 
     def get_gallery_urls(self, obj):
-        return [cloudinary_url(public_id) for public_id in (obj.gallery or [])]
+        return [asset_url(public_id) for public_id in (obj.gallery or [])]
 
     def get_pending_booking(self, obj):
         # Use prefetched _pending_bookings if available, otherwise query
@@ -255,6 +282,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "status",
             "faqs",
             "fee",
+            "deposit",
             "availability",
             "location",
             "condition",
@@ -282,7 +310,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         ]
 
     def get_thumbnail_url(self, obj):
-        return cloudinary_url(obj.thumbnail)
+        return asset_url(obj.thumbnail)
 
     def _viewer_collection_codes(self):
         """Codes of every collection the requesting user owns or belongs to.
@@ -424,6 +452,9 @@ class ThingCreateSerializer(serializers.ModelSerializer):
     fee = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
     )
+    deposit = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
+    )
 
     class Meta:
         model = Thing
@@ -435,11 +466,16 @@ class ThingCreateSerializer(serializers.ModelSerializer):
             "gallery",
             "tags",
             "fee",
+            "deposit",
             "availability",
             "location",
             "condition",
             "is_endless",
         ]
+
+    def validate(self, attrs):
+        validate_deposit_for_type(attrs.get("type"), attrs.get("deposit"))
+        return attrs
 
 
 class ThingUpdateSerializer(serializers.ModelSerializer):
@@ -465,6 +501,9 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
     fee = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
     )
+    deposit = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
+    )
 
     class Meta:
         model = Thing
@@ -477,12 +516,24 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
             "tags",
             "status",
             "fee",
+            "deposit",
             "availability",
             "location",
             "condition",
             "is_endless",
         ]
         read_only_fields = ["status"]
+
+    def validate(self, attrs):
+        # Whatever the row will look like once this edit lands: an untouched
+        # field keeps the stored value, so changing only the type still has to
+        # answer for the deposit already on it.
+        stored = self.instance
+        validate_deposit_for_type(
+            attrs.get("type", stored.type if stored else None),
+            attrs.get("deposit", stored.deposit if stored else None),
+        )
+        return attrs
 
     def validate_tags(self, value):
         """Each tag must belong to the vocabulary of the thing's collection(s)."""
@@ -544,6 +595,9 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     fee = LocaleDecimalField(
         max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
     )
+    deposit = LocaleDecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
+    )
     tags = serializers.ListField(
         child=LocalizedHeadlineField(max_length=32, storage_max_length=LOCALIZED_TAG_STORAGE),
         max_length=12,
@@ -551,7 +605,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
         allow_empty=True,
     )
     # Cover photo public_id. A CSV can't carry binaries, but a ZIP bundle can:
-    # the client unzips, uploads each image to Cloudinary, and sends the resulting
+    # the client unzips, uploads each image to the bucket, and sends the resulting
     # public_id here (validated path-traversal-safe like the single-create path).
     thumbnail = ImageIdField(required=False, allow_blank=True)
 
@@ -562,6 +616,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
             "headline",
             "description",
             "fee",
+            "deposit",
             "availability",
             "location",
             "condition",
@@ -584,3 +639,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
         # other free-text fields. The subset-against-collection check runs in
         # ThingBulkCreateView (the serializer has no collection context).
         return [reject_spreadsheet_formula(tag) for tag in value] if value else value
+
+    def validate(self, attrs):
+        validate_deposit_for_type(attrs.get("type"), attrs.get("deposit"))
+        return attrs

@@ -42,7 +42,12 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-const renderPage = () => render(<MemoryRouter><SharedThingsPage /></MemoryRouter>);
+const renderPage = () =>
+  render(
+    <MemoryRouter>
+      <SharedThingsPage />
+    </MemoryRouter>
+  );
 
 /**
  * The cross-group view a member never had.
@@ -54,15 +59,18 @@ const renderPage = () => render(<MemoryRouter><SharedThingsPage /></MemoryRouter
 describe('SharedThingsPage', () => {
   test('lists things from the groups you belong to, and links each to its collection', async () => {
     apiFetch.mockImplementation((url) =>
-      url.startsWith('/api/v1/invited-things/') ? ok({ results: [THING], next: null }) : ok({}));
+      url.startsWith('/api/v1/invited-things/') ? ok({ results: [THING], next: null }) : ok({})
+    );
 
     renderPage();
 
     expect(await screen.findByText('A cordless drill')).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/invited-things/', expect.anything());
     // The card knows which collection it came from, so its links stay in context.
-    expect(screen.getByRole('link', { name: /A cordless drill/ }))
-      .toHaveAttribute('href', '/collections/COL001/things/THG001');
+    expect(screen.getByRole('link', { name: /A cordless drill/ })).toHaveAttribute(
+      'href',
+      '/collections/COL001/things/THG001'
+    );
   });
 
   test('an empty result says so and offers the way back, not a blank page', async () => {
@@ -70,12 +78,16 @@ describe('SharedThingsPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText(/nothing has been shared in your groups yet/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/nothing has been shared in your groups yet/i)
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to my groups/i })).toHaveAttribute('href', '/');
   });
 
   test('a failed load shows a persistent error, not an endless spinner', async () => {
-    apiFetch.mockImplementation(() => Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) }));
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    );
 
     renderPage();
 
@@ -86,7 +98,8 @@ describe('SharedThingsPage', () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/invited-things/')
         ? ok({ results: [THING], next: 'http://testserver/api/v1/invited-things/?page=2' })
-        : ok({}));
+        : ok({})
+    );
 
     renderPage();
 

@@ -522,15 +522,35 @@ def _links(*links):
     return {"type": "links", "links": [{"url": url, "label": label} for url, label in links]}
 
 
-def _render_email(blocks):
+def _render_email(blocks, lang=None):
     """Render the HTML body from a list of blocks through the autoescaping layout.
 
     ``has_logo`` mirrors whether ``_send()`` will find the asset to attach —
     the ``cid:`` reference is only rendered when there's a matching attachment
     coming, so a missing file never leaves a broken image in the email.
+
+    ``legal_url`` always resolves, whether or not the caller passes ``lang`` —
+    every email carries it, mandatory ones included, because it is the art. 14
+    disclosure link and not a preference (unlike the "manage your emails"
+    footer in ``_with_footer``, which only appears on the categories a
+    recipient can opt out of). ``lang`` here only picks the label's language;
+    ``T`` already falls back to the deployment default when it is ``None``.
+
+    The resolved ``lang`` also lands on ``<html lang="...">`` itself (A4) — a
+    screen reader picks its pronunciation from that attribute, and every email
+    already speaks a specific, known language (``resolve_email_language``), so
+    leaving the tag blank was never "unknown", only unstated.
     """
+    resolved_lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
     return render_to_string(
-        "email/layout.html", {"blocks": blocks, "has_logo": _logo_bytes() is not None}
+        "email/layout.html",
+        {
+            "blocks": blocks,
+            "has_logo": _logo_bytes() is not None,
+            "lang": resolved_lang,
+            "legal_url": f"{_frontend_base_url()}/legal",
+            "legal_label": T("footer_legal", lang=lang),
+        },
     )
 
 
@@ -593,7 +613,8 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
         [
             _para(T("magic_intro")),
             _links((magic_link, T("magic_cta"))),
-        ]
+        ],
+        lang=lang,
     )
     _send(email, subject, plain, html, CATEGORY_MANDATORY, lang=lang)
 
@@ -636,7 +657,24 @@ def send_collection_invite_email(
     blocks.append(
         _links((accept_link, T("invite_accept_cta")), (reject_link, T("invite_decline_cta")))
     )
-    _send(email, subject, plain, _render_email(blocks), CATEGORY_MANDATORY, user=user, lang=lang)
+    # Art. 14 GDPR: this address did not come from its owner, it came from
+    # whoever invited them, so the first message they get from us has to say
+    # so — where the email came from, what it is used for, and that doing
+    # nothing ends it. This is the one email in the catalogue that has to
+    # carry this sentence, because it is the one email sent to somebody OIUEEI
+    # never asked anything of directly.
+    source_note = T("invite_source_note")
+    blocks.append(_para(source_note))
+    plain = f"{plain} {source_note}"
+    _send(
+        email,
+        subject,
+        plain,
+        _render_email(blocks, lang=lang),
+        CATEGORY_MANDATORY,
+        user=user,
+        lang=lang,
+    )
 
 
 def send_invitation_proposal_email(
@@ -683,7 +721,13 @@ def send_invitation_proposal_email(
         _links((approve_link, T("proposal_approve_cta")), (reject_link, T("proposal_reject_cta")))
     )
     _send(
-        owner_email, subject, plain, _render_email(blocks), CATEGORY_ACTIVITY, user=user, lang=lang
+        owner_email,
+        subject,
+        plain,
+        _render_email(blocks, lang=lang),
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
     )
 
 
@@ -708,7 +752,7 @@ def send_proposal_declined_email(
         proposer_email,
         subject,
         body,
-        _render_email([_para(body)]),
+        _render_email([_para(body)], lang=lang),
         CATEGORY_ACTIVITY,
         user=user,
         lang=lang,
@@ -718,7 +762,7 @@ def send_proposal_declined_email(
 def send_collection_welcome_doc_email(collection_headline, doc_url, email, collection=None):
     """Send the collection's welcome & rules PDF to a member who has just joined.
 
-    A **link**, never an attachment: the file lives on Cloudinary, and mailing a
+    A **link**, never an attachment: the file lives in the bucket, and mailing a
     5 MB PDF to every joiner would be a good way to get the domain filtered.
     Membership lifecycle, so it is mandatory (Cat. 1) like the invitation itself —
     a member who never sees the rules can't follow them. Sent once, on the first
@@ -734,7 +778,8 @@ def send_collection_welcome_doc_email(collection_headline, doc_url, email, colle
             _para(T("welcome_doc_intro")),
             _links((doc_url, headline)),
             _para(T("welcome_doc_outro")),
-        ]
+        ],
+        lang=lang,
     )
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
 
@@ -760,13 +805,65 @@ def send_account_delete_email(user, delete_link):
             _para(T("account_delete_keeps")),
             _links((delete_link, T("account_delete_cta"))),
             _para(T("account_delete_outro")),
-        ]
+        ],
+        lang=lang,
     )
     _send(
         user.email,
         subject,
         plain,
         html,
+        CATEGORY_MANDATORY,
+        user=user,
+        include_viral=False,
+        lang=lang,
+    )
+
+
+def send_inactivity_warning_email(user, months, days, will_delete=True):
+    """Tell somebody their account has gone quiet, before anything happens (Cat. 1).
+
+    Mandatory, like the erasure confirmation and for the same reason: it is
+    about whether the account continues to exist, so it has to reach people who
+    opted out of everything else. ``include_viral=False`` too — a growth line on
+    "we are about to delete you" would be grotesque.
+
+    **Two bodies, because two things can happen.** Most accounts are deleted
+    when the grace period runs out. An account that owns a group other people
+    are still using never is, so it must not be told that it will be: it gets
+    the true version instead — nothing is being taken away, but nobody has
+    looked after this in two years, and leaving is yours to choose.
+
+    Nothing here nags. The version that ends "if you would rather it went, you
+    don't have to do anything at all" is the honest one (DESIGN §6): the exit
+    must not be made harder than the entrance, and an inactive account is
+    somebody who already left.
+    """
+    lang = resolve_email_language(user=user)
+    T = _texts(lang)
+    login_url = f"{_frontend_base_url()}/login"
+    if will_delete:
+        plain = T("inactivity_plain").format(months=months, days=days, link=login_url)
+        blocks = [
+            _para(T("inactivity_intro").format(months=months)),
+            _para(T("inactivity_deletes").format(days=days)),
+            _para(T("inactivity_keep")),
+            _links((login_url, T("inactivity_cta"))),
+            _para(T("inactivity_outro")),
+        ]
+    else:
+        plain = T("inactivity_kept_plain").format(months=months, link=login_url)
+        blocks = [
+            _para(T("inactivity_intro").format(months=months)),
+            _para(T("inactivity_kept")),
+            _links((login_url, T("inactivity_cta"))),
+            _para(T("inactivity_kept_outro")),
+        ]
+    _send(
+        user.email,
+        T("inactivity_subject"),
+        plain,
+        _render_email(blocks, lang=lang),
         CATEGORY_MANDATORY,
         user=user,
         include_viral=False,
@@ -798,7 +895,8 @@ def send_contact_email(name, email, message, kind="support"):
             _field(T("contact_name_label"), name or "-"),
             _field(T("contact_email_label"), email),
             _para(message),
-        ]
+        ],
+        lang=lang,
     )
     _send(
         recipient,
@@ -824,7 +922,8 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
             _para(T("revoke_intro").format(owner=owner_name)),
             _strong(headline),
             _para(T("revoke_outro")),
-        ]
+        ],
+        lang=lang,
     )
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
 
@@ -866,7 +965,8 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
             _strong(headline),
             *_booking_detail_blocks(booking, lang),
             _links((accept_link, T("hold_confirm_cta")), (reject_link, T("hold_cancel_cta"))),
-        ]
+        ],
+        lang=lang,
     )
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -896,7 +996,8 @@ def send_booking_decision_email(booking, thing, accepted=True):
             _para(T("decision_intro").format(action=action, decision=decision_word)),
             _strong(headline),
             *_booking_detail_blocks(booking, lang),
-        ]
+        ],
+        lang=lang,
     )
     _send(booking.requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -912,7 +1013,8 @@ def send_invite_rejected_email(invitee_name, collection_headline, owner_email, c
         [
             _para(T("invite_rejected_intro").format(invitee=invitee_name)),
             _strong(headline),
-        ]
+        ],
+        lang=lang,
     )
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -950,7 +1052,8 @@ def send_booking_confirmation_email(requester, thing, booking):
             *_booking_detail_blocks(booking, lang),
             _para(T("confirmation_outro").format(owner=owner_name)),
             _links((thing_url, headline)),
-        ]
+        ],
+        lang=lang,
     )
     _send(requester.email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -972,7 +1075,8 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
             _strong(headline),
             _field(T("question_label"), question),
             _links((thing_url, T("faq_view_reply_cta"))),
-        ]
+        ],
+        lang=lang,
     )
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -994,7 +1098,8 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
             _field(T("your_question_label"), question),
             _field(T("reply_label"), answer),
             _links((thing_url, headline)),
-        ]
+        ],
+        lang=lang,
     )
     _send(questioner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -1010,7 +1115,8 @@ def send_faq_hide_email(owner_name, thing_headline, question, questioner_email):
             _para(T("faq_hide_intro").format(owner=owner_name)),
             _strong(L(thing_headline)),
             _field(T("question_label"), question),
-        ]
+        ],
+        lang=lang,
     )
     _send(questioner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -1034,7 +1140,8 @@ def send_thing_reported_email(thing, owner_email):
             _strong(headline),
             _para(T("reported_outro")),
             _links((thing_url, T("reported_review_cta"))),
-        ]
+        ],
+        lang=lang,
     )
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -1067,7 +1174,8 @@ def send_broadcast_email(
                     _para(T("broadcast_intro").format(owner=owner_name, collection=headline)),
                     _para(message),
                     _links((collection_url, T("broadcast_help_cta"))),
-                ]
+                ],
+                lang=lang,
             ),
         )
 
@@ -1084,7 +1192,7 @@ def send_return_reminder_email(requester_name, thing_headline, end_date, owner_e
     subject = T("reminder_subject")
     plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end_date)
     body = T("reminder_body").format(requester=requester_name, thing=headline, end=end_date)
-    html = _render_email([_para(body)])
+    html = _render_email([_para(body)], lang=lang)
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
@@ -1108,7 +1216,7 @@ def send_return_due_email(owner_name, thing_headline, end_date, requester_email,
     blocks = [_para(body)]
     if thing_url:
         blocks.append(_links((thing_url, T("view_thing_cta"))))
-    html = _render_email(blocks)
+    html = _render_email(blocks, lang=lang)
     _send(requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
@@ -1135,7 +1243,8 @@ def send_digest_email(
                     _para(T("digest_intro").format(collection=headline)),
                     _list(headlines),
                     _links((collection_url, T("view_collection_cta"))),
-                ]
+                ],
+                lang=lang,
             ),
         )
 
@@ -1213,6 +1322,9 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
     # One send per superuser: _send takes a single address, and a per-recipient
     # send keeps a bad address from costing the others their alert.
     plain = "\n".join(plain_lines)
-    html = _render_email(blocks)
+    # No lang var here on purpose (see the docstring): this is operator-only
+    # ops mail with no i18n catalogue, so the legal footer speaks the deployment
+    # default rather than any particular recipient's preference.
+    html = _render_email(blocks, lang=None)
     for recipient in recipients:
         _send(recipient, subject, plain, html, CATEGORY_MANDATORY, include_viral=False)

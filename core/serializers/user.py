@@ -5,7 +5,7 @@ User serializers for OIUEEI.
 from rest_framework import serializers
 
 from core.models import Language, Theeeme, User
-from core.utils import cloudinary_url
+from core.utils import asset_url
 from core.validators import ImageIdField, SafeHeadlineField, SafeTextField
 
 
@@ -59,7 +59,7 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
     def get_photo_url(self, obj):
-        return cloudinary_url(obj.photo)
+        return asset_url(obj.photo)
 
     def get_own_collections(self, obj):
         return list(obj.owned_collections.values_list("code", flat=True))
@@ -101,7 +101,7 @@ class UserPublicSerializer(serializers.ModelSerializer):
         ]
 
     def get_photo_url(self, obj):
-        return cloudinary_url(obj.photo)
+        return asset_url(obj.photo)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):

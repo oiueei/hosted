@@ -3,6 +3,12 @@
     "downloadStats": "Download stats (CSV)",
     "downloadStatsError": "Couldn't download the stats."
   },
+  "collectionExport": {
+    "downloadButton": "Download the whole collection (JSON)",
+    "downloading": "Preparing the file…",
+    "notice": "The whole group — every thing, every member's email, the full history. Not the summary above: it carries other people's data, so keep it somewhere safe and don't forward it.",
+    "error": "Couldn't build the export. Please try again in a moment."
+  },
   "ageRange": {
     "PRE_1946": "1945 or earlier",
     "BOOMER": "Boomers (1946–1964)",
@@ -134,7 +140,8 @@
     "contact": "Contact — OIUEEI",
     "collaborate": "Collaborate — OIUEEI",
     "ownerBookings": "Requests to me — OIUEEI",
-    "sharedThings": "Shared with me — OIUEEI"
+    "sharedThings": "Shared with me — OIUEEI",
+    "dataExport": "Data export — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -152,7 +159,8 @@
     "operator": "",
     "popIn": "New here? Pop in →",
     "legalLink": "Legal notice & privacy",
-    "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →"
+    "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →",
+    "faqLink": "Questions about this site? →"
   },
   "verify": {
     "declined": "Declined",
@@ -276,6 +284,8 @@
   "thingPage": {
     "typeLabel": "Type.",
     "priceLabel": "Price.",
+    "depositLabel": "Deposit.",
+    "depositRefundableNote": "(refundable)",
     "availabilityLabel": "Availability.",
     "locationLabel": "Location.",
     "conditionLabel": "Condition.",
@@ -387,6 +397,8 @@
     "titleLabel": "Title",
     "descriptionLabel": "Description",
     "priceLabel": "Price",
+    "depositLabel": "Deposit (optional)",
+    "depositHelper": "A guarantee you give back when the thing does — not part of the price.",
     "availabilityLabel": "Availability",
     "conditionLabel": "Condition",
     "locationLabel": "Location",
@@ -443,6 +455,7 @@
     "photoHelper": "Shown on your profile, optional",
     "maxAbout": "Maximum 2000 characters.",
     "languageHelper": "OIUEEI also writes to you in this language (emails included).",
+    "downloadData": "Download a copy of your data",
     "deleteAccount": "Delete account",
     "nameHelper": "Your name, a nickname, anything you like. It appears beside the questions you ask, in the journey of anything you have held, and in your groups’ member lists — publicly, if the group shares publicly."
   },
@@ -746,7 +759,7 @@
     "heading": "Add many at once (CSV)",
     "help": "Add multiple things from a CSV — or a ZIP with the photos included.",
     "formatTitle": "CSV/ZIP format",
-    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column.",
+    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column.",
     "fileLabel": "CSV or ZIP file",
     "empty": "No rows found in that file.",
     "tooMany": "You can import up to {{max}} items at once.",
@@ -762,7 +775,7 @@
     "zipError": "We couldn't read that ZIP. Check the file and try again.",
     "imageUploadError": "Some photos couldn't be uploaded. Check the images and try again.",
     "uploadingImages": "Uploading photos… ({{done}}/{{total}})",
-    "formatBody": "Tags go in one cell separated by | (and must be defined in the collection — write the tag in any of its languages, e.g. \"Crianza\" or \"Criança\"). The fee column accepts either 1.5 or 1,5. For photos, zip the CSV together with the image files and name each photo in the \"photo\" column — like this:",
+    "formatBody": "Tags go in one cell separated by | (and must be defined in the collection — write the tag in any of its languages, e.g. \"Crianza\" or \"Criança\"). The fee and deposit columns both accept either 1.5 or 1,5, and deposit is only used for LEND/RENT rows — a value on any other type is rejected. For photos, zip the CSV together with the image files and name each photo in the \"photo\" column — like this:",
     "downloadExample": "Download example (ZIP)"
   },
   "gallery": {
@@ -781,6 +794,8 @@
     "durationsHelper": "For lending/renting items. Renters pick one of these. Empty = any length.",
     "weekdaysLabel": "Pickup / return days",
     "weekdaysHelper": "Both pickup and return must fall on these days. Empty = any day.",
+    "depositPolicyLabel": "Deposit policy (optional)",
+    "depositPolicyHelper": "How deposits work in this group — the amount is set per thing, this explains the condition for getting it back. Leave empty if this group doesn't use deposits.",
     "d1": "1 day",
     "d2": "2 days",
     "d3": "3 days",
@@ -808,11 +823,15 @@
     "infoTitle": "One text per language",
     "infoBody": "If your group reads in two languages, write the title or the description as a small map — copy this and change the words. Everyone then reads it in their own language, in the app and in their emails.",
     "tagsInfoBody": "A tag label works the same way — write it as a map and each member sees their own.",
+    "policyHint": "The deposit policy can hold one text per language too.",
+    "policyInfoBody": "It works the same way — write it as a small map and each member reads their own.",
     "infoFallback": "Languages: es (Spanish), ca (Catalan), en (English). Write in one only if you prefer — anything that isn't a map is shown exactly as you typed it."
   },
   "deleteAccount": {
     "pageTitle": "Delete your account",
     "intro": "Deleting your account is immediate and irreversible once you confirm it. This page tells you exactly what goes and what stays.",
+    "exportFirst": "Before you delete: download a copy of your data first — it's your last chance to.",
+    "exportFirstLink": "Download my data",
     "whatGoesTitle": "What is deleted",
     "whatGoes": "Your account, your collections, your things and their photos, and your pending requests — permanently.",
     "whatStaysTitle": "What stays",
@@ -861,5 +880,37 @@
     "needsApproval": "Some options need approval on this deployment: {{list}}.",
     "unavailable": "Some options are not available on this deployment: {{list}}.",
     "requestAccess": "Request access"
+  },
+  "dataExport": {
+    "pageTitle": "Download your data",
+    "intro": "A copy of everything OIUEEI holds about you, as one JSON file — read here before you decide, or before you delete your account.",
+    "whatYouTakeTitle": "What you take",
+    "take": {
+      "profile": "Your profile",
+      "collectionsOwned": "The groups you own — members, things and all",
+      "collectionsMemberOf": "The groups you belong to",
+      "things": "Your things",
+      "bookings": "Your reservations, made and received",
+      "faqs": "Questions you've asked, and answered on your own things",
+      "proposals": "People you've suggested for a group",
+      "transfers": "The journey of things that have passed through your hands",
+      "notifications": "Your notifications",
+      "reports": "Reports you've filed",
+      "activity": "Your own activity history"
+    },
+    "whatYouDontTakeTitle": "What you don't take",
+    "dontTake": {
+      "credentials": "Credentials. Your collections' public link, your magic-link tokens and your session cookies — someone holding this file could otherwise walk into your groups.",
+      "othersData": "Other people's data, beyond what you already see. Emails only for groups you own; no one else's birth range or postal code.",
+      "othersThings": "The full record of other people's things in your groups — just their code, title and owner's name. Managing the group? Download the collection copy instead.",
+      "reports": "Reports about your things. They're anonymous by design — neither the app nor this file says who reported. The ones you filed are here.",
+      "photos": "Photos and documents, which travel as links, not files. Deleting your account breaks those links — download your images first.",
+      "emails": "Copies of the emails we've sent you, or of contact-form messages, which we don't keep.",
+      "logs": "Server logs. Their handling is in the privacy policy.",
+      "deleted": "Anything you've already deleted. There's no bin."
+    },
+    "downloadButton": "Download my data",
+    "downloading": "Preparing your file…",
+    "error": "Couldn't build your export. Please try again in a moment."
   }
 }

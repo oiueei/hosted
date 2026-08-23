@@ -5,7 +5,9 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 window.scrollTo = vi.fn();
 
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   extractApiError: vi.fn(() => Promise.resolve('')),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
@@ -23,7 +25,8 @@ function mockResponse(data, ok = true) {
 function setApi({ collection = {}, thing = {} } = {}) {
   apiFetch.mockImplementation((url, opts = {}) => {
     const method = opts.method || 'GET';
-    if (url === '/api/v1/things/' && method === 'POST') return Promise.resolve(mockResponse({ code: 'NEW001' }));
+    if (url === '/api/v1/things/' && method === 'POST')
+      return Promise.resolve(mockResponse({ code: 'NEW001' }));
     if (/\/collections\/[^/]+\//.test(url)) return Promise.resolve(mockResponse(collection));
     if (/\/things\/[^/]+\//.test(url)) return Promise.resolve(mockResponse(thing));
     return Promise.resolve(mockResponse({}));
@@ -57,10 +60,17 @@ function renderEdit(apiOpts) {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem('theeemeColors', JSON.stringify({
-    color_01: 'bus', color_02: 'suomenlinna-light', color_03: 'copper',
-    color_04: 'black', color_05: 'white', color_06: 'white',
-  }));
+  localStorage.setItem(
+    'theeemeColors',
+    JSON.stringify({
+      color_01: 'bus',
+      color_02: 'suomenlinna-light',
+      color_03: 'copper',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'white',
+    })
+  );
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   setApi();
@@ -84,7 +94,9 @@ describe('AddThingPage — field visibility', () => {
   });
 
   test('SELL (single-type allowlist): pre-selects type, shows fee + detail fields', async () => {
-    const { container } = renderAdd({ collection: { mode: 'PROPRIETARY', allowed_thing_types: ['SELL_THING'] } });
+    const { container } = renderAdd({
+      collection: { mode: 'PROPRIETARY', allowed_thing_types: ['SELL_THING'] },
+    });
 
     // The single-element allowlist pre-selects SELL_THING, so the fee surfaces.
     await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
@@ -92,9 +104,10 @@ describe('AddThingPage — field visibility', () => {
     expect(container.querySelector('#add-thing-location')).toBeTruthy();
   });
 
-
   test('single-type allowlist: preselects it and shows its fields', async () => {
-    const { container } = renderAdd({ collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] } });
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     // The Select still renders even when the allowlist leaves one option.
@@ -146,11 +159,15 @@ describe('AddThingPage — submit', () => {
     const { container } = renderAdd({ collection: { mode: 'PROPRIETARY' } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    fireEvent.change(container.querySelector('#add-thing-headline'), { target: { value: 'My Gift' } });
+    fireEvent.change(container.querySelector('#add-thing-headline'), {
+      target: { value: 'My Gift' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
-      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST');
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST'
+      );
       expect(call).toBeTruthy();
       const body = JSON.parse(call[1].body);
       expect(body).toMatchObject({
@@ -167,20 +184,28 @@ describe('AddThingPage — submit', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('EditThingPage', () => {
   test('pre-populates the headline from the loaded thing', async () => {
-    renderEdit({ thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Existing Thing', description: '' } });
+    renderEdit({
+      thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Existing Thing', description: '' },
+    });
 
     expect(await screen.findByDisplayValue('Existing Thing')).toBeInTheDocument();
   });
 
   test('PATCHes /api/v1/things/{code}/ with the edited fields', async () => {
-    const { container } = renderEdit({ thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Existing Thing', description: '' } });
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Existing Thing', description: '' },
+    });
 
     await screen.findByDisplayValue('Existing Thing');
-    fireEvent.change(container.querySelector('#edit-thing-headline'), { target: { value: 'Renamed Thing' } });
+    fireEvent.change(container.querySelector('#edit-thing-headline'), {
+      target: { value: 'Renamed Thing' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      const call = apiFetch.mock.calls.find((c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH');
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH'
+      );
       expect(call).toBeTruthy();
       const body = JSON.parse(call[1].body);
       expect(body).toMatchObject({ headline: 'Renamed Thing', type: 'GIFT_THING' });
@@ -207,18 +232,26 @@ describe('EditThingPage — the stored verb stays offered', () => {
 
      `openTypes()` reads the option list the way a user sees it — the Select
      renders its options only while open, so each read opens it first. */
-  const LENT_THING = { code: 'THG001', type: 'LEND_THING', headline: 'Drill', tags: [], gallery_urls: [] };
+  const LENT_THING = {
+    code: 'THG001',
+    type: 'LEND_THING',
+    headline: 'Drill',
+    tags: [],
+    gallery_urls: [],
+  };
 
   function narrowedApi() {
     apiFetch.mockImplementation((url) => {
       if (url.includes('/auth/me/')) {
-        return Promise.resolve(mockResponse({
-          capabilities: {
-            collection_modes: ['PROPRIETARY'],
-            thing_types: ['GIFT_THING', 'SELL_THING'],
-            request_url: null,
-          },
-        }));
+        return Promise.resolve(
+          mockResponse({
+            capabilities: {
+              collection_modes: ['PROPRIETARY'],
+              thing_types: ['GIFT_THING', 'SELL_THING'],
+              request_url: null,
+            },
+          })
+        );
       }
       return Promise.resolve(mockResponse(LENT_THING));
     });
@@ -330,6 +363,138 @@ describe('AddThingPage — clearing a detail select', () => {
       );
       expect(call).toBeTruthy();
       expect(JSON.parse(call[1].body).availability).toBeUndefined();
+    });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Deposit (S6) — LEND/RENT only, and never left ambiguous across an edit
+// ════════════════════════════════════════════════════════════════════════
+
+describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {
+  test('a GIFT thing never sees a deposit input', async () => {
+    const { container } = renderAdd({ collection: { headline: 'Plain', mode: 'PROPRIETARY' } });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    expect(container.querySelector('#add-thing-deposit')).toBeNull();
+  });
+
+  test('a LEND thing gets the field, with no default and never labelled as part of the price', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    // Empty, never pre-filled (DESIGN §6 — no suggested amount).
+    expect(container.querySelector('#add-thing-deposit').value).toBe('');
+    // A price row for LEND would be wrong regardless — but if it ever appeared,
+    // a shared euro icon with no other cue is exactly how "10 + 50" becomes "60 €".
+    expect(container.querySelector('#add-thing-fee')).toBeNull();
+  });
+
+  test('a RENT thing carries both fields, distinctly labelled', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['RENT_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
+    expect(container.querySelector('#add-thing-deposit')).toBeTruthy();
+    // Two different labels, not the same word twice — otherwise "10" next to
+    // "50" reads as one 60 € cost instead of a price plus a returnable deposit.
+    const feeLabel = container.querySelector('label[for="add-thing-fee"]');
+    const depositLabel = container.querySelector('label[for="add-thing-deposit"]');
+    expect(feeLabel.textContent).not.toBe(depositLabel.textContent);
+    expect(depositLabel.textContent).toMatch(/deposit/i);
+  });
+
+  test('a deposit typed for a LEND thing reaches the POST body', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    fireEvent.change(container.querySelector('#add-thing-headline'), {
+      target: { value: 'Drill' },
+    });
+    fireEvent.change(container.querySelector('#add-thing-deposit'), { target: { value: '50' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST'
+      );
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body)).toMatchObject({ deposit: '50', type: 'LEND_THING' });
+    });
+  });
+
+  test('leaving it empty never sends the field at all — nothing to clear on a brand-new thing', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    fireEvent.change(container.querySelector('#add-thing-headline'), {
+      target: { value: 'Drill' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST'
+      );
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body)).not.toHaveProperty('deposit');
+    });
+  });
+});
+
+describe('EditThingPage — deposit follows the type, explicitly', () => {
+  test('a stored deposit pre-fills the field', async () => {
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+    });
+
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-deposit').value).toBe('50');
+  });
+
+  test('switching the type away from LEND/RENT clears the deposit in the same PATCH', async () => {
+    // The server judges the row that lands (core/serializers/CLAUDE.md): an
+    // untouched field keeps its stored value, so this can't be left implicit —
+    // the client has to say `deposit: null` itself or the save 400s.
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+
+    fireEvent.click(container.querySelector('#edit-thing-type-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH'
+      );
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).deposit).toBeNull();
+    });
+  });
+
+  test('keeping the type as LEND/RENT keeps sending the amount', async () => {
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH'
+      );
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).deposit).toBe('50.00');
     });
   });
 });

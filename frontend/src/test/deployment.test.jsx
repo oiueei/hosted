@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe('the module keeps its contract', () => {
-  test('exports the four values App.jsx and the pages read', async () => {
+  test('exports the five values App.jsx and the pages read', async () => {
     /* Asserted as a **shape**, not as this checkout's values.
 
        The obvious version of this test — `deploymentRoutes` is `[]`, both paths
@@ -50,9 +50,8 @@ describe('the module keeps its contract', () => {
        App.jsx, LoginPage, SiteFooter, CollectionPage and VerifyPage read. The
        behaviours themselves are pinned below with the module mocked, which
        works identically wherever it runs. */
-    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath } = await import(
-      '../deployment'
-    );
+    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath, faqPath } =
+      await import('../deployment');
 
     expect(Array.isArray(deploymentRoutes)).toBe(true);
     deploymentRoutes.forEach((route) => {
@@ -61,7 +60,7 @@ describe('the module keeps its contract', () => {
     });
     expect(typeof deploymentI18n).toBe('object');
     expect(deploymentI18n).not.toBeNull();
-    [popInPath, aboutPath].forEach((path) => {
+    [popInPath, aboutPath, faqPath].forEach((path) => {
       expect(path === null || typeof path === 'string').toBe(true);
     });
   });
@@ -73,11 +72,10 @@ describe('a deployment that adds a route', () => {
     // renders the 404 page, and nothing about the app looks broken — it just
     // insists the deployment's own page does not exist.
     vi.doMock('../deployment', () => ({
-      deploymentRoutes: [
-        { path: '/request-access', Component: () => <p>Ask to join</p> },
-      ],
+      deploymentRoutes: [{ path: '/request-access', Component: () => <p>Ask to join</p> }],
       popInPath: null,
       aboutPath: null,
+      faqPath: null,
       deploymentI18n: {},
     }));
     const { default: App } = await import('../App');
@@ -91,11 +89,10 @@ describe('a deployment that adds a route', () => {
   test('unknown paths still reach the 404 page', async () => {
     /* The catch-all must survive the insertion above it. */
     vi.doMock('../deployment', () => ({
-      deploymentRoutes: [
-        { path: '/request-access', Component: () => <p>Ask to join</p> },
-      ],
+      deploymentRoutes: [{ path: '/request-access', Component: () => <p>Ask to join</p> }],
       popInPath: null,
       aboutPath: null,
+      faqPath: null,
       deploymentI18n: {},
     }));
     const { default: App } = await import('../App');
@@ -122,11 +119,16 @@ describe('the open-door button follows popInPath', () => {
       deploymentRoutes: [],
       popInPath: null,
       aboutPath: null,
+      faqPath: null,
       deploymentI18n: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
     // Nothing dangling: no button, and no link pointing at the page that is
     // not there. Sending a stranger to a 404 is worse than telling them the
@@ -140,14 +142,64 @@ describe('the open-door button follows popInPath', () => {
       deploymentRoutes: [],
       popInPath: '/join-us',
       aboutPath: null,
+      faqPath: null,
       deploymentI18n: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(document.querySelector('a[href="/join-us"]')).not.toBeNull();
+    });
+  });
+});
+
+describe('the faq link follows faqPath', () => {
+  test('is not rendered at all when the deployment has no help page', async () => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      faqPath: null,
+      deploymentI18n: {},
+    }));
+    const { default: LoginPage } = await import('../pages/LoginPage');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    // Same reasoning as the pop-in button: a link to a 404 is worse than one
+    // link fewer, so upstream — with no FAQ content of its own — offers none.
+    expect(screen.queryByRole('link', { name: /questions|faq/i })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/faq"]')).toBeNull();
+  });
+
+  test('points wherever the deployment says, not at a hard-coded path', async () => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      faqPath: '/help',
+      deploymentI18n: {},
+    }));
+    const { default: LoginPage } = await import('../pages/LoginPage');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('a[href="/help"]')).not.toBeNull();
     });
   });
 });
@@ -158,11 +210,16 @@ describe('the about link follows aboutPath', () => {
       deploymentRoutes: [],
       popInPath: null,
       aboutPath: '/about-us',
+      faqPath: null,
       deploymentI18n: {},
     }));
     const { default: SiteFooter } = await import('../components/SiteFooter');
 
-    render(<MemoryRouter><SiteFooter /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
 
     // Upstream this link is absent entirely (siteFooter.test.jsx pins that).
     // Here it exists and points where the deployment put its page — not at a
@@ -217,6 +274,7 @@ describe("the dashboard's second button follows aboutPath", () => {
       deploymentRoutes: [],
       popInPath: null,
       aboutPath: null,
+      faqPath: null,
       deploymentI18n: {},
     }));
     mockEmptyDashboard();
@@ -244,14 +302,13 @@ describe("the dashboard's second button follows aboutPath", () => {
       deploymentRoutes: [],
       popInPath: null,
       aboutPath: '/about-us',
+      faqPath: null,
       deploymentI18n: {},
     }));
     mockEmptyDashboard();
     await renderHome();
 
-    await waitFor(() =>
-      expect(document.querySelector('a[href="/about-us"]')).not.toBeNull()
-    );
+    await waitFor(() => expect(document.querySelector('a[href="/about-us"]')).not.toBeNull());
   });
 });
 
@@ -271,6 +328,7 @@ describe('a "welcome" landing follows aboutPath', () => {
       deploymentRoutes: [],
       popInPath: null,
       aboutPath,
+      faqPath: null,
       deploymentI18n: {},
     }));
     globalThis.fetch = vi.fn(() =>

@@ -7,7 +7,8 @@ import { apiFetch } from '../services/api';
 import BulkInviteCsv from '../components/BulkInviteCsv';
 
 const fileInput = (container) => container.querySelector('input[type="file"]');
-const pick = (container, file) => fireEvent.change(fileInput(container), { target: { files: [file] } });
+const pick = (container, file) =>
+  fireEvent.change(fileInput(container), { target: { files: [file] } });
 
 const csvFile = (text) => new File([text], 'guests.csv', { type: 'text/csv' });
 
@@ -75,9 +76,7 @@ describe('BulkInviteCsv', () => {
     expect(screen.getByText('lala@mail.com — already a member')).toBeInTheDocument();
     expect(screen.getByText('lele@mail.com — already invited')).toBeInTheDocument();
     expect(screen.getByText('lili@mail.com — duplicate')).toBeInTheDocument();
-    expect(
-      screen.getByText('lulu@mail.com — daily invitation limit reached')
-    ).toBeInTheDocument();
+    expect(screen.getByText('lulu@mail.com — daily invitation limit reached')).toBeInTheDocument();
   });
 
   test('an unknown skip reason falls back to "invalid email" rather than a blank', async () => {

@@ -2,6 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Sets html[lang] before first paint (A3): App.jsx corrects it once React
+         mounts, via i18n.on('languageChanged') — but a returning Spanish/Catalan
+         visitor, and every crawler, saw the static "en" above until then. An
+         external file, not an inline block: script-src is 'self' with no
+         'unsafe-inline' in production (core/middleware.py), so inline script
+         content is silently dropped by the CSP and this has to load like any
+         other same-origin script. Synchronous (no type="module", no defer) —
+         it has to finish before the browser paints anything. -->
+    <script src="/detect-lang.js"></script>
     <link rel="icon" type="image/png" href="/oiueei-icon-192.png" />
     <link rel="apple-touch-icon" href="/oiueei-icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />

@@ -10,18 +10,114 @@ import { describe, test, expect } from 'vitest';
 // 0081 color_02 -> -medium-light and 0112 Vaakuna color_05 -> black). Keep this
 // list in lockstep with that seed.
 const THEEEMES = [
-  { name: 'Bussi', color_01: 'bus', color_02: 'suomenlinna-medium-light', color_03: 'copper', color_04: 'black', color_05: 'black', color_06: 'white' },
-  { name: 'Engel', color_01: 'engel', color_02: 'bus-medium-light', color_03: 'copper', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'Hopea', color_01: 'gold', color_02: 'bus-medium-light', color_03: 'silver', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'Kesä', color_01: 'summer', color_02: 'engel-medium-light', color_03: 'tram', color_04: 'black', color_05: 'white', color_06: 'black' },
-  { name: 'Kupari', color_01: 'copper', color_02: 'fog-medium-light', color_03: 'suomenlinna', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'Kulta', color_01: 'gold', color_02: 'fog-medium-light', color_03: 'metro', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'Metro', color_01: 'metro', color_02: 'suomenlinna-medium-light', color_03: 'gold', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'Sumu', color_01: 'fog', color_02: 'engel-medium-light', color_03: 'metro', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'Spåra', color_01: 'tram', color_02: 'engel-medium-light', color_03: 'summer', color_04: 'black', color_05: 'black', color_06: 'white' },
-  { name: 'Suomenlinna', color_01: 'suomenlinna', color_02: 'bus-medium-light', color_03: 'bus', color_04: 'black', color_05: 'white', color_06: 'black' },
-  { name: 'Vaakuna', color_01: 'summer', color_02: 'fog-medium-light', color_03: 'suomenlinna', color_04: 'black', color_05: 'black', color_06: 'black' },
-  { name: 'M&V', color_01: 'summer', color_02: 'black-5', color_03: 'black', color_04: 'black', color_05: 'white', color_06: 'black' },
+  {
+    name: 'Bussi',
+    color_01: 'bus',
+    color_02: 'suomenlinna-medium-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'white',
+  },
+  {
+    name: 'Engel',
+    color_01: 'engel',
+    color_02: 'bus-medium-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'Hopea',
+    color_01: 'gold',
+    color_02: 'bus-medium-light',
+    color_03: 'silver',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'Kesä',
+    color_01: 'summer',
+    color_02: 'engel-medium-light',
+    color_03: 'tram',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'black',
+  },
+  {
+    name: 'Kupari',
+    color_01: 'copper',
+    color_02: 'fog-medium-light',
+    color_03: 'suomenlinna',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'Kulta',
+    color_01: 'gold',
+    color_02: 'fog-medium-light',
+    color_03: 'metro',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'Metro',
+    color_01: 'metro',
+    color_02: 'suomenlinna-medium-light',
+    color_03: 'gold',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'Sumu',
+    color_01: 'fog',
+    color_02: 'engel-medium-light',
+    color_03: 'metro',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'Spåra',
+    color_01: 'tram',
+    color_02: 'engel-medium-light',
+    color_03: 'summer',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'white',
+  },
+  {
+    name: 'Suomenlinna',
+    color_01: 'suomenlinna',
+    color_02: 'bus-medium-light',
+    color_03: 'bus',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'black',
+  },
+  {
+    name: 'Vaakuna',
+    color_01: 'summer',
+    color_02: 'fog-medium-light',
+    color_03: 'suomenlinna',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+  {
+    name: 'M&V',
+    color_01: 'summer',
+    color_02: 'black-5',
+    color_03: 'black',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'black',
+  },
 ];
 
 // The role pairings that render text on a coloured surface (frontend/CLAUDE.md
@@ -66,7 +162,9 @@ describe('theeeme palette WCAG AA contrast', () => {
   test('all curated theeeme role tokens resolve to a hex value', () => {
     for (const theeeme of THEEEMES) {
       for (const key of ['color_01', 'color_02', 'color_03', 'color_04', 'color_05', 'color_06']) {
-        expect(tokens[theeeme[key]], `${theeeme.name} ${key}=${theeeme[key]}`).toMatch(/^#[0-9a-fA-F]{6}$/);
+        expect(tokens[theeeme[key]], `${theeeme.name} ${key}=${theeeme[key]}`).toMatch(
+          /^#[0-9a-fA-F]{6}$/
+        );
       }
     }
   });
@@ -74,7 +172,9 @@ describe('theeeme palette WCAG AA contrast', () => {
   test.each(THEEEMES)('$name meets AA for every text-on-colour role', (theeeme) => {
     for (const { role, fg, bg } of PAIRINGS) {
       const ratio = contrastRatio(tokens[theeeme[fg]], tokens[theeeme[bg]]);
-      expect(ratio, `${theeeme.name} — ${role}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+      expect(ratio, `${theeeme.name} — ${role}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+        AA_NORMAL
+      );
     }
   });
 });

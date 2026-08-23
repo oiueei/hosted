@@ -86,6 +86,12 @@ class User(AbstractBaseUser):
     name = models.CharField(max_length=32, blank=True, default="")
     created = models.DateField(default=date.today)
     last_activity = models.DateField(null=True, blank=True, default=None)
+    # The day we last told this person their account had gone quiet, so the
+    # grace period has somewhere to be counted from. Cleared the moment they
+    # come back (see `update_last_activity`): a warning that was answered must
+    # stop counting, or returning would not save them — which is the one thing
+    # the email promises.
+    inactivity_notified = models.DateField(null=True, blank=True, default=None)
     headline = models.CharField(max_length=64, blank=True, default="")
     about = models.CharField(max_length=2000, blank=True, default="")
     photo = models.CharField(max_length=255, blank=True, default="")
@@ -155,6 +161,16 @@ class User(AbstractBaseUser):
         return self.is_superuser
 
     def update_last_activity(self):
-        """Update the user's last activity date."""
+        """Update the user's last activity date.
+
+        Coming back also cancels any standing inactivity warning. That is the
+        whole promise of the email — "signing in once is enough to keep it" — so
+        a grace period that kept running would delete somebody for doing exactly
+        what they were asked.
+        """
         self.last_activity = date.today()
-        self.save(update_fields=["last_activity"])
+        fields = ["last_activity"]
+        if self.inactivity_notified is not None:
+            self.inactivity_notified = None
+            fields.append("inactivity_notified")
+        self.save(update_fields=fields)

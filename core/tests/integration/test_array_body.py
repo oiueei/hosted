@@ -45,13 +45,18 @@ def test_share_link_answers_a_normal_response_not_500(authenticated_client, coll
 
 
 @pytest.mark.django_db
-def test_upload_signature_answers_a_normal_response_not_500(authenticated_client, settings):
-    """No `kind`/`folder` in an array body ⇒ the image defaults, not a crash."""
-    res = authenticated_client.post("/api/v1/upload/signature/", ARRAY_BODY, format="json")
+def test_upload_ticket_answers_a_normal_response_not_500(authenticated_client):
+    """An array body carries no fields, so the view's own validation answers.
 
-    assert res.status_code == 200
-    assert res.data["folder"] == "oiueei/users"
-    assert res.data["resource_type"] == "image"
+    `body_dict` is what makes this a 400 and not a 500: a list has no `.get`, and
+    this view reads the body before any serializer runs. The 400 (rather than the
+    200 this used to assert) is the endpoint's own doing — it now requires a
+    content type and a length, and an array body supplies neither.
+    """
+    res = authenticated_client.post("/api/v1/upload/ticket/", ARRAY_BODY, format="json")
+
+    assert res.status_code == 400
+    assert "content_type" in res.data
 
 
 @pytest.mark.django_db

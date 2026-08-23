@@ -56,13 +56,30 @@ export default function RemoveGuestPage() {
       backTo={backPath}
       backLabel={backLabel}
     >
-      <p><Trans i18nKey="removeGuest.warning" values={{ name: guestName }} components={[<strong key="0" />]} /></p>
+      <p>
+        <Trans
+          i18nKey="removeGuest.warning"
+          values={{ name: guestName }}
+          components={[<strong key="0" />]}
+        />
+      </p>
       <div className="spacer-xs" />
       <div className="form-grid">
-        <Button fullWidth disabled={removing} onClick={handleRemove} style={btnStyle} iconStart={<IconCrossCircle aria-hidden="true" />}>
+        <Button
+          fullWidth
+          disabled={removing}
+          onClick={handleRemove}
+          style={btnStyle}
+          iconStart={<IconCrossCircle aria-hidden="true" />}
+        >
           {removing ? t('common.removing') : t('common.remove')}
         </Button>
-        <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => navigate(backPath)}
+          style={btnSecondaryStyle}
+        >
           {t('common.cancel')}
         </Button>
       </div>

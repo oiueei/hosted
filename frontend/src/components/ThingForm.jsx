@@ -1,6 +1,12 @@
 import { Select, TextInput, TextArea, NumberInput, ToggleButton } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { FEE_TYPES, DETAIL_TYPES, AVAILABILITY_VALUES, CONDITION_VALUES } from '../constants/things';
+import {
+  FEE_TYPES,
+  DATE_TYPES,
+  DETAIL_TYPES,
+  AVAILABILITY_VALUES,
+  CONDITION_VALUES,
+} from '../constants/things';
 import ImageUpload from './ImageUpload';
 import GalleryUpload from './GalleryUpload';
 import LocalizedInfo from './LocalizedInfo';
@@ -42,6 +48,9 @@ export default function ThingForm({
   fee,
   setFee,
   feeStep,
+  deposit,
+  setDeposit,
+  depositStep,
   availability,
   setAvailability,
   condition,
@@ -60,13 +69,18 @@ export default function ThingForm({
 }) {
   const { t } = useTranslation();
   const L = useLocalized();
-  const toggleTheme = theeemeColor01 ? { '--toggle-button-color': `var(--color-${theeemeColor01})` } : undefined;
+  const toggleTheme = theeemeColor01
+    ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
+    : undefined;
 
   const showEndless = ['GIFT_THING', 'SELL_THING'].includes(type);
   const isFeeType = FEE_TYPES.includes(type);
   const isDetailType = DETAIL_TYPES.includes(type);
   const showFee = isFeeType;
-  const showSpacer = isFeeType && isDetailType;
+  // Deposit is a guarantee that comes back, not part of the price — LEND/RENT
+  // only (D4). Its own gate, never showFee: RENT carries both, LEND only this.
+  const showDeposit = DATE_TYPES.includes(type);
+  const showSpacer = (isFeeType || showDeposit) && isDetailType;
   const showDetailFields = isDetailType;
 
   return (
@@ -91,7 +105,9 @@ export default function ThingForm({
           <div className="info-popover-row info-popover-row--end">
             <InfoPopover id={`${idPrefix}-type-info`} title={t('typeInfo.title')}>
               {typeOptions.map(({ label, value }) => (
-                <p key={value}><b>{label}</b> — {t('typeInfo.' + value)}</p>
+                <p key={value}>
+                  <b>{label}</b> — {t('typeInfo.' + value)}
+                </p>
               ))}
             </InfoPopover>
           </div>
@@ -144,9 +160,25 @@ export default function ThingForm({
           errorText={errors.fee}
         />
       )}
-      {showSpacer && (
-        <div className="spacer-xxxx" />
+      {/* No default, never pre-filled, and never presented ahead of the price:
+          a deposit is exclusionary by nature (DESIGN §6 — no dark pattern nudges
+          someone towards asking for one) and the helper text names it as what
+          it is, a guarantee given back, not a cost. */}
+      {showDeposit && (
+        <NumberInput
+          id={`${idPrefix}-deposit`}
+          label={t('addThing.depositLabel')}
+          helperText={t('addThing.depositHelper')}
+          value={deposit === '' ? '' : Number(deposit)}
+          onChange={(e) => setDeposit(e.target.value)}
+          min={0}
+          step={depositStep}
+          unit="EUR"
+          invalid={!!errors.deposit}
+          errorText={errors.deposit}
+        />
       )}
+      {showSpacer && <div className="spacer-xxxx" />}
       {showDetailFields && (
         <>
           <Select

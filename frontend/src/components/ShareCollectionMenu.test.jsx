@@ -10,7 +10,9 @@ vi.mock('qrcode.react', () => ({
 }));
 
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
@@ -273,7 +275,10 @@ describe('handing the link over', () => {
     pick('QR code');
 
     // What the camera would read …
-    expect(await screen.findByTestId('qr')).toHaveAttribute('data-value', 'http://x/share/NEWTOKEN');
+    expect(await screen.findByTestId('qr')).toHaveAttribute(
+      'data-value',
+      'http://x/share/NEWTOKEN'
+    );
     // … and what the person holding the phone up can check against it.
     expect(screen.getByText('http://x/share/NEWTOKEN')).toBeInTheDocument();
   });

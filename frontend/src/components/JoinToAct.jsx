@@ -55,7 +55,11 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
           aria-describedby={status === 'error' ? 'join-to-act-error' : undefined}
         />
         {status === 'error' && (
-          <p id="join-to-act-error" role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
+          <p
+            id="join-to-act-error"
+            role="alert"
+            style={{ color: 'var(--color-error)', marginBottom: 0 }}
+          >
             {message}
           </p>
         )}

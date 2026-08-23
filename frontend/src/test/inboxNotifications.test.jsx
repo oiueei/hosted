@@ -5,7 +5,9 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 window.scrollTo = vi.fn();
 
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
@@ -90,15 +92,12 @@ const renderCollection = () =>
   );
 
 describe('InboxNotifications (O1)', () => {
-  test('the owner sees the collection\'s own notifications on its page', async () => {
+  test("the owner sees the collection's own notifications on its page", async () => {
     renderCollection();
 
     expect(await screen.findByText(/The drill/)).toBeInTheDocument();
     // Scoped: it asked the API for this collection only.
-    expect(apiFetch).toHaveBeenCalledWith(
-      '/api/v1/inbox/?collection=COL001',
-      expect.anything()
-    );
+    expect(apiFetch).toHaveBeenCalledWith('/api/v1/inbox/?collection=COL001', expect.anything());
     // And the request deep-links the thing, so the owner can go and answer it.
     expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
       'href',
@@ -152,7 +151,11 @@ describe('InboxNotifications — every type says something', () => {
       notification: {
         code: 'NOTA01',
         type: 'MEMBER_LEFT',
-        payload: { collection_headline: 'Toy library', member_name: 'Lulu', collection_code: 'COL001' },
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: 'Lulu',
+          collection_code: 'COL001',
+        },
         created: '2026-08-06T10:00:00Z',
       },
       says: [/Lulu/, /Toy library/],
@@ -230,8 +233,10 @@ describe('InboxNotifications — every type says something', () => {
     // Not the broadcast fallback: that renders an empty body and a bare " — ".
     expect(container.textContent).not.toMatch(/\s—\s*Toy library\s*$/);
     expect(container.textContent).not.toMatch(/\{\{\w+\}\}/);
-    expect(screen.getByRole('link', { name: /decide now|open the group/i }))
-      .toHaveAttribute('href', links);
+    expect(screen.getByRole('link', { name: /decide now|open the group/i })).toHaveAttribute(
+      'href',
+      links
+    );
   });
 
   test('a recommendation approved before the dedicated type existed still reads right', async () => {
@@ -239,12 +244,20 @@ describe('InboxNotifications — every type says something', () => {
     // back-compatibility branch it would read as a request to decide — telling
     // the proposer to go and approve their own recommendation.
     apiFetch.mockImplementation((url) => {
-      if (url.startsWith('/api/v1/inbox/')) return ok([{
-        code: 'NOTA05',
-        type: 'INVITE_PROPOSED',
-        payload: { collection_headline: 'Toy library', collection_code: 'COL001', email: 'nou@vei.cat', approved: true },
-        created: '2026-08-06T10:00:00Z',
-      }]);
+      if (url.startsWith('/api/v1/inbox/'))
+        return ok([
+          {
+            code: 'NOTA05',
+            type: 'INVITE_PROPOSED',
+            payload: {
+              collection_headline: 'Toy library',
+              collection_code: 'COL001',
+              email: 'nou@vei.cat',
+              approved: true,
+            },
+            created: '2026-08-06T10:00:00Z',
+          },
+        ]);
       if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
       if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
       return ok([]);
@@ -257,8 +270,10 @@ describe('InboxNotifications — every type says something', () => {
     );
 
     expect(await screen.findByText(/recommendation went through/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open the group/i }))
-      .toHaveAttribute('href', '/collections/COL001');
+    expect(screen.getByRole('link', { name: /open the group/i })).toHaveAttribute(
+      'href',
+      '/collections/COL001'
+    );
   });
 });
 

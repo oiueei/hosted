@@ -62,6 +62,22 @@ class Thing(models.Model):
     thumbnail = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
     fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # What the owner asks to be left as security on a loan or a rental — and
+    # **information, nothing else**: OIUEEI never holds it, never moves it, and
+    # has no state for "returned" or "kept". It is a number shown next to the
+    # price, exactly like `fee`, and the two people settle it between them.
+    #
+    # Written down because the risk here was never technical: it is that a year
+    # from now somebody asks "and while we're at it, couldn't OIUEEI hold the
+    # money?". That is a different product — escrow, a payment processor, a
+    # licence to run one, a dispute process and a whole new category of personal
+    # data — and it deserves to be a decision taken on purpose rather than a
+    # place this column quietly arrived at.
+    #
+    # LEND and RENT only: there is nothing to give back on a gift or a sale. The
+    # serializers enforce that, not this column, because the JSON API and the CSV
+    # import are two more doors into it.
+    deposit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     availability = models.CharField(
         max_length=12, choices=Availability.choices, blank=True, default=""
     )
@@ -72,7 +88,7 @@ class Thing(models.Model):
         blank=True,
         help_text=(
             "Additional photos beyond the cover thumbnail: an ordered list of "
-            "Cloudinary public_ids. Max 8. Things only (not collections)."
+            "storage keys. Max 8. Things only (not collections)."
         ),
     )
     tags = models.JSONField(

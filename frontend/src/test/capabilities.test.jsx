@@ -75,8 +75,16 @@ describe('the cache cannot outlive the account it answered for', () => {
     const other = { collection_modes: ['COMMUNITY'], thing_types: [], request_url: null };
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ capabilities: CAPABILITIES }) })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ capabilities: other }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ capabilities: CAPABILITIES }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ capabilities: other }),
+      });
     const { loadCapabilities } = await import('../hooks/useCapabilities');
 
     expect(await loadCapabilities()).toEqual(CAPABILITIES);
@@ -95,7 +103,11 @@ describe('a failed request is not remembered', () => {
     globalThis.fetch = vi
       .fn()
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ capabilities: CAPABILITIES }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ capabilities: CAPABILITIES }),
+      });
     const { loadCapabilities } = await import('../hooks/useCapabilities');
 
     // Fail open: null, which every caller reads as "no restriction".
@@ -111,7 +123,11 @@ describe('a failed request is not remembered', () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({ ok: false, status: 500, json: () => Promise.resolve({}) })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ capabilities: CAPABILITIES }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ capabilities: CAPABILITIES }),
+      });
     const { loadCapabilities } = await import('../hooks/useCapabilities');
 
     expect(await loadCapabilities()).toBeNull();

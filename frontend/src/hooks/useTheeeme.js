@@ -44,9 +44,7 @@ export default function useTheeeme(overrideColors) {
   // Stringify the override for a stable memo dependency (a caller may pass a fresh
   // object reference each render, e.g. `user?.theeeme_colors`).
   const overrideKey =
-    overrideColors && Object.keys(overrideColors).length > 0
-      ? JSON.stringify(overrideColors)
-      : '';
+    overrideColors && Object.keys(overrideColors).length > 0 ? JSON.stringify(overrideColors) : '';
 
   return useMemo(() => {
     let tc;
@@ -81,9 +79,13 @@ export default function useTheeeme(overrideColors) {
     const uploadStyle = tc.color_01
       ? {
           '--upload-border': `var(--color-${tc.color_01})`,
-          '--upload-color': tc.color_04 ? `var(--color-${tc.color_04})` : `var(--color-${tc.color_01})`,
+          '--upload-color': tc.color_04
+            ? `var(--color-${tc.color_04})`
+            : `var(--color-${tc.color_01})`,
           '--upload-bg-hover': `var(--color-${tc.color_01})`,
-          '--upload-color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
+          '--upload-color-hover': tc.color_06
+            ? `var(--color-${tc.color_06})`
+            : 'var(--color-white)',
         }
       : {};
     return { tc, koro, btnStyle, btnSecondaryStyle, uploadStyle };

@@ -8,7 +8,7 @@ merged onto this skeleton by `seed_demo.load_seed_data`. Adding a language means
 translating text only — never re-declaring structure (R17).
 
 Image ids (photo/thumbnail/gallery) are stored BARE here; `seed_demo` prefixes
-them with ``SEED_IMAGE_FOLDER`` (oiueei/seed/) at seed time — that's the Cloudinary
+them with ``SEED_IMAGE_FOLDER`` (oiueei/seed/) at seed time — that's the storage
 folder the demo fixtures actually live in, kept apart from real user uploads.
 """
 
@@ -37,6 +37,17 @@ TAG_LIMPIEZA = _localized_tag(es="Limpieza", ca="Neteja", en="Cleaning")
 TAG_DEPORTE = _localized_tag(es="Deporte", ca="Esport", en="Sports")
 TAG_OCIO = _localized_tag(es="Ocio", ca="Lleure", en="Leisure")
 TAG_ELECTRONICA = _localized_tag(es="Electrónica", ca="Electrònica", en="Electronics")
+
+# Lili's deposit policy (S6, D5) — reuses `_localized_tag`'s serialization: the
+# stored value is still just a {lang: text} map, on a different field. Written
+# here rather than split across the per-language files because, like a tag
+# label, it is small, structural-adjacent owner content rather than the kind
+# of long-form prose the per-language merge exists for.
+DEPOSIT_POLICY_LILI = _localized_tag(
+    es="La fianza es igual al precio del alquiler. Se devuelve al traer la cosa de vuelta en buen estado.",
+    ca="La fiança és igual al preu del lloguer. Es retorna en tornar la cosa en bon estat.",
+    en="The deposit equals the rental fee. Refunded when the thing comes back in good shape.",
+)
 
 USERS = [
     {
@@ -114,6 +125,7 @@ COLLECTIONS = [
             TAG_ELECTRONICA,
         ],
         "thumbnail": "l1l1C1",
+        "deposit_policy": DEPOSIT_POLICY_LILI,
     },
 ]
 
@@ -227,6 +239,7 @@ THINGS = [
         "collections": ["l1l1C1"],
         "thumbnail": "l1l107",
         "fee": "3.00",
+        "deposit": "20.00",
         "tags": [TAG_ELECTRONICA],
     },
     {
@@ -236,6 +249,7 @@ THINGS = [
         "collections": ["l1l1C1"],
         "thumbnail": "l1l108",
         "fee": "3.00",
+        "deposit": "15.00",
         "tags": [TAG_OCIO, TAG_ELECTRONICA],
     },
     {
@@ -272,6 +286,7 @@ THINGS = [
         "collections": ["l1l1C1"],
         "thumbnail": "l1l112",
         "fee": "3.00",
+        "deposit": "30.00",
         "tags": [TAG_BRICOLAJE],
     },
     {

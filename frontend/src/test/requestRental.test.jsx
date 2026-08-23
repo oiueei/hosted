@@ -5,7 +5,9 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 window.scrollTo = vi.fn();
 
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   extractApiError: vi.fn(() => Promise.resolve('')),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
@@ -20,9 +22,15 @@ function mockResponse(data, ok = true) {
 // A RENT_THING whose collection defines rental rules (#7): fixed lengths of one
 // and two weeks, pickup/return only on Wednesdays (Python weekday 2).
 const RENTAL_THING = {
-  code: 'RENT01', type: 'RENT_THING', headline: 'Cordless drill', fee: null,
-  collection_code: 'COL001', rental_durations: [7, 14], rental_weekdays: [2],
-  available_today: true, next_available: null,
+  code: 'RENT01',
+  type: 'RENT_THING',
+  headline: 'Cordless drill',
+  fee: null,
+  collection_code: 'COL001',
+  rental_durations: [7, 14],
+  rental_weekdays: [2],
+  available_today: true,
+  next_available: null,
 };
 
 function setApi({ thing = RENTAL_THING, calendar = [] } = {}) {
@@ -36,7 +44,9 @@ function setApi({ thing = RENTAL_THING, calendar = [] } = {}) {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/collections/COL001/things/RENT01/request', state: {} }]}>
+    <MemoryRouter
+      initialEntries={[{ pathname: '/collections/COL001/things/RENT01/request', state: {} }]}
+    >
       <Routes>
         <Route path="/collections/:code/things/:thingCode/request" element={<RequestThingPage />} />
         <Route path="*" element={<div data-testid="navigated" />} />
@@ -75,10 +85,17 @@ const dayDisabled = (iso) => dayCell(iso)?.getAttribute('aria-disabled') === 'tr
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem('theeemeColors', JSON.stringify({
-    color_01: 'bus', color_02: 'suomenlinna-light', color_03: 'copper',
-    color_04: 'black', color_05: 'white', color_06: 'white',
-  }));
+  localStorage.setItem(
+    'theeemeColors',
+    JSON.stringify({
+      color_01: 'bus',
+      color_02: 'suomenlinna-light',
+      color_03: 'copper',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'white',
+    })
+  );
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   // Freeze "today" on Monday 2026-06-01 so the picker opens on June 2026 and the
@@ -94,7 +111,7 @@ afterEach(() => {
 });
 
 describe('RequestThingPage — rental duration Select', () => {
-  test('lists the collection\'s fixed lengths as options', async () => {
+  test("lists the collection's fixed lengths as options", async () => {
     renderPage();
     await screen.findByRole('combobox', { name: /Rental length/ });
 
@@ -171,7 +188,9 @@ describe('RequestThingPage — pickup calendar disabling', () => {
     //  - picking up 06-03 returns on 06-10 = the booking's pickup day → allowed
     //  - picking up 06-10 overlaps the interior → blocked
     //  - picking up 06-17 = the booking's return day → allowed (back-to-back)
-    setApi({ calendar: [{ start_date: '2026-06-10', end_date: '2026-06-17', status: 'ACCEPTED' }] });
+    setApi({
+      calendar: [{ start_date: '2026-06-10', end_date: '2026-06-17', status: 'ACCEPTED' }],
+    });
     renderPage();
     await screen.findByRole('combobox', { name: /Rental length/ });
 

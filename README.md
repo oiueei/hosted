@@ -35,6 +35,7 @@ What I'm looking for is honest feedback from people willing to poke at it: thing
 - **Static files**: WhiteNoise
 - **PWA**: installable web app manifest + icons ("Add to Home Screen"); no service worker yet
 - **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders` and `send_digests` (see [HEROKU.md](HEROKU.md))
+- **Retention**: `purge_expired_data` enforces a period per category of data (`RETENTION_*` settings; 0 = keep indefinitely). Dry-run by default
 
 ## UI & Design System
 
@@ -84,7 +85,7 @@ core/
     booking_service.py # Accept/reject booking logic (transaction.atomic)
   permissions.py     # Custom DRF permissions (IsThingOwner, IsCollectionOwner)
   validators.py      # Input validation (image IDs, headlines, etc.)
-  utils.py           # ID generation, client IP, Cloudinary URLs
+  utils.py           # ID generation, client IP, asset URLs
   pagination.py      # StandardResultsPagination (max 100)
   management/
     commands/
@@ -110,7 +111,7 @@ core/
 
 | Model | Purpose |
 |-------|---------|
-| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio) and `photo` (Cloudinary profile photo, exposed as `photo_url`) |
+| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio) and `photo` (profile photo, stored as an object key and exposed as `photo_url`) |
 | **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — the owner still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
 | **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
@@ -150,6 +151,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url}`, what this deployment lets them create (see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything and `request_url` is `null` |
 | POST | `/api/v1/auth/logout/` | Log out (clears auth cookies) |
 | POST | `/api/v1/auth/delete-account/` | Request account deletion (rate limited: 3/h): emails a 24h single-use confirmation link; the deletion itself commits via a POST on the verify endpoint (GET only previews) |
+| GET | `/api/v1/auth/export/` | Download a copy of your own data as one JSON file (rate limited: 10/day). Attachment, `private, no-store`; carries no share tokens, no RSVP tokens and no third-party data beyond what you already see |
 
 ### Users
 | Method | URL | Description |
@@ -183,6 +185,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h |
 | POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner only, rate limited: 5/h) |
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner only) |
+| GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner only, rate limited: 10/day). A member gets 403, never a partial file |
 | POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner only) |
 | POST | `/api/v1/collections/{code}/things/bulk/` | Bulk-create things from a CSV (rate limited: 10/h) |
 
@@ -226,7 +229,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 |--------|-----|-------------|
 | GET | `/api/v1/inbox/` | List in-app notifications for the current user |
 | DELETE | `/api/v1/inbox/{code}/` | Dismiss an in-app notification |
-| POST | `/api/v1/upload/signature/` | Get a signed Cloudinary upload signature (rate limited: 30/h) |
+| POST | `/api/v1/upload/ticket/` | Get a short-lived ticket to upload one file straight to object storage (rate limited: 30/h) |
 | GET | `/api/v1/theeemes/` | List all available theeemes |
 | POST | `/api/v1/contact/` | Support/contact form (anonymous on purpose — a locked-out user is the main case; rate limited: 5/h per IP). Forwards the message to the operator with the sender as Reply-To; `kind: support\|collab` labels the subject (the `/contact` and `/collaborate` pages) |
 | GET | `/api/v1/health/` | Health check: verifies app **and** database (`SELECT 1`) — 200 ok / 503 degraded. Point your uptime monitor here (rate limited: 60/min per IP, GET and HEAD — far above any real monitor's cadence) |
@@ -300,6 +303,12 @@ python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
+# Retention sweep (GDPR art. 5.1.e) — DRY-RUN BY DEFAULT, --commit to apply.
+# Not part of the daily chain above: it deletes real rows, so it is worth
+# looking at before it is trusted. Weekly is plenty.
+python manage.py purge_expired_data           # count what is past its period
+python manage.py purge_expired_data --commit  # anonymise / delete it
+
 # One-off: seed the Event analytics log from existing rows (idempotent).
 # Run once, the day tracking ships, before forward events accumulate.
 python manage.py backfill_events
@@ -347,11 +356,17 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `EMAIL_HOST_PASSWORD` | Prod | SMTP password |
 | `EMAIL_TIMEOUT` | No | SMTP socket timeout in seconds (default: `10`) — caps a slow/hung provider so it can't stall a web dyno |
 | `EMAIL_LANGUAGE` | No | **Default** language for outbound email (`en`\|`es`\|`ca`; default `en`) — the weakest level of the hierarchy **deployment → collection (`Collection.language`) → recipient (`User.language`)**, so it only speaks when neither the group nor the member has chosen. Catalogues live in `core/services/email_texts/`; unknown codes fall back to English |
-| `VITE_FEEDBACK_URL` | No | Frontend build-time: points the in-app feedback link at your own form (default: the project's Tally form) |
+| `VITE_FEEDBACK_URL` | No | Frontend build-time: points the in-app feedback link at your own form. **No default** — without it the link is not rendered at all, rather than quietly forwarding your users' feedback to the upstream project's own form |
 | `DEFAULT_FROM_EMAIL` | Prod | Sender email address |
 | `RSVP_BASE_URL` | Prod | Base URL for RSVP action links in emails (default in dev: `http://localhost:3000/rsvp`) |
 | `SHARE_LINK_BASE_URL` | Prod | Base URL for public collection share links (default in dev: `http://localhost:3000/share`) |
-| `CLOUDINARY_URL` | Uploads | Cloudinary credentials for image uploads: `cloudinary://api_key:api_secret@cloud_name` (free account at cloudinary.com) |
+| `OBJECT_STORAGE_ENDPOINT` | Uploads | S3-compatible endpoint, e.g. `https://fsn1.your-objectstorage.com` |
+| `OBJECT_STORAGE_BUCKET` | Uploads | Bucket name. **Must be private and not listable** — objects are made public one by one at upload time, so a listable bucket would let anyone enumerate a private collection's photos |
+| `OBJECT_STORAGE_REGION` | Uploads | Region the endpoint serves, e.g. `fsn1` |
+| `OBJECT_STORAGE_ACCESS_KEY` | Uploads | S3 access key, scoped to that bucket alone |
+| `OBJECT_STORAGE_SECRET_KEY` | Uploads | S3 secret key |
+| `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are read from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. It also feeds the Content-Security-Policy, so a wrong value shows up as images that refuse to load |
+| `CLOUDINARY_URL` | Legacy | The previous image host, still read so a deployment mid-migration can roll back without a code change. Unnecessary once your files are in the bucket |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
 | `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
@@ -438,6 +453,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 - **No tracking, of any kind.** No analytics SDK, no tag manager, no fingerprinting, no session replay, no heatmaps, no A/B-testing service, no "anonymous" telemetry that phones home.
 - **No third-party code running in your browser.** The app ships 12 runtime dependencies (React, HDS, i18next, a router, a QR renderer, a CSV/ZIP parser) — all rendering and parsing libraries, none of which talks to anyone. No script from another origin is loaded, ever.
 - **No cookie banner, because there is nothing to consent to.** The only cookies are the technical ones that keep you signed in (auth + CSRF). There is no third-party cookie, no advertising cookie, no tracker to ask permission for — so asking would be theatre.
+- **No unnecessary browser storage either.** LSSI-CE art. 22.2 covers more than cookies — `localStorage`, `sessionStorage`, IndexedDB — so "no banner" has to be true of all of it, not just of what a cookie table shows.
 - **No tracking pixels or wrapped links in emails.** Links go where they say they go; there is no open-tracking pixel, no click-redirect domain.
 - **No sale, sharing, profiling or automated decisions** on user data. [DESIGN.md §9](DESIGN.md#9-user-data-is-never-a-product) lists what is forbidden here under any justification — it is a design rule, not a policy page.
 
@@ -446,9 +462,10 @@ Everything below is written so you don't have to take my word for it. Each claim
 | Claim | How to verify it |
 |---|---|
 | Third-party scripts *cannot* load | `curl -sI https://www.oiueei.com/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
-| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and `res.cloudinary.com` (the photos). That is the whole list. |
+| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the media bucket the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names, which is also the only extra host the CSP allows. That is the whole list. |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
+| Browser storage is strictly necessary, nothing more | **Inventoried 2026-08-21.** Four `localStorage` keys, all session/preference, none observed behaviour: `userCode` (which account is signed in), `theeemeColors` + `koro` (your own display preferences), `seenWelcome` (whether you've seen the first-visit box). `sessionStorage` is unused. One more key exists but isn't ours to name in code: `i18next-browser-languagedetector` caches your chosen UI language as `i18nextLng` under its own default — same category, a dependency's own write. `frontend/src/test/browserStorage.test.jsx` sweeps every source file and fails the build if a key outside this list ever appears — a public claim like this one needs a test that breaks when it stops being true, not just a paragraph. |
 | The metrics are first-party | `core/models/event.py` and `core/models/activity.py` — an append-only event log and one `(user, date)` row. They record *less* than any web server log, and never leave the database. |
 | All of it | The whole codebase is public. Read it. |
 
@@ -458,16 +475,22 @@ Four outbound flows exist, all operational, all named — the app is a normal we
 
 1. **Hosting and database** — where the operator deploys it.
 2. **Email delivery** — the configured SMTP provider (magic links, invitations, activity notices).
-3. **Images and documents** — Cloudinary, which serves the photos to your browser and therefore sees the request.
+3. **Images and documents** — the object-storage bucket the operator configured, which serves the photos to your browser and therefore sees the request.
 4. **Error monitoring** — optional, deploy-only (Sentry). Events are scrubbed of cookies, auth headers, IP and user identity before being sent (`send_default_pii=False` + a `before_send` hook).
 
-For the official deployment at **www.oiueei.com**, the verified locations are: application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`). Cloudinary and Sentry are, at the time of writing, on their US regions — which is why this README does not claim "everything is in Europe". The current state is always the one written on the [`/legal`](https://www.oiueei.com/legal) page.
+For the official deployment at **www.oiueei.com**, the verified locations are: application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`), and images in **Hetzner Object Storage, Falkenstein (Germany)** — moving them off Cloudinary's US region is what this migration was for. **Sentry** remains on a US region at the time of writing, which is why this README still does not claim "everything is in Europe". The current state is always the one written on the [`/legal`](https://www.oiueei.com/legal) page.
 
 ### Your rights over your data
 
-**Right to erasure is self-service, not a support ticket**: delete your own account from your profile (Edit profile → Delete account). Once confirmed via an emailed 24-hour link it is immediate and irreversible — the account, its collections, things, photos and pending requests are permanently deleted, Cloudinary assets included (`core/services/cloudinary_cleanup.py` runs on the delete). Questions you asked on other people's things and an item's transfer history survive **anonymised**: the content stays with the thing, your name goes ("former member").
+**Right to erasure is self-service, not a support ticket**: delete your own account from your profile (Edit profile → Delete account). Once confirmed via an emailed 24-hour link it is immediate and irreversible — the account, its collections, things, photos and pending requests are permanently deleted, stored files included (`core/services/asset_cleanup.py` runs on the delete). Questions you asked on other people's things and an item's transfer history survive **anonymised**: the content stays with the thing, your name goes ("former member").
 
-For access, rectification, portability, objection or restriction, write to the operator — for www.oiueei.com, the address on the [`/legal`](https://www.oiueei.com/legal) page.
+**Portability is self-service too**: `GET /api/v1/auth/export/` hands you your whole account as a single JSON file — profile, collections, things, bookings, questions, handovers, notifications and your own activity rows. It carries no credentials (no `share_token`, no RSVP tokens) and no third-party data beyond what the app already shows you; photos and PDFs travel as links rather than bytes, which is why deleting the account breaks them — **download your images before you erase**. Collection owners get a second, separate download (`GET /api/v1/collections/{code}/export/`) with the whole group in it, so a library of things can be carried out rather than only deleted. That file holds other people's details, and whoever downloads it is the one answering for it.
+
+**Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are what www.oiueei.com decided, and a self-hoster under a different regime sets their own.
+
+**If somebody else's address reached you, you're told so in the same email.** Being invited to a collection means somebody else typed your address in, not you — art. 14 GDPR requires that to be disclosed the first time it happens, so the invitation email says where the address came from and that declining or ignoring it ends the relationship. Every email, that one included, links to [`/legal`](https://www.oiueei.com/legal) in its footer, whether or not you can opt out of the category it belongs to (`core/services/email_service.py`, `_render_email`).
+
+For access, rectification, objection or restriction, write to the operator — for www.oiueei.com, the address on the [`/legal`](https://www.oiueei.com/legal) page.
 
 
 ## Architecture Decisions
@@ -529,7 +552,7 @@ All UI components are sourced from the [Helsinki Design System](https://hds.hel.
 - **Accessible tooltips** — `TooltipButton` provides `aria-label` for icon-only actions
 - **Image alt text** — thing thumbnails and gallery images include meaningful `alt` attributes derived from headlines
 - **Page titles** — every page sets `document.title` via `useEffect` for meaningful browser tab titles and screen reader orientation
-- **Language attribute** — `<html lang>` is set dynamically on the document root via `i18n.on('languageChanged', ...)` in `App.jsx`
+- **Language attribute** — `public/detect-lang.js` sets `<html lang>` synchronously before React mounts (mirroring `i18next-browser-languagedetector`'s own saved-choice → browser-language priority), so the very first paint and every crawler already see the right language; `App.jsx` keeps it in sync afterward via `i18n.on('languageChanged', ...)`. Outbound emails carry the same attribute on their own `<html>`, set from `resolve_email_language` (`core/services/email_service.py`)
 - **Internationalisation** — all UI strings are externalised via `react-i18next` with automatic browser language detection (`i18next-browser-languagedetector`). Supported: English, Spanish, Catalan. Brazilian Portuguese, European Portuguese, Basque, and Galician are paused (not deleted) and fall back to Spanish
 
 ### Validation

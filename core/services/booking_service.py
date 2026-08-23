@@ -382,6 +382,7 @@ def request_date_based_booking(
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type=thing.type,
+            deposit_amount=thing.deposit,
             requester_code=requester,
             requester_email=requester.email,
             owner_code=thing.owner,
@@ -411,6 +412,7 @@ def request_standard_booking(thing, requester, owner_email, collection_code=None
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type=thing.type,
+            deposit_amount=thing.deposit,
             requester_code=requester,
             requester_email=requester.email,
             owner_code=thing.owner,

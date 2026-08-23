@@ -18,7 +18,7 @@ function renderPage() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<div data-testid="navigated" />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -31,10 +31,16 @@ describe('ContactPage', () => {
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'me@example.com' } });
     fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Help!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    expect(await screen.findByText("We've got your message — we'll reply as soon as we can.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("We've got your message — we'll reply as soon as we can.")
+    ).toBeInTheDocument();
     const post = globalThis.fetch.mock.calls.find(([, o]) => o?.method === 'POST');
     expect(post[0]).toBe('/api/v1/contact/');
-    expect(JSON.parse(post[1].body)).toMatchObject({ email: 'me@example.com', message: 'Help!', kind: 'support' });
+    expect(JSON.parse(post[1].body)).toMatchObject({
+      email: 'me@example.com',
+      message: 'Help!',
+      kind: 'support',
+    });
   });
 
   test('the collaborate page shares the form but posts the collab kind', async () => {
@@ -45,13 +51,15 @@ describe('ContactPage', () => {
           <Route path="/collaborate" element={<CollaboratePage />} />
           <Route path="*" element={<div data-testid="navigated" />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     expect(screen.getByText('Collaborate with OIUEEI')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'dev@example.com' } });
     fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'I design.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    expect(await screen.findByText("We've got your message — we'll reply as soon as we can.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("We've got your message — we'll reply as soon as we can.")
+    ).toBeInTheDocument();
     const post = globalThis.fetch.mock.calls.find(([, o]) => o?.method === 'POST');
     expect(JSON.parse(post[1].body)).toMatchObject({ kind: 'collab' });
   });
@@ -63,7 +71,7 @@ describe('ContactPage', () => {
     fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Help!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(
-      await screen.findByText('Too many attempts — please wait a moment and try again.'),
+      await screen.findByText('Too many attempts — please wait a moment and try again.')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });

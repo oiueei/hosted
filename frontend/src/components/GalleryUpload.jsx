@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadImageToCloudinary } from '../utils/uploadImage';
+import { uploadImage } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
@@ -9,7 +9,7 @@ const MAX_IMAGES = 8;
 
 /**
  * Multi-image gallery upload (additional photos beyond the cover thumbnail).
- * Backed by Cloudinary direct upload (folder oiueei/things), client-resized to
+ * Backed by a ticketed direct-to-bucket upload (folder oiueei/things), client-resized to
  * 1216px like ImageUpload. Max 8 images. Things only.
  *
  * Items are {publicId, url} pairs so the parent can both preview each photo and
@@ -49,7 +49,7 @@ export default function GalleryUpload({ items = [], onChange }) {
     const uploaded = [];
     try {
       for (const original of selected) {
-        uploaded.push(await uploadImageToCloudinary(original, 'oiueei/things'));
+        uploaded.push(await uploadImage(original, 'oiueei/things'));
       }
       // Selected more than the remaining slots — keep what fit, flag the cap.
       if (truncated) setError(t('gallery.maxImages', { max: MAX_IMAGES }));

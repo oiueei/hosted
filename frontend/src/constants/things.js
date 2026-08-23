@@ -3,9 +3,7 @@
  * Display labels are handled by i18n — use t('types.GIFT_THING') etc.
  */
 
-export const TYPE_VALUES = [
-  'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING',
-];
+export const TYPE_VALUES = ['GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING'];
 
 export const DATE_TYPES = ['LEND_THING', 'RENT_THING'];
 export const FEE_TYPES = ['SELL_THING', 'RENT_THING'];
@@ -18,9 +16,7 @@ export const CONDITION_VALUES = ['NEW', 'GOOD', 'FAIR', 'USED', 'WELL_USED', 'AL
 
 // The thing types a collection's allowlist may name. Both modes take the same
 // set — mode decides WHO may add a thing, not WHICH types are on offer.
-export const ALLOWED_TYPES = [
-  'GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING',
-];
+export const ALLOWED_TYPES = ['GIFT_THING', 'SELL_THING', 'RENT_THING', 'LEND_THING'];
 
 export const TAG_THEMES = {
   taken: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },

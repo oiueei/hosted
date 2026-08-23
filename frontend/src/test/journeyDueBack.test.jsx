@@ -36,16 +36,18 @@ const journey = (autoClosed) => ({
   current_holder_name: null,
   original_owner: 'OWN001',
   original_owner_name: 'Lili',
-  transfers: [{
-    code: 'TRF001',
-    from_user: 'OWN001',
-    to_user: 'BOR001',
-    from_user_name: 'Lili',
-    to_user_name: 'Lele',
-    lent_date: '2026-07-20',
-    returned_date: '2026-07-27',
-    auto_closed: autoClosed,
-  }],
+  transfers: [
+    {
+      code: 'TRF001',
+      from_user: 'OWN001',
+      to_user: 'BOR001',
+      from_user_name: 'Lili',
+      to_user_name: 'Lele',
+      lent_date: '2026-07-20',
+      returned_date: '2026-07-27',
+      auto_closed: autoClosed,
+    },
+  ],
 });
 
 const setApi = (autoClosed) => {

@@ -276,9 +276,7 @@ describe('ThingFaqSection — failures', () => {
     setApi({
       routes: {
         '/faq/': (url, options) =>
-          options?.method === 'POST'
-            ? jsonResponse({}, false, 429)
-            : jsonResponse({ results: [] }),
+          options?.method === 'POST' ? jsonResponse({}, false, 429) : jsonResponse({ results: [] }),
       },
     });
     const { onToast } = renderFaq();
@@ -325,7 +323,10 @@ describe('ThingFaqSection — failures', () => {
   });
 
   test('a failed hide leaves the question shown and says which way it failed', async () => {
-    setApi({ faqs: [faq({ answer: 'Yes.' })], routes: { '/hide/': () => jsonResponse({}, false) } });
+    setApi({
+      faqs: [faq({ answer: 'Yes.' })],
+      routes: { '/hide/': () => jsonResponse({}, false) },
+    });
     const { onToast, container } = renderFaq({ isOwner: true });
 
     fireEvent.click(await screen.findByRole('button', { name: 'Hide' }));

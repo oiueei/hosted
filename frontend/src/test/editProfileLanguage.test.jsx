@@ -5,7 +5,9 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 window.scrollTo = vi.fn();
 
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   extractApiError: vi.fn(() => Promise.resolve('')),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
@@ -75,9 +77,7 @@ describe('EditProfilePage language Select (S7)', () => {
     });
 
     // The load effect must not have re-fired: still exactly one /auth/me/ call.
-    expect(
-      apiFetch.mock.calls.filter(([url]) => url === '/api/v1/auth/me/').length
-    ).toBe(1);
+    expect(apiFetch.mock.calls.filter(([url]) => url === '/api/v1/auth/me/').length).toBe(1);
     // The unsaved name edit survives the language change.
     expect(screen.getByDisplayValue('Edited name')).toBeInTheDocument();
     expect(languageCombobox).toHaveTextContent('Español');

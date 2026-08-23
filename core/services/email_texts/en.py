@@ -8,6 +8,9 @@ wording, which the email content tests assert)."""
 TEXTS = {
     # Shared
     "footer_manage": "Manage your email preferences",
+    # Art. 14 GDPR: every email — mandatory ones included — links to the
+    # legal page, since this is a disclosure duty and not a preference.
+    "footer_legal": "Legal & privacy",
     "dates_label": "Dates",
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
@@ -33,6 +36,12 @@ TEXTS = {
     "invite_recommended_by": "{proposer} suggested you for this group.",
     "invite_accept_cta": "Accept invitation",
     "invite_decline_cta": "Decline invitation",
+    # Art. 14 GDPR: this address came from whoever invited you, not from you.
+    "invite_source_note": (
+        "You got this because someone invited you — that's where we got your "
+        "address, and it's only used to send you this invitation. Decline it or "
+        "do nothing, and you won't hear from us again."
+    ),
     # Collection access revoked
     "revoke_subject": "Your access has been revoked",
     "revoke_plain": "{owner} has revoked your access to '{collection}'.",
@@ -75,6 +84,43 @@ TEXTS = {
     "account_delete_outro": (
         "The link works for 24 hours and the page asks you to confirm once more. If "
         "you didn't request this, ignore this email — nothing will happen."
+    ),
+    # Inactivity warning (sent before an unused account is deleted)
+    "inactivity_subject": "Your OIUEEI account has gone quiet",
+    "inactivity_intro": (
+        "You haven't signed in to OIUEEI for {months} months. We don't keep accounts "
+        "nobody uses, so here is the warning that comes first."
+    ),
+    "inactivity_deletes": (
+        "In {days} days your account goes, permanently: your collections, your things "
+        "and their photos with it."
+    ),
+    "inactivity_keep": "Signing in once is enough to keep it. There is nothing else to do.",
+    "inactivity_cta": "Sign in",
+    "inactivity_outro": ("And if you would rather it went, you don't have to do anything at all."),
+    "inactivity_plain": (
+        "You haven't signed in to OIUEEI for {months} months, and we don't keep accounts "
+        "nobody uses. In {days} days your account goes, permanently, with your "
+        "collections, your things and their photos. Signing in once is enough to keep "
+        "it: {link} — and if you would rather it went, you don't have to do anything."
+    ),
+    # Same warning, for an account that will NOT be deleted because a group
+    # depends on it. It must not threaten something that will not happen.
+    "inactivity_kept": (
+        "Your account stays — there are people using a collection of yours, and we are "
+        "not taking that away from them while you are gone. But nobody has looked "
+        "after it in all that time, and it is yours to look after."
+    ),
+    "inactivity_kept_outro": (
+        "If you would rather leave, you can delete your account yourself from your "
+        "profile, whenever you like."
+    ),
+    "inactivity_kept_plain": (
+        "You haven't signed in to OIUEEI for {months} months. Your account stays — "
+        "there are people using a collection of yours and we are not taking that away "
+        "from them while you are gone — but nobody has looked after it in all that "
+        "time. You can pick it up here: {link} — or delete your account yourself from "
+        "your profile, whenever you like."
     ),
     # Contact form (support channel, to the operator)
     "contact_subject": "OIUEEI contact: {sender}",

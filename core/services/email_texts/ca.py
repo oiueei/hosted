@@ -6,6 +6,9 @@ matching the app's Catalan UI vocabulary (reservar, petició, intercanvi)."""
 TEXTS = {
     # Shared
     "footer_manage": "Gestiona les teves preferències de correu",
+    # Art. 14 RGPD: tot correu -- també els obligatoris -- enllaça a la
+    # pàgina legal: és una obligació d'informació, no una preferència.
+    "footer_legal": "Legal i privacitat",
     "dates_label": "Dates",
     "view_collection_cta": "Veure la col·lecció",
     # Substantius d'acció per als correus de reserva — calquen el vocabulari del
@@ -36,6 +39,12 @@ TEXTS = {
     "invite_recommended_by": "{proposer} t'ha proposat per a aquest grup.",
     "invite_accept_cta": "Acceptar la invitació",
     "invite_decline_cta": "Rebutjar la invitació",
+    # Art. 14 RGPD: aquest correu el va donar qui convida, no la persona convidada.
+    "invite_source_note": (
+        "Si has arribat aquí per una invitació, el teu correu ens el va donar qui "
+        "et va convidar, i només es fa servir per enviar-te aquesta invitació. Si "
+        "la rebutges o no fas res, no tornes a rebre res nostre."
+    ),
     # Collection access revoked
     "revoke_subject": "S'ha revocat el teu accés",
     "revoke_plain": "{owner} ha revocat el teu accés a '{collection}'.",
@@ -78,6 +87,43 @@ TEXTS = {
     "account_delete_outro": (
         "L'enllaç funciona durant 24 hores i a la pàgina confirmaràs un cop més. "
         "Si no ho has demanat tu, ignora aquest correu — no passarà res."
+    ),
+    # Avís d'inactivitat (abans d'esborrar un compte sense fer servir)
+    "inactivity_subject": "El teu compte d'OIUEEI fa temps que calla",
+    "inactivity_intro": (
+        "Fa {months} mesos que no entres a OIUEEI. No guardem comptes que ningú fa "
+        "servir, així que aquest és l'avís que va abans."
+    ),
+    "inactivity_deletes": (
+        "D'aquí a {days} dies el teu compte desapareix, per sempre, i amb ell les teves "
+        "col·leccions, les teves coses i les seves fotos."
+    ),
+    "inactivity_keep": "Amb entrar-hi un cop n'hi ha prou per conservar-lo. No cal fer res més.",
+    "inactivity_cta": "Entrar",
+    "inactivity_outro": "I si prefereixes que se'n vagi, no cal que facis absolutament res.",
+    "inactivity_plain": (
+        "Fa {months} mesos que no entres a OIUEEI, i no guardem comptes que ningú fa "
+        "servir. D'aquí a {days} dies el teu compte desapareix, per sempre, amb les "
+        "teves col·leccions, les teves coses i les seves fotos. Amb entrar-hi un cop "
+        "n'hi ha prou per conservar-lo: {link} — i si prefereixes que se'n vagi, no cal "
+        "que facis res."
+    ),
+    # El mateix avís per a un compte que NO s'esborrarà perquè hi ha un grup que
+    # en depèn. No pot amenaçar amb una cosa que no passarà.
+    "inactivity_kept": (
+        "El teu compte es queda: hi ha gent fent servir una col·lecció teva i no els la "
+        "traurem mentre tu no hi ets. Però en tot aquest temps no l'ha cuidada ningú, i "
+        "és teva."
+    ),
+    "inactivity_kept_outro": (
+        "Si prefereixes marxar, pots esborrar el teu compte tu mateix, des del teu "
+        "perfil, quan vulguis."
+    ),
+    "inactivity_kept_plain": (
+        "Fa {months} mesos que no entres a OIUEEI. El teu compte es queda —hi ha gent "
+        "fent servir una col·lecció teva i no els la traurem mentre tu no hi ets— però "
+        "en tot aquest temps no l'ha cuidada ningú. Pots reprendre'l aquí: {link} — o "
+        "esborrar el teu compte tu mateix, des del teu perfil, quan vulguis."
     ),
     # Contact form (support channel, to the operator)
     "contact_subject": "Contacte OIUEEI: {sender}",

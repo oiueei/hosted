@@ -18,8 +18,10 @@ export default function ThingTags({ thing, isOwner, showType = true }) {
   // kept alive for a week) is not a real-world concern here.
   // eslint-disable-next-line react-hooks/purity -- see note above
   const now = Date.now();
-  const isNew = thing.created && thing.status !== 'INACTIVE'
-    && (now - new Date(thing.created).getTime()) < NEW_THING_WINDOW_DAYS * 24 * 3600 * 1000;
+  const isNew =
+    thing.created &&
+    thing.status !== 'INACTIVE' &&
+    now - new Date(thing.created).getTime() < NEW_THING_WINDOW_DAYS * 24 * 3600 * 1000;
 
   return (
     <div className="gallery-row" style={{ gap: 'var(--spacing-2-xs)' }}>
@@ -35,7 +37,9 @@ export default function ThingTags({ thing, isOwner, showType = true }) {
         <Tag theme={TAG_THEMES.pending}>{t('thingTags.pendingQuestions')}</Tag>
       )}
       {(thing.tags || []).map((tag) => (
-        <Tag key={tag} theme={TAG_THEMES.custom}>{L(tag)}</Tag>
+        <Tag key={tag} theme={TAG_THEMES.custom}>
+          {L(tag)}
+        </Tag>
       ))}
     </div>
   );

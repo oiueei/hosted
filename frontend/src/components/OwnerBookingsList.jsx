@@ -23,13 +23,28 @@ export default function OwnerBookingsList({ bookings, activePendingCode, isOwner
         return (
           <li key={b.code} style={{ fontWeight: isActive ? 'bold' : 'normal' }}>
             {isOwner && b.requester_name && <>{b.requester_name}. </>}
-            {b.created && <>{new Date(b.created).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}. </>}
-            {b.start_date && b.end_date && (
-              <>{new Date(b.start_date).toLocaleDateString(i18n.language)} – {new Date(b.end_date).toLocaleDateString(i18n.language)}</>
+            {b.created && (
+              <>
+                {new Date(b.created).toLocaleDateString(i18n.language, {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+                .{' '}
+              </>
             )}
-            {' '}
-            <span style={{ color: b.status === 'ACCEPTED' ? 'var(--color-success)' : 'var(--color-alert-dark)' }}>
-              ({b.status === 'ACCEPTED' ? t('thingCard.confirmed') : t('thingCard.pending')}){showStar ? ' *' : ''}
+            {b.start_date && b.end_date && (
+              <>
+                {new Date(b.start_date).toLocaleDateString(i18n.language)} –{' '}
+                {new Date(b.end_date).toLocaleDateString(i18n.language)}
+              </>
+            )}{' '}
+            <span
+              style={{
+                color: b.status === 'ACCEPTED' ? 'var(--color-success)' : 'var(--color-alert-dark)',
+              }}
+            >
+              ({b.status === 'ACCEPTED' ? t('thingCard.confirmed') : t('thingCard.pending')})
+              {showStar ? ' *' : ''}
             </span>
           </li>
         );

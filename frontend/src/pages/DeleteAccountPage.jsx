@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
+import { Link } from 'react-router';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 
@@ -13,7 +14,9 @@ import PageLayout from '../components/PageLayout';
  */
 export default function DeleteAccountPage() {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t('titles.deleteAccount'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.deleteAccount');
+  }, [t]);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -45,6 +48,13 @@ export default function DeleteAccountPage() {
       description={t('deleteAccount.intro')}
     >
       <div style={{ maxWidth: '600px' }}>
+        {/* Portability before erasure: reading a copy is the sane order and
+            the legally solid one, and this is where someone about to delete
+            their account actually is when it matters. */}
+        <Notification type="info" size="small" style={{ marginBottom: 'var(--spacing-m)' }}>
+          {t('deleteAccount.exportFirst')}{' '}
+          <Link to="/me/data">{t('deleteAccount.exportFirstLink')}</Link>
+        </Notification>
         <h2>{t('deleteAccount.whatGoesTitle')}</h2>
         <p>{t('deleteAccount.whatGoes')}</p>
         <div className="spacer-m" />

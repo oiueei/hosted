@@ -50,6 +50,21 @@ class BookingPeriod(models.Model):
         related_name="bookings",
     )
     thing_type = models.CharField(max_length=17, default="GIFT_THING")
+    # What was agreed when the reservation was made, copied rather than looked
+    # up through the thing — the same reason `thing_type` above is a copy and
+    # `Report.thing_headline` is a snapshot. An owner who edits the listing in
+    # June must not rewrite what a March loan said.
+    #
+    # One snapshot covers the whole handover: every ThingTransfer is created
+    # with its booking attached (`accept_booking`), so a journey reaches the
+    # agreed amount through `transfer.booking` and there is no second copy to
+    # drift away from this one.
+    #
+    # Nothing renders it yet — this is the record, not a display field. That is
+    # deliberate: the column has to exist from the first reservation that
+    # carries a deposit, or the history it is meant to preserve starts with a
+    # hole in it.
+    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     requester_code = models.ForeignKey(
         "User",
         on_delete=models.CASCADE,

@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.serializers.thing import ThingComputedFieldsMixin
-from core.utils import cloudinary_doc_url, cloudinary_url
+from core.utils import asset_url, doc_asset_url
 from core.validators import (
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
@@ -63,7 +63,7 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
         ]
 
     def get_thumbnail_url(self, obj):
-        return cloudinary_url(obj.thumbnail) if obj.thumbnail else None
+        return asset_url(obj.thumbnail) if obj.thumbnail else None
 
 
 class CollectionListSerializer(serializers.ListSerializer):
@@ -129,6 +129,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "deposit_policy",
             "tags",
             "thumbnail",
             "thumbnail_url",
@@ -162,10 +163,10 @@ class CollectionSerializer(serializers.ModelSerializer):
         return obj.owner.name
 
     def get_thumbnail_url(self, obj):
-        return cloudinary_url(obj.thumbnail) if obj.thumbnail else None
+        return asset_url(obj.thumbnail) if obj.thumbnail else None
 
     def get_welcome_doc_url(self, obj):
-        return cloudinary_doc_url(obj.welcome_doc) if obj.welcome_doc else None
+        return doc_asset_url(obj.welcome_doc) if obj.welcome_doc else None
 
     def get_things(self, obj):
         request = self.context.get("request")
@@ -278,7 +279,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     thumbnail = ImageIdField(required=False, allow_blank=True)
-    # The welcome PDF is a Cloudinary public_id like any other asset — same
+    # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
     welcome_doc = ImageIdField(required=False, allow_blank=True)
     tags = serializers.ListField(
@@ -299,6 +300,11 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    # Localized like every other owner text (D5): a deposit policy that could
+    # only be written in one language would be the single piece of group prose
+    # that a bilingual group cannot say twice. 256 visible per language, 1024
+    # stored — the same arithmetic as `description`.
+    deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -313,6 +319,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "deposit_policy",
             "tags",
             "thumbnail",
             "welcome_doc",
@@ -383,7 +390,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     headline = LocalizedHeadlineField(max_length=64, required=False)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     thumbnail = ImageIdField(required=False, allow_blank=True)
-    # The welcome PDF is a Cloudinary public_id like any other asset — same
+    # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
     welcome_doc = ImageIdField(required=False, allow_blank=True)
     pause_message = SafeTextField(max_length=256, required=False, allow_blank=True)
@@ -405,6 +412,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    # Localized like every other owner text (D5): a deposit policy that could
+    # only be written in one language would be the single piece of group prose
+    # that a bilingual group cannot say twice. 256 visible per language, 1024
+    # stored — the same arithmetic as `description`.
+    deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -420,6 +432,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "deposit_policy",
             "tags",
             "thumbnail",
             "welcome_doc",

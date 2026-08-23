@@ -39,7 +39,9 @@ export default function CollectionPage() {
   const location = useLocation();
   const { t } = useTranslation();
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
-  const [showWelcome, setShowWelcome] = useState(!!location.state?.fromInvite && !localStorage.getItem('seenWelcome'));
+  const [showWelcome, setShowWelcome] = useState(
+    !!location.state?.fromInvite && !localStorage.getItem('seenWelcome')
+  );
   const [collection, setCollection] = useState(null);
   const [error, setError] = useState('');
   const [broadcastOpen, setBroadcastOpen] = useState(false);
@@ -56,7 +58,11 @@ export default function CollectionPage() {
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
   const headline = L(collection?.headline);
-  useEffect(() => { document.title = collection ? t('titles.collection', { headline }) : t('titles.collectionDefault'); }, [collection, headline, t]);
+  useEffect(() => {
+    document.title = collection
+      ? t('titles.collection', { headline })
+      : t('titles.collectionDefault');
+  }, [collection, headline, t]);
 
   // Stable across renders (functional setState, no deps) so memoised ThingLinkbox
   // cards don't re-render when unrelated page state (broadcast box, tag filter)
@@ -106,7 +112,9 @@ export default function CollectionPage() {
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">{error}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {error}
+        </Notification>
       </PageLayout>
     );
   }
@@ -125,7 +133,10 @@ export default function CollectionPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setBroadcastResult({ type: 'success', message: t('broadcast.sent', { count: data.recipients }) });
+        setBroadcastResult({
+          type: 'success',
+          message: t('broadcast.sent', { count: data.recipients }),
+        });
         setBroadcastMessage('');
       } else {
         // `detail` first, then `error`, the same order `extractApiError` reads
@@ -205,7 +216,9 @@ export default function CollectionPage() {
     : visibleThings;
   // Newest first, then capped at what's actually been asked for. Sorting before
   // the slice is what makes "Show more" append older things rather than reshuffle.
-  const sortedThings = [...matchingThings].sort((a, b) => new Date(b.created) - new Date(a.created));
+  const sortedThings = [...matchingThings].sort(
+    (a, b) => new Date(b.created) - new Date(a.created)
+  );
   const shownThings = sortedThings.slice(0, shownCount);
   const remainingThings = sortedThings.length - shownThings.length;
   // A collection locked to one thing type makes the per-card "Type = X" row
@@ -219,155 +232,207 @@ export default function CollectionPage() {
     >
       <div
         className={`form-hero${collection.thumbnail_url ? ' form-hero--photo' : ''}`}
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
         <div className="form-hero-split">
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
-          <ContactCorner />
-          {!showWelcome && (
-            <BackLink to="/" label={t('common.home')} />
-          )}
-          <h1 className="form-hero-title">
-            {headline}
-            {collection.mode === 'COMMUNITY' && (
-              <>{' '}<Tag theme={{ '--tag-background': 'var(--color-engel)', '--tag-color': 'var(--color-black-90)' }}>{t('collectionPage.communityTag')}</Tag></>
+          <div
+            className="form-hero-content"
+            style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+          >
+            <ContactCorner />
+            {!showWelcome && <BackLink to="/" label={t('common.home')} />}
+            <h1 className="form-hero-title">
+              {headline}
+              {collection.mode === 'COMMUNITY' && (
+                <>
+                  {' '}
+                  <Tag
+                    theme={{
+                      '--tag-background': 'var(--color-engel)',
+                      '--tag-color': 'var(--color-black-90)',
+                    }}
+                  >
+                    {t('collectionPage.communityTag')}
+                  </Tag>
+                </>
+              )}
+              {isOwner && (
+                <>
+                  {' '}
+                  <Tag
+                    theme={
+                      collection.visibility === 'PUBLIC'
+                        ? {
+                            '--tag-background': 'var(--color-success)',
+                            '--tag-color': 'var(--color-white)',
+                          }
+                        : {
+                            '--tag-background': 'var(--color-black-20)',
+                            '--tag-color': 'var(--color-black-90)',
+                          }
+                    }
+                  >
+                    {collection.visibility === 'PUBLIC'
+                      ? t('visibility.publicTag')
+                      : t('visibility.privateTag')}
+                  </Tag>
+                </>
+              )}
+            </h1>
+            {collection.description && (
+              <MarkdownText text={L(collection.description)} className="form-hero-text" />
             )}
-            {isOwner && (
-              <>{' '}<Tag theme={collection.visibility === 'PUBLIC'
-                ? { '--tag-background': 'var(--color-success)', '--tag-color': 'var(--color-white)' }
-                : { '--tag-background': 'var(--color-black-20)', '--tag-color': 'var(--color-black-90)' }}>
-                {collection.visibility === 'PUBLIC' ? t('visibility.publicTag') : t('visibility.privateTag')}
-              </Tag></>
+            {!isOwner && collection.owner_name && (
+              <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                <strong>
+                  {t(
+                    collection.mode === 'COMMUNITY'
+                      ? 'collectionPage.curator'
+                      : 'collectionPage.owner'
+                  )}
+                </strong>{' '}
+                <Link to={`/${collection.owner}`} className="owner-link">
+                  {collection.owner_name}
+                </Link>
+              </p>
             )}
-          </h1>
-          {collection.description && <MarkdownText text={L(collection.description)} className="form-hero-text" />}
-          {!isOwner && collection.owner_name && (
-            <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
-              <strong>{t(collection.mode === 'COMMUNITY' ? 'collectionPage.curator' : 'collectionPage.owner')}</strong> <Link to={`/${collection.owner}`} className="owner-link">{collection.owner_name}</Link>
-            </p>
-          )}
-          {!isAuthenticated && (
-            <p className="invite-nudge">
-              {t('collectionPage.anonIntro')}{' '}
-              <Link to={`/collections/${code}/join`} className="owner-link">
-                {t('collectionPage.anonIntroLink')}
-              </Link>
-            </p>
-          )}
-          {/* The same invitation for a reader who is already signed in. They
+            {!isAuthenticated && (
+              <p className="invite-nudge">
+                {t('collectionPage.anonIntro')}{' '}
+                <Link to={`/collections/${code}/join`} className="owner-link">
+                  {t('collectionPage.anonIntroLink')}
+                </Link>
+              </p>
+            )}
+            {/* The same invitation for a reader who is already signed in. They
               cannot be sent down the anonymous funnel — it asks for an email and
               answers with a magic link — so they get the action itself. Only on
               a PUBLIC collection: a private one is unreachable without an
               invitation, and this is exactly where the page used to offer
               "Add thing" to someone the API would refuse. */}
-          {isAuthenticated && !isOwner && !collection.is_member
-            && collection.visibility === 'PUBLIC' && (
-            <div className="invite-nudge">
-              <p style={{ margin: 0 }}>{t('collectionPage.visitorIntro')}</p>
-              <div style={{ marginTop: 'var(--spacing-xs)' }}>
-                <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
-                  {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
-                </Button>
-              </div>
-              {joinError && (
-                <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
-                  {t('collectionPage.visitorJoinError')}
-                </p>
+            {isAuthenticated &&
+              !isOwner &&
+              !collection.is_member &&
+              collection.visibility === 'PUBLIC' && (
+                <div className="invite-nudge">
+                  <p style={{ margin: 0 }}>{t('collectionPage.visitorIntro')}</p>
+                  <div style={{ marginTop: 'var(--spacing-xs)' }}>
+                    <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
+                      {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
+                    </Button>
+                  </div>
+                  {joinError && (
+                    <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
+                      {t('collectionPage.visitorJoinError')}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-          {isOwner && (
-            <>
-            <div className="spacer-m"></div>
-            <div className="button-row-wide">
-              <Link to={`/collections/${code}/edit`}>
-                <Button style={btnStyle}>{t('collectionPage.editCollection')}</Button>
-              </Link>
-              <Link to={`/collections/${code}/add`}>
-                <Button variant="secondary" style={btnSecondaryStyle}>{t('collectionPage.addThing')}</Button>
-              </Link>
-              <Link to={`/collections/${code}/invites`}>
-                <Button variant="secondary" style={btnSecondaryStyle}>{t('collectionPage.manageGuests')}</Button>
-              </Link>
-            </div>
-            <div className="spacer-s"></div>
-            <div className="spacer-l" />
-            <div className="share-menu-wrap">
-              <ShareCollectionMenu
-                collectionCode={code}
-                collectionHeadline={headline}
-                ownerName={collection.owner_name}
-                isPublic={collection.visibility === 'PUBLIC'}
-              />
-            </div>
-            {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
+            {isOwner && (
+              <>
+                <div className="spacer-m"></div>
+                <div className="button-row-wide">
+                  <Link to={`/collections/${code}/edit`}>
+                    <Button style={btnStyle}>{t('collectionPage.editCollection')}</Button>
+                  </Link>
+                  <Link to={`/collections/${code}/add`}>
+                    <Button variant="secondary" style={btnSecondaryStyle}>
+                      {t('collectionPage.addThing')}
+                    </Button>
+                  </Link>
+                  <Link to={`/collections/${code}/invites`}>
+                    <Button variant="secondary" style={btnSecondaryStyle}>
+                      {t('collectionPage.manageGuests')}
+                    </Button>
+                  </Link>
+                </div>
+                <div className="spacer-s"></div>
+                <div className="spacer-l" />
+                <div className="share-menu-wrap">
+                  <ShareCollectionMenu
+                    collectionCode={code}
+                    collectionHeadline={headline}
+                    ownerName={collection.owner_name}
+                    isPublic={collection.visibility === 'PUBLIC'}
+                  />
+                </div>
+                {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
                 showing but hasn't invited anyone — a quiet one-line pointer, no
                 banner or pressure. It disappears once the first guest joins. */}
-            {collection.invites.length === 0 && visibleThings.length > 0 && (
-              <p className="invite-nudge">
-                {t('collectionPage.inviteNudge')}{' '}
-                <Link to={`/collections/${code}/invites`} className="owner-link">
-                  {t('collectionPage.inviteNudgeLink')}
-                </Link>
-              </p>
+                {collection.invites.length === 0 && visibleThings.length > 0 && (
+                  <p className="invite-nudge">
+                    {t('collectionPage.inviteNudge')}{' '}
+                    <Link to={`/collections/${code}/invites`} className="owner-link">
+                      {t('collectionPage.inviteNudgeLink')}
+                    </Link>
+                  </p>
+                )}
+              </>
             )}
-            </>
-          )}
-          {/* Everything in here is a member's control — contributing a thing,
+            {/* Everything in here is a member's control — contributing a thing,
               recommending a guest, silencing the digest — so membership is the
               single condition. It used to admit any signed-in reader of a
               COMMUNITY collection, which is how the dead-end button got here. */}
-          {isAuthenticated && !isOwner && collection.is_member && (
-            <>
-            <div className="spacer-m"></div>
-            {/* Membership, not just mode: `Collection.can_add_thing` requires
+            {isAuthenticated && !isOwner && collection.is_member && (
+              <>
+                <div className="spacer-m"></div>
+                {/* Membership, not just mode: `Collection.can_add_thing` requires
                 an invite, so offering this to a signed-in non-member sent them
-                through the whole form — photos uploaded to Cloudinary and all —
+                through the whole form — photos uploaded to the bucket and all —
                 to collect a 403 at the end. They get the join button above
                 instead, which is the thing that actually unlocks this. */}
-            {collection.mode === 'COMMUNITY' && collection.is_member && (
-              <div className="button-row-wide">
-                <Link to={`/collections/${code}/add`}>
-                  <Button variant="secondary" style={btnSecondaryStyle}>{t('collectionPage.addThing')}</Button>
-                </Link>
-              </div>
-            )}
-            {collection.is_member && collection.allow_member_proposals && (
-              <RecommendGuest collectionCode={code} ownerName={collection.owner_name} />
-            )}
-            {collection.is_member && collection.digest_frequency !== 'NONE' && (
-              <p className="digest-pref">
-                {collection.is_digest_muted
-                  ? t('collectionPage.digestMuted')
-                  : t('collectionPage.digestSubscribed')}{' '}
-                <button
-                  type="button"
-                  className="digest-pref-button"
-                  onClick={toggleDigest}
-                  disabled={digestSaving}
-                >
-                  {collection.is_digest_muted
-                    ? t('collectionPage.digestUnmute')
-                    : t('collectionPage.digestMute')}
-                </button>
-                {digestError && (
-                  <>
-                    {' '}
-                    <span role="alert">{t('collectionPage.digestError')}</span>
-                  </>
+                {collection.mode === 'COMMUNITY' && collection.is_member && (
+                  <div className="button-row-wide">
+                    <Link to={`/collections/${code}/add`}>
+                      <Button variant="secondary" style={btnSecondaryStyle}>
+                        {t('collectionPage.addThing')}
+                      </Button>
+                    </Link>
+                  </div>
                 )}
-              </p>
-            )}
-            {/* "Leave the group" used to sit here, third in a stack of
+                {collection.is_member && collection.allow_member_proposals && (
+                  <RecommendGuest collectionCode={code} ownerName={collection.owner_name} />
+                )}
+                {collection.is_member && collection.digest_frequency !== 'NONE' && (
+                  <p className="digest-pref">
+                    {collection.is_digest_muted
+                      ? t('collectionPage.digestMuted')
+                      : t('collectionPage.digestSubscribed')}{' '}
+                    <button
+                      type="button"
+                      className="digest-pref-button"
+                      onClick={toggleDigest}
+                      disabled={digestSaving}
+                    >
+                      {collection.is_digest_muted
+                        ? t('collectionPage.digestUnmute')
+                        : t('collectionPage.digestMute')}
+                    </button>
+                    {digestError && (
+                      <>
+                        {' '}
+                        <span role="alert">{t('collectionPage.digestError')}</span>
+                      </>
+                    )}
+                  </p>
+                )}
+                {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only
                 destructive one of the three. It moved to the own profile's "My
                 groups" list (design round): leaving is something you do to your
                 own membership, so it belongs with the rest of your account, next
                 to the other memberships you might weigh it against. The route
                 (/collections/:code/leave) is unchanged. */}
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
         </div>
         {collection.thumbnail_url && (
           <HeroPhoto
@@ -384,132 +449,159 @@ export default function CollectionPage() {
         />
       </div>
       <div className="page-container">
-      {/* The owner's notifications for this collection — a hold request is answered
+        {/* The owner's notifications for this collection — a hold request is answered
           on the thing, so it should reach them where the things are, not only on
           Home. A member's own notifications (FAQs) stay on Home. */}
-      {isOwner && <InboxNotifications collection={code} />}
-      {isOwner && collection.status === 'INACTIVE' && (
-        <Notification label={t('common.notice')} type="info" style={{ marginBottom: 'var(--spacing-m)' }}>
-          {t('collectionPage.inactiveNotice')}
-        </Notification>
-      )}
-      {collection.is_paused && (
-        <Notification label={t('pause.bannerLabel')} type="alert" style={{ marginBottom: 'var(--spacing-m)' }}>
-          {collection.pause_message}
-        </Notification>
-      )}
+        {isOwner && <InboxNotifications collection={code} />}
+        {isOwner && collection.status === 'INACTIVE' && (
+          <Notification
+            label={t('common.notice')}
+            type="info"
+            style={{ marginBottom: 'var(--spacing-m)' }}
+          >
+            {t('collectionPage.inactiveNotice')}
+          </Notification>
+        )}
+        {collection.is_paused && (
+          <Notification
+            label={t('pause.bannerLabel')}
+            type="alert"
+            style={{ marginBottom: 'var(--spacing-m)' }}
+          >
+            {collection.pause_message}
+          </Notification>
+        )}
 
-      {/* Offered to someone who has just accepted an invitation — but only on a
+        {/* Offered to someone who has just accepted an invitation — but only on a
           deployment that has a page explaining what it is. Upstream there is
           none, so the box never renders; `seenWelcome` keeps working either way,
           which is what lets a deployment turn it back on from its own file. */}
-      {showWelcome && aboutPath && (
-        <div className="linkbox-full-width">
-        <Linkbox
-          href={aboutPath}
-          onClick={(e) => {
-            e.preventDefault();
-            setShowWelcome(false);
-            navigate(aboutPath, { state: { collectionHeadline: headline } });
-          }}
-          heading={t('collectionPage.welcomeHeading')}
-          text={t('collectionPage.welcomeText')}
-          linkAriaLabel={t('collectionPage.welcomeAriaLabel')}
-          linkboxAriaLabel={t('collectionPage.welcomeHeading')}
-          border
-        />
-        <div className="spacer-l" />
-        </div>
-      )}
-
-      <h2>{t('collectionPage.things')}</h2>
-      <div className="spacer-m" />
-      {visibleThings.length > 0 && collectionTags.length > 0 && (
-        <div className="tag-filter-bar">
-          <button
-            type="button"
-            className="tag-chip"
-            aria-pressed={!effectiveTag}
-            onClick={() => { setActiveTag(null); setShownCount(CARDS_PER_PAGE); }}
-          >
-            {t('collectionPage.allTags')} ({visibleThings.length})
-          </button>
-          {collectionTags.map((tag) => {
-            const count = visibleThings.filter((thg) => (thg.tags || []).includes(tag)).length;
-            return (
-              <button
-                key={tag}
-                type="button"
-                className="tag-chip"
-                aria-pressed={effectiveTag === tag}
-                onClick={() => {
-                  setActiveTag(effectiveTag === tag ? null : tag);
-                  setShownCount(CARDS_PER_PAGE);
-                }}
-              >
-                {L(tag)} ({count})
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {visibleThings.length === 0 ? (
-        <>
-          <p>{t('collectionPage.noThings')}{(isOwner || collection.mode === 'COMMUNITY') && <> <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.</>}</p>
-          <div className="spacer-xxs" />
-          {(isOwner || collection.mode === 'COMMUNITY') && (
-            <p><Link to={`/collections/${code}/add#bulk-add`}>{t('collectionPage.addManyCsv')}</Link></p>
-          )}
-        </>
-      ) : shownThings.length === 0 ? (
-        <p>{t('collectionPage.noThingsForTag')}</p>
-      ) : (
-        <>
-        <div className="things-grid">
-          {shownThings.map((thing) => (
-            <ThingLinkbox
-              key={thing.code}
-              thing={thing}
-              userCode={userCode}
-              collectionCode={code}
-              collectionHeadline={headline}
-              collectionOwner={collection.owner}
-              collectionMode={collection.mode}
-              isPaused={collection.is_paused}
-              hideType={singleType}
-              canAct={isAuthenticated}
-              loginToAct={!isAuthenticated}
-              onUpdateThing={handleUpdateThing}
+        {showWelcome && aboutPath && (
+          <div className="linkbox-full-width">
+            <Linkbox
+              href={aboutPath}
+              onClick={(e) => {
+                e.preventDefault();
+                setShowWelcome(false);
+                navigate(aboutPath, { state: { collectionHeadline: headline } });
+              }}
+              heading={t('collectionPage.welcomeHeading')}
+              text={t('collectionPage.welcomeText')}
+              linkAriaLabel={t('collectionPage.welcomeAriaLabel')}
+              linkboxAriaLabel={t('collectionPage.welcomeHeading')}
+              border
             />
-          ))}
-        </div>
-        {remainingThings > 0 && (
-          <>
-            <div className="spacer-m" />
-            <Button
-              variant="secondary"
-              style={btnSecondaryStyle}
-              onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
+            <div className="spacer-l" />
+          </div>
+        )}
+
+        <h2>{t('collectionPage.things')}</h2>
+        <div className="spacer-m" />
+        {visibleThings.length > 0 && collectionTags.length > 0 && (
+          <div className="tag-filter-bar">
+            <button
+              type="button"
+              className="tag-chip"
+              aria-pressed={!effectiveTag}
+              onClick={() => {
+                setActiveTag(null);
+                setShownCount(CARDS_PER_PAGE);
+              }}
             >
-              {t('collectionPage.showMoreThings', { count: remainingThings })}
-            </Button>
+              {t('collectionPage.allTags')} ({visibleThings.length})
+            </button>
+            {collectionTags.map((tag) => {
+              const count = visibleThings.filter((thg) => (thg.tags || []).includes(tag)).length;
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  className="tag-chip"
+                  aria-pressed={effectiveTag === tag}
+                  onClick={() => {
+                    setActiveTag(effectiveTag === tag ? null : tag);
+                    setShownCount(CARDS_PER_PAGE);
+                  }}
+                >
+                  {L(tag)} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {visibleThings.length === 0 ? (
+          <>
+            <p>
+              {t('collectionPage.noThings')}
+              {(isOwner || collection.mode === 'COMMUNITY') && (
+                <>
+                  {' '}
+                  <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.
+                </>
+              )}
+            </p>
+            <div className="spacer-xxs" />
+            {(isOwner || collection.mode === 'COMMUNITY') && (
+              <p>
+                <Link to={`/collections/${code}/add#bulk-add`}>
+                  {t('collectionPage.addManyCsv')}
+                </Link>
+              </p>
+            )}
+          </>
+        ) : shownThings.length === 0 ? (
+          <p>{t('collectionPage.noThingsForTag')}</p>
+        ) : (
+          <>
+            <div className="things-grid">
+              {shownThings.map((thing) => (
+                <ThingLinkbox
+                  key={thing.code}
+                  thing={thing}
+                  userCode={userCode}
+                  collectionCode={code}
+                  collectionHeadline={headline}
+                  collectionOwner={collection.owner}
+                  collectionMode={collection.mode}
+                  isPaused={collection.is_paused}
+                  hideType={singleType}
+                  canAct={isAuthenticated}
+                  loginToAct={!isAuthenticated}
+                  onUpdateThing={handleUpdateThing}
+                />
+              ))}
+            </div>
+            {remainingThings > 0 && (
+              <>
+                <div className="spacer-m" />
+                <Button
+                  variant="secondary"
+                  style={btnSecondaryStyle}
+                  onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
+                >
+                  {t('collectionPage.showMoreThings', { count: remainingThings })}
+                </Button>
+              </>
+            )}
           </>
         )}
-        </>
-      )}
 
-      {isOwner && collection.invites.length > 0 && (
-        <>
-          <div className="spacer-l" />
-          <h2>{t('broadcast.heading')}</h2>
-          <div className="spacer-m" />
-          {!broadcastOpen ? (
-            <Button variant="secondary" style={btnSecondaryStyle} onClick={() => setBroadcastOpen(true)}>
-              {t('broadcast.openButton')}
-            </Button>
-          ) : (
-            <div className="form-grid">
-              {/* The one place in the product where a member learns an address
+        {isOwner && collection.invites.length > 0 && (
+          <>
+            <div className="spacer-l" />
+            <h2>{t('broadcast.heading')}</h2>
+            <div className="spacer-m" />
+            {!broadcastOpen ? (
+              <Button
+                variant="secondary"
+                style={btnSecondaryStyle}
+                onClick={() => setBroadcastOpen(true)}
+              >
+                {t('broadcast.openButton')}
+              </Button>
+            ) : (
+              <div className="form-grid">
+                {/* The one place in the product where a member learns an address
                   the API takes care never to serve them: the broadcast carries
                   the owner's own email as Reply-To, so replying to the group
                   message is one tap. Worth keeping — without it a broadcast is
@@ -517,68 +609,79 @@ export default function CollectionPage() {
                   noreply — but not worth doing without saying so first
                   (DESIGN §6). Their own address, their own send: disclosure is
                   what consent needs here, not a switch. */}
-              <TextArea
-                id="broadcast-message"
-                label={t('broadcast.messageLabel')}
-                helperText={t('broadcast.replyToNotice')}
-                value={broadcastMessage}
-                onChange={(e) => setBroadcastMessage(e.target.value)}
-                maxLength={256}
-                required
-              />
-              {broadcastResult && (
-                <Notification
-                  label={broadcastResult.type === 'success' ? t('common.sent') : t('common.error')}
-                  type={broadcastResult.type}
-                  style={{ marginBottom: 'var(--spacing-s)' }}
-                  dismissible
-                  onClose={() => setBroadcastResult(null)}
-                >
-                  {broadcastResult.message}
-                </Notification>
-              )}
-              <div className="button-row-wide">
-                <Button
-                  style={btnStyle}
-                  onClick={handleBroadcast}
-                  disabled={broadcastSending || !broadcastMessage.trim()}
-                >
-                  {broadcastSending ? t('broadcast.sending') : t('broadcast.sendButton')}
-                </Button>
-                <Button variant="secondary" style={btnSecondaryStyle} onClick={() => { setBroadcastOpen(false); setBroadcastResult(null); }}>
-                  {t('common.close')}
-                </Button>
+                <TextArea
+                  id="broadcast-message"
+                  label={t('broadcast.messageLabel')}
+                  helperText={t('broadcast.replyToNotice')}
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  maxLength={256}
+                  required
+                />
+                {broadcastResult && (
+                  <Notification
+                    label={
+                      broadcastResult.type === 'success' ? t('common.sent') : t('common.error')
+                    }
+                    type={broadcastResult.type}
+                    style={{ marginBottom: 'var(--spacing-s)' }}
+                    dismissible
+                    onClose={() => setBroadcastResult(null)}
+                  >
+                    {broadcastResult.message}
+                  </Notification>
+                )}
+                <div className="button-row-wide">
+                  <Button
+                    style={btnStyle}
+                    onClick={handleBroadcast}
+                    disabled={broadcastSending || !broadcastMessage.trim()}
+                  >
+                    {broadcastSending ? t('broadcast.sending') : t('broadcast.sendButton')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    style={btnSecondaryStyle}
+                    onClick={() => {
+                      setBroadcastOpen(false);
+                      setBroadcastResult(null);
+                    }}
+                  >
+                    {t('common.close')}
+                  </Button>
+                </div>
               </div>
+            )}
+          </>
+        )}
+
+        {isOwner && collection.things.some((thg) => thg.status === 'INACTIVE') && (
+          <>
+            <div className="spacer-l" />
+            <h2>{t('collectionPage.inactiveThings')}</h2>
+            <div className="spacer-m" />
+            <div className="things-grid">
+              {[...collection.things]
+                .filter((thg) => thg.status === 'INACTIVE')
+                .sort((a, b) => {
+                  return new Date(b.created) - new Date(a.created);
+                })
+                .map((thing) => (
+                  <ThingLinkbox
+                    key={thing.code}
+                    thing={thing}
+                    userCode={userCode}
+                    collectionCode={code}
+                    collectionHeadline={headline}
+                    collectionOwner={collection.owner}
+                    collectionMode={collection.mode}
+                    hideType={singleType}
+                    onUpdateThing={handleUpdateThing}
+                  />
+                ))}
             </div>
-          )}
-        </>
-      )}
-
-      {isOwner && collection.things.some((thg) => thg.status === 'INACTIVE') && (
-        <>
-          <div className="spacer-l" />
-          <h2>{t('collectionPage.inactiveThings')}</h2>
-          <div className="spacer-m" />
-          <div className="things-grid">
-            {[...collection.things].filter((thg) => thg.status === 'INACTIVE').sort((a, b) => {
-              return new Date(b.created) - new Date(a.created);
-            }).map((thing) => (
-              <ThingLinkbox
-                key={thing.code}
-                thing={thing}
-                userCode={userCode}
-                collectionCode={code}
-                collectionHeadline={headline}
-                collectionOwner={collection.owner}
-                collectionMode={collection.mode}
-                hideType={singleType}
-                onUpdateThing={handleUpdateThing}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
+          </>
+        )}
       </div>
     </div>
   );

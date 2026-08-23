@@ -91,9 +91,7 @@ describe("a deployment's own copy", () => {
 
     await i18n.changeLanguage('es');
 
-    expect(i18n.t('stats.downloadStatsError')).toBe(
-      'No se pudieron descargar las estadísticas.'
-    );
+    expect(i18n.t('stats.downloadStatsError')).toBe('No se pudieron descargar las estadísticas.');
   });
 
   test('a language the deployment did not translate is untouched', async () => {

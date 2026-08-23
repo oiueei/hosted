@@ -42,7 +42,7 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
-from core.utils import cloudinary_doc_url, get_client_ip, redact_email
+from core.utils import doc_asset_url, get_client_ip, redact_email
 from core.views._helpers import body_dict
 
 security_logger = logging.getLogger("security")
@@ -148,7 +148,7 @@ def _join_collection(collection, user, source=""):
         return
     send_collection_welcome_doc_email(
         collection.headline,
-        cloudinary_doc_url(collection.welcome_doc),
+        doc_asset_url(collection.welcome_doc),
         user.email,
         collection=collection,
     )

@@ -17,7 +17,19 @@ import { useLocalized } from '../utils/localized';
 // Memoised: CollectionPage keeps broadcast/tag-filter state at its root, so a
 // keystroke in the broadcast box re-renders the page. With stable props (the
 // parent passes a useCallback'd onUpdateThing) memo skips re-rendering every card.
-function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, collectionOwner, collectionMode, isPaused, canAct = true, hideType = false, loginToAct = false, onUpdateThing }) {
+function ThingLinkbox({
+  thing,
+  userCode,
+  collectionCode,
+  collectionHeadline,
+  collectionOwner,
+  collectionMode,
+  isPaused,
+  canAct = true,
+  hideType = false,
+  loginToAct = false,
+  onUpdateThing,
+}) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
@@ -63,10 +75,14 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
   // Anonymous visitor (loginToAct): show the action buttons, but route each click
   // to the collection's join page — they log in there and come back able to act.
   const joinPath = `/collections/${collectionCode || thing.collection_code}/join`;
-  const goJoin = () => navigate(joinPath, { state: { collectionHeadline: collectionHeadline || L(thing.collection_headline) } });
+  const goJoin = () =>
+    navigate(joinPath, {
+      state: { collectionHeadline: collectionHeadline || L(thing.collection_headline) },
+    });
   // The owner "Confirm hold" label, with its in-flight ("Confirming…") state. Shared
   // by the plain accept Button and the ownership-transfer <InlineConfirm> trigger.
-  const acceptLabel = bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');
+  const acceptLabel =
+    bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');
 
   const editPath = collectionCode
     ? `/collections/${collectionCode}/things/${thing.code}/edit`
@@ -77,8 +93,9 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
     : `/things/${thing.code}/delete`;
 
   const deleteBackPath = collectionCode ? `/collections/${collectionCode}` : '/';
-  const deleteBackLabel = collectionCode ? (collectionHeadline || t('common.collection')) : t('common.home');
-
+  const deleteBackLabel = collectionCode
+    ? collectionHeadline || t('common.collection')
+    : t('common.home');
 
   const thingPath = collectionCode
     ? `/collections/${collectionCode}/things/${thing.code}`
@@ -96,7 +113,13 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
         if (images.length === 1) {
           return (
             <Link to={thingPath}>
-              <img src={images[0]} alt={headline} className="thing-card-image" loading="lazy" onError={onImageError} />
+              <img
+                src={images[0]}
+                alt={headline}
+                className="thing-card-image"
+                loading="lazy"
+                onError={onImageError}
+              />
             </Link>
           );
         }
@@ -112,15 +135,20 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
                 the profile behind it is `IsAuthenticated`, so for that reader
                 it was only ever a door onto a 403. */}
             {thing.owner_name && thing.owner ? (
-              <Link to={`/${thing.owner}`} className="thing-card-owner-link">{thing.owner_name}</Link>
+              <Link to={`/${thing.owner}`} className="thing-card-owner-link">
+                {thing.owner_name}
+              </Link>
             ) : (
               thing.owner_name || t('common.aMember')
             )}
-            {thing.created && ` · ${new Date(thing.created).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })}`}
+            {thing.created &&
+              ` · ${new Date(thing.created).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })}`}
           </p>
         )}
         <h3 className="thing-card-headline">
-          <Link to={thingPath} className="thing-card-link">{headline}</Link>
+          <Link to={thingPath} className="thing-card-link">
+            {headline}
+          </Link>
         </h3>
         {thing.description && (
           <MarkdownText text={L(thing.description)} className="thing-card-description" />
@@ -130,37 +158,74 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
           {thing.transfer_count > 0 && (
             <div className="thing-card-info-row">
               <IconSwapUser size="m" aria-hidden="true" />
-              <span>{t(`transfers.${
-                thing.type === 'LEND_THING' ? 'lendCount' :
-                thing.type === 'RENT_THING' ? 'rentCount' :
-                'changesCount'
-              }`, { count: thing.transfer_count })}</span>
+              <span>
+                {t(
+                  `transfers.${
+                    thing.type === 'LEND_THING'
+                      ? 'lendCount'
+                      : thing.type === 'RENT_THING'
+                        ? 'rentCount'
+                        : 'changesCount'
+                  }`,
+                  { count: thing.transfer_count }
+                )}
+              </span>
             </div>
           )}
         </ThingInfoRows>
-        <OwnerBookingsList bookings={bookings} activePendingCode={activePendingCode} isOwner={isOwner} />
+        <OwnerBookingsList
+          bookings={bookings}
+          activePendingCode={activePendingCode}
+          isOwner={isOwner}
+        />
         <div className="thing-card-buttons">
           {isOwner && thing.status === 'ACTIVE' && (
             <>
               {needsPage && activePendingCode && (
                 <>
-                    <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept', activePendingCode)} style={btnStyle}>
-                      {acceptLabel}
-                    </Button>
-                  <Button variant="secondary" fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('reject', activePendingCode)} style={btnSecondaryStyle}>
-                    {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
+                  <Button
+                    fullWidth
+                    disabled={!!bookingAction}
+                    onClick={() => handleBookingAction('accept', activePendingCode)}
+                    style={btnStyle}
+                  >
+                    {acceptLabel}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    disabled={!!bookingAction}
+                    onClick={() => handleBookingAction('reject', activePendingCode)}
+                    style={btnSecondaryStyle}
+                  >
+                    {bookingActionVerb === 'reject'
+                      ? t('thingCard.cancelling')
+                      : t('thingCard.cancelHold')}
                   </Button>
                 </>
               )}
               <Link to={editPath} style={{ display: 'contents' }}>
                 {needsPage && activePendingCode ? (
-                  <Button fullWidth variant="secondary" style={btnSecondaryStyle}>{t('common.edit')}</Button>
+                  <Button fullWidth variant="secondary" style={btnSecondaryStyle}>
+                    {t('common.edit')}
+                  </Button>
                 ) : (
-                  <Button fullWidth style={btnStyle}>{t('common.edit')}</Button>
+                  <Button fullWidth style={btnStyle}>
+                    {t('common.edit')}
+                  </Button>
                 )}
               </Link>
               {!bookings.some((b) => b.status === 'PENDING') && canDelete && (
-                <Button variant="secondary" fullWidth style={btnSecondaryStyle} onClick={() => navigate(deletePath, { state: { backPath: deleteBackPath, backLabel: deleteBackLabel } })}>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  style={btnSecondaryStyle}
+                  onClick={() =>
+                    navigate(deletePath, {
+                      state: { backPath: deleteBackPath, backLabel: deleteBackLabel },
+                    })
+                  }
+                >
                   {t('common.delete')}
                 </Button>
               )}
@@ -168,14 +233,29 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
           )}
           {isOwner && thing.status === 'TAKEN' && (
             <>
-                <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept')} style={btnStyle}>
-                  {acceptLabel}
-                </Button>
-              <Button variant="secondary" fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('reject')} style={btnSecondaryStyle}>
-                {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
+              <Button
+                fullWidth
+                disabled={!!bookingAction}
+                onClick={() => handleBookingAction('accept')}
+                style={btnStyle}
+              >
+                {acceptLabel}
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
+                disabled={!!bookingAction}
+                onClick={() => handleBookingAction('reject')}
+                style={btnSecondaryStyle}
+              >
+                {bookingActionVerb === 'reject'
+                  ? t('thingCard.cancelling')
+                  : t('thingCard.cancelHold')}
               </Button>
               <Link to={editPath} style={{ display: 'contents' }}>
-                <Button variant="secondary" fullWidth style={btnSecondaryStyle}>{t('common.edit')}</Button>
+                <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
+                  {t('common.edit')}
+                </Button>
               </Link>
             </>
           )}
@@ -185,14 +265,20 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
                 {activating ? t('thingCard.reactivating') : t('thingCard.reactivate')}
               </Button>
               <Link to={editPath} style={{ display: 'contents' }}>
-                <Button variant="secondary" fullWidth style={btnSecondaryStyle}>{t('common.edit')}</Button>
+                <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
+                  {t('common.edit')}
+                </Button>
               </Link>
               {canDelete && (
                 <Button
                   variant="secondary"
                   fullWidth
                   style={btnSecondaryStyle}
-                  onClick={() => navigate(deletePath, { state: { backPath: deleteBackPath, backLabel: deleteBackLabel } })}
+                  onClick={() =>
+                    navigate(deletePath, {
+                      state: { backPath: deleteBackPath, backLabel: deleteBackLabel },
+                    })
+                  }
                 >
                   {t('common.delete')}
                 </Button>
@@ -204,7 +290,21 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
               fullWidth
               disabled={loginToAct ? loginButtonDisabled : buttonDisabled}
               style={btnStyle}
-              onClick={loginToAct ? goJoin : (needsPage ? () => navigate(requestPath, { state: { backPath: collectionCode ? `/collections/${collectionCode}` : '/', backLabel: collectionCode ? (collectionHeadline || t('common.collection')) : t('common.home') } }) : handleRequest)}
+              onClick={
+                loginToAct
+                  ? goJoin
+                  : needsPage
+                    ? () =>
+                        navigate(requestPath, {
+                          state: {
+                            backPath: collectionCode ? `/collections/${collectionCode}` : '/',
+                            backLabel: collectionCode
+                              ? collectionHeadline || t('common.collection')
+                              : t('common.home'),
+                          },
+                        })
+                    : handleRequest
+              }
             >
               {buttonLabel}
             </Button>
@@ -214,7 +314,11 @@ function ThingLinkbox({ thing, userCode, collectionCode, collectionHeadline, col
               variant="secondary"
               fullWidth
               style={btnSecondaryStyle}
-              onClick={() => navigate(deletePath, { state: { backPath: deleteBackPath, backLabel: deleteBackLabel } })}
+              onClick={() =>
+                navigate(deletePath, {
+                  state: { backPath: deleteBackPath, backLabel: deleteBackLabel },
+                })
+              }
             >
               {t('common.delete')}
             </Button>

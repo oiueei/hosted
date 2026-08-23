@@ -41,7 +41,9 @@ export default function ApprovalNotice({ kind, catalogue }) {
           to ask means "not yet", nowhere to ask means "not here". Telling
           someone to request access when there is no such page would be worse
           than the disabled control it was meant to explain. */}
-      {requestUrl ? t('capabilities.needsApproval', { list }) : t('capabilities.unavailable', { list })}
+      {requestUrl
+        ? t('capabilities.needsApproval', { list })
+        : t('capabilities.unavailable', { list })}
       {requestUrl && (
         <>
           {' '}

@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
@@ -91,7 +91,7 @@ export default defineConfig(({ mode }) => ({
       // the code needs covering, never that the line needs lowering.
       thresholds: {
         statements: 85,
-        branches: 77,
+        branches: 78,
         functions: 77,
         lines: 88,
       },
@@ -99,9 +99,9 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: {
-      'react': path.resolve(__dirname, 'node_modules/react'),
+      react: path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-      'postcss': path.resolve(__dirname, 'src/stubs/postcss.js'),
+      postcss: path.resolve(__dirname, 'src/stubs/postcss.js'),
     },
   },
   server: {
@@ -113,9 +113,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     fs: {
-      allow: [
-        path.resolve(__dirname, '..'),
-      ],
+      allow: [path.resolve(__dirname, '..')],
     },
   },
-}))
+}));

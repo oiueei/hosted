@@ -26,6 +26,12 @@
  *   who has just accepted an invitation, and a fresh magic-link login lands
  *   there. Upstream there is no such page: what OIUEEI is belongs in the
  *   README, and a deployment's own answer belongs to the deployment.
+ * @property {?string} faqPath
+ *   Where this deployment's help/FAQ page lives, or `null` for none. Linked
+ *   from `/login`, the door with the most traffic — upstream has nowhere to
+ *   send that link, since the FAQ (pricing, early-bird terms, who operates
+ *   the service) is deployment-specific content with no home in this repo.
+ *   Same shape as `aboutPath`: a link to a 404 is worse than one link fewer.
  * @property {Object<string, Object>} deploymentI18n
  *   Extra translations, keyed by language code, merged into the `translation`
  *   namespace at startup. A deployment's copy stays out of
@@ -41,5 +47,7 @@ export const deploymentRoutes = [];
 export const popInPath = null;
 
 export const aboutPath = null;
+
+export const faqPath = null;
 
 export const deploymentI18n = {};

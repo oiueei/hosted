@@ -26,7 +26,10 @@ export default function TooltipButton({ tooltip, onClick, disabled, children }) 
   // Escape re-shows on the next hover/focus, so a dismissal is never sticky.
   const [dismissed, setDismissed] = useState(false);
 
-  const show = () => { setDismissed(false); setVisible(true); };
+  const show = () => {
+    setDismissed(false);
+    setVisible(true);
+  };
   const hide = () => setVisible(false);
 
   // WCAG 1.4.13 "dismissible": Escape hides the bubble without moving the
@@ -38,12 +41,18 @@ export default function TooltipButton({ tooltip, onClick, disabled, children }) 
   // own Escape.
   useEffect(() => {
     if (!visible || dismissed) return undefined;
-    const onKeyDown = (e) => { if (e.key === 'Escape') setDismissed(true); };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setDismissed(true);
+    };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [visible, dismissed]);
 
   return (
+    // The div is a passive wrapper, not an interactive target: the real
+    // Button below carries all the keyboard/aria semantics, and its own
+    // focus/blur bubble up here to control the bubble's visibility.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className="tooltip-button"
       onMouseEnter={show}

@@ -6,7 +6,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
-import downloadBlob from '../utils/downloadBlob';
+import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ImageUpload from '../components/ImageUpload';
@@ -30,7 +30,11 @@ export default function EditCollectionPage() {
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [loading, setLoading] = useState(true);
   const [headline, setHeadline] = useState('');
-  useEffect(() => { document.title = headline ? t('titles.editCollection', { headline: L(headline) }) : t('titles.editCollectionDefault'); }, [headline, t, L]);
+  useEffect(() => {
+    document.title = headline
+      ? t('titles.editCollection', { headline: L(headline) })
+      : t('titles.editCollectionDefault');
+  }, [headline, t, L]);
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [mode, setMode] = useState('PROPRIETARY');
@@ -47,6 +51,7 @@ export default function EditCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -57,6 +62,8 @@ export default function EditCollectionPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [pauseSubmitting, setPauseSubmitting] = useState(false);
   const [statsError, setStatsError] = useState(false);
+  const [collectionExportError, setCollectionExportError] = useState(null);
+  const [collectionExportDownloading, setCollectionExportDownloading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -68,8 +75,16 @@ export default function EditCollectionPage() {
   ];
 
   const ALL_MODE_OPTIONS = [
-    { label: t('editCollection.modeProprietary'), description: t('createCollection.modeProprietaryDesc'), value: 'PROPRIETARY' },
-    { label: t('editCollection.modeCommunity'), description: t('createCollection.modeCommunityDesc'), value: 'COMMUNITY' },
+    {
+      label: t('editCollection.modeProprietary'),
+      description: t('createCollection.modeProprietaryDesc'),
+      value: 'PROPRIETARY',
+    },
+    {
+      label: t('editCollection.modeCommunity'),
+      description: t('createCollection.modeCommunityDesc'),
+      value: 'COMMUNITY',
+    },
   ];
   // `savedMode` — not `mode` — is the current value here: a collection opened
   // before this deployment narrowed still shows the mode it is in, and keeps
@@ -86,11 +101,11 @@ export default function EditCollectionPage() {
     { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
   ];
 
-
   // Live "pick at least one" feedback once a submit has been attempted (P1-5).
-  const allowedTypesError = submitAttempted && allowedThingTypes.length === 0
-    ? t('createCollection.allowedTypesAtLeastOne')
-    : '';
+  const allowedTypesError =
+    submitAttempted && allowedThingTypes.length === 0
+      ? t('createCollection.allowedTypesAtLeastOne')
+      : '';
 
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
@@ -119,6 +134,7 @@ export default function EditCollectionPage() {
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
+          setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
           setThumbnailUrl(data.thumbnail_url || '');
@@ -146,7 +162,8 @@ export default function EditCollectionPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('editCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('editCollection.maxHeadline');
-    if (localizedCounter(description, 256).over) newErrors.description = t('editCollection.maxDescription');
+    if (localizedCounter(description, 256).over)
+      newErrors.description = t('editCollection.maxDescription');
     setErrors(newErrors);
     const allowedTypesOk = allowedThingTypes.length > 0;
     return Object.keys(newErrors).length === 0 && allowedTypesOk;
@@ -168,6 +185,7 @@ export default function EditCollectionPage() {
       allowed_thing_types: allowedThingTypes,
       rental_durations: rentalDurations,
       rental_weekdays: rentalWeekdays,
+      deposit_policy: depositPolicy.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -187,8 +205,8 @@ export default function EditCollectionPage() {
         // Backend rejects narrowing if it would orphan existing things — surface
         // its detail (which names the offending types) so the user can act on it.
         const detail = await res.json().catch(() => null);
-        const message = (detail && (detail.non_field_errors || detail.detail))
-          || t('editCollection.errorSaving');
+        const message =
+          (detail && (detail.non_field_errors || detail.detail)) || t('editCollection.errorSaving');
         setToast({ type: 'error', message: Array.isArray(message) ? message[0] : message });
       } else {
         setToast({ type: 'error', message: t('editCollection.errorSaving') });
@@ -238,12 +256,28 @@ export default function EditCollectionPage() {
     }
   };
 
+  const handleDownloadCollectionExport = async () => {
+    setCollectionExportError(null);
+    setCollectionExportDownloading(true);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/export/`);
+      if (res.ok) {
+        downloadBlob(await res.blob(), filenameFromResponse(res, `${code}.json`));
+      } else if (res.status === 429) {
+        setCollectionExportError(t('common.tooManyAttempts'));
+      } else {
+        setCollectionExportError(t('collectionExport.error'));
+      }
+    } catch {
+      setCollectionExportError(t('common.connectionError'));
+    } finally {
+      setCollectionExportDownloading(false);
+    }
+  };
+
   return (
-    <PageLayout
-      backTo={`/collections/${code}`}
-      backLabel={L(headline) || t('common.collection')}
-    >
-        <h1 className="page-title-xl">{t('editCollection.pageTitle')}</h1>
+    <PageLayout backTo={`/collections/${code}`} backLabel={L(headline) || t('common.collection')}>
+      <h1 className="page-title-xl">{t('editCollection.pageTitle')}</h1>
       <div className="form-grid">
         <TextInput
           id="edit-collection-headline"
@@ -316,14 +350,16 @@ export default function EditCollectionPage() {
             />
             <LocalizedInfo id="edit-collection-tags-info" variant="tags" />
           </div>
-            <RentalRulesFields
-              idPrefix="edit-collection"
-              rentalDurations={rentalDurations}
-              setRentalDurations={setRentalDurations}
-              rentalWeekdays={rentalWeekdays}
-              setRentalWeekdays={setRentalWeekdays}
-              theeemeColor01={tc.color_01}
-            />
+          <RentalRulesFields
+            idPrefix="edit-collection"
+            rentalDurations={rentalDurations}
+            setRentalDurations={setRentalDurations}
+            rentalWeekdays={rentalWeekdays}
+            setRentalWeekdays={setRentalWeekdays}
+            depositPolicy={depositPolicy}
+            setDepositPolicy={setDepositPolicy}
+            theeemeColor01={tc.color_01}
+          />
           <Select
             id="edit-collection-digest"
             texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
@@ -369,20 +405,37 @@ export default function EditCollectionPage() {
         <Button disabled={submitting} onClick={handleSubmit} style={{ ...btnStyle, width: '100%' }}>
           {submitting ? t('common.saving') : t('common.save')}
         </Button>
-        <Button variant="secondary" fullWidth disabled={submitting} onClick={() => {
-          navigate(`/collections/${code}/delete`, { state: { backPath: `/collections/${code}/edit`, backLabel: L(headline) || t('common.collection') } });
-        }} style={{
-          '--background-color': 'var(--color-white)',
-          '--border-color': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
-          '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
-          '--background-color-hover': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
-          '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-          marginTop: 'var(--spacing-s)',
-        }}>
+        <Button
+          variant="secondary"
+          fullWidth
+          disabled={submitting}
+          onClick={() => {
+            navigate(`/collections/${code}/delete`, {
+              state: {
+                backPath: `/collections/${code}/edit`,
+                backLabel: L(headline) || t('common.collection'),
+              },
+            });
+          }}
+          style={{
+            '--background-color': 'var(--color-white)',
+            '--border-color': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
+            '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
+            '--background-color-hover': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
+            '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
+            marginTop: 'var(--spacing-s)',
+          }}
+        >
           {t('common.delete')}
         </Button>
       </div>
-      <div style={{ marginTop: 'var(--spacing-xl)', borderTop: '1px solid var(--color-black-20)', paddingTop: 'var(--spacing-m)' }}>
+      <div
+        style={{
+          marginTop: 'var(--spacing-xl)',
+          borderTop: '1px solid var(--color-black-20)',
+          paddingTop: 'var(--spacing-m)',
+        }}
+      >
         <h2>{t('pause.sectionHeading')}</h2>
         <p>{t('pause.sectionHelper')}</p>
         {!isPaused && (
@@ -398,12 +451,25 @@ export default function EditCollectionPage() {
           </div>
         )}
         {isPaused && (
-          <blockquote style={{ borderLeft: `4px solid ${tc.color_01 ? `var(--color-${tc.color_01})` : 'var(--color-black-50)'}`, paddingLeft: 'var(--spacing-m)', margin: 'var(--spacing-m) 0', fontStyle: 'italic' }}>
+          <blockquote
+            style={{
+              borderLeft: `4px solid ${tc.color_01 ? `var(--color-${tc.color_01})` : 'var(--color-black-50)'}`,
+              paddingLeft: 'var(--spacing-m)',
+              margin: 'var(--spacing-m) 0',
+              fontStyle: 'italic',
+            }}
+          >
             {pauseMessage}
           </blockquote>
         )}
         {!isPaused && !pauseMessage.trim() && (
-          <p style={{ marginTop: 'var(--spacing-s)', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)' }}>
+          <p
+            style={{
+              marginTop: 'var(--spacing-s)',
+              fontSize: 'var(--fontsize-body-s)',
+              color: 'var(--color-black-60)',
+            }}
+          >
             {t('pause.messageRequiredHint')}
           </p>
         )}
@@ -416,12 +482,22 @@ export default function EditCollectionPage() {
             style={btnSecondaryStyle}
           >
             {pauseSubmitting
-              ? (isPaused ? t('pause.resuming') : t('pause.pausing'))
-              : (isPaused ? t('pause.resumeButton') : t('pause.pauseButton'))}
+              ? isPaused
+                ? t('pause.resuming')
+                : t('pause.pausing')
+              : isPaused
+                ? t('pause.resumeButton')
+                : t('pause.pauseButton')}
           </Button>
         </div>
       </div>
-      <div style={{ marginTop: 'var(--spacing-xl)', borderTop: '1px solid var(--color-black-20)', paddingTop: 'var(--spacing-m)' }}>
+      <div
+        style={{
+          marginTop: 'var(--spacing-xl)',
+          borderTop: '1px solid var(--color-black-20)',
+          paddingTop: 'var(--spacing-m)',
+        }}
+      >
         <Button
           variant="secondary"
           fullWidth
@@ -435,6 +511,36 @@ export default function EditCollectionPage() {
             {t('stats.downloadStatsError')}
           </Notification>
         )}
+        {/* The whole group, not the summary above — a different download, so the
+            label and the copy beside it have to say so: it carries other
+            members' data, and whoever downloads it is who answers for it. */}
+        <div style={{ marginTop: 'var(--spacing-s)' }}>
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={collectionExportDownloading}
+            onClick={handleDownloadCollectionExport}
+            style={btnSecondaryStyle}
+          >
+            {collectionExportDownloading
+              ? t('collectionExport.downloading')
+              : t('collectionExport.downloadButton')}
+          </Button>
+          <p
+            style={{
+              marginTop: 'var(--spacing-2-xs)',
+              fontSize: 'var(--fontsize-body-s)',
+              color: 'var(--color-black-60)',
+            }}
+          >
+            {t('collectionExport.notice')}
+          </p>
+          {collectionExportError && (
+            <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
+              {collectionExportError}
+            </Notification>
+          )}
+        </div>
       </div>
       <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
