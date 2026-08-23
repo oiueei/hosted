@@ -27,8 +27,15 @@ CI_URL = "postgres://oiueei:oiueei@localhost:5432/oiueei_test"
 
 
 def _databases_with(env):
-    """The DATABASES dict development.py builds under ``env``."""
-    with mock.patch.dict(os.environ, env, clear=False):
+    """The DATABASES dict development.py builds under exactly ``env``.
+
+    ``load_dotenv`` is stubbed for the reload: re-importing the settings re-runs
+    it, which would read the developer's own `.env` back into the environment
+    this function just emptied. Without the stub, putting `DATABASE_URL` in a
+    local `.env` — to run the suite against Postgres the way CI does — turns
+    every assertion below into a test of that file instead of of the branch.
+    """
+    with mock.patch.dict(os.environ, env, clear=False), mock.patch("dotenv.load_dotenv"):
         for key in ("DATABASE_URL", "DEV_DB_NAME"):
             if key not in env:
                 os.environ.pop(key, None)

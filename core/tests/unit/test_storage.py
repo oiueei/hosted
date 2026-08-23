@@ -322,7 +322,20 @@ class TestThePublicBaseUrlIsDerivedUnlessGiven:
 
     @staticmethod
     def _base_url_with(env):
-        with mock.patch.dict(os.environ, env, clear=False):
+        """Reload the settings under exactly ``env`` and nothing else.
+
+        ``load_dotenv`` is stubbed out for the reload, and that is the whole
+        trick: re-importing the module re-runs it, which would read the
+        developer's own `.env` straight back into the environment this test
+        just emptied. Without the stub these assertions pass or fail depending
+        on whether whoever runs them happens to have configured storage
+        locally — green on CI, red on the machine of anyone actually using the
+        feature.
+        """
+        with (
+            mock.patch.dict(os.environ, env, clear=False),
+            mock.patch("dotenv.load_dotenv"),
+        ):
             for key in (
                 "OBJECT_STORAGE_ENDPOINT",
                 "OBJECT_STORAGE_BUCKET",
