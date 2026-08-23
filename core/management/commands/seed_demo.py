@@ -48,7 +48,7 @@ _LANG_ORDER = ["es", "ca", "en"]
 # User codes that identify demo accounts — used by --reset to scope deletion.
 DEMO_USER_CODES = ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh", "1u1ucs"]
 
-# Demo fixture images live in their own Cloudinary folder, cleanly separated from
+# Demo fixture images live in their own storage folder, cleanly separated from
 # real user uploads (which land in oiueei/{users,things,collections,documents}/).
 # The seed stores bare ids (see common.py); this prefix is applied at seed time so
 # the stored public_id resolves to the fixture. Re-point here if the folder moves.
@@ -56,7 +56,7 @@ SEED_IMAGE_FOLDER = "oiueei/seed/"
 
 
 def _seed_image(public_id):
-    """Prefix a bare demo image id with its Cloudinary folder (empty stays empty)."""
+    """Prefix a bare demo image id with its storage folder (empty stays empty)."""
     return f"{SEED_IMAGE_FOLDER}{public_id}" if public_id else public_id
 
 

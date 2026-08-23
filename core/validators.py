@@ -16,12 +16,16 @@ from core.utils import parse_localized
 
 def validate_image_id(value):
     """
-    Validate that a Cloudinary public_id contains only safe characters.
+    Validate that a storage key contains only safe characters.
 
     Allows letters, numbers, underscores, hyphens, and forward slashes
-    (needed for folder-prefixed public_ids such as oiueei/things/abc123).
+    (needed for folder-prefixed keys such as oiueei/things/abc123).
     Rejects double slashes, leading/trailing slashes, and any other characters
     to prevent path traversal and injection attacks.
+
+    The rule outlived the provider it was written for: what it guards is a key
+    the client hands back after an upload, and a key that can climb out of its
+    folder is the same problem whoever stores it.
     """
     if value:
         if not re.match(r"^[a-zA-Z0-9_/.-]+$", value):
@@ -38,10 +42,10 @@ def validate_image_id(value):
 
 class ImageIdField(serializers.CharField):
     """
-    A CharField that validates Cloudinary public_ids.
+    A CharField that validates storage keys.
 
-    Accepts folder-prefixed IDs (e.g. oiueei/things/abc123) as well as
-    plain IDs. Prevents path traversal and injection attacks.
+    Accepts folder-prefixed keys (e.g. oiueei/things/abc123) as well as
+    plain ones. Prevents path traversal and injection attacks.
     """
 
     def __init__(self, **kwargs):

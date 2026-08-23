@@ -28,7 +28,7 @@ For endpoint definitions, permissions, request/response formats, and business lo
 
 ## Detailed Serializers Documentation
 
-For serializer patterns (security fields, prefetch-aware computed fields, Cloudinary URLs), naming conventions, and field-by-field documentation for each serializer, see [`core/serializers/CLAUDE.md`](core/serializers/CLAUDE.md).
+For serializer patterns (security fields, prefetch-aware computed fields, asset URLs), naming conventions, and field-by-field documentation for each serializer, see [`core/serializers/CLAUDE.md`](core/serializers/CLAUDE.md).
 
 ## Detailed Services Documentation
 

@@ -4,7 +4,7 @@ import { onImageError } from './imageFallback';
 describe('onImageError', () => {
   test('swaps a broken image to the placeholder', () => {
     const img = document.createElement('img');
-    img.src = 'https://res.cloudinary.com/demo/gone.jpg';
+    img.src = 'https://bucket.example-storage.com/oiueei/things/gone';
 
     onImageError({ currentTarget: img });
 
@@ -16,7 +16,7 @@ describe('onImageError', () => {
   // re-enter this handler and reset src forever.
   test('a second error on an already-swapped image changes nothing', () => {
     const img = document.createElement('img');
-    img.src = 'https://res.cloudinary.com/demo/gone.jpg';
+    img.src = 'https://bucket.example-storage.com/oiueei/things/gone';
 
     onImageError({ currentTarget: img });
     const swapped = img.src;

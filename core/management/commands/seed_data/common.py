@@ -8,7 +8,7 @@ merged onto this skeleton by `seed_demo.load_seed_data`. Adding a language means
 translating text only — never re-declaring structure (R17).
 
 Image ids (photo/thumbnail/gallery) are stored BARE here; `seed_demo` prefixes
-them with ``SEED_IMAGE_FOLDER`` (oiueei/seed/) at seed time — that's the Cloudinary
+them with ``SEED_IMAGE_FOLDER`` (oiueei/seed/) at seed time — that's the storage
 folder the demo fixtures actually live in, kept apart from real user uploads.
 """
 

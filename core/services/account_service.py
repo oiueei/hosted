@@ -33,7 +33,7 @@ What was never identifying:
   exposed to users (DESIGN §9). The codes stop resolving to anyone the moment
   the row below is gone.
 
-Cloudinary: the `post_delete` handlers destroy the profile photo and every
+Stored files: the `post_delete` handlers delete the profile photo and every
 thumbnail/gallery/welcome-doc of the cascaded rows, on commit.
 """
 

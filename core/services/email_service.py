@@ -762,7 +762,7 @@ def send_proposal_declined_email(
 def send_collection_welcome_doc_email(collection_headline, doc_url, email, collection=None):
     """Send the collection's welcome & rules PDF to a member who has just joined.
 
-    A **link**, never an attachment: the file lives on Cloudinary, and mailing a
+    A **link**, never an attachment: the file lives in the bucket, and mailing a
     5 MB PDF to every joiner would be a good way to get the domain filtered.
     Membership lifecycle, so it is mandatory (Cat. 1) like the invitation itself —
     a member who never sees the rules can't follow them. Sent once, on the first

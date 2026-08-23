@@ -279,7 +279,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     thumbnail = ImageIdField(required=False, allow_blank=True)
-    # The welcome PDF is a Cloudinary public_id like any other asset — same
+    # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
     welcome_doc = ImageIdField(required=False, allow_blank=True)
     tags = serializers.ListField(
@@ -390,7 +390,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     headline = LocalizedHeadlineField(max_length=64, required=False)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     thumbnail = ImageIdField(required=False, allow_blank=True)
-    # The welcome PDF is a Cloudinary public_id like any other asset — same
+    # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
     welcome_doc = ImageIdField(required=False, allow_blank=True)
     pause_message = SafeTextField(max_length=256, required=False, allow_blank=True)

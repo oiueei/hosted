@@ -85,7 +85,7 @@ core/
     booking_service.py # Accept/reject booking logic (transaction.atomic)
   permissions.py     # Custom DRF permissions (IsThingOwner, IsCollectionOwner)
   validators.py      # Input validation (image IDs, headlines, etc.)
-  utils.py           # ID generation, client IP, Cloudinary URLs
+  utils.py           # ID generation, client IP, asset URLs
   pagination.py      # StandardResultsPagination (max 100)
   management/
     commands/
@@ -111,7 +111,7 @@ core/
 
 | Model | Purpose |
 |-------|---------|
-| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio) and `photo` (Cloudinary profile photo, exposed as `photo_url`) |
+| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio) and `photo` (profile photo, stored as an object key and exposed as `photo_url`) |
 | **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — the owner still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
 | **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
@@ -360,7 +360,13 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `DEFAULT_FROM_EMAIL` | Prod | Sender email address |
 | `RSVP_BASE_URL` | Prod | Base URL for RSVP action links in emails (default in dev: `http://localhost:3000/rsvp`) |
 | `SHARE_LINK_BASE_URL` | Prod | Base URL for public collection share links (default in dev: `http://localhost:3000/share`) |
-| `CLOUDINARY_URL` | Uploads | Cloudinary credentials for image uploads: `cloudinary://api_key:api_secret@cloud_name` (free account at cloudinary.com) |
+| `OBJECT_STORAGE_ENDPOINT` | Uploads | S3-compatible endpoint, e.g. `https://fsn1.your-objectstorage.com` |
+| `OBJECT_STORAGE_BUCKET` | Uploads | Bucket name. **Must be private and not listable** — objects are made public one by one at upload time, so a listable bucket would let anyone enumerate a private collection's photos |
+| `OBJECT_STORAGE_REGION` | Uploads | Region the endpoint serves, e.g. `fsn1` |
+| `OBJECT_STORAGE_ACCESS_KEY` | Uploads | S3 access key, scoped to that bucket alone |
+| `OBJECT_STORAGE_SECRET_KEY` | Uploads | S3 secret key |
+| `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are read from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. It also feeds the Content-Security-Policy, so a wrong value shows up as images that refuse to load |
+| `CLOUDINARY_URL` | Legacy | The previous image host, still read so a deployment mid-migration can roll back without a code change. Unnecessary once your files are in the bucket |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
 | `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
@@ -469,10 +475,10 @@ Four outbound flows exist, all operational, all named — the app is a normal we
 
 1. **Hosting and database** — where the operator deploys it.
 2. **Email delivery** — the configured SMTP provider (magic links, invitations, activity notices).
-3. **Images and documents** — Cloudinary, which serves the photos to your browser and therefore sees the request.
+3. **Images and documents** — the object-storage bucket the operator configured, which serves the photos to your browser and therefore sees the request.
 4. **Error monitoring** — optional, deploy-only (Sentry). Events are scrubbed of cookies, auth headers, IP and user identity before being sent (`send_default_pii=False` + a `before_send` hook).
 
-For the official deployment at **www.oiueei.com**, the verified locations are: application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`). Cloudinary and Sentry are, at the time of writing, on their US regions — which is why this README does not claim "everything is in Europe". The current state is always the one written on the [`/legal`](https://www.oiueei.com/legal) page.
+For the official deployment at **www.oiueei.com**, the verified locations are: application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`), and images in **Hetzner Object Storage, Falkenstein (Germany)** — moving them off Cloudinary's US region is what this migration was for. **Sentry** remains on a US region at the time of writing, which is why this README still does not claim "everything is in Europe". The current state is always the one written on the [`/legal`](https://www.oiueei.com/legal) page.
 
 ### Your rights over your data
 

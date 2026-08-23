@@ -88,7 +88,7 @@ class Thing(models.Model):
         blank=True,
         help_text=(
             "Additional photos beyond the cover thumbnail: an ordered list of "
-            "Cloudinary public_ids. Max 8. Things only (not collections)."
+            "storage keys. Max 8. Things only (not collections)."
         ),
     )
     tags = models.JSONField(

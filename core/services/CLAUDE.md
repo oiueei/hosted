@@ -128,7 +128,7 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 | `send_booking_decision_email(booking, thing, accepted)` | Owner accepts or rejects a booking | Requester |
 | `send_collection_invite_email(inviter_name, collection_headline, email, accept_link, reject_link)` | Owner invites a user to a collection | Invitee |
 | `send_invite_rejected_email(invitee_name, collection_headline, owner_email)` | Invitee declines a collection invitation | Collection owner |
-| `send_collection_welcome_doc_email(collection_headline, doc_url, email)` | A user becomes a member of a collection **for the first time** (any join path — invite, share token, public-collection join) and the owner has set a welcome PDF | The new member. The PDF travels as a **link** (Cloudinary), never an attachment. Membership lifecycle ⇒ Cat. 1: a member who never sees the rules can't follow them |
+| `send_collection_welcome_doc_email(collection_headline, doc_url, email)` | A user becomes a member of a collection **for the first time** (any join path — invite, share token, public-collection join) and the owner has set a welcome PDF | The new member. The PDF travels as a **link** to the bucket, never an attachment. Membership lifecycle ⇒ Cat. 1: a member who never sees the rules can't follow them |
 | `send_collection_revoke_email(owner_name, collection_headline, email)` | Owner removes a user from a collection | Revoked user |
 | `send_account_delete_email(user, delete_link)` | User requests account deletion (`AccountDeleteRequestView`) | The account owner. States what is deleted and what stays anonymised; the link previews on GET and commits on POST (24h, single-use). `include_viral=False` — a growth CTA on an erasure email would be grotesque |
 | `send_inactivity_warning_email(user, months, days, will_delete=True)` | `purge_expired_data`, before an unused account is erased for retention | The account owner. Mandatory for the same reason as the erasure confirmation — it is about whether the account continues to exist — and `include_viral=False` for the same one. **Two bodies:** the default says the account goes in `days` days and that signing in once keeps it; `will_delete=False` is the version for an account that owns a group other people are using, which is never auto-deleted and therefore must not be told that it will be. Neither nags — the first ends "if you would rather it went, you don't have to do anything at all" (DESIGN §6: an inactive account is somebody who already left) |
@@ -265,7 +265,7 @@ The mirror of `account_service`: *what dies with you is what you get to take wit
 
 **Owner text stays raw.** A localized `headline` (`{"es": …, "ca": …}`) exports as the map the owner wrote, never resolved to one language: the file is for machines, and resolving would silently drop two thirds of it.
 
-**Photos and the welcome PDF travel as Cloudinary URLs, not bytes.** It keeps the response inside Heroku's 30-second window — and it is why the page offering the download has to say that deleting the account breaks those links.
+**Photos and the welcome PDF travel as URLs, not bytes.** It keeps the response inside Heroku's 30-second window — and it is why the page offering the download has to say that deleting the account breaks those links.
 
 ---
 
@@ -288,4 +288,4 @@ Frees the stored objects a record owns when the record itself is deleted, so rem
 
 #### Suspension (the demo-seed guard)
 
-`suspended()` is a context manager that disables the cleanup for deletes inside the block. **`seed_demo._reset()` wraps its deletes in it**: the demo reuses a fixed pool of shared Cloudinary public ids, so wiping them on `--reset` would destroy the very images the immediate re-seed points back at. Any other bulk delete that must not touch Cloudinary can reuse the same guard.
+`suspended()` is a context manager that disables the cleanup for deletes inside the block. **`seed_demo._reset()` wraps its deletes in it**: the demo reuses a fixed pool of shared storage keys, so wiping them on `--reset` would destroy the very images the immediate re-seed points back at. Any other bulk delete that must not touch the bucket can reuse the same guard.

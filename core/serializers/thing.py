@@ -605,7 +605,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
         allow_empty=True,
     )
     # Cover photo public_id. A CSV can't carry binaries, but a ZIP bundle can:
-    # the client unzips, uploads each image to Cloudinary, and sends the resulting
+    # the client unzips, uploads each image to the bucket, and sends the resulting
     # public_id here (validated path-traversal-safe like the single-create path).
     thumbnail = ImageIdField(required=False, allow_blank=True)
 

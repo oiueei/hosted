@@ -19,7 +19,7 @@ OIUEEI es software de código público (licencia BUSL 1.1; MIT a partir de 2030)
 
 **Qué guarda la aplicación, por diseño:** tu email (para entrar con enlaces mágicos — sin contraseñas), tu nombre y perfil opcional (bio, foto, idioma), el contenido que publicas (colecciones, cosas y sus fotos, preguntas y respuestas, reservas), tus preferencias de correo, y datos demográficos **opcionales** (generación de nacimiento y código postal) que solo ve quien administra tus comunidades, en agregado — nunca son públicos.
 
-**A dónde van:** el correo sale por el proveedor SMTP que el operador haya configurado y las imágenes se alojan en Cloudinary. Nada más sale de la instancia: sin SDKs de terceros, sin eventos enviados fuera. Las métricas de uso son propias, seudonimizadas y nunca se comparten.
+**A dónde van:** el correo sale por el proveedor SMTP que el operador haya configurado y las imágenes y documentos se guardan en el bucket de almacenamiento de objetos del propio operador. Nada más sale de la instancia: sin SDKs de terceros, sin eventos enviados fuera. Las métricas de uso son propias, seudonimizadas y nunca se comparten.
 
 **Cookies:** solo técnicas (sesión y seguridad). No hay cookies de terceros ni de publicidad, por eso no hay banner.
 
@@ -33,5 +33,5 @@ OIUEEI se encuentra en fase alfa y se ofrece «tal cual», sin garantías, en la
 
 # Para operadores (self-hosting)
 
-Si despliegas OIUEEI, el responsable del tratamiento eres tú: completa esta página con tu identidad, tus finalidades y tus encargados (proveedor de correo, Cloudinary, hosting), y atiende los derechos de tus usuarios. La licencia BUSL 1.1 permite el uso en producción; lo único que no permite es ofrecer OIUEEI a terceros como servicio hospedado que compita con la oferta de pago del licenciante.
+Si despliegas OIUEEI, el responsable del tratamiento eres tú: completa esta página con tu identidad, tus finalidades y tus encargados (proveedor de correo, almacenamiento de objetos, hosting), y atiende los derechos de tus usuarios. La licencia BUSL 1.1 permite el uso en producción; lo único que no permite es ofrecer OIUEEI a terceros como servicio hospedado que compita con la oferta de pago del licenciante.
 `;

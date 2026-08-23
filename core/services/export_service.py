@@ -35,7 +35,7 @@ Invariants, each pinned by a test in ``core/tests/unit/test_export_service.py``:
   is for machines, and resolving would silently drop two thirds of it.
 - **No tombstones.** Deleted is deleted; the file is a photo of what exists.
 
-Photos and the welcome PDF travel as Cloudinary URLs, not bytes: it keeps the
+Photos and the welcome PDF travel as URLs, not bytes: it keeps the
 response inside Heroku's 30-second window, and it is why the page that offers
 the download has to say that deleting the account breaks those links.
 """

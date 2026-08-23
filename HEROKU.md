@@ -21,7 +21,7 @@ Runtime (single gunicorn process):
 - A Heroku account
 - **Three external services** the app cannot run without:
   - **PostgreSQL** — the database (added as a Heroku add-on below)
-  - **Cloudinary** — image uploads, free account at [cloudinary.com](https://cloudinary.com)
+  - **An S3-compatible object store** — image and document uploads. OIUEEI's own deployment uses [Hetzner Object Storage](https://www.hetzner.com/storage/object-storage/) (Falkenstein), which keeps the files inside the EU
   - **An SMTP provider** — magic-link sign-in emails, e.g. Mailgun or SendGrid
 
 ## Font Notice
@@ -102,12 +102,20 @@ heroku config:set \
   MAGIC_LINK_BASE_URL='https://your-app-name.herokuapp.com/verify' \
   RSVP_BASE_URL='https://your-app-name.herokuapp.com/rsvp' \
   SHARE_LINK_BASE_URL='https://your-app-name.herokuapp.com/share' \
-  CLOUDINARY_URL='cloudinary://<api_key>:<api_secret>@<cloud_name>' \
+  OBJECT_STORAGE_ENDPOINT='https://fsn1.your-objectstorage.com' \
+  OBJECT_STORAGE_BUCKET='<your-bucket>' \
+  OBJECT_STORAGE_REGION='fsn1' \
+  OBJECT_STORAGE_ACCESS_KEY='<access-key>' \
+  OBJECT_STORAGE_SECRET_KEY='<secret-key>' \
   NPM_CONFIG_PRODUCTION=false \
   -a your-app-name
 ```
 
-> **Cloudinary:** `CLOUDINARY_URL` powers image uploads. Create a free account at [cloudinary.com](https://cloudinary.com) and copy the value of *API environment variable* from your dashboard (Settings → API Keys). Format: `cloudinary://api_key:api_secret@cloud_name`. Without it the app runs, but image uploads fail.
+> **Object storage:** the five `OBJECT_STORAGE_*` vars power image and document uploads — the browser gets a short-lived signed URL and writes straight to the bucket, so the file never passes through the dyno. Without them the app runs and serves what it already has; uploads and asset deletion are what fail.
+>
+> **Create the bucket private, and do not enable object locking.** Objects are made public individually at upload time, which is what keeps a *listable* bucket from exposing the photos of a collection its owner chose to keep private; and locking would break record deletion, `seed_demo --reset` and `cleanup_orphan_images`, all of which delete for real. Give the app credentials scoped to that bucket alone, and use a **separate bucket with separate credentials** for development — the orphan sweep deletes what it finds, and it must never be looking at production.
+>
+> Set `MEDIA_PUBLIC_BASE_URL` only if you put a CDN or a custom domain in front; it defaults to the bucket's own URL. It is also what the Content-Security-Policy allows, so a wrong value shows up as images that silently refuse to load.
 
 > **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. **No default any more** (2026-08, S2): without it the component renders nothing rather than quietly forwarding your users' feedback to the upstream project's own form, which they'd have had no way to know about or to name as a processor in their own legal text.
 
@@ -319,7 +327,7 @@ The daily commands are safe to run every day — each checks the date internally
 
 If you want a periodic report on your own numbers, the `Event` log and `DailyActivity` are there to be queried and a command of your own can ride the same chain — this repository ships the instrumentation, not the report.
 
-**Not in the daily chain:** `cleanup_orphan_images` (delete orphaned Cloudinary uploads) is a separate, manual command — dry-run by default, `--commit` to actually delete. It's destructive and gated behind Heroku shell access, so it isn't auto-scheduled; run it by hand roughly weekly. Quote the inner command so the Heroku CLI doesn't eat the flag: `heroku run --app <app> "python manage.py cleanup_orphan_images --commit"`.
+**Not in the daily chain:** `cleanup_orphan_images` (delete orphaned uploads from the bucket) is a separate, manual command — dry-run by default, `--commit` to actually delete. It's destructive and gated behind Heroku shell access, so it isn't auto-scheduled; run it by hand roughly weekly. Quote the inner command so the Heroku CLI doesn't eat the flag: `heroku run --app <app> "python manage.py cleanup_orphan_images --commit"`.
 
 ## Backups & the restore drill
 
