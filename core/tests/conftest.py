@@ -7,11 +7,17 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import FAQ, RSVP, Collection, Theeeme, Thing, User
+from core.services import storage
 
 
 @pytest.fixture(autouse=True)
 def object_storage_configured(settings):
     """The suite runs as a deployment that has a bucket, because almost all of it is.
+
+    The credentials are fake and never leave the machine: signing an upload URL is
+    local arithmetic, so the ticket endpoint is exercised for real without a
+    network call — the same way the Cloudinary signature endpoint used to run
+    against a fake CLOUDINARY_URL.
 
     Without a `MEDIA_PUBLIC_BASE_URL` there is no such thing as an asset URL —
     `storage.public_url` correctly returns None rather than a relative link back
@@ -19,7 +25,15 @@ def object_storage_configured(settings):
     unconfigured case by accident. That case is real and has its own tests in
     `unit/test_storage.py`; it should not be the one the other 1300 run under.
     """
-    settings.MEDIA_PUBLIC_BASE_URL = "https://test-bucket.example-storage.com"
+    settings.OBJECT_STORAGE_ENDPOINT = "https://fsn1.example-storage.com"
+    settings.OBJECT_STORAGE_BUCKET = "test-bucket"
+    settings.OBJECT_STORAGE_REGION = "fsn1"
+    settings.OBJECT_STORAGE_ACCESS_KEY = "test-key"
+    settings.OBJECT_STORAGE_SECRET_KEY = "test-secret"
+    settings.MEDIA_PUBLIC_BASE_URL = "https://test-bucket.fsn1.example-storage.com"
+    storage._clients.clear()
+    yield
+    storage._clients.clear()
 
 
 @pytest.fixture(autouse=True)

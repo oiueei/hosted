@@ -11,7 +11,6 @@ from rest_framework.test import APIClient
 from core.models import RSVP, Collection, User
 
 JOIN_URL = "/api/v1/auth/join/"
-SIGNATURE_URL = "/api/v1/upload/signature/"
 
 DOC_ID = "oiueei/collections/welcome-doc-1"
 
@@ -121,65 +120,6 @@ class TestWelcomeDocOnJoin:
         sent = _doc_emails()
         assert len(sent) == 1
         assert sent[0].to == [user.email]
-
-
-@pytest.mark.django_db
-class TestDocumentSignature:
-    def test_document_mode_signs_pdf_only(self, authenticated_client):
-        res = authenticated_client.post(
-            SIGNATURE_URL,
-            {"folder": "oiueei/collections", "kind": "document"},
-            format="json",
-        )
-
-        assert res.status_code == 200
-        assert res.data["allowed_formats"] == "pdf"
-        # max_file_size isn't a signable Cloudinary parameter (S3) — never returned.
-        assert "max_file_size" not in res.data
-        # A PDF is a page-based image to Cloudinary — same resource type as a photo.
-        assert res.data["resource_type"] == "image"
-
-    def test_document_mode_always_signs_the_documents_folder(self, authenticated_client):
-        # S4: document mode forces oiueei/documents regardless of the body's folder.
-        res = authenticated_client.post(
-            SIGNATURE_URL,
-            {"folder": "oiueei/collections", "kind": "document"},
-            format="json",
-        )
-        assert res.data["folder"] == "oiueei/documents"
-
-    def test_document_mode_ignores_a_missing_folder_too(self, authenticated_client):
-        res = authenticated_client.post(SIGNATURE_URL, {"kind": "document"}, format="json")
-        assert res.status_code == 200
-        assert res.data["folder"] == "oiueei/documents"
-
-    def test_image_mode_is_unchanged(self, authenticated_client):
-        res = authenticated_client.post(SIGNATURE_URL, {"folder": "oiueei/things"}, format="json")
-
-        assert res.status_code == 200
-        assert "pdf" not in res.data["allowed_formats"]
-        assert "max_file_size" not in res.data
-        assert res.data["resource_type"] == "image"
-
-    def test_image_mode_cannot_choose_the_documents_folder(self, authenticated_client):
-        # S4: oiueei/documents is document-only — an image request naming it
-        # falls back like any other disallowed value.
-        res = authenticated_client.post(
-            SIGNATURE_URL, {"folder": "oiueei/documents"}, format="json"
-        )
-        assert res.status_code == 200
-        assert res.data["folder"] == "oiueei/users"
-
-    def test_an_unknown_kind_falls_back_to_an_image_upload(self, authenticated_client):
-        res = authenticated_client.post(
-            SIGNATURE_URL,
-            {"folder": "oiueei/collections", "kind": "executable"},
-            format="json",
-        )
-
-        assert res.status_code == 200
-        assert "pdf" not in res.data["allowed_formats"]
-        assert "max_file_size" not in res.data
 
 
 @pytest.mark.django_db

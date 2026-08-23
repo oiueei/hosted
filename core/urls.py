@@ -57,7 +57,7 @@ from .views.things import (
     ThingViewSet,
 )
 from .views.transfers import ThingTransferView
-from .views.upload import CloudinarySignatureView
+from .views.upload import UploadTicketView
 from .views.users import UserDetailView
 
 
@@ -205,7 +205,7 @@ urlpatterns = [
         name="collection-things-bulk",
     ),
     # Upload
-    path("upload/signature/", CloudinarySignatureView.as_view(), name="upload-signature"),
+    path("upload/ticket/", UploadTicketView.as_view(), name="upload-ticket"),
     # Theeemes
     path("theeemes/", TheeemeListView.as_view(), name="theeeme-list"),
     # Things (non-viewset)
