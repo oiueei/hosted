@@ -4,9 +4,9 @@ Account erasure (right to be forgotten).
 One function, `delete_account`, because the schema already says almost
 everything: the map of what dies, what survives anonymised, and what was never
 identifying in the first place is encoded in the FK `on_delete` rules, and the
-Cloudinary assets follow via the `post_delete` handlers in
-`cloudinary_cleanup.py`. This module exists so that map is written down in one
-place and the views stay thin.
+stored files follow via the `post_delete` handlers in `asset_cleanup.py`.
+This module exists so that map is written down in one place and the views stay
+thin.
 
 What `user.delete()` cascades away (CASCADE):
 - Their collections — and with them the `collection_things` / `collection_invites`

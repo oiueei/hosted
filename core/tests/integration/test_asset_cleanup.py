@@ -1,8 +1,14 @@
-"""Cloudinary asset cleanup when a Thing / Collection / User is deleted.
+"""Stored-asset cleanup when a Thing / Collection / User is deleted.
 
 The cleanup runs on transaction commit, so every test wraps the delete in
 ``django_capture_on_commit_callbacks(execute=True)`` and patches
-``cloudinary.uploader.destroy`` (no real network calls).
+``storage.delete`` (no real network calls).
+
+What these protect is that a deleted record takes its objects with it — the
+bucket has no notion of a foreign key, so nothing else will ever notice they are
+unreachable — and, just as importantly, that a delete which *fails* to reach the
+bucket still deletes the row. An orphaned object costs storage; a delete that
+raises costs the user their action.
 """
 
 from unittest.mock import patch
@@ -10,11 +16,11 @@ from unittest.mock import patch
 import pytest
 
 from core.models import Collection, Thing, User
-from core.services import cloudinary_cleanup
+from core.services import asset_cleanup
 
 
 @pytest.mark.django_db
-class TestCloudinaryCleanup:
+class TestAssetCleanup:
     def test_thing_delete_destroys_thumbnail_and_gallery(self, django_capture_on_commit_callbacks):
         owner = User.objects.create(email="o1@example.com")
         thing = Thing.objects.create(
@@ -24,7 +30,7 @@ class TestCloudinaryCleanup:
             thumbnail="oiueei/things/cover",
             gallery=["oiueei/things/g1", "oiueei/things/g2"],
         )
-        with patch("cloudinary.uploader.destroy") as destroy:
+        with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 thing.delete()
 
@@ -40,7 +46,7 @@ class TestCloudinaryCleanup:
         coll = Collection.objects.create(
             owner=owner, headline="C", thumbnail="oiueei/collections/c1"
         )
-        with patch("cloudinary.uploader.destroy") as destroy:
+        with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 coll.delete()
 
@@ -54,7 +60,7 @@ class TestCloudinaryCleanup:
         Thing.objects.create(
             owner=owner, headline="T", type="GIFT_THING", thumbnail="oiueei/things/t1"
         )
-        with patch("cloudinary.uploader.destroy") as destroy:
+        with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 owner.delete()  # FK cascade deletes the collection and the thing
 
@@ -63,34 +69,34 @@ class TestCloudinaryCleanup:
 
     def test_empty_image_fields_destroy_nothing(self, django_capture_on_commit_callbacks):
         owner = User.objects.create(email="o4@example.com")  # no photo
-        with patch("cloudinary.uploader.destroy") as destroy:
+        with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 owner.delete()
         destroy.assert_not_called()
 
-    def test_cloudinary_failure_does_not_break_the_delete(self, django_capture_on_commit_callbacks):
+    def test_a_storage_failure_does_not_break_the_delete(self, django_capture_on_commit_callbacks):
         owner = User.objects.create(email="o5@example.com")
         thing = Thing.objects.create(
             owner=owner, headline="T", type="GIFT_THING", thumbnail="oiueei/things/boom"
         )
-        with patch("cloudinary.uploader.destroy", side_effect=RuntimeError("cloudinary down")):
+        with patch("core.services.storage.delete", side_effect=RuntimeError("bucket down")):
             with django_capture_on_commit_callbacks(execute=True):
                 thing.delete()  # must not raise
         assert not Thing.objects.filter(code=thing.code).exists()
 
-    def test_seed_reset_does_not_touch_cloudinary(self, django_capture_on_commit_callbacks):
+    def test_seed_reset_does_not_touch_the_bucket(self, django_capture_on_commit_callbacks):
         from django.core.management import call_command
 
-        call_command("seed_demo")  # demo things carry real shared public ids
-        with patch("cloudinary.uploader.destroy") as destroy:
+        call_command("seed_demo")  # demo things carry real shared storage keys
+        with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 call_command("seed_demo", "--reset")  # deletes then re-creates
         destroy.assert_not_called()
 
     def test_suspended_context_blocks_cleanup(self, django_capture_on_commit_callbacks):
         owner = User.objects.create(email="o6@example.com", photo="oiueei/users/keep")
-        with patch("cloudinary.uploader.destroy") as destroy:
+        with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
-                with cloudinary_cleanup.suspended():
+                with asset_cleanup.suspended():
                     owner.delete()
         destroy.assert_not_called()

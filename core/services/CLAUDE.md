@@ -232,7 +232,7 @@ It answers only *may this person bring such a thing into existence here at all*.
 
 ### `account_service.py` — Account Erasure (Right to Be Forgotten)
 
-One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed); Cloudinary assets are destroyed by the `cloudinary_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
+One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed); stored files are deleted by the `asset_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
 
 ---
 
@@ -269,9 +269,9 @@ The mirror of `account_service`: *what dies with you is what you get to take wit
 
 ---
 
-### `cloudinary_cleanup.py` — Delete Cloudinary Assets on Delete
+### `asset_cleanup.py` — Delete Stored Files on Delete
 
-Frees the Cloudinary images a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned assets piling up (storage cost + clutter).
+Frees the stored objects a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned files piling up (storage cost + clutter). The bucket has no notion of a foreign key, so nothing else would ever notice they had become unreachable.
 
 #### How it's wired
 
