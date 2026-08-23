@@ -1,0 +1,11 @@
+# Commits that changed formatting only, and would otherwise sit between every
+# line and its real author.
+#
+# Enable it once per clone:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub reads this file by name and applies it automatically.
+
+# Give the frontend a formatter, and a gate that keeps it (prettier, 2026-08-23)
+000ff8d458c1cf0d59f935a4240d867b67508bec
