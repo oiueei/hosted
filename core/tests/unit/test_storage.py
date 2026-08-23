@@ -29,6 +29,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
+from botocore.exceptions import ClientError
 from django.core.exceptions import ImproperlyConfigured
 
 import config.settings.base as base_settings
@@ -199,6 +200,56 @@ class TestTheUploadTicketSignsTheRulesItPromises:
         params, ticket = self._params(s3, key="oiueei/documents/xyz")
         assert (params["Bucket"], params["Key"]) == ("test-bucket", "oiueei/documents/xyz")
         assert ticket["method"] == "PUT"
+
+
+class TestAServerSideUploadMatchesATicketedOne:
+    """`put` is how the server moves bytes it already has (a copy, a migration).
+
+    The object it produces has to be indistinguishable from one a browser
+    uploaded through a ticket, because everything downstream — the CDN-less
+    cache story, the PDF opening in a viewer, the public read — depends on the
+    same three headers being on it. An object copied in without them is the bug
+    that only shows up months later, behind an email link.
+    """
+
+    def test_it_carries_the_same_three_things_a_signed_ticket_does(self, s3):
+        storage.put("oiueei/seed/x", b"bytes", "image/webp")
+        call = s3.put_object.call_args.kwargs
+        assert call["ACL"] == "public-read"
+        assert call["ContentType"] == "image/webp"
+        assert call["CacheControl"] == storage.CACHE_CONTROL
+
+    def test_it_writes_the_given_bytes_to_the_given_key_in_the_configured_bucket(self, s3):
+        storage.put("oiueei/seed/x", b"bytes", "image/png")
+        call = s3.put_object.call_args.kwargs
+        assert (call["Bucket"], call["Key"], call["Body"]) == (
+            "test-bucket",
+            "oiueei/seed/x",
+            b"bytes",
+        )
+
+
+class TestExistsAnswersWithoutDownloading:
+    """What makes a copy idempotent — and it must not turn a real fault into False."""
+
+    def test_a_present_object_is_true(self, s3):
+        assert storage.exists("k") is True
+        s3.head_object.assert_called_once_with(Bucket="test-bucket", Key="k")
+
+    def test_a_missing_object_is_false(self, s3):
+        s3.head_object.side_effect = ClientError(
+            {"Error": {"Code": "404"}, "ResponseMetadata": {"HTTPStatusCode": 404}}, "HeadObject"
+        )
+        assert storage.exists("k") is False
+
+    def test_a_permission_error_raises_rather_than_reading_as_absent(self, s3):
+        """Swallowing this would make a copy re-upload everything and call it success."""
+        s3.head_object.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied"}, "ResponseMetadata": {"HTTPStatusCode": 403}},
+            "HeadObject",
+        )
+        with pytest.raises(ClientError):
+            storage.exists("k")
 
 
 class TestDeletionIsBatchedAndForgiving:

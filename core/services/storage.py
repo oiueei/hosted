@@ -33,6 +33,7 @@ that gets painfully rediscovered six months later:
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -162,6 +163,38 @@ def presign_upload(key, content_type, content_length, max_bytes):
             "Cache-Control": CACHE_CONTROL,
         },
     }
+
+
+def exists(key):
+    """Whether ``key`` is already in the bucket. Used to make copies idempotent."""
+    try:
+        client().head_object(Bucket=_config()["bucket"], Key=key)
+        return True
+    except ClientError as exc:
+        if exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 404:
+            return False
+        raise
+
+
+def put(key, body, content_type):
+    """Upload ``body`` from the server, with the same guarantees a ticket gives.
+
+    The browser path (:func:`presign_upload`) is how user uploads arrive and is
+    the one that matters; this is for the server moving bytes it already has —
+    seeding, migrating from another provider. Both must produce objects that are
+    indistinguishable afterwards, so the ACL, the content type and the cache
+    header are the same three the presigned policy signs. An object copied in
+    without them is one that reads as ``binary/octet-stream`` and is re-fetched
+    on every visit.
+    """
+    client().put_object(
+        Bucket=_config()["bucket"],
+        Key=key,
+        Body=body,
+        ACL="public-read",
+        ContentType=content_type,
+        CacheControl=CACHE_CONTROL,
+    )
 
 
 def delete(key):
