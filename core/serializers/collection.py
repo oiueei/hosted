@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.serializers.thing import ThingComputedFieldsMixin
-from core.utils import cloudinary_doc_url, cloudinary_url
+from core.utils import asset_url, doc_asset_url
 from core.validators import (
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
@@ -63,7 +63,7 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
         ]
 
     def get_thumbnail_url(self, obj):
-        return cloudinary_url(obj.thumbnail) if obj.thumbnail else None
+        return asset_url(obj.thumbnail) if obj.thumbnail else None
 
 
 class CollectionListSerializer(serializers.ListSerializer):
@@ -163,10 +163,10 @@ class CollectionSerializer(serializers.ModelSerializer):
         return obj.owner.name
 
     def get_thumbnail_url(self, obj):
-        return cloudinary_url(obj.thumbnail) if obj.thumbnail else None
+        return asset_url(obj.thumbnail) if obj.thumbnail else None
 
     def get_welcome_doc_url(self, obj):
-        return cloudinary_doc_url(obj.welcome_doc) if obj.welcome_doc else None
+        return doc_asset_url(obj.welcome_doc) if obj.welcome_doc else None
 
     def get_things(self, obj):
         request = self.context.get("request")

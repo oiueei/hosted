@@ -58,7 +58,7 @@ from core.models import (
     ThingTransfer,
 )
 from core.services.email_service import resolve_email_language
-from core.utils import cloudinary_doc_url, cloudinary_url
+from core.utils import asset_url, doc_asset_url
 
 ACCOUNT_FORMAT = "oiueei-account-export/1"
 COLLECTION_FORMAT = "oiueei-collection-export/1"
@@ -342,8 +342,8 @@ def _collection_columns(collection):
         "allowed_thing_types": collection.allowed_thing_types,
         "tags": collection.tags,
         "pause_message": collection.pause_message,
-        "thumbnail_url": cloudinary_url(collection.thumbnail),
-        "welcome_doc_url": cloudinary_doc_url(collection.welcome_doc),
+        "thumbnail_url": asset_url(collection.thumbnail),
+        "welcome_doc_url": doc_asset_url(collection.welcome_doc),
     }
 
 
@@ -363,8 +363,8 @@ def _thing_columns(thing):
         "location": thing.location,
         "condition": thing.condition,
         "is_endless": thing.is_endless,
-        "thumbnail_url": cloudinary_url(thing.thumbnail),
-        "gallery_urls": [cloudinary_url(image_id) for image_id in thing.gallery],
+        "thumbnail_url": asset_url(thing.thumbnail),
+        "gallery_urls": [asset_url(image_id) for image_id in thing.gallery],
     }
 
 
@@ -459,7 +459,7 @@ def _profile(user):
         "last_activity": _iso(user.last_activity),
         "headline": user.headline,
         "about": user.about,
-        "photo_url": cloudinary_url(user.photo),
+        "photo_url": asset_url(user.photo),
         "koro": user.koro,
         "theeeme": {"code": user.theeeme.code, "name": user.theeeme.name},
         "notify_activity": user.notify_activity,

@@ -126,10 +126,9 @@ class Collection(models.Model):
         ),
     )
     thumbnail = models.CharField(max_length=255, blank=True, default="")
-    # Cloudinary public_id of the owner's optional welcome & rules PDF. Emailed as a
-    # link (never an attachment) to every member the first time they join. Stored
-    # under resource_type=image like every other asset — Cloudinary treats a PDF as
-    # a page-based image (see core.utils.cloudinary_doc_url).
+    # Storage key of the owner's optional welcome & rules PDF. Emailed as a link
+    # (never an attachment) to every member the first time they join, which is why
+    # the link has to still work weeks later — see core.utils.doc_asset_url.
     welcome_doc = models.CharField(max_length=255, blank=True, default="")
     pause_message = models.CharField(max_length=256, blank=True, default="")
     share_token = models.CharField(max_length=22, blank=True, null=True, unique=True)

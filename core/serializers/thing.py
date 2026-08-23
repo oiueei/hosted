@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from core.models import Thing
 from core.models.booking import BookingPeriod
-from core.utils import cloudinary_url
+from core.utils import asset_url
 from core.validators import (
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
@@ -165,7 +165,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         return obj.owner.name
 
     def get_gallery_urls(self, obj):
-        return [cloudinary_url(public_id) for public_id in (obj.gallery or [])]
+        return [asset_url(public_id) for public_id in (obj.gallery or [])]
 
     def get_pending_booking(self, obj):
         # Use prefetched _pending_bookings if available, otherwise query
@@ -310,7 +310,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         ]
 
     def get_thumbnail_url(self, obj):
-        return cloudinary_url(obj.thumbnail)
+        return asset_url(obj.thumbnail)
 
     def _viewer_collection_codes(self):
         """Codes of every collection the requesting user owns or belongs to.

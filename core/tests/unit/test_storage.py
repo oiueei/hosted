@@ -89,6 +89,11 @@ class TestPublicUrlsComeFromTheSetting:
         configured.OBJECT_STORAGE_SECRET_KEY = ""
         assert storage.public_url("k").endswith("/k")
 
+    def test_an_unconfigured_checkout_has_no_url_rather_than_a_relative_one(self, configured):
+        """`/k` would be a link back to Django, which answers 404 and renders broken."""
+        configured.MEDIA_PUBLIC_BASE_URL = ""
+        assert storage.public_url("k") is None
+
 
 class TestMissingConfigurationSaysWhatIsMissing:
     def test_the_error_names_the_unset_setting(self, configured, s3):

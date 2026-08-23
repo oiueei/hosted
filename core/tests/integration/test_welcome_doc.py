@@ -4,6 +4,7 @@ to every member the first time they join.
 """
 
 import pytest
+from django.conf import settings
 from django.core import mail
 from rest_framework.test import APIClient
 
@@ -193,8 +194,12 @@ class TestWelcomeDocField:
 
         detail = authenticated_client.get(f"/api/v1/collections/{collection.code}/")
         assert detail.data["welcome_doc"] == DOC_ID
-        # Delivered as a .pdf URL — no f_auto/q_auto photo transformations.
-        assert detail.data["welcome_doc_url"].endswith(".pdf")
+        # The URL is the stored key under the media base, and nothing else. It used
+        # to have to end in `.pdf`: Cloudinary filed a PDF under resource_type=image
+        # and only served it as a document if the URL carried the extension. The
+        # object store has no such quirk — what makes it open in the viewer is the
+        # Content-Type signed at upload, which is pinned in unit/test_storage.py.
+        assert detail.data["welcome_doc_url"] == f"{settings.MEDIA_PUBLIC_BASE_URL}/{DOC_ID}"
 
     def test_a_path_traversing_id_is_rejected(self, authenticated_client, collection):
         res = authenticated_client.patch(

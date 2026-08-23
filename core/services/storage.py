@@ -89,12 +89,18 @@ def client():
 
 
 def public_url(key):
-    """The public URL of a stored key, or ``None`` for an empty key.
+    """The public URL of a stored key, or ``None`` if there cannot be one.
 
     Built from ``MEDIA_PUBLIC_BASE_URL`` rather than from the client, so putting a
     CDN in front of the bucket is a setting and not a code change.
+
+    ``None`` covers two cases, and the second is the one worth stating: an empty
+    key (the field was never set), and **no configured base URL** (a checkout with
+    no storage account). Joining a key onto an empty base would produce ``/key`` —
+    a relative link back to Django, which answers 404. Callers already treat None
+    as "no image"; a 404 they would render as a broken one.
     """
-    if not key:
+    if not key or not settings.MEDIA_PUBLIC_BASE_URL:
         return None
     return f"{settings.MEDIA_PUBLIC_BASE_URL.rstrip('/')}/{key}"
 
