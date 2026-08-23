@@ -18,6 +18,12 @@
   var lang = null;
   try {
     lang = resolve(window.localStorage.getItem('i18nextLng'));
+    // The binding is unused and stays anyway: this file runs before anything
+    // else and avoids syntax newer than the oldest browser it might land in,
+    // and dropping it (`catch {`) is ES2019. A syntax error here costs the
+    // visitor their language on the first paint, which is the one thing this
+    // script exists to get right.
+    // eslint-disable-next-line no-unused-vars
   } catch (e) {
     // localStorage can throw in a locked-down context (private mode,
     // disabled storage); the browser-language fallback below still works.
