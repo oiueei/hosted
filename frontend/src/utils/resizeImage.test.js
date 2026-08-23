@@ -3,7 +3,15 @@ import { resizeImage } from './resizeImage';
 
 // jsdom decodes no images and implements no canvas, so both are stubbed here and
 // only the scaling maths + File plumbing are actually under test.
+//
+// What these protect since the move off Cloudinary: delivery used to re-encode
+// (`f_auto,q_auto`), so whatever went up, a modern browser was sent WebP. An
+// object store serves the bytes it was given, which makes the encode this
+// function does the only one there is.
 let canvases;
+// Lets a test make the encoder answer with something other than what was asked
+// for — or with nothing — which is exactly what `toBlob` is allowed to do.
+let canvasBlobType;
 
 function stubImage({ width, height, fail = false }) {
   class FakeImage {
@@ -27,6 +35,7 @@ const jpeg = () => new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' });
 
 beforeEach(() => {
   canvases = [];
+  canvasBlobType = undefined;
   URL.createObjectURL = vi.fn(() => 'blob:mock-url');
   URL.revokeObjectURL = vi.fn();
   const realCreateElement = document.createElement.bind(document);
@@ -36,7 +45,10 @@ beforeEach(() => {
       width: 0,
       height: 0,
       getContext: vi.fn(() => ({ drawImage: vi.fn() })),
-      toBlob: vi.fn((cb, type) => cb(new Blob(['resized'], { type }))),
+      toBlob: vi.fn((cb, type) => {
+        const actual = canvasBlobType === undefined ? type : canvasBlobType;
+        cb(actual === null ? null : new Blob(['resized'], { type: actual }));
+      }),
     };
     canvases.push(canvas);
     return canvas;
@@ -51,21 +63,35 @@ afterEach(() => {
 });
 
 describe('resizeImage', () => {
-  test('passes a small image through as the very same File', async () => {
+  test('re-encodes a small image instead of passing it through', async () => {
+    // It used to come back untouched, which was right while Cloudinary
+    // re-encoded on delivery. Now the stored object is the delivered object, so
+    // a 900px PNG passed through would genuinely be served as that PNG.
     stubImage({ width: 800, height: 600 });
     const file = jpeg();
 
-    await expect(resizeImage(file)).resolves.toBe(file);
-    expect(canvases).toHaveLength(0);
+    const out = await resizeImage(file);
+
+    expect(out).not.toBe(file);
+    expect(out.type).toBe('image/webp');
+    expect(out.name).toBe('photo.webp');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
   });
 
-  test('an image exactly at the cap is still a pass-through', async () => {
-    stubImage({ width: 1216, height: 1216 });
-    const file = jpeg();
+  test('a small image keeps its own dimensions — re-encoded, not upscaled', async () => {
+    stubImage({ width: 800, height: 600 });
 
-    await expect(resizeImage(file)).resolves.toBe(file);
-    expect(canvases).toHaveLength(0);
+    await resizeImage(jpeg());
+
+    expect(canvases[0]).toMatchObject({ width: 800, height: 600 });
+  });
+
+  test('an image exactly at the cap is not scaled either way', async () => {
+    stubImage({ width: 1216, height: 1216 });
+
+    await resizeImage(jpeg());
+
+    expect(canvases[0]).toMatchObject({ width: 1216, height: 1216 });
   });
 
   test('scales a landscape image to 1216 on its longest side, keeping the ratio', async () => {
@@ -75,8 +101,39 @@ describe('resizeImage', () => {
 
     expect(canvases[0]).toMatchObject({ width: 1216, height: 608 });
     expect(out).toBeInstanceOf(File);
-    expect(out.name).toBe('photo.jpg');
-    expect(out.type).toBe('image/jpeg');
+    expect(out.name).toBe('photo.webp');
+    expect(out.type).toBe('image/webp');
+  });
+
+  test('asks the canvas for WebP', async () => {
+    stubImage({ width: 2432, height: 1216 });
+
+    await resizeImage(jpeg());
+
+    expect(canvases[0].toBlob).toHaveBeenCalledWith(expect.any(Function), 'image/webp', 0.82);
+  });
+
+  test('reports whatever the encoder actually produced, not what it asked for', async () => {
+    // `toBlob` falls back to PNG where WebP encoding is missing, and says nothing.
+    // The caller signs this type into the upload, so claiming WebP here would
+    // have the store serve a PNG announced as something else.
+    stubImage({ width: 2432, height: 1216 });
+    canvasBlobType = 'image/png';
+
+    const out = await resizeImage(jpeg());
+
+    expect(out.type).toBe('image/png');
+    expect(out.name).toBe('photo.png');
+  });
+
+  test('falls back to the original when the canvas encodes nothing at all', async () => {
+    stubImage({ width: 2432, height: 1216 });
+    canvasBlobType = null;
+    const file = jpeg();
+
+    // A real image the browser cannot encode is still worth uploading; failing
+    // here would take the whole form down over a missing codec.
+    await expect(resizeImage(file)).resolves.toBe(file);
   });
 
   test('caps a portrait image on its height instead', async () => {
