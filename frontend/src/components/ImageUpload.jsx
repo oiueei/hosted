@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadImageToCloudinary } from '../utils/uploadImage';
+import { uploadImage } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
@@ -56,7 +56,7 @@ export default function ImageUpload({ id, label, onChange, currentUrl, folder = 
     setError(null);
 
     try {
-      const { publicId, url } = await uploadImageToCloudinary(files[0], folder);
+      const { publicId, url } = await uploadImage(files[0], folder);
       setPreviewUrl(url);
       onChange(publicId);
     } catch {

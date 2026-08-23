@@ -1,16 +1,16 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
-// The Cloudinary helpers are unit-tested next to themselves (src/utils/upload*.test.js);
+// The upload helpers are unit-tested next to themselves (src/utils/upload*.test.js);
 // here they are mocked so no test ever touches the network.
-vi.mock('../utils/uploadImage', () => ({ uploadImageToCloudinary: vi.fn() }));
+vi.mock('../utils/uploadImage', () => ({ uploadImage: vi.fn() }));
 vi.mock('../utils/uploadPdf', async (importOriginal) => ({
   ...(await importOriginal()),
-  uploadPdfToCloudinary: vi.fn(),
+  uploadPdf: vi.fn(),
 }));
 
-import { uploadImageToCloudinary } from '../utils/uploadImage';
-import { uploadPdfToCloudinary, PDF_MAX_BYTES } from '../utils/uploadPdf';
+import { uploadImage } from '../utils/uploadImage';
+import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import GalleryUpload from '../components/GalleryUpload';
@@ -39,7 +39,7 @@ beforeEach(() => {
 // ════════════════════════════════════════════════════════════════════════
 describe('ImageUpload', () => {
   test('a picked image is uploaded, previewed, and its public_id reported', async () => {
-    uploadImageToCloudinary.mockResolvedValue({
+    uploadImage.mockResolvedValue({
       publicId: 'oiueei/things/abc',
       url: 'https://res.cloudinary.com/demo/abc.jpg',
     });
@@ -51,7 +51,7 @@ describe('ImageUpload', () => {
     pick(container, photo());
 
     await waitFor(() => expect(onChange).toHaveBeenCalledWith('oiueei/things/abc'));
-    expect(uploadImageToCloudinary).toHaveBeenCalledWith(expect.any(File), 'oiueei/things');
+    expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'oiueei/things');
 
     const preview = await screen.findByAltText('Image preview');
     expect(preview).toHaveAttribute('src', 'https://res.cloudinary.com/demo/abc.jpg');
@@ -73,7 +73,7 @@ describe('ImageUpload', () => {
       'src',
       'https://res.cloudinary.com/demo/saved.jpg'
     );
-    expect(uploadImageToCloudinary).not.toHaveBeenCalled();
+    expect(uploadImage).not.toHaveBeenCalled();
     expect(fileInput(container)).toBeNull();
   });
 
@@ -152,7 +152,7 @@ describe('ImageUpload', () => {
   });
 
   test('a failed upload shows the error and reports no value', async () => {
-    uploadImageToCloudinary.mockRejectedValue(new Error('upload_failed'));
+    uploadImage.mockRejectedValue(new Error('upload_failed'));
     const onChange = vi.fn();
     const { container } = render(<ImageUpload id="thumb" label="Thumbnail" onChange={onChange} />);
 
@@ -188,12 +188,12 @@ describe('PdfUpload', () => {
     pick(container, pdf(PDF_MAX_BYTES + 1));
 
     expect(await screen.findByText('The file is too large (max 5 MB).')).toBeInTheDocument();
-    expect(uploadPdfToCloudinary).not.toHaveBeenCalled();
+    expect(uploadPdf).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
   });
 
   test('a file exactly at the cap is accepted', async () => {
-    uploadPdfToCloudinary.mockResolvedValue({
+    uploadPdf.mockResolvedValue({
       publicId: 'oiueei/documents/abc',
       url: 'https://res.cloudinary.com/demo/abc.pdf',
     });
@@ -205,7 +205,7 @@ describe('PdfUpload', () => {
     pick(container, pdf(PDF_MAX_BYTES));
 
     await waitFor(() => expect(onChange).toHaveBeenCalledWith('oiueei/documents/abc'));
-    expect(uploadPdfToCloudinary).toHaveBeenCalledWith(expect.any(File), 'oiueei/documents');
+    expect(uploadPdf).toHaveBeenCalledWith(expect.any(File), 'oiueei/documents');
     expect(screen.getByRole('link', { name: 'View the document' })).toBeInTheDocument();
   });
 
@@ -258,7 +258,7 @@ describe('PdfUpload', () => {
   });
 
   test('a failed upload shows the error and reports no value', async () => {
-    uploadPdfToCloudinary.mockRejectedValue(new Error('upload_failed'));
+    uploadPdf.mockRejectedValue(new Error('upload_failed'));
     const onChange = vi.fn();
     const { container } = render(
       <PdfUpload id="doc" label="Welcome document" onChange={onChange} />
@@ -278,7 +278,7 @@ describe('GalleryUpload', () => {
   const item = (n) => ({ publicId: `p${n}`, url: `https://res.cloudinary.com/demo/p${n}.jpg` });
 
   test('an added photo is appended to the existing items', async () => {
-    uploadImageToCloudinary.mockResolvedValue({
+    uploadImage.mockResolvedValue({
       publicId: 'p2',
       url: 'https://res.cloudinary.com/demo/p2.jpg',
     });
@@ -288,7 +288,7 @@ describe('GalleryUpload', () => {
     pick(container, photo());
 
     await waitFor(() => expect(onChange).toHaveBeenCalledWith([item(1), item(2)]));
-    expect(uploadImageToCloudinary).toHaveBeenCalledWith(expect.any(File), 'oiueei/things');
+    expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'oiueei/things');
   });
 
   test('removing a thumbnail reports the list without it', () => {
@@ -310,7 +310,7 @@ describe('GalleryUpload', () => {
 
   // Selecting more than fits keeps what fits rather than dropping the lot.
   test('a selection over the cap uploads only what fits and flags the cap', async () => {
-    uploadImageToCloudinary.mockResolvedValue({
+    uploadImage.mockResolvedValue({
       publicId: 'p8',
       url: 'https://res.cloudinary.com/demo/p8.jpg',
     });
@@ -321,14 +321,14 @@ describe('GalleryUpload', () => {
     pick(container, photo('a.jpg'), photo('b.jpg'), photo('c.jpg'));
 
     await waitFor(() => expect(onChange).toHaveBeenCalledWith([...items, item(8)]));
-    expect(uploadImageToCloudinary).toHaveBeenCalledTimes(1);
+    expect(uploadImage).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Maximum 8 photos.')).toBeInTheDocument();
   });
 
   // The loop is not atomic: whatever uploaded before the failure is kept, so the
   // user doesn't lose good photos to one bad one.
   test('a mid-batch failure keeps the photos that made it and shows the error', async () => {
-    uploadImageToCloudinary
+    uploadImage
       .mockResolvedValueOnce({ publicId: 'p1', url: 'https://res.cloudinary.com/demo/p1.jpg' })
       .mockRejectedValueOnce(new Error('upload_failed'));
     const onChange = vi.fn();
@@ -341,7 +341,7 @@ describe('GalleryUpload', () => {
   });
 
   test('a single failed upload reports nothing', async () => {
-    uploadImageToCloudinary.mockRejectedValue(new Error('upload_failed'));
+    uploadImage.mockRejectedValue(new Error('upload_failed'));
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
 

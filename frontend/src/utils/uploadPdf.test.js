@@ -3,24 +3,20 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 
 import { apiFetch } from '../services/api';
-import { uploadPdfToCloudinary, PDF_MAX_BYTES } from './uploadPdf';
+import { uploadPdf, PDF_MAX_BYTES } from './uploadPdf';
 
-// Document-mode signature (core/views/upload.py): the folder is forced server-side
-// and allowed_formats narrows to pdf alone.
-const SIGNATURE = {
-  signature: 'sig-doc',
-  timestamp: 1720000000,
-  api_key: 'key-123',
-  cloud_name: 'demo-cloud',
-  folder: 'oiueei/documents',
-  public_id: 'oiueei/documents/server-generated',
-  allowed_formats: 'pdf',
-  resource_type: 'image',
-};
-
-const UPLOADED = {
-  public_id: 'oiueei/documents/server-generated',
-  secure_url: 'https://res.cloudinary.com/demo-cloud/image/upload/v1/welcome.pdf',
+// Document-mode ticket (core/views/upload.py): the folder is forced server-side
+// and the only content type it will sign is application/pdf.
+const TICKET = {
+  url: 'https://bucket.fsn1.example-storage.com/oiueei/documents/xyz?X-Amz-Signature=sig',
+  method: 'PUT',
+  headers: {
+    'x-amz-acl': 'public-read',
+    'Content-Type': 'application/pdf',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  },
+  key: 'oiueei/documents/xyz',
+  public_url: 'https://bucket.fsn1.example-storage.com/oiueei/documents/xyz',
 };
 
 function jsonResponse(data, ok = true) {
@@ -33,8 +29,8 @@ let fetchMock;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  apiFetch.mockResolvedValue(jsonResponse(SIGNATURE));
-  fetchMock = vi.fn(() => Promise.resolve(jsonResponse(UPLOADED)));
+  apiFetch.mockResolvedValue(jsonResponse(TICKET));
+  fetchMock = vi.fn(() => Promise.resolve({ ok: true, status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -42,58 +38,57 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('uploadPdfToCloudinary', () => {
-  // max_file_size isn't signable, so this constant is the only size cap that
-  // exists anywhere — PdfUpload is what enforces it.
-  test('PDF_MAX_BYTES is 5 MB', () => {
-    expect(PDF_MAX_BYTES).toBe(5 * 1024 * 1024);
-  });
+describe('uploadPdf', () => {
+  test('asks for a document ticket and PUTs the file unresized', async () => {
+    const file = pdf();
 
-  test('asks for a document-kind signature and uploads with the signed parameters', async () => {
-    const result = await uploadPdfToCloudinary(pdf());
+    const result = await uploadPdf(file);
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/v1/upload/signature/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/v1/upload/ticket/', {
       method: 'POST',
-      body: JSON.stringify({ folder: 'oiueei/documents', kind: 'document' }),
+      body: JSON.stringify({
+        folder: 'oiueei/documents',
+        kind: 'document',
+        content_type: 'application/pdf',
+        content_length: file.size,
+      }),
     });
 
     const [url, options] = fetchMock.mock.calls[0];
-    // A PDF is a page-based image to Cloudinary, so it rides the signed
-    // resource_type (image) like every other asset — not a raw/document type.
-    expect(url).toBe('https://api.cloudinary.com/v1_1/demo-cloud/image/upload');
-    expect(options.method).toBe('POST');
+    expect(url).toBe(TICKET.url);
+    expect(options.method).toBe('PUT');
+    // A document is not a photo: the bytes that go up are the ones picked.
+    expect(options.body).toBe(file);
 
-    const sent = options.body;
-    expect(sent.get('file').name).toBe('welcome.pdf');
-    expect(sent.get('api_key')).toBe('key-123');
-    expect(sent.get('timestamp')).toBe('1720000000');
-    expect(sent.get('signature')).toBe('sig-doc');
-    expect(sent.get('folder')).toBe('oiueei/documents');
-    expect(sent.get('public_id')).toBe('oiueei/documents/server-generated');
-    expect(sent.get('allowed_formats')).toBe('pdf');
-
-    expect(result).toEqual({ publicId: UPLOADED.public_id, url: UPLOADED.secure_url });
+    expect(result).toEqual({ publicId: TICKET.key, url: TICKET.public_url });
   });
 
-  test('asks for a signature on the caller-chosen folder', async () => {
-    await uploadPdfToCloudinary(pdf(), 'oiueei/things');
+  test('signs application/pdf, which is what makes it open in a viewer', async () => {
+    // Emailed as a link and opened weeks later. Stored without this the object
+    // is served as binary/octet-stream and the browser downloads it instead.
+    await uploadPdf(pdf());
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/v1/upload/signature/', {
-      method: 'POST',
-      body: JSON.stringify({ folder: 'oiueei/things', kind: 'document' }),
-    });
+    expect(JSON.parse(apiFetch.mock.calls[0][1].body).content_type).toBe('application/pdf');
+    expect(fetchMock.mock.calls[0][1].headers['Content-Type']).toBe('application/pdf');
   });
 
-  test('throws signature_failed and uploads nothing when the server refuses to sign', async () => {
+  test('the client cap matches the one the server signs', async () => {
+    // PdfUpload refuses an oversized file before this runs, as a courtesy. The
+    // real limit is DOCUMENT_MAX_BYTES in core/views/upload.py; if the two ever
+    // disagree, one of them is lying to somebody.
+    expect(PDF_MAX_BYTES).toBe(5 * 1024 * 1024);
+  });
+
+  test('throws signature_failed and uploads nothing when the server refuses a ticket', async () => {
     apiFetch.mockResolvedValue(jsonResponse({ detail: 'no' }, false));
 
-    await expect(uploadPdfToCloudinary(pdf())).rejects.toThrow('signature_failed');
+    await expect(uploadPdf(pdf())).rejects.toThrow('signature_failed');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test('throws upload_failed when Cloudinary rejects the upload', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ error: 'nope' }, false));
+  test('throws upload_failed when the store rejects the upload', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 403 });
 
-    await expect(uploadPdfToCloudinary(pdf())).rejects.toThrow('upload_failed');
+    await expect(uploadPdf(pdf())).rejects.toThrow('upload_failed');
   });
 });

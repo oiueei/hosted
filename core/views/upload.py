@@ -95,8 +95,16 @@ class UploadTicketView(APIView):
             "url": "https://<bucket>.<endpoint>/<key>?X-Amz-...",
             "method": "PUT",
             "headers": {"x-amz-acl": ..., "Content-Type": ..., "Cache-Control": ...},
-            "key": "oiueei/things/<random>"
+            "key": "oiueei/things/<random>",
+            "public_url": "https://<media base>/oiueei/things/<random>"
         }
+
+    ``public_url`` is where the object will be readable once the PUT succeeds, and
+    it is answered here rather than derived by the client because the two can
+    differ: the presigned URL always names the bucket, while reads go through
+    whatever ``MEDIA_PUBLIC_BASE_URL`` points at — a CDN or a custom domain, on a
+    deployment that has one. Stripping the query off ``url`` would quietly bypass
+    it.
     """
 
     permission_classes = [IsAuthenticated]
@@ -137,4 +145,4 @@ class UploadTicketView(APIView):
         ticket = storage.presign_upload(
             key, content_type=content_type, content_length=content_length, max_bytes=max_bytes
         )
-        return Response({**ticket, "key": key})
+        return Response({**ticket, "key": key, "public_url": storage.public_url(key)})

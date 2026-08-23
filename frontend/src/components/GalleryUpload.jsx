@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadImageToCloudinary } from '../utils/uploadImage';
+import { uploadImage } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
@@ -49,7 +49,7 @@ export default function GalleryUpload({ items = [], onChange }) {
     const uploaded = [];
     try {
       for (const original of selected) {
-        uploaded.push(await uploadImageToCloudinary(original, 'oiueei/things'));
+        uploaded.push(await uploadImage(original, 'oiueei/things'));
       }
       // Selected more than the remaining slots — keep what fit, flag the cap.
       if (truncated) setError(t('gallery.maxImages', { max: MAX_IMAGES }));

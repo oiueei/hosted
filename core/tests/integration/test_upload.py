@@ -227,7 +227,22 @@ class TestTheTicketIsUsableAsGiven:
         assert headers["x-amz-acl"] == "public-read"
         assert "immutable" in headers["Cache-Control"]
 
+    def test_it_says_where_the_object_will_be_readable(self, authenticated_client):
+        """Answered by the server: a CDN in front means reads and writes differ."""
+        res = authenticated_client.post(URL, image_body(), format="json")
+        assert res.data["public_url"] == (
+            f"https://test-bucket.fsn1.example-storage.com/{res.data['key']}"
+        )
+
+    def test_the_public_url_follows_the_media_base_not_the_bucket(
+        self, authenticated_client, settings
+    ):
+        settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org"
+        res = authenticated_client.post(URL, image_body(), format="json")
+        assert res.data["public_url"].startswith("https://cdn.example.org/")
+        assert res.data["url"].startswith("https://test-bucket.")
+
     def test_no_cloudinary_parameters_survive_in_the_response(self, authenticated_client):
         """The old contract is gone: a client still sending it back would be ignored."""
         res = authenticated_client.post(URL, image_body(), format="json")
-        assert set(res.data) == {"url", "method", "headers", "key"}
+        assert set(res.data) == {"url", "method", "headers", "key", "public_url"}

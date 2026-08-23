@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
 import { apiFetch } from '../services/api';
-import { uploadImageToCloudinary } from '../utils/uploadImage';
+import { uploadImage } from '../utils/uploadImage';
 import { MAX_ROWS, mapRow, validateRows } from '../utils/bulkCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
@@ -147,7 +147,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
       const entry = zipImages.get(name.toLowerCase());
       const blob = await entry.async('blob');
       const imgFile = new File([blob], name, { type: blob.type || mimeFromName(name) });
-      const { publicId } = await uploadImageToCloudinary(imgFile, 'oiueei/things');
+      const { publicId } = await uploadImage(imgFile, 'oiueei/things');
       idByName.set(name, publicId);
       setUploadProgress((p) => ({ done: p.done + 1, total: p.total }));
     }

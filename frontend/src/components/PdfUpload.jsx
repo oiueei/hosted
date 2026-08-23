@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadPdfToCloudinary, PDF_MAX_BYTES } from '../utils/uploadPdf';
+import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
@@ -62,7 +62,7 @@ export default function PdfUpload({
 
     setUploading(true);
     try {
-      const { publicId, url } = await uploadPdfToCloudinary(file, folder);
+      const { publicId, url } = await uploadPdf(file, folder);
       setDocUrl(url);
       onChange(publicId);
     } catch {
