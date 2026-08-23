@@ -9,7 +9,7 @@ const MAX_IMAGES = 8;
 
 /**
  * Multi-image gallery upload (additional photos beyond the cover thumbnail).
- * Backed by Cloudinary direct upload (folder oiueei/things), client-resized to
+ * Backed by a ticketed direct-to-bucket upload (folder oiueei/things), client-resized to
  * 1216px like ImageUpload. Max 8 images. Things only.
  *
  * Items are {publicId, url} pairs so the parent can both preview each photo and

@@ -322,7 +322,7 @@ export default function CollectionPage() {
             <div className="spacer-m"></div>
             {/* Membership, not just mode: `Collection.can_add_thing` requires
                 an invite, so offering this to a signed-in non-member sent them
-                through the whole form — photos uploaded to Cloudinary and all —
+                through the whole form — photos uploaded to the bucket and all —
                 to collect a 403 at the end. They get the join button above
                 instead, which is the thing that actually unlocks this. */}
             {collection.mode === 'COMMUNITY' && collection.is_member && (

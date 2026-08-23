@@ -6,17 +6,17 @@ import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
 /**
- * Single-image upload component backed by Cloudinary direct upload.
+ * Single-image upload component backed by a ticketed direct-to-bucket upload.
  * Images wider or taller than 1216 px are resized on the client before upload.
  * Shows a preview with a Remove button after upload or when an existing image
- * is present. Removing clears the field without deleting from Cloudinary.
+ * is present. Removing clears the field without deleting the stored object.
  *
  * Props:
  *   id          – HTML id for the FileInput
  *   label       – visible label text
  *   onChange    – called with the new public_id (or '') on upload / remove
  *   currentUrl  – full URL of the current saved image (for the initial preview)
- *   folder      – Cloudinary upload folder (default 'oiueei/users')
+ *   folder      – upload folder (default 'oiueei/users')
  *   helperText  – optional helper text shown below the input
  */
 export default function ImageUpload({ id, label, onChange, currentUrl, folder = 'oiueei/users', helperText }) {

@@ -20,7 +20,7 @@ const COLUMNS = ['type', 'headline', 'description', 'fee', 'availability', 'loca
 
 /**
  * Map one parsed CSV record to a row payload. `withPhoto` keeps the `photo`
- * filename for later Cloudinary resolution (ZIP path only). Empty/whitespace
+ * filename resolved against the ZIP at upload time (ZIP path only). Empty/whitespace
  * cells are dropped so they don't overwrite server defaults.
  */
 export function mapRow(raw, withPhoto) {

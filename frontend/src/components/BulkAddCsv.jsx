@@ -11,7 +11,7 @@ import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
 
 // Image extensions recognised inside a ZIP — kept in sync with the backend's
-// Cloudinary `IMAGE_FORMATS` allow-list (core/views/upload.py).
+// The server's `IMAGE_TYPES` allow-list (core/views/upload.py).
 const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif)$/i;
 const MIME_BY_EXT = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
@@ -37,7 +37,7 @@ function mimeFromName(name) {
  *
  * Plain `.csv`: text-only rows. `.zip` (CSV + image files): each row may name its
  * cover photo by filename in a `photo` column; on import the referenced images are
- * uploaded to Cloudinary (reusing the secure signed-upload path) and their
+ * uploaded to the bucket (reusing the ticketed upload path) and their
  * public_ids are sent as `thumbnail`. Server-side validators reject HTML, line
  * breaks and spreadsheet-formula (CSV) injection per field.
  *
