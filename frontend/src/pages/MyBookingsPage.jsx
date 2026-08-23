@@ -32,7 +32,9 @@ export default function MyBookingsPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [cancelling, setCancelling] = useState(null);
-  useEffect(() => { document.title = t('titles.myBookings'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.myBookings');
+  }, [t]);
 
   const STATUS_LABELS = {
     PENDING: t('myBookings.statusPending'),
@@ -68,7 +70,7 @@ export default function MyBookingsPage() {
       });
       if (res.ok) {
         setBookings((prev) =>
-          prev.map((b) => b.code === bookingCode ? { ...b, status: 'CANCELLED' } : b)
+          prev.map((b) => (b.code === bookingCode ? { ...b, status: 'CANCELLED' } : b))
         );
         setToast({ type: 'success', message: t('myBookings.requestCancelled') });
       } else {
@@ -109,7 +111,9 @@ export default function MyBookingsPage() {
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">{error}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {error}
+        </Notification>
       </PageLayout>
     );
   }
@@ -139,17 +143,33 @@ export default function MyBookingsPage() {
         <div>
           <Link to={`/things/${row._thingCode}`}>{row._thingHeadline}</Link>
           {row._ownerName && (
-            <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)' }}>
+            <p
+              style={{
+                margin: 'var(--spacing-2-xs) 0 0',
+                fontSize: 'var(--fontsize-body-s)',
+                color: 'var(--color-black-60)',
+              }}
+            >
               {row._ownerName}
             </p>
           )}
-          <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-50)' }}>
-            {t('myBookings.requested', { date: new Date(row._created).toLocaleDateString(i18n.language) })}
+          <p
+            style={{
+              margin: 'var(--spacing-2-xs) 0 0',
+              fontSize: 'var(--fontsize-body-s)',
+              color: 'var(--color-black-50)',
+            }}
+          >
+            {t('myBookings.requested', {
+              date: new Date(row._created).toLocaleDateString(i18n.language),
+            })}
           </p>
           <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
-            {row._startDate && row._endDate
-              ? `${new Date(row._startDate).toLocaleDateString(i18n.language)} — ${new Date(row._endDate).toLocaleDateString(i18n.language)}`
-              : <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>}
+            {row._startDate && row._endDate ? (
+              `${new Date(row._startDate).toLocaleDateString(i18n.language)} — ${new Date(row._endDate).toLocaleDateString(i18n.language)}`
+            ) : (
+              <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
+            )}
           </p>
         </div>
       ),
@@ -164,7 +184,13 @@ export default function MyBookingsPage() {
             {STATUS_LABELS[row._status] || row._status}
           </StatusLabel>
           {row._status === 'EXPIRED' && (
-            <p style={{ margin: 0, fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)' }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 'var(--fontsize-body-s)',
+                color: 'var(--color-black-60)',
+              }}
+            >
               {t('myBookings.expiredHelper')}
             </p>
           )}
@@ -174,67 +200,94 @@ export default function MyBookingsPage() {
     {
       key: '_actions',
       headerName: '',
-      transform: (row) => row._status === 'PENDING' ? (
-        <TooltipButton
-          tooltip={t('myBookings.cancelTooltip')}
-          onClick={() => handleCancel(row._code)}
-          disabled={cancelling === row._code}
-        >
-          <IconCrossCircle aria-hidden />
-        </TooltipButton>
-      ) : null,
+      transform: (row) =>
+        row._status === 'PENDING' ? (
+          <TooltipButton
+            tooltip={t('myBookings.cancelTooltip')}
+            onClick={() => handleCancel(row._code)}
+            disabled={cancelling === row._code}
+          >
+            <IconCrossCircle aria-hidden />
+          </TooltipButton>
+        ) : null,
     },
   ];
 
   return (
     <PageLayout title={t('myBookings.pageTitle')} backTo="/" backLabel={t('common.home')}>
+      {bookings.length === 0 ? (
+        <div>
+          <p>{t('myBookings.noBookings')}</p>
+          <div className="spacer-m" />
+          <Link to="/">
+            <Button style={btnStyle}>{t('myBookings.goHome')}</Button>
+          </Link>
+        </div>
+      ) : (
+        <>
+          {(() => {
+            const pendingRows = rows.filter((r) => r._status === 'PENDING');
+            const otherRows = rows.filter((r) => r._status !== 'PENDING');
+            return (
+              <>
+                <h2>{t('myBookings.statusPending')}</h2>
+                <div className="spacer-s" />
+                {pendingRows.length === 0 ? (
+                  <p className="text-muted">{t('myBookings.noPending')}</p>
+                ) : (
+                  <Table
+                    cols={cols}
+                    rows={pendingRows}
+                    indexKey="_id"
+                    renderIndexCol={false}
+                    dense
+                    theme={
+                      tc.color_03
+                        ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                        : undefined
+                    }
+                  />
+                )}
+                {otherRows.length > 0 && (
+                  <>
+                    <div className="spacer-xl" />
+                    <h2>{t('myBookings.pastRequests')}</h2>
+                    <div className="spacer-s" />
+                    <Table
+                      cols={cols}
+                      rows={otherRows}
+                      indexKey="_id"
+                      renderIndexCol={false}
+                      dense
+                      theme={
+                        tc.color_03
+                          ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                          : undefined
+                      }
+                    />
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </>
+      )}
 
-        {bookings.length === 0 ? (
-          <div>
-            <p>{t('myBookings.noBookings')}</p>
-            <div className="spacer-m" />
-            <Link to="/">
-              <Button style={btnStyle}>{t('myBookings.goHome')}</Button>
-            </Link>
-          </div>
-        ) : (
-          <>
-            {(() => {
-              const pendingRows = rows.filter((r) => r._status === 'PENDING');
-              const otherRows = rows.filter((r) => r._status !== 'PENDING');
-              return (
-                <>
-                  <h2>{t('myBookings.statusPending')}</h2>
-                  <div className="spacer-s" />
-                  {pendingRows.length === 0 ? (
-                    <p className="text-muted">{t('myBookings.noPending')}</p>
-                  ) : (
-                    <Table cols={cols} rows={pendingRows} indexKey="_id" renderIndexCol={false} dense theme={tc.color_03 ? { '--header-background-color': `var(--color-${tc.color_03})` } : undefined} />
-                  )}
-                  {otherRows.length > 0 && (
-                    <>
-                      <div className="spacer-xl" />
-                      <h2>{t('myBookings.pastRequests')}</h2>
-                      <div className="spacer-s" />
-                      <Table cols={cols} rows={otherRows} indexKey="_id" renderIndexCol={false} dense theme={tc.color_03 ? { '--header-background-color': `var(--color-${tc.color_03})` } : undefined} />
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </>
-        )}
+      {next && (
+        <>
+          <div className="spacer-s" />
+          <Button
+            variant="secondary"
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={btnSecondaryStyle}
+          >
+            {t('common.loadMore')}
+          </Button>
+        </>
+      )}
 
-        {next && (
-          <>
-            <div className="spacer-s" />
-            <Button variant="secondary" onClick={loadMore} disabled={loadingMore} style={btnSecondaryStyle}>
-              {t('common.loadMore')}
-            </Button>
-          </>
-        )}
-
-        <Toast toast={toast} onClose={() => setToast(null)} />
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
   );
 }

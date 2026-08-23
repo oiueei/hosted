@@ -94,7 +94,9 @@ describe('RentalRulesFields durations', () => {
     fireEvent.click(screen.getByRole('combobox', { name: /length|duration/i }));
     fireEvent.click(screen.getByRole('option', { name: '1 week' }));
     expect(props.setRentalDurations).toHaveBeenCalledWith([7]);
-    expect(props.setRentalDurations.mock.calls[0][0].every((d) => typeof d === 'number')).toBe(true);
+    expect(props.setRentalDurations.mock.calls[0][0].every((d) => typeof d === 'number')).toBe(
+      true
+    );
   });
 });
 

@@ -42,12 +42,7 @@ function sourceFiles(dir, found = []) {
   return found;
 }
 
-const EXPECTED_LOCAL_STORAGE_KEYS = new Set([
-  'userCode',
-  'theeemeColors',
-  'koro',
-  'seenWelcome',
-]);
+const EXPECTED_LOCAL_STORAGE_KEYS = new Set(['userCode', 'theeemeColors', 'koro', 'seenWelcome']);
 
 function storageKeys(source, method) {
   const pattern = new RegExp(`${method}\\.setItem\\(\\s*'([^']+)'`, 'g');
@@ -72,8 +67,8 @@ describe('what this app writes to the browser (LSSI-CE art. 22.2)', () => {
 
   test('sessionStorage is never written', () => {
     const files = sourceFiles('src');
-    const offenders = files.filter((file) =>
-      storageKeys(fs.readFileSync(file, 'utf8'), 'sessionStorage').length > 0
+    const offenders = files.filter(
+      (file) => storageKeys(fs.readFileSync(file, 'utf8'), 'sessionStorage').length > 0
     );
 
     expect(offenders).toEqual([]);

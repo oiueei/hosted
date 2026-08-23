@@ -33,16 +33,19 @@ export default function ThingPage() {
   // The owner may have written this thing's text once per language.
   const L = useLocalized();
   const headline = L(thing?.headline);
-  useEffect(() => { document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault'); }, [thing, headline, t]);
+  useEffect(() => {
+    document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
+  }, [thing, headline, t]);
 
   // Anonymous visitor on a PUBLIC collection: like ThingLinkbox's login-to-act
   // mode, show the action buttons but route each click to the collection's join
   // page (they log in there and come back able to act) rather than an inline form.
   const collectionCode = code || thing?.collection_code;
   const loginToAct = !isAuthenticated && !!collectionCode;
-  const goJoin = () => navigate(`/collections/${collectionCode}/join`, {
-    state: { collectionHeadline: L(thing?.collection_headline) },
-  });
+  const goJoin = () =>
+    navigate(`/collections/${collectionCode}/join`, {
+      state: { collectionHeadline: L(thing?.collection_headline) },
+    });
 
   // Owner-button-matrix + reservation view-model (shared with ThingLinkbox).
   const {
@@ -76,7 +79,8 @@ export default function ThingPage() {
 
   // The owner "Confirm hold" label, with its in-flight ("Confirming…") state. Shared
   // by the plain accept Button and the ownership-transfer <InlineConfirm> trigger.
-  const acceptLabel = bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');
+  const acceptLabel =
+    bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');
 
   // Transfer state
   const [transfers, setTransfers] = useState(null);
@@ -112,7 +116,9 @@ export default function ThingPage() {
           if (signal.aborted) return;
           setTransfers(data);
         }
-      } catch { /* silently fail */ }
+      } catch {
+        /* silently fail */
+      }
     };
 
     fetchThing();
@@ -123,7 +129,9 @@ export default function ThingPage() {
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">{error}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {error}
+        </Notification>
       </PageLayout>
     );
   }
@@ -140,7 +148,8 @@ export default function ThingPage() {
     : `/things/${thing.code}/edit`;
 
   const backPath = collectionCode ? `/collections/${collectionCode}` : '/';
-  const backLabel = L(thing.collection_headline) || (collectionCode ? t('common.collection') : t('common.home'));
+  const backLabel =
+    L(thing.collection_headline) || (collectionCode ? t('common.collection') : t('common.home'));
 
   const requestPath = code
     ? `/collections/${code}/things/${thing.code}/request`
@@ -160,13 +169,20 @@ export default function ThingPage() {
 
   return (
     <PageLayout backTo={backPath} backLabel={backLabel}>
-
       <div className="form-grid">
         {(() => {
           const images = [thing.thumbnail_url, ...(thing.gallery_urls || [])].filter(Boolean);
           if (images.length === 0) return null;
           if (images.length === 1) {
-            return <img src={images[0]} alt={headline} className="detail-image" loading="lazy" onError={onImageError} />;
+            return (
+              <img
+                src={images[0]}
+                alt={headline}
+                className="detail-image"
+                loading="lazy"
+                onError={onImageError}
+              />
+            );
           }
           return <ImageCarousel images={images} alt={headline} />;
         })()}
@@ -192,7 +208,11 @@ export default function ThingPage() {
         <ThingInfoRows thing={thing} isDateBased={isDateBased} />
 
         {/* Owner bookings list */}
-        <OwnerBookingsList bookings={bookings} activePendingCode={activePendingCode} isOwner={isOwner} />
+        <OwnerBookingsList
+          bookings={bookings}
+          activePendingCode={activePendingCode}
+          isOwner={isOwner}
+        />
 
         {/* Owner actions */}
         {isOwner && thing.status === 'ACTIVE' && (
@@ -205,23 +225,47 @@ export default function ThingPage() {
                     comes back — nothing changes hands for good. The TAKEN block
                     below is where a GIFT/SELL is accepted, and where the confirm
                     belongs. */}
-                <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept')} style={btnStyle}>
+                <Button
+                  fullWidth
+                  disabled={!!bookingAction}
+                  onClick={() => handleBookingAction('accept')}
+                  style={btnStyle}
+                >
                   {acceptLabel}
                 </Button>
-                <Button fullWidth variant="secondary" disabled={!!bookingAction} onClick={() => handleBookingAction('reject')} style={btnSecondaryStyle}>
-                  {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
+                <Button
+                  fullWidth
+                  variant="secondary"
+                  disabled={!!bookingAction}
+                  onClick={() => handleBookingAction('reject')}
+                  style={btnSecondaryStyle}
+                >
+                  {bookingActionVerb === 'reject'
+                    ? t('thingCard.cancelling')
+                    : t('thingCard.cancelHold')}
                 </Button>
               </>
             )}
             <Link to={editPath} style={{ display: 'contents' }}>
               {needsPage && activePendingCode ? (
-                <Button fullWidth variant="secondary" style={btnSecondaryStyle}>{t('common.edit')}</Button>
+                <Button fullWidth variant="secondary" style={btnSecondaryStyle}>
+                  {t('common.edit')}
+                </Button>
               ) : (
-                <Button fullWidth style={btnStyle}>{t('common.edit')}</Button>
+                <Button fullWidth style={btnStyle}>
+                  {t('common.edit')}
+                </Button>
               )}
             </Link>
             {!hasPendingBookings && canDelete && (
-              <Button fullWidth variant="secondary" style={btnSecondaryStyle} onClick={() => navigate(deletePath, { state: { backPath, backLabel } })}>{t('common.delete')}</Button>
+              <Button
+                fullWidth
+                variant="secondary"
+                style={btnSecondaryStyle}
+                onClick={() => navigate(deletePath, { state: { backPath, backLabel } })}
+              >
+                {t('common.delete')}
+              </Button>
             )}
           </div>
         )}
@@ -240,26 +284,47 @@ export default function ThingPage() {
                 confirmProps={{ style: btnStyle }}
               />
             ) : (
-              <Button fullWidth disabled={!!bookingAction} onClick={() => handleBookingAction('accept')} style={btnStyle}>
+              <Button
+                fullWidth
+                disabled={!!bookingAction}
+                onClick={() => handleBookingAction('accept')}
+                style={btnStyle}
+              >
                 {acceptLabel}
               </Button>
             )}
-            <Button fullWidth variant="secondary" disabled={!!bookingAction} onClick={() => handleBookingAction('reject')} style={btnSecondaryStyle}>
-              {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
+            <Button
+              fullWidth
+              variant="secondary"
+              disabled={!!bookingAction}
+              onClick={() => handleBookingAction('reject')}
+              style={btnSecondaryStyle}
+            >
+              {bookingActionVerb === 'reject'
+                ? t('thingCard.cancelling')
+                : t('thingCard.cancelHold')}
             </Button>
             <Link to={editPath} style={{ display: 'contents' }}>
-              <Button fullWidth variant="secondary" style={btnSecondaryStyle}>{t('common.edit')}</Button>
+              <Button fullWidth variant="secondary" style={btnSecondaryStyle}>
+                {t('common.edit')}
+              </Button>
             </Link>
           </div>
         )}
 
         {isOwner && thing.status === 'INACTIVE' && (
           <div className="button-row">
-            <Button style={{ ...btnStyle, width: '100%' }} disabled={activating} onClick={handleActivate}>
+            <Button
+              style={{ ...btnStyle, width: '100%' }}
+              disabled={activating}
+              onClick={handleActivate}
+            >
               {activating ? t('thingCard.reactivating') : t('thingCard.reactivate')}
             </Button>
             <Link to={editPath} style={{ display: 'contents' }}>
-              <Button variant="secondary" style={{ ...btnSecondaryStyle, width: '100%' }}>{t('common.edit')}</Button>
+              <Button variant="secondary" style={{ ...btnSecondaryStyle, width: '100%' }}>
+                {t('common.edit')}
+              </Button>
             </Link>
             {canDelete && (
               <Button
@@ -280,7 +345,21 @@ export default function ThingPage() {
             fullWidth
             disabled={loginToAct ? loginButtonDisabled : buttonDisabled}
             style={btnStyle}
-            onClick={loginToAct ? goJoin : (needsPage ? () => navigate(requestPath, { state: { backPath: code ? `/collections/${code}/things/${thing.code}` : `/things/${thing.code}`, backLabel: headline } }) : handleRequest)}
+            onClick={
+              loginToAct
+                ? goJoin
+                : needsPage
+                  ? () =>
+                      navigate(requestPath, {
+                        state: {
+                          backPath: code
+                            ? `/collections/${code}/things/${thing.code}`
+                            : `/things/${thing.code}`,
+                          backLabel: headline,
+                        },
+                      })
+                  : handleRequest
+            }
           >
             {buttonLabel}
           </Button>
@@ -297,7 +376,6 @@ export default function ThingPage() {
             </Button>
           </div>
         )}
-
 
         {/* FAQs Section */}
         <ThingFaqSection
@@ -319,7 +397,11 @@ export default function ThingPage() {
             <h2>{t('transfers.heading')}</h2>
             <p>{t('transfers.journeyCount', { count: transfers.unique_homes })}</p>
             {transfers.current_holder_name && (
-              <p><strong>{t('transfers.currentlyWith', { name: transfers.current_holder_name })}</strong></p>
+              <p>
+                <strong>
+                  {t('transfers.currentlyWith', { name: transfers.current_holder_name })}
+                </strong>
+              </p>
             )}
             <ul className="thing-card-bookings">
               {transfers.transfers.map((tr) => (
@@ -327,14 +409,22 @@ export default function ThingPage() {
                   {holderLabel(tr.from_user_name)} {t('transfers.to')}{' '}
                   {holderLabel(tr.to_user_name)}
                   {' — '}
-                  {t('transfers.lentOn', { date: new Date(tr.lent_date).toLocaleDateString(i18n.language) })}
+                  {t('transfers.lentOn', {
+                    date: new Date(tr.lent_date).toLocaleDateString(i18n.language),
+                  })}
                   {/* `auto_closed` means the daily command wrote this date when
                       the booking's end_date passed — nobody said the thing came
                       back. The journey is the product's most human surface, so
                       it says "due back on" rather than claiming a handover we
                       never witnessed. */}
                   {tr.returned_date && (
-                    <> · {t(tr.auto_closed ? 'transfers.dueBackOn' : 'transfers.returnedOn', { date: new Date(tr.returned_date).toLocaleDateString(i18n.language) })}</>
+                    <>
+                      {' '}
+                      ·{' '}
+                      {t(tr.auto_closed ? 'transfers.dueBackOn' : 'transfers.returnedOn', {
+                        date: new Date(tr.returned_date).toLocaleDateString(i18n.language),
+                      })}
+                    </>
                   )}
                 </li>
               ))}

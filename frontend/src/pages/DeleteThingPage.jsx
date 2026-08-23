@@ -31,7 +31,9 @@ export default function DeleteThingPage() {
   const error = failedCode === thingCode;
 
   useEffect(() => {
-    document.title = thing ? t('titles.deleteThing', { headline: L(thing.headline) }) : t('titles.deleteThingDefault');
+    document.title = thing
+      ? t('titles.deleteThing', { headline: L(thing.headline) })
+      : t('titles.deleteThingDefault');
   }, [thing, t, L]);
 
   useEffect(() => {
@@ -87,7 +89,9 @@ export default function DeleteThingPage() {
           have a journey behind it, and both go with it (FAQ and ThingTransfer
           cascade on the FK). Someone's pending hold dies here too. "This action
           cannot be undone" said none of that. */}
-      <p><strong>{t('deleteThing.warning')}</strong></p>
+      <p>
+        <strong>{t('deleteThing.warning')}</strong>
+      </p>
       <div className="spacer-s" />
       <p>{t('deleteThing.whatGoesTitle')}</p>
       <ul className="measure">
@@ -97,10 +101,21 @@ export default function DeleteThingPage() {
       </ul>
       <div className="spacer-s" />
       <div className="form-grid">
-        <Button fullWidth disabled={deleting} onClick={handleDelete} style={btnStyle} iconStart={<IconTrash aria-hidden="true" />}>
+        <Button
+          fullWidth
+          disabled={deleting}
+          onClick={handleDelete}
+          style={btnStyle}
+          iconStart={<IconTrash aria-hidden="true" />}
+        >
           {deleting ? t('common.deleting') : t('common.delete')}
         </Button>
-        <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => navigate(backPath)}
+          style={btnSecondaryStyle}
+        >
           {t('common.cancel')}
         </Button>
       </div>

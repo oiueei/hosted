@@ -14,7 +14,9 @@ import PageLayout from '../components/PageLayout';
  */
 export default function DeleteAccountPage() {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t('titles.deleteAccount'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.deleteAccount');
+  }, [t]);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');

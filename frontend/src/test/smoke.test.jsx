@@ -69,7 +69,16 @@ const MOCK_THING = {
 };
 
 const MOCK_THEEEMES = [
-  { code: 'BUU331', name: 'Bussi', color_01: 'bus', color_02: 'suomenlinna-light', color_03: 'copper', color_04: 'black', color_05: 'white', color_06: 'white' },
+  {
+    code: 'BUU331',
+    name: 'Bussi',
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  },
 ];
 
 function mockResponse(data, ok = true) {
@@ -80,19 +89,22 @@ function mockResponse(data, ok = true) {
 vi.mock('../services/api', () => ({
   apiFetch: vi.fn((url) => {
     if (url.includes('/auth/me/')) return Promise.resolve(mockResponse(MOCK_USER));
-    if (url.includes('/notifications/token/')) return Promise.resolve(mockResponse({ notify_activity: true, notify_news: true }));
+    if (url.includes('/notifications/token/'))
+      return Promise.resolve(mockResponse({ notify_activity: true, notify_news: true }));
     if (url.includes('/theeemes/')) return Promise.resolve(mockResponse(MOCK_THEEEMES));
     if (url.includes('/my-bookings/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.includes('/my-invitations/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.includes('/invited-collections/')) return Promise.resolve(mockResponse([]));
     if (url.includes('/invited-things/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.match(/\/things\/[^/]+\/faq\//)) return Promise.resolve(mockResponse({ results: [] }));
-    if (url.match(/\/things\/[^/]+\/calendar\//)) return Promise.resolve(mockResponse({ results: [] }));
+    if (url.match(/\/things\/[^/]+\/calendar\//))
+      return Promise.resolve(mockResponse({ results: [] }));
     if (url.match(/\/things\/[^/]+\//)) return Promise.resolve(mockResponse(MOCK_THING));
     if (url.includes('/things/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.match(/\/collections\/[^/]+\//)) return Promise.resolve(mockResponse(MOCK_COLLECTION));
     if (url.includes('/collections/')) return Promise.resolve(mockResponse({ results: [] }));
-    if (url.match(/\/users\/[^/]+\//)) return Promise.resolve(mockResponse({ ...MOCK_USER, collections: [] }));
+    if (url.match(/\/users\/[^/]+\//))
+      return Promise.resolve(mockResponse({ ...MOCK_USER, collections: [] }));
     return Promise.resolve(mockResponse({}));
   }),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
@@ -105,7 +117,7 @@ globalThis.fetch = vi.fn(() =>
 
 // ── Helper: render with route params ──────────────────────────────────
 function renderWithRoute(Component, { path, entry, state } = {}) {
-  const initialEntry = state ? { pathname: entry || '/', state } : (entry || '/');
+  const initialEntry = state ? { pathname: entry || '/', state } : entry || '/';
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
@@ -164,7 +176,9 @@ function smokeAndAxe(name, Component, routeOpts) {
     test('renders without crashing', async () => {
       const { container } = renderWithRoute(Component, routeOpts);
       await waitFor(() => {
-        expect(container.querySelector('.form-page, .page-container, form, [data-testid="navigated"]')).toBeTruthy();
+        expect(
+          container.querySelector('.form-page, .page-container, form, [data-testid="navigated"]')
+        ).toBeTruthy();
       });
     });
 
@@ -172,7 +186,9 @@ function smokeAndAxe(name, Component, routeOpts) {
       const { container } = renderWithRoute(Component, routeOpts);
       // Wait for async rendering to settle
       await waitFor(() => {
-        expect(container.querySelector('.form-page, .page-container, form, [data-testid="navigated"]')).toBeTruthy();
+        expect(
+          container.querySelector('.form-page, .page-container, form, [data-testid="navigated"]')
+        ).toBeTruthy();
       });
       const results = await axe(container);
       expect(results).toHaveNoViolations();
@@ -270,7 +286,6 @@ smokeAndAxe('VerifyPage', VerifyPage, {
 });
 
 smokeAndAxe('LogoutPage', LogoutPage);
-
 
 smokeAndAxe('SharePage', SharePage, {
   path: '/share/:token',

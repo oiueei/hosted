@@ -102,7 +102,10 @@ export default function RecommendGuest({ collectionCode, ownerName }) {
           <Button
             variant="secondary"
             style={btnSecondaryStyle}
-            onClick={() => { setOpen(false); setResult(null); }}
+            onClick={() => {
+              setOpen(false);
+              setResult(null);
+            }}
           >
             {t('common.close')}
           </Button>

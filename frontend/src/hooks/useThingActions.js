@@ -32,19 +32,23 @@ import useThingBooking from './useThingBooking';
  * `canDelete`, `hasPendingBookings`, `showButton`, `isMine`, `buttonDisabled`,
  * `loginButtonDisabled`, `buttonLabel`.
  */
-export default function useThingActions(thing, userCode, {
-  isPaused = false,
-  canAct = true,
-  loginToAct = false,
-  collectionOwner = null,
-  onThingChange = () => {},
-  setToast = () => {},
-  initialActivePending = null,
-  initialRequested = false,
-  fetchOnEndless = false,
-  activateSuccessMessage = null,
-  collectionCode = null,
-} = {}) {
+export default function useThingActions(
+  thing,
+  userCode,
+  {
+    isPaused = false,
+    canAct = true,
+    loginToAct = false,
+    collectionOwner = null,
+    onThingChange = () => {},
+    setToast = () => {},
+    initialActivePending = null,
+    initialRequested = false,
+    fetchOnEndless = false,
+    activateSuccessMessage = null,
+    collectionCode = null,
+  } = {}
+) {
   const { t } = useTranslation();
 
   const isOwner = thing?.owner === userCode;

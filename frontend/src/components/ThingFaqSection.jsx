@@ -154,7 +154,9 @@ export default function ThingFaqSection({
               <Highlight
                 text={faq.question}
                 reference={faq.answer || undefined}
-                theme={tc.color_03 ? { '--accent-line-color': `var(--color-${tc.color_03})` } : undefined}
+                theme={
+                  tc.color_03 ? { '--accent-line-color': `var(--color-${tc.color_03})` } : undefined
+                }
               />
               {!faq.answer && isOwner && (
                 <>
@@ -172,11 +174,15 @@ export default function ThingFaqSection({
                     <div className="faq-actions" style={{ flexDirection: 'column', width: '100%' }}>
                       <Button
                         fullWidth
-                        disabled={answerSubmitting[faq.code] || !(answerTexts[faq.code] || '').trim()}
+                        disabled={
+                          answerSubmitting[faq.code] || !(answerTexts[faq.code] || '').trim()
+                        }
                         onClick={() => handleAnswer(faq.code)}
                         style={btnStyle}
                       >
-                        {answerSubmitting[faq.code] ? t('common.sending') : t('thingPage.replyLabel')}
+                        {answerSubmitting[faq.code]
+                          ? t('common.sending')
+                          : t('thingPage.replyLabel')}
                       </Button>
                       <Button
                         variant="secondary"
@@ -214,7 +220,12 @@ export default function ThingFaqSection({
       {faqsNext && (
         <>
           <div className="spacer-s" />
-          <Button variant="secondary" onClick={loadMoreFaqs} disabled={loadingMore} style={btnSecondaryStyle}>
+          <Button
+            variant="secondary"
+            onClick={loadMoreFaqs}
+            disabled={loadingMore}
+            style={btnSecondaryStyle}
+          >
             {t('common.loadMore')}
           </Button>
         </>

@@ -33,13 +33,7 @@ export async function uploadImage(original, folder = 'oiueei/things') {
     }),
   });
   if (!ticketRes.ok) throw new Error('signature_failed');
-  const {
-    url,
-    method,
-    headers,
-    key,
-    public_url: publicUrl,
-  } = await ticketRes.json();
+  const { url, method, headers, key, public_url: publicUrl } = await ticketRes.json();
 
   // The file goes up as the raw body, not as form-data. Content-Length is signed
   // too but is absent from `headers`: the browser sets it from the body, and

@@ -39,7 +39,9 @@ export default function RequestThingPage() {
   const [thing, setThing] = useState(null);
   const L = useLocalized();
   const headline = L(thing?.headline);
-  useEffect(() => { document.title = thing ? t('titles.holdThing', { headline }) : t('titles.holdDefault'); }, [thing, headline, t]);
+  useEffect(() => {
+    document.title = thing ? t('titles.holdThing', { headline }) : t('titles.holdDefault');
+  }, [thing, headline, t]);
   // Date field state lives in the DISPLAY format (DD/MM/YYYY, what the DateInputs
   // emit); it converts to ISO at the consumption boundaries (POST body, derived
   // return date) via displayToIso.
@@ -83,7 +85,8 @@ export default function RequestThingPage() {
   // Per-collection rental rules (#7): a set of fixed lengths + allowed weekdays.
   const rentalDurations = thing?.rental_durations || [];
   const rentalWeekdays = thing?.rental_weekdays || [];
-  const isConstrainedRental = !!thing && DATE_TYPES.includes(thing.type) && rentalDurations.length > 0;
+  const isConstrainedRental =
+    !!thing && DATE_TYPES.includes(thing.type) && rentalDurations.length > 0;
 
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
@@ -92,9 +95,8 @@ export default function RequestThingPage() {
   // and in between the form's own validation called itself incomplete. What the
   // renter picks always wins; the single option only stands in before they have
   // touched the control.
-  const soleDuration = isConstrainedRental && rentalDurations.length === 1
-    ? String(rentalDurations[0])
-    : '';
+  const soleDuration =
+    isConstrainedRental && rentalDurations.length === 1 ? String(rentalDurations[0]) : '';
   const chosenDuration = duration || soleDuration;
 
   // Pickup validity and blocked-date checks are pure, timezone-safe, unit-tested
@@ -183,122 +185,156 @@ export default function RequestThingPage() {
             {t('request.successMessage')}
           </Notification>
           <div className="spacer-m" />
-          <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => navigate(backPath)}
+            style={btnSecondaryStyle}
+          >
             {t('request.backTo', { label: backLabel })}
           </Button>
         </>
       ) : (
-      <>
-      {thing.fee && <p><strong>{t('request.priceLabel')}</strong> {t('request.priceValue', { fee: thing.fee })}</p>}
-      <div className="spacer-m" />
-      {isDateBased && (
         <>
-          <Notification
-            type={thing.available_today ? 'success' : 'info'}
-            size="small"
-            label={t('thingPage.availabilityLabel')}
-          >
-            {`${t('thingPage.availabilityLabel')} ${thing.available_today
-              ? t('availability.IMMEDIATE')
-              : thing.next_available
-                ? t('availability.nextAvailable', { date: new Date(thing.next_available).toLocaleDateString(i18n.language, { day: 'numeric', month: 'numeric' }) })
-                : t('availability.noneSoon')}`}
-          </Notification>
-          <div className="spacer-s" />
-        </>
-      )}
-      {isDateBased && isConstrainedRental && (
-        <div className="summary-grid section-mt">
-          <Select
-            id="request-duration"
-            texts={{
-              label: t('rental.chooseDuration'),
-              placeholder: t('rental.chooseDurationPlaceholder'),
-              error: attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
-              language: 'en',
-            }}
-            options={rentalDurations.map((d) => ({ label: durationLabel(d, t), value: String(d) }))}
-            value={chosenDuration
-              ? [{ label: durationLabel(Number(chosenDuration), t), value: chosenDuration }]
-              : []}
-            onChange={(opts) => { setDuration(opts.length ? opts[0].value : ''); setStartDate(''); }}
-            invalid={attempted && !chosenDuration}
-          />
-          <div className="spacer-xxxs" />
-          <DateInput
-            id="request-pickup-date"
-            label={t('rental.pickupLabel')}
-            value={startDate}
-            onChange={(value) => setStartDate(value)}
-            dateFormat={DISPLAY_DATE_FORMAT}
-            language="en"
-            required
-            disabled={!chosenDuration}
-            invalid={attempted && !startDate}
-            errorText={attempted && !startDate ? t('request.startRequired') : undefined}
-            minDate={TODAY}
-            maxDate={MAX_DATE}
-            dateOutsideRangeErrorText={t('request.dateRange')}
-            isDateDisabledBy={pickupDisabled}
-            malformedDateErrorText={t('request.dateOverlap')}
-          />
-          {chosenDuration && displayToIso(startDate) && (
-            <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-              {t('rental.returnBy', { date: isoToDisplay(derivedReturnDate(displayToIso(startDate), chosenDuration)) })}
+          {thing.fee && (
+            <p>
+              <strong>{t('request.priceLabel')}</strong>{' '}
+              {t('request.priceValue', { fee: thing.fee })}
             </p>
           )}
-        </div>
-      )}
-      {isDateBased && !isConstrainedRental && (
-        <div className="summary-grid section-mt">
-          <DateInput
-            id="request-start-date"
-            label={t('request.startLabel')}
-            value={startDate}
-            onChange={(value) => setStartDate(value)}
-            dateFormat={DISPLAY_DATE_FORMAT}
-            language="en"
-            required
-            invalid={attempted && !startDate}
-            errorText={attempted && !startDate ? t('request.startRequired') : undefined}
-            minDate={TODAY}
-            maxDate={MAX_DATE}
-            dateOutsideRangeErrorText={t('request.dateRange')}
-            isDateDisabledBy={dateBlocked}
-            malformedDateErrorText={t('request.dateOverlap')}
-          />
-          <div className="spacer-xxxs" />
-          <DateInput
-            id="request-end-date"
-            label={t('request.endLabel')}
-            value={endDate}
-            onChange={(value) => setEndDate(value)}
-            dateFormat={DISPLAY_DATE_FORMAT}
-            language="en"
-            required
-            invalid={attempted && !endDate}
-            errorText={attempted && !endDate ? t('request.endRequired') : undefined}
-            minDate={TODAY}
-            maxDate={MAX_DATE}
-            dateOutsideRangeErrorText={t('request.dateRange')}
-            isDateDisabledBy={dateBlocked}
-            malformedDateErrorText={t('request.dateOverlap')}
-          />
-        </div>
-      )}
+          <div className="spacer-m" />
+          {isDateBased && (
+            <>
+              <Notification
+                type={thing.available_today ? 'success' : 'info'}
+                size="small"
+                label={t('thingPage.availabilityLabel')}
+              >
+                {`${t('thingPage.availabilityLabel')} ${
+                  thing.available_today
+                    ? t('availability.IMMEDIATE')
+                    : thing.next_available
+                      ? t('availability.nextAvailable', {
+                          date: new Date(thing.next_available).toLocaleDateString(i18n.language, {
+                            day: 'numeric',
+                            month: 'numeric',
+                          }),
+                        })
+                      : t('availability.noneSoon')
+                }`}
+              </Notification>
+              <div className="spacer-s" />
+            </>
+          )}
+          {isDateBased && isConstrainedRental && (
+            <div className="summary-grid section-mt">
+              <Select
+                id="request-duration"
+                texts={{
+                  label: t('rental.chooseDuration'),
+                  placeholder: t('rental.chooseDurationPlaceholder'),
+                  error: attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
+                  language: 'en',
+                }}
+                options={rentalDurations.map((d) => ({
+                  label: durationLabel(d, t),
+                  value: String(d),
+                }))}
+                value={
+                  chosenDuration
+                    ? [{ label: durationLabel(Number(chosenDuration), t), value: chosenDuration }]
+                    : []
+                }
+                onChange={(opts) => {
+                  setDuration(opts.length ? opts[0].value : '');
+                  setStartDate('');
+                }}
+                invalid={attempted && !chosenDuration}
+              />
+              <div className="spacer-xxxs" />
+              <DateInput
+                id="request-pickup-date"
+                label={t('rental.pickupLabel')}
+                value={startDate}
+                onChange={(value) => setStartDate(value)}
+                dateFormat={DISPLAY_DATE_FORMAT}
+                language="en"
+                required
+                disabled={!chosenDuration}
+                invalid={attempted && !startDate}
+                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
+                minDate={TODAY}
+                maxDate={MAX_DATE}
+                dateOutsideRangeErrorText={t('request.dateRange')}
+                isDateDisabledBy={pickupDisabled}
+                malformedDateErrorText={t('request.dateOverlap')}
+              />
+              {chosenDuration && displayToIso(startDate) && (
+                <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+                  {t('rental.returnBy', {
+                    date: isoToDisplay(derivedReturnDate(displayToIso(startDate), chosenDuration)),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+          {isDateBased && !isConstrainedRental && (
+            <div className="summary-grid section-mt">
+              <DateInput
+                id="request-start-date"
+                label={t('request.startLabel')}
+                value={startDate}
+                onChange={(value) => setStartDate(value)}
+                dateFormat={DISPLAY_DATE_FORMAT}
+                language="en"
+                required
+                invalid={attempted && !startDate}
+                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
+                minDate={TODAY}
+                maxDate={MAX_DATE}
+                dateOutsideRangeErrorText={t('request.dateRange')}
+                isDateDisabledBy={dateBlocked}
+                malformedDateErrorText={t('request.dateOverlap')}
+              />
+              <div className="spacer-xxxs" />
+              <DateInput
+                id="request-end-date"
+                label={t('request.endLabel')}
+                value={endDate}
+                onChange={(value) => setEndDate(value)}
+                dateFormat={DISPLAY_DATE_FORMAT}
+                language="en"
+                required
+                invalid={attempted && !endDate}
+                errorText={attempted && !endDate ? t('request.endRequired') : undefined}
+                minDate={TODAY}
+                maxDate={MAX_DATE}
+                dateOutsideRangeErrorText={t('request.dateRange')}
+                isDateDisabledBy={dateBlocked}
+                malformedDateErrorText={t('request.dateOverlap')}
+              />
+            </div>
+          )}
 
-      <div className="spacer-xs" />
-      <div className="form-grid">
-        <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
-          {submitting ? t('common.sending') : t(`thingCard.action.${thing?.type}`, { defaultValue: t('thingCard.hold') })}
-        </Button>
-        <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
-          {t('common.cancel')}
-        </Button>
-      </div>
+          <div className="spacer-xs" />
+          <div className="form-grid">
+            <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
+              {submitting
+                ? t('common.sending')
+                : t(`thingCard.action.${thing?.type}`, { defaultValue: t('thingCard.hold') })}
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => navigate(backPath)}
+              style={btnSecondaryStyle}
+            >
+              {t('common.cancel')}
+            </Button>
+          </div>
 
-      <Toast toast={toast} onClose={() => setToast(null)} />
-      </>
+          <Toast toast={toast} onClose={() => setToast(null)} />
+        </>
       )}
     </PageLayout>
   );

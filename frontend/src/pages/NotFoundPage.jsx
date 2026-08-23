@@ -7,7 +7,9 @@ import ContactCorner from '../components/ContactCorner';
 
 export default function NotFoundPage() {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t('titles.notFound'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.notFound');
+  }, [t]);
 
   const { tc, btnStyle } = useTheeeme();
   const isLoggedIn = !!localStorage.getItem('userCode');
@@ -19,14 +21,26 @@ export default function NotFoundPage() {
     >
       <div
         className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
           <ContactCorner />
           <h1 className="form-hero-title">{t('notFound.title')}</h1>
           <div>
             <Link to={isLoggedIn ? '/' : '/login'}>
-              <Button style={btnStyle}>{isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}</Button>
+              <Button style={btnStyle}>
+                {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
+              </Button>
             </Link>
           </div>
         </div>

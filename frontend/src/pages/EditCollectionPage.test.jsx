@@ -39,7 +39,11 @@ const COLLECTION = {
   is_paused: false,
 };
 
-function mockApi({ save = { ok: true }, stats = { ok: true }, collectionExport = { ok: true } } = {}) {
+function mockApi({
+  save = { ok: true },
+  stats = { ok: true },
+  collectionExport = { ok: true },
+} = {}) {
   apiFetch.mockImplementation((url, opts) => {
     if (opts?.method === 'PATCH') {
       return Promise.resolve({
@@ -61,7 +65,9 @@ function mockApi({ save = { ok: true }, stats = { ok: true }, collectionExport =
         status: collectionExport.status ?? (collectionExport.ok ? 200 : 500),
         headers: {
           get: (name) =>
-            name === 'Content-Disposition' ? 'attachment; filename="oiueei-COL001-2026-08-21.json"' : null,
+            name === 'Content-Disposition'
+              ? 'attachment; filename="oiueei-COL001-2026-08-21.json"'
+              : null,
         },
         blob: async () => new Blob(['{}'], { type: 'application/json' }),
       });
@@ -213,7 +219,8 @@ describe('EditCollectionPage — the deposit policy (S6)', () => {
   test('a stored policy pre-fills the field, once "More options" is open', async () => {
     mockApi();
     apiFetch.mockImplementation((url, opts) => {
-      if (opts?.method === 'PATCH') return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      if (opts?.method === 'PATCH')
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
       if (url.includes('/stats/') || url.includes('/export/')) {
         return Promise.resolve({ ok: true, status: 200, blob: async () => new Blob(['x']) });
       }
@@ -266,13 +273,11 @@ describe('EditCollectionPage — the collection export', () => {
     await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake'));
   });
 
-  test('the warning that it carries other members\' data is always on the page', async () => {
+  test("the warning that it carries other members' data is always on the page", async () => {
     mockApi();
     renderPage();
 
-    expect(
-      await screen.findByText(/carries other people's data/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/carries other people's data/i)).toBeInTheDocument();
   });
 
   test('a 429 says "too many attempts", the same message every rate-limited action uses', async () => {
@@ -282,7 +287,9 @@ describe('EditCollectionPage — the collection export', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
 
-    expect(await screen.findByText('Too many attempts — please wait a moment and try again.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Too many attempts — please wait a moment and try again.')
+    ).toBeInTheDocument();
   });
 
   test('any other failure says so instead of doing nothing', async () => {

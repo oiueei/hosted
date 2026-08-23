@@ -28,7 +28,11 @@ export default function EditThingPage() {
   // why the live form value cannot play this role.
   const [savedType, setSavedType] = useState(null);
   const [headline, setHeadline] = useState('');
-  useEffect(() => { document.title = headline ? t('titles.editThing', { headline: L(headline) }) : t('titles.editThingDefault'); }, [headline, t, L]);
+  useEffect(() => {
+    document.title = headline
+      ? t('titles.editThing', { headline: L(headline) })
+      : t('titles.editThingDefault');
+  }, [headline, t, L]);
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -86,13 +90,15 @@ export default function EditThingPage() {
   }, [userCode, thingCode, navigate, code, t]);
 
   const returnPath = thingCollectionCode ? `/collections/${thingCollectionCode}` : '/';
-  const returnLabel = L(thingCollectionHeadline) || (thingCollectionCode ? t('common.collection') : t('common.home'));
+  const returnLabel =
+    L(thingCollectionHeadline) || (thingCollectionCode ? t('common.collection') : t('common.home'));
 
   const validate = () => {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('addThing.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('addThing.maxHeadline');
-    if (localizedCounter(description, 256).over) newErrors.description = t('addThing.maxDescription');
+    if (localizedCounter(description, 256).over)
+      newErrors.description = t('addThing.maxDescription');
     if (FEE_TYPES.includes(thingType) && (fee === '' || fee === undefined)) {
       newErrors.fee = t('addThing.priceRequired');
     }
@@ -162,7 +168,7 @@ export default function EditThingPage() {
 
   return (
     <PageLayout backTo={returnPath} backLabel={returnLabel}>
-        <h1 className="page-title-xl">{t('editThing.pageTitle')}</h1>
+      <h1 className="page-title-xl">{t('editThing.pageTitle')}</h1>
       <div className="form-grid">
         <ThingForm
           idPrefix="edit-thing"
@@ -205,12 +211,18 @@ export default function EditThingPage() {
         <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
           {submitting ? t('common.saving') : t('common.save')}
         </Button>
-        <Button variant="secondary" fullWidth disabled={submitting} onClick={() => {
-          const deletePath = thingCollectionCode
-            ? `/collections/${thingCollectionCode}/things/${thingCode}/delete`
-            : `/things/${thingCode}/delete`;
-          navigate(deletePath, { state: { backPath: returnPath, backLabel: returnLabel } });
-        }} style={{ ...btnSecondaryStyle, marginTop: 'var(--spacing-s)' }}>
+        <Button
+          variant="secondary"
+          fullWidth
+          disabled={submitting}
+          onClick={() => {
+            const deletePath = thingCollectionCode
+              ? `/collections/${thingCollectionCode}/things/${thingCode}/delete`
+              : `/things/${thingCode}/delete`;
+            navigate(deletePath, { state: { backPath: returnPath, backLabel: returnLabel } });
+          }}
+          style={{ ...btnSecondaryStyle, marginTop: 'var(--spacing-s)' }}
+        >
           {t('common.delete')}
         </Button>
       </div>

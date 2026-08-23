@@ -18,9 +18,7 @@ import Toast from './Toast';
 
 // qrcode.react only renders once the owner opens the QR dialog — split it
 // out of the CollectionPage chunk instead of shipping it to every visitor.
-const QRCodeSVG = lazy(() =>
-  import('qrcode.react').then((m) => ({ default: m.QRCodeSVG }))
-);
+const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QRCodeSVG })));
 
 /**
  * Share menu for the CollectionPage hero (owner only).
@@ -41,7 +39,12 @@ const QRCodeSVG = lazy(() =>
  * `qrcode.react` (client-side, no network). It is handy for sharing in person —
  * a guest scans it with their phone camera.
  */
-export default function ShareCollectionMenu({ collectionCode, collectionHeadline, ownerName, isPublic }) {
+export default function ShareCollectionMenu({
+  collectionCode,
+  collectionHeadline,
+  ownerName,
+  isPublic,
+}) {
   const { t, i18n } = useTranslation();
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const [toast, setToast] = useState(null);
@@ -222,7 +225,13 @@ export default function ShareCollectionMenu({ collectionCode, collectionHeadline
               <Suspense
                 fallback={
                   <div
-                    style={{ width: 232, height: 232, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{
+                      width: 232,
+                      height: 232,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                     role="status"
                     aria-live="polite"
                   >

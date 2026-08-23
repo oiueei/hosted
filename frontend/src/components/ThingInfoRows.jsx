@@ -1,5 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { IconTicket, IconEuroSign, IconLock, IconCalendar, IconLocation, IconShield } from 'hds-react';
+import {
+  IconTicket,
+  IconEuroSign,
+  IconLock,
+  IconCalendar,
+  IconLocation,
+  IconShield,
+} from 'hds-react';
 
 /**
  * The `thing-card-info` rows shared by ThingPage and ThingLinkbox: type, fee,
@@ -35,7 +42,9 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
         <div className="thing-card-info-row">
           <IconLock size="m" aria-hidden="true" />
           <span className="thing-card-info-label">{t('thingPage.depositLabel')}</span>
-          <span>{thing.deposit} € {t('thingPage.depositRefundableNote')}</span>
+          <span>
+            {thing.deposit} € {t('thingPage.depositRefundableNote')}
+          </span>
         </div>
       )}
       {/* Live availability (date-based things): computed from the booking calendar */}
@@ -47,7 +56,12 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
             {thing.available_today
               ? t('availability.IMMEDIATE')
               : thing.next_available
-                ? t('availability.nextAvailable', { date: new Date(thing.next_available).toLocaleDateString(i18n.language, { day: 'numeric', month: 'numeric' }) })
+                ? t('availability.nextAvailable', {
+                    date: new Date(thing.next_available).toLocaleDateString(i18n.language, {
+                      day: 'numeric',
+                      month: 'numeric',
+                    }),
+                  })
                 : t('availability.noneSoon')}
           </span>
         </div>

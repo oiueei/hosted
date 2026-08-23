@@ -39,17 +39,20 @@ import { apiFetch, extractApiError } from '../services/api';
  * Returns `{ submitting, requested, bookingAction, bookings, activePendingCode,
  * handleRequest, handleActivate, handleBookingAction }`.
  */
-export default function useThingBooking(thing, {
-  isOwner = false,
-  onThingChange = () => {},
-  setToast = () => {},
-  initialActivePending = null,
-  initialRequested = false,
-  fetchOnEndless = false,
-  bookingKeepsStatus = false,
-  activateSuccessMessage = null,
-  collectionCode = null,
-} = {}) {
+export default function useThingBooking(
+  thing,
+  {
+    isOwner = false,
+    onThingChange = () => {},
+    setToast = () => {},
+    initialActivePending = null,
+    initialRequested = false,
+    fetchOnEndless = false,
+    bookingKeepsStatus = false,
+    activateSuccessMessage = null,
+    collectionCode = null,
+  } = {}
+) {
   const { t } = useTranslation();
 
   const [submitting, setSubmitting] = useState(false);
@@ -83,18 +86,19 @@ export default function useThingBooking(thing, {
   const seededCodeRef = useRef(null);
 
   useEffect(() => {
-    const shouldLoad = isOwner
-      && (isDateBased || status === 'TAKEN' || (fetchOnEndless && isEndless));
+    const shouldLoad =
+      isOwner && (isDateBased || status === 'TAKEN' || (fetchOnEndless && isEndless));
     if (!shouldLoad || !code) return undefined;
 
-    const futureOnly = (rows) => rows.filter((b) => {
-      if (!b.end_date) return true; // GIFT/SELL: no dates, always current
-      const d = new Date(b.end_date);
-      d.setHours(0, 0, 0, 0);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return d >= today;
-    });
+    const futureOnly = (rows) =>
+      rows.filter((b) => {
+        if (!b.end_date) return true; // GIFT/SELL: no dates, always current
+        const d = new Date(b.end_date);
+        d.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return d >= today;
+      });
 
     const seed = (rows) => {
       const future = futureOnly(rows);
@@ -190,25 +194,41 @@ export default function useThingBooking(thing, {
       const res = await apiFetch(`/api/v1/bookings/${targetCode}/${action}/`, { method: 'POST' });
       if (res.ok) {
         if (action === 'accept') {
-          const updated = bookings.map((b) => (b.code === targetCode ? { ...b, status: 'ACCEPTED' } : b));
+          const updated = bookings.map((b) =>
+            b.code === targetCode ? { ...b, status: 'ACCEPTED' } : b
+          );
           const nextPending = updated.find((b) => b.code !== targetCode && b.status === 'PENDING');
           setBookings(updated);
           setActivePendingCode(nextPending?.code || null);
-          onThingChange(bookingKeepsStatus
-            ? { pending_booking: nextPending?.code || null }
-            : { status: 'INACTIVE', pending_booking: nextPending?.code || null });
+          onThingChange(
+            bookingKeepsStatus
+              ? { pending_booking: nextPending?.code || null }
+              : { status: 'INACTIVE', pending_booking: nextPending?.code || null }
+          );
         } else {
           const remaining = bookings.filter((b) => b.code !== targetCode);
           const nextPending = remaining.find((b) => b.status === 'PENDING');
           setBookings(remaining);
           setActivePendingCode(nextPending?.code || null);
-          onThingChange(bookingKeepsStatus
-            ? { pending_booking: nextPending?.code || null }
-            : { status: 'ACTIVE', pending_booking: nextPending?.code || null });
+          onThingChange(
+            bookingKeepsStatus
+              ? { pending_booking: nextPending?.code || null }
+              : { status: 'ACTIVE', pending_booking: nextPending?.code || null }
+          );
         }
-        setToast({ type: 'success', message: action === 'accept' ? t('thingPage.holdConfirmed') : t('thingPage.holdCancelled') });
+        setToast({
+          type: 'success',
+          message:
+            action === 'accept' ? t('thingPage.holdConfirmed') : t('thingPage.holdCancelled'),
+        });
       } else {
-        setToast({ type: 'error', message: action === 'accept' ? t('thingPage.errorConfirmingHold') : t('thingPage.errorCancellingHold') });
+        setToast({
+          type: 'error',
+          message:
+            action === 'accept'
+              ? t('thingPage.errorConfirmingHold')
+              : t('thingPage.errorCancellingHold'),
+        });
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });

@@ -41,21 +41,24 @@ function booking(over = {}) {
 
 function renderPage(rows) {
   apiFetch.mockImplementation((url, opts) => {
-    if (opts?.method === 'POST') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({ results: rows, next: null }) });
+    if (opts?.method === 'POST')
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ results: rows, next: null }),
+    });
   });
   return render(
     <MemoryRouter initialEntries={['/owner-bookings']}>
       <Routes>
         <Route path="/owner-bookings" element={<OwnerBookingsPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
 const acceptButton = () => screen.getByRole('button', { name: /Confirm this request/i });
-const postCalls = () =>
-  apiFetch.mock.calls.filter(([, o]) => o?.method === 'POST').map(([u]) => u);
+const postCalls = () => apiFetch.mock.calls.filter(([, o]) => o?.method === 'POST').map(([u]) => u);
 
 describe('Accepting a request that hands the thing over', () => {
   beforeEach(() => {
@@ -94,7 +97,9 @@ describe('Accepting a request that hands the thing over', () => {
   });
 
   test('a loan accepts straight away — it comes back, nothing is transferred', async () => {
-    renderPage([booking({ thing_type: 'LEND_THING', start_date: '2099-01-01', end_date: '2099-01-08' })]);
+    renderPage([
+      booking({ thing_type: 'LEND_THING', start_date: '2099-01-01', end_date: '2099-01-08' }),
+    ]);
     await screen.findByText('Blue armchair');
 
     fireEvent.click(acceptButton());
@@ -130,9 +135,15 @@ describe('ThingPage — the confirm that was never shown', () => {
 
   function renderThing(thing) {
     apiFetch.mockImplementation((url, opts) => {
-      if (opts?.method === 'POST') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      if (url.includes('/faq/')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ results: [] }) });
-      if (url.includes('/transfers/')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ total_transfers: 0, transfers: [] }) });
+      if (opts?.method === 'POST')
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      if (url.includes('/faq/'))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ results: [] }) });
+      if (url.includes('/transfers/'))
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ total_transfers: 0, transfers: [] }),
+        });
       return Promise.resolve({ ok: true, json: () => Promise.resolve(thing) });
     });
     return render(
@@ -140,16 +151,36 @@ describe('ThingPage — the confirm that was never shown', () => {
         <Routes>
           <Route path="/things/:thingCode" element={<ThingPage />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
   }
 
   const takenGift = {
-    code: 'THG001', type: 'GIFT_THING', headline: 'Blue armchair', description: '',
-    status: 'TAKEN', owner: 'USR001', owner_name: 'Me', is_endless: false,
-    thumbnail_url: '', gallery_urls: [], tags: [], collection_tags: [],
-    pending_questions: 0, pending_booking: 'BKG001', my_pending_booking: null,
-    bookings: [{ code: 'BKG001', requester_name: 'Lele', start_date: null, end_date: null, status: 'PENDING', created: '2026-08-01T10:00:00Z' }],
+    code: 'THG001',
+    type: 'GIFT_THING',
+    headline: 'Blue armchair',
+    description: '',
+    status: 'TAKEN',
+    owner: 'USR001',
+    owner_name: 'Me',
+    is_endless: false,
+    thumbnail_url: '',
+    gallery_urls: [],
+    tags: [],
+    collection_tags: [],
+    pending_questions: 0,
+    pending_booking: 'BKG001',
+    my_pending_booking: null,
+    bookings: [
+      {
+        code: 'BKG001',
+        requester_name: 'Lele',
+        start_date: null,
+        end_date: null,
+        status: 'PENDING',
+        created: '2026-08-01T10:00:00Z',
+      },
+    ],
   };
 
   test('accepting a taken gift asks first, and commits only on confirm', async () => {

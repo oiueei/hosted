@@ -169,7 +169,9 @@ describe('ImageUpload', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('PdfUpload', () => {
   test('offers a .pdf-only picker with the generic add-file label', () => {
-    const { container } = render(<PdfUpload id="doc" label="Welcome document" onChange={vi.fn()} />);
+    const { container } = render(
+      <PdfUpload id="doc" label="Welcome document" onChange={vi.fn()} />
+    );
 
     expect(fileInput(container)).toHaveAttribute('accept', '.pdf,application/pdf');
     // A document is not an image: the label must not be the photo one.

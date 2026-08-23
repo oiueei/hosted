@@ -45,7 +45,11 @@ export default function ThingReportFooter({ thingCode, onToast }) {
         onTriggerClick={() => setOpen((o) => !o)}
         onClose={() => setOpen(false)}
         triggerLabel={t('thingPage.report')}
-        triggerProps={{ variant: 'supplementary', size: 'small', iconStart: <IconAlertCircleFill aria-hidden="true" /> }}
+        triggerProps={{
+          variant: 'supplementary',
+          size: 'small',
+          iconStart: <IconAlertCircleFill aria-hidden="true" />,
+        }}
         title={t('thingPage.reportConfirmTitle')}
         body={t('thingPage.reportConfirmBody')}
         confirmLabel={t('thingPage.reportConfirm')}

@@ -43,8 +43,7 @@ function mockRoutes({
   });
 }
 
-const proposalCalls = () =>
-  globalThis.fetch.mock.calls.filter(([u]) => u.includes('/proposals/'));
+const proposalCalls = () => globalThis.fetch.mock.calls.filter(([u]) => u.includes('/proposals/'));
 
 function renderPage() {
   return render(
@@ -102,9 +101,7 @@ describe('ManageInvitesPage (the guest list)', () => {
     mockRoutes();
     renderPage();
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Resend invitation to this guest' })
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Resend invitation to this guest' }));
 
     await screen.findByText('Invitation resent.');
     const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/invite/'));
@@ -161,7 +158,10 @@ describe('ManageInvitesPage (the guest list)', () => {
   test('a refused decision keeps the suggestion and surfaces the reason', async () => {
     mockRoutes({
       collection: { ...COLLECTION, pending_proposals: [PROPOSAL] },
-      proposal: { status: 429, body: { error: 'Daily invitation limit reached. Try again tomorrow.' } },
+      proposal: {
+        status: 429,
+        body: { error: 'Daily invitation limit reached. Try again tomorrow.' },
+      },
     });
     renderPage();
     await screen.findByText('lili@example.com');
@@ -222,12 +222,16 @@ describe('ManageInvitesPage (the guest list)', () => {
  * with no explanation and no way to retry.
  */
 describe('ManageInvitesPage load failures', () => {
-  beforeEach(() => { localStorage.setItem('userCode', 'OWNER1'); });
-  afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'OWNER1');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
 
   const failWith = (status) => {
-    globalThis.fetch = vi.fn(() =>
-      Promise.resolve({ ok: false, status, json: async () => ({}) }));
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status, json: async () => ({}) }));
   };
 
   test('a server error stops the page instead of showing an empty guest list', async () => {

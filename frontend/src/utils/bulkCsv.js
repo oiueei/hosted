@@ -16,7 +16,16 @@ export const MAX_ROWS = 100;
 // of the list, mirroring where it lands in EXAMPLE_CSV's header below — an
 // existing CSV missing it simply never sets `raw.deposit`, safely skipped by
 // the same `undefined` check every other column already gets.
-const COLUMNS = ['type', 'headline', 'description', 'fee', 'availability', 'location', 'condition', 'deposit'];
+const COLUMNS = [
+  'type',
+  'headline',
+  'description',
+  'fee',
+  'availability',
+  'location',
+  'condition',
+  'deposit',
+];
 
 /**
  * Map one parsed CSV record to a row payload. `withPhoto` keeps the `photo`
@@ -34,7 +43,10 @@ export function mapRow(raw, withPhoto) {
   // Tags are a single cell holding a `|`-separated list (pipe avoids clashing
   // with the CSV field delimiter, which is `;` in some locales).
   if (raw.tags !== undefined && String(raw.tags).trim() !== '') {
-    const tags = String(raw.tags).split('|').map((tag) => tag.trim()).filter(Boolean);
+    const tags = String(raw.tags)
+      .split('|')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
     if (tags.length > 0) row.tags = tags;
   }
   if (withPhoto && raw.photo !== undefined && String(raw.photo).trim() !== '') {

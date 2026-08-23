@@ -20,7 +20,9 @@ function jsonResponse({ ok, status, filename }) {
   return {
     ok,
     status,
-    headers: { get: (name) => (name === 'Content-Disposition' ? `attachment; filename="${filename}"` : null) },
+    headers: {
+      get: (name) => (name === 'Content-Disposition' ? `attachment; filename="${filename}"` : null),
+    },
     blob: () => Promise.resolve(new Blob(['{}'], { type: 'application/json' })),
   };
 }
@@ -32,7 +34,11 @@ describe('DataExportPage', () => {
   });
 
   test('lists what the export excludes — the point of the page', () => {
-    render(<MemoryRouter><DataExportPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
 
     // The 8-point list EXPORT_TOOL.md specifies, checked by content: a
     // reordering or a rewrite that drops one still reads wrong here.
@@ -45,7 +51,11 @@ describe('DataExportPage', () => {
     apiFetchMock.mockResolvedValue(
       jsonResponse({ ok: true, status: 200, filename: 'oiueei-ABC123-2026-08-21.json' })
     );
-    render(<MemoryRouter><DataExportPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /download my data/i }));
 
@@ -57,7 +67,11 @@ describe('DataExportPage', () => {
 
   test('a 429 says "too many attempts", not a generic error', async () => {
     apiFetchMock.mockResolvedValue({ ok: false, status: 429 });
-    render(<MemoryRouter><DataExportPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /download my data/i }));
 
@@ -67,7 +81,11 @@ describe('DataExportPage', () => {
 
   test('any other failure shows the export-specific error, and nothing downloads', async () => {
     apiFetchMock.mockResolvedValue({ ok: false, status: 500 });
-    render(<MemoryRouter><DataExportPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /download my data/i }));
 
@@ -77,7 +95,11 @@ describe('DataExportPage', () => {
 
   test('a network failure is reported as a connection error', async () => {
     apiFetchMock.mockRejectedValue(new Error('offline'));
-    render(<MemoryRouter><DataExportPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /download my data/i }));
 

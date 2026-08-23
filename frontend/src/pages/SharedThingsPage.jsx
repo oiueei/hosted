@@ -30,7 +30,9 @@ export default function SharedThingsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
-  useEffect(() => { document.title = t('titles.sharedThings'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.sharedThings');
+  }, [t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -90,7 +92,9 @@ export default function SharedThingsPage() {
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">{error}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {error}
+        </Notification>
       </PageLayout>
     );
   }
@@ -133,7 +137,12 @@ export default function SharedThingsPage() {
       {next && (
         <>
           <div className="spacer-m" />
-          <Button variant="secondary" onClick={loadMore} disabled={loadingMore} style={btnSecondaryStyle}>
+          <Button
+            variant="secondary"
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={btnSecondaryStyle}
+          >
             {t('common.loadMore')}
           </Button>
         </>

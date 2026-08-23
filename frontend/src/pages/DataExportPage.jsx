@@ -46,7 +46,9 @@ const DONT_TAKE_KEYS = [
  */
 export default function DataExportPage() {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t('titles.dataExport'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.dataExport');
+  }, [t]);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
 
@@ -79,12 +81,16 @@ export default function DataExportPage() {
       <div style={{ maxWidth: '600px' }}>
         <h2>{t('dataExport.whatYouTakeTitle')}</h2>
         <ul>
-          {TAKE_KEYS.map((key) => <li key={key}>{t(`dataExport.take.${key}`)}</li>)}
+          {TAKE_KEYS.map((key) => (
+            <li key={key}>{t(`dataExport.take.${key}`)}</li>
+          ))}
         </ul>
         <div className="spacer-m" />
         <h2>{t('dataExport.whatYouDontTakeTitle')}</h2>
         <ol>
-          {DONT_TAKE_KEYS.map((key) => <li key={key}>{t(`dataExport.dontTake.${key}`)}</li>)}
+          {DONT_TAKE_KEYS.map((key) => (
+            <li key={key}>{t(`dataExport.dontTake.${key}`)}</li>
+          ))}
         </ol>
         <div className="spacer-m" />
         {error && (

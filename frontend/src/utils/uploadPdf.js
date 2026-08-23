@@ -27,13 +27,7 @@ export async function uploadPdf(file, folder = 'oiueei/documents') {
     }),
   });
   if (!ticketRes.ok) throw new Error('signature_failed');
-  const {
-    url,
-    method,
-    headers,
-    key,
-    public_url: publicUrl,
-  } = await ticketRes.json();
+  const { url, method, headers, key, public_url: publicUrl } = await ticketRes.json();
 
   const uploadRes = await fetch(url, { method, headers, body: file });
   if (!uploadRes.ok) throw new Error('upload_failed');

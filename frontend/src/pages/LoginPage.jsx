@@ -9,7 +9,9 @@ import { popInPath, faqPath } from '../deployment';
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t('titles.login'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.login');
+  }, [t]);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'alert' | 'error'
@@ -55,9 +57,19 @@ export default function LoginPage() {
     >
       <div
         className="form-hero form-hero--no-watermark"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
           <ContactCorner />
           <h1 className="form-hero-title" aria-label={t('login.title')}>
             <span className="form-hero-title-logo" aria-hidden="true" />
@@ -70,26 +82,52 @@ export default function LoginPage() {
         />
       </div>
       <div className="page-container">
-        <p className="section-mt measure" style={{ fontWeight: 700 }}>{t('login.pitch')}</p>
-        <p className="measure" style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}>{t('login.description')}</p>
+        <p className="section-mt measure" style={{ fontWeight: 700 }}>
+          {t('login.pitch')}
+        </p>
+        <p
+          className="measure"
+          style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}
+        >
+          {t('login.description')}
+        </p>
         <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
           <Trans
             i18nKey="login.openSource"
             components={[
               <span key="0" />,
               // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
-              <a key="1" href="https://github.com/oiueei/standalone" target="_blank" rel="noopener noreferrer" />,
+              <a
+                key="1"
+                href="https://github.com/oiueei/standalone"
+                target="_blank"
+                rel="noopener noreferrer"
+              />,
             ]}
           />
         </p>
-        <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>{t('login.manifesto')}</p>
-        <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
+        <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
+          {t('login.manifesto')}
+        </p>
+        <p
+          className="measure"
+          style={{
+            marginTop: 'var(--spacing-2-xs)',
+            color: 'var(--color-black-60)',
+            fontSize: 'var(--fontsize-body-s)',
+          }}
+        >
           <Trans
             i18nKey="login.noBanner"
             components={[
               <span key="0" />,
               // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
-              <a key="1" href="https://github.com/oiueei/standalone#privacy" target="_blank" rel="noopener noreferrer" />,
+              <a
+                key="1"
+                href="https://github.com/oiueei/standalone#privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+              />,
             ]}
           />
         </p>
@@ -97,7 +135,14 @@ export default function LoginPage() {
             the standalone repo, filled on the deploy branch — the same split as
             src/legal/. Only rendered when the operator has actually written one. */}
         {t('login.operator') ? (
-          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)', fontSize: 'var(--fontsize-body-s)' }}>
+          <p
+            className="measure"
+            style={{
+              marginTop: 'var(--spacing-2-xs)',
+              color: 'var(--color-black-60)',
+              fontSize: 'var(--fontsize-body-s)',
+            }}
+          >
             {t('login.operator')}
           </p>
         ) : null}
@@ -108,17 +153,36 @@ export default function LoginPage() {
         </p>
         {status ? (
           <>
-            <Notification label={status === 'success' ? t('common.sent') : status === 'alert' ? t('common.warning') : t('common.error')} type={status}>
+            <Notification
+              label={
+                status === 'success'
+                  ? t('common.sent')
+                  : status === 'alert'
+                    ? t('common.warning')
+                    : t('common.error')
+              }
+              type={status}
+            >
               {message}
             </Notification>
             <div style={{ marginTop: 'var(--spacing-s)' }}>
-              <Button variant="secondary" onClick={() => { setStatus(null); setMessage(''); }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setStatus(null);
+                  setMessage('');
+                }}
+              >
                 {t('login.tryAnotherEmail')}
               </Button>
             </div>
           </>
         ) : (
-          <form onSubmit={handleSubmit} className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
+          <form
+            onSubmit={handleSubmit}
+            className="measure"
+            style={{ marginTop: 'var(--spacing-s)' }}
+          >
             <TextInput
               id="login-email"
               label={t('login.emailLabel')}

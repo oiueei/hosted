@@ -18,7 +18,9 @@ const CONTENT = { es: legalEs, ca: legalCa, en: legalEn };
  */
 export default function LegalPage() {
   const { t, i18n } = useTranslation();
-  useEffect(() => { document.title = t('titles.legal'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.legal');
+  }, [t]);
   const lang = (i18n.language || 'en').split('-')[0];
   const content = CONTENT[lang] || CONTENT.en;
   const isLoggedIn = !!localStorage.getItem('userCode');

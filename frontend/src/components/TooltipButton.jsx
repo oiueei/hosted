@@ -26,7 +26,10 @@ export default function TooltipButton({ tooltip, onClick, disabled, children }) 
   // Escape re-shows on the next hover/focus, so a dismissal is never sticky.
   const [dismissed, setDismissed] = useState(false);
 
-  const show = () => { setDismissed(false); setVisible(true); };
+  const show = () => {
+    setDismissed(false);
+    setVisible(true);
+  };
   const hide = () => setVisible(false);
 
   // WCAG 1.4.13 "dismissible": Escape hides the bubble without moving the
@@ -38,7 +41,9 @@ export default function TooltipButton({ tooltip, onClick, disabled, children }) 
   // own Escape.
   useEffect(() => {
     if (!visible || dismissed) return undefined;
-    const onKeyDown = (e) => { if (e.key === 'Escape') setDismissed(true); };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setDismissed(true);
+    };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [visible, dismissed]);

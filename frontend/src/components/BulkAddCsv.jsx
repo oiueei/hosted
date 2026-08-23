@@ -14,9 +14,17 @@ import InfoPopover from './InfoPopover';
 // The server's `IMAGE_TYPES` allow-list (core/views/upload.py).
 const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif)$/i;
 const MIME_BY_EXT = {
-  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
-  gif: 'image/gif', bmp: 'image/bmp', tif: 'image/tiff', tiff: 'image/tiff',
-  avif: 'image/avif', heic: 'image/heic', heif: 'image/heif',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  bmp: 'image/bmp',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  avif: 'image/avif',
+  heic: 'image/heic',
+  heif: 'image/heif',
 };
 // Shown in the format InfoPopover. Language-agnostic, so it lives here rather
 // than in the i18n bundles (matches BulkInviteCsv's EXAMPLE_CSV).
@@ -83,7 +91,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
     Papa.parse(file, {
       ...CSV_PARSE_OPTIONS,
       complete: (result) => {
-        const parsed = (result.data || []).map((raw) => mapRow(raw, false))
+        const parsed = (result.data || [])
+          .map((raw) => mapRow(raw, false))
           .filter((row) => Object.keys(row).length > 0);
         const err = validate(parsed);
         if (err) setError(err);
@@ -114,7 +123,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
       Papa.parse(text, {
         ...CSV_PARSE_OPTIONS,
         complete: (result) => {
-          const parsed = (result.data || []).map((raw) => mapRow(raw, true))
+          const parsed = (result.data || [])
+            .map((raw) => mapRow(raw, true))
             .filter((row) => Object.keys(row).length > 0);
           const err = validate(parsed);
           if (err) {
@@ -122,8 +132,9 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
             return;
           }
           // Every referenced photo must actually be in the ZIP.
-          const missing = [...new Set(parsed.filter((r) => r.photo).map((r) => r.photo))]
-            .filter((name) => !images.has(name.toLowerCase()));
+          const missing = [...new Set(parsed.filter((r) => r.photo).map((r) => r.photo))].filter(
+            (name) => !images.has(name.toLowerCase())
+          );
           if (missing.length > 0) {
             setError(t('bulkAdd.zipMissingImages', { files: missing.join(', ') }));
             return;
@@ -169,7 +180,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         }
         // Swap the `photo` filename for the uploaded `thumbnail` public_id.
         payloadRows = rows.map(({ photo, ...rest }) =>
-          photo ? { ...rest, thumbnail: idByName.get(photo) } : rest);
+          photo ? { ...rest, thumbnail: idByName.get(photo) } : rest
+        );
       } else {
         payloadRows = rows;
       }
@@ -208,7 +220,9 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
   };
 
   const importLabel = importing
-    ? (uploadProgress ? t('bulkAdd.uploadingImages', uploadProgress) : t('bulkAdd.importing'))
+    ? uploadProgress
+      ? t('bulkAdd.uploadingImages', uploadProgress)
+      : t('bulkAdd.importing')
     : t('bulkAdd.import', { count: rows.length });
 
   return (

@@ -21,7 +21,14 @@ const MAX_LEN = 32;
  *
  * Props: tags (string[]), onChange (string[]), label, placeholder, helperText, max.
  */
-export default function TagInput({ tags = [], onChange, label, placeholder, helperText, max = MAX_TAGS }) {
+export default function TagInput({
+  tags = [],
+  onChange,
+  label,
+  placeholder,
+  helperText,
+  max = MAX_TAGS,
+}) {
   const { t } = useTranslation();
   const L = useLocalized();
   const [input, setInput] = useState('');

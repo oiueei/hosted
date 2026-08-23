@@ -44,7 +44,11 @@ function mockRoutes({ thing, ownThings = [], request = { ok: true, status: 201 }
     const respond = (status, body) =>
       Promise.resolve({ ok: status < 400, status, json: async () => body });
     if (url.endsWith('/calendar/')) return respond(200, []);
-    if (url.endsWith('/request/')) return respond(request.status, request.body ?? { message: 'Booking request sent', booking_code: 'BK0001' });
+    if (url.endsWith('/request/'))
+      return respond(
+        request.status,
+        request.body ?? { message: 'Booking request sent', booking_code: 'BK0001' }
+      );
     if (url === '/api/v1/things/') return respond(200, { results: ownThings });
     if (options.method === undefined || options.method === 'GET') return respond(200, thing);
     return respond(404, {});
@@ -111,6 +115,4 @@ describe('RequestThingPage (what the pickers produce is what the POST carries)',
     expect(await screen.findByText('Date overlaps with another booking.')).toBeInTheDocument();
     expect(screen.queryByText("You're all set!")).not.toBeInTheDocument();
   });
-
-
 });

@@ -87,7 +87,8 @@ export const displayToIso = (display) => {
 
 // Weekday rule: allowed when unrestricted, or the date's Python weekday is listed.
 export const weekdayAllowed = (date, rentalWeekdays) =>
-  rentalWeekdays.length === 0 || rentalWeekdays.includes(jsToPyWeekday(parseLocalDate(date).getDay()));
+  rentalWeekdays.length === 0 ||
+  rentalWeekdays.includes(jsToPyWeekday(parseLocalDate(date).getDay()));
 
 // Is `date` inside any blocked [start_date, end_date] period (both ends inclusive)?
 // This is the calendar *display* range — the item is out from pickup through the

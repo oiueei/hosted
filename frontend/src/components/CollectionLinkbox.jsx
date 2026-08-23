@@ -24,11 +24,19 @@ export default function CollectionLinkbox({ collection, showInfo = false }) {
   return (
     <Linkbox
       href={`/collections/${collection.code}`}
-      onClick={(e) => { e.preventDefault(); navigate(`/collections/${collection.code}`); }}
+      onClick={(e) => {
+        e.preventDefault();
+        navigate(`/collections/${collection.code}`);
+      }}
       heading={headline}
-      text={showInfo
-        ? t('userPage.collectionInfo', { things: collection.things.length, guests: collection.invites.length })
-        : undefined}
+      text={
+        showInfo
+          ? t('userPage.collectionInfo', {
+              things: collection.things.length,
+              guests: collection.invites.length,
+            })
+          : undefined
+      }
       linkAriaLabel={t('userPage.viewCollection', { headline })}
       linkboxAriaLabel={headline}
       border

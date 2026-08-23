@@ -61,7 +61,9 @@ describe('mapRow — deposit (S6)', () => {
 
 describe('validateRows', () => {
   const rowsOf = (n, withHeadline = true) =>
-    Array.from({ length: n }, (_, i) => (withHeadline ? { headline: `h${i}` } : { type: 'GIFT_THING' }));
+    Array.from({ length: n }, (_, i) =>
+      withHeadline ? { headline: `h${i}` } : { type: 'GIFT_THING' }
+    );
 
   test('flags an empty set', () => {
     expect(validateRows([])).toBe('empty');
@@ -93,7 +95,9 @@ describe('CSV_PARSE_OPTIONS', () => {
     let captured;
     Papa.parse(text, {
       ...CSV_PARSE_OPTIONS,
-      complete: (result) => { captured = result; },
+      complete: (result) => {
+        captured = result;
+      },
     });
     expect(captured.meta.delimiter).toBe(';');
     expect(captured.meta.fields).toEqual(['headline', 'type', 'fee']);
@@ -108,7 +112,9 @@ describe('CSV_PARSE_OPTIONS', () => {
     let captured;
     Papa.parse(text, {
       ...CSV_PARSE_OPTIONS,
-      complete: (result) => { captured = result; },
+      complete: (result) => {
+        captured = result;
+      },
     });
     expect(captured.meta.delimiter).toBe(',');
     expect(captured.meta.fields).toEqual(['headline', 'type']);

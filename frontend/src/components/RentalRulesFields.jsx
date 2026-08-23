@@ -54,7 +54,9 @@ export default function RentalRulesFields({
         }}
         options={RENTAL_DURATION_PRESETS.map((p) => ({ label: t(p.key), value: String(p.days) }))}
         value={rentalDurations.map((d) => ({ label: durationLabel(d, t), value: String(d) }))}
-        onChange={(opts) => setRentalDurations(opts.map((o) => Number(o.value)).sort((a, b) => a - b))}
+        onChange={(opts) =>
+          setRentalDurations(opts.map((o) => Number(o.value)).sort((a, b) => a - b))
+        }
       />
       <div className="weekday-field">
         <p className="weekday-field-label" id={`${idPrefix}-rental-weekdays-label`}>
@@ -83,9 +85,15 @@ export default function RentalRulesFields({
                       : [...rentalWeekdays, w].sort((a, b) => a - b)
                   )
                 }
-                style={selected && theeemeColor01
-                  ? { backgroundColor: `var(--color-${theeemeColor01})`, borderColor: `var(--color-${theeemeColor01})`, color: 'var(--color-white)' }
-                  : undefined}
+                style={
+                  selected && theeemeColor01
+                    ? {
+                        backgroundColor: `var(--color-${theeemeColor01})`,
+                        borderColor: `var(--color-${theeemeColor01})`,
+                        color: 'var(--color-white)',
+                      }
+                    : undefined
+                }
               >
                 {weekdayNarrow(w, i18n.language)}
               </button>

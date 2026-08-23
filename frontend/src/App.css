@@ -5,7 +5,12 @@
 }
 
 body {
-  font-family: var(--font-default), Arial, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    var(--font-default),
+    Arial,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   background: var(--color-black-5);
   color: var(--color-black-90);
 }
@@ -311,11 +316,11 @@ body {
   padding: var(--spacing-l) 0;
 }
 
-div[class*="Linkbox-module_linkbox"] {
+div[class*='Linkbox-module_linkbox'] {
   max-width: 400px;
 }
 
-.linkbox-full-width div[class*="Linkbox-module_linkbox"] {
+.linkbox-full-width div[class*='Linkbox-module_linkbox'] {
   max-width: 100%;
 }
 
@@ -430,7 +435,7 @@ div[class*="Linkbox-module_linkbox"] {
 }
 
 /* HDS input helper text → body-s (down from HDS default body-m) */
-[class*="helper-text"] {
+[class*='helper-text'] {
   font-size: var(--fontsize-body-s) !important;
 }
 
@@ -461,7 +466,7 @@ div[class*="Linkbox-module_linkbox"] {
   border-color: var(--color-bus);
 }
 
-.tag-chip[aria-pressed="true"] {
+.tag-chip[aria-pressed='true'] {
   background-color: var(--color-bus);
   color: var(--color-white);
 }
@@ -502,7 +507,6 @@ div[class*="Linkbox-module_linkbox"] {
   }
 }
 
-
 /* Collections render as image-less full-width rows, one under another at
    every breakpoint — thing cards keep their thumbnail grid, so this is what
    visually tells a collection row apart from a thing card (S8). Unlike a
@@ -516,21 +520,21 @@ div[class*="Linkbox-module_linkbox"] {
 /* Neutralise the global 400px Linkbox cap for these full-width rows (the
    `linkbox-full-width` pattern used elsewhere, e.g. the CollectionPage
    Welcome Linkbox) and give them the same card look thing cards have. */
-.collections-grid div[class*="Linkbox-module_linkbox"] {
+.collections-grid div[class*='Linkbox-module_linkbox'] {
   max-width: 100%;
   background-color: var(--color-white);
 }
 
-.collections-grid div[class*="Linkbox-module_border"] {
+.collections-grid div[class*='Linkbox-module_border'] {
   border: none;
 }
 
-.collections-grid div[class*="Linkbox-module_withBackground"] {
+.collections-grid div[class*='Linkbox-module_withBackground'] {
   box-sizing: border-box;
 }
 
 /* Match the collection Linkbox heading to .thing-card-headline (heading-s / 700). */
-.collections-grid *[class*="Linkbox-module_heading"] {
+.collections-grid *[class*='Linkbox-module_heading'] {
   font-size: var(--fontsize-heading-s);
   font-weight: 700;
   line-height: 1.2;
@@ -538,26 +542,42 @@ div[class*="Linkbox-module_linkbox"] {
 }
 
 /* Spacers */
-.spacer-xxxx, 
-.spacer-xxxs, 
-.spacer-xxs, 
-.spacer-xs, 
-.spacer-s, 
-.spacer-m, 
+.spacer-xxxx,
+.spacer-xxxs,
+.spacer-xxs,
+.spacer-xs,
+.spacer-s,
+.spacer-m,
 .spacer-l,
-.spacer-xl { 
-  margin: 0; 
+.spacer-xl {
+  margin: 0;
   padding: 0;
 }
 
-.spacer-xxxx { height: 0 }
-.spacer-xxxs { height: var(--spacing-3-xs); }
-.spacer-xxs { height: var(--spacing-2-xs); }
-.spacer-xs { height: var(--spacing-xs); }
-.spacer-s  { height: var(--spacing-s); }
-.spacer-m  { height: var(--spacing-m); }
-.spacer-l  { height: var(--spacing-l); }
-.spacer-xl { height: var(--spacing-xl); }
+.spacer-xxxx {
+  height: 0;
+}
+.spacer-xxxs {
+  height: var(--spacing-3-xs);
+}
+.spacer-xxs {
+  height: var(--spacing-2-xs);
+}
+.spacer-xs {
+  height: var(--spacing-xs);
+}
+.spacer-s {
+  height: var(--spacing-s);
+}
+.spacer-m {
+  height: var(--spacing-m);
+}
+.spacer-l {
+  height: var(--spacing-l);
+}
+.spacer-xl {
+  height: var(--spacing-xl);
+}
 
 /* Utility classes */
 .form-grid {
@@ -573,7 +593,7 @@ div[class*="Linkbox-module_linkbox"] {
   min-width: 0;
 }
 
-.form-grid > div[class*="Select-module"] {
+.form-grid > div[class*='Select-module'] {
   max-width: 100%;
 }
 
@@ -754,11 +774,10 @@ div[class*="Linkbox-module_linkbox"] {
   }
   /* HDS Select root is capped at max-width:420px — let it fill the wrap so the
      share dropdown goes full-width like the buttons above (same breakpoint). */
-  .share-menu-wrap [class*="Select-module_root"] {
+  .share-menu-wrap [class*='Select-module_root'] {
     max-width: 100%;
   }
 }
-
 
 .back-link {
   display: inline-block;
@@ -808,7 +827,6 @@ div[class*="Linkbox-module_linkbox"] {
   border-radius: 8px;
   margin-bottom: var(--spacing-m);
 }
-
 
 .detail-image {
   max-width: 400px;
@@ -925,7 +943,7 @@ div[class*="Linkbox-module_linkbox"] {
    2.5.5 target — so bump these interactive ones to 44px (matching the
    deliberate .tag-chip / .weekday-chip targets). Scoped to role="button" so
    the non-interactive label tags on cards keep their compact size. (O8) */
-.tag-chip-row [role="button"] {
+.tag-chip-row [role='button'] {
   min-height: 44px;
 }
 
@@ -958,11 +976,11 @@ div[class*="Linkbox-module_linkbox"] {
   gap: var(--spacing-xs);
 }
 
-.faq-grid figure[class*="Highlight-module"] {
+.faq-grid figure[class*='Highlight-module'] {
   margin: 0;
 }
 
-figure[class*="Highlight-module_highlight"] {
+figure[class*='Highlight-module_highlight'] {
   width: 100% !important;
   margin: 0 !important;
   max-width: 100% !important;
@@ -1068,13 +1086,13 @@ figure[class*="Highlight-module_highlight"] {
 }
 
 /* Make the HDS FileInput button fill the available width and follow theeeme colors */
-.image-upload div:has(> input[type="file"]),
-.pdf-upload div:has(> input[type="file"]) {
+.image-upload div:has(> input[type='file']),
+.pdf-upload div:has(> input[type='file']) {
   display: block;
   width: 100%;
 }
-.image-upload button[aria-hidden="true"],
-.pdf-upload button[aria-hidden="true"] {
+.image-upload button[aria-hidden='true'],
+.pdf-upload button[aria-hidden='true'] {
   width: 100%;
   --border-color: var(--upload-border);
   --color: var(--upload-color);
@@ -1274,19 +1292,19 @@ figure[class*="Highlight-module_highlight"] {
  * same row even when the label is multi-line (e.g. long helper text under
  * the title). `align-items: flex-start` aligns the pill with the title
  * rather than the vertical centre of a tall label. */
-.toggle-left [class*="toggleButtonContainerInlineVariant"] {
+.toggle-left [class*='toggleButtonContainerInlineVariant'] {
   flex-direction: row-reverse;
   justify-content: flex-end;
   align-items: flex-start;
   flex-wrap: nowrap;
   gap: var(--spacing-s);
 }
-.toggle-left [class*="toggleButtonContainerInlineVariant"] > button {
+.toggle-left [class*='toggleButtonContainerInlineVariant'] > button {
   margin-left: 0 !important;
   flex-shrink: 0;
 }
 /* Disabled+checked toggle: darker grey than HDS default (black-10) */
-.toggle-left button[aria-pressed="true"][disabled] {
+.toggle-left button[aria-pressed='true'][disabled] {
   background-color: var(--color-black-90) !important;
   border-color: var(--color-black-90) !important;
 }
@@ -1298,10 +1316,10 @@ figure[class*="Highlight-module_highlight"] {
    selection without an extra click. The first rule lifts the cap; the
    second hides the now-redundant show-all button. The clear-all button (if
    ever shown) is preserved. */
-[class*="Select-module_tagListContainer"] [class*="Select-module_tagList__"] {
+[class*='Select-module_tagListContainer'] [class*='Select-module_tagList__'] {
   max-height: unset !important;
 }
-[class*="Select-module_tagListContainer"] [class*="showAllButton"] {
+[class*='Select-module_tagListContainer'] [class*='showAllButton'] {
   display: none !important;
 }
 

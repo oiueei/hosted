@@ -28,7 +28,9 @@ export default function ImageCarousel({ images = [], alt = '', variant = 'detail
   const isCard = variant === 'card';
   const go = (delta) => setIndex((i) => Math.min(Math.max(i + delta, 0), count - 1));
 
-  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
   const onTouchEnd = (e) => {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
@@ -39,7 +41,11 @@ export default function ImageCarousel({ images = [], alt = '', variant = 'detail
   const announce = t('thingPage.galleryImageAlt', { name: alt, index: index + 1, total: count });
   const img = (
     <img
-      className={isCard ? 'image-carousel-image image-carousel-image--card' : 'detail-image image-carousel-image'}
+      className={
+        isCard
+          ? 'image-carousel-image image-carousel-image--card'
+          : 'detail-image image-carousel-image'
+      }
       src={images[index]}
       alt={announce}
       loading="lazy"
@@ -55,11 +61,19 @@ export default function ImageCarousel({ images = [], alt = '', variant = 'detail
       aria-roledescription="carousel"
       aria-label={t('thingPage.galleryLabel')}
       onKeyDown={(e) => {
-        if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
-        if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          go(-1);
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          go(1);
+        }
       }}
     >
-      <span className="sr-only" aria-live="polite">{announce}</span>
+      <span className="sr-only" aria-live="polite">
+        {announce}
+      </span>
       <div
         className={`image-carousel-viewport${isCard ? ' image-carousel-viewport--card' : ''}`}
         onTouchStart={onTouchStart}

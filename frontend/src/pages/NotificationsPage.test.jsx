@@ -17,8 +17,7 @@ function renderWithToken(path = '/me/notifications/TOK123') {
   );
 }
 
-const activityToggle = () =>
-  screen.getByRole('button', { name: /Activity between users/ });
+const activityToggle = () => screen.getByRole('button', { name: /Activity between users/ });
 const newsToggle = () => screen.getByRole('button', { name: /News and announcements/ });
 
 describe('NotificationsPage (email prefs via the signed footer token)', () => {
@@ -50,9 +49,7 @@ describe('NotificationsPage (email prefs via the signed footer token)', () => {
     });
     renderWithToken();
 
-    expect(
-      await screen.findByText(/This link is invalid or has expired/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/This link is invalid or has expired/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 

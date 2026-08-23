@@ -19,7 +19,14 @@ import hdsLang from '../utils/hdsLang';
  *   folder      – upload folder (default 'oiueei/users')
  *   helperText  – optional helper text shown below the input
  */
-export default function ImageUpload({ id, label, onChange, currentUrl, folder = 'oiueei/users', helperText }) {
+export default function ImageUpload({
+  id,
+  label,
+  onChange,
+  currentUrl,
+  folder = 'oiueei/users',
+  helperText,
+}) {
   const { t, i18n } = useTranslation();
   const { uploadStyle } = useTheeeme();
   const [uploading, setUploading] = useState(false);
@@ -93,7 +100,7 @@ export default function ImageUpload({ id, label, onChange, currentUrl, folder = 
           disabled={uploading}
           language={hdsLang(i18n.language)}
           buttonLabel={t('upload.addFile')}
-          helperText={uploading ? t('upload.uploading') : (helperText || t('upload.acceptHint'))}
+          helperText={uploading ? t('upload.uploading') : helperText || t('upload.acceptHint')}
           errorText={error || undefined}
           invalid={!!error}
         />

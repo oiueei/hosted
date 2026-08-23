@@ -42,14 +42,35 @@ export default function LeaveCollectionPage() {
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
 
   return (
-    <PageLayout title={t('leaveCollection.pageTitle', { headline })} backTo={backPath} backLabel={headline}>
-      <p><Trans i18nKey="leaveCollection.warning" values={{ headline }} components={[<strong key="0" />]} /></p>
+    <PageLayout
+      title={t('leaveCollection.pageTitle', { headline })}
+      backTo={backPath}
+      backLabel={headline}
+    >
+      <p>
+        <Trans
+          i18nKey="leaveCollection.warning"
+          values={{ headline }}
+          components={[<strong key="0" />]}
+        />
+      </p>
       <div className="spacer-xs" />
       <div className="form-grid">
-        <Button fullWidth disabled={leaving} onClick={handleLeave} style={btnStyle} iconStart={<IconSignout aria-hidden="true" />}>
+        <Button
+          fullWidth
+          disabled={leaving}
+          onClick={handleLeave}
+          style={btnStyle}
+          iconStart={<IconSignout aria-hidden="true" />}
+        >
           {leaving ? t('leaveCollection.leaving') : t('leaveCollection.leave')}
         </Button>
-        <Button variant="secondary" fullWidth onClick={() => navigate(backPath)} style={btnSecondaryStyle}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => navigate(backPath)}
+          style={btnSecondaryStyle}
+        >
           {t('common.cancel')}
         </Button>
       </div>

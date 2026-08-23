@@ -28,13 +28,17 @@ export default function UserPage() {
 
   const userCode = paramCode || localStorage.getItem('userCode');
   const isOwnProfile = !paramCode || paramCode === localStorage.getItem('userCode');
-  useEffect(() => { document.title = user ? t('titles.user', { name: user.name || 'Profile' }) : t('titles.user', { name: 'Profile' }); }, [user, t]);
+  useEffect(() => {
+    document.title = user
+      ? t('titles.user', { name: user.name || 'Profile' })
+      : t('titles.user', { name: 'Profile' });
+  }, [user, t]);
 
   useEffect(() => {
     if (!userCode) {
       // If no userCode yet, fetch /me to get it
       apiFetch('/api/v1/auth/me/')
-        .then((res) => res.ok ? res.json() : Promise.reject())
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => {
           if (data.code) localStorage.setItem('userCode', data.code);
           setUser(data);
@@ -61,7 +65,6 @@ export default function UserPage() {
       }
     };
     fetchUser();
-
   }, [userCode, isOwnProfile, t]);
 
   useEffect(() => {
@@ -79,7 +82,9 @@ export default function UserPage() {
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">{error}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {error}
+        </Notification>
       </PageLayout>
     );
   }
@@ -89,35 +94,65 @@ export default function UserPage() {
   }
 
   // Use theeeme colors from user data (own profile) or localStorage (other profiles)
-  const tc = user.theeeme_colors || (() => {
-    try { return JSON.parse(localStorage.getItem('theeemeColors')) || {}; } catch { return {}; }
-  })();
-  const btnStyle = tc.color_01 ? {
-    '--background-color': `var(--color-${tc.color_01})`,
-    '--background-color-hover': `var(--color-${tc.color_01}-dark)`,
-    '--color': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-    '--border-color': `var(--color-${tc.color_01})`,
-  } : undefined;
-  const btnSecondaryStyle = tc.color_01 ? {
-    '--background-color': 'var(--color-white)',
-    '--border-color': `var(--color-${tc.color_01})`,
-    '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
-    '--background-color-hover': `var(--color-${tc.color_01})`,
-    '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-  } : undefined;
+  const tc =
+    user.theeeme_colors ||
+    (() => {
+      try {
+        return JSON.parse(localStorage.getItem('theeemeColors')) || {};
+      } catch {
+        return {};
+      }
+    })();
+  const btnStyle = tc.color_01
+    ? {
+        '--background-color': `var(--color-${tc.color_01})`,
+        '--background-color-hover': `var(--color-${tc.color_01}-dark)`,
+        '--color': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
+        '--border-color': `var(--color-${tc.color_01})`,
+      }
+    : undefined;
+  const btnSecondaryStyle = tc.color_01
+    ? {
+        '--background-color': 'var(--color-white)',
+        '--border-color': `var(--color-${tc.color_01})`,
+        '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
+        '--background-color-hover': `var(--color-${tc.color_01})`,
+        '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
+      }
+    : undefined;
 
   const koroType = localStorage.getItem('koro') || 'basic';
 
   const heroContent = (
-    <div className="form-hero-content" style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}>
+    <div
+      className="form-hero-content"
+      style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+    >
       <ContactCorner />
       <BackLink to="/" label={t('common.home')} />
       <div className="spacer-m" />
-      {user.headline && <p style={{ fontSize: 'var(--fontsize-heading-m)', fontWeight: 700, lineHeight: 'var(--lineheight-m)', letterSpacing: '-0.2px', color: 'var(--hero-text-color, var(--color-black-90))' }}>{user.headline}</p>}
+      {user.headline && (
+        <p
+          style={{
+            fontSize: 'var(--fontsize-heading-m)',
+            fontWeight: 700,
+            lineHeight: 'var(--lineheight-m)',
+            letterSpacing: '-0.2px',
+            color: 'var(--hero-text-color, var(--color-black-90))',
+          }}
+        >
+          {user.headline}
+        </p>
+      )}
       <h1 className="form-hero-title">{user.name || user.email}</h1>
       {user.created && (
         <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
-          {t('userPage.memberSince', { date: new Date(user.created).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' }) })}
+          {t('userPage.memberSince', {
+            date: new Date(user.created).toLocaleDateString(i18n.language, {
+              month: 'long',
+              year: 'numeric',
+            }),
+          })}
         </p>
       )}
       {isOwnProfile && (
@@ -126,7 +161,9 @@ export default function UserPage() {
             <Button style={btnStyle}>{t('userPage.editProfile')}</Button>
           </Link>
           <Link to="/logout">
-            <Button variant="secondary" style={btnSecondaryStyle}>{t('userPage.logout')}</Button>
+            <Button variant="secondary" style={btnSecondaryStyle}>
+              {t('userPage.logout')}
+            </Button>
           </Link>
         </div>
       )}
@@ -140,11 +177,16 @@ export default function UserPage() {
     >
       <div
         className={`form-hero${user.photo_url ? ' form-hero--photo' : ''}`}
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})`, '--hero-logo-color': `var(--color-${tc.color_02})` } : undefined}
+        style={
+          tc.color_03
+            ? {
+                backgroundColor: `var(--color-${tc.color_03})`,
+                '--hero-logo-color': `var(--color-${tc.color_02})`,
+              }
+            : undefined
+        }
       >
-        <div className="form-hero-split">
-          {heroContent}
-        </div>
+        <div className="form-hero-split">{heroContent}</div>
         {user.photo_url && (
           <HeroPhoto
             photoUrl={user.photo_url}

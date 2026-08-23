@@ -17,9 +17,16 @@ import SiteFooter from '../components/SiteFooter';
  */
 describe('SiteFooter', () => {
   test('always reaches the legal page, from any page, signed in or not', () => {
-    render(<MemoryRouter><SiteFooter /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
 
-    expect(screen.getByRole('link', { name: /privacy & legal/i })).toHaveAttribute('href', '/legal');
+    expect(screen.getByRole('link', { name: /privacy & legal/i })).toHaveAttribute(
+      'href',
+      '/legal'
+    );
   });
 
   test('offers no about link when the deployment has no such page', async () => {
@@ -30,7 +37,11 @@ describe('SiteFooter', () => {
     vi.doMock('../deployment', () => ({ aboutPath: null }));
     const { default: Footer } = await import('../components/SiteFooter');
 
-    render(<MemoryRouter><Footer /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>
+    );
 
     // A footer link to a route that 404s is worse than one link fewer.
     expect(screen.queryByRole('link', { name: /what oiueei is/i })).not.toBeInTheDocument();
@@ -39,7 +50,11 @@ describe('SiteFooter', () => {
   });
 
   test('still says where it was made', () => {
-    render(<MemoryRouter><SiteFooter /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
     expect(screen.getByText(/Zona Franca/)).toBeInTheDocument();
   });
 });

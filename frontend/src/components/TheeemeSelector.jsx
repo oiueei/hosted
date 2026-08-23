@@ -8,7 +8,9 @@ export default function TheeemeSelector({ theeemes, value, onChange }) {
 
   return (
     <div className="theeeme-selector">
-      <span id="theeeme-selector-label" className="theeeme-selector-label">{t('editProfile.theeemeLabel')}</span>
+      <span id="theeeme-selector-label" className="theeeme-selector-label">
+        {t('editProfile.theeemeLabel')}
+      </span>
       <div className="theeeme-selector-grid" role="group" aria-labelledby="theeeme-selector-label">
         {theeemes.map((th) => {
           const selected = th.code === value;
@@ -22,9 +24,18 @@ export default function TheeemeSelector({ theeemes, value, onChange }) {
               aria-label={th.name}
             >
               <span className="theeeme-swatches">
-                <span className="theeeme-swatch" style={{ backgroundColor: `var(--color-${th.color_01})` }} />
-                <span className="theeeme-swatch" style={{ backgroundColor: `var(--color-${th.color_02})` }} />
-                <span className="theeeme-swatch" style={{ backgroundColor: `var(--color-${th.color_03})` }} />
+                <span
+                  className="theeeme-swatch"
+                  style={{ backgroundColor: `var(--color-${th.color_01})` }}
+                />
+                <span
+                  className="theeeme-swatch"
+                  style={{ backgroundColor: `var(--color-${th.color_02})` }}
+                />
+                <span
+                  className="theeeme-swatch"
+                  style={{ backgroundColor: `var(--color-${th.color_03})` }}
+                />
               </span>
               <span className="theeeme-name">{th.name}</span>
               {selected && (

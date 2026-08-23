@@ -16,14 +16,16 @@
  */
 
 function escapeHtml(str) {
-  return str
-    // NUL is dropped, not escaped: renderInline parks extracted links behind
-    // NUL-delimited placeholders, so user text must not be able to forge one.
-    .replace(/\0/g, '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return (
+    str
+      // NUL is dropped, not escaped: renderInline parks extracted links behind
+      // NUL-delimited placeholders, so user text must not be able to forge one.
+      .replace(/\0/g, '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  );
 }
 
 function sanitizeUrl(url) {
@@ -45,15 +47,12 @@ function renderInline(text) {
   // href: a URL with a `*…*` segment used to come back with an <em> spliced
   // into it. Restored at the end, untouched.
   const links = [];
-  let result = text.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_, label, url) => {
-      links.push(
-        `<a href="${sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
-      );
-      return `\0LINK${links.length - 1}\0`;
-    }
-  );
+  let result = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    links.push(
+      `<a href="${sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+    );
+    return `\0LINK${links.length - 1}\0`;
+  });
   // Bold: **text**
   result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // Italic: *text* or _text_
@@ -68,7 +67,10 @@ const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(l);
 const isTableSeparator = (l) => /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(l);
 const tableCells = (escapedLine) => {
   const trimmed = escapedLine.trim();
-  return trimmed.slice(1, -1).split('|').map((c) => c.trim());
+  return trimmed
+    .slice(1, -1)
+    .split('|')
+    .map((c) => c.trim());
 };
 
 function markdownToHtml(text, headingBase = 3) {
@@ -86,9 +88,17 @@ function markdownToHtml(text, headingBase = 3) {
     // Pipe table: a |header| row immediately followed by a |---| separator row.
     // Cells are escaped (via `line`) before splitting, then get inline rendering.
     if (isTableRow(rawLine) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
-      if (inUl) { output.push('</ul>'); inUl = false; }
-      if (inOl) { output.push('</ol>'); inOl = false; }
-      const header = tableCells(line).map((c) => `<th>${renderInline(c)}</th>`).join('');
+      if (inUl) {
+        output.push('</ul>');
+        inUl = false;
+      }
+      if (inOl) {
+        output.push('</ol>');
+        inOl = false;
+      }
+      const header = tableCells(line)
+        .map((c) => `<th>${renderInline(c)}</th>`)
+        .join('');
       const bodyRows = [];
       let j = i + 2;
       while (j < lines.length && isTableRow(lines[j]) && !isTableSeparator(lines[j])) {
@@ -110,8 +120,14 @@ function markdownToHtml(text, headingBase = 3) {
     // outline doesn't skip a level (axe heading-order).
     const headingMatch = line.match(/^(#{1,6}) (.+)$/);
     if (headingMatch) {
-      if (inUl) { output.push('</ul>'); inUl = false; }
-      if (inOl) { output.push('</ol>'); inOl = false; }
+      if (inUl) {
+        output.push('</ul>');
+        inUl = false;
+      }
+      if (inOl) {
+        output.push('</ol>');
+        inOl = false;
+      }
       const tag = `h${Math.min(headingMatch[1].length, 3) + headingBase - 1}`;
       output.push(`<${tag}>${renderInline(headingMatch[2])}</${tag}>`);
       continue;
@@ -120,8 +136,14 @@ function markdownToHtml(text, headingBase = 3) {
     // Unordered list: - text
     const ulMatch = line.match(/^- (.+)$/);
     if (ulMatch) {
-      if (inOl) { output.push('</ol>'); inOl = false; }
-      if (!inUl) { output.push('<ul>'); inUl = true; }
+      if (inOl) {
+        output.push('</ol>');
+        inOl = false;
+      }
+      if (!inUl) {
+        output.push('<ul>');
+        inUl = true;
+      }
       output.push(`<li>${renderInline(ulMatch[1])}</li>`);
       continue;
     }
@@ -129,15 +151,27 @@ function markdownToHtml(text, headingBase = 3) {
     // Ordered list: 1. text
     const olMatch = line.match(/^\d+\. (.+)$/);
     if (olMatch) {
-      if (inUl) { output.push('</ul>'); inUl = false; }
-      if (!inOl) { output.push('<ol>'); inOl = true; }
+      if (inUl) {
+        output.push('</ul>');
+        inUl = false;
+      }
+      if (!inOl) {
+        output.push('<ol>');
+        inOl = true;
+      }
       output.push(`<li>${renderInline(olMatch[1])}</li>`);
       continue;
     }
 
     // Close any open list
-    if (inUl) { output.push('</ul>'); inUl = false; }
-    if (inOl) { output.push('</ol>'); inOl = false; }
+    if (inUl) {
+      output.push('</ul>');
+      inUl = false;
+    }
+    if (inOl) {
+      output.push('</ol>');
+      inOl = false;
+    }
 
     if (line.trim() === '') {
       output.push('<br/>');

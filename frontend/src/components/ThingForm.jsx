@@ -1,6 +1,12 @@
 import { Select, TextInput, TextArea, NumberInput, ToggleButton } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { FEE_TYPES, DATE_TYPES, DETAIL_TYPES, AVAILABILITY_VALUES, CONDITION_VALUES } from '../constants/things';
+import {
+  FEE_TYPES,
+  DATE_TYPES,
+  DETAIL_TYPES,
+  AVAILABILITY_VALUES,
+  CONDITION_VALUES,
+} from '../constants/things';
 import ImageUpload from './ImageUpload';
 import GalleryUpload from './GalleryUpload';
 import LocalizedInfo from './LocalizedInfo';
@@ -63,7 +69,9 @@ export default function ThingForm({
 }) {
   const { t } = useTranslation();
   const L = useLocalized();
-  const toggleTheme = theeemeColor01 ? { '--toggle-button-color': `var(--color-${theeemeColor01})` } : undefined;
+  const toggleTheme = theeemeColor01
+    ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
+    : undefined;
 
   const showEndless = ['GIFT_THING', 'SELL_THING'].includes(type);
   const isFeeType = FEE_TYPES.includes(type);
@@ -97,7 +105,9 @@ export default function ThingForm({
           <div className="info-popover-row info-popover-row--end">
             <InfoPopover id={`${idPrefix}-type-info`} title={t('typeInfo.title')}>
               {typeOptions.map(({ label, value }) => (
-                <p key={value}><b>{label}</b> — {t('typeInfo.' + value)}</p>
+                <p key={value}>
+                  <b>{label}</b> — {t('typeInfo.' + value)}
+                </p>
               ))}
             </InfoPopover>
           </div>
@@ -168,9 +178,7 @@ export default function ThingForm({
           errorText={errors.deposit}
         />
       )}
-      {showSpacer && (
-        <div className="spacer-xxxx" />
-      )}
+      {showSpacer && <div className="spacer-xxxx" />}
       {showDetailFields && (
         <>
           <Select

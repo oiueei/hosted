@@ -50,9 +50,8 @@ describe('the module keeps its contract', () => {
        App.jsx, LoginPage, SiteFooter, CollectionPage and VerifyPage read. The
        behaviours themselves are pinned below with the module mocked, which
        works identically wherever it runs. */
-    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath, faqPath } = await import(
-      '../deployment'
-    );
+    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath, faqPath } =
+      await import('../deployment');
 
     expect(Array.isArray(deploymentRoutes)).toBe(true);
     deploymentRoutes.forEach((route) => {
@@ -73,9 +72,7 @@ describe('a deployment that adds a route', () => {
     // renders the 404 page, and nothing about the app looks broken — it just
     // insists the deployment's own page does not exist.
     vi.doMock('../deployment', () => ({
-      deploymentRoutes: [
-        { path: '/request-access', Component: () => <p>Ask to join</p> },
-      ],
+      deploymentRoutes: [{ path: '/request-access', Component: () => <p>Ask to join</p> }],
       popInPath: null,
       aboutPath: null,
       faqPath: null,
@@ -92,9 +89,7 @@ describe('a deployment that adds a route', () => {
   test('unknown paths still reach the 404 page', async () => {
     /* The catch-all must survive the insertion above it. */
     vi.doMock('../deployment', () => ({
-      deploymentRoutes: [
-        { path: '/request-access', Component: () => <p>Ask to join</p> },
-      ],
+      deploymentRoutes: [{ path: '/request-access', Component: () => <p>Ask to join</p> }],
       popInPath: null,
       aboutPath: null,
       faqPath: null,
@@ -129,7 +124,11 @@ describe('the open-door button follows popInPath', () => {
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
     // Nothing dangling: no button, and no link pointing at the page that is
     // not there. Sending a stranger to a 404 is worse than telling them the
@@ -148,7 +147,11 @@ describe('the open-door button follows popInPath', () => {
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(document.querySelector('a[href="/join-us"]')).not.toBeNull();
@@ -167,7 +170,11 @@ describe('the faq link follows faqPath', () => {
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
     // Same reasoning as the pop-in button: a link to a 404 is worse than one
     // link fewer, so upstream — with no FAQ content of its own — offers none.
@@ -185,7 +192,11 @@ describe('the faq link follows faqPath', () => {
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(document.querySelector('a[href="/help"]')).not.toBeNull();
@@ -204,7 +215,11 @@ describe('the about link follows aboutPath', () => {
     }));
     const { default: SiteFooter } = await import('../components/SiteFooter');
 
-    render(<MemoryRouter><SiteFooter /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
 
     // Upstream this link is absent entirely (siteFooter.test.jsx pins that).
     // Here it exists and points where the deployment put its page — not at a
@@ -293,9 +308,7 @@ describe("the dashboard's second button follows aboutPath", () => {
     mockEmptyDashboard();
     await renderHome();
 
-    await waitFor(() =>
-      expect(document.querySelector('a[href="/about-us"]')).not.toBeNull()
-    );
+    await waitFor(() => expect(document.querySelector('a[href="/about-us"]')).not.toBeNull());
   });
 });
 

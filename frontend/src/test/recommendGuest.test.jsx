@@ -19,7 +19,7 @@ function renderRecommend() {
   return render(
     <MemoryRouter>
       <RecommendGuest collectionCode="COL001" ownerName="Lala" />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 

@@ -24,7 +24,7 @@
    * it without !important, so an !important override here beats it
    * deterministically in both dev and production builds.
    * ================================================================ */
-  --font-default: "Curiosa", Arial, sans-serif !important;
+  --font-default: 'Curiosa', Arial, sans-serif !important;
 
   /* ================================================================
    * BRAND COLORS

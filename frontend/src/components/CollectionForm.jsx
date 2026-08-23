@@ -27,7 +27,9 @@ export default function CollectionForm({
   theeemeColor01,
 }) {
   const { t } = useTranslation();
-  const toggleTheme = theeemeColor01 ? { '--toggle-button-color': `var(--color-${theeemeColor01})` } : undefined;
+  const toggleTheme = theeemeColor01
+    ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
+    : undefined;
 
   const allowedTypesOptions = ALLOWED_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
 
@@ -36,7 +38,21 @@ export default function CollectionForm({
       <div className="toggle-left">
         <ToggleButton
           id={`${idPrefix}-visibility`}
-          label={<>{t('visibility.publicLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('visibility.publicHelper')}</span></>}
+          label={
+            <>
+              {t('visibility.publicLabel')}
+              <br />
+              <span
+                style={{
+                  fontSize: 'var(--fontsize-body-s)',
+                  fontWeight: 400,
+                  color: 'var(--color-black-70)',
+                }}
+              >
+                {t('visibility.publicHelper')}
+              </span>
+            </>
+          }
           checked={visibility === 'PUBLIC'}
           onChange={(val) => setVisibility(val ? 'PRIVATE' : 'PUBLIC')}
           variant="inline"
@@ -50,7 +66,21 @@ export default function CollectionForm({
       <div className="toggle-left">
         <ToggleButton
           id={`${idPrefix}-allow-proposals`}
-          label={<>{t('recommend.settingLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('recommend.settingHelper')}</span></>}
+          label={
+            <>
+              {t('recommend.settingLabel')}
+              <br />
+              <span
+                style={{
+                  fontSize: 'var(--fontsize-body-s)',
+                  fontWeight: 400,
+                  color: 'var(--color-black-70)',
+                }}
+              >
+                {t('recommend.settingHelper')}
+              </span>
+            </>
+          }
           checked={allowProposals}
           onChange={(val) => setAllowProposals(!val)}
           variant="inline"

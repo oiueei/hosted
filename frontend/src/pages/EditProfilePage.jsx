@@ -17,7 +17,9 @@ const AGE_RANGES = ['PRE_1946', 'BOOMER', 'GEN_X', 'GEN_Y', 'GEN_Z', 'GEN_A', 'G
 export default function EditProfilePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  useEffect(() => { document.title = t('titles.editProfile'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.editProfile');
+  }, [t]);
   const location = useLocation();
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');
@@ -143,164 +145,224 @@ export default function EditProfilePage() {
 
   return (
     <PageLayout backTo={backPath} backLabel={backLabel}>
-        <h1 className="page-title-xl">{t('editProfile.pageTitle')}</h1>
-        <div className="form-grid">
-          <TextInput
-            id="edit-profile-name"
-            label={t('editProfile.nameLabel')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            invalid={!!errors.name}
-            errorText={errors.name}
-            helperText={`${t('editProfile.nameHelper')} ${name.length}/32`}
-          />
-          <TextInput
-            id="edit-profile-headline"
-            label={t('editProfile.bioLabel')}
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
-            invalid={!!errors.headline}
-            errorText={errors.headline}
-            helperText={`${headline.length}/64`}
-          />
-          {/* Group the textarea and its Markdown hint in one grid cell so the hint
+      <h1 className="page-title-xl">{t('editProfile.pageTitle')}</h1>
+      <div className="form-grid">
+        <TextInput
+          id="edit-profile-name"
+          label={t('editProfile.nameLabel')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          invalid={!!errors.name}
+          errorText={errors.name}
+          helperText={`${t('editProfile.nameHelper')} ${name.length}/32`}
+        />
+        <TextInput
+          id="edit-profile-headline"
+          label={t('editProfile.bioLabel')}
+          value={headline}
+          onChange={(e) => setHeadline(e.target.value)}
+          invalid={!!errors.headline}
+          errorText={errors.headline}
+          helperText={`${headline.length}/64`}
+        />
+        {/* Group the textarea and its Markdown hint in one grid cell so the hint
               hugs the textarea, and the grid gap separates it from the photo field. */}
-          <div>
-            <TextArea
-              id="edit-profile-about"
-              label={t('editProfile.aboutLabel')}
-              value={about}
-              onChange={(e) => setAbout(e.target.value)}
-              invalid={!!errors.about}
-              errorText={errors.about}
-              helperText={`${t('editProfile.aboutHelper')} · ${about.length}/2000`}
-              style={{ minHeight: '8rem' }}
-            />
-            <p style={{ fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-60)', marginTop: 'var(--spacing-2-xs)' }}>
-              <Trans
-                i18nKey="editProfile.aboutMarkdownHint"
-                components={[
-                  // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
-                  <a key="0" href="https://dillinger.io" target="_blank" rel="noopener noreferrer" />,
-                ]}
-              />
-            </p>
-          </div>
-          <ImageUpload
-            id="edit-profile-photo"
-            label={t('editProfile.photoLabel')}
-            folder="oiueei/users"
-            currentUrl={photoUrl}
-            onChange={setPhoto}
-            helperText={t('editProfile.photoHelper')}
+        <div>
+          <TextArea
+            id="edit-profile-about"
+            label={t('editProfile.aboutLabel')}
+            value={about}
+            onChange={(e) => setAbout(e.target.value)}
+            invalid={!!errors.about}
+            errorText={errors.about}
+            helperText={`${t('editProfile.aboutHelper')} · ${about.length}/2000`}
+            style={{ minHeight: '8rem' }}
           />
-          <TheeemeSelector
-            theeemes={theeemes}
-            value={theeeme}
-            onChange={setTheeeme}
-          />
-          <KoroSelector value={koro} onChange={setKoro} />
-          <Select
-            id="edit-profile-language"
-            texts={{ label: t('editProfile.languageLabel'), language: 'en' }}
-            helper={t('editProfile.languageHelper')}
-            options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
-            value={language || i18n.resolvedLanguage || i18n.language}
-            onChange={(selectedOptions) => {
-              if (selectedOptions.length > 0) {
-                // The interface switches at once (as it always did); Save then
-                // persists it, so the emails follow the interface.
-                setLanguage(selectedOptions[0].value);
-                i18n.changeLanguage(selectedOptions[0].value);
-              }
+          <p
+            style={{
+              fontSize: 'var(--fontsize-body-s)',
+              color: 'var(--color-black-60)',
+              marginTop: 'var(--spacing-2-xs)',
             }}
-          />
-        </div>
-        <h2 style={{ marginTop: 'var(--spacing-xl)' }}>{t('communityProfile.heading')}</h2>
-        <p style={{ marginBottom: 'var(--spacing-m)' }}>{t('communityProfile.helper')}</p>
-        <div className="form-grid">
-          <Select
-            id="edit-profile-age"
-            texts={{ label: t('communityProfile.ageLabel'), language: 'en' }}
-            options={[
-              { label: t('communityProfile.ageUnset'), value: '' },
-              ...AGE_RANGES.map((c) => ({ label: t(`ageRange.${c}`), value: c })),
-            ]}
-            value={ageRange}
-            onChange={(selectedOptions) => {
-              setAgeRange(selectedOptions.length > 0 ? selectedOptions[0].value : '');
-            }}
-          />
-          <TextInput
-            id="edit-profile-postal"
-            label={t('communityProfile.postalLabel')}
-            value={postalCode}
-            onChange={(e) => setPostalCode(e.target.value)}
-            maxLength={10}
-          />
-        </div>
-        <h2 style={{ marginTop: 'var(--spacing-xl)' }}>{t('notifications.pageTitle')}</h2>
-        <p style={{ marginBottom: 'var(--spacing-m)' }}>{t('notifications.intro')}</p>
-        <div className="form-grid">
-          <div className="toggle-left">
-            <ToggleButton
-              id="notify-magic"
-              label={<>{t('notifications.magicLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('notifications.magicHelper')}</span></>}
-              checked
-              disabled
-              onChange={() => {}}
-              variant="inline"
-              theme={theeemeColors.color_01 ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` } : undefined}
-            />
-          </div>
-          <div className="toggle-left">
-            <ToggleButton
-              id="notify-activity"
-              label={<>{t('notifications.activityLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('notifications.activityHelper')}</span></>}
-              checked={notifyActivity}
-              onChange={(val) => setNotifyActivity(!val)}
-              variant="inline"
-              theme={theeemeColors.color_01 ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` } : undefined}
-            />
-          </div>
-          <div className="toggle-left">
-            <ToggleButton
-              id="notify-news"
-              label={<>{t('notifications.newsLabel')}<br/><span style={{ fontSize: 'var(--fontsize-body-s)', fontWeight: 400, color: 'var(--color-black-70)' }}>{t('notifications.newsHelper')}</span></>}
-              checked={notifyNews}
-              onChange={(val) => setNotifyNews(!val)}
-              variant="inline"
-              theme={theeemeColors.color_01 ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` } : undefined}
-            />
-          </div>
-        </div>
-        <div className="form-actions">
-          <Button
-            fullWidth
-            disabled={submitting}
-            onClick={handleSubmit}
-            style={btnStyle}
           >
-            {submitting ? t('common.saving') : t('common.save')}
-          </Button>
+            <Trans
+              i18nKey="editProfile.aboutMarkdownHint"
+              components={[
+                // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
+                <a key="0" href="https://dillinger.io" target="_blank" rel="noopener noreferrer" />,
+              ]}
+            />
+          </p>
         </div>
-        {/* Portability before erasure, in that order: reading your own copy
+        <ImageUpload
+          id="edit-profile-photo"
+          label={t('editProfile.photoLabel')}
+          folder="oiueei/users"
+          currentUrl={photoUrl}
+          onChange={setPhoto}
+          helperText={t('editProfile.photoHelper')}
+        />
+        <TheeemeSelector theeemes={theeemes} value={theeeme} onChange={setTheeeme} />
+        <KoroSelector value={koro} onChange={setKoro} />
+        <Select
+          id="edit-profile-language"
+          texts={{ label: t('editProfile.languageLabel'), language: 'en' }}
+          helper={t('editProfile.languageHelper')}
+          options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
+          value={language || i18n.resolvedLanguage || i18n.language}
+          onChange={(selectedOptions) => {
+            if (selectedOptions.length > 0) {
+              // The interface switches at once (as it always did); Save then
+              // persists it, so the emails follow the interface.
+              setLanguage(selectedOptions[0].value);
+              i18n.changeLanguage(selectedOptions[0].value);
+            }
+          }}
+        />
+      </div>
+      <h2 style={{ marginTop: 'var(--spacing-xl)' }}>{t('communityProfile.heading')}</h2>
+      <p style={{ marginBottom: 'var(--spacing-m)' }}>{t('communityProfile.helper')}</p>
+      <div className="form-grid">
+        <Select
+          id="edit-profile-age"
+          texts={{ label: t('communityProfile.ageLabel'), language: 'en' }}
+          options={[
+            { label: t('communityProfile.ageUnset'), value: '' },
+            ...AGE_RANGES.map((c) => ({ label: t(`ageRange.${c}`), value: c })),
+          ]}
+          value={ageRange}
+          onChange={(selectedOptions) => {
+            setAgeRange(selectedOptions.length > 0 ? selectedOptions[0].value : '');
+          }}
+        />
+        <TextInput
+          id="edit-profile-postal"
+          label={t('communityProfile.postalLabel')}
+          value={postalCode}
+          onChange={(e) => setPostalCode(e.target.value)}
+          maxLength={10}
+        />
+      </div>
+      <h2 style={{ marginTop: 'var(--spacing-xl)' }}>{t('notifications.pageTitle')}</h2>
+      <p style={{ marginBottom: 'var(--spacing-m)' }}>{t('notifications.intro')}</p>
+      <div className="form-grid">
+        <div className="toggle-left">
+          <ToggleButton
+            id="notify-magic"
+            label={
+              <>
+                {t('notifications.magicLabel')}
+                <br />
+                <span
+                  style={{
+                    fontSize: 'var(--fontsize-body-s)',
+                    fontWeight: 400,
+                    color: 'var(--color-black-70)',
+                  }}
+                >
+                  {t('notifications.magicHelper')}
+                </span>
+              </>
+            }
+            checked
+            disabled
+            onChange={() => {}}
+            variant="inline"
+            theme={
+              theeemeColors.color_01
+                ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                : undefined
+            }
+          />
+        </div>
+        <div className="toggle-left">
+          <ToggleButton
+            id="notify-activity"
+            label={
+              <>
+                {t('notifications.activityLabel')}
+                <br />
+                <span
+                  style={{
+                    fontSize: 'var(--fontsize-body-s)',
+                    fontWeight: 400,
+                    color: 'var(--color-black-70)',
+                  }}
+                >
+                  {t('notifications.activityHelper')}
+                </span>
+              </>
+            }
+            checked={notifyActivity}
+            onChange={(val) => setNotifyActivity(!val)}
+            variant="inline"
+            theme={
+              theeemeColors.color_01
+                ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                : undefined
+            }
+          />
+        </div>
+        <div className="toggle-left">
+          <ToggleButton
+            id="notify-news"
+            label={
+              <>
+                {t('notifications.newsLabel')}
+                <br />
+                <span
+                  style={{
+                    fontSize: 'var(--fontsize-body-s)',
+                    fontWeight: 400,
+                    color: 'var(--color-black-70)',
+                  }}
+                >
+                  {t('notifications.newsHelper')}
+                </span>
+              </>
+            }
+            checked={notifyNews}
+            onChange={(val) => setNotifyNews(!val)}
+            variant="inline"
+            theme={
+              theeemeColors.color_01
+                ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                : undefined
+            }
+          />
+        </div>
+      </div>
+      <div className="form-actions">
+        <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
+          {submitting ? t('common.saving') : t('common.save')}
+        </Button>
+      </div>
+      {/* Portability before erasure, in that order: reading your own copy
             first is the sane sequence and the legally solid one, and it's why
             this link sits above deleteAccount's rather than below it. */}
-        <div style={{ marginTop: 'var(--spacing-xl)', borderTop: '1px solid var(--color-black-20)', paddingTop: 'var(--spacing-m)' }}>
-          <Link to="/me/data" style={{ color: 'var(--color-black-60)', textDecoration: 'underline' }}>
-            {t('editProfile.downloadData')}
-          </Link>
-        </div>
-        {/* Right to erasure — a quiet link, not a red button: deletion has its
+      <div
+        style={{
+          marginTop: 'var(--spacing-xl)',
+          borderTop: '1px solid var(--color-black-20)',
+          paddingTop: 'var(--spacing-m)',
+        }}
+      >
+        <Link to="/me/data" style={{ color: 'var(--color-black-60)', textDecoration: 'underline' }}>
+          {t('editProfile.downloadData')}
+        </Link>
+      </div>
+      {/* Right to erasure — a quiet link, not a red button: deletion has its
             own page that explains everything and still requires an email
             confirmation, so this is an entrance, not the trigger. */}
-        <div style={{ marginTop: 'var(--spacing-xs)' }}>
-          <Link to="/me/delete" style={{ color: 'var(--color-black-60)', textDecoration: 'underline' }}>
-            {t('editProfile.deleteAccount')}
-          </Link>
-        </div>
-        <Toast toast={toast} onClose={() => setToast(null)} />
+      <div style={{ marginTop: 'var(--spacing-xs)' }}>
+        <Link
+          to="/me/delete"
+          style={{ color: 'var(--color-black-60)', textDecoration: 'underline' }}
+        >
+          {t('editProfile.deleteAccount')}
+        </Link>
+      </div>
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>
   );
 }

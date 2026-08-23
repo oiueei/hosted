@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, Notification, StatusLabel, Tag, Table, IconCheck, IconCrossCircle } from 'hds-react';
+import {
+  Button,
+  Dialog,
+  Notification,
+  StatusLabel,
+  Tag,
+  Table,
+  IconCheck,
+  IconCrossCircle,
+} from 'hds-react';
 import { DATE_TYPES } from '../constants/things';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
@@ -50,7 +59,9 @@ export default function OwnerBookingsPage() {
   // longer has it, and there is no undo. A loan, a rental and an endless
   // give-away all come back or never run out, so those accept straight away.
   const [transferRow, setTransferRow] = useState(null);
-  useEffect(() => { document.title = t('titles.ownerBookings'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.ownerBookings');
+  }, [t]);
 
   const STATUS_LABELS = {
     PENDING: t('myBookings.statusPending'),
@@ -87,14 +98,12 @@ export default function OwnerBookingsPage() {
           prev.map((b) =>
             b.code === bookingCode
               ? { ...b, status: action === 'accept' ? 'ACCEPTED' : 'REJECTED' }
-              : b,
-          ),
+              : b
+          )
         );
         setToast({
           type: 'success',
-          message: action === 'accept'
-            ? t('ownerBookings.accepted')
-            : t('ownerBookings.rejected'),
+          message: action === 'accept' ? t('ownerBookings.accepted') : t('ownerBookings.rejected'),
         });
       } else {
         setToast({ type: 'error', message: t('ownerBookings.errorActing') });
@@ -134,7 +143,9 @@ export default function OwnerBookingsPage() {
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">{error}</Notification>
+        <Notification label={t('common.error')} type="error">
+          {error}
+        </Notification>
       </PageLayout>
     );
   }
@@ -167,13 +178,23 @@ export default function OwnerBookingsPage() {
               {t('ownerBookings.requestedBy', { name: row._requesterName })}
             </p>
           )}
-          <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)', color: 'var(--color-black-50)' }}>
-            {t('myBookings.requested', { date: new Date(row._created).toLocaleDateString(i18n.language) })}
+          <p
+            style={{
+              margin: 'var(--spacing-2-xs) 0 0',
+              fontSize: 'var(--fontsize-body-s)',
+              color: 'var(--color-black-50)',
+            }}
+          >
+            {t('myBookings.requested', {
+              date: new Date(row._created).toLocaleDateString(i18n.language),
+            })}
           </p>
           <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
-            {row._startDate && row._endDate
-              ? `${new Date(row._startDate).toLocaleDateString(i18n.language)} — ${new Date(row._endDate).toLocaleDateString(i18n.language)}`
-              : <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>}
+            {row._startDate && row._endDate ? (
+              `${new Date(row._startDate).toLocaleDateString(i18n.language)} — ${new Date(row._endDate).toLocaleDateString(i18n.language)}`
+            ) : (
+              <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
+            )}
           </p>
         </div>
       ),
@@ -193,26 +214,27 @@ export default function OwnerBookingsPage() {
     {
       key: '_actions',
       headerName: '',
-      transform: (row) => row._status === 'PENDING' ? (
-        <div style={{ display: 'flex', gap: 'var(--spacing-xs)', justifyContent: 'flex-end' }}>
-          <TooltipButton
-            tooltip={t('ownerBookings.acceptTooltip')}
-            onClick={() => (row._transfersOwnership
-              ? setTransferRow(row)
-              : handleAction(row._code, 'accept'))}
-            disabled={acting === row._code}
-          >
-            <IconCheck aria-hidden />
-          </TooltipButton>
-          <TooltipButton
-            tooltip={t('ownerBookings.rejectTooltip')}
-            onClick={() => handleAction(row._code, 'reject')}
-            disabled={acting === row._code}
-          >
-            <IconCrossCircle aria-hidden />
-          </TooltipButton>
-        </div>
-      ) : null,
+      transform: (row) =>
+        row._status === 'PENDING' ? (
+          <div style={{ display: 'flex', gap: 'var(--spacing-xs)', justifyContent: 'flex-end' }}>
+            <TooltipButton
+              tooltip={t('ownerBookings.acceptTooltip')}
+              onClick={() =>
+                row._transfersOwnership ? setTransferRow(row) : handleAction(row._code, 'accept')
+              }
+              disabled={acting === row._code}
+            >
+              <IconCheck aria-hidden />
+            </TooltipButton>
+            <TooltipButton
+              tooltip={t('ownerBookings.rejectTooltip')}
+              onClick={() => handleAction(row._code, 'reject')}
+              disabled={acting === row._code}
+            >
+              <IconCrossCircle aria-hidden />
+            </TooltipButton>
+          </div>
+        ) : null,
     },
   ];
 
@@ -242,14 +264,28 @@ export default function OwnerBookingsPage() {
           {pendingRows.length === 0 ? (
             <p className="text-muted">{t('ownerBookings.noPending')}</p>
           ) : (
-            <Table cols={cols} rows={pendingRows} indexKey="_id" renderIndexCol={false} dense theme={tableTheme} />
+            <Table
+              cols={cols}
+              rows={pendingRows}
+              indexKey="_id"
+              renderIndexCol={false}
+              dense
+              theme={tableTheme}
+            />
           )}
           {otherRows.length > 0 && (
             <>
               <div className="spacer-xl" />
               <h2>{t('myBookings.pastRequests')}</h2>
               <div className="spacer-s" />
-              <Table cols={cols} rows={otherRows} indexKey="_id" renderIndexCol={false} dense theme={tableTheme} />
+              <Table
+                cols={cols}
+                rows={otherRows}
+                indexKey="_id"
+                renderIndexCol={false}
+                dense
+                theme={tableTheme}
+              />
             </>
           )}
         </>
@@ -258,7 +294,12 @@ export default function OwnerBookingsPage() {
       {next && (
         <>
           <div className="spacer-s" />
-          <Button variant="secondary" onClick={loadMore} disabled={loadingMore} style={btnSecondaryStyle}>
+          <Button
+            variant="secondary"
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={btnSecondaryStyle}
+          >
             {t('common.loadMore')}
           </Button>
         </>
@@ -294,7 +335,11 @@ export default function OwnerBookingsPage() {
             >
               {t('thingCard.transferConfirm')}
             </Button>
-            <Button variant="secondary" style={btnSecondaryStyle} onClick={() => setTransferRow(null)}>
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => setTransferRow(null)}
+            >
               {t('common.cancel')}
             </Button>
           </Dialog.ActionButtons>

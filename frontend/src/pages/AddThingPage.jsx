@@ -21,7 +21,9 @@ export default function AddThingPage() {
   const routerLocation = useLocation();
 
   const userCode = localStorage.getItem('userCode');
-  useEffect(() => { document.title = t('titles.addThing'); }, [t]);
+  useEffect(() => {
+    document.title = t('titles.addThing');
+  }, [t]);
 
   // Deep-link from the collection empty state: /add#bulk-add scrolls to the CSV importer.
   useEffect(() => {
@@ -73,7 +75,8 @@ export default function AddThingPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('addThing.titleRequired');
     else if (localizedCounter(headline, 64).over) newErrors.headline = t('addThing.maxHeadline');
-    if (localizedCounter(description, 256).over) newErrors.description = t('addThing.maxDescription');
+    if (localizedCounter(description, 256).over)
+      newErrors.description = t('addThing.maxDescription');
     if (FEE_TYPES.includes(type) && (fee === '' || fee === undefined)) {
       newErrors.fee = t('addThing.priceRequired');
     }
@@ -162,42 +165,42 @@ export default function AddThingPage() {
       backTo={`/collections/${code}`}
       backLabel={L(collectionHeadline) || t('common.collection')}
     >
-        <h1 className="page-title-xl">{t('addThing.pageTitle')}</h1>
+      <h1 className="page-title-xl">{t('addThing.pageTitle')}</h1>
       <div className="form-grid">
-          <ThingForm
-            idPrefix="add-thing"
-            theeemeColor01={tc.color_01}
-            errors={errors}
-            typeOptions={typeOptions}
-            typeCatalogue={typeCatalogue}
-            showTypeSelector
-            type={type}
-            setType={setType}
-            isEndless={isEndless}
-            setIsEndless={setIsEndless}
-            headline={headline}
-            setHeadline={setHeadline}
-            description={description}
-            setDescription={setDescription}
-            fee={fee}
-            setFee={setFee}
-            deposit={deposit}
-            setDeposit={setDeposit}
-            availability={availability}
-            setAvailability={setAvailability}
-            condition={condition}
-            setCondition={setCondition}
-            location={location}
-            setLocation={setLocation}
-            collectionTags={collectionTags}
-            tags={tags}
-            setTags={setTags}
-            imageLabel={t('upload.thumbnailLabel')}
-            thumbnail={thumbnail}
-            setThumbnail={setThumbnail}
-            gallery={gallery}
-            setGallery={setGallery}
-          />
+        <ThingForm
+          idPrefix="add-thing"
+          theeemeColor01={tc.color_01}
+          errors={errors}
+          typeOptions={typeOptions}
+          typeCatalogue={typeCatalogue}
+          showTypeSelector
+          type={type}
+          setType={setType}
+          isEndless={isEndless}
+          setIsEndless={setIsEndless}
+          headline={headline}
+          setHeadline={setHeadline}
+          description={description}
+          setDescription={setDescription}
+          fee={fee}
+          setFee={setFee}
+          deposit={deposit}
+          setDeposit={setDeposit}
+          availability={availability}
+          setAvailability={setAvailability}
+          condition={condition}
+          setCondition={setCondition}
+          location={location}
+          setLocation={setLocation}
+          collectionTags={collectionTags}
+          tags={tags}
+          setTags={setTags}
+          imageLabel={t('upload.thumbnailLabel')}
+          thumbnail={thumbnail}
+          setThumbnail={setThumbnail}
+          gallery={gallery}
+          setGallery={setGallery}
+        />
       </div>
 
       <div className="form-actions">

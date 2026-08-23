@@ -404,17 +404,20 @@ describe('sending a message to the whole group', () => {
     allow_member_proposals: false,
   };
 
-  const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+  const ok = (body) =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
   /** The collection loads; the POST answers however this test needs it to. */
   function mockPost(post) {
     apiFetch.mockImplementation((url, options) =>
-      options?.method === 'POST' ? post() : ok(OWNED_WITH_GUESTS),
+      options?.method === 'POST' ? post() : ok(OWNED_WITH_GUESTS)
     );
   }
 
   const broadcastPosts = () =>
-    apiFetch.mock.calls.filter(([url, opts]) => opts?.method === 'POST' && url.endsWith('/broadcast/'));
+    apiFetch.mock.calls.filter(
+      ([url, opts]) => opts?.method === 'POST' && url.endsWith('/broadcast/')
+    );
 
   const renderPage = () =>
     render(
@@ -499,9 +502,13 @@ describe('sending a message to the whole group', () => {
     // The window between the click and the answer, on the one control here
     // whose double-fire mails everybody a second copy.
     let deliver;
-    mockPost(() => new Promise((resolve) => {
-      deliver = () => resolve({ ok: true, status: 200, json: () => Promise.resolve({ recipients: 1 }) });
-    }));
+    mockPost(
+      () =>
+        new Promise((resolve) => {
+          deliver = () =>
+            resolve({ ok: true, status: 200, json: () => Promise.resolve({ recipients: 1 }) });
+        })
+    );
 
     const message = await openComposer();
     fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
@@ -548,7 +555,7 @@ describe('a broadcast the server turns down', () => {
     apiFetch.mockImplementation((url, options) =>
       options?.method === 'POST'
         ? Promise.resolve(response)
-        : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(OWNED_WITH_GUESTS) }),
+        : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(OWNED_WITH_GUESTS) })
     );
     render(
       <MemoryRouter initialEntries={['/collections/COL001']}>
@@ -573,7 +580,7 @@ describe('a broadcast the server turns down', () => {
     });
 
     expect(
-      await screen.findByText('Too many requests. Please slow down and try again later.'),
+      await screen.findByText('Too many requests. Please slow down and try again later.')
     ).toBeInTheDocument();
     // The words are still there to send tomorrow.
     expect(screen.getByLabelText(/Message/)).toHaveValue('The library is closed on Monday');
@@ -679,7 +686,7 @@ describe('a join that does not take', () => {
     apiFetch.mockImplementation((url, options) =>
       options?.method === 'POST'
         ? Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) })
-        : page(),
+        : page()
     );
 
     await pressJoin();
@@ -698,7 +705,9 @@ describe('a join that does not take', () => {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
       getCalls += 1;
-      return getCalls === 1 ? page() : Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+      return getCalls === 1
+        ? page()
+        : Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
     });
 
     await pressJoin();
@@ -708,7 +717,7 @@ describe('a join that does not take', () => {
 
   test('a connection lost mid-join says so too', async () => {
     apiFetch.mockImplementation((url, options) =>
-      options?.method === 'POST' ? Promise.reject(new Error('network down')) : page(),
+      options?.method === 'POST' ? Promise.reject(new Error('network down')) : page()
     );
 
     await pressJoin();
@@ -754,8 +763,6 @@ describe('arriving from an invitation is a one-time fact', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId('nav-state')).toHaveTextContent(/^\{\}$/)
-    );
+    await waitFor(() => expect(screen.getByTestId('nav-state')).toHaveTextContent(/^\{\}$/));
   });
 });

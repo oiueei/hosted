@@ -1,0 +1,10 @@
+dist
+coverage
+storybook-static
+node_modules
+package-lock.json
+
+# Docs are prose, not code. Prettier realigns Markdown tables and rewraps
+# lists, which produces thousands of lines of diff and improves nothing —
+# the backend formatter (ruff) does not touch Markdown either.
+*.md

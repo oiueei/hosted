@@ -59,12 +59,19 @@ export default function InlineConfirm({
 
   return (
     <>
-      <Button aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={handleTrigger} {...triggerProps}>
+      <Button
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onClick={handleTrigger}
+        {...triggerProps}
+      >
         {triggerLabel}
       </Button>
       {open && (
         <div id={panelId} className="thing-report-confirm">
-          <p><strong>{title}</strong></p>
+          <p>
+            <strong>{title}</strong>
+          </p>
           <p>{body}</p>
           <div className="button-row">
             <Button

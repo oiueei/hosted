@@ -41,7 +41,7 @@ describe('VerifyPage auto-commit', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'BOOKING_ACCEPT' }))
-        : Promise.resolve(mockResponse({ requires_confirmation: true })),
+        : Promise.resolve(mockResponse({ requires_confirmation: true }))
     );
 
     renderVerify();
@@ -59,7 +59,7 @@ describe('VerifyPage auto-commit', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'BOOKING_REJECT' }))
-        : Promise.resolve(mockResponse({ requires_confirmation: true })),
+        : Promise.resolve(mockResponse({ requires_confirmation: true }))
     );
 
     renderVerify();
@@ -73,7 +73,7 @@ describe('VerifyPage auto-commit', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'SOMETHING_ELSE' }))
-        : Promise.resolve(mockResponse({ requires_confirmation: true })),
+        : Promise.resolve(mockResponse({ requires_confirmation: true }))
     );
 
     renderVerify();
@@ -110,7 +110,7 @@ describe('VerifyPage auto-commit', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'BOOKING_ACCEPT' }))
-        : Promise.resolve(mockResponse({ requires_confirmation: true })),
+        : Promise.resolve(mockResponse({ requires_confirmation: true }))
     );
 
     renderVerify(true);
@@ -149,20 +149,20 @@ describe('a refusal the link survives', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse(body, false, status))
-        : Promise.resolve(mockResponse(previewApprove)),
+        : Promise.resolve(mockResponse(previewApprove))
     );
   }
 
   test('shows the server’s reason and says the link still works', async () => {
     mockRefusal(
       { error: 'Daily invitation limit reached. Try again tomorrow.', retryable: true },
-      429,
+      429
     );
 
     renderVerify();
 
     expect(
-      await screen.findByText('Daily invitation limit reached. Try again tomorrow.'),
+      await screen.findByText('Daily invitation limit reached. Try again tomorrow.')
     ).toBeInTheDocument();
     // Not "your link died": the owner is meant to come back to this same one.
     expect(screen.getByText(/this link still works/i)).toBeInTheDocument();
@@ -173,13 +173,13 @@ describe('a refusal the link survives', () => {
   test('a full group is a reason too, not an expiry, on the same 400 as a dead link', async () => {
     mockRefusal(
       { error: 'This collection has reached its limit of 2 guests.', retryable: true },
-      400,
+      400
     );
 
     renderVerify();
 
     expect(
-      await screen.findByText('This collection has reached its limit of 2 guests.'),
+      await screen.findByText('This collection has reached its limit of 2 guests.')
     ).toBeInTheDocument();
     expect(screen.getByText(/this link still works/i)).toBeInTheDocument();
   });
@@ -222,7 +222,7 @@ describe('the owner answering a member’s suggestion', () => {
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse(body))
-        : Promise.resolve(mockResponse(approvePreview)),
+        : Promise.resolve(mockResponse(approvePreview))
     );
   }
 
@@ -274,13 +274,13 @@ describe('declining an invitation from the email', () => {
     // nothing away from anyone else, so it is safe on GET — which is exactly
     // why the page must not fire a commit of its own after it.
     globalThis.fetch = vi.fn(() =>
-      Promise.resolve(mockResponse({ action: 'COLLECTION_REJECT', message: 'Invitation declined' })),
+      Promise.resolve(mockResponse({ action: 'COLLECTION_REJECT', message: 'Invitation declined' }))
     );
 
     renderVerify();
 
     expect(
-      await screen.findByText('Invitation declined. The collection owner has been notified.'),
+      await screen.findByText('Invitation declined. The collection owner has been notified.')
     ).toBeInTheDocument();
     expect(screen.getByText('Declined')).toBeInTheDocument();
     expect(postCalls(globalThis.fetch)).toHaveLength(0);
@@ -301,8 +301,12 @@ describe('where a magic link lands', () => {
     name: 'Lele',
     email: 'lele@test.com',
     theeeme_colors: {
-      color_01: 'bus', color_02: 'white', color_03: 'engel',
-      color_04: 'black', color_05: 'black', color_06: 'white',
+      color_01: 'bus',
+      color_02: 'white',
+      color_03: 'engel',
+      color_04: 'black',
+      color_05: 'black',
+      color_06: 'white',
     },
     koro: 'beat',
   };
@@ -314,7 +318,7 @@ describe('where a magic link lands', () => {
 
   function renderMagicLink(body) {
     globalThis.fetch = vi.fn(() =>
-      Promise.resolve(mockResponse({ action: 'MAGIC_LINK', user: USER, ...body })),
+      Promise.resolve(mockResponse({ action: 'MAGIC_LINK', user: USER, ...body }))
     );
     return render(
       <MemoryRouter initialEntries={[`/verify/${CODE}`]}>
@@ -322,7 +326,7 @@ describe('where a magic link lands', () => {
           <Route path="/verify/:code" element={<VerifyPage />} />
           <Route path="*" element={<Landing />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
   }
 
@@ -341,7 +345,7 @@ describe('where a magic link lands', () => {
     // two halves of this assertion are two different behaviours: the right
     // group, and arriving there as somebody who was invited.
     expect(
-      await screen.findByText('landed on /collections/COL001 fromInvite=true'),
+      await screen.findByText('landed on /collections/COL001 fromInvite=true')
     ).toBeInTheDocument();
     expect(localStorage.getItem('userCode')).toBe('USR002');
     expect(JSON.parse(localStorage.getItem('theeemeColors')).color_01).toBe('bus');
@@ -355,7 +359,7 @@ describe('where a magic link lands', () => {
     renderMagicLink({ landing: 'collection', collection: 'COL001' });
 
     expect(
-      await screen.findByText('landed on /collections/COL001 fromInvite=false'),
+      await screen.findByText('landed on /collections/COL001 fromInvite=false')
     ).toBeInTheDocument();
   });
 
@@ -444,8 +448,8 @@ describe('a stalled network', () => {
           email: 'lele@test.com',
           collections: 2,
           things: 5,
-        }),
-      ),
+        })
+      )
     );
 
     renderVerify();
@@ -458,9 +462,7 @@ describe('a stalled network', () => {
     });
 
     expect(screen.getByText('Delete your account?')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Delete my account forever' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete my account forever' })).toBeInTheDocument();
     expect(screen.queryByText('Connection error.')).toBeNull();
   });
 });

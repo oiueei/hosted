@@ -139,6 +139,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The frontend half of what `ruff format --check` does for the backend.
+      # A formatter nobody enforces is a formatter that drifts, and the drift
+      # only shows up as noise in somebody else's diff.
+      - name: Format
+        run: npm run format:check
+
       - name: Test
         run: npm run test:coverage
 

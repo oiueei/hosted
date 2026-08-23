@@ -10,7 +10,9 @@ window.scrollTo = vi.fn();
 // The factory cannot reference module-scope vars (it is hoisted), so it ships a
 // permissive default; each test refines behaviour through setApi() below.
 vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })),
+  apiFetch: vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+  ),
   extractApiError: vi.fn(() => Promise.resolve('')),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
@@ -28,8 +30,13 @@ function mockResponse(data, ok = true, status = ok ? 200 : 400) {
 // `request`/`activate`/`booking` override a single route outright, for the
 // failure branches that need a status code or a throw.
 function setApi({
-  thing = {}, calendar = [], responses = [], requestOk = true,
-  request = null, activate = null, booking = null,
+  thing = {},
+  calendar = [],
+  responses = [],
+  requestOk = true,
+  request = null,
+  activate = null,
+  booking = null,
 } = {}) {
   apiFetch.mockImplementation((url) => {
     if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse(calendar));
@@ -43,8 +50,10 @@ function setApi({
       return booking ? booking() : Promise.resolve(mockResponse({}));
     }
     if (/\/things\/[^/]+\/faq\//.test(url)) return Promise.resolve(mockResponse({ results: [] }));
-    if (/\/things\/[^/]+\/transfers\//.test(url)) return Promise.resolve(mockResponse({ total_transfers: 0, transfers: [] }));
-    if (/\/things\/[^/]+\/responses\//.test(url)) return Promise.resolve(mockResponse({ results: responses }));
+    if (/\/things\/[^/]+\/transfers\//.test(url))
+      return Promise.resolve(mockResponse({ total_transfers: 0, transfers: [] }));
+    if (/\/things\/[^/]+\/responses\//.test(url))
+      return Promise.resolve(mockResponse({ results: responses }));
     if (/\/things\/[^/]+\/resolve\//.test(url)) return Promise.resolve(mockResponse({}));
     if (/\/things\/[^/]+\//.test(url)) return Promise.resolve(mockResponse(thing));
     return Promise.resolve(mockResponse({}));
@@ -93,10 +102,17 @@ function renderThingPage() {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'GUEST1');
-  localStorage.setItem('theeemeColors', JSON.stringify({
-    color_01: 'bus', color_02: 'suomenlinna-light', color_03: 'copper',
-    color_04: 'black', color_05: 'white', color_06: 'white',
-  }));
+  localStorage.setItem(
+    'theeemeColors',
+    JSON.stringify({
+      color_01: 'bus',
+      color_02: 'suomenlinna-light',
+      color_03: 'copper',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'white',
+    })
+  );
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   // clearAllMocks keeps implementations, so a test that gives the server a
@@ -141,12 +157,8 @@ describe('ThingLinkbox — guest reservation button', () => {
     fireEvent.click(screen.getByRole('button', { name: label }));
 
     await waitFor(() => expect(screen.getByTestId('navigated')).toBeInTheDocument());
-    expect(apiFetch).not.toHaveBeenCalledWith(
-      '/api/v1/things/THG001/request/',
-      expect.anything()
-    );
+    expect(apiFetch).not.toHaveBeenCalledWith('/api/v1/things/THG001/request/', expect.anything());
   });
-
 
   // An endless GIFT/SELL keeps circulating (bookingKeepsStatus) but has no
   // dates/items to pick, so its hold POSTs directly — it must NOT navigate to an
@@ -267,7 +279,6 @@ describe('ThingPage — guest reservation', () => {
       );
     });
   });
-
 });
 
 describe('ThingPage — owner button matrix', () => {
@@ -311,21 +322,19 @@ describe('ThingPage — owner button matrix', () => {
 describe('ThingPage — anonymous login-to-act', () => {
   test('shows the reserve button and routes the click to the join page', async () => {
     localStorage.removeItem('userCode');
-    setApi({ thing: makeThing({ type: 'GIFT_THING', owner: 'OWNER1', collection_code: 'PUB001' }) });
+    setApi({
+      thing: makeThing({ type: 'GIFT_THING', owner: 'OWNER1', collection_code: 'PUB001' }),
+    });
     renderThingPage();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Claim' }));
 
     await waitFor(() => expect(screen.getByTestId('navigated')).toBeInTheDocument());
     // The anonymous click only navigates — it never fires a direct hold POST.
-    expect(apiFetch).not.toHaveBeenCalledWith(
-      '/api/v1/things/THG001/request/',
-      expect.anything()
-    );
+    expect(apiFetch).not.toHaveBeenCalledWith('/api/v1/things/THG001/request/', expect.anything());
     // The old inline JoinToAct email box is gone (replaced by the routing button).
     expect(screen.queryByText('Join to take part')).toBeNull();
   });
-
 });
 
 // ════════════════════════════════════════════════════════════════════════
@@ -448,7 +457,10 @@ describe('useThingBooking — the owner decides a hold', () => {
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BK1/reject/', { method: 'POST' })
     );
-    expect(onUpdateThing).toHaveBeenCalledWith('THG001', { status: 'ACTIVE', pending_booking: null });
+    expect(onUpdateThing).toHaveBeenCalledWith('THG001', {
+      status: 'ACTIVE',
+      pending_booking: null,
+    });
     expect(await screen.findByText('Hold cancelled.')).toBeInTheDocument();
   });
 
@@ -511,16 +523,19 @@ describe('useThingBooking — the owner decides a hold', () => {
   test.each([
     ['confirm', 'Confirm hold', 'Error confirming hold.'],
     ['cancel', 'Cancel hold', 'Error cancelling hold.'],
-  ])('a failed %s says which way it failed and leaves the thing alone', async (_n, label, message) => {
-    const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {
-      booking: () => Promise.resolve(mockResponse({}, false)),
-    });
+  ])(
+    'a failed %s says which way it failed and leaves the thing alone',
+    async (_n, label, message) => {
+      const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {
+        booking: () => Promise.resolve(mockResponse({}, false)),
+      });
 
-    fireEvent.click(await screen.findByRole('button', { name: label }));
+      fireEvent.click(await screen.findByRole('button', { name: label }));
 
-    expect(await screen.findByText(message)).toBeInTheDocument();
-    expect(onUpdateThing).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(onUpdateThing).not.toHaveBeenCalled();
+    }
+  );
 
   test('a dropped connection while deciding is reported', async () => {
     renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {

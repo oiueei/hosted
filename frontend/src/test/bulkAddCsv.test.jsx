@@ -12,7 +12,8 @@ import { uploadImage } from '../utils/uploadImage';
 import BulkAddCsv from '../components/BulkAddCsv';
 
 const fileInput = (container) => container.querySelector('input[type="file"]');
-const pick = (container, file) => fireEvent.change(fileInput(container), { target: { files: [file] } });
+const pick = (container, file) =>
+  fireEvent.change(fileInput(container), { target: { files: [file] } });
 
 const csvFile = (text) => new File([text], 'things.csv', { type: 'text/csv' });
 
@@ -110,7 +111,13 @@ describe('BulkAddCsv — ZIP', () => {
     apiFetch.mockResolvedValue(jsonResponse({ created: 1 }));
     const { container, onImported } = renderBulkAdd();
 
-    pick(container, await zipFile({ 'things.csv': 'headline,photo\nCazo,cazo.jpg', 'cazo.jpg': 'fake-jpeg-bytes' }));
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo\nCazo,cazo.jpg',
+        'cazo.jpg': 'fake-jpeg-bytes',
+      })
+    );
 
     expect(await screen.findByText('Preview (1)')).toBeInTheDocument();
     expect(screen.getByText('Cazo · 📷 cazo.jpg')).toBeInTheDocument();
@@ -139,7 +146,9 @@ describe('BulkAddCsv — ZIP', () => {
     pick(container, await zipFile({ 'things.csv': 'headline,photo\nCazo,cazo.jpg' }));
 
     expect(
-      await screen.findByText('These photos are named in the CSV but missing from the ZIP: cazo.jpg')
+      await screen.findByText(
+        'These photos are named in the CSV but missing from the ZIP: cazo.jpg'
+      )
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Preview/)).toBeNull();
   });
@@ -156,7 +165,13 @@ describe('BulkAddCsv — ZIP', () => {
     uploadImage.mockRejectedValue(new Error('upload_failed'));
     const { container, onImported } = renderBulkAdd();
 
-    pick(container, await zipFile({ 'things.csv': 'headline,photo\nCazo,cazo.jpg', 'cazo.jpg': 'fake-jpeg-bytes' }));
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo\nCazo,cazo.jpg',
+        'cazo.jpg': 'fake-jpeg-bytes',
+      })
+    );
     fireEvent.click(await screen.findByText('Add 1 items'));
 
     expect(
@@ -171,7 +186,9 @@ describe('BulkAddCsv — ZIP', () => {
 // the user has to be told which rows to fix.
 describe('BulkAddCsv — server rejections', () => {
   test('surfaces the error detail from a 400', async () => {
-    apiFetch.mockResolvedValue(jsonResponse({ error: 'Tag "Cocina" is not in this collection.' }, false));
+    apiFetch.mockResolvedValue(
+      jsonResponse({ error: 'Tag "Cocina" is not in this collection.' }, false)
+    );
     const { container, onImported } = renderBulkAdd();
 
     pick(container, csvFile('headline\nCazo'));

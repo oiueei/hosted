@@ -1,11 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import {
-  ALLOWED,
-  evaluateAudit,
-  reportAudit,
-  loadReport,
-  main,
-} from './audit-gate.mjs';
+import { ALLOWED, evaluateAudit, reportAudit, loadReport, main } from './audit-gate.mjs';
 
 // The gate that decides whether a dependency advisory turns CI red — and, on
 // purpose, the one thing in this repo that can *accept* a high. Its failure mode
@@ -92,7 +86,9 @@ describe('what fails the build', () => {
 });
 
 describe('the allowlist', () => {
-  const listed = { 'GHSA-aaaa-bbbb-cccc': { why: 'unreachable', noFix: 'none', remove: 'when fixed' } };
+  const listed = {
+    'GHSA-aaaa-bbbb-cccc': { why: 'unreachable', noFix: 'none', remove: 'when fixed' },
+  };
 
   test('a listed high passes instead of blocking', () => {
     const { blocking, allowed } = evaluateAudit(report(advisory()), listed);
@@ -168,9 +164,9 @@ describe('the allowlist', () => {
     // against entries that must fail it, so the check below means something at
     // zero entries.
     expect(unjustified('GHSA-bare', {})).toHaveLength(3);
-    expect(unjustified('GHSA-terse', { why: 'unreachable', noFix: 'none', remove: 'later' })).toEqual([
-      'GHSA-terse: why (a word, not an argument)',
-    ]);
+    expect(
+      unjustified('GHSA-terse', { why: 'unreachable', noFix: 'none', remove: 'later' })
+    ).toEqual(['GHSA-terse: why (a word, not an argument)']);
     expect(
       unjustified('GHSA-ok', {
         why: 'x'.repeat(41),

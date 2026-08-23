@@ -18,9 +18,18 @@ import useTheeeme from '../hooks/useTheeeme';
  * `children` (optional extra content under the form, e.g. ContactPage's link
  * to the collaborate page).
  */
-export default function ContactFormPage({ docTitleKey, titleKey, introKey, kind, idPrefix, children }) {
+export default function ContactFormPage({
+  docTitleKey,
+  titleKey,
+  introKey,
+  kind,
+  idPrefix,
+  children,
+}) {
   const { t } = useTranslation();
-  useEffect(() => { document.title = t(docTitleKey); }, [t, docTitleKey]);
+  useEffect(() => {
+    document.title = t(docTitleKey);
+  }, [t, docTitleKey]);
   const { btnStyle } = useTheeeme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
