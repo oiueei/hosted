@@ -203,10 +203,37 @@ class TestSecurityHeadersMiddleware:
         response = self.middleware(request)
         assert "default-src 'self'" in response["Content-Security-Policy"]
 
-    def test_csp_allows_cloudinary_images(self):
-        request = self.factory.get("/")
-        response = self.middleware(request)
-        assert "https://res.cloudinary.com" in response["Content-Security-Policy"]
+    def test_csp_allows_images_from_the_configured_media_host(self, settings):
+        """Derived from the setting, not hardcoded — prod and dev use different buckets."""
+        settings.MEDIA_PUBLIC_BASE_URL = "https://a-bucket.fsn1.example-storage.com"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+        img = next(d for d in csp.split(";") if d.strip().startswith("img-src"))
+        assert "https://a-bucket.fsn1.example-storage.com" in img
+
+    def test_csp_allows_uploading_to_the_media_host(self, settings):
+        """The upload is a fetch() straight to the bucket, so connect-src must allow it."""
+        settings.MEDIA_PUBLIC_BASE_URL = "https://a-bucket.fsn1.example-storage.com"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+        connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
+        assert "https://a-bucket.fsn1.example-storage.com" in connect
+
+    def test_csp_takes_the_origin_only_not_a_path(self, settings):
+        """A path is not something CSP matches on; leaving one in widens nothing but lies."""
+        settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org/media/v2"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+        assert "https://cdn.example.org;" in csp or "https://cdn.example.org " in csp
+        assert "/media/v2" not in csp
+
+    def test_csp_names_no_host_when_none_is_configured(self, settings):
+        """An unconfigured checkout must not widen its policy to a stray empty token."""
+        settings.MEDIA_PUBLIC_BASE_URL = ""
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+        assert "img-src 'self' blob:;" in csp
+        assert "connect-src 'self';" in csp
+
+    def test_csp_no_longer_names_cloudinary(self, settings):
+        """The bucket replaced it; a leftover allowance is a wider policy for nothing."""
+        assert "cloudinary" not in self.middleware(self.factory.get("/"))["Content-Security-Policy"]
 
     def test_permissions_policy_disables_sensitive_apis(self):
         request = self.factory.get("/")

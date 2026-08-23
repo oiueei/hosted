@@ -3,6 +3,7 @@ Middleware for OIUEEI: security headers + first-party daily-activity tracking.
 """
 
 import logging
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.cache import cache
@@ -38,17 +39,37 @@ class SecurityHeadersMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
+    @staticmethod
+    def _media_origin():
+        """The scheme+host assets are served from, or "" when none is configured.
+
+        Derived from ``MEDIA_PUBLIC_BASE_URL`` rather than written in here, which
+        it used to be. A literal stopped working the moment there was more than
+        one bucket: production and development serve from different hostnames, and
+        a deployment pointing the setting at its own bucket or a CDN would have had
+        to edit this file — a file it should never have to touch — to be allowed to
+        load its own images. Only the origin is taken; a path in the setting is not
+        part of what CSP matches on.
+        """
+        base = getattr(settings, "MEDIA_PUBLIC_BASE_URL", "")
+        if not base:
+            return ""
+        parsed = urlparse(base)
+        return f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else ""
+
     def __call__(self, request):
         response = self.get_response(request)
         script_src = (
             "script-src 'self' 'unsafe-inline'; " if settings.DEBUG else "script-src 'self'; "
         )
+        # `connect-src` needs it as well as `img-src`: uploads are a fetch() straight
+        # to the bucket, so blocking it there would block every upload.
+        media = f" {origin}" if (origin := self._media_origin()) else ""
         response["Content-Security-Policy"] = (
             "default-src 'self'; " + script_src + "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self'  blob: https://res.cloudinary.com; "
+            f"img-src 'self' blob:{media}; "
             "font-src 'self' data:; "
-            "connect-src 'self' https://api.cloudinary.com "
-            "https://res.cloudinary.com; "
+            f"connect-src 'self'{media}; "
             "frame-ancestors 'none'; "
             "object-src 'none'; "
             "base-uri 'self'; "

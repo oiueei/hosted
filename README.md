@@ -456,7 +456,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 | Claim | How to verify it |
 |---|---|
 | Third-party scripts *cannot* load | `curl -sI https://www.oiueei.com/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
-| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and `res.cloudinary.com` (the photos). That is the whole list. |
+| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the media bucket the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names, which is also the only extra host the CSP allows. That is the whole list. |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
 | Browser storage is strictly necessary, nothing more | **Inventoried 2026-08-21.** Four `localStorage` keys, all session/preference, none observed behaviour: `userCode` (which account is signed in), `theeemeColors` + `koro` (your own display preferences), `seenWelcome` (whether you've seen the first-visit box). `sessionStorage` is unused. One more key exists but isn't ours to name in code: `i18next-browser-languagedetector` caches your chosen UI language as `i18nextLng` under its own default — same category, a dependency's own write. `frontend/src/test/browserStorage.test.jsx` sweeps every source file and fails the build if a key outside this list ever appears — a public claim like this one needs a test that breaks when it stops being true, not just a paragraph. |
