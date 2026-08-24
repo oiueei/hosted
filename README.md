@@ -34,7 +34,7 @@ What I'm looking for is honest feedback from people willing to poke at it: thing
 - **Deployment**: Heroku (Procfile + `.python-version` included)
 - **Static files**: WhiteNoise
 - **PWA**: installable web app manifest + icons ("Add to Home Screen"); no service worker yet
-- **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders` and `send_digests` (see [HEROKU.md](HEROKU.md))
+- **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders`, `send_digests` and `purge_expired_data --commit` (see [HEROKU.md](HEROKU.md))
 - **Retention**: `purge_expired_data` enforces a period per category of data (`RETENTION_*` settings; 0 = keep indefinitely). Dry-run by default
 
 ## UI & Design System
