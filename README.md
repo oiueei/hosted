@@ -148,7 +148,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |
 | POST | `/api/v1/auth/refresh/` | Rotate access/refresh tokens via HttpOnly cookies |
-| GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url}`, what this deployment lets them create (see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything and `request_url` is `null` |
+| GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url}`, what this deployment lets them create (see [SELF_HOSTING.md](SELF_HOSTING.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything and `request_url` is `null` |
 | POST | `/api/v1/auth/logout/` | Log out (clears auth cookies) |
 | POST | `/api/v1/auth/delete-account/` | Request account deletion (rate limited: 3/h): emails a 24h single-use confirmation link; the deletion itself commits via a POST on the verify endpoint (GET only previews) |
 | GET | `/api/v1/auth/export/` | Download a copy of your own data as one JSON file (rate limited: 10/day). Attachment, `private, no-store`; carries no share tokens, no RSVP tokens and no third-party data beyond what you already see |
@@ -252,7 +252,7 @@ So the mechanism is here and the policy is not. Four extension points let a
 deployment add routes, decide who may create what, tell the frontend so it
 stops offering what would be refused, and replace the SPA's pages and copy —
 **without editing a file this repository also edits**, which is what makes an
-upgrade a merge and not an argument. See [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md).
+upgrade a merge and not an argument. See [SELF_HOSTING.md](SELF_HOSTING.md).
 
 ## Development
 
@@ -387,7 +387,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 
 Note what the second bullet means before you go public: **a PUBLIC collection's code is in its own URL**, so anyone who can read the collection can also ask your deployment to mail a magic link to any address they type. That is your sending domain, not theirs. `COLLECTION_JOINS_PER_DAY` caps how many people one collection may be joined by in a day and is the guard for it; it ships **off**, because only you know how big a share link you handed out.
 
-**If your deployment wants an open door**, add one: a view of your own, mounted through `DEPLOYMENT_URLCONFS`, that creates the account and joins it to your `is_onboarding` collections. The mechanism is documented in [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md); the policy is yours, which is why it is not shipped here.
+**If your deployment wants an open door**, add one: a view of your own, mounted through `DEPLOYMENT_URLCONFS`, that creates the account and joins it to your `is_onboarding` collections. The mechanism is documented in [SELF_HOSTING.md](SELF_HOSTING.md); the policy is yours, which is why it is not shipped here.
 
 ## Security
 

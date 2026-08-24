@@ -160,7 +160,7 @@ heroku config:set \
 
 > **Optional — your own extensions:** `DEPLOYMENT_URLCONFS` mounts URL modules of your own and
 > `CREATOR_POLICY` names the class deciding who may create what. Both are how a deployment adds to
-> OIUEEI without editing files this repository also edits — see [STANDALONE_HOSTED.md](STANDALONE_HOSTED.md).
+> OIUEEI without editing files this repository also edits — see [SELF_HOSTING.md](SELF_HOSTING.md).
 >
 > **Both are checked before the dyno boots.** They name code by dotted path and are resolved
 > lazily, so a typo used to pass every gate and surface as a 500 — for `CREATOR_POLICY`, on
