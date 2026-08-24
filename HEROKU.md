@@ -307,11 +307,19 @@ heroku config:set \
 
 ## Scheduled jobs (cron)
 
-The app relies on five management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice) chaining all five with `&&`, so any failure stops the chain and surfaces in scheduler-monitor:
+The app relies on six management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice) chaining all six with `&&`, so any failure stops the chain and surfaces in scheduler-monitor:
 
 ```
-python manage.py expire_bookings && python manage.py cleanup_rsvps && python manage.py close_transfers && python manage.py send_reminders && python manage.py send_digests
+python manage.py expire_bookings && python manage.py cleanup_rsvps && python manage.py close_transfers && python manage.py send_reminders && python manage.py send_digests && python manage.py purge_expired_data --commit
 ```
+
+⚠️ **Read this before you paste the last one.** `purge_expired_data` deletes real rows, and it is the command that turns the retention policy from a paragraph into something true — a deployment that never arms it keeps everything forever, which is not a valid answer to "how long do you keep this?". But the periods it enforces are the `RETENTION_*` settings, and their defaults are **what www.oiueei.com decided**, not a law you inherit: set them for your own regime first (`0` keeps a category indefinitely — see the retention section of `README.md`). Then run it **by hand, without the flag**, and read what it says it would do:
+
+```bash
+heroku run --app <app> "python manage.py purge_expired_data"
+```
+
+Without `--commit` it only counts, so that is safe to run at any time; the flag is the whole difference between a preview and a deletion. Once the counts look like your policy, leave it armed in the chain above. Quote the inner command or the Heroku CLI eats the flag.
 
 Heroku Scheduler config lives in the dashboard and nowhere else, so keep the dashboard in sync with this table — it is the only version of the schedule you can read.
 
@@ -322,8 +330,9 @@ Heroku Scheduler config lives in the dashboard and nowhere else, so keep the das
 | `python manage.py close_transfers` | daily (chained) | Sets `returned_date` on transfers whose ACCEPTED booking's `end_date` has passed. |
 | `python manage.py send_reminders` | daily (chained) | Return/delivery reminders for bookings due tomorrow. |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
+| `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email. **Dry-run without `--commit`** — read the warning above before arming it. |
 
-The daily commands are safe to run every day — each checks the date internally and no-ops when there's nothing to do.
+The daily commands are safe to run every day — each checks the current state and no-ops when there's nothing to do, so a repeated run costs a few seconds and changes nothing.
 
 If you want a periodic report on your own numbers, the `Event` log and `DailyActivity` are there to be queried and a command of your own can ride the same chain — this repository ships the instrumentation, not the report.
 
