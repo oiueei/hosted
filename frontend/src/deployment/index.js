@@ -29,8 +29,9 @@
  * @property {?string} faqPath
  *   Where this deployment's help/FAQ page lives, or `null` for none. Linked
  *   from `/login`, the door with the most traffic — upstream has nowhere to
- *   send that link, since the FAQ (pricing, early-bird terms, who operates
- *   the service) is deployment-specific content with no home in this repo.
+ *   send that link, since a FAQ answers questions about a *particular*
+ *   deployment: who operates it, what it lets people create, how to ask for
+ *   something it holds back. This repository has no answers to give.
  *   Same shape as `aboutPath`: a link to a 404 is worse than one link fewer.
  * @property {Object<string, Object>} deploymentI18n
  *   Extra translations, keyed by language code, merged into the `translation`

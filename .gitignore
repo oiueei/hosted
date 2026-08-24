@@ -72,6 +72,14 @@ mutants/
 # They were only ever protected by .git/info/exclude, which lives inside .git
 # and travels with no clone — so on any second machine there was nothing
 # stopping them being committed.
+#
+# `oiueei_*.md` covers the product, deployment, legal and glossary notes that
+# live in the author's own documents folder and get copied in here to be worked
+# on. They carry the operator's legal identity and the commercial reasoning that
+# the public repository deliberately has no version of — and unlike the files
+# above, they arrive by a plain `cp`, so nothing about them looks temporary to a
+# `git add -A` run three commits later.
 *_TASKS.md
 *_FIXES.md
 LEGAL_HEROKU.md
+oiueei_*.md

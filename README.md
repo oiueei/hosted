@@ -303,9 +303,11 @@ python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
-# Retention sweep (GDPR art. 5.1.e) — DRY-RUN BY DEFAULT, --commit to apply.
-# Not part of the daily chain above: it deletes real rows, so it is worth
-# looking at before it is trusted. Weekly is plenty.
+# Retention sweep (GDPR art. 5.1.e) — the sixth link in that daily chain, and the
+# one that makes "nothing is kept forever" below true rather than aspirational.
+# DRY-RUN BY DEFAULT: it deletes real rows, so look at what it would do, decide
+# your own RETENTION_* periods (0 keeps a category indefinitely), and only then
+# add --commit to the scheduled chain. See HEROKU.md § Scheduled jobs.
 python manage.py purge_expired_data           # count what is past its period
 python manage.py purge_expired_data --commit  # anonymise / delete it
 
