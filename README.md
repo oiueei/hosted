@@ -572,7 +572,7 @@ The app ships a public **`/legal`** page (commitment, legal notice, privacy, bas
 
 ### Need a hand running your own OIUEEI?
 
-Self-hosting is allowed and encouraged. If you'd like help deploying your own instance, adapting it to your community, or building custom features on top of it, I offer exactly that as an on-demand service — write to **oiueei@disroot.org** and tell me what you have in mind.
+Self-hosting is allowed and encouraged. If you'd like help deploying your own instance, adapting it to your community, or building custom features on top of it, I offer exactly that as an on-demand service — write to **maintainer@oiueei.com** and tell me what you have in mind.
 
 ## Acknowledgements
 
