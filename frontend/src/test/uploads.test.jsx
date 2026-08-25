@@ -3,13 +3,20 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 // The upload helpers are unit-tested next to themselves (src/utils/upload*.test.js);
 // here they are mocked so no test ever touches the network.
-vi.mock('../utils/uploadImage', () => ({ uploadImage: vi.fn() }));
+// Same shape as the uploadPdf mock below: stub the function, keep the real
+// `UploadTooLargeError` and `IMAGE_MAX_BYTES`. The components branch on that
+// class, so a bare factory leaves it undefined and every failure path throws
+// inside its own catch.
+vi.mock('../utils/uploadImage', async (importOriginal) => ({
+  ...(await importOriginal()),
+  uploadImage: vi.fn(),
+}));
 vi.mock('../utils/uploadPdf', async (importOriginal) => ({
   ...(await importOriginal()),
   uploadPdf: vi.fn(),
 }));
 
-import { uploadImage } from '../utils/uploadImage';
+import { uploadImage, UploadTooLargeError } from '../utils/uploadImage';
 import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
@@ -161,6 +168,22 @@ describe('ImageUpload', () => {
     expect(await screen.findByText('Upload failed. Please try again.')).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.queryByAltText('Image preview')).toBeNull();
+  });
+
+  test('an oversized image says so, rather than "upload failed"', async () => {
+    // The whole difference this makes: one of these two is something the person
+    // can act on, and telling them apart is why `uploadImage` throws a class
+    // and not a string. `PdfUpload` has always done this; the image path met the
+    // server's cap with a shrug.
+    uploadImage.mockRejectedValue(new UploadTooLargeError());
+    const onChange = vi.fn();
+    const { container } = render(<ImageUpload id="thumb" label="Thumbnail" onChange={onChange} />);
+
+    pick(container, photo());
+
+    expect(await screen.findByText(/The image is too large \(max 10 MB\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 
@@ -343,6 +366,23 @@ describe('GalleryUpload', () => {
     pick(container, photo('a.jpg'), photo('b.jpg'));
 
     expect(await screen.findByText('Upload failed. Please try again.')).toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith([item(1)]);
+  });
+
+  test('one oversized photo mid-batch keeps the rest and says which problem it was', async () => {
+    // Both halves matter here. The batch is not atomic, so the photos that made
+    // it are kept — and the message has to name the size, because that is the
+    // one failure the person can fix by picking a different file.
+    uploadImage
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
+      .mockRejectedValueOnce(new UploadTooLargeError());
+    const onChange = vi.fn();
+    const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
+
+    pick(container, photo('a.jpg'), photo('b.jpg'));
+
+    expect(await screen.findByText(/The image is too large \(max 10 MB\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
     expect(onChange).toHaveBeenCalledWith([item(1)]);
   });
 

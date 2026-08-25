@@ -382,6 +382,7 @@
     "pdfHint": "Solo PDF, máximo 5 MB.",
     "pdfView": "Ver el documento",
     "pdfTooLarge": "El archivo es demasiado grande (máximo 5 MB).",
+    "imageTooLarge": "La imagen es demasiado grande (máximo 10 MB). Prueba con una foto que el navegador pueda redimensionar.",
     "welcomeDocLabel": "Documento de bienvenida (PDF)",
     "welcomeDocHelper": "Opcional. Quien entra en el grupo lo recibe por correo, una sola vez."
   },

@@ -388,6 +388,7 @@
     "pdfHint": "PDF only, max 5 MB.",
     "pdfView": "View the document",
     "pdfTooLarge": "The file is too large (max 5 MB).",
+    "imageTooLarge": "The image is too large (max 10 MB). Try a photo the browser can resize.",
     "welcomeDocLabel": "Welcome document (PDF)",
     "welcomeDocHelper": "Optional. Everyone who joins the group receives it by email, once."
   },

@@ -7,7 +7,7 @@ vi.mock('./resizeImage', () => ({ resizeImage: vi.fn() }));
 
 import { apiFetch } from '../services/api';
 import { resizeImage } from './resizeImage';
-import { uploadImage } from './uploadImage';
+import { uploadImage, IMAGE_MAX_BYTES, UploadTooLargeError } from './uploadImage';
 
 // What the server hands back (core/views/upload.py). Everything that constrains
 // the upload — key, type, cache policy, byte length — is already inside `url`'s
@@ -110,5 +110,50 @@ describe('uploadImage', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 403 });
 
     await expect(uploadImage(photo())).rejects.toThrow('upload_failed');
+  });
+
+  describe('the size a resize could not fix', () => {
+    // `resizeImage` returns the original untouched when the browser cannot
+    // decode it, which is the only realistic way something oversized reaches
+    // the ticket call. The server would refuse it anyway (the cap is signed);
+    // the point of failing here is that the person gets told what is wrong
+    // instead of a generic "upload failed" after a pointless round trip.
+    const oversized = () => {
+      const file = new File(['x'], 'raw.tiff', { type: 'image/tiff' });
+      Object.defineProperty(file, 'size', { value: IMAGE_MAX_BYTES + 1 });
+      return file;
+    };
+
+    test('refuses it before asking for a ticket', async () => {
+      resizeImage.mockResolvedValue(oversized());
+
+      await expect(uploadImage(photo())).rejects.toBeInstanceOf(UploadTooLargeError);
+      expect(apiFetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    test('judges the RESIZED file, not the original', async () => {
+      // The regression that would matter: a 30 MB phone photo resizes to a few
+      // hundred kilobytes and must upload. Checking the original would refuse
+      // exactly the files this product is for.
+      const huge = photo();
+      Object.defineProperty(huge, 'size', { value: IMAGE_MAX_BYTES * 3 });
+
+      await expect(uploadImage(huge)).resolves.toEqual({
+        publicId: TICKET.key,
+        url: TICKET.public_url,
+      });
+    });
+
+    test('accepts a file exactly on the limit', async () => {
+      // The cap is `>`, and it has to match the server's `<=` boundary
+      // (core/views/upload.py) or the courtesy check refuses what the real one
+      // allows.
+      const exact = new File(['x'], 'edge.webp', { type: 'image/webp' });
+      Object.defineProperty(exact, 'size', { value: IMAGE_MAX_BYTES });
+      resizeImage.mockResolvedValue(exact);
+
+      await expect(uploadImage(photo())).resolves.toHaveProperty('publicId', TICKET.key);
+    });
   });
 });

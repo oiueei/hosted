@@ -382,6 +382,7 @@
     "pdfHint": "Només PDF, màxim 5 MB.",
     "pdfView": "Veure el document",
     "pdfTooLarge": "El fitxer és massa gran (màxim 5 MB).",
+    "imageTooLarge": "La imatge és massa gran (màxim 10 MB). Prova amb una foto que el navegador pugui redimensionar.",
     "welcomeDocLabel": "Document de benvinguda (PDF)",
     "welcomeDocHelper": "Opcional. Qui entra al grup el rep per correu, una sola vegada."
   },
