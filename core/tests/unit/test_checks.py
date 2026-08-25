@@ -17,7 +17,7 @@ from django.core.management import call_command
 from django.core.management.base import SystemCheckError
 from django.test import override_settings
 
-from core.checks import check_creator_policy
+from core.checks import check_creator_policy, check_object_storage
 from core.services.creator_policy import Capabilities, CreatorPolicy
 
 
@@ -122,3 +122,62 @@ class TestTheCheckActuallyRunsAtCheckTime:
         """A gate that failed the standalone would be worse than no gate — it
         would be turned off, and take the real check with it."""
         call_command("check")
+
+
+class TestObjectStorageIsAllOrNone:
+    """The half-configured bucket — a deployment that looks healthy and is not.
+
+    Storage being *unset* is supported: uploads are off, everything else works,
+    and that is what makes a checkout runnable without an account. Storage being
+    *partly* set is the trap. `MEDIA_PUBLIC_BASE_URL` still derives from the
+    endpoint and bucket, so every image already stored renders, the CSP is
+    correct and nothing complains — until the first person presses Upload and
+    `storage._config()` raises. Nobody reads a config var again after a
+    successful deploy, so the report has to arrive at deploy time.
+    """
+
+    ALL_FIVE = {
+        "OBJECT_STORAGE_ENDPOINT": "https://fsn1.example-storage.com",
+        "OBJECT_STORAGE_BUCKET": "a-bucket",
+        "OBJECT_STORAGE_REGION": "fsn1",
+        "OBJECT_STORAGE_ACCESS_KEY": "key",
+        "OBJECT_STORAGE_SECRET_KEY": "secret",
+    }
+
+    def test_all_five_set_is_silent(self):
+        with override_settings(**self.ALL_FIVE):
+            assert check_object_storage(None) == []
+
+    def test_none_set_is_silent_because_that_is_a_real_deployment(self):
+        """A checkout with no storage account is supported, not broken."""
+        with override_settings(**dict.fromkeys(self.ALL_FIVE, "")):
+            assert check_object_storage(None) == []
+
+    @pytest.mark.parametrize("forgotten", sorted(ALL_FIVE))
+    def test_forgetting_any_one_of_them_is_reported(self, forgotten):
+        """Each of the five, because "the obvious one" is not how a typo picks."""
+        with override_settings(**{**self.ALL_FIVE, forgotten: ""}):
+            issues = check_object_storage(None)
+
+        assert len(issues) == 1
+        assert issues[0].id == "core.W001"
+        # The message names the one that is missing: an operator reading a
+        # deploy log needs the variable, not "something is wrong with storage".
+        assert forgotten in issues[0].msg
+
+    def test_the_secret_alone_being_set_is_reported_too(self):
+        """The other end of the range — one set, four missing, still not "none"."""
+        with override_settings(
+            **{**dict.fromkeys(self.ALL_FIVE, ""), "OBJECT_STORAGE_SECRET_KEY": "secret"}
+        ):
+            issues = check_object_storage(None)
+
+        assert len(issues) == 1
+        assert issues[0].id == "core.W001"
+
+    def test_it_warns_rather_than_failing_the_deploy(self):
+        """Deliberate, and the reason it is a Warning: an Error here would refuse
+        to start the very no-storage checkout the setting is optional for, so it
+        would be the check that gets deleted."""
+        with override_settings(**{**self.ALL_FIVE, "OBJECT_STORAGE_REGION": ""}):
+            call_command("check")  # does not raise SystemCheckError

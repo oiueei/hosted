@@ -170,6 +170,14 @@ heroku config:set \
 > `migrate`, which runs system checks, so a bad value **fails the release phase and Heroku keeps
 > the previous release** rather than promoting a broken one.
 
+> **A third check covers the bucket, as a warning rather than an error** (`core.W001`). The five
+> `OBJECT_STORAGE_*` vars are one credential set, and storage is genuinely optional — unset, the app
+> runs and uploads are simply off. Set **four of the five** and the deployment looks perfectly
+> healthy: images already stored keep rendering, the CSP is right, nothing complains — and the first
+> person to press Upload gets a 500. `manage.py check` now says so at deploy time. It is a warning
+> so it cannot refuse to start the no-storage checkout the setting is optional for; run
+> `manage.py check --fail-level WARNING` if you would rather it were fatal on yours.
+
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
 > **Email** is configured separately — see the [Email](#email) section below. Magic-link sign-in does not work until SMTP is set.
