@@ -43,7 +43,7 @@ The `User` model represents a person who can own collections, be invited to othe
 
 5. **Creation date is persisted** - The `created` field is automatically set to today's date when the user is created.
 
-6. **Last activity is updated on login** - The `update_last_activity()` method is called on each successful authentication. Newly-created users have `last_activity = None` until that first call; subsequent calls bump the date to today.
+6. **Last activity is updated on login** - The `update_last_activity()` method is called on each successful authentication **and on every `GET /auth/me/`**, so an account in daily use through the SPA never looks dormant to the retention sweep. Newly-created users have `last_activity = None` until that first call; subsequent calls bump the date to today, and a call on a day already recorded writes nothing.
 
 7. **Email notification preferences** - `notify_activity` and `notify_news` (**both default on**) are consulted by `core/services/email_service.py` before sending. News is additionally narrowed per group by `Collection.digest_muted`, which is what keeps an on-by-default news flag from being a pre-ticked opt-in (DESIGN §6). Magic links and invitations (Cat. 1) are mandatory and always sent regardless of these flags.
 
@@ -51,7 +51,7 @@ The `User` model represents a person who can own collections, be invited to othe
 
 ### Methods
 
-- `update_last_activity()` - Updates `last_activity` to today's date
+- `update_last_activity()` - Sets `last_activity` to today and clears any standing `inactivity_notified` warning. **A no-op when neither would change**: the column holds a date, and `MeView` calls this on every `GET /auth/me/` — which the SPA asks three or four times per page load — so an unconditional save was that many `UPDATE`s writing the value already there.
 - `has_perm(perm, obj)` - Returns True only for superusers
 - `has_module_perms(app_label)` - Returns True only for superusers
 
