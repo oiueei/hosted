@@ -9,6 +9,7 @@ import {
 } from '../utils/rental';
 import LocalizedInfo from './LocalizedInfo';
 import { localizedCounter } from '../utils/localized';
+import hdsLang from '../utils/hdsLang';
 
 /**
  * The rental-rules fields (#7) for a collection that lends or rents items: the
@@ -50,7 +51,7 @@ export default function RentalRulesFields({
           label: t('rental.durationsLabel'),
           placeholder: t('rental.durationsPlaceholder'),
           assistive: t('rental.durationsHelper'),
-          language: 'en',
+          language: hdsLang(i18n.language),
         }}
         options={RENTAL_DURATION_PRESETS.map((p) => ({ label: t(p.key), value: String(p.days) }))}
         value={rentalDurations.map((d) => ({ label: durationLabel(d, t), value: String(d) }))}

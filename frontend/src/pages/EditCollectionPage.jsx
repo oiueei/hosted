@@ -18,6 +18,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import hdsLang from '../utils/hdsLang';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -301,7 +302,7 @@ export default function EditCollectionPage() {
         <LocalizedInfo id="edit-collection-localized-info" />
         <Select
           id="edit-collection-status"
-          texts={{ label: t('editCollection.statusLabel'), language: 'en' }}
+          texts={{ label: t('editCollection.statusLabel'), language: hdsLang(i18n.language) }}
           helper={t('editCollection.statusHelper')}
           options={STATUS_OPTIONS}
           value={status}
@@ -362,7 +363,7 @@ export default function EditCollectionPage() {
           />
           <Select
             id="edit-collection-digest"
-            texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
+            texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}
             helper={t('editCollection.digestHelper')}
             options={DIGEST_OPTIONS}
             value={digestFrequency}
@@ -374,7 +375,7 @@ export default function EditCollectionPage() {
           />
           <Select
             id="edit-collection-language"
-            texts={{ label: t('collectionLanguage.label'), language: 'en' }}
+            texts={{ label: t('collectionLanguage.label'), language: hdsLang(i18n.language) }}
             helper={t('collectionLanguage.helper')}
             options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
             value={language}

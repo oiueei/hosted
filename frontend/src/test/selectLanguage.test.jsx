@@ -94,4 +94,37 @@ describe('the dead prop does not come back', () => {
 
     expect(offenders).toEqual([]);
   });
+
+  /**
+   * The companion to the test above. That one catches `language` passed as a
+   * *prop* (silently ignored since HDS 6); this one catches the mapping being
+   * written out by hand at a call site instead of going through `hdsLang`.
+   *
+   * It is here because that drift really happened: `ShareCollectionMenu` carried
+   * its own `i18n.language?.startsWith('fi') ? 'fi' : 'en'`, which had already
+   * diverged from the shared util — it sent Swedish to English. Found in the
+   * 2026-08 frontend review, by reading, not by a failing test.
+   *
+   * A bare `language: 'en'` counts as hand-rolled too, and thirteen call sites
+   * had one. Correct today, because every language OIUEEI offers maps to English
+   * — and wrong the moment anyone adds Finnish or Swedish, which are the two
+   * languages HDS actually ships strings for and the exact case `hdsLang` exists
+   * to pass through. That is the bug from "Stop fourteen selects announcing
+   * themselves in Finnish" waiting to happen again from the other direction.
+   */
+  test('no call site hand-rolls the HDS language mapping', () => {
+    const files = jsxFiles('src');
+    expect(files.length).toBeGreaterThan(20);
+
+    const offenders = [];
+    for (const file of files) {
+      if (file.endsWith('hdsLang.js')) continue;
+      const source = fs.readFileSync(file, 'utf8');
+      for (const match of source.match(/language:\s*[^,\n}]+/g) || []) {
+        if (!/hdsLang\(/.test(match)) offenders.push(`${file} → ${match.trim()}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
 });

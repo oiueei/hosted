@@ -16,6 +16,7 @@ import LocalizedInfo from '../components/LocalizedInfo';
 import { localizedCounter } from '../utils/localized';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import hdsLang from '../utils/hdsLang';
 
 export default function CreateCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -225,7 +226,7 @@ export default function CreateCollectionPage() {
                 so the one field doesn't read differently on the two screens. */}
           <Select
             id="create-collection-digest"
-            texts={{ label: t('editCollection.digestLabel'), language: 'en' }}
+            texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}
             helper={t('editCollection.digestHelper')}
             options={[
               { label: t('editCollection.digestNone'), value: 'NONE' },
@@ -239,7 +240,7 @@ export default function CreateCollectionPage() {
           />
           <Select
             id="create-collection-language"
-            texts={{ label: t('collectionLanguage.label'), language: 'en' }}
+            texts={{ label: t('collectionLanguage.label'), language: hdsLang(i18n.language) }}
             helper={t('collectionLanguage.helper')}
             options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
             value={language}

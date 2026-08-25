@@ -18,6 +18,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import hdsLang from '../utils/hdsLang';
 
 export default function RequestThingPage() {
   const { code, thingCode } = useParams();
@@ -234,7 +235,7 @@ export default function RequestThingPage() {
                   label: t('rental.chooseDuration'),
                   placeholder: t('rental.chooseDurationPlaceholder'),
                   error: attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
-                  language: 'en',
+                  language: hdsLang(i18n.language),
                 }}
                 options={rentalDurations.map((d) => ({
                   label: durationLabel(d, t),

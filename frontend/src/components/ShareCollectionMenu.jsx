@@ -13,6 +13,7 @@ import {
   Select,
 } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
+import hdsLang from '../utils/hdsLang';
 import { apiFetch } from '../services/api';
 import Toast from './Toast';
 
@@ -195,7 +196,7 @@ export default function ShareCollectionMenu({
         texts={{
           label: t('shareMenu.label'),
           placeholder: t('shareMenu.placeholder'),
-          language: i18n.language?.startsWith('fi') ? 'fi' : 'en',
+          language: hdsLang(i18n.language),
         }}
         options={options}
         value={[]}
