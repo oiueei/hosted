@@ -309,7 +309,11 @@ export default function ManageInvitesPage() {
                               state: {
                                 guestCode: row._code,
                                 guestName: row._name,
-                                backLabel: headline || 'Guests',
+                                // Bare: with no headline, RemoveGuestPage's own
+                                // `t('removeGuest.guests')` is the right label for
+                                // where the link goes. A literal here is truthy and
+                                // would beat that fallback to it, in English.
+                                backLabel: headline,
                               },
                             })
                           }

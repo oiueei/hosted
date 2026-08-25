@@ -29,9 +29,9 @@ export default function UserPage() {
   const userCode = paramCode || localStorage.getItem('userCode');
   const isOwnProfile = !paramCode || paramCode === localStorage.getItem('userCode');
   useEffect(() => {
-    document.title = user
-      ? t('titles.user', { name: user.name || 'Profile' })
-      : t('titles.user', { name: 'Profile' });
+    // Both branches always fell back to the same word, and it was English in
+    // every locale — the one string on this page that never got externalised.
+    document.title = t('titles.user', { name: user?.name || t('common.profile') });
   }, [user, t]);
 
   useEffect(() => {

@@ -15,7 +15,10 @@ export default function RemoveGuestPage() {
   const backPath = `/collections/${code}/invites`;
   const backLabel = location.state?.backLabel || t('removeGuest.guests');
   const guestCode = location.state?.guestCode;
-  const guestName = location.state?.guestName || 'this guest';
+  // The same stand-in the rest of the app uses for a member with no name set
+  // (`ThingLinkbox`, `InboxNotifications`, HomePage): the copy interpolates it
+  // mid-sentence, so the sentence still needs a subject.
+  const guestName = location.state?.guestName || t('common.aMember');
 
   useEffect(() => {
     if (!guestCode) navigate(backPath);
