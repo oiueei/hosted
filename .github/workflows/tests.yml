@@ -134,6 +134,10 @@ jobs:
       - name: Audit dependencies
         run: node scripts/audit-gate.mjs
 
+      # `--max-warnings 0` (in the npm script) is what makes this a gate rather
+      # than a report: `eslint .` exits 0 on warnings, so for a while this step
+      # was green with a live warning in it. The backend's `ruff check` fails on
+      # any finding; this is the frontend on the same floor.
       - name: Lint
         run: npm run lint
 
