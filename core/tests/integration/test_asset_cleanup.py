@@ -100,3 +100,57 @@ class TestAssetCleanup:
                 with asset_cleanup.suspended():
                     owner.delete()
         destroy.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestSeedPoolIsNeverDestroyed:
+    """The demo's fixture pool survives any delete.
+
+    These exist because the pool was destroyed for real: deleting the demo from
+    the Django admin emptied the whole ``oiueei/seed/`` folder. ``seed_demo
+    --reset`` was safe because it suspends the mechanism; every other door —
+    the admin, a cascade, a shell delete — was not. The pool is shared by every
+    database that has ever seeded, so one row's delete must never reach it.
+    """
+
+    def test_thing_delete_spares_seed_keys(self, django_capture_on_commit_callbacks):
+        owner = User.objects.create(email="seed1@example.com")
+        thing = Thing.objects.create(
+            owner=owner,
+            headline="Demo drill",
+            type="GIFT_THING",
+            thumbnail="oiueei/seed/l1l112",
+            gallery=["oiueei/seed/l1l112_b"],
+        )
+        with patch.object(asset_cleanup.storage, "delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                thing.delete()
+        destroy.assert_not_called()
+
+    def test_collection_and_user_deletes_spare_seed_keys(self, django_capture_on_commit_callbacks):
+        owner = User.objects.create(email="seed2@example.com", photo="oiueei/seed/1u1uPH")
+        collection = Collection.objects.create(
+            owner=owner, headline="Demo group", thumbnail="oiueei/seed/l1l1C1"
+        )
+        with patch.object(asset_cleanup.storage, "delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                collection.delete()
+                owner.delete()
+        destroy.assert_not_called()
+
+    def test_a_real_upload_alongside_a_seed_key_still_goes(
+        self, django_capture_on_commit_callbacks
+    ):
+        """The skip is per key, not per record — a genuine upload is still cleaned."""
+        owner = User.objects.create(email="seed3@example.com")
+        thing = Thing.objects.create(
+            owner=owner,
+            headline="Half and half",
+            type="GIFT_THING",
+            thumbnail="oiueei/seed/l1l112",
+            gallery=["oiueei/things/a-real-upload"],
+        )
+        with patch.object(asset_cleanup.storage, "delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                thing.delete()
+        destroy.assert_called_once_with("oiueei/things/a-real-upload")

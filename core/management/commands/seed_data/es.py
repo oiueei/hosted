@@ -14,8 +14,8 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "headline": "¡La resistencia es fútil! Lele y su electrónica.",
-        "about": "## El taller de Lele ⚡\n\nManitas de la **electrónica** y cazadora de componentes. Mi coliving funciona con jumpers y Arduinos a medio hacer. Me apunto a todo lo que circule por el barrio — si algo se enciende, lo arreglo. *¡La resistencia es fútil!*",
+        "headline": "Los domingos monto mercadillo y comida en la cooperativa.",
+        "about": "## Domingos en la cooperativa 🥘\n\nVivo en una **cooperativa de viviendas**, y aquí casi nada se hace en solitario. Cada domingo montamos en el patio un **mercadillo-fiesta-comida**: cada cual baja lo que le sobra, alguien pone música y siempre acaba habiendo más comida que gente.\n\n- 🧺 Lo que a ti te sobra, a tu vecina le hace falta\n- 🔧 Herramientas compartidas, escalera incluida\n- 🍲 Trae plato, te vas con receta",
     },
     {
         "code": "l1l13S",
@@ -49,6 +49,16 @@ COLLECTIONS = [
         "code": "l1l1C1",
         "headline": "Préstamos de Lili – ¡hora de compartir las cosas!",
         "description": "¿Necesitas taladro, limpiador de vapor, escalera sólida, báscula de equipaje o mega kit de magdalenas? La biblioteca de préstamos de Lili te cubre – ¡todo a un coste simbólico!",
+    },
+    {
+        "code": "1u1uC1",
+        "headline": "¡Herramientas para nosotros!",
+        "description": "Subimos aquí las herramientas que tenemos y las ponemos a disposición del resto del grupo. Cuidadlas bien: son nuestras y las necesitamos entre todas y todos.",
+    },
+    {
+        "code": "L3L3C1",
+        "headline": "El mercadillo de los domingos en el patio",
+        "description": "Cada domingo montamos mercadillo, fiesta y comida en el patio. Baja lo que ya no uses y llévate lo que te haga falta: aquí todo se regala. Solo para vecinas y vecinos de la cooperativa.",
     },
 ]
 
@@ -224,6 +234,166 @@ THINGS = [
     {
         "code": "La1a00",
         "headline": "¿Alguien tiene una escalerilla? ¡La estantería alta gana! 🪜",
+    },
+    {
+        "code": "1u1u01",
+        "headline": "Cepillo de carpintero tipo Stanley",
+        "description": "Un clásico entre los clásicos: cuerpo metálico robusto, mango bien conservado y esa viruta fina saliendo de la cuchilla que demuestra un ajuste perfecto. Ideal para quien busca precisión sin depender de la electricidad.",
+    },
+    {
+        "code": "1u1u02",
+        "headline": "Pie de rey y compás de precisión",
+        "description": "Dos clásicos para medir con exactitud: el calibre metálico mantiene sus escalas legibles y su mecanismo se desliza sin trabas, mientras que el compás conserva la punta firme para trazar círculos sin desviarse.",
+    },
+    {
+        "code": "1u1u03",
+        "headline": "Cepillo eléctrico en plena acción",
+        "description": "Se ve trabajando sobre una tabla de pino, dejando esa viruta fina que delata un filo bien afilado. Las manos protegidas con guantes confirman que quien lo usa sabe lo que hace y cuida su seguridad.",
+    },
+    {
+        "code": "1u1u04",
+        "headline": "Set tradicional de tallado en madera",
+        "description": "Una brocha, una navaja de tallar, un martillo de mango desgastado por el uso y una garlopa pequeña de madera maciza forman este conjunto con mucho oficio detrás. Cada pieza tiene su función clara.",
+    },
+    {
+        "code": "1u1u05",
+        "headline": "Mini amoladora con set de puntas y cepillos",
+        "description": "Una herramienta rotativa compacta acompañada de un buen surtido de puntas abrasivas y cepillos metálicos, ideal para pulir, lijar o dar los últimos retoques a piezas pequeñas. Se ve poco desgaste.",
+    },
+    {
+        "code": "1u1u06",
+        "headline": "Ingletadora eléctrica para molduras y rodapiés",
+        "description": "Esta ingletadora se usa claramente para trabajos de acabado, ahí está la moldura blanca recién cortada como prueba. El disco luce en buen estado y la base se ve estable para cortes limpios y sin vibraciones.",
+    },
+    {
+        "code": "1u1u07",
+        "headline": "Formones y mazo de madera para carpintería",
+        "description": "Dos formones con mango de madera y filo bien cuidado, junto a un mazo macizo perfecto para golpes precisos sin dañar el mango. Al fondo se asoma un pequeño cepillo de madera que completa el set.",
+    },
+    {
+        "code": "1u1u08",
+        "headline": "Equipo de sopladores de vidrio en plena faena",
+        "description": "Aquí vemos el oficio en acción: la vara de soplado sostiene una pieza de vidrio incandescente recién sacada del horno, mientras el artesano la trabaja con calma y control. El delantal de cuero dice el resto.",
+    },
+    {
+        "code": "1u1u09",
+        "headline": "Kit de electricista: crimpadora, alicates y grapadora",
+        "description": "Todo lo necesario para un cableado limpio: crimpadoras de colores, alicates de corte, un comprobador de tensión y hasta una grapadora manual para fijar cables. Las gafas de protección van incluidas.",
+    },
+    {
+        "code": "1u1u10",
+        "headline": "Yunque de fragua con martillo de herrero",
+        "description": "Un conjunto clásico de forja: el yunque conserva su forma y solidez a pesar del paso de los años, y el mazo de mango de madera se ve fuerte y bien equilibrado. Se nota el uso real de un taller.",
+    },
+    {
+        "code": "1u1u11",
+        "headline": "Set de joyería para trabajar metales finos",
+        "description": "Un mini yunque de joyero acompañado de alicates, soplete y una pieza en proceso muestran el detalle milimétrico que exige este oficio. Todo el instrumental se ve cuidado y listo para seguir.",
+    },
+    {
+        "code": "1u1u12",
+        "headline": "Maletín de carraca y vasos completo",
+        "description": "Un set de llaves de vaso y carraca con bastante recorrido, se nota por el color desgastado del maletín, pero todas las piezas están en su sitio y listas para apretar cualquier tornillo.",
+    },
+    {
+        "code": "1u1u13",
+        "headline": "Ingletadora con serrucho de apoyo",
+        "description": "Esta ingletadora ha visto bastante trabajo, el serrín acumulado lo confirma, pero el disco y la estructura se mantienen firmes para seguir haciendo cortes en ángulo con precisión.",
+    },
+    {
+        "code": "1u1u14",
+        "headline": "Kit de soldadura con careta y electrodos",
+        "description": "Careta protectora, guante resistente al calor y varillas de electrodo listas para chispear: todo lo esencial para soldar sin sustos. El equipo se ve completo y en condiciones de seguir dando buenas soldaduras.",
+    },
+    {
+        "code": "1u1u15",
+        "headline": "Trío de serruchos de mano multiuso",
+        "description": "Tres serruchos con mangos de colores y dientes bien definidos, cada uno pensado para un tipo de corte distinto. Se conservan afilados y sin óxido, listos para entrar en cualquier caja de herramientas.",
+    },
+    {
+        "code": "1u1u16",
+        "headline": "Ingletadora amarilla con molduras cortadas",
+        "description": "Con varias piezas de madera ya cortadas a su lado, esta ingletadora demuestra que ha estado en pleno rendimiento. El amarillo desgastado y algunas marcas de uso no le quitan mérito: es de fiar.",
+    },
+    {
+        "code": "1u1u17",
+        "headline": "Martillo perforador con brocas y puntas SDS",
+        "description": "Un martillo perforador robusto acompañado de brocas de distintos grosores, un cincel plano y hasta los lápices de carpintero de toda la vida. Las gafas de protección al lado son un buen recordatorio.",
+    },
+    {
+        "code": "1u1u18",
+        "headline": "Taladro atornillador a batería",
+        "description": "Un taladro compacto y ligero, con la batería incluida y lista para usar. Se ve algo de polvo de trabajo reciente en la superficie, señal de que ha estado en plena faena y no cogiendo polvo en un cajón.",
+    },
+    {
+        "code": "1u1u19",
+        "headline": "Kit básico: martillo, cinta métrica y alicates",
+        "description": "El combo esencial para cualquier reparación en casa: un martillo de mango azul, una cinta métrica naranja bien visible, unos alicates multiuso y clavos de sobra. Sencillo, práctico y sin complicaciones.",
+    },
+    {
+        "code": "1u1u20",
+        "headline": "Escalera profesional de aluminio",
+        "description": "Escalera de trabajo de aluminio en excelente estado, resistente y versátil. Estructura robusta, peldaños seguros y estables.",
+    },
+    {
+        "code": "1u1u21",
+        "headline": "Conjunto de brochas y pinceles",
+        "description": "Conjunto completo de 6 brochas y pinceles de pintura con mangos de madera natural (amarillos y blancos). Variedad de tamaños y tipos para trabajos de precisión y cobertura.",
+    },
+    {
+        "code": "L3L301",
+        "headline": "Batidora amasadora roja",
+        "description": "Batidora amasadora de color rojo, con un diseño moderno y elegante. Perfecta para preparar todo tipo de masas y postres. Bol de acero inoxidable.",
+    },
+    {
+        "code": "L3L302",
+        "headline": "Bicicleta de aprendizaje para niños",
+        "description": "Bicicleta de aprendizaje para niños, ideal para iniciarse en el mundo de las dos ruedas.",
+    },
+    {
+        "code": "L3L303",
+        "headline": "Altavoz amplificado Fenton FT212LED",
+        "description": "Altavoz amplificado Fenton FT212LED con una potencia de 1400 W. Cuenta con iluminación LED integrada que cambia de color. Bluetooth, USB y dos micros inalámbricos. En perfecto estado.",
+    },
+    {
+        "code": "L3L304",
+        "headline": "Raspberry Pi 5 con Recalbox lista para usar",
+        "description": "Raspberry Pi 5 de 2 GB completa, con ventilador integrado, cable HDMI, cable de alimentación y microSD de 64 GB con Recalbox listo para usar. Totalmente nueva.",
+    },
+    {
+        "code": "L3L305",
+        "headline": "Lote de siete puzzles de 1000 piezas",
+        "description": "Lote de siete puzzles de la marca That's Life, cada uno con 1000 piezas. Son ideales para pasar tiempo de ocio. Todos completos y en perfecto estado.",
+    },
+    {
+        "code": "L3L306",
+        "headline": "Televisor JVC AV14BM8EPS",
+        "description": "Televisor JVC modelo AV14BM8EPS en color plateado. Funciona como monitor a través de la entrada frontal. Sin mando.",
+    },
+    {
+        "code": "L3L307",
+        "headline": "Máquina de moler café manual",
+        "description": "Máquina de moler café manual, como decoración o para restaurar. Funciona perfectamente.",
+    },
+    {
+        "code": "L3L308",
+        "headline": "Paellera de acero pulido de 42 cm",
+        "description": "Sartén para hacer paella muy grande, de acero pulido. 42 cm de diámetro. Para 10 personas como mínimo.",
+    },
+    {
+        "code": "L3L309",
+        "headline": "Cafetera Nespresso Krups negra",
+        "description": "Cafetera Nespresso Krups en color negro. Diseñada para preparar deliciosos cafés.",
+    },
+    {
+        "code": "L3L310",
+        "headline": "Microondas Taurus con grill",
+        "description": "Microondas Taurus en color blanco con función grill. Ideal para calentar y cocinar. Se encuentra en muy buen estado, limpio y listo para usar.",
+    },
+    {
+        "code": "L3L311",
+        "headline": "Nevera portátil para playa y picnic",
+        "description": "Nevera portátil con tapa verde y asa gris, ideal para llevar tus bebidas y alimentos frescos a la playa o de picnic. Su diseño es práctico y fácil de transportar.",
     },
 ]
 

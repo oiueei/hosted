@@ -42,6 +42,13 @@ from django.core.exceptions import ImproperlyConfigured
 # visit is another round trip to Falkenstein.
 CACHE_CONTROL = "public, max-age=31536000, immutable"
 
+# The demo's fixture images — a **shared, static pool**. Every database that has
+# ever run `seed_demo` points at these same objects, so they do not belong to the
+# rows that reference them and no single delete may take them away. Both sweeps
+# that could destroy them (the orphan sweep and the delete-time cleanup) skip this
+# prefix, and both read it from here so the two can never drift apart.
+SEED_PREFIX = "oiueei/seed/"
+
 # S3 caps one DeleteObjects call at 1000 keys.
 _DELETE_LIMIT = 1000
 
