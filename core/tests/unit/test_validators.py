@@ -68,7 +68,7 @@ class TestImageIdField:
         assert field.to_internal_value("abc123") == "abc123"
 
     def test_max_length_default(self):
-        """Should have default max_length of 255 (folder-prefixed Cloudinary IDs)."""
+        """Should have default max_length of 255 (folder-prefixed storage keys)."""
         field = ImageIdField()
         assert field.max_length == 255
 

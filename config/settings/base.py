@@ -248,9 +248,9 @@ INVITE_EMAILS_PER_DAY = int(os.environ.get("INVITE_EMAILS_PER_DAY", "0"))
 COLLECTION_JOINS_PER_DAY = int(os.environ.get("COLLECTION_JOINS_PER_DAY", "0"))
 
 # Per-collection capacity guards against mass upload. Same reasoning as the
-# invitation cap above: this is the operator protecting their own storage,
-# Cloudinary bill and moderation load, so the standalone default is **off** and
-# each deployment sets its own numbers.
+# invitation cap above: this is the operator protecting their own storage bill
+# and moderation load, so the standalone default is **off** and each deployment
+# sets its own numbers.
 #
 # COLLECTION_THINGS_ALARM — cross it and the operator gets ONE email per
 #   collection. The owner is never told: a silent tripwire, not a warning, so a

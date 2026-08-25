@@ -149,7 +149,7 @@ class TestBulkCreate:
         assert collection.things.count() == 0
 
     def test_imports_thumbnail_public_id(self, auth_client, collection):
-        # The ZIP path uploads images to Cloudinary client-side and sends the
+        # The ZIP path uploads images to the bucket client-side and sends the
         # resulting public_id here as `thumbnail`.
         rows = [
             {"type": "GIFT_THING", "headline": "With photo", "thumbnail": "oiueei/things/abc123"}
