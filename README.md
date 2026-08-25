@@ -310,6 +310,8 @@ python manage.py send_digests      # weekly/monthly digest emails (daily)
 # add --commit to the scheduled chain. See HEROKU.md § Scheduled jobs.
 python manage.py purge_expired_data           # count what is past its period
 python manage.py purge_expired_data --commit  # anonymise / delete it
+# Inactivity warnings are capped at 200 per run so a first-time backlog does not
+# arrive at your mail provider in one burst. --max-warnings 0 lifts the cap.
 
 # One-off: seed the Event analytics log from existing rows (idempotent).
 # Run once, the day tracking ships, before forward events accumulate.

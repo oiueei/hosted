@@ -44,6 +44,22 @@ from core.services.email_service import send_inactivity_warning_email
 
 security_logger = logging.getLogger("security")
 
+# How many inactivity warnings one run may send. The first run on an established
+# database is the one that matters: every account dormant for the full period
+# becomes a candidate on the same night, and this command sends synchronously —
+# so an unbounded first run is a single dyno making thousands of SMTP calls in a
+# burst, which is how a sending domain earns a rate-limit or a reputation hit
+# right before the mail that says "your account is about to be deleted".
+#
+# Nothing is lost by spreading it: the mark is only written on a successful send,
+# so whoever is not reached tonight is simply still a candidate tomorrow, and the
+# grace period each of them gets is counted from *their* warning. A backlog
+# drains at this rate per day, and a steady state never approaches it.
+#
+# `--max-warnings 0` lifts the cap for an operator who knows their provider can
+# take it.
+DEFAULT_MAX_WARNINGS = 200
+
 
 def months_ago(months, now=None):
     """The same day of the month, ``months`` calendar months back.
@@ -70,9 +86,20 @@ class Command(BaseCommand):
             action="store_true",
             help="Actually apply it. Without this flag the command is a dry-run (default).",
         )
+        parser.add_argument(
+            "--max-warnings",
+            type=int,
+            default=DEFAULT_MAX_WARNINGS,
+            help=(
+                "Cap on inactivity warning emails per run "
+                f"(default {DEFAULT_MAX_WARNINGS}; 0 = no cap). "
+                "The rest are picked up by the next run."
+            ),
+        )
 
     def handle(self, *args, **options):
         commit = options["commit"]
+        self.max_warnings = options["max_warnings"]
         now = timezone.now()
         # Lines a step wants said after the table rather than in it — a count is
         # not always the whole story.
@@ -211,6 +238,15 @@ class Command(BaseCommand):
             return (label, len(candidates))
         warned = 0
         for user in candidates:
+            if self.max_warnings and warned >= self.max_warnings:
+                # Deliberately not an error: the remainder are still candidates
+                # tomorrow, and each one's grace period starts from its own
+                # warning, so nobody is deleted un-warned by stopping here.
+                self.notes.append(
+                    f"  Stopped at {self.max_warnings} warnings this run; "
+                    f"{len(candidates) - warned} still queued for the next one."
+                )
+                break
             keeps_a_group = Collection.objects.filter(owner=user, invites__isnull=False).exists()
             try:
                 send_inactivity_warning_email(user, months, grace, will_delete=not keeps_a_group)

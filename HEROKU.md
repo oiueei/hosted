@@ -331,6 +331,8 @@ heroku run --app <app> "python manage.py purge_expired_data"
 
 Without `--commit` it only counts, so that is safe to run at any time; the flag is the whole difference between a preview and a deletion. Once the counts look like your policy, leave it armed in the chain above. Quote the inner command or the Heroku CLI eats the flag.
 
+One more thing about that first armed run: on an established database **every** account dormant for the full period becomes a candidate on the same night, and the warnings are sent synchronously. `--max-warnings` caps them at **200 per run** by default so a backlog drains over several nights instead of arriving at your mail provider as one burst. Nobody is dropped by that — the mark is written only on a successful send, so whoever is not reached tonight is a candidate again tomorrow, and each grace period is counted from that person's own warning. `--max-warnings 0` lifts the cap if you know your provider can take it.
+
 Heroku Scheduler config lives in the dashboard and nowhere else, so keep the dashboard in sync with this table — it is the only version of the schedule you can read.
 
 | Command | Cadence | What it does |
@@ -340,7 +342,7 @@ Heroku Scheduler config lives in the dashboard and nowhere else, so keep the das
 | `python manage.py close_transfers` | daily (chained) | Sets `returned_date` on transfers whose ACCEPTED booking's `end_date` has passed. |
 | `python manage.py send_reminders` | daily (chained) | Return/delivery reminders for bookings due tomorrow. |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
-| `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email. **Dry-run without `--commit`** — read the warning above before arming it. |
+| `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email (at most 200 warnings per run — see `--max-warnings`). **Dry-run without `--commit`** — read the warning above before arming it. |
 
 The daily commands are safe to run every day — each checks the current state and no-ops when there's nothing to do, so a repeated run costs a few seconds and changes nothing.
 
