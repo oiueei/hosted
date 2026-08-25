@@ -1032,7 +1032,10 @@ def send_booking_decision_email(booking, thing, accepted=True):
             action=action, thing=headline, decision=decision_word, url=thing_url
         )
 
-    subject = T("decision_subject")
+    # One subject per decision. A single "We have news" for both an accepted and
+    # a refused hold is unscannable in an inbox, and reads as a teaser rather
+    # than as news (DESIGN §2 direct, §6 no curiosity gaps).
+    subject = T("decision_subject_confirmed") if accepted else T("decision_subject_cancelled")
     html = _render_email(
         [
             _para(T("decision_intro").format(action=action, decision=decision_word)),

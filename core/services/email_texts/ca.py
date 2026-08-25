@@ -152,7 +152,8 @@ TEXTS = {
     "hold_confirm_cta": "Confirmar la reserva",
     "hold_cancel_cta": "Cancel·lar la reserva",
     # Booking decision (to requester)
-    "decision_subject": "Tenim notícies",
+    "decision_subject_confirmed": "La teva sol·licitud està confirmada",
+    "decision_subject_cancelled": "La teva sol·licitud no ha tirat endavant",
     "decision_confirmed": "confirmada",
     "decision_cancelled": "cancel·lada",
     "decision_plain_dated": (

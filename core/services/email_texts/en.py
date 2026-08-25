@@ -151,7 +151,8 @@ TEXTS = {
     "hold_confirm_cta": "Confirm hold",
     "hold_cancel_cta": "Cancel hold",
     # Booking decision (to requester)
-    "decision_subject": "We have news",
+    "decision_subject_confirmed": "Your request is confirmed",
+    "decision_subject_cancelled": "Your request didn't go through",
     "decision_confirmed": "confirmed",
     "decision_cancelled": "cancelled",
     "decision_plain_dated": (
