@@ -307,11 +307,13 @@ heroku config:set \
 
 ## Scheduled jobs (cron)
 
-The app relies on six management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice) chaining all six with `&&`, so any failure stops the chain and surfaces in scheduler-monitor:
+The app relies on six management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice), each guarded so that one failure does not cancel the rest:
 
 ```
-python manage.py expire_bookings && python manage.py cleanup_rsvps && python manage.py close_transfers && python manage.py send_reminders && python manage.py send_digests && python manage.py purge_expired_data --commit
+rc=0; python manage.py expire_bookings || rc=1; python manage.py cleanup_rsvps || rc=1; python manage.py close_transfers || rc=1; python manage.py send_reminders || rc=1; python manage.py send_digests || rc=1; python manage.py purge_expired_data --commit || rc=1; exit $rc
 ```
+
+**Why not `&&`.** It was `&&`, and the shape is wrong for this chain: `&&` stops at the first failure, so a transient error in `expire_bookings` silently cancels the five behind it — `purge_expired_data` included, which is the command that keeps the retention policy true rather than aspirational. A plain `;` runs them all but reports the **last** command's status, so the job exits 0 and scheduler-monitor never says a word. The form above does both jobs: every command runs, `rc` remembers that one of them failed, and `exit $rc` is what Heroku sees — so a broken stage still turns the run red.
 
 ⚠️ **Read this before you paste the last one.** `purge_expired_data` deletes real rows, and it is the command that turns the retention policy from a paragraph into something true — a deployment that never arms it keeps everything forever, which is not a valid answer to "how long do you keep this?". But the periods it enforces are the `RETENTION_*` settings, and their defaults are **what www.oiueei.com decided**, not a law you inherit: set them for your own regime first (`0` keeps a category indefinitely — see the retention section of `README.md`). Then run it **by hand, without the flag**, and read what it says it would do:
 
