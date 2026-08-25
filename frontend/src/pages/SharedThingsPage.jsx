@@ -123,6 +123,9 @@ export default function SharedThingsPage() {
           {things.map((thing) => (
             <ThingLinkbox
               key={thing.code}
+              // This grid hangs straight off the page `<h1>` — there is no
+              // section heading between them, so the cards are level 2 here.
+              headingLevel={2}
               thing={thing}
               userCode={userCode}
               collectionCode={thing.collection_code}

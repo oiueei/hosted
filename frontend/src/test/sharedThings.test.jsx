@@ -1,6 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+
+expect.extend(toHaveNoViolations);
 
 window.scrollTo = vi.fn();
 
@@ -183,5 +186,68 @@ describe('SharedThingsPage pagination', () => {
     // first page is still there, and so is the way to retry.
     expect(screen.getByText('A cordless drill')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /load more/i })).toBeEnabled();
+  });
+});
+
+/**
+ * The axe sweep in `smoke.test.jsx` covers all 30 other routes; this page was
+ * the one it never reached, so its markup shipped unscanned. Scanned here
+ * rather than added to that sweep because the fixtures live in this file — and
+ * because the generic helper can only ever reach a page's default state, while
+ * the three states below are what a member actually lands on. DESIGN §5 puts
+ * WCAG 2.1 AA at the floor, not the ceiling.
+ */
+describe('SharedThingsPage — accessibility', () => {
+  /**
+   * Pinned with `getByRole` rather than left to the axe scan below. axe's
+   * `heading-order` verdict turned out not to be reproducible in this suite:
+   * with a byte-identical DOM it reported the h1→h3 skip when these three tests
+   * ran alone and stayed silent when the whole file ran, because axe-core keeps
+   * state between `axe.run` calls in one process. A guard that only fires
+   * depending on what ran before it is not a guard, so the outline is asserted
+   * directly here — the scan below still earns its place for the label, role and
+   * name rules, which did reproduce.
+   */
+  test('the card headings continue the page outline instead of skipping a level', async () => {
+    mockPages({ results: [THING], next: null });
+    renderPage();
+    await screen.findByText('A cordless drill');
+
+    expect(screen.getByRole('heading', { level: 1, name: /shared/i })).toBeInTheDocument();
+    // The grid hangs straight off the page h1 with no section heading between
+    // them, so a card is level 2 here — level 3 (the default, which is right on
+    // CollectionPage, where an h2 does sit in between) would skip a level and
+    // tell a screen reader walking the outline that a heading is missing.
+    expect(screen.getByRole('heading', { level: 2, name: 'A cordless drill' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
+  });
+
+  test('the populated grid has no axe violations', async () => {
+    mockPages({ results: [THING, { ...THING, code: 'THG002', headline: 'A ladder' }], next: null });
+    const { container } = renderPage();
+    await screen.findByText('A cordless drill');
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('the empty state has no axe violations', async () => {
+    mockPages({ results: [], next: null });
+    const { container } = renderPage();
+    await screen.findByText(/nothing/i);
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('the error state has no axe violations', async () => {
+    apiFetch.mockImplementationOnce(() =>
+      Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    );
+    const { container } = renderPage();
+    await screen.findByRole('heading', { level: 1 });
+
+    // The error screen swaps the whole page out, so it is a distinct render
+    // tree from the two above — an unlabelled Notification here would never be
+    // caught by scanning the populated grid.
+    expect(await axe(container)).toHaveNoViolations();
   });
 });
