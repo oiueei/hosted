@@ -6,11 +6,20 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: mode === 'production' ? '/static/' : '/',
   build: {
-    // vendor-hds is ~614 kB raw but only ~159 kB gzipped (under our 200 kB-gz
-    // bar) — it's the irreducible hds-react library, shared and long-cached.
+    // vendor-hds is ~623 kB raw but only ~161 kB gzipped (under our 200 kB-gz
+    // bar) — it's the hds-react we actually use, shared and long-cached.
     // Raising the limit keeps the build green; the per-language i18n locales are
-    // now code-split (see src/i18n/index.js), so the remaining win (HDS v6
-    // tree-shaking) is tracked separately.
+    // now code-split (see src/i18n/index.js).
+    //
+    // Tree-shaking is **not** an outstanding win here, though this comment used
+    // to say it was. Measured at the 2026-08 pre-release frontend review by
+    // grepping the built chunk for the marker strings of components we never
+    // import — CookieConsent, Header, Footer, Search, Stepper, Pagination,
+    // SideNavigation, PhoneInput, PasswordInput, Breadcrumb, Card, Tabs, Hero,
+    // Logo — and none of them is in it. What is left is the ~30 components,
+    // their shared internals and the 24 icons this app really renders. Switching
+    // the imports to `hds-react/components/*` subpaths would buy nothing, and
+    // the icons have no subpath export to switch to.
     //
     // The number is a tripwire, not a budget: it sits just above the current
     // chunk so the next HDS minor that grows it materially says so out loud.
