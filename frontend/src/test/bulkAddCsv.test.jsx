@@ -133,7 +133,7 @@ describe('BulkAddCsv — ZIP', () => {
     expect(uploaded.type).toBe('image/jpeg');
     expect(folder).toBe('oiueei/things');
 
-    // The filename is swapped for the public_id Cloudinary returned.
+    // The filename is swapped for the storage key the upload returned.
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/COL001/things/bulk/', {
       method: 'POST',
       body: JSON.stringify({ rows: [{ headline: 'Cazo', thumbnail: 'oiueei/things/cazo' }] }),

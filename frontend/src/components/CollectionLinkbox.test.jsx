@@ -6,7 +6,7 @@ import CollectionLinkbox from './CollectionLinkbox';
 const collection = {
   code: 'COL001',
   headline: 'Kitchen Collection',
-  thumbnail_url: 'https://res.cloudinary.com/demo/image/upload/oiueei/collections/cover.jpg',
+  thumbnail_url: 'https://bucket.example.com/oiueei/collections/cover.jpg',
   things: [{ code: 'THG001' }, { code: 'THG002' }],
   invites: [{ code: 'INV001' }],
 };

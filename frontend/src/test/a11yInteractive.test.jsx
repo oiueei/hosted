@@ -50,7 +50,7 @@ const MOCK_THING = {
   availability: '',
   location: '',
   condition: '',
-  thumbnail_url: 'https://res.cloudinary.com/demo/image/upload/x.jpg',
+  thumbnail_url: 'https://bucket.example.com/x.jpg',
   gallery: [],
   gallery_urls: [],
   available_today: null,
