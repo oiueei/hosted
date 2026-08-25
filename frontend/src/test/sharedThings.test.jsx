@@ -39,7 +39,13 @@ const THING = {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ME0001');
-  vi.clearAllMocks();
+  // `resetAllMocks`, not `clearAllMocks`: clearing wipes the recorded calls but
+  // leaves the `mockImplementationOnce` queue intact, so a page a test queued
+  // and never consumed is still sitting there when the next test runs. Every
+  // test in this file queues responses that way, so the leak made results
+  // order-dependent — the axe scans below passed in a full-file run and failed
+  // when run alone, which is the wrong way round for a test to be believed.
+  vi.resetAllMocks();
 });
 
 const renderPage = () =>
