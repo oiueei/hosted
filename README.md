@@ -368,7 +368,6 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `OBJECT_STORAGE_ACCESS_KEY` | Uploads | S3 access key, scoped to that bucket alone |
 | `OBJECT_STORAGE_SECRET_KEY` | Uploads | S3 secret key |
 | `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are read from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. It also feeds the Content-Security-Policy, so a wrong value shows up as images that refuse to load |
-| `CLOUDINARY_URL` | Legacy | The previous image host, still read so a deployment mid-migration can roll back without a code change. Unnecessary once your files are in the bucket |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
 | `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
