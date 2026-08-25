@@ -23,13 +23,15 @@ the text fields, and add the code to SUPPORTED_LANGS below.
 """
 
 import json
+from datetime import timedelta
 from importlib import import_module
 from types import SimpleNamespace
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
-from core.models import FAQ, Collection, Thing, User
+from core.models import FAQ, RSVP, BookingPeriod, Collection, Thing, User
 from core.models.transfer import ThingTransfer
 
 from .seed_data import common
@@ -51,7 +53,9 @@ DEMO_USER_CODES = ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh", "1u1ucs"]
 # Demo fixture images live in their own storage folder, cleanly separated from
 # real user uploads (which land in oiueei/{users,things,collections,documents}/).
 # The seed stores bare ids (see common.py); this prefix is applied at seed time so
-# the stored public_id resolves to the fixture. Re-point here if the folder moves.
+# the stored public_id resolves to the fixture.
+#
+# Re-point here if the folder moves.
 SEED_IMAGE_FOLDER = "oiueei/seed/"
 
 
@@ -146,15 +150,20 @@ class Command(BaseCommand):
 
         self._seed_users(data.USERS)
         self._seed_collections(data.COLLECTIONS)
+        self._seed_invitations(common.PENDING_INVITATIONS)
         self._seed_things(data.THINGS)
         self._seed_faqs(data.FAQS)
+        self._seed_bookings(common.BOOKINGS)
         self._seed_transfers(common.TRANSFERS)
+        self._seed_transfers(common.COMMUNITY_TRANSFERS)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded [{lang}] {len(data.USERS)} users, {len(data.COLLECTIONS)} collections, "
                 f"{len(data.THINGS)} things, {len(data.FAQS)} FAQs, "
-                f"{len(common.TRANSFERS)} transfers."
+                f"{len(common.PENDING_INVITATIONS)} pending invitations, "
+                f"{len(common.BOOKINGS)} bookings, "
+                f"{len(common.TRANSFERS) + len(common.COMMUNITY_TRANSFERS)} transfers."
             )
         )
 
@@ -183,6 +192,19 @@ class Command(BaseCommand):
                     "koro": data.get("koro", "basic"),
                     "photo": _seed_image(data.get("photo", "")),
                     "about": data.get("about", ""),
+                    # Optional profile fields. `age_range` and `postal_code` are
+                    # shown to the owner of a COMMUNITY collection and to nobody
+                    # else (see CollectionSerializer.get_invites) — the demo needs
+                    # them filled for that view to have anything to render, and
+                    # Lili leaves both blank so the "not declared" case shows too.
+                    #
+                    # `language` is the strongest link in the email hierarchy
+                    # (deployment default → collection → recipient), so Lele reads
+                    # her mail in Catalan and Lulu in English whatever the
+                    # deployment speaks.
+                    "age_range": data.get("age_range", ""),
+                    "postal_code": data.get("postal_code", ""),
+                    "language": data.get("language", ""),
                     # Demos opt INTO news so the digest collection in
                     # seed_data/common.py keeps landing in an inbox regardless of
                     # the model default (which is OFF for real new users — DESIGN §6).
@@ -212,6 +234,26 @@ class Command(BaseCommand):
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))
+
+    def _seed_invitations(self, invitations):
+        """Invitations the guest has not answered yet (COLLECTION_INVITE RSVPs).
+
+        `created` is set on every run — the row's whole meaning is "still waiting",
+        and its 30-day lifetime is measured from here, so a re-seed has to restart
+        the clock or the demo would ship invitations already half-expired.
+        """
+        for code, collection_code, user_code, days_ago in invitations:
+            user = User.objects.get(code=user_code)
+            RSVP.objects.update_or_create(
+                code=code,
+                defaults={
+                    "user_code": user,
+                    "user_email": user.email,
+                    "action": RSVP.Action.COLLECTION_INVITE,
+                    "target_code": collection_code,
+                    "created": timezone.now() - timedelta(days=days_ago),
+                },
+            )
 
     def _seed_things(self, things):
         for data in things:
@@ -245,12 +287,41 @@ class Command(BaseCommand):
                 defaults={"answer": data["answer"], "is_visible": True},
             )
 
+    def _seed_bookings(self, bookings):
+        for code, thing_code, owner_code, requester_code, start, end, status in bookings:
+            requester = User.objects.get(code=requester_code)
+            thing = Thing.objects.get(code=thing_code)
+            BookingPeriod.objects.update_or_create(
+                code=code,
+                defaults={
+                    "thing_code": thing,
+                    # Read off the thing rather than written per row: the column is
+                    # a snapshot of what was agreed, and a seed that could disagree
+                    # with the thing it points at is a snapshot of nothing. LEND and
+                    # RENT carry dates; GIFT and SELL are single-use and carry none.
+                    "thing_type": thing.type,
+                    "owner_code": User.objects.get(code=owner_code),
+                    "requester_code": requester,
+                    # Copied, not looked up, for the same reason the column is:
+                    # what the request said stays what it said.
+                    "requester_email": requester.email,
+                    "start_date": start,
+                    "end_date": end,
+                    "status": status,
+                },
+            )
+
     def _seed_transfers(self, transfers):
-        for thing_code, from_code, to_code, lent_date, returned_date in transfers:
+        # Rows are five- or six-element: the sixth is the booking this handover
+        # came from. Older rows have none — those are manual transfers, which the
+        # model allows (`booking` is nullable) and which say nothing about a
+        # request, because there wasn't one.
+        for thing_code, from_code, to_code, lent_date, returned_date, *rest in transfers:
+            booking = BookingPeriod.objects.get(code=rest[0]) if rest else None
             ThingTransfer.objects.get_or_create(
                 thing=Thing.objects.get(code=thing_code),
                 from_user=User.objects.get(code=from_code),
                 to_user=User.objects.get(code=to_code),
                 lent_date=lent_date,
-                defaults={"returned_date": returned_date},
+                defaults={"returned_date": returned_date, "booking": booking},
             )
