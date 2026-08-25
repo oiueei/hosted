@@ -205,6 +205,10 @@ class Command(BaseCommand):
                 "tags": data.get("tags", []),
                 "allowed_thing_types": data.get("allowed_thing_types", []),
                 "deposit_policy": data.get("deposit_policy", ""),
+                # Empty is the "no fixed rule" default the model documents, so a
+                # collection that says nothing keeps the free date range.
+                "rental_durations": data.get("rental_durations", []),
+                "rental_weekdays": data.get("rental_weekdays", []),
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))
