@@ -217,9 +217,54 @@ class TestSecurityHeadersMiddleware:
         connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
         assert "https://a-bucket.fsn1.example-storage.com" in connect
 
+    def test_csp_lets_a_cdn_deployment_still_reach_its_bucket(self, settings):
+        """The regression this pair exists for.
+
+        Reads may be pointed at a CDN; an upload cannot follow them there. A
+        presigned URL is signed for the bucket's own virtual host, so a policy
+        that names only the read origin forbids the PUT — and does it invisibly,
+        because the images already in the bucket go on loading through the CDN
+        while every new upload dies in the browser.
+        """
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.OBJECT_STORAGE_PUBLIC_URL = "https://a-bucket.fsn1.example-storage.com"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+
+        connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
+        assert "https://a-bucket.fsn1.example-storage.com" in connect, (
+            "connect-src must name the bucket the presigned PUT actually goes to"
+        )
+        assert "https://media.example.com" in connect
+
+    def test_csp_does_not_let_the_bucket_serve_images_a_cdn_is_fronting(self, settings):
+        """The other half: `img-src` follows the reads, and only the reads.
+
+        Widening it to the bucket as well would be a policy that allows an origin
+        nothing is asked to render from — the "while we're in here" habit that
+        turns a CSP into decoration.
+        """
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.OBJECT_STORAGE_PUBLIC_URL = "https://a-bucket.fsn1.example-storage.com"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+
+        img = next(d for d in csp.split(";") if d.strip().startswith("img-src"))
+        assert "https://media.example.com" in img
+        assert "a-bucket" not in img
+
+    def test_csp_names_one_host_once_when_reads_and_writes_share_it(self, settings):
+        """The default deployment: both settings are the bucket, so it appears once."""
+        bucket = "https://a-bucket.fsn1.example-storage.com"
+        settings.MEDIA_PUBLIC_BASE_URL = bucket
+        settings.OBJECT_STORAGE_PUBLIC_URL = bucket
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+
+        connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
+        assert connect.count(bucket) == 1, f"duplicated origin: {connect!r}"
+
     def test_csp_takes_the_origin_only_not_a_path(self, settings):
         """A path is not something CSP matches on; leaving one in widens nothing but lies."""
         settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org/media/v2"
+        settings.OBJECT_STORAGE_PUBLIC_URL = ""
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
         assert "https://cdn.example.org;" in csp or "https://cdn.example.org " in csp
         assert "/media/v2" not in csp
@@ -227,6 +272,7 @@ class TestSecurityHeadersMiddleware:
     def test_csp_names_no_host_when_none_is_configured(self, settings):
         """An unconfigured checkout must not widen its policy to a stray empty token."""
         settings.MEDIA_PUBLIC_BASE_URL = ""
+        settings.OBJECT_STORAGE_PUBLIC_URL = ""
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
         assert "img-src 'self' blob:;" in csp
         assert "connect-src 'self';" in csp
