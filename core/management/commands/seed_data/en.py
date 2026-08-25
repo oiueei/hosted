@@ -47,6 +47,11 @@ COLLECTIONS = [
         "headline": "Lili's Lending – time to share our things!",
         "description": "Need a drill, steam cleaner, sturdy ladder, luggage scale or muffin mega-kit? Lili's lending library has your back – all for a token fee!",
     },
+    {
+        "code": "1u1uC1",
+        "headline": "Tools for us!",
+        "description": "We upload the tools we have here and make them available to the rest of the group. Take good care of them: they're ours and we all need them.",
+    },
 ]
 
 THINGS = [
@@ -221,6 +226,111 @@ THINGS = [
     {
         "code": "La1a00",
         "headline": "Hey! Maybe a small ladder, anyone? The top shelf is winning! 🪜",
+    },
+    {
+        "code": "1u1u01",
+        "headline": "Stanley-type carpenter's hand plane",
+        "description": "A classic among classics: sturdy metal body, well-kept handle and that fine shaving curling off the blade that proves a perfect setting. Ideal for anyone after precision without relying on electricity.",
+    },
+    {
+        "code": "1u1u02",
+        "headline": "Vernier caliper and precision compass",
+        "description": "Two classics for measuring accurately: the metal caliper keeps its scales legible and its mechanism slides without catching, while the compass holds a firm point for drawing circles that never drift.",
+    },
+    {
+        "code": "1u1u03",
+        "headline": "Electric planer hard at work",
+        "description": "Caught working a pine board, leaving the fine shaving that gives away a well-sharpened blade. The gloved hands confirm that whoever uses it knows what they are doing and looks after their safety.",
+    },
+    {
+        "code": "1u1u04",
+        "headline": "Traditional wood-carving set",
+        "description": "A brush, a carving knife, a hammer with a handle worn smooth by use and a small solid-wood jack plane make up a set with real craft behind it. Each piece has a clear job of its own.",
+    },
+    {
+        "code": "1u1u05",
+        "headline": "Mini rotary tool with bits and brushes",
+        "description": "A compact rotary tool with a good assortment of abrasive bits and wire brushes, ideal for polishing, sanding or putting the finishing touches to small pieces. Barely any wear on it.",
+    },
+    {
+        "code": "1u1u06",
+        "headline": "Electric mitre saw for mouldings and skirting",
+        "description": "This mitre saw is clearly used for finishing work — the freshly cut white moulding beside it is the proof. The blade looks in good shape and the base seems stable enough for clean, vibration-free cuts.",
+    },
+    {
+        "code": "1u1u07",
+        "headline": "Wood chisels and mallet for carpentry",
+        "description": "Two wooden-handled chisels with well-kept edges, next to a solid mallet made for precise blows that spare the handle. A small wooden plane peeks out behind them, rounding off the set.",
+    },
+    {
+        "code": "1u1u08",
+        "headline": "Glassblowing gear in full swing",
+        "description": "The craft in action: the blowpipe holds a glowing piece of glass fresh from the furnace while the artisan works it with calm and control. The leather apron says the rest.",
+    },
+    {
+        "code": "1u1u09",
+        "headline": "Electrician's kit: crimper, pliers and stapler",
+        "description": "Everything you need for tidy wiring: colour-coded crimpers, cutting pliers, a voltage tester and even a hand stapler for fixing cables. The safety glasses are included.",
+    },
+    {
+        "code": "1u1u10",
+        "headline": "Forge anvil with blacksmith's hammer",
+        "description": "A classic forging pair: the anvil keeps its shape and heft despite the years, and the wooden-handled sledge looks strong and well balanced. The real use of a working forge shows.",
+    },
+    {
+        "code": "1u1u11",
+        "headline": "Jeweller's set for fine metalwork",
+        "description": "A jeweller's mini anvil alongside pliers, a torch and a piece in progress show the millimetre detail this craft demands. Every tool looks cared for and ready to carry on.",
+    },
+    {
+        "code": "1u1u12",
+        "headline": "Complete ratchet and socket case",
+        "description": "A socket and ratchet set with plenty of mileage — you can tell from the faded case — but every piece is in its place and ready to tighten any bolt.",
+    },
+    {
+        "code": "1u1u13",
+        "headline": "Mitre saw with backing handsaw",
+        "description": "This mitre saw has seen a fair amount of work — the built-up sawdust confirms it — but the blade and the frame stay firm enough to go on making accurate angled cuts.",
+    },
+    {
+        "code": "1u1u14",
+        "headline": "Welding kit with mask and electrodes",
+        "description": "Protective mask, heat-resistant glove and electrode rods ready to spark: everything essential for welding without frights. The kit looks complete and in shape to keep laying down good welds.",
+    },
+    {
+        "code": "1u1u15",
+        "headline": "Trio of multi-purpose handsaws",
+        "description": "Three handsaws with coloured handles and well-defined teeth, each meant for a different kind of cut. They are still sharp and rust-free, ready to drop into any toolbox.",
+    },
+    {
+        "code": "1u1u16",
+        "headline": "Yellow mitre saw with cut mouldings",
+        "description": "With several lengths of wood already cut beside it, this mitre saw shows it has been running at full tilt. The faded yellow and a few marks of use take nothing away: it is one to trust.",
+    },
+    {
+        "code": "1u1u17",
+        "headline": "SDS rotary hammer with bits and chisels",
+        "description": "A sturdy rotary hammer with drill bits in various gauges, a flat chisel and even the good old carpenter's pencils. The safety glasses beside it are a fair reminder.",
+    },
+    {
+        "code": "1u1u18",
+        "headline": "Cordless drill driver",
+        "description": "A compact, light drill with the battery included and ready to go. There is a little dust from recent work on the casing — a sign it has been out on the job rather than gathering dust in a drawer.",
+    },
+    {
+        "code": "1u1u19",
+        "headline": "Basic kit: hammer, tape measure and pliers",
+        "description": "The essential combo for any repair at home: a blue-handled hammer, a bright orange tape measure, multi-purpose pliers and nails to spare. Simple, practical and fuss-free.",
+    },
+    {
+        "code": "1u1u20",
+        "headline": "Professional aluminium ladder",
+        "description": "An aluminium work ladder in excellent condition, sturdy and versatile. Robust frame, with safe and stable rungs.",
+    },
+    {
+        "code": "1u1u21",
+        "headline": "Set of brushes and paintbrushes",
+        "description": "A complete set of 6 paintbrushes and brushes with natural wooden handles (yellow and white). A range of sizes and types for both precision work and coverage.",
     },
 ]
 

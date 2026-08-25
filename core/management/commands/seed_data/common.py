@@ -38,6 +38,21 @@ TAG_DEPORTE = _localized_tag(es="Deporte", ca="Esport", en="Sports")
 TAG_OCIO = _localized_tag(es="Ocio", ca="Lleure", en="Leisure")
 TAG_ELECTRONICA = _localized_tag(es="Electrónica", ca="Electrònica", en="Electronics")
 
+# The community workshop's vocabulary (Lulu's group). Kept separate from Lili's
+# labels above even where they rhyme: TAG_BRICOLAJE is her one-word "DIY", while
+# this group tags maintenance alongside it, and a thing references its collection's
+# label by raw string — one shared constant would silently merge two vocabularies.
+TAG_BRICO_MANT = _localized_tag(
+    es="Bricolaje y mantenimiento", ca="Bricolatge i manteniment", en="DIY & maintenance"
+)
+TAG_CARPINTERIA = _localized_tag(es="Carpintería", ca="Fusteria", en="Woodworking")
+TAG_ELECTRICAS = _localized_tag(
+    es="Herramientas eléctricas", ca="Eines elèctriques", en="Power tools"
+)
+TAG_METALISTERIA = _localized_tag(es="Metalistería", ca="Metal·listeria", en="Metalwork")
+TAG_ARTESANIA = _localized_tag(es="Oficios artesanales", ca="Oficis artesanals", en="Craft trades")
+TAG_PRECISION = _localized_tag(es="Precisión", ca="Precisió", en="Precision")
+
 # Lili's deposit policy (S6, D5) — reuses `_localized_tag`'s serialization: the
 # stored value is still just a {lang: text} map, on a different field. Written
 # here rather than split across the per-language files because, like a tag
@@ -126,6 +141,30 @@ COLLECTIONS = [
         ],
         "thumbnail": "l1l1C1",
         "deposit_policy": DEPOSIT_POLICY_LILI,
+    },
+    {
+        "code": "1u1uC1",
+        "owner_code": "1u1ucs",
+        "mode": "COMMUNITY",
+        "visibility": "PRIVATE",
+        "invites": ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh"],
+        "is_onboarding": True,
+        "allowed_thing_types": ["LEND_THING"],
+        # The only COMMUNITY collection in the demo: every member uploads and every
+        # member lends, so the 21 things below are owned by all five, not by Lulu.
+        # Rental rules come with it — a loan runs one week and changes hands on a
+        # Wednesday, which is what rental_durations/rental_weekdays encode.
+        "rental_durations": [7],
+        "rental_weekdays": [2],
+        "tags": [
+            TAG_BRICO_MANT,
+            TAG_CARPINTERIA,
+            TAG_ELECTRICAS,
+            TAG_METALISTERIA,
+            TAG_ARTESANIA,
+            TAG_PRECISION,
+        ],
+        "thumbnail": "1u1uC1",
     },
 ]
 
@@ -444,6 +483,175 @@ THINGS = [
         "thumbnail": "l0l007",
         "is_endless": True,
     },
+    {
+        "code": "1u1u01",
+        "type": "LEND_THING",
+        "owner_code": "l1l13S",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u01",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u02",
+        "type": "LEND_THING",
+        "owner_code": "l1l13S",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u02",
+        "tags": [TAG_PRECISION],
+    },
+    {
+        "code": "1u1u03",
+        "type": "LEND_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u03",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u04",
+        "type": "LEND_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u04",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u05",
+        "type": "LEND_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u05",
+        "tags": [TAG_ELECTRICAS],
+    },
+    {
+        "code": "1u1u06",
+        "type": "LEND_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u06",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u07",
+        "type": "LEND_THING",
+        "owner_code": "l1l13S",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u07",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u08",
+        "type": "LEND_THING",
+        "owner_code": "l1l13S",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u08",
+        "tags": [TAG_ARTESANIA],
+    },
+    {
+        "code": "1u1u09",
+        "type": "LEND_THING",
+        "owner_code": "l1l13S",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u09",
+        "tags": [TAG_BRICO_MANT],
+    },
+    {
+        "code": "1u1u10",
+        "type": "LEND_THING",
+        "owner_code": "La1aN1",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u10",
+        "tags": [TAG_METALISTERIA],
+    },
+    {
+        "code": "1u1u11",
+        "type": "LEND_THING",
+        "owner_code": "La1aN1",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u11",
+        "tags": [TAG_ARTESANIA],
+    },
+    {
+        "code": "1u1u12",
+        "type": "LEND_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u12",
+        "tags": [TAG_BRICO_MANT],
+    },
+    {
+        "code": "1u1u13",
+        "type": "LEND_THING",
+        "owner_code": "l0l0oh",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u13",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u14",
+        "type": "LEND_THING",
+        "owner_code": "La1aN1",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u14",
+        "tags": [TAG_METALISTERIA],
+    },
+    {
+        "code": "1u1u15",
+        "type": "LEND_THING",
+        "owner_code": "l0l0oh",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u15",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u16",
+        "type": "LEND_THING",
+        "owner_code": "La1aN1",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u16",
+        "tags": [TAG_CARPINTERIA],
+    },
+    {
+        "code": "1u1u17",
+        "type": "LEND_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u17",
+        "tags": [TAG_BRICO_MANT],
+    },
+    {
+        "code": "1u1u18",
+        "type": "LEND_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u18",
+        "tags": [TAG_ELECTRICAS],
+    },
+    {
+        "code": "1u1u19",
+        "type": "LEND_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u19",
+        "tags": [TAG_BRICO_MANT],
+    },
+    {
+        "code": "1u1u20",
+        "type": "LEND_THING",
+        "owner_code": "l0l0oh",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u20",
+        "condition": "GOOD",
+        "tags": [TAG_BRICO_MANT],
+    },
+    {
+        "code": "1u1u21",
+        "type": "LEND_THING",
+        "owner_code": "l0l0oh",
+        "collections": ["1u1uC1"],
+        "thumbnail": "1u1u21",
+        "tags": [TAG_BRICO_MANT, TAG_ARTESANIA],
+    },
 ]
 
 FAQS = [
@@ -492,4 +700,12 @@ TRANSFERS = [
     ("l1l113", "l1l13S", "La1aN1", date(2026, 4, 25), date(2026, 4, 26)),
     # Laser printer — the tax-return loan.
     ("l1l107", "l1l13S", "L3L3oo", date(2026, 6, 1), date(2026, 6, 8)),
+    # The community workshop: the loans do NOT all start from the collection's
+    # owner. Lolo's ladder went out to Lulu, which is the shape a COMMUNITY group
+    # has and a PROPRIETARY one cannot — see Lili's rows above, all from her.
+    ("1u1u20", "l0l0oh", "1u1ucs", date(2026, 7, 10), date(2026, 7, 17)),
+    # The basic kit is this group's workhorse — out three times, all returned.
+    ("1u1u19", "1u1ucs", "L3L3oo", date(2026, 7, 16), date(2026, 7, 24)),
+    ("1u1u19", "1u1ucs", "l0l0oh", date(2026, 7, 30), date(2026, 8, 7)),
+    ("1u1u19", "1u1ucs", "l0l0oh", date(2026, 8, 12), date(2026, 8, 20)),
 ]

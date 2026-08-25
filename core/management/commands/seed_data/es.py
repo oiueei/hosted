@@ -50,6 +50,11 @@ COLLECTIONS = [
         "headline": "Préstamos de Lili – ¡hora de compartir las cosas!",
         "description": "¿Necesitas taladro, limpiador de vapor, escalera sólida, báscula de equipaje o mega kit de magdalenas? La biblioteca de préstamos de Lili te cubre – ¡todo a un coste simbólico!",
     },
+    {
+        "code": "1u1uC1",
+        "headline": "¡Herramientas para nosotros!",
+        "description": "Subimos aquí las herramientas que tenemos y las ponemos a disposición del resto del grupo. Cuidadlas bien: son nuestras y las necesitamos entre todas y todos.",
+    },
 ]
 
 THINGS = [
@@ -224,6 +229,111 @@ THINGS = [
     {
         "code": "La1a00",
         "headline": "¿Alguien tiene una escalerilla? ¡La estantería alta gana! 🪜",
+    },
+    {
+        "code": "1u1u01",
+        "headline": "Cepillo de carpintero tipo Stanley",
+        "description": "Un clásico entre los clásicos: cuerpo metálico robusto, mango bien conservado y esa viruta fina saliendo de la cuchilla que demuestra un ajuste perfecto. Ideal para quien busca precisión sin depender de la electricidad.",
+    },
+    {
+        "code": "1u1u02",
+        "headline": "Pie de rey y compás de precisión",
+        "description": "Dos clásicos para medir con exactitud: el calibre metálico mantiene sus escalas legibles y su mecanismo se desliza sin trabas, mientras que el compás conserva la punta firme para trazar círculos sin desviarse.",
+    },
+    {
+        "code": "1u1u03",
+        "headline": "Cepillo eléctrico en plena acción",
+        "description": "Se ve trabajando sobre una tabla de pino, dejando esa viruta fina que delata un filo bien afilado. Las manos protegidas con guantes confirman que quien lo usa sabe lo que hace y cuida su seguridad.",
+    },
+    {
+        "code": "1u1u04",
+        "headline": "Set tradicional de tallado en madera",
+        "description": "Una brocha, una navaja de tallar, un martillo de mango desgastado por el uso y una garlopa pequeña de madera maciza forman este conjunto con mucho oficio detrás. Cada pieza tiene su función clara.",
+    },
+    {
+        "code": "1u1u05",
+        "headline": "Mini amoladora con set de puntas y cepillos",
+        "description": "Una herramienta rotativa compacta acompañada de un buen surtido de puntas abrasivas y cepillos metálicos, ideal para pulir, lijar o dar los últimos retoques a piezas pequeñas. Se ve poco desgaste.",
+    },
+    {
+        "code": "1u1u06",
+        "headline": "Ingletadora eléctrica para molduras y rodapiés",
+        "description": "Esta ingletadora se usa claramente para trabajos de acabado, ahí está la moldura blanca recién cortada como prueba. El disco luce en buen estado y la base se ve estable para cortes limpios y sin vibraciones.",
+    },
+    {
+        "code": "1u1u07",
+        "headline": "Formones y mazo de madera para carpintería",
+        "description": "Dos formones con mango de madera y filo bien cuidado, junto a un mazo macizo perfecto para golpes precisos sin dañar el mango. Al fondo se asoma un pequeño cepillo de madera que completa el set.",
+    },
+    {
+        "code": "1u1u08",
+        "headline": "Equipo de sopladores de vidrio en plena faena",
+        "description": "Aquí vemos el oficio en acción: la vara de soplado sostiene una pieza de vidrio incandescente recién sacada del horno, mientras el artesano la trabaja con calma y control. El delantal de cuero dice el resto.",
+    },
+    {
+        "code": "1u1u09",
+        "headline": "Kit de electricista: crimpadora, alicates y grapadora",
+        "description": "Todo lo necesario para un cableado limpio: crimpadoras de colores, alicates de corte, un comprobador de tensión y hasta una grapadora manual para fijar cables. Las gafas de protección van incluidas.",
+    },
+    {
+        "code": "1u1u10",
+        "headline": "Yunque de fragua con martillo de herrero",
+        "description": "Un conjunto clásico de forja: el yunque conserva su forma y solidez a pesar del paso de los años, y el mazo de mango de madera se ve fuerte y bien equilibrado. Se nota el uso real de un taller.",
+    },
+    {
+        "code": "1u1u11",
+        "headline": "Set de joyería para trabajar metales finos",
+        "description": "Un mini yunque de joyero acompañado de alicates, soplete y una pieza en proceso muestran el detalle milimétrico que exige este oficio. Todo el instrumental se ve cuidado y listo para seguir.",
+    },
+    {
+        "code": "1u1u12",
+        "headline": "Maletín de carraca y vasos completo",
+        "description": "Un set de llaves de vaso y carraca con bastante recorrido, se nota por el color desgastado del maletín, pero todas las piezas están en su sitio y listas para apretar cualquier tornillo.",
+    },
+    {
+        "code": "1u1u13",
+        "headline": "Ingletadora con serrucho de apoyo",
+        "description": "Esta ingletadora ha visto bastante trabajo, el serrín acumulado lo confirma, pero el disco y la estructura se mantienen firmes para seguir haciendo cortes en ángulo con precisión.",
+    },
+    {
+        "code": "1u1u14",
+        "headline": "Kit de soldadura con careta y electrodos",
+        "description": "Careta protectora, guante resistente al calor y varillas de electrodo listas para chispear: todo lo esencial para soldar sin sustos. El equipo se ve completo y en condiciones de seguir dando buenas soldaduras.",
+    },
+    {
+        "code": "1u1u15",
+        "headline": "Trío de serruchos de mano multiuso",
+        "description": "Tres serruchos con mangos de colores y dientes bien definidos, cada uno pensado para un tipo de corte distinto. Se conservan afilados y sin óxido, listos para entrar en cualquier caja de herramientas.",
+    },
+    {
+        "code": "1u1u16",
+        "headline": "Ingletadora amarilla con molduras cortadas",
+        "description": "Con varias piezas de madera ya cortadas a su lado, esta ingletadora demuestra que ha estado en pleno rendimiento. El amarillo desgastado y algunas marcas de uso no le quitan mérito: es de fiar.",
+    },
+    {
+        "code": "1u1u17",
+        "headline": "Martillo perforador con brocas y puntas SDS",
+        "description": "Un martillo perforador robusto acompañado de brocas de distintos grosores, un cincel plano y hasta los lápices de carpintero de toda la vida. Las gafas de protección al lado son un buen recordatorio.",
+    },
+    {
+        "code": "1u1u18",
+        "headline": "Taladro atornillador a batería",
+        "description": "Un taladro compacto y ligero, con la batería incluida y lista para usar. Se ve algo de polvo de trabajo reciente en la superficie, señal de que ha estado en plena faena y no cogiendo polvo en un cajón.",
+    },
+    {
+        "code": "1u1u19",
+        "headline": "Kit básico: martillo, cinta métrica y alicates",
+        "description": "El combo esencial para cualquier reparación en casa: un martillo de mango azul, una cinta métrica naranja bien visible, unos alicates multiuso y clavos de sobra. Sencillo, práctico y sin complicaciones.",
+    },
+    {
+        "code": "1u1u20",
+        "headline": "Escalera profesional de aluminio",
+        "description": "Escalera de trabajo de aluminio en excelente estado, resistente y versátil. Estructura robusta, peldaños seguros y estables.",
+    },
+    {
+        "code": "1u1u21",
+        "headline": "Conjunto de brochas y pinceles",
+        "description": "Conjunto completo de 6 brochas y pinceles de pintura con mangos de madera natural (amarillos y blancos). Variedad de tamaños y tipos para trabajos de precisión y cobertura.",
     },
 ]
 
