@@ -12,7 +12,10 @@ from core.models import RSVP, Collection, User
 
 JOIN_URL = "/api/v1/auth/join/"
 
-DOC_ID = "oiueei/collections/welcome-doc-1"
+# The documents folder, which is what `PdfUpload` and the document-mode
+# ticket actually produce — `welcome_doc` now refuses a key belonging to
+# another asset folder (`validators.validate_key_folder`).
+DOC_ID = "oiueei/documents/welcome-doc-1"
 
 
 def _verify(rsvp):

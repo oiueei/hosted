@@ -272,10 +272,10 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    thumbnail = ImageIdField(required=False, allow_blank=True)
+    thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
-    welcome_doc = ImageIdField(required=False, allow_blank=True)
+    welcome_doc = ImageIdField(folder="oiueei/documents", required=False, allow_blank=True)
     tags = serializers.ListField(
         child=LocalizedHeadlineField(max_length=32, storage_max_length=LOCALIZED_TAG_STORAGE),
         max_length=12,
@@ -383,10 +383,10 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    thumbnail = ImageIdField(required=False, allow_blank=True)
+    thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
-    welcome_doc = ImageIdField(required=False, allow_blank=True)
+    welcome_doc = ImageIdField(folder="oiueei/documents", required=False, allow_blank=True)
     pause_message = SafeTextField(max_length=256, required=False, allow_blank=True)
     tags = serializers.ListField(
         child=LocalizedHeadlineField(max_length=32, storage_max_length=LOCALIZED_TAG_STORAGE),

@@ -27,7 +27,7 @@ All user-facing text inputs use custom validator fields to prevent XSS:
 | `SafeTextField` | Rejects HTML tags (regex) and unsafe link schemes; line breaks allowed (Markdown) | FAQ answers, pause message, broadcast message, User `about` |
 | `LocalizedHeadlineField` | Everything `SafeHeadlineField` does, **plus** mode-awareness: the value may be an inline `{lang: text}` map (see below) | Thing/Collection `headline`, each `tags` label |
 | `LocalizedTextField` | Everything `SafeTextField` does, plus the same mode-awareness | Thing/Collection `description`, Collection `deposit_policy` |
-| `ImageIdField` | Alphanumeric + `_-./` only, no leading/trailing/double slashes | Storage keys including their folder path (e.g. `oiueei/things/abc123`) |
+| `ImageIdField` | Alphanumeric + `_-./` only, no leading/trailing/double slashes, **and the key may not name one of the *other* asset folders** (`folder=` — see below) | Storage keys including their folder path (e.g. `oiueei/things/abc123`) |
 
 ### Owner content that carries one text per language (O6)
 

@@ -414,7 +414,7 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Authorization | DRF Permissions | Custom `IsThingOwner`, `IsCollectionOwner` permission classes |
 | Authorization | IDOR Protection | Profile access only via collection connections |
 | Input Validation | XSS Prevention | HTML escaped in emails via `django.utils.html.escape()`. Headlines sanitized |
-| Input Validation | Image ID | Alphanumeric validation prevents path traversal |
+| Input Validation | Image ID | Alphanumeric validation prevents path traversal; each field is also bound to its own storage folder, so a key may not name another one |
 | Rate Limiting | Auth | 5 req/min for magic link, 10 req/min for verify, 10 req/min for token refresh |
 | Rate Limiting | Join (`/auth/join/`) | 5 req/min per IP + 5 req/hour per email |
 | Rate Limiting | Joins per collection | Off by default; set `COLLECTION_JOINS_PER_DAY` to cap how many people **one collection** may be joined by per day. The two limits above cap one IP and one victim; this is what stops many IPs each mailing a different stranger once, using a public collection code as a relay onto the operator's sending domain. A refusal returns the endpoint's usual unified response, so the cap can't be used to probe which codes are real |

@@ -49,6 +49,17 @@ CACHE_CONTROL = "public, max-age=31536000, immutable"
 # prefix, and both read it from here so the two can never drift apart.
 SEED_PREFIX = "oiueei/seed/"
 
+# The folders this project stores assets in, one per kind of thing that owns one.
+# `views/upload.py` decides which of them a ticket may be signed for;
+# `validators.validate_key_folder` refuses a key that names one of the others.
+# Both read this, so the set cannot drift between the door and the field —
+# the same reason SEED_PREFIX lives here rather than in each sweep.
+USER_FOLDER = "oiueei/users"
+THING_FOLDER = "oiueei/things"
+COLLECTION_FOLDER = "oiueei/collections"
+DOCUMENT_FOLDER = "oiueei/documents"
+ASSET_FOLDERS = frozenset({USER_FOLDER, THING_FOLDER, COLLECTION_FOLDER, DOCUMENT_FOLDER})
+
 # S3 caps one DeleteObjects call at 1000 keys.
 _DELETE_LIMIT = 1000
 

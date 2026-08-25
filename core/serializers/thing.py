@@ -434,10 +434,10 @@ class ThingCreateSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    thumbnail = ImageIdField()
+    thumbnail = ImageIdField(folder="oiueei/things")
     location = SafeHeadlineField(max_length=32, required=False, allow_blank=True)
     gallery = serializers.ListField(
-        child=ImageIdField(allow_blank=False),
+        child=ImageIdField(folder="oiueei/things", allow_blank=False),
         max_length=8,
         required=False,
         allow_empty=True,
@@ -483,10 +483,10 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    thumbnail = ImageIdField()
+    thumbnail = ImageIdField(folder="oiueei/things")
     location = SafeHeadlineField(max_length=32, required=False, allow_blank=True)
     gallery = serializers.ListField(
-        child=ImageIdField(allow_blank=False),
+        child=ImageIdField(folder="oiueei/things", allow_blank=False),
         max_length=8,
         required=False,
         allow_empty=True,
@@ -607,7 +607,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     # Cover photo public_id. A CSV can't carry binaries, but a ZIP bundle can:
     # the client unzips, uploads each image to the bucket, and sends the resulting
     # public_id here (validated path-traversal-safe like the single-create path).
-    thumbnail = ImageIdField(required=False, allow_blank=True)
+    thumbnail = ImageIdField(folder="oiueei/things", required=False, allow_blank=True)
 
     class Meta:
         model = Thing

@@ -1129,7 +1129,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 
 ### Input Validation
 
-1. **Image IDs** — Only alphanumeric characters, underscores, and hyphens allowed.
+1. **Image IDs** — Only alphanumeric characters, underscores, hyphens, dots and slashes; no traversal. Each field is also **bound to its own folder** (`ImageIdField(folder=…)` → `validators.validate_key_folder`): the upload ticket refuses to sign a write outside a known folder, but the key that lands on the model arrives in a *separate* request, so nothing tied the two together — a member could put a collection's welcome PDF into their own `photo` and republish a document its owner shared with one group. The rule is deliberately narrow, refusing only a key naming one of the **other** `storage.ASSET_FOLDERS`: a bare Cloudinary-era id, an `oiueei/seed/` fixture (the demo's shared pool legitimately backs every kind of row) and any unknown namespace still save, because the guard arrived years after the keys did and refusing them would strand rows whose photo works perfectly.
 2. **Headlines** — HTML tags rejected to prevent XSS.
 3. **Quantities** — Order quantities capped at 99.
 4. **Dates** — Start dates must be today or future. End dates must be >= start dates.
