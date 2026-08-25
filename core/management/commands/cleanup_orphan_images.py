@@ -50,7 +50,7 @@ from django.utils import timezone as dj_timezone
 from core.models import Collection, Thing, User
 from core.services import storage
 
-SEED_PREFIX = "oiueei/seed/"
+SEED_PREFIX = storage.SEED_PREFIX
 DELETE_BATCH = 100
 
 

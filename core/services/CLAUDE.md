@@ -286,6 +286,14 @@ Frees the stored objects a record owns when the record itself is deleted, so rem
 | `Collection` | `thumbnail`, `welcome_doc` (the welcome PDF — also `resource_type=image`, so the default destroy kwargs are right) |
 | `User` | `photo` |
 
-#### Suspension (the demo-seed guard)
+#### The seed pool is never destroyed
 
-`suspended()` is a context manager that disables the cleanup for deletes inside the block. **`seed_demo._reset()` wraps its deletes in it**: the demo reuses a fixed pool of shared storage keys, so wiping them on `--reset` would destroy the very images the immediate re-seed points back at. Any other bulk delete that must not touch the bucket can reuse the same guard.
+Keys under **`storage.SEED_PREFIX`** (`oiueei/seed/`) are skipped outright. The demo's fixtures are a *shared, static pool*: every database that has ever run `seed_demo` points at the same objects, so they don't belong to the rows that reference them and one delete must not take them from every other environment.
+
+The skip is **per key, not per record** — a genuine upload sitting in the same thing's gallery as a seed image is still cleaned.
+
+This used to be handled only by `seed_demo --reset` suspending the mechanism, which left every *other* door open: the Django admin, an FK cascade, a shell delete. Deleting the demo from the admin emptied the whole folder for real, which is what prompted the guard. `cleanup_orphan_images` already skipped the same prefix — the two now read it from one constant in `storage`, because two hand-written copies of a path that must agree are one edit away from a demo that deletes its own photographs.
+
+#### Suspension (still needed, for a different job)
+
+`suspended()` is a context manager that disables the cleanup entirely for deletes inside the block. **`seed_demo._reset()` still wraps its deletes in it** — belt and braces over the skip above, and the reusable guard for any bulk delete that must not touch the bucket at all.

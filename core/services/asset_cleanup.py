@@ -7,9 +7,13 @@ actually disappears. The destroy runs on ``transaction.on_commit`` (a
 rolled-back delete keeps its images) and never raises: an orphaned asset is a
 smaller problem than a delete that blows up.
 
-It is **suspended** during ``seed_demo --reset``: the demo reuses a fixed pool
-of shared storage keys, so wiping them on reset would break the very images the
-immediate re-seed points back at.
+Keys under ``storage.SEED_PREFIX`` are **never** destroyed. The demo's fixtures
+are a shared pool: every database that has ever seeded points at the same
+objects, so deleting one demo row — from the admin, from a cascade, from
+anywhere — must not take an image away from every other environment. This used
+to be handled only by ``seed_demo --reset`` suspending the whole mechanism,
+which left the admin as an open trapdoor; the skip below closes it, and
+``suspended()`` stays for what it is actually for.
 """
 
 import logging
@@ -71,6 +75,6 @@ def _destroy(key):
 def _cleanup_assets_on_delete(sender, instance, **kwargs):
     if _suspended:
         return
-    assets = list(_assets(instance))
+    assets = [key for key in _assets(instance) if not key.startswith(storage.SEED_PREFIX)]
     if assets:
         transaction.on_commit(lambda: [_destroy(key) for key in assets])

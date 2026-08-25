@@ -33,6 +33,7 @@ from django.utils import timezone
 
 from core.models import FAQ, RSVP, BookingPeriod, Collection, Thing, User
 from core.models.transfer import ThingTransfer
+from core.services import storage
 
 from .seed_data import common
 
@@ -55,8 +56,11 @@ DEMO_USER_CODES = ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh", "1u1ucs"]
 # The seed stores bare ids (see common.py); this prefix is applied at seed time so
 # the stored public_id resolves to the fixture.
 #
-# Re-point here if the folder moves.
-SEED_IMAGE_FOLDER = "oiueei/seed/"
+# Defined in `storage` because two sweeps have to agree with it about which keys
+# are untouchable — the orphan sweep and the delete-time cleanup. It was written
+# out by hand in three places, which is one drift away from a demo that deletes
+# its own photographs.
+SEED_IMAGE_FOLDER = storage.SEED_PREFIX
 
 
 def _seed_image(public_id):
