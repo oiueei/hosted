@@ -11,8 +11,8 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "headline": "Resistance is futile! Lele and her electronics.",
-        "about": "## Lele's workshop ⚡\n\nA hands-on **electronics** tinkerer and component hoarder. My coliving runs on jumper wires and half-finished Arduinos. I join in on whatever goes round the neighbourhood — if it lights up, I can fix it. *Resistance is futile!*",
+        "headline": "Sundays I run a swap-and-lunch at the co-op.",
+        "about": "## Sundays at the co-op 🥘\n\nI live in a **housing cooperative**, and almost nothing here gets done alone. Every Sunday we set up a **swap-meet-party-lunch** in the courtyard: everyone brings down what they no longer need, someone puts music on, and there is always more food than people.\n\n- 🧺 What you have spare is what your neighbour needs\n- 🔧 Shared tools, ladder included\n- 🍲 Bring a dish, leave with a recipe",
     },
     {
         "code": "l1l13S",
@@ -51,6 +51,11 @@ COLLECTIONS = [
         "code": "1u1uC1",
         "headline": "Tools for us!",
         "description": "We upload the tools we have here and make them available to the rest of the group. Take good care of them: they're ours and we all need them.",
+    },
+    {
+        "code": "L3L3C1",
+        "headline": "The Sunday swap-meet in the courtyard",
+        "description": "Every Sunday we set up a swap-meet, a party and a lunch in the courtyard. Bring down what you no longer use and take home what you need: everything here is a gift. Co-op neighbours only.",
     },
 ]
 
@@ -331,6 +336,61 @@ THINGS = [
         "code": "1u1u21",
         "headline": "Set of brushes and paintbrushes",
         "description": "A complete set of 6 paintbrushes and brushes with natural wooden handles (yellow and white). A range of sizes and types for both precision work and coverage.",
+    },
+    {
+        "code": "L3L301",
+        "headline": "Red stand mixer",
+        "description": "A red stand mixer with a modern, elegant design. Perfect for preparing all kinds of doughs and desserts. Stainless steel bowl.",
+    },
+    {
+        "code": "L3L302",
+        "headline": "Kids' balance bike",
+        "description": "A balance bike for children, ideal for taking the first steps into the world of two wheels.",
+    },
+    {
+        "code": "L3L303",
+        "headline": "Fenton FT212LED powered speaker",
+        "description": "A Fenton FT212LED powered speaker rated at 1400 W. Built-in LED lighting that changes colour. Bluetooth, USB and two wireless microphones. In perfect condition.",
+    },
+    {
+        "code": "L3L304",
+        "headline": "Raspberry Pi 5 with Recalbox ready to go",
+        "description": "A complete 2 GB Raspberry Pi 5 with built-in fan, HDMI cable, power supply and a 64 GB microSD carrying Recalbox, ready to use. Brand new.",
+    },
+    {
+        "code": "L3L305",
+        "headline": "Seven 1000-piece jigsaw puzzles",
+        "description": "A lot of seven That's Life jigsaw puzzles, 1000 pieces each. Ideal for whiling away an afternoon. All complete and in perfect condition.",
+    },
+    {
+        "code": "L3L306",
+        "headline": "JVC AV14BM8EPS television",
+        "description": "A silver JVC AV14BM8EPS television. Works as a monitor through the front input. No remote.",
+    },
+    {
+        "code": "L3L307",
+        "headline": "Hand coffee grinder",
+        "description": "A hand-cranked coffee grinder, as decoration or to restore. Works perfectly.",
+    },
+    {
+        "code": "L3L308",
+        "headline": "Polished steel paella pan, 42 cm",
+        "description": "A very large polished steel paella pan, 42 cm across. Feeds ten at the very least.",
+    },
+    {
+        "code": "L3L309",
+        "headline": "Black Nespresso Krups machine",
+        "description": "A Nespresso Krups coffee machine in black. Designed to pull a good cup of coffee.",
+    },
+    {
+        "code": "L3L310",
+        "headline": "Taurus microwave with grill",
+        "description": "A white Taurus microwave with a grill function. Ideal for heating and cooking. In very good condition, clean and ready to use.",
+    },
+    {
+        "code": "L3L311",
+        "headline": "Portable cool box for beach and picnic",
+        "description": "A cool box with a green lid and grey handle, ideal for taking drinks and food to the beach or on a picnic. Practical and easy to carry.",
     },
 ]
 

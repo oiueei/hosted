@@ -14,8 +14,8 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "headline": "¡La resistencia es fútil! Lele y su electrónica.",
-        "about": "## El taller de Lele ⚡\n\nManitas de la **electrónica** y cazadora de componentes. Mi coliving funciona con jumpers y Arduinos a medio hacer. Me apunto a todo lo que circule por el barrio — si algo se enciende, lo arreglo. *¡La resistencia es fútil!*",
+        "headline": "Los domingos monto mercadillo y comida en la cooperativa.",
+        "about": "## Domingos en la cooperativa 🥘\n\nVivo en una **cooperativa de viviendas**, y aquí casi nada se hace en solitario. Cada domingo montamos en el patio un **mercadillo-fiesta-comida**: cada cual baja lo que le sobra, alguien pone música y siempre acaba habiendo más comida que gente.\n\n- 🧺 Lo que a ti te sobra, a tu vecina le hace falta\n- 🔧 Herramientas compartidas, escalera incluida\n- 🍲 Trae plato, te vas con receta",
     },
     {
         "code": "l1l13S",
@@ -54,6 +54,11 @@ COLLECTIONS = [
         "code": "1u1uC1",
         "headline": "¡Herramientas para nosotros!",
         "description": "Subimos aquí las herramientas que tenemos y las ponemos a disposición del resto del grupo. Cuidadlas bien: son nuestras y las necesitamos entre todas y todos.",
+    },
+    {
+        "code": "L3L3C1",
+        "headline": "El mercadillo de los domingos en el patio",
+        "description": "Cada domingo montamos mercadillo, fiesta y comida en el patio. Baja lo que ya no uses y llévate lo que te haga falta: aquí todo se regala. Solo para vecinas y vecinos de la cooperativa.",
     },
 ]
 
@@ -334,6 +339,61 @@ THINGS = [
         "code": "1u1u21",
         "headline": "Conjunto de brochas y pinceles",
         "description": "Conjunto completo de 6 brochas y pinceles de pintura con mangos de madera natural (amarillos y blancos). Variedad de tamaños y tipos para trabajos de precisión y cobertura.",
+    },
+    {
+        "code": "L3L301",
+        "headline": "Batidora amasadora roja",
+        "description": "Batidora amasadora de color rojo, con un diseño moderno y elegante. Perfecta para preparar todo tipo de masas y postres. Bol de acero inoxidable.",
+    },
+    {
+        "code": "L3L302",
+        "headline": "Bicicleta de aprendizaje para niños",
+        "description": "Bicicleta de aprendizaje para niños, ideal para iniciarse en el mundo de las dos ruedas.",
+    },
+    {
+        "code": "L3L303",
+        "headline": "Altavoz amplificado Fenton FT212LED",
+        "description": "Altavoz amplificado Fenton FT212LED con una potencia de 1400 W. Cuenta con iluminación LED integrada que cambia de color. Bluetooth, USB y dos micros inalámbricos. En perfecto estado.",
+    },
+    {
+        "code": "L3L304",
+        "headline": "Raspberry Pi 5 con Recalbox lista para usar",
+        "description": "Raspberry Pi 5 de 2 GB completa, con ventilador integrado, cable HDMI, cable de alimentación y microSD de 64 GB con Recalbox listo para usar. Totalmente nueva.",
+    },
+    {
+        "code": "L3L305",
+        "headline": "Lote de siete puzzles de 1000 piezas",
+        "description": "Lote de siete puzzles de la marca That's Life, cada uno con 1000 piezas. Son ideales para pasar tiempo de ocio. Todos completos y en perfecto estado.",
+    },
+    {
+        "code": "L3L306",
+        "headline": "Televisor JVC AV14BM8EPS",
+        "description": "Televisor JVC modelo AV14BM8EPS en color plateado. Funciona como monitor a través de la entrada frontal. Sin mando.",
+    },
+    {
+        "code": "L3L307",
+        "headline": "Máquina de moler café manual",
+        "description": "Máquina de moler café manual, como decoración o para restaurar. Funciona perfectamente.",
+    },
+    {
+        "code": "L3L308",
+        "headline": "Paellera de acero pulido de 42 cm",
+        "description": "Sartén para hacer paella muy grande, de acero pulido. 42 cm de diámetro. Para 10 personas como mínimo.",
+    },
+    {
+        "code": "L3L309",
+        "headline": "Cafetera Nespresso Krups negra",
+        "description": "Cafetera Nespresso Krups en color negro. Diseñada para preparar deliciosos cafés.",
+    },
+    {
+        "code": "L3L310",
+        "headline": "Microondas Taurus con grill",
+        "description": "Microondas Taurus en color blanco con función grill. Ideal para calentar y cocinar. Se encuentra en muy buen estado, limpio y listo para usar.",
+    },
+    {
+        "code": "L3L311",
+        "headline": "Nevera portátil para playa y picnic",
+        "description": "Nevera portátil con tapa verde y asa gris, ideal para llevar tus bebidas y alimentos frescos a la playa o de picnic. Su diseño es práctico y fácil de transportar.",
     },
 ]
 

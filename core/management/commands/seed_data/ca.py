@@ -16,8 +16,8 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "headline": "La resistència és fútil! La Lele i la seva electrònica.",
-        "about": "## El taller de la Lele ⚡\n\nManetes de l'**electrònica** i caçadora de components. El meu coliving funciona amb jumpers i Arduinos a mig fer. M'apunto a tot el que circula pel barri — si s'encén, ho puc arreglar. *La resistència és fútil!*",
+        "headline": "Els diumenges munto mercadet i dinar a la cooperativa.",
+        "about": "## Diumenges a la cooperativa 🥘\n\nVisc en una **cooperativa d'habitatge**, i aquí gairebé res no es fa en solitari. Cada diumenge muntem al pati un **mercadet-festa-dinar**: cadascú baixa el que li sobra, algú posa música i sempre acaba havent-hi més menjar que gent.\n\n- 🧺 El que a tu et sobra, a la veïna li fa falta\n- 🔧 Eines compartides, escala inclosa\n- 🍲 Porta plat, te'n vas amb recepta",
     },
     {
         "code": "l1l13S",
@@ -56,6 +56,11 @@ COLLECTIONS = [
         "code": "1u1uC1",
         "headline": "Eines per a nosaltres!",
         "description": "Pugem aquí les eines que tenim i les posem a disposició de la resta del grup. Cuideu-les bé: són nostres i les necessitem entre totes i tots.",
+    },
+    {
+        "code": "L3L3C1",
+        "headline": "El mercadet dels diumenges al pati",
+        "description": "Cada diumenge muntem mercadet, festa i dinar al pati. Baixa el que ja no facis servir i emporta't el que et faci falta: aquí tot es regala. Només per a veïnes i veïns de la cooperativa.",
     },
 ]
 
@@ -336,6 +341,61 @@ THINGS = [
         "code": "1u1u21",
         "headline": "Conjunt de brotxes i pinzells",
         "description": "Conjunt complet de 6 brotxes i pinzells de pintura amb mànecs de fusta natural (grocs i blancs). Varietat de mides i tipus per a treballs de precisió i de cobertura.",
+    },
+    {
+        "code": "L3L301",
+        "headline": "Batedora amassadora vermella",
+        "description": "Batedora amassadora de color vermell, amb un disseny modern i elegant. Perfecta per preparar tota mena de masses i postres. Bol d'acer inoxidable.",
+    },
+    {
+        "code": "L3L302",
+        "headline": "Bicicleta d'aprenentatge per a nens",
+        "description": "Bicicleta d'aprenentatge per a nens, ideal per iniciar-se en el món de les dues rodes.",
+    },
+    {
+        "code": "L3L303",
+        "headline": "Altaveu amplificat Fenton FT212LED",
+        "description": "Altaveu amplificat Fenton FT212LED amb una potència de 1400 W. Té il·luminació LED integrada que canvia de color. Bluetooth, USB i dos micròfons sense fil. En perfecte estat.",
+    },
+    {
+        "code": "L3L304",
+        "headline": "Raspberry Pi 5 amb Recalbox a punt",
+        "description": "Raspberry Pi 5 de 2 GB completa, amb ventilador integrat, cable HDMI, cable d'alimentació i microSD de 64 GB amb Recalbox a punt per fer servir. Totalment nova.",
+    },
+    {
+        "code": "L3L305",
+        "headline": "Lot de set trencaclosques de 1000 peces",
+        "description": "Lot de set trencaclosques de la marca That's Life, cadascun amb 1000 peces. Ideals per passar l'estona. Tots complets i en perfecte estat.",
+    },
+    {
+        "code": "L3L306",
+        "headline": "Televisor JVC AV14BM8EPS",
+        "description": "Televisor JVC model AV14BM8EPS de color platejat. Funciona com a monitor a través de l'entrada frontal. Sense comandament.",
+    },
+    {
+        "code": "L3L307",
+        "headline": "Molinet de cafè manual",
+        "description": "Molinet de cafè manual, com a decoració o per restaurar. Funciona perfectament.",
+    },
+    {
+        "code": "L3L308",
+        "headline": "Paella d'acer polit de 42 cm",
+        "description": "Paella molt gran per fer arròs, d'acer polit. 42 cm de diàmetre. Per a 10 persones com a mínim.",
+    },
+    {
+        "code": "L3L309",
+        "headline": "Cafetera Nespresso Krups negra",
+        "description": "Cafetera Nespresso Krups de color negre. Dissenyada per preparar cafès deliciosos.",
+    },
+    {
+        "code": "L3L310",
+        "headline": "Microones Taurus amb grill",
+        "description": "Microones Taurus de color blanc amb funció grill. Ideal per escalfar i cuinar. Es troba en molt bon estat, net i a punt per fer servir.",
+    },
+    {
+        "code": "L3L311",
+        "headline": "Nevera portàtil per a platja i pícnic",
+        "description": "Nevera portàtil amb tapa verda i nansa grisa, ideal per portar begudes i aliments frescos a la platja o de pícnic. El disseny és pràctic i fàcil de transportar.",
     },
 ]
 
