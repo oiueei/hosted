@@ -156,9 +156,12 @@ TEXTS = {
     "decision_confirmed": "confirmada",
     "decision_cancelled": "cancel·lada",
     "decision_plain_dated": (
-        "La teva sol·licitud {action} de '{thing}' del {start} al {end} ha estat {decision}."
+        "La teva sol·licitud {action} de '{thing}' del {start} al {end} ha estat {decision}. "
+        "Veure la publicació: {url}"
     ),
-    "decision_plain": "La teva sol·licitud {action} de '{thing}' ha estat {decision}.",
+    "decision_plain": (
+        "La teva sol·licitud {action} de '{thing}' ha estat {decision}. Veure la publicació: {url}"
+    ),
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",

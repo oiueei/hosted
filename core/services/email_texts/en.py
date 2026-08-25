@@ -155,9 +155,10 @@ TEXTS = {
     "decision_confirmed": "confirmed",
     "decision_cancelled": "cancelled",
     "decision_plain_dated": (
-        "Your {action} request for '{thing}' from {start} to {end} has been {decision}."
+        "Your {action} request for '{thing}' from {start} to {end} has been {decision}. "
+        "View thing: {url}"
     ),
-    "decision_plain": "Your {action} request for '{thing}' has been {decision}.",
+    "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
     "decision_intro": "Your {action} request has been {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",

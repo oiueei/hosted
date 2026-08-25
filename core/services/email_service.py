@@ -1012,6 +1012,12 @@ def send_booking_decision_email(booking, thing, accepted=True):
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
 
+    # The reader is the requester, and this is the one booking email that used to
+    # carry no link at all: it announced a decision and left them with nothing to
+    # press, at the moment the hold either becomes real or stops. The request
+    # email has accept/reject, the FAQ ones link the thing; this one now does too.
+    thing_url = _thing_url(thing)
+
     if booking.start_date and booking.end_date:
         plain = T("decision_plain_dated").format(
             action=action,
@@ -1019,9 +1025,12 @@ def send_booking_decision_email(booking, thing, accepted=True):
             start=booking.start_date,
             end=booking.end_date,
             decision=decision_word,
+            url=thing_url,
         )
     else:
-        plain = T("decision_plain").format(action=action, thing=headline, decision=decision_word)
+        plain = T("decision_plain").format(
+            action=action, thing=headline, decision=decision_word, url=thing_url
+        )
 
     subject = T("decision_subject")
     html = _render_email(
@@ -1029,6 +1038,7 @@ def send_booking_decision_email(booking, thing, accepted=True):
             _para(T("decision_intro").format(action=action, decision=decision_word)),
             _strong(headline),
             *_booking_detail_blocks(booking, lang),
+            _links((thing_url, T("view_thing_cta"))),
         ],
         lang=lang,
     )
