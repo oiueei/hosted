@@ -324,3 +324,45 @@ def test_admin_login_page_still_loads():
     assert resp.status_code == 200
     # 200 alone could be an error page — the actual login form must render.
     assert b'name="username"' in resp.content
+
+
+@pytest.mark.django_db
+class TestAuthCookiesFollowTheProjectsCookieSwitch:
+    """The JWT cookies read `SESSION_COOKIE_SECURE`, not `DEBUG`.
+
+    They are the credentials — an access token and a 7-day refresh token — and
+    they used to derive `Secure` from `not DEBUG`. That is right for both
+    environments this repo ships and wrong for one neither is: `DEBUG=True`
+    behind HTTPS served these two cookies without the flag while the session and
+    CSRF cookies beside them kept it. Invisible in the app; the whole difference
+    is what a downgraded request carries in clear.
+    """
+
+    def _login(self, client):
+        from core.models import RSVP, User
+
+        user = User.objects.create(code="CKY001", email="cookie@example.com")
+        rsvp = RSVP.objects.create(user_code=user, user_email=user.email)
+        return client.get(f"/api/v1/auth/verify/{rsvp.token}/")
+
+    def test_a_deployment_with_secure_cookies_gets_secure_auth_cookies(self, api_client, settings):
+        # DEBUG stays True (the test settings): the point is that it is no longer
+        # what decides, so this pairing has to produce Secure cookies.
+        settings.DEBUG = True
+        settings.SESSION_COOKIE_SECURE = True
+
+        res = self._login(api_client)
+
+        assert res.status_code == 200
+        assert res.cookies["access_token"]["secure"]
+        assert res.cookies["refresh_token"]["secure"]
+
+    def test_plain_http_development_still_gets_usable_cookies(self, api_client, settings):
+        """The other half: a Secure cookie on http://localhost is never sent
+        back, so flipping this unconditionally would break local development."""
+        settings.SESSION_COOKIE_SECURE = False
+
+        res = self._login(api_client)
+
+        assert res.status_code == 200
+        assert not res.cookies["access_token"]["secure"]
