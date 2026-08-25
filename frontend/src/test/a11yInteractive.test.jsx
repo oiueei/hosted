@@ -2,6 +2,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+import InfoPopover from '../components/InfoPopover';
+import InlineConfirm from '../components/InlineConfirm';
 
 expect.extend(toHaveNoViolations);
 window.scrollTo = vi.fn();
@@ -143,5 +145,45 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     // The Dialog renders in a portal on document.body.
     await waitFor(() => expect(document.querySelector('.share-qr-code')).toBeTruthy());
     expect(await axe(document.body, NO_REGION)).toHaveNoViolations();
+  });
+});
+
+/**
+ * The two shared disclosure widgets, scanned in the state that only exists after
+ * a click. Both are generic — `InfoPopover` backs the (i) on ThingForm,
+ * BulkAddCsv, BulkInviteCsv and LocalizedInfo; `InlineConfirm` is the canonical
+ * consequence-confirm on ThingPage, ThingLinkbox and ThingReportFooter — so a
+ * violation in either repeats across most of the app, and the page-level smoke
+ * sweep only ever renders them shut.
+ */
+describe('shared disclosure widgets — opened-state a11y', () => {
+  test('the opened InfoPopover panel has no axe violations', async () => {
+    const { container } = render(
+      <InfoPopover title="CSV format" id="csv-help">
+        <p>One row per thing.</p>
+      </InfoPopover>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'CSV format' }));
+    await screen.findByText('One row per thing.');
+
+    expect(await axe(container, NO_REGION)).toHaveNoViolations();
+  });
+
+  test('the expanded InlineConfirm panel has no axe violations', async () => {
+    const { container } = render(
+      <InlineConfirm
+        triggerLabel="Report this listing"
+        title="Report this listing?"
+        body="The owner is told, and a moderator reads it."
+        confirmLabel="Report"
+        onConfirm={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Report this listing' }));
+    await screen.findByText('The owner is told, and a moderator reads it.');
+
+    expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 });
