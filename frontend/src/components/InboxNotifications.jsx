@@ -80,10 +80,25 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
 
   // Resolve the three headline keys once, then the builders below interpolate plain
   // words like they always did.
+  //
+  // The name keys get a stand-in for the same reason `ThingLinkbox` has always
+  // used one: the backend sends the bare `name`, never `display_name`, because
+  // the fallback in `display_name` is the person's email address and the reader
+  // here is a co-member who is not entitled to it (L2). A person who never set a
+  // name therefore arrives as `''`, and every one of these strings interpolates
+  // the name mid-sentence — so without this the body reads " has replied to your
+  // question about:". One funnel, so a builder cannot forget.
+  const named = (value) => value || t('common.aMember');
   const localizedPayload = (payload) => ({
     ...payload,
     collection_headline: L(payload.collection_headline),
     thing_headline: L(payload.thing_headline),
+    owner_name: named(payload.owner_name),
+    questioner_name: named(payload.questioner_name),
+    requester_name: named(payload.requester_name),
+    invitee_name: named(payload.invitee_name),
+    member_name: named(payload.member_name),
+    proposer_name: named(payload.proposer_name),
   });
 
   const notificationLabel = (n) => {

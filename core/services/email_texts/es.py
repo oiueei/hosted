@@ -10,6 +10,9 @@ TEXTS = {
     # página legal: es una obligación de información, no una preferencia.
     "footer_legal": "Legal y privacidad",
     "dates_label": "Fechas",
+    # Cómo se nombra a alguien que nunca puso nombre, allí donde quien lee no
+    # tiene derecho a su dirección. Ver "a_member" en en.py y `_member_name`.
+    "a_member": "Un miembro",
     "view_collection_cta": "Ver la colección",
     # Sustantivos de acción por tipo para los correos de reserva — calcan el
     # vocabulario del frontend (thingCard.action / types): una solicitud SELL

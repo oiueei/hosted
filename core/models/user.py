@@ -151,7 +151,23 @@ class User(AbstractBaseUser):
 
     @property
     def display_name(self):
-        """Human-facing name: the chosen name, falling back to the email."""
+        """Human-facing name: the chosen name, falling back to the email.
+
+        **The fallback makes this unsafe to show to anyone but the person
+        themselves or somebody who already holds their address** — and the
+        fallback is the common case, not the rare one: ``name`` is empty for
+        every account made by ``get_or_create(email=email)``, which is everyone
+        who arrived by magic link or invitation and never filled in a profile.
+
+        Who already holds it: a collection owner sees their members' emails
+        (``owner_member_rows``), and a thing owner sees a requester's
+        (``BookingPeriodSerializer.requester_email``). Those readers may have
+        this. Everyone else — a co-member, an invitee, a stranger being invited —
+        gets the bare ``name`` and a neutral stand-in where the copy needs a
+        subject (``email_service._member_name``, ``common.aMember`` in the SPA).
+        Serializers read by co-members already do this one by one; see the notes
+        on ``MyBookingSerializer.get_owner_name`` and its neighbours.
+        """
         return self.name or self.email
 
     def has_perm(self, perm, obj=None):

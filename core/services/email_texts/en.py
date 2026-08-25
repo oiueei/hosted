@@ -12,6 +12,12 @@ TEXTS = {
     # legal page, since this is a disclosure duty and not a preference.
     "footer_legal": "Legal & privacy",
     "dates_label": "Dates",
+    # What a person is called when they never set a name, wherever the reader is
+    # someone who is not entitled to their address. `User.display_name` falls
+    # back to the email, and `name` is empty for everyone who joined by magic
+    # link and never filled in their profile — so the fallback is the *default*
+    # state of a new member, not an edge case (L2). See `_member_name`.
+    "a_member": "A member",
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
     # thingCard.action / types vocabulary so a SELL request reads "purchase

@@ -340,3 +340,101 @@ describe('InboxNotifications — dismissing', () => {
     await waitFor(() => expect(onNetworkError).toHaveBeenCalled());
   });
 });
+
+/**
+ * L2: the backend sends the bare `name`, never `display_name`, because the
+ * fallback in `display_name` is the person's email address and the reader of an
+ * inbox card is a co-member who is not entitled to it. So a person who never
+ * filled in their profile arrives here as `''`.
+ *
+ * Every one of these strings interpolates the name mid-sentence, so an empty one
+ * is not a cosmetic problem: the card reads " has replied to your question
+ * about:" — a message from nobody. `localizedPayload` substitutes the same
+ * stand-in `ThingLinkbox` has always used, and this is what pins it.
+ *
+ * The backend half lives in `core/tests/integration/test_member_name_privacy.py`.
+ */
+describe('InboxNotifications — a person with no name still has a subject', () => {
+  const renderInbox = () =>
+    render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+
+  const NAMELESS_CASES = [
+    {
+      what: 'an answer from an owner who never set a name',
+      notification: {
+        code: 'NON001',
+        type: 'FAQ_ANSWERED',
+        payload: { thing_headline: 'The drill', owner_name: '', thing_code: 'THG001' },
+        created: '2026-08-25T10:00:00Z',
+      },
+    },
+    {
+      what: 'a question from an asker who never set a name',
+      notification: {
+        code: 'NON002',
+        type: 'FAQ_QUESTION',
+        payload: { thing_headline: 'The drill', questioner_name: '', thing_code: 'THG001' },
+        created: '2026-08-25T10:00:00Z',
+      },
+    },
+    {
+      what: 'a hold accepted by an owner who never set a name',
+      notification: {
+        code: 'NON003',
+        type: 'BOOKING_ACCEPTED',
+        payload: { thing_headline: 'The drill', owner_name: '', thing_code: 'THG001' },
+        created: '2026-08-25T10:00:00Z',
+      },
+    },
+  ];
+
+  test('a pending invitation from an owner who never set a name still names somebody', async () => {
+    // Not an inbox notification — HomePage renders these from
+    // `/api/v1/my-invitations/`, whose `owner_name` follows the same rule (the
+    // reader is only invited so far, so the API withholds the owner's address).
+    // It sits here because it is the same concern and the same page.
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/my-invitations/'))
+        return ok([
+          {
+            accept_code: 'tok-accept',
+            reject_code: 'tok-reject',
+            collection_code: 'COL001',
+            collection_headline: 'Toy library',
+            owner_name: '',
+          },
+        ]);
+      if (url.startsWith('/api/v1/inbox/')) return ok([]);
+      if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
+      if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
+      return ok([]);
+    });
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/A member has invited you/)).toBeInTheDocument();
+    expect(screen.queryByText(/@/)).not.toBeInTheDocument();
+  });
+
+  test.each(NAMELESS_CASES)('$what still names somebody', async ({ notification }) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok([notification]);
+      if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
+      return ok([]);
+    });
+
+    renderInbox();
+
+    // The stand-in, not a blank — and above all not an email address.
+    expect(await screen.findByText(/A member/)).toBeInTheDocument();
+    expect(screen.queryByText(/@/)).not.toBeInTheDocument();
+  });
+});

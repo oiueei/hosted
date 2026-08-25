@@ -268,7 +268,10 @@ def finalize_booking_decision(booking, accepted):
     if thing is None:
         return None
 
-    owner_name = booking.owner_code.display_name
+    # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
+    # the requester, a co-member, and the API withholds the owner's address from
+    # them everywhere else (L2).
+    owner_name = booking.owner_code.name
     # The booking doesn't record which collection it was made through, so the
     # requester-side notification deep-links through the same approximation the
     # request-side one used.

@@ -173,7 +173,9 @@ class CollectionViewSet(ModelViewSet):
         return obj
 
     def perform_destroy(self, instance):
-        owner_name = instance.owner.display_name
+        # Bare name — this rides an in-app notification to every member, and a
+        # member is never served their owner's address (L2).
+        owner_name = instance.owner.name
         headline = instance.headline
         invitees = list(instance.invites.all())
 
@@ -418,7 +420,8 @@ class CollectionInviteView(APIView):
         invited_user, already_invited = deliver_invitation(
             collection,
             email,
-            request.user.display_name,
+            # Bare name: this reaches somebody outside the group entirely.
+            request.user.name,
             quota_user_code=request.user.code,
         )
         if already_invited:
@@ -462,7 +465,9 @@ class CollectionInviteView(APIView):
 
             # Notify the removed user — invited_user is already in hand (fetched
             # above), so there's no need to re-query and no DoesNotExist to guard.
-            owner_name = request.user.display_name
+            # Bare name — the person being removed is the last reader who
+            # should be handed the owner's address on the way out (L2).
+            owner_name = request.user.name
             send_collection_revoke_email(
                 owner_name, collection.headline, invited_user.email, collection=collection
             )
@@ -948,7 +953,7 @@ class CollectionBulkInviteView(APIView):
             if full:
                 return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
-        inviter_name = request.user.display_name
+        inviter_name = request.user.name  # bare name — invitees are third parties (L2)
         invited = []
         recipients = []  # (email, accept_link, reject_link)
         with transaction.atomic():
@@ -1116,7 +1121,8 @@ class MyPendingInvitationsView(APIView):
                     "reject_code": reject_rsvp.token if reject_rsvp else None,
                     "collection_code": collection.code,
                     "collection_headline": collection.headline,
-                    "owner_name": collection.owner.display_name,
+                    # Bare name: the reader is an invitee, not a member yet.
+                    "owner_name": collection.owner.name,
                 }
             )
 
@@ -1216,7 +1222,12 @@ class CollectionBroadcastView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        owner_name = request.user.display_name
+        # Bare name. The broadcast discloses the owner's address anyway, by
+        # design — it carries a Reply-To so a group message can be answered, and
+        # the compose box says so before it is sent. That is a disclosure the
+        # owner makes knowingly; rendering it as their *name* in the body and in
+        # every member's inbox is not the same thing, and is not what it means.
+        owner_name = request.user.name
 
         _send_broadcast(
             owner_name=owner_name,

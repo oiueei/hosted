@@ -221,7 +221,8 @@ def approve_proposal(proposal):
     invited_user, already = deliver_invitation(
         collection,
         proposal.email,
-        collection.owner.display_name,
+        # Bare name: the invitation goes to somebody outside the group.
+        collection.owner.name,
         quota_user_code=collection.owner_id,
         # The invitee almost certainly knows the member who suggested them, not
         # the owner — without this line a warm recommendation lands as an email

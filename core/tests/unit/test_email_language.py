@@ -74,7 +74,9 @@ class TestEmailLanguage:
         """Send a SELL confirmation and return the resulting mailbox message."""
 
         class FakeOwner:
-            display_name = "Lala"
+            # `name`, not `display_name`: the confirmation goes to the requester,
+            # a co-member, so the sender reads the bare name (L2).
+            name = "Lala"
 
         class FakeCollections:
             def first(self):
