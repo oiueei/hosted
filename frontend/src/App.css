@@ -1362,6 +1362,18 @@ figure[class*='Highlight-module_highlight'] {
   text-decoration: underline;
 }
 
+/* The app's own HDS tables (bookings, guests). `hds-react` ships
+   `.Table-module_container { height: inherit }` and nothing else — no
+   `overflow-x`, no `table-layout`, no `width` — so a native <table> of three
+   rich columns sizes to its content and pushes the page body wider than the
+   288px xs container (DESIGN §4, §12). Same wrapper as the Markdown tables
+   below, for the same reason: wide content scrolls inside itself so the page
+   never scrolls sideways. No `tabindex`: every row carries a link or a button,
+   so a keyboard reaches the off-screen columns by tabbing into them. */
+.table-wrap {
+  overflow-x: auto;
+}
+
 /* Pipe tables in Markdown bios: wide content scrolls inside its own wrapper so
    the page body never scrolls horizontally on mobile. */
 .markdown-text .markdown-table-wrap {

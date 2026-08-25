@@ -264,28 +264,32 @@ export default function OwnerBookingsPage() {
           {pendingRows.length === 0 ? (
             <p className="text-muted">{t('ownerBookings.noPending')}</p>
           ) : (
-            <Table
-              cols={cols}
-              rows={pendingRows}
-              indexKey="_id"
-              renderIndexCol={false}
-              dense
-              theme={tableTheme}
-            />
+            <div className="table-wrap">
+              <Table
+                cols={cols}
+                rows={pendingRows}
+                indexKey="_id"
+                renderIndexCol={false}
+                dense
+                theme={tableTheme}
+              />
+            </div>
           )}
           {otherRows.length > 0 && (
             <>
               <div className="spacer-xl" />
               <h2>{t('myBookings.pastRequests')}</h2>
               <div className="spacer-s" />
-              <Table
-                cols={cols}
-                rows={otherRows}
-                indexKey="_id"
-                renderIndexCol={false}
-                dense
-                theme={tableTheme}
-              />
+              <div className="table-wrap">
+                <Table
+                  cols={cols}
+                  rows={otherRows}
+                  indexKey="_id"
+                  renderIndexCol={false}
+                  dense
+                  theme={tableTheme}
+                />
+              </div>
             </>
           )}
         </>

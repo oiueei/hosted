@@ -323,17 +323,19 @@ export default function ManageInvitesPage() {
               : []),
           ];
           return (
-            <Table
-              cols={cols}
-              rows={tableRows}
-              indexKey="_id"
-              renderIndexCol={false}
-              theme={
-                tc.color_03
-                  ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                  : undefined
-              }
-            />
+            <div className="table-wrap">
+              <Table
+                cols={cols}
+                rows={tableRows}
+                indexKey="_id"
+                renderIndexCol={false}
+                theme={
+                  tc.color_03
+                    ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                    : undefined
+                }
+              />
+            </div>
           );
         })()
       )}
