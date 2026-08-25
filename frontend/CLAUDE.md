@@ -111,6 +111,8 @@ OIUEEI follows the official [HDS breakpoint tokens](https://hds.hel.fi/foundatio
 
 The `page-container` and `form-hero-content` max-width is **1248px** (aligned with `breakpoint-xl`). The complementary `max-width: 767px` query (below `breakpoint-m`) is also valid for mobile-only overrides.
 
+**Wide content scrolls inside itself, never the page body.** `hds-react` ships `.Table-module_container { height: inherit }` and no `overflow-x`, so a native `<table>` sizes to its content and pushes the body past the 288px xs container. Every HDS `Table` therefore sits in a **`.table-wrap`** (`overflow-x: auto`, App.css) — `MyBookingsPage`, `OwnerBookingsPage` and `ManageInvitesPage`, five in all. Markdown pipe tables in a bio have their own `.markdown-table-wrap` for the same reason. No `tabindex` on either: the rows carry links and buttons, so a keyboard reaches the off-screen columns by tabbing in.
+
 ---
 
 ## PWA
