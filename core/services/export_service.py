@@ -828,19 +828,17 @@ def collection_stats_rows(collection):
 def _collection_members(collection):
     """The roster its owner already manages, demographics gated by mode.
 
-    ``age_range``/``postal_code`` ride along only in a COMMUNITY group, mirroring
-    ``CollectionSerializer.get_invites``: in every other mode they are the
-    member's alone, and a PROPRIETARY export must not be the back door to them.
+    The row shape is ``Collection.owner_member_rows`` — the same one
+    ``CollectionSerializer.get_invites`` serves the guests page, so
+    ``age_range``/``postal_code`` ride along only in a COMMUNITY group and a
+    PROPRIETARY export cannot be the back door to what the API withholds. It
+    used to be a second copy of that loop, which is a privacy invariant kept true
+    by vigilance rather than by construction.
+
+    The ordering is this file's own: an export is read by a person scanning a
+    file, not by a UI that sorts for them.
     """
-    community = collection.is_community()
-    rows = []
-    for member in collection.invites.all().order_by("name", "code"):
-        row = {"code": member.code, "name": member.name, "email": member.email}
-        if community:
-            row["age_range"] = member.age_range
-            row["postal_code"] = member.postal_code
-        rows.append(row)
-    return rows
+    return collection.owner_member_rows(collection.invites.all().order_by("name", "code"))
 
 
 def _collection_bookings(thing_codes):

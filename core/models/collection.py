@@ -250,6 +250,38 @@ class Collection(models.Model):
         """Check if this is a community collection."""
         return self.mode == self.Mode.COMMUNITY
 
+    def owner_member_rows(self, members=None):
+        """Every member as **their owner** sees them, demographics gated by mode.
+
+        The one definition of a privacy rule that used to be written twice —
+        once in `CollectionSerializer.get_invites`, once in
+        `export_service._collection_members` — as two near-identical loops that
+        agreed only because somebody kept them agreeing. `age_range` and
+        `postal_code` are optional answers a member gave; in a COMMUNITY group
+        their owner sees them (it is what the demographics breakdown is for), and
+        in every other mode nobody but the member does. An export must not become
+        the back door to what the API withholds, and the next mode added must not
+        have to be remembered in two files.
+
+        It lives on the model rather than in either caller because the gate is
+        `self.mode` — a fact about the group, not about JSON. It builds a row and
+        nothing else: **who may ask is the caller's job** (`_requester_is_owner`
+        in the serializer, `require_collection_owner` on the export view), and
+        calling this does not make anyone an owner.
+
+        `members` defaults to the M2M, so a caller with a prefetched or ordered
+        queryset passes it in rather than triggering a second one.
+        """
+        community = self.is_community()
+        rows = []
+        for member in self.invites.all() if members is None else members:
+            row = {"code": member.code, "name": member.name, "email": member.email}
+            if community:
+                row["age_range"] = member.age_range
+                row["postal_code"] = member.postal_code
+            rows.append(row)
+        return rows
+
     def is_public(self):
         """Check if this collection is publicly readable (anonymous-friendly)."""
         return self.visibility == self.Visibility.PUBLIC

@@ -409,6 +409,32 @@ class TestCollectionExport:
         # which is a property of the stats feature, not of the export.
         assert payload["stats"]["Postal 08001"] == 1
 
+    @pytest.mark.parametrize("mode", Collection.Mode.values)
+    def test_the_export_shows_an_owner_exactly_what_the_guests_page_does(
+        self, user, user2, mode, api_client
+    ):
+        """The invariant the shared row shape exists for.
+
+        These were two loops in two files — `CollectionSerializer.get_invites`
+        and `_collection_members` — that happened to agree. Nothing made them
+        agree, and the direction they drift in is the dangerous one: the export
+        is a file, so a mode gate the API applies and the export forgets is a
+        leak that leaves the building. Asserting the two answers are *the same
+        object* is stronger than asserting each is right, and it is the assertion
+        that survives a third caller being added.
+        """
+        group = Collection.objects.create(
+            code="SAME01", owner=user, headline="Same rules", mode=mode
+        )
+        group.invites.add(user2)
+        User.objects.filter(pk=user2.pk).update(age_range="GEN_X", postal_code="08001")
+
+        api_client.force_authenticate(user=user)
+        from_api = api_client.get(f"/api/v1/collections/{group.code}/").data["invites"]
+        from_export = build_collection_export(Collection.objects.get(code=group.code))["members"]
+
+        assert from_export == from_api, f"the two owner views disagree in {mode} mode"
+
     def test_the_groups_credentials_stay_out(self, user, world):
         raw = export_bytes(build_collection_export(world["mine"]))
 
