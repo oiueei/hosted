@@ -95,14 +95,26 @@ export default defineConfig(({ mode }) => ({
       // two thing-form controls that carry logic. The suite reads 87.6 / 79.9 /
       // 79.7 / 90.7, so every metric had drifted to 3.7-4.9 points of slack.
       //
+      // Raised a fifth time at the close of the 2026-08 pre-release **frontend**
+      // review, which took the suite to 88.7 / 81.0 / 80.8 / 91.3: the WCAG
+      // 1.4.13 fix on InfoPopover (62.5 -> 100 across the board), the profile
+      // form's validation, payload and error paths (EditProfilePage 63.5 -> 92.7
+      // statements, 44.4 -> 66.7 functions), SharedThingsPage's axe sweep and
+      // heading outline, CollectionLinkbox's client-side navigation, and the
+      // first tests hdsLang has ever had. Statements and functions had drifted
+      // to 3.7-3.8 points of slack, which is wider than this band is meant to be.
+      //
+      // All four now sit 2.3-3.0 points under. Mirrored in CLAUDE.md, which
+      // quotes these numbers — they move together or the doc starts lying.
+      //
       // The floor is not the goal — it only catches a drop. New code still owes
       // tests that name a behaviour; a change that lands under this line means
       // the code needs covering, never that the line needs lowering.
       thresholds: {
-        statements: 85,
+        statements: 86,
         branches: 78,
-        functions: 77,
-        lines: 88,
+        functions: 78,
+        lines: 89,
       },
     },
   },
