@@ -348,21 +348,12 @@ SHARE_LINK_BASE_URL = os.environ.get(
 )
 
 
-# Cloudinary — the SDK reads CLOUDINARY_URL automatically on import.
-# CLOUDINARY_URL format: cloudinary://api_key:api_secret@cloud_name
-import cloudinary  # noqa: E402
-
-cloudinary.config(cloudinary_url=os.environ.get("CLOUDINARY_URL", ""), secure=True)
-CLOUDINARY_CLOUD_NAME = cloudinary.config().cloud_name or ""
-
-
-# Object storage (S3-compatible) — replacing Cloudinary, which served the images
-# from the United States. See `core/services/storage.py`, the only module that
+# Object storage (S3-compatible). It replaced Cloudinary, which served the images
+# from the United States — see `core/services/storage.py`, the only module that
 # talks to it.
 #
 # Unset, the app starts and serves fine; uploads and asset deletion are what
-# fail. Same contract CLOUDINARY_URL has above, and what keeps a checkout
-# runnable without an account.
+# fail. That is what keeps a checkout runnable without an account.
 OBJECT_STORAGE_ENDPOINT = os.environ.get("OBJECT_STORAGE_ENDPOINT", "")
 OBJECT_STORAGE_BUCKET = os.environ.get("OBJECT_STORAGE_BUCKET", "")
 OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION", "")

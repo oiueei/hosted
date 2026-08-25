@@ -27,7 +27,6 @@ django-otp==1.7.0
 
 # Utils
 python-dotenv==1.2.2
-cloudinary==1.45.0
 # boto3 talks to the S3-compatible object storage that is replacing Cloudinary.
 # Both live here until the last Cloudinary call site is gone (see core/services/storage.py).
 # botocore ships with it and is not pinned separately: boto3 already pins it exactly.

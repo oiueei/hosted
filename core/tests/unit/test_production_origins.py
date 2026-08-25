@@ -33,7 +33,6 @@ BOOT_ENV = {
     "MAGIC_LINK_BASE_URL": "https://example.org/verify",
     "RSVP_BASE_URL": "https://example.org/rsvp",
     "SHARE_LINK_BASE_URL": "https://example.org/share",
-    "CLOUDINARY_URL": "cloudinary://k:s@c",
 }
 
 ORIGIN_VARS = ("CSRF_TRUSTED_ORIGINS", "CORS_ALLOWED_ORIGINS")
