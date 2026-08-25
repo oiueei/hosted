@@ -79,6 +79,18 @@ function RouteFocusReset() {
 function App() {
   const { t } = useTranslation();
 
+  // Warm the csrftoken cookie, which is the only reason this call exists — the
+  // response is deliberately thrown away. `MeView` carries `@ensure_csrf_cookie`
+  // precisely because the SPA hits it on every app load, so this is the request
+  // that guarantees `getCsrfToken()` has something to put in `X-CSRFToken` on
+  // the first unsafe request of a brand-new visit.
+  //
+  // Failure is ignored on purpose: the endpoint is `IsAuthenticated`, so it 401s
+  // for a signed-out visitor — but `ensure_csrf_cookie` has already set the
+  // cookie by then, which is all this call was after. Nothing races it either:
+  // `CookieJWTAuthentication` only enforces CSRF once the `access_token` cookie
+  // has authenticated the request, so the anonymous POSTs that can happen this
+  // early (request-link, join) are not checked at all.
   useEffect(() => {
     fetch('/api/v1/auth/me/', { credentials: 'same-origin' }).catch(() => {});
   }, []);
