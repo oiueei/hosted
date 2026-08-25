@@ -28,7 +28,17 @@ branch = true
 omit = ["*/migrations/*", "*/tests/*"]
 
 [tool.coverage.report]
-fail_under = 80
+# The backend ratchet, and the number a bare `pytest --cov=core` enforces
+# locally. It has to be the one CI enforces (.github/workflows/tests.yml passes
+# `--cov-fail-under` explicitly) or the local run is a weaker gate wearing the
+# same name: this said 80 while CI said 95, so seventeen points of regression
+# could pass on a laptop and only turn red on push.
+#
+# A ratchet, not a target: it sits a couple of points under the suite's real
+# coverage so a genuine drop is visible. Raise it as coverage grows — in this
+# file, in the workflow, and in the two places that quote it (CLAUDE.md, README
+# § Testing) in the same commit. Never lower one to make a red build pass.
+fail_under = 96
 show_missing = true
 exclude_lines = [
     "pragma: no cover",

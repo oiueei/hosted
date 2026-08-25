@@ -38,7 +38,7 @@ Then summarise:
 
 Run:
 ```
-pytest -v --cov=core --cov-report=term-missing --cov-fail-under=95
+pytest -v --cov=core --cov-report=term-missing --cov-fail-under=96
 ```
 
 - If tests fail, stop and report the failures to the user. Do not proceed to the commit.

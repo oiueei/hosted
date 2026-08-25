@@ -287,7 +287,7 @@ python manage.py runserver                 # backend → http://localhost:8000
 cd frontend && npm install && npm run dev  # frontend → http://localhost:3000 (separate terminal)
 
 # 5. Tests & linting
-pytest -v --cov=core --cov-fail-under=95   # backend tests (SQLite locally)
+pytest -v --cov=core --cov-fail-under=96   # backend tests (SQLite locally)
 cd frontend && npm test                    # frontend tests (smoke + accessibility)
 # CI runs this same backend suite against PostgreSQL — see Testing below.
 ruff check .                               # lint + import sort (replaces flake8 + isort)
@@ -323,7 +323,7 @@ python manage.py backfill_events
 Backend `pytest` + `pytest-django`, frontend `vitest` + Testing Library + `jest-axe`.
 Coverage floors are **ratchets, not targets** — they sit a couple of points under
 the suite's real coverage so a regression is visible, and CI enforces both:
-backend 95%, frontend 86/78/78/89 (statements/branches/functions/lines).
+backend 96%, frontend 86/78/78/89 (statements/branches/functions/lines).
 
 **CI runs the backend suite against PostgreSQL, not SQLite.** That is not parity
 for its own sake. On SQLite, Django reports `has_select_for_update = False` and
