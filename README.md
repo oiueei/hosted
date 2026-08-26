@@ -323,7 +323,7 @@ python manage.py backfill_events
 Backend `pytest` + `pytest-django`, frontend `vitest` + Testing Library + `jest-axe`.
 Coverage floors are **ratchets, not targets** — they sit a couple of points under
 the suite's real coverage so a regression is visible, and CI enforces both:
-backend 96%, frontend 86/78/78/89 (statements/branches/functions/lines).
+backend 96%, frontend 87/79/79/89 (statements/branches/functions/lines).
 
 **CI runs the backend suite against PostgreSQL, not SQLite.** That is not parity
 for its own sake. On SQLite, Django reports `has_select_for_update = False` and
