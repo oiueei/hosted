@@ -80,7 +80,17 @@ class TestBookingCalendarView:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_guest_sees_limited_calendar_info(self, user, user2, lend_thing, collection):
-        """Guest sees only dates and status, not requester info."""
+        """A guest reading a calendar learns when the thing is out — and nothing
+        about who has it.
+
+        Asserted as the **whole** key set, not as a list of fields that must be
+        absent. A "not in" assertion guards exactly the field it names: this test
+        used to check `requester_code` and `code`, and adding `requester_email`
+        to the serializer left the entire suite green — on an `AllowAny`
+        endpoint, so a public collection's thing would have handed a stranger's
+        address to anyone who asked. The allowlist is what makes the next field
+        somebody adds fail here instead of in production.
+        """
         collection.add_invite(user2.code)
 
         # Create a booking
@@ -99,13 +109,8 @@ class TestBookingCalendarView:
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-        # Guest should NOT see requester_code or code
-        assert "requester_code" not in response.data[0]
-        assert "code" not in response.data[0]
-        # Guest should see dates and status
-        assert "start_date" in response.data[0]
-        assert "end_date" in response.data[0]
-        assert "status" in response.data[0]
+        assert set(response.data[0]) == {"start_date", "end_date", "status"}
+        assert response.data[0]["status"] == "ACCEPTED"
 
     def test_owner_sees_full_calendar_info(
         self, authenticated_client, user, user2, lend_thing, collection
@@ -127,9 +132,50 @@ class TestBookingCalendarView:
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-        # Owner should see requester_code and code
-        assert "requester_code" in response.data[0]
-        assert "code" in response.data[0]
+        # The owner's own key set, pinned whole for the same reason as the
+        # guest's: this is the richer of the two serializers, so it is the one a
+        # new field lands on by default.
+        assert set(response.data[0]) == {
+            "code",
+            "created",
+            "requester_code",
+            "requester_name",
+            "start_date",
+            "end_date",
+            "status",
+        }
+        assert response.data[0]["requester_code"] == user2.code
+        assert response.data[0]["requester_name"] == user2.name
+
+    def test_the_owner_can_still_tell_who_asked_when_they_never_set_a_name(
+        self, authenticated_client, user, user2, lend_thing, collection
+    ):
+        """A nameless requester shows as the address they asked with, not as blank.
+
+        `name` is empty for every account made by `get_or_create(email=...)` —
+        everyone who arrived by magic link or invitation and never filled in a
+        profile — so this is the ordinary case, not an exotic one. The owner is
+        one of the few readers the API does hand an address to (they already see
+        it on the request itself), and the alternative here is a calendar row
+        attributed to nobody. Nothing pinned this: returning `""` for a blank
+        name left the whole suite green.
+        """
+        collection.add_invite(user2.code)
+        user2.name = ""
+        user2.save(update_fields=["name"])
+        BookingPeriod.objects.create(
+            thing_code=lend_thing,
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=3),
+            status="PENDING",
+        )
+
+        response = authenticated_client.get(f"/api/v1/things/{lend_thing.code}/calendar/")
+
+        assert response.data[0]["requester_name"] == user2.email
 
 
 @pytest.mark.django_db

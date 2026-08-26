@@ -6,9 +6,12 @@ Acting (reserving, asking) still requires login, and the collection *list* stays
 private. INACTIVE things never leak to an anonymous reader.
 """
 
+from datetime import date
+
 import pytest
 
 from core.models import FAQ, Collection, Thing
+from core.models.booking import BookingPeriod
 from core.models.transfer import ThingTransfer
 
 pytestmark = pytest.mark.django_db
@@ -216,6 +219,38 @@ def test_anonymous_can_read_calendar_on_public_thing(api_client, user):
     thing = _thing(user, coll)
     res = api_client.get(f"/api/v1/things/{thing.code}/calendar/")
     assert res.status_code == 200
+
+
+def test_the_anonymous_calendar_says_when_not_who(api_client, user, user2):
+    """The open web learns that a thing is out, never who has it.
+
+    This test used to assert a 200 on a thing with **no bookings** — an empty
+    list can leak nothing, so it certified only that the endpoint answered. The
+    booking below is the whole point: `BookingPeriodCalendarSerializer` is what
+    an anonymous reader gets, and every field it grows is public by default.
+    """
+    coll = _collection(user, Collection.Visibility.PUBLIC)
+    thing = _thing(user, coll)
+    BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email="borrower@example.com",
+        owner_code=user,
+        start_date=date(2026, 3, 2),
+        end_date=date(2026, 3, 9),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    res = api_client.get(f"/api/v1/things/{thing.code}/calendar/")
+    body = res.json()
+
+    assert res.status_code == 200
+    assert body == [{"start_date": "2026-03-02", "end_date": "2026-03-09", "status": "ACCEPTED"}]
+    # Against the raw bytes, so a field added under any name is caught by what
+    # it carries rather than by what it is called.
+    assert "borrower@example.com" not in res.content.decode()
+    assert user2.code not in res.content.decode()
 
 
 # --- acting still requires login ------------------------------------------
