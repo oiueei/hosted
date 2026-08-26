@@ -10,6 +10,9 @@ TEXTS = {
     # página legal: es una obligación de información, no una preferencia.
     "footer_legal": "Legal y privacidad",
     "dates_label": "Fechas",
+    # Cómo se nombra a alguien que nunca puso nombre, allí donde quien lee no
+    # tiene derecho a su dirección. Ver "a_member" en en.py y `_member_name`.
+    "a_member": "Un miembro",
     "view_collection_cta": "Ver la colección",
     # Sustantivos de acción por tipo para los correos de reserva — calcan el
     # vocabulario del frontend (thingCard.action / types): una solicitud SELL
@@ -142,13 +145,17 @@ TEXTS = {
     "hold_confirm_cta": "Confirmar la reserva",
     "hold_cancel_cta": "Cancelar la reserva",
     # Booking decision (to requester)
-    "decision_subject": "Tenemos noticias",
+    "decision_subject_confirmed": "Tu solicitud está confirmada",
+    "decision_subject_cancelled": "Tu solicitud no ha salido adelante",
     "decision_confirmed": "confirmada",
     "decision_cancelled": "cancelada",
     "decision_plain_dated": (
-        "Tu solicitud de {action} de '{thing}' del {start} al {end} ha sido {decision}."
+        "Tu solicitud de {action} de '{thing}' del {start} al {end} ha sido {decision}. "
+        "Ver la publicación: {url}"
     ),
-    "decision_plain": "Tu solicitud de {action} de '{thing}' ha sido {decision}.",
+    "decision_plain": (
+        "Tu solicitud de {action} de '{thing}' ha sido {decision}. Ver la publicación: {url}"
+    ),
     "decision_intro": "Tu solicitud de {action} ha sido {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",

@@ -211,6 +211,31 @@ def _recipient(email, collection=None):
     return user, resolve_email_language(user=user, collection=collection)
 
 
+def _member_name(name, lang):
+    """A person's name as somebody else may be told it — never their address (L2).
+
+    ``User.display_name`` falls back to the email when ``name`` is empty, which is
+    right where the reader is the person themselves or somebody who already holds
+    the address (a collection owner sees their members' emails; a thing owner sees
+    a requester's, via ``BookingPeriodSerializer.requester_email``). It is wrong
+    everywhere else, and "everywhere else" is most of this module: a co-member, an
+    invitee, a stranger being invited for the first time.
+
+    The fallback is not an edge case — ``name`` is empty for **every** account
+    created by ``get_or_create(email=email)``, which is everyone who joined by
+    magic link or invitation and never filled in their profile. So a group owner
+    who never set a name broadcast their address to the whole group.
+
+    Where the name sits on a line of its own, dropping the line is better still
+    and the callers do exactly that (``proposer_name`` in
+    ``send_collection_invite_email``). This is for the rest: a name interpolated
+    mid-sentence, where the sentence needs *a* subject and the honest one is a
+    noun rather than an address. It mirrors the frontend's ``common.aMember``,
+    which ``ThingLinkbox`` has always used for the same reason.
+    """
+    return name or _texts(lang)("a_member")
+
+
 def _muted_codes(collection):
     """User codes that have silenced this collection's digest (empty set if none).
 
@@ -636,14 +661,21 @@ def send_collection_invite_email(
     recommendation arrives as an email from a stranger. The invitation is still
     the owner's — this is context, not authorship.
 
-    **The bare `name`, never `display_name`.** The fallback in `display_name` is
-    the email address, and this message goes to a third party: an owner or
-    proposer who never set a name would have their address handed to someone
-    outside the group (L2). No name, no line.
+    **Neither name is ever `display_name`.** The fallback in `display_name` is the
+    email address, and this message goes to a third party — somebody outside the
+    group who has not agreed to anything yet (L2). The two are handled
+    differently because they sit differently in the copy:
+
+    - ``proposer_name`` has a line to itself, so **no name, no line**: the caller
+      passes the bare ``name`` and an empty one simply drops the sentence.
+    - ``inviter_name`` is interpolated mid-sentence ("{inviter} has invited
+      you…"), which needs *a* subject, so it goes through ``_member_name`` and an
+      owner who never set a name is "A member" rather than an address.
     """
     user, lang = _recipient(email, collection)
     T, L = _texts(lang), _local(lang)
     headline = L(collection_headline)
+    inviter_name = _member_name(inviter_name, lang)
     subject = T("invite_subject").format(collection=headline)
     plain = T("invite_plain").format(collection=headline, accept=accept_link, reject=reject_link)
     blocks = [
@@ -915,6 +947,7 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
     user, lang = _recipient(email, collection)
     T, L = _texts(lang), _local(lang)
     headline = L(collection_headline)
+    owner_name = _member_name(owner_name, lang)
     subject = T("revoke_subject")
     plain = T("revoke_plain").format(owner=owner_name, collection=headline)
     html = _render_email(
@@ -979,6 +1012,12 @@ def send_booking_decision_email(booking, thing, accepted=True):
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
 
+    # The reader is the requester, and this is the one booking email that used to
+    # carry no link at all: it announced a decision and left them with nothing to
+    # press, at the moment the hold either becomes real or stops. The request
+    # email has accept/reject, the FAQ ones link the thing; this one now does too.
+    thing_url = _thing_url(thing)
+
     if booking.start_date and booking.end_date:
         plain = T("decision_plain_dated").format(
             action=action,
@@ -986,16 +1025,23 @@ def send_booking_decision_email(booking, thing, accepted=True):
             start=booking.start_date,
             end=booking.end_date,
             decision=decision_word,
+            url=thing_url,
         )
     else:
-        plain = T("decision_plain").format(action=action, thing=headline, decision=decision_word)
+        plain = T("decision_plain").format(
+            action=action, thing=headline, decision=decision_word, url=thing_url
+        )
 
-    subject = T("decision_subject")
+    # One subject per decision. A single "We have news" for both an accepted and
+    # a refused hold is unscannable in an inbox, and reads as a teaser rather
+    # than as news (DESIGN §2 direct, §6 no curiosity gaps).
+    subject = T("decision_subject_confirmed") if accepted else T("decision_subject_cancelled")
     html = _render_email(
         [
             _para(T("decision_intro").format(action=action, decision=decision_word)),
             _strong(headline),
             *_booking_detail_blocks(booking, lang),
+            _links((thing_url, T("view_thing_cta"))),
         ],
         lang=lang,
     )
@@ -1023,7 +1069,7 @@ def send_booking_confirmation_email(requester, thing, booking):
     """Send booking confirmation email to the requester."""
     user, lang = _recipient(requester.email)
     T, L = _texts(lang), _local(lang)
-    owner_name = thing.owner.display_name
+    owner_name = _member_name(thing.owner.name, lang)
     thing_url = _thing_url(thing)
     collection = thing.collections.first()
     action = _action_noun(thing, lang)
@@ -1064,6 +1110,7 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
     T, L = _texts(lang), _local(lang)
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
+    questioner_name = _member_name(questioner_name, lang)
 
     subject = T("faq_question_subject")
     plain = T("faq_question_plain").format(
@@ -1087,6 +1134,7 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
     T, L = _texts(lang), _local(lang)
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
+    owner_name = _member_name(owner_name, lang)
     subject = T("faq_answer_subject")
     plain = T("faq_answer_plain").format(
         owner=owner_name, answer=answer, thing=headline, url=thing_url
@@ -1108,6 +1156,7 @@ def send_faq_hide_email(owner_name, thing_headline, question, questioner_email):
     """Send FAQ hidden notification email to questioner."""
     user, lang = _recipient(questioner_email)
     T, L = _texts(lang), _local(lang)
+    owner_name = _member_name(owner_name, lang)
     subject = T("faq_hide_subject")
     plain = T("faq_hide_plain").format(owner=owner_name, question=question)
     html = _render_email(
@@ -1161,17 +1210,18 @@ def send_broadcast_email(
     def compose(lang):
         T, L = _texts(lang), _local(lang)
         headline = L(collection_headline)
+        owner = _member_name(owner_name, lang)
         return (
             T("broadcast_subject").format(collection=headline),
             T("broadcast_plain").format(
-                owner=owner_name,
+                owner=owner,
                 collection=headline,
                 message=message,
                 url=collection_url,
             ),
             _render_email(
                 [
-                    _para(T("broadcast_intro").format(owner=owner_name, collection=headline)),
+                    _para(T("broadcast_intro").format(owner=owner, collection=headline)),
                     _para(message),
                     _links((collection_url, T("broadcast_help_cta"))),
                 ],

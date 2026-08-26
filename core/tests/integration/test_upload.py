@@ -246,3 +246,67 @@ class TestTheTicketIsUsableAsGiven:
         """The old contract is gone: a client still sending it back would be ignored."""
         res = authenticated_client.post(URL, image_body(), format="json")
         assert set(res.data) == {"url", "method", "headers", "key", "public_url"}
+
+
+@pytest.mark.django_db
+class TestTheBrowserIsActuallyAllowedToUseTheTicket:
+    """A ticket the CSP forbids is a ticket nobody can spend.
+
+    The unit tests in `test_security.py` pin what the header says; these pin that
+    what it says matches where a real ticket points. The two are produced by
+    different modules from different settings — `storage.presign_upload` signs
+    for the bucket, `SecurityHeadersMiddleware` reads `MEDIA_PUBLIC_BASE_URL` —
+    and they were out of step for exactly one configuration, the documented one:
+    reads pointed at a CDN, uploads still going to the bucket, `connect-src`
+    naming only the CDN. Every upload was refused by the browser before it left,
+    while the images already stored went on loading perfectly.
+
+    So this asks the question the browser asks: is the host of the URL I was just
+    handed in the policy I was just served?
+    """
+
+    @staticmethod
+    def _connect_src(response):
+        directive = next(
+            d for d in response["Content-Security-Policy"].split(";") if "connect-src" in d
+        )
+        return directive.split()
+
+    @staticmethod
+    def _origin(url):
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    def test_the_ticket_host_is_in_connect_src(self, authenticated_client):
+        res = authenticated_client.post(URL, image_body(), format="json")
+
+        assert res.status_code == 200
+        assert self._origin(res.data["url"]) in self._connect_src(res)
+
+    def test_it_still_is_when_reads_go_through_a_cdn(self, authenticated_client, settings):
+        """The configuration README and HEROKU.md invite, and the one that broke."""
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+
+        res = authenticated_client.post(URL, image_body(), format="json")
+
+        assert res.status_code == 200
+        upload_origin = self._origin(res.data["url"])
+        assert upload_origin != "https://media.example.com", (
+            "the presigned PUT does not follow the CDN — if it ever does, this test is moot"
+        )
+        assert upload_origin in self._connect_src(res)
+        # And the read host is still allowed to render what was written.
+        img = next(
+            d for d in res["Content-Security-Policy"].split(";") if d.strip().startswith("img-src")
+        )
+        assert "https://media.example.com" in img
+
+    def test_the_document_ticket_too(self, authenticated_client, settings):
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+
+        res = authenticated_client.post(URL, document_body(), format="json")
+
+        assert res.status_code == 200
+        assert self._origin(res.data["url"]) in self._connect_src(res)

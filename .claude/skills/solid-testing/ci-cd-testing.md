@@ -7,8 +7,10 @@ round). Keep both properties when editing.
 
 ## Already enforced — don't regress it
 
-- Backend suite with `--cov-fail-under=80`; frontend `npm run test:coverage`
-  with the vite.config ratchet (the CI-visible floor).
+- Backend suite with the `fail_under` ratchet in `pyproject.toml` (CI passes the
+  same number as `--cov-fail-under`); frontend `npm run test:coverage` with the
+  vite.config ratchet. Both are the CI-visible floors — quote them, never
+  hardcode a second copy that can drift.
 - `python manage.py makemigrations --check` on a bare checkout — no phantom
   migrations.
 - `npm run build` — the production bundle must build (catches import errors

@@ -40,36 +40,61 @@ class SecurityHeadersMiddleware:
         self.get_response = get_response
 
     @staticmethod
-    def _media_origin():
-        """The scheme+host assets are served from, or "" when none is configured.
+    def _origin(setting_name):
+        """The scheme+host named by a setting, or "" when it names none.
 
-        Derived from ``MEDIA_PUBLIC_BASE_URL`` rather than written in here, which
-        it used to be. A literal stopped working the moment there was more than
-        one bucket: production and development serve from different hostnames, and
-        a deployment pointing the setting at its own bucket or a CDN would have had
-        to edit this file — a file it should never have to touch — to be allowed to
-        load its own images. Only the origin is taken; a path in the setting is not
-        part of what CSP matches on.
+        Derived from settings rather than written in here, which it used to be. A
+        literal stopped working the moment there was more than one bucket:
+        production and development serve from different hostnames, and a
+        deployment pointing storage at its own bucket or a CDN would have had to
+        edit this file — a file it should never have to touch — to be allowed to
+        load its own images. Only the origin is taken; a path in the setting is
+        not part of what CSP matches on.
         """
-        base = getattr(settings, "MEDIA_PUBLIC_BASE_URL", "")
+        base = getattr(settings, setting_name, "")
         if not base:
             return ""
         parsed = urlparse(base)
         return f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else ""
+
+    @classmethod
+    def _asset_origins(cls):
+        """``(read, connect)`` — the hosts assets are fetched from and written to.
+
+        **Two settings, because they are two hosts the moment anybody splits
+        them.** Reads come from ``MEDIA_PUBLIC_BASE_URL``; a browser upload is a
+        ``PUT`` to a presigned URL, which is always signed for the bucket's own
+        virtual host (``OBJECT_STORAGE_PUBLIC_URL``) and does not follow a CDN.
+
+        Naming only the read origin is what this did before, and it was correct
+        exactly as long as nobody used the setting it read: on the default
+        deployment the two coincide. Point ``MEDIA_PUBLIC_BASE_URL`` at a CDN or
+        a custom domain — which README and HEROKU.md both invite — and
+        ``connect-src`` stopped naming the bucket, so every upload was refused by
+        the browser before it left, while the images it had already stored went on
+        loading perfectly. A configuration that half-works is worse than one that
+        doesn't, and this is the half that fails silently.
+
+        ``connect`` keeps both, deduplicated and in a stable order so the header
+        doesn't churn between requests.
+        """
+        read = cls._origin("MEDIA_PUBLIC_BASE_URL")
+        upload = cls._origin("OBJECT_STORAGE_PUBLIC_URL")
+        return read, [origin for origin in dict.fromkeys((read, upload)) if origin]
 
     def __call__(self, request):
         response = self.get_response(request)
         script_src = (
             "script-src 'self' 'unsafe-inline'; " if settings.DEBUG else "script-src 'self'; "
         )
-        # `connect-src` needs it as well as `img-src`: uploads are a fetch() straight
-        # to the bucket, so blocking it there would block every upload.
-        media = f" {origin}" if (origin := self._media_origin()) else ""
+        read_origin, connect_origins = self._asset_origins()
+        img = f" {read_origin}" if read_origin else ""
+        connect = "".join(f" {origin}" for origin in connect_origins)
         response["Content-Security-Policy"] = (
             "default-src 'self'; " + script_src + "style-src 'self' 'unsafe-inline'; "
-            f"img-src 'self' blob:{media}; "
+            f"img-src 'self' blob:{img}; "
             "font-src 'self' data:; "
-            f"connect-src 'self'{media}; "
+            f"connect-src 'self'{connect}; "
             "frame-ancestors 'none'; "
             "object-src 'none'; "
             "base-uri 'self'; "

@@ -152,7 +152,7 @@
     "magicLinkSent": "If this email is registered, your magic link is on its way — check your inbox, and your spam folder just in case.",
     "errorSendingLink": "Error sending link.",
     "pitch": "Share what you have with the people you trust — no ads, no strangers.",
-    "description": "OIUEEI is an open-source app for sharing what you own with the people around you. Create a collection — things to give away, sell, rent or lend — and share it with your circle: they can browse, reserve and ask.",
+    "description": "OIUEEI is an app with public, auditable code under BSL 1.1, for sharing what you own with the people around you. Create a collection — things to give away, sell, rent or lend — and share it with your circle: they can browse, reserve and ask.",
     "openSource": "OIUEEI's code is public — source-available under BUSL 1.1, MIT from 2030. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there.",
     "manifesto": "No ads, no trackers. Your data is not the product.",
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
@@ -388,6 +388,7 @@
     "pdfHint": "PDF only, max 5 MB.",
     "pdfView": "View the document",
     "pdfTooLarge": "The file is too large (max 5 MB).",
+    "imageTooLarge": "The image is too large (max 10 MB). Try a photo the browser can resize.",
     "welcomeDocLabel": "Welcome document (PDF)",
     "welcomeDocHelper": "Optional. Everyone who joins the group receives it by email, once."
   },

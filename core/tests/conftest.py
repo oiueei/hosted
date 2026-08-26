@@ -30,6 +30,11 @@ def object_storage_configured(settings):
     settings.OBJECT_STORAGE_REGION = "fsn1"
     settings.OBJECT_STORAGE_ACCESS_KEY = "test-key"
     settings.OBJECT_STORAGE_SECRET_KEY = "test-secret"
+    # Both URL settings, pinned rather than left to whatever base.py derived from
+    # the developer's own `.env` at import time: this machine has real
+    # OBJECT_STORAGE_* values in it, and a CSP assertion that reads the real
+    # bucket's hostname passes here and fails in CI (or the reverse).
+    settings.OBJECT_STORAGE_PUBLIC_URL = "https://test-bucket.fsn1.example-storage.com"
     settings.MEDIA_PUBLIC_BASE_URL = "https://test-bucket.fsn1.example-storage.com"
     storage._clients.clear()
     yield

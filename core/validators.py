@@ -40,15 +40,67 @@ def validate_image_id(value):
     return value
 
 
+def validate_key_folder(value, folder):
+    """Keep a stored key inside the folder its field is for.
+
+    ``validate_image_id`` above proves a key is *well-formed*; it says nothing
+    about **which** object the key names. The upload ticket already refuses to
+    sign a write outside a known folder (``core/views/upload.py``), but the value
+    that ends up on the model is whatever the client sends back afterwards — the
+    two are separate requests, and nothing tied them together.
+
+    So an authenticated member could put any key they knew into any field of
+    their own: a collection's welcome PDF (``oiueei/documents/…``) as their
+    profile photo, republishing a document its owner shared with one group. Keys
+    carry 128 bits of entropy, so this is defence in depth rather than a hole
+    somebody could walk through — but the guard costs one comparison, and "they
+    would have to guess it" is a poor thing to be relying on when the field
+    already knows what it is for.
+
+    **It refuses only a key that names one of the *other* asset folders**, not
+    everything outside its own — a deliberately narrow rule, because the guard
+    arrived years after the keys did. Anything else still passes exactly as
+    before: a bare Cloudinary-era public id with no folder at all, a key under
+    ``storage.SEED_PREFIX`` (the demo's shared fixture pool legitimately backs
+    things, collections and profiles alike), whatever shape a future provider
+    hands back. Refusing those would have made a field a person could no longer
+    save without re-uploading a photo that was working perfectly — a regression
+    paid for by every owner of an old row, to close nothing that
+    ``ASSET_FOLDERS`` doesn't already cover.
+
+    The folder set is read from ``storage`` rather than written out here for the
+    reason it lives there: this and the upload ticket must agree about what the
+    folders are, and two copies of that list are one edit away from not.
+
+    ``folder=None`` disables the check, which is what a field with no single
+    home wants.
+    """
+    if not value or not folder:
+        return value
+    from core.services import storage
+
+    if value.startswith(f"{folder}/"):
+        return value
+    for other in storage.ASSET_FOLDERS:
+        if other != folder and value.startswith(f"{other}/"):
+            raise serializers.ValidationError(f"This file must be stored under {folder}/.")
+    return value
+
+
 class ImageIdField(serializers.CharField):
     """
     A CharField that validates storage keys.
 
     Accepts folder-prefixed keys (e.g. oiueei/things/abc123) as well as
     plain ones. Prevents path traversal and injection attacks.
+
+    ``folder`` binds the key to the one this field is for — see
+    :func:`validate_key_folder` for why the ticket alone doesn't. Omit it where a
+    field has no single home; every field in this project has one.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, folder=None, **kwargs):
+        self.folder = folder
         kwargs.setdefault("max_length", 255)
         kwargs.setdefault("required", False)
         kwargs.setdefault("allow_blank", True)
@@ -56,7 +108,7 @@ class ImageIdField(serializers.CharField):
 
     def to_internal_value(self, data):
         value = super().to_internal_value(data)
-        return validate_image_id(value)
+        return validate_key_folder(validate_image_id(value), self.folder)
 
 
 def _reject_html_and_unsafe_schemes(value):

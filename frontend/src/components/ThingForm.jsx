@@ -13,6 +13,7 @@ import LocalizedInfo from './LocalizedInfo';
 import InfoPopover from './InfoPopover';
 import ApprovalNotice from './ApprovalNotice';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import hdsLang from '../utils/hdsLang';
 
 /**
  * The shared field cluster of the Add and Edit thing forms: type selector (with
@@ -67,7 +68,7 @@ export default function ThingForm({
   gallery,
   setGallery,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const L = useLocalized();
   const toggleTheme = theeemeColor01
     ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
@@ -89,7 +90,7 @@ export default function ThingForm({
         <>
           <Select
             id={`${idPrefix}-type`}
-            texts={{ label: t('addThing.typeLabel'), language: 'en' }}
+            texts={{ label: t('addThing.typeLabel'), language: hdsLang(i18n.language) }}
             options={typeOptions}
             value={type}
             onChange={(selectedOptions) => {
@@ -183,7 +184,7 @@ export default function ThingForm({
         <>
           <Select
             id={`${idPrefix}-availability`}
-            texts={{ label: t('addThing.availabilityLabel'), language: 'en' }}
+            texts={{ label: t('addThing.availabilityLabel'), language: hdsLang(i18n.language) }}
             options={AVAILABILITY_VALUES.map((v) => ({ label: t('availability.' + v), value: v }))}
             value={availability}
             onChange={(sel) => setAvailability(sel.length > 0 ? sel[0].value : '')}
@@ -191,7 +192,7 @@ export default function ThingForm({
           />
           <Select
             id={`${idPrefix}-condition`}
-            texts={{ label: t('addThing.conditionLabel'), language: 'en' }}
+            texts={{ label: t('addThing.conditionLabel'), language: hdsLang(i18n.language) }}
             options={CONDITION_VALUES.map((v) => ({ label: t('condition.' + v), value: v }))}
             value={condition}
             onChange={(sel) => setCondition(sel.length > 0 ? sel[0].value : '')}
@@ -216,7 +217,7 @@ export default function ThingForm({
             label: t('addThing.tagsLabel'),
             placeholder: t('addThing.tagsPlaceholder'),
             assistive: t('addThing.tagsHelper'),
-            language: 'en',
+            language: hdsLang(i18n.language),
           }}
           options={collectionTags.map((tg) => ({ label: L(tg), value: tg }))}
           value={tags.map((tg) => ({ label: L(tg), value: tg }))}

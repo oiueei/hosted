@@ -58,6 +58,32 @@ describe('apiFetch', () => {
     expect(opts.headers['X-CSRFToken']).toBe('explicit');
   });
 
+  test('the refresh call itself carries the CSRF header and the cookie', async () => {
+    // The refresh is a POST authenticated by cookie, so Django's CSRF middleware
+    // rejects it without this header — and the failure is invisible from here:
+    // every session would simply stop renewing and log people out when their
+    // access token expired. The tests around it only ever pinned *that* a
+    // refresh happened, so deleting the header left all 784 green.
+    let refreshed = false;
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('/auth/refresh/')) {
+        refreshed = true;
+        return Promise.resolve({ ok: true, status: 200 });
+      }
+      return Promise.resolve({ ok: refreshed, status: refreshed ? 200 : 401 });
+    });
+
+    await apiFetch('/api/v1/collections/');
+
+    const [url, opts] = globalThis.fetch.mock.calls.find(([u]) =>
+      String(u).includes('/auth/refresh/')
+    );
+    expect(url).toBe('/api/v1/auth/refresh/');
+    expect(opts.method).toBe('POST');
+    expect(opts.headers['X-CSRFToken']).toBe('tok-123');
+    expect(opts.credentials).toBe('include');
+  });
+
   test('concurrent 401s trigger a single shared refresh (single-flight)', async () => {
     let refreshCalls = 0;
     let refreshed = false;

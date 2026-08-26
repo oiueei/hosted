@@ -29,7 +29,15 @@ function ThingLinkbox({
   hideType = false,
   loginToAct = false,
   onUpdateThing,
+  headingLevel = 3,
 }) {
+  // The card's headline is a heading in the *page's* outline, not the card's, so
+  // only the caller knows what level is correct. `CollectionPage` puts its grids
+  // under an `<h2>` section heading ("Things", "Inactive things"), so 3 is right
+  // there and is the default. `SharedThingsPage` is a single-section page whose
+  // grid sits directly under the page `<h1>` — left at 3 it skipped a level, and
+  // a screen reader walking the outline was told a heading was missing.
+  const Heading = `h${headingLevel}`;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
@@ -145,11 +153,11 @@ function ThingLinkbox({
               ` · ${new Date(thing.created).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })}`}
           </p>
         )}
-        <h3 className="thing-card-headline">
+        <Heading className="thing-card-headline">
           <Link to={thingPath} className="thing-card-link">
             {headline}
           </Link>
-        </h3>
+        </Heading>
         {thing.description && (
           <MarkdownText text={L(thing.description)} className="thing-card-description" />
         )}

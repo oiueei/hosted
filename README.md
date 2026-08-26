@@ -287,7 +287,7 @@ python manage.py runserver                 # backend → http://localhost:8000
 cd frontend && npm install && npm run dev  # frontend → http://localhost:3000 (separate terminal)
 
 # 5. Tests & linting
-pytest -v --cov=core --cov-fail-under=95   # backend tests (SQLite locally)
+pytest -v --cov=core --cov-fail-under=96   # backend tests (SQLite locally)
 cd frontend && npm test                    # frontend tests (smoke + accessibility)
 # CI runs this same backend suite against PostgreSQL — see Testing below.
 ruff check .                               # lint + import sort (replaces flake8 + isort)
@@ -310,6 +310,8 @@ python manage.py send_digests      # weekly/monthly digest emails (daily)
 # add --commit to the scheduled chain. See HEROKU.md § Scheduled jobs.
 python manage.py purge_expired_data           # count what is past its period
 python manage.py purge_expired_data --commit  # anonymise / delete it
+# Inactivity warnings are capped at 200 per run so a first-time backlog does not
+# arrive at your mail provider in one burst. --max-warnings 0 lifts the cap.
 
 # One-off: seed the Event analytics log from existing rows (idempotent).
 # Run once, the day tracking ships, before forward events accumulate.
@@ -321,7 +323,7 @@ python manage.py backfill_events
 Backend `pytest` + `pytest-django`, frontend `vitest` + Testing Library + `jest-axe`.
 Coverage floors are **ratchets, not targets** — they sit a couple of points under
 the suite's real coverage so a regression is visible, and CI enforces both:
-backend 95%, frontend 85/78/77/88 (statements/branches/functions/lines).
+backend 96%, frontend 87/79/79/89 (statements/branches/functions/lines).
 
 **CI runs the backend suite against PostgreSQL, not SQLite.** That is not parity
 for its own sake. On SQLite, Django reports `has_select_for_update = False` and
@@ -331,8 +333,17 @@ capacity recheck on bulk import) would be proving its logic and never its lock.
 That breaks with two concurrent requests, not two thousand. SQLite also doesn't
 enforce `CharField(max_length=N)`, which PostgreSQL does.
 
+`core/tests/integration/test_booking_row_locks.py` is the suite that depends on
+this. It races two connections at one booking and asserts the second is still
+blocked while the first holds the row — which is the only shape that can tell a
+lock from the re-read beside it. Everything else in the suite is single-threaded
+inside one transaction, where a FOR UPDATE never blocks against the transaction
+that took it, so removing all six of them used to leave the whole run green.
+Those three tests **skip** on SQLite rather than measure the unlocked behaviour.
+
 A local `pytest` still runs on SQLite and needs no database server. To reproduce
-a CI failure, point `DATABASE_URL` at a throwaway Postgres:
+a CI failure — or to run the lock tests at all — point `DATABASE_URL` at a
+throwaway Postgres:
 
 ```bash
 DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
@@ -367,7 +378,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `OBJECT_STORAGE_REGION` | Uploads | Region the endpoint serves, e.g. `fsn1` |
 | `OBJECT_STORAGE_ACCESS_KEY` | Uploads | S3 access key, scoped to that bucket alone |
 | `OBJECT_STORAGE_SECRET_KEY` | Uploads | S3 secret key |
-| `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are read from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. It also feeds the Content-Security-Policy, so a wrong value shows up as images that refuse to load |
+| `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are **read** from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. Uploads are unaffected — a presigned URL is always signed for the bucket, so the Content-Security-Policy allows both hosts and splitting them does not break writing. A wrong value shows up as images that refuse to load |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
 | `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
@@ -376,6 +387,15 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `COLLECTION_INVITES_BLOCK` | No | Per-collection ceiling on members: invitations that would cross it are refused when **sent**, not when accepted. **Unset or `0` = off**. Same `capacity_unblocked` override. |
 | `COLLECTION_JOINS_PER_DAY` | No | Cap on how many people **one collection** may be joined by per day through `POST /auth/join/` — the door that needs no account. `INVITE_EMAILS_PER_DAY` guards what an *account* sends; this guards the one anybody can push, where the address mailed is whatever a stranger typed and the collection code is public by construction. Without it the per-IP limit is all that stands between your sending domain and many IPs each mailing a different stranger once. Counted **per collection**, so abusing one group's public code costs that group its day and leaves the rest working — a deployment-wide counter would let one abuser switch joining off for everyone. A refusal answers with the endpoint's usual unified response (the operator gets a `security` log line; the visitor is never told, or the cap becomes a way to probe which codes are real). **Unset or `0` = no limit**, the standalone default: a share link pasted into a group chat can legitimately bring in hundreds in an evening. Ignored when `RATELIMIT_ENABLE` is off. |
 | `TRUSTED_PROXY_COUNT` | No | How many proxies in front of the app are trusted to have appended to `X-Forwarded-For`. It decides which entry every per-IP rate limit buckets on, counted from the **right** — only the tail of that header is written by a proxy; the rest is the caller's own text. Default `1` = one trusted proxy (the Heroku/Render/Fly router, or an nginx you run). **Set `0` if nothing trusted sits in front** (gunicorn facing the internet): otherwise the header is caller-supplied and one caller can mint a fresh bucket per request, defeating every rate limit below. `2+` for a CDN in front of the router. |
+| `RETENTION_INACTIVE_ACCOUNT_MONTHS` | No | How long an account nobody signs into is kept before it is erased (default `24`). `GET /auth/me/` counts as signing in, so an account in daily use through the app is never dormant. An account that **owns a group other people are using is never auto-deleted** — `purge_expired_data` lists it for a person to decide instead. **`0` = keep indefinitely.** |
+| `RETENTION_INACTIVE_WARNING_DAYS` | No | The grace period between the warning email and the erasure (default `30`). Nothing is ever deleted without that email first, and coming back once clears the mark *and* refreshes the clock, so returning genuinely saves the account. |
+| `RETENTION_UNVISITED_GUEST_DAYS` | No | How long a `User` row created by somebody else's invitation and **never used** is kept (default `60`). That address came from a third party (art. 14) and was used for one thing: an invitation nobody answered. Anyone who accepted, owns anything, or still has a live invitation is excluded. **`0` = keep indefinitely.** |
+| `RETENTION_EVENT_ANONYMISE_MONTHS` | No | When the analytics log stops being about a person (default `14`). **Anonymised, not deleted** — `actor_code` is cleared and the fact survives as aggregate, which is what art. 5.1.e asks for; deleting would throw away the history to achieve the same thing. **`0` = keep indefinitely.** |
+| `RETENTION_DAILY_ACTIVITY_MONTHS` | No | How long the one-row-per-user-per-day activity log is kept (default `26`). **`0` = keep indefinitely.** |
+| `RETENTION_NOTIFICATION_MONTHS` | No | How long in-app notifications are kept (default `12`). **`0` = keep indefinitely.** |
+| `RETENTION_REPORT_MONTHS` | No | How long reports on things are kept, dated from `created` (default `12`). **`0` = keep indefinitely.** |
+
+> **None of the `RETENTION_*` periods happens on its own.** `python manage.py purge_expired_data` is what enforces them and it is **dry-run by default** — a deployment that never adds `--commit` to its scheduled chain keeps everything forever. Set your own periods for your own regime first, run it once by hand and read what it says it would do, and only then arm it. See [HEROKU.md § Scheduled jobs](HEROKU.md).
 
 ## Onboarding & access
 
@@ -403,7 +423,7 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Authorization | DRF Permissions | Custom `IsThingOwner`, `IsCollectionOwner` permission classes |
 | Authorization | IDOR Protection | Profile access only via collection connections |
 | Input Validation | XSS Prevention | HTML escaped in emails via `django.utils.html.escape()`. Headlines sanitized |
-| Input Validation | Image ID | Alphanumeric validation prevents path traversal |
+| Input Validation | Image ID | Alphanumeric validation prevents path traversal; each field is also bound to its own storage folder, so a key may not name another one |
 | Rate Limiting | Auth | 5 req/min for magic link, 10 req/min for verify, 10 req/min for token refresh |
 | Rate Limiting | Join (`/auth/join/`) | 5 req/min per IP + 5 req/hour per email |
 | Rate Limiting | Joins per collection | Off by default; set `COLLECTION_JOINS_PER_DAY` to cap how many people **one collection** may be joined by per day. The two limits above cap one IP and one victim; this is what stops many IPs each mailing a different stranger once, using a public collection code as a relay onto the operator's sending domain. A refusal returns the endpoint's usual unified response, so the cap can't be used to probe which codes are real |
@@ -463,7 +483,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 | Claim | How to verify it |
 |---|---|
 | Third-party scripts *cannot* load | `curl -sI https://www.oiueei.com/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
-| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the media bucket the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names, which is also the only extra host the CSP allows. That is the whole list. |
+| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the host the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names. On a deployment that puts a CDN in front of its bucket the CSP allows one host more, the bucket itself, because that is where an upload is written even when reads come from the CDN. Two hosts at most, and that is the whole list. |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
 | Browser storage is strictly necessary, nothing more | **Inventoried 2026-08-21.** Four `localStorage` keys, all session/preference, none observed behaviour: `userCode` (which account is signed in), `theeemeColors` + `koro` (your own display preferences), `seenWelcome` (whether you've seen the first-visit box). `sessionStorage` is unused. One more key exists but isn't ours to name in code: `i18next-browser-languagedetector` caches your chosen UI language as `i18nextLng` under its own default — same category, a dependency's own write. `frontend/src/test/browserStorage.test.jsx` sweeps every source file and fails the build if a key outside this list ever appears — a public claim like this one needs a test that breaks when it stops being true, not just a paragraph. |
@@ -487,7 +507,7 @@ For the official deployment at **www.oiueei.com**, the verified locations are (c
 
 **Portability is self-service too**: `GET /api/v1/auth/export/` hands you your whole account as a single JSON file — profile, collections, things, bookings, questions, handovers, notifications and your own activity rows. It carries no credentials (no `share_token`, no RSVP tokens) and no third-party data beyond what the app already shows you; photos and PDFs travel as links rather than bytes, which is why deleting the account breaks them — **download your images before you erase**. Collection owners get a second, separate download (`GET /api/v1/collections/{code}/export/`) with the whole group in it, so a library of things can be carried out rather than only deleted. That file holds other people's details, and whoever downloads it is the one answering for it.
 
-**Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are what www.oiueei.com decided, and a self-hoster under a different regime sets their own.
+**Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first and 30 days to answer it), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are what www.oiueei.com decided, and a self-hoster under a different regime sets their own.
 
 **If somebody else's address reached you, you're told so in the same email.** Being invited to a collection means somebody else typed your address in, not you — art. 14 GDPR requires that to be disclosed the first time it happens, so the invitation email says where the address came from and that declining or ignoring it ends the relationship. Every email, that one included, links to [`/legal`](https://www.oiueei.com/legal) in its footer, whether or not you can opt out of the category it belongs to (`core/services/email_service.py`, `_render_email`).
 

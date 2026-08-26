@@ -110,7 +110,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     name = SafeHeadlineField(max_length=32, required=False, allow_blank=True)
     headline = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     about = SafeTextField(max_length=2000, required=False, allow_blank=True)
-    photo = ImageIdField(required=False, allow_blank=True)
+    photo = ImageIdField(folder="oiueei/users", required=False, allow_blank=True)
     theeeme = serializers.SlugRelatedField(
         slug_field="code",
         queryset=Theeeme.objects.all(),

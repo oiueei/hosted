@@ -60,21 +60,58 @@ class TestEmailLanguage:
             end_date = None
             requester_email = "r@example.com"
 
+        class FakeCollections:
+            def first(self):
+                return None
+
         class FakeThing:
             headline = "Taladro"
+            code = "THG123"
             type = "SELL_THING"
+            collections = FakeCollections()
 
         email_service.send_booking_decision_email(FakeBooking(), FakeThing(), accepted=True)
-        assert mail.outbox[0].subject == "Tenemos noticias"
+        assert mail.outbox[0].subject == "Tu solicitud está confirmada"
         assert "ha sido confirmada" in mail.outbox[0].body
         assert "compra" in mail.outbox[0].body
         assert "Taladro" in mail.outbox[0].body
+        # The decision is the end of the requester's flow, so it has to lead
+        # somewhere: the thing, in both formats, translated CTA in the HTML.
+        assert "/things/THG123" in mail.outbox[0].body
+        html = mail.outbox[0].alternatives[0][0]
+        assert "/things/THG123" in html
+        assert "Ver la publicación" in html
+
+    @override_settings(EMAIL_LANGUAGE="es")
+    def test_decision_subject_tells_the_two_outcomes_apart(self):
+        """One subject per decision — the inbox has to be readable without opening."""
+
+        class FakeBooking:
+            start_date = None
+            end_date = None
+            requester_email = "r@example.com"
+
+        class FakeCollections:
+            def first(self):
+                return None
+
+        class FakeThing:
+            headline = "Taladro"
+            code = "THG123"
+            type = "SELL_THING"
+            collections = FakeCollections()
+
+        email_service.send_booking_decision_email(FakeBooking(), FakeThing(), accepted=False)
+        assert mail.outbox[0].subject == "Tu solicitud no ha salido adelante"
+        assert "ha sido cancelada" in mail.outbox[0].body
 
     def _send_sell_confirmation(self):
         """Send a SELL confirmation and return the resulting mailbox message."""
 
         class FakeOwner:
-            display_name = "Lala"
+            # `name`, not `display_name`: the confirmation goes to the requester,
+            # a co-member, so the sender reads the bare name (L2).
+            name = "Lala"
 
         class FakeCollections:
             def first(self):

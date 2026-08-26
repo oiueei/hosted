@@ -198,13 +198,15 @@ OIUEEI uses four of the six HDS breakpoints (xs / m / l / xl). `breakpoint-s` (5
 | `breakpoint-l` | 992 px | 944 px | 3 |
 | `breakpoint-xl` | 1248 px | 1200 px | 4 |
 
-Note: the "columns" here are OIUEEI card-grid columns (`things-grid`, `collections-grid`, etc.), not the HDS 12-column layout grid. HDS grid column counts live in §4.
+Note: the "columns" here are OIUEEI card-grid columns (`things-grid` and any future card grid), not the HDS 12-column layout grid. HDS grid column counts live in §4.
+
+**`collections-grid` is deliberately not one of them.** Collections render as image-less full-width rows, one under another, at every breakpoint — thing cards keep their thumbnail grid, and that difference is what tells a collection row apart from a thing card on sight. It never goes multi-column. A new card grid follows the progression above unless it has a reason of this kind, written down beside it.
 
 **Rules for all layout code:**
 
 - Write CSS **mobile-first**: start with the xs (1-column) layout as the default, then use `@media (min-width: ...)` to add columns progressively.
 - Use only these three `min-width` values in media queries: `768px`, `992px`, `1248px`. Never use `576px`, `480px`, `944px`, or any other ad-hoc value. `max-width: 767px` is also acceptable for mobile-only overrides.
-- Card grids (`things-grid`, `collections-grid`, and any future card grid) follow the OIUEEI column progression: 1 → 2 → 3 → 4.
+- Card grids (`things-grid` and any future card grid) follow the OIUEEI column progression: 1 → 2 → 3 → 4. `collections-grid` is the standing exception — see the note above the table.
 - The `page-container` and `form-hero-content` max-width is `1248px` (matching breakpoint-xl total width).
 
 **When writing a new layout:** start at 1 column, add `min-width: 768px` for 2 columns, `min-width: 992px` for 3, `min-width: 1248px` for 4. Never design desktop-first and collapse downward.

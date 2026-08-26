@@ -235,18 +235,12 @@ class CollectionSerializer(serializers.ModelSerializer):
     def get_invites(self, obj):
         members = obj.invites.all()
         if self._requester_is_owner(obj):
-            # In a COMMUNITY collection the owner also sees each member's optional
-            # age range and postal code (owner-only, never public). Other modes
-            # and non-owners never receive them.
-            community = obj.is_community()
-            result = []
-            for u in members:
-                member = {"code": u.code, "email": u.email, "name": u.name}
-                if community:
-                    member["age_range"] = u.age_range
-                    member["postal_code"] = u.postal_code
-                result.append(member)
-            return result
+            # The owner's view of the roster — emails, and in a COMMUNITY
+            # collection each member's optional age range and postal code. Built
+            # by the model (`Collection.owner_member_rows`) because the data
+            # export answers the same question and the two must not drift; other
+            # modes and non-owners never receive the demographics.
+            return obj.owner_member_rows(members)
         # Co-members' emails are owner-only (L2); logged-in guests get only
         # code + name. An ANONYMOUS reader of a PUBLIC collection gets codes
         # alone — the member count survives for the card, but real names of a
@@ -278,10 +272,10 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    thumbnail = ImageIdField(required=False, allow_blank=True)
+    thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
-    welcome_doc = ImageIdField(required=False, allow_blank=True)
+    welcome_doc = ImageIdField(folder="oiueei/documents", required=False, allow_blank=True)
     tags = serializers.ListField(
         child=LocalizedHeadlineField(max_length=32, storage_max_length=LOCALIZED_TAG_STORAGE),
         max_length=12,
@@ -389,10 +383,10 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    thumbnail = ImageIdField(required=False, allow_blank=True)
+    thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
-    welcome_doc = ImageIdField(required=False, allow_blank=True)
+    welcome_doc = ImageIdField(folder="oiueei/documents", required=False, allow_blank=True)
     pause_message = SafeTextField(max_length=256, required=False, allow_blank=True)
     tags = serializers.ListField(
         child=LocalizedHeadlineField(max_length=32, storage_max_length=LOCALIZED_TAG_STORAGE),

@@ -235,27 +235,10 @@ export default function MyBookingsPage() {
                 {pendingRows.length === 0 ? (
                   <p className="text-muted">{t('myBookings.noPending')}</p>
                 ) : (
-                  <Table
-                    cols={cols}
-                    rows={pendingRows}
-                    indexKey="_id"
-                    renderIndexCol={false}
-                    dense
-                    theme={
-                      tc.color_03
-                        ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                        : undefined
-                    }
-                  />
-                )}
-                {otherRows.length > 0 && (
-                  <>
-                    <div className="spacer-xl" />
-                    <h2>{t('myBookings.pastRequests')}</h2>
-                    <div className="spacer-s" />
+                  <div className="table-wrap">
                     <Table
                       cols={cols}
-                      rows={otherRows}
+                      rows={pendingRows}
                       indexKey="_id"
                       renderIndexCol={false}
                       dense
@@ -265,6 +248,27 @@ export default function MyBookingsPage() {
                           : undefined
                       }
                     />
+                  </div>
+                )}
+                {otherRows.length > 0 && (
+                  <>
+                    <div className="spacer-xl" />
+                    <h2>{t('myBookings.pastRequests')}</h2>
+                    <div className="spacer-s" />
+                    <div className="table-wrap">
+                      <Table
+                        cols={cols}
+                        rows={otherRows}
+                        indexKey="_id"
+                        renderIndexCol={false}
+                        dense
+                        theme={
+                          tc.color_03
+                            ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                            : undefined
+                        }
+                      />
+                    </div>
                   </>
                 )}
               </>

@@ -3,13 +3,20 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 // The upload helpers are unit-tested next to themselves (src/utils/upload*.test.js);
 // here they are mocked so no test ever touches the network.
-vi.mock('../utils/uploadImage', () => ({ uploadImage: vi.fn() }));
+// Same shape as the uploadPdf mock below: stub the function, keep the real
+// `UploadTooLargeError` and `IMAGE_MAX_BYTES`. The components branch on that
+// class, so a bare factory leaves it undefined and every failure path throws
+// inside its own catch.
+vi.mock('../utils/uploadImage', async (importOriginal) => ({
+  ...(await importOriginal()),
+  uploadImage: vi.fn(),
+}));
 vi.mock('../utils/uploadPdf', async (importOriginal) => ({
   ...(await importOriginal()),
   uploadPdf: vi.fn(),
 }));
 
-import { uploadImage } from '../utils/uploadImage';
+import { uploadImage, UploadTooLargeError } from '../utils/uploadImage';
 import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
@@ -41,7 +48,7 @@ describe('ImageUpload', () => {
   test('a picked image is uploaded, previewed, and its public_id reported', async () => {
     uploadImage.mockResolvedValue({
       publicId: 'oiueei/things/abc',
-      url: 'https://res.cloudinary.com/demo/abc.jpg',
+      url: 'https://bucket.example.com/abc.jpg',
     });
     const onChange = vi.fn();
     const { container } = render(
@@ -54,7 +61,7 @@ describe('ImageUpload', () => {
     expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'oiueei/things');
 
     const preview = await screen.findByAltText('Image preview');
-    expect(preview).toHaveAttribute('src', 'https://res.cloudinary.com/demo/abc.jpg');
+    expect(preview).toHaveAttribute('src', 'https://bucket.example.com/abc.jpg');
     // The picker gives way to the preview — you replace by removing first.
     expect(fileInput(container)).toBeNull();
   });
@@ -65,13 +72,13 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={vi.fn()}
-        currentUrl="https://res.cloudinary.com/demo/saved.jpg"
+        currentUrl="https://bucket.example.com/saved.jpg"
       />
     );
 
     expect(screen.getByAltText('Image preview')).toHaveAttribute(
       'src',
-      'https://res.cloudinary.com/demo/saved.jpg'
+      'https://bucket.example.com/saved.jpg'
     );
     expect(uploadImage).not.toHaveBeenCalled();
     expect(fileInput(container)).toBeNull();
@@ -84,7 +91,7 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={onChange}
-        currentUrl="https://res.cloudinary.com/demo/saved.jpg"
+        currentUrl="https://bucket.example.com/saved.jpg"
       />
     );
 
@@ -110,12 +117,12 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={vi.fn()}
-        currentUrl="https://res.cloudinary.com/demo/first.jpg"
+        currentUrl="https://bucket.example.com/first.jpg"
       />
     );
     expect(screen.getByAltText('Image preview')).toHaveAttribute(
       'src',
-      'https://res.cloudinary.com/demo/first.jpg'
+      'https://bucket.example.com/first.jpg'
     );
 
     rerender(
@@ -123,12 +130,12 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={vi.fn()}
-        currentUrl="https://res.cloudinary.com/demo/second.jpg"
+        currentUrl="https://bucket.example.com/second.jpg"
       />
     );
     expect(screen.getByAltText('Image preview')).toHaveAttribute(
       'src',
-      'https://res.cloudinary.com/demo/second.jpg'
+      'https://bucket.example.com/second.jpg'
     );
   });
 
@@ -140,7 +147,7 @@ describe('ImageUpload', () => {
       id: 'thumb',
       label: 'Thumbnail',
       onChange: vi.fn(),
-      currentUrl: 'https://res.cloudinary.com/demo/saved.jpg',
+      currentUrl: 'https://bucket.example.com/saved.jpg',
     };
     const { rerender, container } = render(<ImageUpload {...props} />);
 
@@ -162,6 +169,22 @@ describe('ImageUpload', () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.queryByAltText('Image preview')).toBeNull();
   });
+
+  test('an oversized image says so, rather than "upload failed"', async () => {
+    // The whole difference this makes: one of these two is something the person
+    // can act on, and telling them apart is why `uploadImage` throws a class
+    // and not a string. `PdfUpload` has always done this; the image path met the
+    // server's cap with a shrug.
+    uploadImage.mockRejectedValue(new UploadTooLargeError());
+    const onChange = vi.fn();
+    const { container } = render(<ImageUpload id="thumb" label="Thumbnail" onChange={onChange} />);
+
+    pick(container, photo());
+
+    expect(await screen.findByText(/The image is too large \(max 10 MB\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════════
@@ -179,8 +202,12 @@ describe('PdfUpload', () => {
     expect(screen.queryByText('Add a file')).toBeNull();
   });
 
-  // THE size guard: `max_file_size` is not a signable Cloudinary parameter, so
-  // this client check is the only cap on the welcome doc anywhere in the system.
+  // The *inline* size guard. It is no longer the only cap — the byte count is
+  // signed into the upload ticket and `UploadTicketView` refuses anything over
+  // `DOCUMENT_MAX_BYTES`, so a client that skipped this check would be turned
+  // away by the bucket. What this protects is the refusal happening *here*:
+  // instantly, with a message next to the field, instead of after a round trip.
+  // Keep `PDF_MAX_BYTES` and the server's limit equal.
   test('a file over 5 MB is refused inline and never uploaded', async () => {
     const onChange = vi.fn();
     const { container } = render(
@@ -197,7 +224,7 @@ describe('PdfUpload', () => {
   test('a file exactly at the cap is accepted', async () => {
     uploadPdf.mockResolvedValue({
       publicId: 'oiueei/documents/abc',
-      url: 'https://res.cloudinary.com/demo/abc.pdf',
+      url: 'https://bucket.example.com/abc.pdf',
     });
     const onChange = vi.fn();
     const { container } = render(
@@ -218,13 +245,13 @@ describe('PdfUpload', () => {
         id="doc"
         label="Welcome document"
         onChange={onChange}
-        currentUrl="https://res.cloudinary.com/demo/welcome.pdf"
+        currentUrl="https://bucket.example.com/welcome.pdf"
       />
     );
 
     expect(screen.getByRole('link', { name: 'View the document' })).toHaveAttribute(
       'href',
-      'https://res.cloudinary.com/demo/welcome.pdf'
+      'https://bucket.example.com/welcome.pdf'
     );
     expect(fileInput(container)).toBeNull();
 
@@ -240,22 +267,22 @@ describe('PdfUpload', () => {
       id: 'doc',
       label: 'Welcome document',
       onChange: vi.fn(),
-      currentUrl: 'https://res.cloudinary.com/demo/first.pdf',
+      currentUrl: 'https://bucket.example.com/first.pdf',
     };
     const { rerender } = render(<PdfUpload {...props} />);
     expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
       'href',
-      'https://res.cloudinary.com/demo/first.pdf'
+      'https://bucket.example.com/first.pdf'
     );
 
-    rerender(<PdfUpload {...props} currentUrl="https://res.cloudinary.com/demo/second.pdf" />);
+    rerender(<PdfUpload {...props} currentUrl="https://bucket.example.com/second.pdf" />);
     expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
       'href',
-      'https://res.cloudinary.com/demo/second.pdf'
+      'https://bucket.example.com/second.pdf'
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    rerender(<PdfUpload {...props} currentUrl="https://res.cloudinary.com/demo/second.pdf" />);
+    rerender(<PdfUpload {...props} currentUrl="https://bucket.example.com/second.pdf" />);
     expect(screen.queryByRole('link', { name: /view/i })).toBeNull();
   });
 
@@ -277,12 +304,12 @@ describe('PdfUpload', () => {
 // GalleryUpload — a thing's extra photos, max 8
 // ════════════════════════════════════════════════════════════════════════
 describe('GalleryUpload', () => {
-  const item = (n) => ({ publicId: `p${n}`, url: `https://res.cloudinary.com/demo/p${n}.jpg` });
+  const item = (n) => ({ publicId: `p${n}`, url: `https://bucket.example.com/p${n}.jpg` });
 
   test('an added photo is appended to the existing items', async () => {
     uploadImage.mockResolvedValue({
       publicId: 'p2',
-      url: 'https://res.cloudinary.com/demo/p2.jpg',
+      url: 'https://bucket.example.com/p2.jpg',
     });
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[item(1)]} onChange={onChange} />);
@@ -314,7 +341,7 @@ describe('GalleryUpload', () => {
   test('a selection over the cap uploads only what fits and flags the cap', async () => {
     uploadImage.mockResolvedValue({
       publicId: 'p8',
-      url: 'https://res.cloudinary.com/demo/p8.jpg',
+      url: 'https://bucket.example.com/p8.jpg',
     });
     const items = Array.from({ length: 7 }, (_, i) => item(i));
     const onChange = vi.fn();
@@ -331,7 +358,7 @@ describe('GalleryUpload', () => {
   // user doesn't lose good photos to one bad one.
   test('a mid-batch failure keeps the photos that made it and shows the error', async () => {
     uploadImage
-      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://res.cloudinary.com/demo/p1.jpg' })
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
       .mockRejectedValueOnce(new Error('upload_failed'));
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
@@ -339,6 +366,23 @@ describe('GalleryUpload', () => {
     pick(container, photo('a.jpg'), photo('b.jpg'));
 
     expect(await screen.findByText('Upload failed. Please try again.')).toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith([item(1)]);
+  });
+
+  test('one oversized photo mid-batch keeps the rest and says which problem it was', async () => {
+    // Both halves matter here. The batch is not atomic, so the photos that made
+    // it are kept — and the message has to name the size, because that is the
+    // one failure the person can fix by picking a different file.
+    uploadImage
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
+      .mockRejectedValueOnce(new UploadTooLargeError());
+    const onChange = vi.fn();
+    const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
+
+    pick(container, photo('a.jpg'), photo('b.jpg'));
+
+    expect(await screen.findByText(/The image is too large \(max 10 MB\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
     expect(onChange).toHaveBeenCalledWith([item(1)]);
   });
 

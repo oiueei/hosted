@@ -1,6 +1,7 @@
 import { Select, ToggleButton } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import { ALLOWED_TYPES } from '../constants/things';
+import hdsLang from '../utils/hdsLang';
 
 /**
  * The shared identity cluster of the Create and Edit collection forms — the part
@@ -26,7 +27,7 @@ export default function CollectionForm({
   errors,
   theeemeColor01,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toggleTheme = theeemeColor01
     ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
     : undefined;
@@ -98,7 +99,7 @@ export default function CollectionForm({
               return t('createCollection.allowedTypesHelper');
             })(),
             error: errors.allowedThingTypes,
-            language: 'en',
+            language: hdsLang(i18n.language),
           }}
           options={allowedTypesOptions}
           value={allowedThingTypes.map((v) => ({

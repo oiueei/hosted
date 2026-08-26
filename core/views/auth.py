@@ -54,10 +54,25 @@ REFRESH_COOKIE_PATH = "/api/v1/auth/"
 
 
 def _set_auth_cookies(response, refresh):
-    """Set HttpOnly JWT cookies on the response."""
+    """Set HttpOnly JWT cookies on the response.
+
+    ``Secure`` follows ``SESSION_COOKIE_SECURE`` — the switch Django's own cookies
+    already read, which ``production.py`` sets to True alongside
+    ``CSRF_COOKIE_SECURE`` and the SSL redirect. It used to be ``not DEBUG``,
+    which gives the right answer for both environments this repository ships and
+    the wrong one for a shape neither of them is: a deployment running with
+    ``DEBUG=True`` behind HTTPS would have served **these two cookies alone**
+    without the flag, while the session and CSRF cookies beside them kept it.
+
+    That is worth a line because these are the credentials — an access token and
+    a 7-day refresh token — and because the failure is invisible: the app works,
+    the cookies are set, and the only difference is that a downgraded request
+    would carry them in clear. Reading the same setting as everything else means
+    a deployment turns cookie security on in one place, not two.
+    """
     access_token = str(refresh.access_token)
     refresh_token = str(refresh)
-    is_secure = not settings.DEBUG
+    is_secure = getattr(settings, "SESSION_COOKIE_SECURE", False)
 
     response.set_cookie(
         "access_token",

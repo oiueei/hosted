@@ -217,9 +217,54 @@ class TestSecurityHeadersMiddleware:
         connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
         assert "https://a-bucket.fsn1.example-storage.com" in connect
 
+    def test_csp_lets_a_cdn_deployment_still_reach_its_bucket(self, settings):
+        """The regression this pair exists for.
+
+        Reads may be pointed at a CDN; an upload cannot follow them there. A
+        presigned URL is signed for the bucket's own virtual host, so a policy
+        that names only the read origin forbids the PUT — and does it invisibly,
+        because the images already in the bucket go on loading through the CDN
+        while every new upload dies in the browser.
+        """
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.OBJECT_STORAGE_PUBLIC_URL = "https://a-bucket.fsn1.example-storage.com"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+
+        connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
+        assert "https://a-bucket.fsn1.example-storage.com" in connect, (
+            "connect-src must name the bucket the presigned PUT actually goes to"
+        )
+        assert "https://media.example.com" in connect
+
+    def test_csp_does_not_let_the_bucket_serve_images_a_cdn_is_fronting(self, settings):
+        """The other half: `img-src` follows the reads, and only the reads.
+
+        Widening it to the bucket as well would be a policy that allows an origin
+        nothing is asked to render from — the "while we're in here" habit that
+        turns a CSP into decoration.
+        """
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.OBJECT_STORAGE_PUBLIC_URL = "https://a-bucket.fsn1.example-storage.com"
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+
+        img = next(d for d in csp.split(";") if d.strip().startswith("img-src"))
+        assert "https://media.example.com" in img
+        assert "a-bucket" not in img
+
+    def test_csp_names_one_host_once_when_reads_and_writes_share_it(self, settings):
+        """The default deployment: both settings are the bucket, so it appears once."""
+        bucket = "https://a-bucket.fsn1.example-storage.com"
+        settings.MEDIA_PUBLIC_BASE_URL = bucket
+        settings.OBJECT_STORAGE_PUBLIC_URL = bucket
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+
+        connect = next(d for d in csp.split(";") if d.strip().startswith("connect-src"))
+        assert connect.count(bucket) == 1, f"duplicated origin: {connect!r}"
+
     def test_csp_takes_the_origin_only_not_a_path(self, settings):
         """A path is not something CSP matches on; leaving one in widens nothing but lies."""
         settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org/media/v2"
+        settings.OBJECT_STORAGE_PUBLIC_URL = ""
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
         assert "https://cdn.example.org;" in csp or "https://cdn.example.org " in csp
         assert "/media/v2" not in csp
@@ -227,6 +272,7 @@ class TestSecurityHeadersMiddleware:
     def test_csp_names_no_host_when_none_is_configured(self, settings):
         """An unconfigured checkout must not widen its policy to a stray empty token."""
         settings.MEDIA_PUBLIC_BASE_URL = ""
+        settings.OBJECT_STORAGE_PUBLIC_URL = ""
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
         assert "img-src 'self' blob:;" in csp
         assert "connect-src 'self';" in csp
@@ -278,3 +324,45 @@ def test_admin_login_page_still_loads():
     assert resp.status_code == 200
     # 200 alone could be an error page — the actual login form must render.
     assert b'name="username"' in resp.content
+
+
+@pytest.mark.django_db
+class TestAuthCookiesFollowTheProjectsCookieSwitch:
+    """The JWT cookies read `SESSION_COOKIE_SECURE`, not `DEBUG`.
+
+    They are the credentials — an access token and a 7-day refresh token — and
+    they used to derive `Secure` from `not DEBUG`. That is right for both
+    environments this repo ships and wrong for one neither is: `DEBUG=True`
+    behind HTTPS served these two cookies without the flag while the session and
+    CSRF cookies beside them kept it. Invisible in the app; the whole difference
+    is what a downgraded request carries in clear.
+    """
+
+    def _login(self, client):
+        from core.models import RSVP, User
+
+        user = User.objects.create(code="CKY001", email="cookie@example.com")
+        rsvp = RSVP.objects.create(user_code=user, user_email=user.email)
+        return client.get(f"/api/v1/auth/verify/{rsvp.token}/")
+
+    def test_a_deployment_with_secure_cookies_gets_secure_auth_cookies(self, api_client, settings):
+        # DEBUG stays True (the test settings): the point is that it is no longer
+        # what decides, so this pairing has to produce Secure cookies.
+        settings.DEBUG = True
+        settings.SESSION_COOKIE_SECURE = True
+
+        res = self._login(api_client)
+
+        assert res.status_code == 200
+        assert res.cookies["access_token"]["secure"]
+        assert res.cookies["refresh_token"]["secure"]
+
+    def test_plain_http_development_still_gets_usable_cookies(self, api_client, settings):
+        """The other half: a Secure cookie on http://localhost is never sent
+        back, so flipping this unconditionally would break local development."""
+        settings.SESSION_COOKIE_SECURE = False
+
+        res = self._login(api_client)
+
+        assert res.status_code == 200
+        assert not res.cookies["access_token"]["secure"]

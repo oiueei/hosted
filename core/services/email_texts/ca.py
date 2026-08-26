@@ -10,6 +10,9 @@ TEXTS = {
     # pàgina legal: és una obligació d'informació, no una preferència.
     "footer_legal": "Legal i privacitat",
     "dates_label": "Dates",
+    # Com s'anomena algú que mai no ha posat nom, allà on qui llegeix no té dret
+    # a la seva adreça. Vegeu "a_member" a en.py i `_member_name`.
+    "a_member": "Un membre",
     "view_collection_cta": "Veure la col·lecció",
     # Substantius d'acció per als correus de reserva — calquen el vocabulari del
     # frontend (thingCard.action / types): una sol·licitud SELL és "sol·licitud
@@ -149,13 +152,17 @@ TEXTS = {
     "hold_confirm_cta": "Confirmar la reserva",
     "hold_cancel_cta": "Cancel·lar la reserva",
     # Booking decision (to requester)
-    "decision_subject": "Tenim notícies",
+    "decision_subject_confirmed": "La teva sol·licitud està confirmada",
+    "decision_subject_cancelled": "La teva sol·licitud no ha tirat endavant",
     "decision_confirmed": "confirmada",
     "decision_cancelled": "cancel·lada",
     "decision_plain_dated": (
-        "La teva sol·licitud {action} de '{thing}' del {start} al {end} ha estat {decision}."
+        "La teva sol·licitud {action} de '{thing}' del {start} al {end} ha estat {decision}. "
+        "Veure la publicació: {url}"
     ),
-    "decision_plain": "La teva sol·licitud {action} de '{thing}' ha estat {decision}.",
+    "decision_plain": (
+        "La teva sol·licitud {action} de '{thing}' ha estat {decision}. Veure la publicació: {url}"
+    ),
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",

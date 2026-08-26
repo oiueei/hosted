@@ -58,18 +58,70 @@ class TestUserPublicSerializer:
     """Tests for UserPublicSerializer."""
 
     def test_serialize_public_user(self):
-        """Should serialize only public fields."""
+        """Everything one member may learn about another — the whole list.
+
+        Pinned as a set rather than as `"email" not in data`. This is the surface
+        that answers "what does a co-member see of me", and `Collection.
+        owner_member_rows` answers the same question for the roster with a rule:
+        `age_range` and `postal_code` reach their owner in a COMMUNITY group and
+        nobody else, ever. That rule is pinned there by three tests. Here there
+        was nothing: adding `postal_code` to this serializer left the whole suite
+        green, and it would have been served to every co-member of every group,
+        in every mode.
+        """
         user = User.objects.create(
             code="ABC123",
             email="test@example.com",
             name="Test User",
+            age_range=User.AgeRange.GEN_X,
+            postal_code="08001",
         )
-        serializer = UserPublicSerializer(user)
-        data = serializer.data
+        data = UserPublicSerializer(user).data
 
+        assert set(data) == {"code", "name", "headline", "about", "photo_url", "created"}
         assert data["code"] == "ABC123"
         assert data["name"] == "Test User"
-        assert "email" not in data
+
+    def test_a_co_members_demographics_are_not_in_the_bytes_under_any_name(self):
+        """The set above pins the field *names*; this pins what they may carry.
+
+        A field added under a friendlier name — `area`, `born` — would satisfy a
+        key-set assertion the moment somebody updated it, and this one still
+        fails. Two cheap assertions, two different mistakes.
+        """
+        user = User.objects.create(
+            code="XYZ789",
+            email="private@example.com",
+            name="Somebody",
+            age_range=User.AgeRange.GEN_X,
+            postal_code="08001",
+        )
+        rendered = str(UserPublicSerializer(user).data)
+
+        assert User.AgeRange.GEN_X.value not in rendered
+        assert "08001" not in rendered
+        assert "private@example.com" not in rendered
+
+    def test_the_profile_photo_is_served_as_a_url_not_a_storage_key(self):
+        """A reader gets somewhere to fetch the photo from; the key is ours.
+
+        `get_photo_url` had never been executed by a test — the one test on this
+        serializer used a user with no photo, so the branch that builds the URL
+        was reached by nothing at all.
+        """
+        user = User.objects.create(
+            code="PHO001", email="p@example.com", name="P", photo="oiueei/users/abc123"
+        )
+
+        photo_url = UserPublicSerializer(user).data["photo_url"]
+
+        assert photo_url and photo_url.endswith("oiueei/users/abc123")
+        assert photo_url.startswith("http")
+
+    def test_a_member_with_no_photo_gets_no_url_rather_than_a_broken_one(self):
+        user = User.objects.create(code="PHO002", email="q@example.com", name="Q")
+
+        assert UserPublicSerializer(user).data["photo_url"] is None
 
 
 @pytest.mark.django_db

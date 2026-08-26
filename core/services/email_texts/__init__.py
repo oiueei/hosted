@@ -2,7 +2,7 @@
 
 Which language a given email speaks is decided by a three-level hierarchy,
 weakest to strongest: the **deployment default** (``EMAIL_LANGUAGE``, env var,
-default ``en`` — the open-source standalone stays English, www.oiueei.com sets
+default ``en`` — the public standalone repo stays English, www.oiueei.com sets
 ``es``), then the **collection's** language (the owner's choice for their group),
 then the **recipient's own** preference. ``core/services/email_service.py``
 resolves it per recipient (``resolve_email_language``) and passes the result down

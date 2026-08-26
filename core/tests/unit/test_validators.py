@@ -68,7 +68,7 @@ class TestImageIdField:
         assert field.to_internal_value("abc123") == "abc123"
 
     def test_max_length_default(self):
-        """Should have default max_length of 255 (folder-prefixed Cloudinary IDs)."""
+        """Should have default max_length of 255 (folder-prefixed storage keys)."""
         field = ImageIdField()
         assert field.max_length == 255
 
@@ -201,3 +201,88 @@ class TestSafeTextField:
         field = SafeTextField(max_length=2000)
         value = "Para 1\n\nPara 2 with [a link](https://example.org/path?q=1)"
         assert field.to_internal_value(value) == value
+
+
+class TestKeyStaysInItsFolder:
+    """A stored key may not name one of the *other* asset folders.
+
+    The upload ticket already refuses to sign a write outside a known folder, but
+    the key that lands on the model arrives in a **separate** request afterwards,
+    and nothing tied the two together: a member could put a collection's welcome
+    PDF (`oiueei/documents/…`) into their own `photo` and republish a document its
+    owner shared with one group. Keys carry 128 bits of entropy, so this is
+    defence in depth — but the field already knows what it is for.
+    """
+
+    def test_a_key_in_its_own_folder_is_accepted(self):
+        field = ImageIdField(folder="oiueei/users")
+        assert field.to_internal_value("oiueei/users/abc123") == "oiueei/users/abc123"
+
+    def test_a_key_naming_another_asset_folder_is_refused(self):
+        """The attack this exists for: a document keyed into a photo field."""
+        field = ImageIdField(folder="oiueei/users")
+        with pytest.raises(serializers.ValidationError):
+            field.to_internal_value("oiueei/documents/someone-elses-rules")
+
+    @pytest.mark.parametrize(
+        "other",
+        ["oiueei/things", "oiueei/collections", "oiueei/documents"],
+    )
+    def test_every_other_asset_folder_is_refused(self, other):
+        """Named one by one, so adding a folder to ASSET_FOLDERS without adding it
+        here leaves a gap this file can be read to notice."""
+        field = ImageIdField(folder="oiueei/users")
+        with pytest.raises(serializers.ValidationError):
+            field.to_internal_value(f"{other}/abc123")
+
+    def test_the_shared_seed_pool_is_accepted_anywhere(self):
+        """The demo's fixtures legitimately back things, collections and profiles
+        alike, and they are not one of the asset folders."""
+        field = ImageIdField(folder="oiueei/users")
+        assert field.to_internal_value("oiueei/seed/lala") == "oiueei/seed/lala"
+
+    def test_a_bare_legacy_key_still_saves(self):
+        """The guard arrived years after the keys did. A Cloudinary-era public id
+        with no folder at all must keep working — refusing it would make a field
+        somebody could no longer save without re-uploading a photo that was fine."""
+        field = ImageIdField(folder="oiueei/users")
+        assert field.to_internal_value("v1234_abc") == "v1234_abc"
+
+    def test_an_unknown_namespace_still_saves(self):
+        """Same reasoning: only the *other known* folders are refused, so whatever
+        shape a future provider hands back is not broken by this."""
+        field = ImageIdField(folder="oiueei/users")
+        assert field.to_internal_value("some/other/store") == "some/other/store"
+
+    def test_a_field_with_no_folder_is_unchanged(self):
+        field = ImageIdField()
+        assert field.to_internal_value("oiueei/documents/x") == "oiueei/documents/x"
+
+    def test_path_traversal_is_still_refused_inside_the_right_folder(self):
+        """The folder check runs after `validate_image_id`, never instead of it."""
+        field = ImageIdField(folder="oiueei/users")
+        with pytest.raises(serializers.ValidationError):
+            field.to_internal_value("oiueei/users/../documents/x")
+
+
+class TestTheTicketAndTheFieldAgreeOnTheFolders:
+    """One definition, read by both the door and the field.
+
+    `views/upload.py` decides which folders a ticket may be signed for and
+    `validators.validate_key_folder` refuses a key naming one of the others — if
+    those lists drifted, a folder could become writable but unstorable, or the
+    reverse. Both read `storage.ASSET_FOLDERS`, and this is what says so.
+    """
+
+    def test_every_folder_a_ticket_can_be_signed_for_is_a_known_asset_folder(self):
+        from core.services import storage
+        from core.views import upload
+
+        assert upload.IMAGE_FOLDERS <= storage.ASSET_FOLDERS
+        assert upload.DOCUMENT_FOLDER in storage.ASSET_FOLDERS
+
+    def test_the_documents_folder_is_never_image_mode(self):
+        """S4: an image must never be written where documents live."""
+        from core.views import upload
+
+        assert upload.DOCUMENT_FOLDER not in upload.IMAGE_FOLDERS

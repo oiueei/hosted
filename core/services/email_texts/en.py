@@ -12,6 +12,12 @@ TEXTS = {
     # legal page, since this is a disclosure duty and not a preference.
     "footer_legal": "Legal & privacy",
     "dates_label": "Dates",
+    # What a person is called when they never set a name, wherever the reader is
+    # someone who is not entitled to their address. `User.display_name` falls
+    # back to the email, and `name` is empty for everyone who joined by magic
+    # link and never filled in their profile — so the fallback is the *default*
+    # state of a new member, not an edge case (L2). See `_member_name`.
+    "a_member": "A member",
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
     # thingCard.action / types vocabulary so a SELL request reads "purchase
@@ -145,13 +151,15 @@ TEXTS = {
     "hold_confirm_cta": "Confirm hold",
     "hold_cancel_cta": "Cancel hold",
     # Booking decision (to requester)
-    "decision_subject": "We have news",
+    "decision_subject_confirmed": "Your request is confirmed",
+    "decision_subject_cancelled": "Your request didn't go through",
     "decision_confirmed": "confirmed",
     "decision_cancelled": "cancelled",
     "decision_plain_dated": (
-        "Your {action} request for '{thing}' from {start} to {end} has been {decision}."
+        "Your {action} request for '{thing}' from {start} to {end} has been {decision}. "
+        "View thing: {url}"
     ),
-    "decision_plain": "Your {action} request for '{thing}' has been {decision}.",
+    "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
     "decision_intro": "Your {action} request has been {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",

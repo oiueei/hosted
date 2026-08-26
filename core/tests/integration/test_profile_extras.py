@@ -1,6 +1,6 @@
 """
 Integration tests for the optional profile extras: a Markdown `about` field and
-a Cloudinary `photo` on User.
+a stored `photo` key on User.
 """
 
 import pytest
@@ -53,7 +53,7 @@ class TestProfilePhoto:
         )
         assert res.status_code == 200
         assert res.data["photo"] == "oiueei/users/abc123"
-        assert res.data["photo_url"]  # cloudinary URL built from the public_id
+        assert res.data["photo_url"]  # public URL built from the storage key
 
     def test_photo_rejects_path_traversal(self, authenticated_client, user):
         res = authenticated_client.put(

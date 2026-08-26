@@ -16,6 +16,7 @@ from datetime import timedelta
 from io import StringIO
 
 import pytest
+import time_machine
 from django.core import mail
 from django.core.management import call_command
 from django.utils import timezone
@@ -35,9 +36,9 @@ from core.models import (
 pytestmark = pytest.mark.django_db
 
 
-def _run(commit=False, **settings_overrides):
+def _run(commit=False, extra_args=(), **settings_overrides):
     out = StringIO()
-    call_command("purge_expired_data", *(["--commit"] if commit else []), stdout=out)
+    call_command("purge_expired_data", *(["--commit"] if commit else []), *extra_args, stdout=out)
     return out.getvalue()
 
 
@@ -537,3 +538,80 @@ class TestTheErasureTheWarningAnnounced:
         _run(commit=True)
 
         assert User.objects.filter(pk=person.pk).exists()
+
+
+@pytest.mark.django_db
+class TestTheWarningsAreSpreadOverRuns:
+    """The first armed run on an established database is the dangerous one.
+
+    Every account dormant for the full period becomes a candidate on the same
+    night, and this command sends synchronously — so without a cap the first run
+    is one dyno making thousands of SMTP calls in a burst. That is how a sending
+    domain earns a rate-limit, and it would earn it while delivering the mail
+    that says "your account is about to be deleted".
+
+    Spreading them costs nothing, and that is the property worth pinning: nobody
+    is deleted un-warned by stopping early, because the deletion counts its grace
+    period from each person's own mark.
+    """
+
+    def _dormant_crowd(self, how_many):
+        for index in range(how_many):
+            person = User.objects.create(code=f"D{index:05d}", email=f"dormant{index}@example.com")
+            User.objects.filter(pk=person.pk).update(
+                last_activity=months_ago(30).date(), created=months_ago(31).date()
+            )
+
+    def test_a_run_stops_at_the_cap(self):
+        self._dormant_crowd(5)
+
+        output = _run(commit=True, extra_args=["--max-warnings", "2"])
+
+        assert len(mail.outbox) == 2
+        assert User.objects.filter(inactivity_notified__isnull=False).count() == 2
+        assert "3 still queued" in output
+
+    def test_the_rest_are_warned_by_the_next_run(self):
+        """The cap defers; it never drops anybody."""
+        self._dormant_crowd(5)
+
+        _run(commit=True, extra_args=["--max-warnings", "2"])
+        _run(commit=True, extra_args=["--max-warnings", "2"])
+        _run(commit=True, extra_args=["--max-warnings", "2"])
+
+        assert len(mail.outbox) == 5
+        assert User.objects.filter(inactivity_notified__isnull=True).count() == 0
+
+    def test_nobody_the_cap_deferred_is_deleted_unwarned(self):
+        """The invariant that makes deferring safe.
+
+        The deletion step keys off `inactivity_notified`, which only a sent
+        warning writes — so an account the cap skipped is invisible to it, not
+        merely early.
+        """
+        self._dormant_crowd(3)
+
+        _run(commit=True, extra_args=["--max-warnings", "1"])
+        # Far past any grace period, so only the mark can be holding them back.
+        with time_machine.travel(timezone.now() + timedelta(days=400)):
+            _run(commit=True, extra_args=["--max-warnings", "0"])
+
+        # The one warned in the first run is gone; the two it deferred were
+        # warned by the second and still have their own grace period to run.
+        assert User.objects.filter(code__startswith="D").count() == 2
+
+    def test_zero_means_no_cap(self):
+        self._dormant_crowd(4)
+
+        _run(commit=True, extra_args=["--max-warnings", "0"])
+
+        assert len(mail.outbox) == 4
+
+    def test_a_dry_run_counts_everybody_regardless_of_the_cap(self):
+        """The cap paces sending. A preview sends nothing, so it hides nothing."""
+        self._dormant_crowd(5)
+
+        output = _run(commit=False, extra_args=["--max-warnings", "2"])
+
+        assert mail.outbox == []
+        assert "Inactive accounts warned (>24m): 5" in output

@@ -45,7 +45,8 @@ When invoked without a narrower request:
    re-introduce the bug (or mutate the condition) and confirm the test FAILS.
    A test you have never seen red is unproven. For broader sweeps, run
    `scripts/mutation_test.sh` (scoped to the changed files).
-6. **Run everything** — backend `pytest -q --cov=core --cov-fail-under=80`,
+6. **Run everything** — backend `pytest -q --cov=core` (the ratchet lives in
+   `pyproject.toml`, which is the number CI enforces — don't pass a weaker one),
    frontend `cd frontend && npm run test:coverage`, plus `ruff check .` and
    `npx eslint src`. The frontend coverage ratchet in `vite.config.js` must
    still pass; if your new code drops a metric below it, the code needs tests,

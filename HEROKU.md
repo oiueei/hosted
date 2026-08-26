@@ -115,7 +115,7 @@ heroku config:set \
 >
 > **Create the bucket private, and do not enable object locking.** Objects are made public individually at upload time, which is what keeps a *listable* bucket from exposing the photos of a collection its owner chose to keep private; and locking would break record deletion, `seed_demo --reset` and `cleanup_orphan_images`, all of which delete for real. Give the app credentials scoped to that bucket alone, and use a **separate bucket with separate credentials** for development — the orphan sweep deletes what it finds, and it must never be looking at production.
 >
-> Set `MEDIA_PUBLIC_BASE_URL` only if you put a CDN or a custom domain in front; it defaults to the bucket's own URL. It is also what the Content-Security-Policy allows, so a wrong value shows up as images that silently refuse to load.
+> Set `MEDIA_PUBLIC_BASE_URL` only if you put a CDN or a custom domain in front; it defaults to the bucket's own URL. It says where files are **read** from and nothing else — an upload is a `PUT` to a presigned URL, which is always signed for the bucket, so the Content-Security-Policy names both hosts and a CDN does not break uploading. A wrong value shows up as images that silently refuse to load.
 
 > **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. **No default any more** (2026-08, S2): without it the component renders nothing rather than quietly forwarding your users' feedback to the upstream project's own form, which they'd have had no way to know about or to name as a processor in their own legal text.
 
@@ -169,6 +169,14 @@ heroku config:set \
 > policy, and Django's own URLconf check covers the URL modules. The `release` command runs
 > `migrate`, which runs system checks, so a bad value **fails the release phase and Heroku keeps
 > the previous release** rather than promoting a broken one.
+
+> **A third check covers the bucket, as a warning rather than an error** (`core.W001`). The five
+> `OBJECT_STORAGE_*` vars are one credential set, and storage is genuinely optional — unset, the app
+> runs and uploads are simply off. Set **four of the five** and the deployment looks perfectly
+> healthy: images already stored keep rendering, the CSP is right, nothing complains — and the first
+> person to press Upload gets a 500. `manage.py check` now says so at deploy time. It is a warning
+> so it cannot refuse to start the no-storage checkout the setting is optional for; run
+> `manage.py check --fail-level WARNING` if you would rather it were fatal on yours.
 
 > **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
@@ -323,6 +331,8 @@ heroku run --app <app> "python manage.py purge_expired_data"
 
 Without `--commit` it only counts, so that is safe to run at any time; the flag is the whole difference between a preview and a deletion. Once the counts look like your policy, leave it armed in the chain above. Quote the inner command or the Heroku CLI eats the flag.
 
+One more thing about that first armed run: on an established database **every** account dormant for the full period becomes a candidate on the same night, and the warnings are sent synchronously. `--max-warnings` caps them at **200 per run** by default so a backlog drains over several nights instead of arriving at your mail provider as one burst. Nobody is dropped by that — the mark is written only on a successful send, so whoever is not reached tonight is a candidate again tomorrow, and each grace period is counted from that person's own warning. `--max-warnings 0` lifts the cap if you know your provider can take it.
+
 Heroku Scheduler config lives in the dashboard and nowhere else, so keep the dashboard in sync with this table — it is the only version of the schedule you can read.
 
 | Command | Cadence | What it does |
@@ -332,7 +342,7 @@ Heroku Scheduler config lives in the dashboard and nowhere else, so keep the das
 | `python manage.py close_transfers` | daily (chained) | Sets `returned_date` on transfers whose ACCEPTED booking's `end_date` has passed. |
 | `python manage.py send_reminders` | daily (chained) | Return/delivery reminders for bookings due tomorrow. |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
-| `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email. **Dry-run without `--commit`** — read the warning above before arming it. |
+| `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email (at most 200 warnings per run — see `--max-warnings`). **Dry-run without `--commit`** — read the warning above before arming it. |
 
 The daily commands are safe to run every day — each checks the current state and no-ops when there's nothing to do, so a repeated run costs a few seconds and changes nothing.
 

@@ -326,7 +326,7 @@ class TestDataExportQueryBudgets:
 
         `assertNumQueries` catches the N+1; it says nothing about the megabytes
         assembled in memory before the response is written. Photos travel as
-        Cloudinary URLs precisely so this stays bounded — the day somebody
+        URLs precisely so this stays bounded — the day somebody
         inlines an image as base64 "for convenience", this is what notices.
         """
         coll = CollectionFactory(owner=user)

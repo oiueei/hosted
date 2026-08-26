@@ -99,7 +99,10 @@ class ThingFAQListView(APIView):
         # Notify owner by email and in-app
         owner = thing.owner
         if owner and owner.email:
-            questioner_name = request.user.display_name
+            # Bare name. In a COMMUNITY collection the thing's owner is a
+            # co-member, and nothing in the FAQ API ever serves them the asker's
+            # address — this notification must not be the one thing that does.
+            questioner_name = request.user.name
             send_faq_question_email(questioner_name, thing, faq.question, owner.email)
             InAppNotification.objects.create(
                 user=owner,
@@ -172,7 +175,7 @@ class FAQAnswerView(APIView):
         # Notify questioner by email and in-app
         questioner = faq.questioner
         if questioner and questioner.email:
-            owner_name = request.user.display_name
+            owner_name = request.user.name  # bare name (L2)
             send_faq_answer_email(owner_name, thing, faq.question, faq.answer, questioner.email)
             InAppNotification.objects.create(
                 user=questioner,
@@ -214,7 +217,7 @@ class FAQVisibilityView(APIView):
             # Notify questioner by email and in-app
             questioner = faq.questioner
             if questioner and questioner.email:
-                owner_name = request.user.display_name
+                owner_name = request.user.name  # bare name (L2)
                 send_faq_hide_email(owner_name, thing.headline, faq.question, questioner.email)
                 InAppNotification.objects.create(
                     user=questioner,

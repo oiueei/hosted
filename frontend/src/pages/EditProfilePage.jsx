@@ -11,6 +11,7 @@ import KoroSelector from '../components/KoroSelector';
 import ImageUpload from '../components/ImageUpload';
 import useTheeeme from '../hooks/useTheeeme';
 import { SUPPORTED_LANGUAGES } from '../i18n';
+import hdsLang from '../utils/hdsLang';
 
 const AGE_RANGES = ['PRE_1946', 'BOOMER', 'GEN_X', 'GEN_Y', 'GEN_Z', 'GEN_A', 'GEN_B'];
 
@@ -206,7 +207,7 @@ export default function EditProfilePage() {
         <KoroSelector value={koro} onChange={setKoro} />
         <Select
           id="edit-profile-language"
-          texts={{ label: t('editProfile.languageLabel'), language: 'en' }}
+          texts={{ label: t('editProfile.languageLabel'), language: hdsLang(i18n.language) }}
           helper={t('editProfile.languageHelper')}
           options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
           value={language || i18n.resolvedLanguage || i18n.language}
@@ -225,7 +226,7 @@ export default function EditProfilePage() {
       <div className="form-grid">
         <Select
           id="edit-profile-age"
-          texts={{ label: t('communityProfile.ageLabel'), language: 'en' }}
+          texts={{ label: t('communityProfile.ageLabel'), language: hdsLang(i18n.language) }}
           options={[
             { label: t('communityProfile.ageUnset'), value: '' },
             ...AGE_RANGES.map((c) => ({ label: t(`ageRange.${c}`), value: c })),

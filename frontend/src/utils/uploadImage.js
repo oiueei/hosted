@@ -1,6 +1,25 @@
 import { apiFetch } from '../services/api';
 import { resizeImage } from './resizeImage';
 
+// Mirrors `IMAGE_MAX_BYTES` in `core/views/upload.py`, which is the one that is
+// signed and therefore the one that counts.
+export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * "This particular file is too big" — as opposed to every other upload failure,
+ * which the caller can only describe as "it didn't work".
+ *
+ * A named class rather than a string code so `instanceof` decides, and a typo in
+ * a comparison is a crash at the point of the mistake rather than a wrong
+ * message shown to somebody.
+ */
+export class UploadTooLargeError extends Error {
+  constructor() {
+    super('image_too_large');
+    this.name = 'UploadTooLargeError';
+  }
+}
+
 /**
  * Resize an image File client-side (≤1216px, WebP) and upload it straight to
  * object storage using a short-lived server-issued ticket. Returns
@@ -19,6 +38,18 @@ import { resizeImage } from './resizeImage';
  */
 export async function uploadImage(original, folder = 'oiueei/things') {
   const file = await resizeImage(original);
+
+  // Checked **after** the resize, never before it: a 30 MB photo from a phone
+  // routinely lands in the hundreds of kilobytes once downscaled to 1216px and
+  // encoded to WebP, so refusing on the original size would reject files that
+  // upload perfectly. What gets here at full size is what `resizeImage` handed
+  // back untouched — a format the browser could not decode.
+  //
+  // Like `PDF_MAX_BYTES`, this is a courtesy and not the cap: the real limit is
+  // signed into the ticket by `UploadTicketView`, where a client cannot skip it.
+  // Its job is to fail here, with a message that says what is wrong, instead of
+  // after a round trip with a generic "upload failed". Keep the two numbers equal.
+  if (file.size > IMAGE_MAX_BYTES) throw new UploadTooLargeError();
 
   const ticketRes = await apiFetch('/api/v1/upload/ticket/', {
     method: 'POST',

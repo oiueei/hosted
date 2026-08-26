@@ -379,7 +379,7 @@ class TestSeedDemoCommand:
 
     def test_maps_gallery_key(self):
         """Regression guard: _seed_things must copy the `gallery` key onto the model
-        (image ids are stored under the SEED_IMAGE_FOLDER Cloudinary prefix)."""
+        (image ids are stored under the SEED_IMAGE_FOLDER storage prefix)."""
         call_command("seed_demo")
         assert Thing.objects.get(code="La1a01").gallery == ["oiueei/seed/La1a01_b"]
 
@@ -397,7 +397,7 @@ class TestSeedDemoCommand:
 
     def test_maps_user_photo_key(self):
         """Regression guard: _seed_users must copy the `photo` key onto the user
-        (image ids are stored under the SEED_IMAGE_FOLDER Cloudinary prefix)."""
+        (image ids are stored under the SEED_IMAGE_FOLDER storage prefix)."""
         call_command("seed_demo")
         assert User.objects.get(code="La1aN1").photo == "oiueei/seed/La1aPH"
 

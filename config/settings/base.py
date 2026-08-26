@@ -248,9 +248,9 @@ INVITE_EMAILS_PER_DAY = int(os.environ.get("INVITE_EMAILS_PER_DAY", "0"))
 COLLECTION_JOINS_PER_DAY = int(os.environ.get("COLLECTION_JOINS_PER_DAY", "0"))
 
 # Per-collection capacity guards against mass upload. Same reasoning as the
-# invitation cap above: this is the operator protecting their own storage,
-# Cloudinary bill and moderation load, so the standalone default is **off** and
-# each deployment sets its own numbers.
+# invitation cap above: this is the operator protecting their own storage bill
+# and moderation load, so the standalone default is **off** and each deployment
+# sets its own numbers.
 #
 # COLLECTION_THINGS_ALARM — cross it and the operator gets ONE email per
 #   collection. The owner is never told: a silent tripwire, not a warning, so a
@@ -331,7 +331,7 @@ MAGIC_LINK_EXPIRY_HOURS = 24
 # production.py turns it on.
 EMAIL_SEND_ASYNC = False
 # The single language all outbound email speaks (core/services/email_texts/):
-# the open-source standalone defaults to English; a deployment sets e.g.
+# the public standalone repo defaults to English; a deployment sets e.g.
 # EMAIL_LANGUAGE=es. Unknown codes fall back to English per key.
 EMAIL_LANGUAGE = os.environ.get("EMAIL_LANGUAGE", "en")
 MAGIC_LINK_BASE_URL = os.environ.get(
@@ -360,16 +360,25 @@ OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION", "")
 OBJECT_STORAGE_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_ACCESS_KEY", "")
 OBJECT_STORAGE_SECRET_KEY = os.environ.get("OBJECT_STORAGE_SECRET_KEY", "")
 
-# Where assets are read from. Defaults to the bucket's own virtual-host URL, and
-# is deliberately **overridable**: pointing it at a CDN or a custom domain is
-# then a config var, not a patch. It is also what feeds the CSP, so a deployment
-# using its own bucket doesn't have to edit middleware.
+# The bucket's own virtual-host URL — **where an upload goes**. A presigned URL
+# is signed for this host and no other, so this is the origin the browser has to
+# be allowed to PUT to, whatever reads are pointed at.
 _endpoint_host = OBJECT_STORAGE_ENDPOINT.split("://", 1)[-1].strip("/")
-MEDIA_PUBLIC_BASE_URL = os.environ.get("MEDIA_PUBLIC_BASE_URL", "") or (
+OBJECT_STORAGE_PUBLIC_URL = (
     f"https://{OBJECT_STORAGE_BUCKET}.{_endpoint_host}"
     if OBJECT_STORAGE_BUCKET and _endpoint_host
     else ""
 )
+
+# Where assets are **read** from. Defaults to the bucket itself, and is
+# deliberately **overridable**: pointing it at a CDN or a custom domain is then a
+# config var, not a patch.
+#
+# The two are separate settings because they are separate hosts the moment
+# anybody uses that override, and the CSP needs both — reads from here, writes
+# from the bucket above. Deriving one from the other is what made
+# `MEDIA_PUBLIC_BASE_URL=https://cdn.example.com` silently forbid every upload.
+MEDIA_PUBLIC_BASE_URL = os.environ.get("MEDIA_PUBLIC_BASE_URL", "") or OBJECT_STORAGE_PUBLIC_URL
 
 
 # Security Headers

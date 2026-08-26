@@ -14,6 +14,7 @@ raises costs the user their action.
 from unittest.mock import patch
 
 import pytest
+from django.db import transaction
 
 from core.models import Collection, Thing, User
 from core.services import asset_cleanup
@@ -100,6 +101,84 @@ class TestAssetCleanup:
                 with asset_cleanup.suspended():
                     owner.delete()
         destroy.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestARollbackKeepsTheImages:
+    """A delete that does not survive its transaction keeps its objects.
+
+    This is what ``transaction.on_commit`` buys, and nothing tested it. Every
+    other test in this file runs its delete inside
+    ``django_capture_on_commit_callbacks(execute=True)`` and then asserts *which*
+    keys were destroyed — which is true whether the destroy was deferred to
+    commit or fired inline, so replacing ``on_commit(...)`` with a direct call
+    left the whole suite green.
+
+    It matters because a bucket delete is not undoable. A request that removes a
+    thing and then fails — a later validation, a 500, a rolled-back
+    ``atomic()`` — leaves the row exactly where it was, and the photographs have
+    to still be there when the owner retries.
+    """
+
+    def test_a_rolled_back_thing_delete_destroys_nothing(self):
+        owner = User.objects.create(email="rb1@example.com")
+        thing = Thing.objects.create(
+            owner=owner,
+            headline="Drill",
+            type="GIFT_THING",
+            thumbnail="oiueei/things/cover",
+            gallery=["oiueei/things/g1"],
+        )
+        # Read before the delete: Django clears the PK on the in-memory instance.
+        code = thing.code
+
+        with patch("core.services.storage.delete") as destroy:
+            with pytest.raises(RuntimeError):
+                with transaction.atomic():
+                    thing.delete()
+                    raise RuntimeError("something later in the request failed")
+
+        destroy.assert_not_called()
+        assert Thing.objects.filter(code=code).exists(), "the row came back"
+
+    def test_a_rolled_back_user_delete_keeps_the_whole_cascade_s_assets(self):
+        """The cascade is the case that would hurt most: a user delete reaches
+        their collections and things too, so an inline destroy would empty
+        several buckets' worth of objects for a transaction that never committed.
+        """
+        owner = User.objects.create(email="rb2@example.com", photo="oiueei/users/face")
+        collection = Collection.objects.create(
+            code="RBC001", owner=owner, headline="Group", thumbnail="oiueei/collections/cover"
+        )
+        Thing.objects.create(
+            owner=owner, headline="Saw", type="GIFT_THING", thumbnail="oiueei/things/saw"
+        )
+        owner_code = owner.code
+
+        with patch("core.services.storage.delete") as destroy:
+            with pytest.raises(RuntimeError):
+                with transaction.atomic():
+                    owner.delete()
+                    raise RuntimeError("rolled back")
+
+        destroy.assert_not_called()
+        assert User.objects.filter(code=owner_code).exists()
+        assert Collection.objects.filter(code=collection.code).exists()
+
+    def test_the_same_delete_committed_does_destroy_them(self, django_capture_on_commit_callbacks):
+        """The counterpart, so the two above can't pass by the cleanup being
+        broken outright."""
+        owner = User.objects.create(email="rb3@example.com")
+        thing = Thing.objects.create(
+            owner=owner, headline="Drill", type="GIFT_THING", thumbnail="oiueei/things/cover2"
+        )
+
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                with transaction.atomic():
+                    thing.delete()
+
+        destroy.assert_called_once_with("oiueei/things/cover2")
 
 
 @pytest.mark.django_db

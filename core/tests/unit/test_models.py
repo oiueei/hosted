@@ -102,6 +102,54 @@ class TestUserModel:
         user.update_last_activity()
         assert user.last_activity == date(2026, 6, 15)
 
+    @time_machine.travel(date(2026, 6, 15))
+    def test_the_second_call_of_the_day_writes_nothing(self, django_assert_num_queries):
+        """The column holds a date, so today's second call has the same answer.
+
+        `MeView` calls this on every `GET /auth/me/`, and the SPA asks three or
+        four times per page load — so an unconditional save is that many `UPDATE`s
+        on the user row for a value that already reads correctly.
+        """
+        user = User.objects.create(email="repeat@example.com")
+        user.update_last_activity()
+
+        with django_assert_num_queries(0):
+            user.update_last_activity()
+
+        user.refresh_from_db()
+        assert user.last_activity == date(2026, 6, 15)
+
+    @time_machine.travel(date(2026, 6, 15))
+    def test_a_stale_date_is_still_refreshed(self):
+        """The guard skips a write that changes nothing — never one that does."""
+        user = User.objects.create(email="stale@example.com", last_activity=date(2026, 6, 1))
+
+        user.update_last_activity()
+
+        user.refresh_from_db()
+        assert user.last_activity == date(2026, 6, 15)
+
+    @time_machine.travel(date(2026, 6, 15))
+    def test_a_standing_warning_is_cancelled_even_when_the_date_is_already_today(self):
+        """The one case the guard must not swallow.
+
+        Somebody warned this morning who comes back this afternoon has
+        `last_activity` already set to today — but `inactivity_notified` is what
+        the deletion grace period counts from, so skipping the write here would
+        leave them queued for erasure after doing exactly what the email asked.
+        """
+        user = User.objects.create(
+            email="warned@example.com",
+            last_activity=date(2026, 6, 15),
+            inactivity_notified=date(2026, 6, 15),
+        )
+
+        user.update_last_activity()
+
+        user.refresh_from_db()
+        assert user.inactivity_notified is None
+        assert user.last_activity == date(2026, 6, 15)
+
     def test_user_email_must_be_unique(self):
         """Duplicate email should raise IntegrityError."""
         from django.db import IntegrityError

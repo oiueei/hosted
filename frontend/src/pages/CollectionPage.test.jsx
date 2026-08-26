@@ -19,7 +19,7 @@ const COLLECTION_WITH_PHOTO = {
   mode: 'PROPRIETARY',
   owner: 'ABC123',
   owner_name: 'Test User',
-  thumbnail_url: 'https://res.cloudinary.com/demo/image/upload/oiueei/collections/cover.jpg',
+  thumbnail_url: 'https://bucket.example.com/oiueei/collections/cover.jpg',
   tags: [],
   things: [],
   invites: [],

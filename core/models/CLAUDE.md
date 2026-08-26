@@ -43,7 +43,7 @@ The `User` model represents a person who can own collections, be invited to othe
 
 5. **Creation date is persisted** - The `created` field is automatically set to today's date when the user is created.
 
-6. **Last activity is updated on login** - The `update_last_activity()` method is called on each successful authentication. Newly-created users have `last_activity = None` until that first call; subsequent calls bump the date to today.
+6. **Last activity is updated on login** - The `update_last_activity()` method is called on each successful authentication **and on every `GET /auth/me/`**, so an account in daily use through the SPA never looks dormant to the retention sweep. Newly-created users have `last_activity = None` until that first call; subsequent calls bump the date to today, and a call on a day already recorded writes nothing.
 
 7. **Email notification preferences** - `notify_activity` and `notify_news` (**both default on**) are consulted by `core/services/email_service.py` before sending. News is additionally narrowed per group by `Collection.digest_muted`, which is what keeps an on-by-default news flag from being a pre-ticked opt-in (DESIGN §6). Magic links and invitations (Cat. 1) are mandatory and always sent regardless of these flags.
 
@@ -51,7 +51,7 @@ The `User` model represents a person who can own collections, be invited to othe
 
 ### Methods
 
-- `update_last_activity()` - Updates `last_activity` to today's date
+- `update_last_activity()` - Sets `last_activity` to today and clears any standing `inactivity_notified` warning. **A no-op when neither would change**: the column holds a date, and `MeView` calls this on every `GET /auth/me/` — which the SPA asks three or four times per page load — so an unconditional save was that many `UPDATE`s writing the value already there.
 - `has_perm(perm, obj)` - Returns True only for superusers
 - `has_module_perms(app_label)` - Returns True only for superusers
 
@@ -140,6 +140,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 - `is_owner(user_code)` - Returns True if user is the owner (`self.owner_id == user_code`)
 - `is_invited(user_code)` - Returns True if user is in invites (`self.invites.filter(code=user_code).exists()`)
 - `is_community()` - Returns True if `mode == "COMMUNITY"`
+- `owner_member_rows(members=None)` - Every member as **their owner** sees them: `code`, `name`, `email`, plus `age_range` and `postal_code` **only in a COMMUNITY group**. The single definition of that privacy gate, used by both surfaces that answer the question — `CollectionSerializer.get_invites` (the guests page) and `export_service._collection_members` (the collection export). It was two near-identical loops in two files that agreed only because somebody kept them agreeing, and the direction they drift in is the dangerous one: an export is a file, so a gate the API applies and the export forgets is a leak that leaves the building. It builds a row and nothing else — **who may ask is the caller's job** (`_requester_is_owner`, `require_collection_owner`). Pass `members` to reuse a prefetched or ordered queryset.
 - `is_public()` - Returns True if `visibility == "PUBLIC"`
 - `has_rental_rules()` - Returns True if the collection constrains LEND/RENT dates (`rental_durations` or `rental_weekdays` set)
 - `rental_violation(start_date, end_date)` - Returns an error string if a LEND/RENT booking `[start, end]` breaks the rules (span not an allowed duration, or pickup/return not on an allowed weekday), else `None`. Used by `booking_service.request_date_based_booking` as the server-side backstop.

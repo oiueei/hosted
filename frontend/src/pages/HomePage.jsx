@@ -257,7 +257,10 @@ export default function HomePage() {
             {pendingInvitations.map((inv) => (
               <Notification
                 key={inv.accept_code}
-                label={t('home.invitedBy', { name: inv.owner_name })}
+                // `owner_name` is the bare name — the API withholds the owner's
+                // address from someone who is only invited so far (L2) — so an
+                // owner who never set one arrives empty and needs a subject.
+                label={t('home.invitedBy', { name: inv.owner_name || t('common.aMember') })}
                 type="info"
                 dismissible
                 closeButtonLabelText={t('home.dismiss')}

@@ -41,9 +41,11 @@ from core.services import storage
 from core.views._helpers import body_dict
 
 # Image-mode folders only — "oiueei/documents" is document-mode-only (forced
-# below, never client-chosen) and deliberately absent from this set.
-IMAGE_FOLDERS = {"oiueei/users", "oiueei/things", "oiueei/collections"}
-DOCUMENT_FOLDER = "oiueei/documents"
+# below, never client-chosen) and deliberately absent from this set. Both are
+# derived from `storage.ASSET_FOLDERS` so this door and the fields that later
+# accept the key back (`validators.validate_key_folder`) read one definition.
+DOCUMENT_FOLDER = storage.DOCUMENT_FOLDER
+IMAGE_FOLDERS = storage.ASSET_FOLDERS - {DOCUMENT_FOLDER}
 
 # Raster photo types only. SVG and other script-bearing or non-photo formats are
 # excluded so an <img>-rendered upload can never carry active content.

@@ -151,7 +151,23 @@ class User(AbstractBaseUser):
 
     @property
     def display_name(self):
-        """Human-facing name: the chosen name, falling back to the email."""
+        """Human-facing name: the chosen name, falling back to the email.
+
+        **The fallback makes this unsafe to show to anyone but the person
+        themselves or somebody who already holds their address** — and the
+        fallback is the common case, not the rare one: ``name`` is empty for
+        every account made by ``get_or_create(email=email)``, which is everyone
+        who arrived by magic link or invitation and never filled in a profile.
+
+        Who already holds it: a collection owner sees their members' emails
+        (``owner_member_rows``), and a thing owner sees a requester's
+        (``BookingPeriodSerializer.requester_email``). Those readers may have
+        this. Everyone else — a co-member, an invitee, a stranger being invited —
+        gets the bare ``name`` and a neutral stand-in where the copy needs a
+        subject (``email_service._member_name``, ``common.aMember`` in the SPA).
+        Serializers read by co-members already do this one by one; see the notes
+        on ``MyBookingSerializer.get_owner_name`` and its neighbours.
+        """
         return self.name or self.email
 
     def has_perm(self, perm, obj=None):
@@ -167,10 +183,28 @@ class User(AbstractBaseUser):
         whole promise of the email — "signing in once is enough to keep it" — so
         a grace period that kept running would delete somebody for doing exactly
         what they were asked.
+
+        **Writes nothing when there is nothing to write.** The column holds a
+        *date*, so the second call of the day records the same value the first
+        one did — and `MeView` calls this on every `GET /auth/me/`, which the SPA
+        hits three or four times per page load (the CSRF-cookie fetch in
+        `App.jsx`, `RequireAuth`'s probe, `useCapabilities`, and the page
+        itself). That was one `UPDATE` per call on a table every request already
+        reads. `DailyActivityMiddleware` keeps a cache key to avoid exactly this
+        for its own row; the guard below is the same idea for a fraction of the
+        cost, since the value it compares is already in memory.
+
+        The cancelled warning still forces the write: `inactivity_notified` is
+        what the deletion grace period counts from, so clearing it is never
+        optional.
         """
-        self.last_activity = date.today()
-        fields = ["last_activity"]
+        today = date.today()
+        fields = []
+        if self.last_activity != today:
+            self.last_activity = today
+            fields.append("last_activity")
         if self.inactivity_notified is not None:
             self.inactivity_notified = None
             fields.append("inactivity_notified")
-        self.save(update_fields=fields)
+        if fields:
+            self.save(update_fields=fields)

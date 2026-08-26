@@ -1,5 +1,11 @@
-"""A deploy-time check for `CREATOR_POLICY`, the setting a deployment points at
-its own code.
+"""Deploy-time checks for the settings that only fail once somebody uses them.
+
+Both checks here guard the same class of outage rather than a feature: a setting
+that nothing reads at startup passes `manage.py check`, passes the Heroku
+`release` phase, boots a healthy dyno — and then surfaces as a 500 on a request,
+after the deploy has already been declared successful.
+
+## `CREATOR_POLICY`, the setting a deployment points at its own code
 
 `CREATOR_POLICY` names a class by dotted path, and it is resolved **lazily** —
 on the first call to `get_creator_policy()`, which is to say on the first
@@ -23,11 +29,34 @@ URLconf is built, and Django's own `check_url_config` is registered as the
 checks framework is imported — before any app's `ready()` — so it always runs
 first and already fails the deploy on an unimportable module or one with no
 `urlpatterns`. A second check could never win that race; it would only rot.
+
+## `OBJECT_STORAGE_*`, the five that have to be set together
+
+Storage is **optional**: unset, the app runs and serves everything it already
+has, which is what keeps a checkout usable without an account. That is a
+supported state and the check below leaves it alone.
+
+What it catches is the state in between. Set four of the five and the deployment
+looks entirely healthy — `MEDIA_PUBLIC_BASE_URL` still derives from the endpoint
+and bucket, so existing images render and the CSP is right — while
+`storage._config()` raises `ImproperlyConfigured` on the first upload anybody
+attempts. Nothing before that moment says a word. All-or-none is the real
+contract, so it is worth stating at deploy time rather than discovering from a
+user who could not add a photo.
 """
 
 from django.conf import settings
-from django.core.checks import Error, register
+from django.core.checks import Error, Warning, register
 from django.utils.module_loading import import_string
+
+# The five that make up one credential set (`core/services/storage.py::_config`).
+_STORAGE_SETTINGS = (
+    "OBJECT_STORAGE_ENDPOINT",
+    "OBJECT_STORAGE_BUCKET",
+    "OBJECT_STORAGE_REGION",
+    "OBJECT_STORAGE_ACCESS_KEY",
+    "OBJECT_STORAGE_SECRET_KEY",
+)
 
 
 @register()
@@ -94,3 +123,31 @@ def check_creator_policy(app_configs, **kwargs):
         ]
 
     return []
+
+
+@register()
+def check_object_storage(app_configs, **kwargs):
+    """The five `OBJECT_STORAGE_*` settings are either all set, or all unset.
+
+    A `Warning`, not an `Error`: unlike `CREATOR_POLICY` — which every deployment
+    has, and whose default is a real value — storage is genuinely optional, and
+    an `Error` would refuse to start the very checkout this setting is optional
+    for. A half-configured one is still always a mistake, so it must be said out
+    loud; `manage.py check --fail-level WARNING` is there for a deployment that
+    wants it fatal.
+    """
+    missing = [name for name in _STORAGE_SETTINGS if not getattr(settings, name, "")]
+    if not missing or len(missing) == len(_STORAGE_SETTINGS):
+        return []
+    return [
+        Warning(
+            "Object storage is half-configured: " + ", ".join(missing) + " unset.",
+            hint=(
+                "The five OBJECT_STORAGE_* settings are one credential set. With some "
+                "of them the app boots, serves every image it already has and reports "
+                "nothing wrong — and then answers 500 on the first upload anybody "
+                "tries. Set all five, or none (uploads are simply off)."
+            ),
+            id="core.W001",
+        )
+    ]
