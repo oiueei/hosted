@@ -24,13 +24,22 @@ import { getCsrfToken } from '../services/api';
  * pair of braces, on a request whose side effect is an email to a stranger.
  *
  * Options: `sentMessageKey` / `errorMessageKey` (i18n keys — they differ per
- * door) and `extraBody` (merged into the POST: `JoinToAct`'s `collection_code`,
- * `SharePage`'s `share_token`).
+ * door), `extraBody` (merged into the POST: `JoinToAct`'s `collection_code`,
+ * `SharePage`'s `share_token`), and `endpoint` (which URL the submit POSTs to —
+ * every upstream caller wants `/auth/join/`, the product's join door, so that
+ * is the default; a deployment with its own open door — one that creates an
+ * account with no target at all, which `/auth/join/` deliberately refuses to do
+ * — passes its own endpoint instead of reimplementing this hook).
  *
  * Returns `{ email, setEmail, loading, status, message, submit }`, where
  * `status` is `null` | `'success'` | `'error'` and `submit` is a form handler.
  */
-export default function useJoin({ sentMessageKey, errorMessageKey, extraBody } = {}) {
+export default function useJoin({
+  sentMessageKey,
+  errorMessageKey,
+  extraBody,
+  endpoint = '/api/v1/auth/join/',
+} = {}) {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +56,7 @@ export default function useJoin({ sentMessageKey, errorMessageKey, extraBody } =
     setStatus(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/join/', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
