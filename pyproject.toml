@@ -67,9 +67,16 @@ exclude_lines = [
 [tool.mutmut]
 source_paths = ["core/"]
 pytest_add_cli_args_test_selection = ["core/tests/"]
+# Pointed at what the 2026-08 pre-release **testing** round audited: the two
+# serializers whose field lists guard a privacy boundary (a co-member's profile,
+# the anonymous booking calendar), the booking service's locked transitions, and
+# the delete-time asset cleanup. The previous round's scope — invitation_service,
+# utils, views/_helpers — came back clean under a 70-mutant sweep and is not
+# where the surviving mutants were.
 only_mutate = [
-    "core/services/invitation_service.py",
-    "core/utils.py",
-    "core/views/_helpers.py",
+    "core/serializers/booking.py",
+    "core/serializers/user.py",
+    "core/services/booking_service.py",
+    "core/services/asset_cleanup.py",
 ]
 also_copy = ["pytest.ini", "manage.py", "config/", "conftest.py", "frontend/public"]
