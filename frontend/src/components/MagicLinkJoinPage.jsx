@@ -23,6 +23,9 @@ import PageLayout from './PageLayout';
  * - `docTitleKey` / `titleKey` / `descriptionKey`: full i18n keys for the
  *   document title, hero title and intro paragraph (their names differ per page).
  * - `extraBody`: extra fields merged into the POST body.
+ * - `endpoint`: which URL the form POSTs to (see `useJoin`) — every upstream
+ *   caller leaves this at the default `/auth/join/`; a deployment's own open
+ *   door passes its own.
  */
 export default function MagicLinkJoinPage({
   ns,
@@ -30,6 +33,7 @@ export default function MagicLinkJoinPage({
   titleKey,
   descriptionKey,
   extraBody,
+  endpoint,
 }) {
   const { t } = useTranslation();
   useEffect(() => {
@@ -39,6 +43,7 @@ export default function MagicLinkJoinPage({
     sentMessageKey: `${ns}.magicLinkSent`,
     errorMessageKey: `${ns}.errorSendingLink`,
     extraBody,
+    endpoint,
   });
 
   const { btnStyle } = useTheeeme();
