@@ -73,7 +73,7 @@ class TestUserPublicSerializer:
             code="ABC123",
             email="test@example.com",
             name="Test User",
-            age_range="1980-1989",
+            age_range=User.AgeRange.GEN_X,
             postal_code="08001",
         )
         data = UserPublicSerializer(user).data
@@ -93,12 +93,12 @@ class TestUserPublicSerializer:
             code="XYZ789",
             email="private@example.com",
             name="Somebody",
-            age_range="1980-1989",
+            age_range=User.AgeRange.GEN_X,
             postal_code="08001",
         )
         rendered = str(UserPublicSerializer(user).data)
 
-        assert "1980-1989" not in rendered
+        assert User.AgeRange.GEN_X.value not in rendered
         assert "08001" not in rendered
         assert "private@example.com" not in rendered
 
