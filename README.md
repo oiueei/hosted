@@ -333,8 +333,17 @@ capacity recheck on bulk import) would be proving its logic and never its lock.
 That breaks with two concurrent requests, not two thousand. SQLite also doesn't
 enforce `CharField(max_length=N)`, which PostgreSQL does.
 
+`core/tests/integration/test_booking_row_locks.py` is the suite that depends on
+this. It races two connections at one booking and asserts the second is still
+blocked while the first holds the row — which is the only shape that can tell a
+lock from the re-read beside it. Everything else in the suite is single-threaded
+inside one transaction, where a FOR UPDATE never blocks against the transaction
+that took it, so removing all six of them used to leave the whole run green.
+Those three tests **skip** on SQLite rather than measure the unlocked behaviour.
+
 A local `pytest` still runs on SQLite and needs no database server. To reproduce
-a CI failure, point `DATABASE_URL` at a throwaway Postgres:
+a CI failure — or to run the lock tests at all — point `DATABASE_URL` at a
+throwaway Postgres:
 
 ```bash
 DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
