@@ -18,6 +18,7 @@ import { onImageError } from '../utils/imageFallback';
 import { useLocalized } from '../utils/localized';
 import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
+import ButtonLink from '../components/ButtonLink';
 
 export default function ThingPage() {
   const { code, thingCode } = useParams();
@@ -246,17 +247,13 @@ export default function ThingPage() {
                 </Button>
               </>
             )}
-            <Link to={editPath} style={{ display: 'contents' }}>
-              {needsPage && activePendingCode ? (
-                <Button fullWidth variant="secondary" style={btnSecondaryStyle}>
-                  {t('common.edit')}
-                </Button>
-              ) : (
-                <Button fullWidth style={btnStyle}>
-                  {t('common.edit')}
-                </Button>
-              )}
-            </Link>
+            <ButtonLink
+              to={editPath}
+              fullWidth
+              style={needsPage && activePendingCode ? btnSecondaryStyle : btnStyle}
+            >
+              {t('common.edit')}
+            </ButtonLink>
             {!hasPendingBookings && canDelete && (
               <Button
                 fullWidth
@@ -304,11 +301,9 @@ export default function ThingPage() {
                 ? t('thingCard.cancelling')
                 : t('thingCard.cancelHold')}
             </Button>
-            <Link to={editPath} style={{ display: 'contents' }}>
-              <Button fullWidth variant="secondary" style={btnSecondaryStyle}>
-                {t('common.edit')}
-              </Button>
-            </Link>
+            <ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>
+              {t('common.edit')}
+            </ButtonLink>
           </div>
         )}
 
@@ -321,11 +316,9 @@ export default function ThingPage() {
             >
               {activating ? t('thingCard.reactivating') : t('thingCard.reactivate')}
             </Button>
-            <Link to={editPath} style={{ display: 'contents' }}>
-              <Button variant="secondary" style={{ ...btnSecondaryStyle, width: '100%' }}>
-                {t('common.edit')}
-              </Button>
-            </Link>
+            <ButtonLink to={editPath} style={{ ...btnSecondaryStyle, width: '100%' }}>
+              {t('common.edit')}
+            </ButtonLink>
             {canDelete && (
               <Button
                 variant="secondary"

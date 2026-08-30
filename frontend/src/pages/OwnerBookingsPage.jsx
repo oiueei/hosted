@@ -19,6 +19,7 @@ import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import ButtonLink from '../components/ButtonLink';
 
 /**
  * The owner's side of MyBookingsPage: every request made on their things, in one
@@ -253,9 +254,9 @@ export default function OwnerBookingsPage() {
           {/* Its own copy, not the requester page's "Browse collections": an
               owner with no requests wants to get their things in front of
               somebody, not to go shopping. */}
-          <Link to="/">
-            <Button style={btnStyle}>{t('ownerBookings.emptyCta')}</Button>
-          </Link>
+          <ButtonLink to="/" style={btnStyle}>
+            {t('ownerBookings.emptyCta')}
+          </ButtonLink>
         </div>
       ) : (
         <>

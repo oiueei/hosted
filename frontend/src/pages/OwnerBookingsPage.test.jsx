@@ -110,7 +110,7 @@ describe('OwnerBookingsPage listing', () => {
     // The owner's own way forward, not the requester page's "Browse
     // collections" — nobody has asked for anything, so the useful next move is
     // to put the collection in front of someone.
-    expect(screen.getByRole('button', { name: 'Share a collection' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Share a collection' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Waiting on you' })).toBeNull();
   });
 

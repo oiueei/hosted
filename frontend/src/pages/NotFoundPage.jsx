@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router';
+
 import { useTranslation } from 'react-i18next';
-import { Button, Koros } from 'hds-react';
+import { Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
+import ButtonLink from '../components/ButtonLink';
 
 export default function NotFoundPage() {
   const { t } = useTranslation();
@@ -37,11 +38,9 @@ export default function NotFoundPage() {
           <ContactCorner />
           <h1 className="form-hero-title">{t('notFound.title')}</h1>
           <div>
-            <Link to={isLoggedIn ? '/' : '/login'}>
-              <Button style={btnStyle}>
-                {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
-              </Button>
-            </Link>
+            <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
+              {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
+            </ButtonLink>
           </div>
         </div>
         <Koros

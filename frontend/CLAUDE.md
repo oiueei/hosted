@@ -464,6 +464,7 @@ Every site that renders owner content calls it: `ThingLinkbox`, `ThingPage`, `Co
 
 ### Shared Components
 
+- **`ButtonLink`** (`src/components/ButtonLink.jsx`) — A control that navigates and looks like a button: one `<a>`, one tab stop. Replaced 25 `<Link><Button>` pairs, which put one interactive element inside another. Built on HDS `Link` + `useButtonStyles`; see **A link that looks like a button** below for the three things about it that are load-bearing. Props: `to`, `state`, `fullWidth`, `style` (the theeeme tokens), and anything else, which reaches the `<a>`.
 - **`BackLink`** (`src/components/BackLink.jsx`) — Reusable `← {label}` back navigation link. Props: `to`, `label`.
 - **`Toast`** (`src/components/Toast.jsx`) — Reusable toast notification wrapping HDS `Notification`. Props: `toast` (`{ type, message }`), `onClose`. Renders at `position="top-right"` with auto-close.
 - **`LoadingSpinner`** (`src/components/LoadingSpinner.jsx`) — Wrapper around HDS `LoadingSpinner` component.
@@ -622,8 +623,9 @@ Four non-obvious behaviours:
 
 > Superseded in part by **A link that looks like a button** below: the 2026-08-30
 > keyboard round found a fourth kind this list missed — a router `Link` wrapped
-> around an HDS `Button`, 28 of them — and `Link`'s `useButtonStyles` is what HDS
-> offers for it. The reasoning below still holds for kinds 1–3.
+> around an HDS `Button`, 25 of them — and they are now `ButtonLink`, built on HDS's
+> own `Link`. So this app does import HDS `Link` after all, just not yet for kind 3
+> (external links), where the reasoning below still stands.
 
 HDS ships a `Link` component and this app imports it **nowhere**, which under DESIGN §1 needs a reason rather than a silence. Reviewed 2026-08-17; the reason is that "link" here means three different things:
 
@@ -686,7 +688,7 @@ had been missed.
 Any adoption of `Link` with `openInNewTab` or `external` **must** pass
 `openInNewTabLabel` / `openInExternalDomainAriaLabel` in all three locales.
 
-### A link that looks like a button: `Link` + `useButtonStyles`
+### A link that looks like a button: `ButtonLink`
 
 `Button` always renders `<button>` — there is no `as` or `href` prop, and wrapping it
 in a router `<Link>` produces nested interactive elements: **two tab stops for one
@@ -696,21 +698,33 @@ violation**, which is how 28 of them accumulated.
 
 HDS's own answer is `Link`'s `useButtonStyles`, which swaps the link class for
 `hds-button hds-button--primary` — the real button CSS, same `--computed-*` token
-chain, so the theeeme styles from `useTheeeme` still apply and a secondary button is
-just the secondary token set on the same element. It renders one `<a>`: one tab stop,
-`role="link"`, right-click and open-in-new-tab intact. Rest props pass through, so
-client-side navigation is the same `preventDefault` + `navigate()` shape
-`CollectionLinkbox` already uses for `Linkbox`:
+chain. `src/components/ButtonLink.jsx` wraps it, and **25 call sites across 11 files
+now use it**:
 
 ```jsx
-<Link href={path} useButtonStyles style={btnStyle}
-      onClick={(e) => { e.preventDefault(); navigate(path); }}>
-  Create collection
-</Link>
+<ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>{t('common.edit')}</ButtonLink>
 ```
 
-Note this flips the element's role, so a test looking for `getByRole('button')` on one
-of these has to look for `link` instead.
+Three things about it are load-bearing:
+
+- **There is no `variant` prop.** What makes a button secondary here is the token
+  set (`btnSecondaryStyle`), not HDS's variant class, so the same element serves
+  both. HDS's own `hds-button--secondary` is a hashed CSS-module name we could not
+  address even if we wanted it.
+- **`fullWidth` is ours** (`.button-link--full`, one declaration) — `Link` has no
+  such prop, and the base class already centres the label.
+- **Only a plain left click is intercepted.** A cmd/ctrl/shift/alt or middle click
+  falls through to the real `href`, so open-in-new-tab keeps working. Losing that is
+  the usual price of hand-rolling this, and it is exactly what a real link buys.
+  Pinned by five cases in `ButtonLink.test.jsx`.
+
+This flips the element's role, so a test looking for `getByRole('button')` on one of
+these has to look for `link`. Seven assertions moved when the 25 landed, and each got
+stronger for it: "this is a link" says more than "this is a button".
+
+One caveat for anyone counting these: **a regex will undercount them.** The sweep that
+found the first 23 missed two more whose `<Link>` held a ternary rather than a `<Button>`
+directly. The runtime invariant found those; grep did not.
 
 ## OIUEEI Customization Layer
 

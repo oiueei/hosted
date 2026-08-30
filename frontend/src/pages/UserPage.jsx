@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Koros, Notification } from 'hds-react';
+import { Koros, Notification } from 'hds-react';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import { apiFetch } from '../services/api';
@@ -11,6 +11,7 @@ import CollectionLinkbox from '../components/CollectionLinkbox';
 import { useLocalized } from '../utils/localized';
 import HeroPhoto from '../components/HeroPhoto';
 import ContactCorner from '../components/ContactCorner';
+import ButtonLink from '../components/ButtonLink';
 
 export default function UserPage() {
   const { userCode: paramCode } = useParams();
@@ -157,14 +158,12 @@ export default function UserPage() {
       )}
       {isOwnProfile && (
         <div className="button-row-wide" style={{ paddingBottom: 'var(--spacing-s)' }}>
-          <Link to="/me/edit">
-            <Button style={btnStyle}>{t('userPage.editProfile')}</Button>
-          </Link>
-          <Link to="/logout">
-            <Button variant="secondary" style={btnSecondaryStyle}>
-              {t('userPage.logout')}
-            </Button>
-          </Link>
+          <ButtonLink to="/me/edit" style={btnStyle}>
+            {t('userPage.editProfile')}
+          </ButtonLink>
+          <ButtonLink to="/logout" style={btnSecondaryStyle}>
+            {t('userPage.logout')}
+          </ButtonLink>
         </div>
       )}
     </div>

@@ -224,7 +224,7 @@ describe('ThingLinkbox — owner button matrix', () => {
     const thing = makeThing({ status: 'ACTIVE' });
     renderLinkbox({ thing, userCode: 'OWNER1' });
 
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reactivate' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Confirm hold' })).toBeNull();
@@ -235,7 +235,7 @@ describe('ThingLinkbox — owner button matrix', () => {
     renderLinkbox({ thing, userCode: 'OWNER1' });
 
     expect(screen.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
@@ -245,7 +245,7 @@ describe('ThingLinkbox — owner button matrix', () => {
 
     expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
   });
 
   // The pending booking arrives from the /calendar/ fetch (date-based type).
@@ -287,7 +287,7 @@ describe('ThingPage — owner button matrix', () => {
     setApi({ thing: makeThing({ status: 'ACTIVE', owner: 'OWNER1' }) });
     renderThingPage();
 
-    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reactivate' })).toBeNull();
   });
@@ -298,7 +298,7 @@ describe('ThingPage — owner button matrix', () => {
     renderThingPage();
 
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
@@ -309,7 +309,7 @@ describe('ThingPage — owner button matrix', () => {
 
     expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
   });
 });
 

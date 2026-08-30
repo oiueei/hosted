@@ -504,6 +504,13 @@ div[class*='Linkbox-module_linkbox'] {
    the (0,2,0) of HDS's own `:focus-visible`, which should go on drawing the outline
    itself from our token. `main:focus` below is (0,1,1) too and comes later in this
    file, so it still wins where it has to. */
+/* HDS's `fullWidth` lives on the Button component; `Link` has no such prop and its
+   own `hds-button--fullwidth` class is a hashed CSS-module name we cannot address.
+   One declaration is the whole of it — the base class already centres the label. */
+.button-link--full {
+  width: 100%;
+}
+
 body :focus-visible {
   outline: 3px solid var(--color-black);
   outline-offset: 3px;

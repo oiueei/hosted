@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Checkbox, DateInput, Notification, Select } from 'hds-react';
 import { DATE_TYPES } from '../constants/things';

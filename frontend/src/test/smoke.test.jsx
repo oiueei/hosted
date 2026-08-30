@@ -171,17 +171,13 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// The nesting that already exists, named so it can only shrink. Each entry is a
-// `<Link>` wrapping an HDS `<Button>` — one control, two tab stops — and the fix
-// for all of them is `Link` + `useButtonStyles` (see frontend/CLAUDE.md). Entries
-// are distinct *shapes*, not occurrences: the debt is the pattern, and the fix
-// removes the pattern rather than instances of it.
-//
-// An entry that no longer matches fails too. That is the point: a page cleaned up
-// must lose its line, or the list stops describing the app and starts hiding it.
-const KNOWN_NESTING = {
-  NotFoundPage: ['a \u203a button \u2014 \u201cGo to homepage\u201d'],
-};
+// Nesting that predates the invariant, named per surface so it can only shrink.
+// **It is empty, and that is the state to keep it in.** The 25 entries it was born
+// with were all `<Link>` wrapping an HDS `<Button>` — one control, two tab stops —
+// and every one of them is now `ButtonLink`. An entry that no longer matches fails
+// as loudly as a new violation: a surface that has been cleaned up must lose its
+// line, or the list stops describing the app and starts hiding it.
+const KNOWN_NESTING = {};
 
 // ── Smoke + axe helper ─────────────────────────────────────────────────
 function smokeAndAxe(name, Component, routeOpts) {
