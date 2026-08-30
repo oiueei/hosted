@@ -79,7 +79,17 @@ export default function ImageCarousel({ images = [], alt = '', variant = 'detail
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {to ? <Link to={to}>{img}</Link> : img}
+        {/* `to` is only ever the page the caller already links to by name (a
+            thing's headline), so this link repeats a destination the reader can
+            reach — it stays clickable and leaves the tab order, the same trade
+            the cover photo makes in ThingLinkbox. */}
+        {to ? (
+          <Link to={to} tabIndex={-1} aria-hidden="true">
+            {img}
+          </Link>
+        ) : (
+          img
+        )}
         {/* `aria-disabled`, never `disabled`: disabling the button that currently
             holds focus makes the browser drop focus to <body>, so reaching the
             last image by clicking "next" would cost the reader their tab position

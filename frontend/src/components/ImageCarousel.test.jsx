@@ -109,14 +109,33 @@ describe('ImageCarousel accessible announcement', () => {
 
 describe('ImageCarousel as a link', () => {
   test('the image links to the thing while the arrows only change the photo', () => {
-    renderCarousel({ to: '/things/ABC123' });
+    const { container } = renderCarousel({ to: '/things/ABC123' });
 
-    // The photo is the navigation target...
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/things/ABC123');
+    // The photo is the navigation target for a pointer...
+    expect(container.querySelector('a')).toHaveAttribute('href', '/things/ABC123');
 
     // ...but paging must not navigate, or browsing photos would leave the page.
     fireEvent.click(next());
     expect(shownSrc()).toBe('b.jpg');
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/things/ABC123');
+    expect(container.querySelector('a')).toHaveAttribute('href', '/things/ABC123');
+  });
+
+  test('that link costs no tab stop and is announced by nobody', () => {
+    // It repeats a destination the caller already links to by name — the thing's
+    // headline — so leaving it in the tab order gave every card two stops to the
+    // same place, and a screen reader two entries under the same words.
+    const { container } = renderCarousel({ to: '/things/ABC123' });
+
+    const link = container.querySelector('a');
+    expect(link).toHaveAttribute('tabindex', '-1');
+    expect(link).toHaveAttribute('aria-hidden', 'true');
+    // Out of the accessibility tree entirely — not merely unlabelled, which
+    // would be an unnamed link rather than no link.
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    // aria-hidden must never wrap something focusable, and tabindex=-1 is what
+    // keeps that true.
+    expect(
+      container.querySelectorAll('[aria-hidden="true"] a[href]:not([tabindex="-1"])')
+    ).toHaveLength(0);
   });
 });

@@ -41,6 +41,30 @@
   /* --color-bus-dark: #TODO; */
 
   /* -- Secondary (coat-of-arms) ------------------------------------- */
+  /* Not a brand choice — none of the 12 theeemes uses this slot. In this app the
+     token is very nearly a focus-ring colour and nothing else, and HDS hard-codes
+     it as one in nine components (DatePicker days, DialogHeader's close and title,
+     Linkbox, Notification's label, Table's sort button, ToggleButton) instead of
+     reading `--color-focus-outline` the way the rest of it does. Those nine also
+     set `outline: none` and draw their own `box-shadow` at a specificity the
+     two-tone ring in App.css cannot reach, so this token is the only handle we
+     have on them.
+
+     This is margin and consistency, NOT a conformance fix, and the difference
+     matters to whoever reads this next. Those nine never sit on a hero: they live
+     on the page background or inside a component with a light ground of its own.
+     Across those surfaces — 12 theeemes x (color_02, white) — HDS's #0072c6
+     already passes 1.4.11 everywhere, but only just: worst case 3.23:1 against a
+     3.0 threshold, so any future palette could tip it under. Black is 13.65:1 at
+     worst, and is the colour the outer band of the ring already uses everywhere
+     else.
+
+     Two visible effects are not focus at all, because HDS reuses the token:
+     FileInput's dark accent (border and text) and Dialog's border. Both go black.
+
+     Delete this when HDS routes those components through `--color-focus-outline`;
+     see the HDS notes in frontend/CLAUDE.md. */
+  --color-coat-of-arms: var(--color-black);
   /* --color-coat-of-arms: #TODO; */
   /* --color-coat-of-arms-light: #TODO; */
   /* --color-coat-of-arms-medium-light: #TODO; */

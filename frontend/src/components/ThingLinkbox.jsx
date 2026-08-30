@@ -121,10 +121,17 @@ function ThingLinkbox({
         if (images.length === 0) return null;
         if (images.length === 1) {
           return (
-            <Link to={thingPath}>
+            // Same destination and same name as the headline link below, so it
+            // is a second tab stop that goes nowhere new — and a second entry
+            // under the same words in a screen reader's list of links, twice per
+            // card. The headline is the real link; this one keeps working for a
+            // pointer and steps out of the way of everything else. The `alt`
+            // empties with it: the name is announced once, by the link that
+            // stayed.
+            <Link to={thingPath} tabIndex={-1} aria-hidden="true">
               <img
                 src={images[0]}
-                alt={headline}
+                alt=""
                 className="thing-card-image"
                 loading="lazy"
                 onError={onImageError}

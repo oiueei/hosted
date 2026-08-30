@@ -153,6 +153,23 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     ).toEqual([]);
   });
 
+  test('a card offers one link to its thing, not two', async () => {
+    // The cover photo and the headline both pointed at the same page under the
+    // same name, so every card cost two tab stops to one destination and put two
+    // identical entries in a screen reader's list of links. In a collection
+    // showing 24 things that is 48 entries for 24 places. The headline is the one
+    // that stayed; the photo still works for a pointer.
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    const toThing = [...container.querySelectorAll('a[href]')].filter((a) =>
+      a.getAttribute('href').endsWith('/things/THG001')
+    );
+    expect(toThing).toHaveLength(2);
+    expect(toThing.filter((a) => a.getAttribute('tabindex') !== '-1')).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Test Thing' })).toHaveLength(1);
+  });
+
   test('the opened broadcast form has no axe violations', async () => {
     const { container } = renderCollection();
     await screen.findByText('Test Thing');
