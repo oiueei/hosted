@@ -91,6 +91,12 @@ export default function TagInput({
               <Tag
                 key={tg}
                 onDelete={() => onChange(tags.filter((x) => x !== tg))}
+                // HDS v6 makes the whole chip the delete control — one
+                // `<div role="button">` whose accessible name is just the label,
+                // with no word anywhere for what activating it does. So the name
+                // has to say it, or a screen reader announces "button, Vintage"
+                // and nothing about removal. See the HDS notes in CLAUDE.md.
+                aria-label={t('tags.remove', { tag: L(tg) })}
                 // A localized chip reads as words like any other; the tooltip names
                 // the languages it carries, so the owner can tell the two apart.
                 title={localized ? Object.keys(localized).join(' · ') : undefined}

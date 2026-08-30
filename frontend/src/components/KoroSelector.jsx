@@ -29,7 +29,7 @@ export default function KoroSelector({ value, onChange }) {
               <span className="koro-name">{t('koro.' + type)}</span>
               {selected && (
                 <span className="koro-check">
-                  <IconCheck size="xs" />
+                  <IconCheck size="xs" aria-hidden="true" />
                 </span>
               )}
             </button>

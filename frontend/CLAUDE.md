@@ -620,6 +620,11 @@ Four non-obvious behaviours:
 
 ### Links — three kinds, and why HDS `Link` is not used yet
 
+> Superseded in part by **A link that looks like a button** below: the 2026-08-30
+> keyboard round found a fourth kind this list missed — a router `Link` wrapped
+> around an HDS `Button`, 28 of them — and `Link`'s `useButtonStyles` is what HDS
+> offers for it. The reasoning below still holds for kinds 1–3.
+
 HDS ships a `Link` component and this app imports it **nowhere**, which under DESIGN §1 needs a reason rather than a silence. Reviewed 2026-08-17; the reason is that "link" here means three different things:
 
 1. **Internal navigation** — react-router's `Link`, and it has to be: an HDS `<a>` would reload the SPA. This is the overwhelming majority, and it is not a deviation at all (HDS has no router).
@@ -636,6 +641,76 @@ Two, and the first one fails **silently** — both learned the expensive way whi
 2. **It re-wraps every child in a `<div key={child.props.id}>`.** A child without an `id` prop gets `key: undefined`, so React logs a missing-key error for each one. Children that are wrappers rather than HDS controls therefore carry an `id` they have no other use for.
 
 It also owns the vertical rhythm (`--spacing-row`, a grid `gap`), so per-option margins are its job, not the caller's.
+
+### HDS accessibility bugs we carry
+
+Found in the **2026-08-30 keyboard round**, all in `hds-react@6.0.5`, all verified
+against the shipped bundle rather than the docs. The decision each time was the
+same and it is deliberate: **stay on HDS, work around it only where the workaround
+is itself an HDS API, and wait for upstream on the rest.** Delete an entry here
+when a release fixes it — do not let one rot into a permanent local fork.
+
+**1. `Linkbox` announces as a region, not a link.** It renders
+`<div role="region" tabindex="0">` with the real `<a>` inside at `tabindex="-1"`,
+and activates it from an `onKeyPress` handler. So the card *is* reachable (one tab
+stop) and Enter *does* follow it — but it is announced as "region", it never appears
+in a screen reader's list of links, **Space does not activate it**, and `onKeyPress`
+is a deprecated React alias. HDS's own documentation site renders the identical
+markup, so this is theirs, not a misuse. **Not worked around** — the only fix is to
+stop using the component, which costs more than the defect. Affects the collection
+grids on `HomePage` and `UserPage` (`CollectionLinkbox`).
+
+**2. A deletable `Tag` has no name for what it does.** v6 makes the *whole chip* the
+control — one `<div role="button">` named from its own text — and there is no
+`deleteButtonAriaLabel` prop any more. A screen reader announces "button, Vintage"
+and nothing about removal. **Worked around**: `TagInput` passes its own `aria-label`
+(the rest props land on that div, last in the `Object.assign`, so it wins). Pinned by
+`TagInput.test.jsx`.
+
+**3. Nine components hard-code their focus ring to `var(--color-coat-of-arms)`**
+instead of reading `--color-focus-outline` the way the rest of HDS does —
+`DatePicker` days, `DialogHeader`'s close and title, `Linkbox`, `Notification`'s
+label, `Table`'s sort button, `ToggleButton`. They also set `outline: none` and draw
+their own `box-shadow`, at a specificity a global rule cannot reach, so the two-tone
+ring in `App.css` does not apply to them. See the focus-ring comment there for why a
+single colour fails; `#0072c6` clears 3:1 on only 31 of the 48 theeeme surfaces.
+
+**4. Icons carry no `aria-hidden`.** `IconFoo` renders a bare decorative `<svg>`, so
+**every** call site has to add `aria-hidden="true"` itself (or a label, when the icon
+is the only content). There is no default and no lint rule; the audit found two that
+had been missed.
+
+**5. `Link`'s new-tab and external-domain labels default to Finnish**
+(`"avautuu uudessa välilehdessä"`, `"Siirtyy toiseen sivustoon."`) — the same trap as
+`Select`'s `language`, and just as invisible, since it only changes what is announced.
+Any adoption of `Link` with `openInNewTab` or `external` **must** pass
+`openInNewTabLabel` / `openInExternalDomainAriaLabel` in all three locales.
+
+### A link that looks like a button: `Link` + `useButtonStyles`
+
+`Button` always renders `<button>` — there is no `as` or `href` prop, and wrapping it
+in a router `<Link>` produces nested interactive elements: **two tab stops for one
+control**, announced "link… button", with the `<a>` taking the focus ring while the
+`<button>` carries the look. `jsx-a11y` has no rule for it and **axe reports no
+violation**, which is how 28 of them accumulated.
+
+HDS's own answer is `Link`'s `useButtonStyles`, which swaps the link class for
+`hds-button hds-button--primary` — the real button CSS, same `--computed-*` token
+chain, so the theeeme styles from `useTheeeme` still apply and a secondary button is
+just the secondary token set on the same element. It renders one `<a>`: one tab stop,
+`role="link"`, right-click and open-in-new-tab intact. Rest props pass through, so
+client-side navigation is the same `preventDefault` + `navigate()` shape
+`CollectionLinkbox` already uses for `Linkbox`:
+
+```jsx
+<Link href={path} useButtonStyles style={btnStyle}
+      onClick={(e) => { e.preventDefault(); navigate(path); }}>
+  Create collection
+</Link>
+```
+
+Note this flips the element's role, so a test looking for `getByRole('button')` on one
+of these has to look for `link` instead.
 
 ## OIUEEI Customization Layer
 

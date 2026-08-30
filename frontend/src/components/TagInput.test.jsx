@@ -78,6 +78,23 @@ describe('TagInput (the tag vocabulary editor)', () => {
     expect(screen.getByText(/over 32 characters/)).toBeInTheDocument();
   });
 
+  test('a chip says that activating it removes the tag, and removes it', () => {
+    // HDS v6 makes the whole chip one `<div role="button">` and names it from
+    // its own text, so without an aria-label the only thing announced is the
+    // tag — never that pressing it deletes. The name is the affordance here.
+    const onChange = renderInput({ tags: ['Vintage', 'Retro'] });
+
+    const chip = screen.getByRole('button', { name: 'Remove Vintage' });
+    fireEvent.click(chip);
+    expect(onChange).toHaveBeenCalledWith(['Retro']);
+  });
+
+  test('a localized chip is named by the words, not the raw map', () => {
+    renderInput({ tags: ['{"es": "Juguetes", "ca": "Joguines"}'] });
+
+    expect(screen.getByRole('button', { name: 'Remove Juguetes' })).toBeInTheDocument();
+  });
+
   test('at the cap of 12 the input and Add are disabled', () => {
     renderInput({ tags: Array.from({ length: 12 }, (_, i) => `tag-${i}`) });
 

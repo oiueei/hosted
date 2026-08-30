@@ -781,7 +781,8 @@
   },
   "tags": {
     "add": "Añadir",
-    "tooLong": "Una etiqueta supera los {{limit}} caracteres (por idioma)."
+    "tooLong": "Una etiqueta supera los {{limit}} caracteres (por idioma).",
+    "remove": "Quitar {{tag}}"
   },
   "errorBoundary": {
     "title": "Algo ha salido mal",

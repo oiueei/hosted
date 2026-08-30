@@ -787,7 +787,8 @@
   },
   "tags": {
     "add": "Add",
-    "tooLong": "One label is over {{limit}} characters (per language)."
+    "tooLong": "One label is over {{limit}} characters (per language).",
+    "remove": "Remove {{tag}}"
   },
   "rental": {
     "durationsLabel": "Rental lengths",

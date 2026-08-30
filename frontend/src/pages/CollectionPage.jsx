@@ -626,6 +626,7 @@ export default function CollectionPage() {
                     type={broadcastResult.type}
                     style={{ marginBottom: 'var(--spacing-s)' }}
                     dismissible
+                    closeButtonLabelText={t('common.close')}
                     onClose={() => setBroadcastResult(null)}
                   >
                     {broadcastResult.message}
