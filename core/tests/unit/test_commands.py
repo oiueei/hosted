@@ -2,6 +2,7 @@
 Unit tests for OIUEEI management commands.
 """
 
+from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from io import StringIO
@@ -11,11 +12,12 @@ import pytest
 import time_machine
 from django.core import mail
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.utils import timezone
 
 from core.models import RSVP, Collection, Thing, User
 from core.models.booking import BookingPeriod
-from core.services import email_service
+from core.services import email_service, storage
 
 
 @pytest.mark.django_db
@@ -497,3 +499,162 @@ class TestAddTotpDeviceCommand:
         call_command("add_totp_device", "staff@example.com", "--replace")
         assert TOTPDevice.objects.filter(user=user).count() == 1
         assert TOTPDevice.objects.get(user=user).key != first_key
+
+
+class TestSetBucketCorsCommand:
+    """The command that writes the one piece of setup living on the bucket.
+
+    Every test here is about a way the bucket can end up *looking* configured
+    while uploads go on failing — which is the failure this command exists to
+    end, and the only one that never shows up in a log.
+    """
+
+    BUCKET = {
+        "OBJECT_STORAGE_ENDPOINT": "https://fsn1.example-storage.com",
+        "OBJECT_STORAGE_BUCKET": "a-bucket",
+        "OBJECT_STORAGE_REGION": "fsn1",
+        "OBJECT_STORAGE_ACCESS_KEY": "key",
+        "OBJECT_STORAGE_SECRET_KEY": "secret",
+    }
+
+    @pytest.fixture(autouse=True)
+    def configured(self, settings):
+        for name, value in self.BUCKET.items():
+            setattr(settings, name, value)
+        settings.CORS_ALLOWED_ORIGINS = []
+        return settings
+
+    @contextmanager
+    def _bucket(self, existing=None):
+        """A bucket holding ``existing`` rules, recording what gets written."""
+        written = []
+
+        def put(rules):
+            written.clear()
+            written.extend(rules)
+
+        state = list(existing or [])
+
+        with (
+            patch.object(storage, "get_cors", side_effect=lambda: written or state),
+            patch.object(storage, "put_cors", side_effect=put),
+        ):
+            yield written
+
+    def _run(self, *args, **kwargs):
+        out = StringIO()
+        call_command("set_bucket_cors", *args, stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_it_writes_rules_for_the_origin_it_was_given(self):
+        with self._bucket() as written:
+            self._run("--origin", "https://www.example.com")
+
+        assert written == storage.cors_rules(["https://www.example.com"])
+
+    def test_it_falls_back_to_the_origins_this_deployment_already_declares(self, configured):
+        """CORS_ALLOWED_ORIGINS is the list the API already had to get right."""
+        configured.CORS_ALLOWED_ORIGINS = ["https://www.example.com"]
+
+        with self._bucket() as written:
+            self._run()
+
+        assert written[0]["AllowedOrigins"] == ["https://www.example.com"]
+
+    def test_with_no_origins_anywhere_it_refuses_rather_than_writing_an_empty_rule(self):
+        """A rule allowing nobody is indistinguishable from a configured bucket."""
+        with self._bucket() as written, pytest.raises(CommandError, match="No origins"):
+            self._run()
+
+        assert written == []
+
+    def test_a_trailing_slash_is_normalised_away(self):
+        """`https://x/` never equals the `Origin` a browser sends — it would match nothing.
+
+        And it fails *silently*: the bucket now has rules, so it looks done.
+        Pasting out of the address bar is how the slash gets there, so it is
+        corrected rather than refused.
+        """
+        with self._bucket() as written:
+            self._run("--origin", "https://www.example.com/")
+
+        assert written[0]["AllowedOrigins"] == ["https://www.example.com"]
+
+    def test_a_real_path_is_refused_because_cors_never_matches_one(self):
+        with self._bucket(), pytest.raises(CommandError, match="no path"):
+            self._run("--origin", "https://www.example.com/media")
+
+    def test_something_that_is_not_an_origin_is_refused(self):
+        with self._bucket(), pytest.raises(CommandError, match="Not an origin"):
+            self._run("--origin", "www.example.com")
+
+    def test_running_it_twice_writes_nothing_the_second_time(self):
+        rules = storage.cors_rules(["https://www.example.com"])
+
+        with self._bucket(existing=rules):
+            with patch.object(storage, "put_cors") as put:
+                output = self._run("--origin", "https://www.example.com")
+
+        put.assert_not_called()
+        assert "nothing to do" in output
+
+    def test_a_store_that_lowercases_the_headers_is_still_the_same_rules(self):
+        """Ceph answers with what it stored, not with what was sent.
+
+        Comparing dicts would make this command rewrite identical rules forever
+        and report a change every time.
+        """
+        stored = storage.cors_rules(["https://www.example.com"])
+        stored[0]["AllowedHeaders"] = [h.lower() for h in stored[0]["AllowedHeaders"]]
+        stored[0]["ExposeHeaders"] = []
+
+        with self._bucket(existing=stored):
+            with patch.object(storage, "put_cors") as put:
+                self._run("--origin", "https://www.example.com")
+
+        put.assert_not_called()
+
+    def test_it_will_not_throw_away_rules_somebody_else_wrote(self):
+        """A PutBucketCors replaces the whole configuration. On a shared bucket
+        that silently revokes another application's permissions."""
+        theirs = [{"AllowedOrigins": ["https://other.example"], "AllowedMethods": ["GET"]}]
+
+        with self._bucket(existing=theirs) as written:
+            with pytest.raises(CommandError, match="--replace"):
+                self._run("--origin", "https://www.example.com")
+
+        assert written == []
+
+    def test_replace_says_the_overwrite_was_meant(self):
+        theirs = [{"AllowedOrigins": ["https://other.example"], "AllowedMethods": ["GET"]}]
+
+        with self._bucket(existing=theirs) as written:
+            self._run("--origin", "https://www.example.com", "--replace")
+
+        assert written[0]["AllowedOrigins"] == ["https://www.example.com"]
+
+    def test_show_reports_and_changes_nothing(self):
+        rules = storage.cors_rules(["https://www.example.com"])
+
+        with self._bucket(existing=rules):
+            with patch.object(storage, "put_cors") as put:
+                output = self._run("--show")
+
+        put.assert_not_called()
+        assert "https://www.example.com" in output
+
+    def test_it_fails_loudly_when_the_store_did_not_keep_what_it_accepted(self):
+        """Hetzner drops the Cache-Control of a POST policy without a word — the
+        reason uploads are a PUT at all. A 200 is not evidence."""
+        with (
+            patch.object(storage, "get_cors", return_value=[]),
+            patch.object(storage, "put_cors"),
+            pytest.raises(CommandError, match="did not store them"),
+        ):
+            self._run("--origin", "https://www.example.com")
+
+    def test_an_unconfigured_checkout_says_which_setting_is_missing(self, configured):
+        configured.OBJECT_STORAGE_BUCKET = ""
+
+        with pytest.raises(CommandError, match="OBJECT_STORAGE_BUCKET"):
+            self._run("--origin", "https://www.example.com")

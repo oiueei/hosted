@@ -312,6 +312,73 @@ class TestListingWalksThePagesAndCarriesTheAge:
         )
 
 
+class TestTheCorsRulesMatchWhatTheTicketAsksFor:
+    """The rules and the ticket are two halves of one handshake.
+
+    `presign_upload` decides which headers the browser will send; these rules
+    decide which the bucket will accept. They live in the same module for that
+    reason, and this is the test that notices when only one of them changes —
+    the failure otherwise appears in a browser, in production, as an upload that
+    dies before it starts while the server logs a perfectly good ticket.
+    """
+
+    def test_the_allowed_headers_are_exactly_the_ones_a_ticket_sends(self, s3):
+        ticket = storage.presign_upload(
+            "oiueei/things/k", content_type="image/webp", content_length=10, max_bytes=100
+        )
+        sent = {name.lower() for name in ticket["headers"]}
+        allowed = {name.lower() for name in storage.CORS_HEADERS}
+        assert sent == allowed, (
+            "a header the ticket sends and the rules do not allow is a preflight 403"
+        )
+
+    def test_content_length_is_not_among_them(self):
+        """It is signed, but the browser sets it — a preflight never names it."""
+        assert not any(h.lower() == "content-length" for h in storage.CORS_HEADERS)
+
+    def test_only_put_is_allowed(self):
+        """Reads are `<img src>` and need no rule; allowing GET would widen for nobody."""
+        assert storage.CORS_METHODS == ("PUT",)
+
+    def test_the_rules_carry_every_origin_in_one_rule(self):
+        rules = storage.cors_rules(["https://a.example", "https://b.example"])
+        assert len(rules) == 1
+        assert rules[0]["AllowedOrigins"] == ["https://a.example", "https://b.example"]
+
+    def test_the_preflight_is_cached_so_a_bulk_import_asks_once(self):
+        """100 photos out of one ZIP is 100 uploads; it must not be 100 preflights."""
+        assert storage.cors_rules(["https://a.example"])[0]["MaxAgeSeconds"] > 0
+
+
+class TestReadingAndWritingTheCorsConfiguration:
+    def test_an_unconfigured_bucket_reads_as_no_rules_not_an_error(self, s3):
+        """Having none is where every bucket starts — an answer, not a failure."""
+        s3.get_bucket_cors.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchCORSConfiguration"}}, "GetBucketCors"
+        )
+        assert storage.get_cors() == []
+
+    def test_a_permission_error_raises_rather_than_reading_as_absent(self, s3):
+        """Otherwise a credential scoped too narrowly looks like a bucket to configure."""
+        s3.get_bucket_cors.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied"}, "ResponseMetadata": {"HTTPStatusCode": 403}},
+            "GetBucketCors",
+        )
+        with pytest.raises(ClientError):
+            storage.get_cors()
+
+    def test_existing_rules_come_back_as_they_are(self, s3):
+        s3.get_bucket_cors.return_value = {"CORSRules": [{"AllowedOrigins": ["https://x.example"]}]}
+        assert storage.get_cors() == [{"AllowedOrigins": ["https://x.example"]}]
+
+    def test_writing_names_the_configured_bucket(self, s3):
+        rules = storage.cors_rules(["https://a.example"])
+        storage.put_cors(rules)
+        s3.put_bucket_cors.assert_called_once_with(
+            Bucket="test-bucket", CORSConfiguration={"CORSRules": rules}
+        )
+
+
 class TestThePublicBaseUrlIsDerivedUnlessGiven:
     """The setting is built in `config/settings/base.py`, so read it from there.
 

@@ -296,6 +296,14 @@ ruff format .                              # formatting (replaces black)
 # Create admin user
 python manage.py createsuperuser
 
+# Object storage: write the bucket's CORS rules — without them NOBODY CAN UPLOAD.
+# The browser writes straight to the bucket, so it preflights, and a store with no
+# rules answers that 403 before the file leaves the laptop. Photos already stored
+# keep loading throughout, so the deployment looks healthy. Idempotent; re-run it
+# whenever your domains change. With no --origin it uses CORS_ALLOWED_ORIGINS.
+python manage.py set_bucket_cors --origin https://your-domain
+python manage.py set_bucket_cors --show     # what the bucket allows right now
+
 # Scheduled jobs (run via Heroku Scheduler in production — one daily job chains them)
 python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)

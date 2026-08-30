@@ -115,6 +115,14 @@ heroku config:set \
 >
 > **Create the bucket private, and do not enable object locking.** Objects are made public individually at upload time, which is what keeps a *listable* bucket from exposing the photos of a collection its owner chose to keep private; and locking would break record deletion, `seed_demo --reset` and `cleanup_orphan_images`, all of which delete for real. Give the app credentials scoped to that bucket alone, and use a **separate bucket with separate credentials** for development — the orphan sweep deletes what it finds, and it must never be looking at production.
 >
+> **Then write the bucket's CORS rules, or nobody can upload anything.** The browser `PUT`s the file straight to the bucket, which makes it a cross-origin request with custom headers — so it sends a preflight `OPTIONS` first, and a store with **no CORS configuration answers that 403**. The upload dies in the browser, before the file leaves the laptop, and **your server sees nothing wrong**: it issued a perfectly good ticket. Worse, the deployment looks healthy from the outside, because every photo already in the bucket goes on loading — reading one is an `<img src>`, which is not a cross-origin request and needs no rules at all. Run this once per bucket, and again whenever your domains change:
+>
+> ```bash
+> heroku run --app your-app-name "python manage.py set_bucket_cors --origin https://your-domain"
+> ```
+>
+> Quote the inner command or the Heroku CLI eats `--origin`. With no `--origin` it falls back to `CORS_ALLOWED_ORIGINS`. It is idempotent, it prints what the bucket allows before and after, and it refuses to overwrite rules it did not write unless you pass `--replace`. `--show` reports without changing anything.
+
 > Set `MEDIA_PUBLIC_BASE_URL` only if you put a CDN or a custom domain in front; it defaults to the bucket's own URL. It says where files are **read** from and nothing else — an upload is a `PUT` to a presigned URL, which is always signed for the bucket, so the Content-Security-Policy names both hosts and a CDN does not break uploading. A wrong value shows up as images that silently refuse to load.
 
 > **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. **No default any more** (2026-08, S2): without it the component renders nothing rather than quietly forwarding your users' feedback to the upstream project's own form, which they'd have had no way to know about or to name as a processor in their own legal text.

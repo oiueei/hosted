@@ -210,6 +210,28 @@ class TestSecurityHeadersMiddleware:
         img = next(d for d in csp.split(";") if d.strip().startswith("img-src"))
         assert "https://a-bucket.fsn1.example-storage.com" in img
 
+    def test_csp_allows_inline_data_images(self):
+        """HDS draws much of its iconography as `data:image/svg+xml`.
+
+        Forty of them in the built `vendor-hds` chunk, so a policy without this
+        blocks an icon on nearly every page — which it did, in production, for as
+        long as this header existed. Nobody noticed because a missing icon looks
+        like a design choice and only the console says otherwise.
+
+        It costs nothing: an SVG rendered through `<img>` executes no script, and
+        `object-src 'none'` still refuses the element that would.
+        """
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+        img = next(d for d in csp.split(";") if d.strip().startswith("img-src"))
+        assert "data:" in img
+
+    def test_csp_does_not_let_data_urls_anywhere_else(self):
+        """`data:` is an image allowance, not a habit — it must not reach scripts."""
+        csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
+        for directive in ("default-src", "script-src", "connect-src", "object-src"):
+            found = next(d for d in csp.split(";") if d.strip().startswith(directive))
+            assert "data:" not in found, f"{directive} should not allow data: — {found!r}"
+
     def test_csp_allows_uploading_to_the_media_host(self, settings):
         """The upload is a fetch() straight to the bucket, so connect-src must allow it."""
         settings.MEDIA_PUBLIC_BASE_URL = "https://a-bucket.fsn1.example-storage.com"
@@ -274,7 +296,7 @@ class TestSecurityHeadersMiddleware:
         settings.MEDIA_PUBLIC_BASE_URL = ""
         settings.OBJECT_STORAGE_PUBLIC_URL = ""
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
-        assert "img-src 'self' blob:;" in csp
+        assert "img-src 'self' blob: data:;" in csp
         assert "connect-src 'self';" in csp
 
     def test_csp_no_longer_names_cloudinary(self, settings):
