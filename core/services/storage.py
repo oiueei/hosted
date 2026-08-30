@@ -63,6 +63,38 @@ ASSET_FOLDERS = frozenset({USER_FOLDER, THING_FOLDER, COLLECTION_FOLDER, DOCUMEN
 # S3 caps one DeleteObjects call at 1000 keys.
 _DELETE_LIMIT = 1000
 
+# ── CORS: what the *bucket* has to allow, as opposed to what we sign ──────────
+#
+# The browser writes to the bucket cross-origin — the app is served from the
+# deployment's own domain and the presigned PUT goes to the bucket's virtual
+# host. That request carries ``x-amz-acl`` and ``Cache-Control``, so it is never
+# a "simple" request: the browser sends a preflight ``OPTIONS`` first, and a
+# store with no CORS configuration answers it **403**. Ceph answers it with a
+# ``SignatureDoesNotMatch`` body, which reads like a signing bug and is not one —
+# a preflight carries none of the signed headers, because it is the browser
+# asking permission rather than the app uploading.
+#
+# Nothing on our side sees any of it. The ticket was issued, the credentials are
+# right, the signature is right, and the file never leaves the laptop. Reads go
+# on working throughout, because an ``<img src>`` is not a cross-origin request
+# in the CORS sense and needs no rules at all — which is how a bucket can serve
+# every photo it holds while accepting no new one.
+#
+# ``manage.py set_bucket_cors`` writes these. They are declared *here* because
+# this is the module that owns the bucket, and because ``presign_upload`` above
+# is what decides the three headers the rules have to allow: two lists that must
+# agree, kept in one file.
+CORS_METHODS = ("PUT",)
+# Exactly the headers ``presign_upload`` returns. ``Content-Length`` is signed
+# too but is deliberately absent: it is a forbidden header name, set by the
+# browser itself, and never named in a preflight.
+CORS_HEADERS = ("Content-Type", "Cache-Control", "x-amz-acl")
+# One hour of preflight cache. The number that matters is the ZIP import: a
+# hundred rows with a photo each is a hundred uploads, and without this it is
+# also a hundred extra round trips to Falkenstein before any of them starts.
+CORS_MAX_AGE_SECONDS = 3600
+
+
 _clients = {}
 
 
@@ -105,6 +137,16 @@ def client():
             ),
         )
     return _clients[key]
+
+
+def bucket_name():
+    """The configured bucket, or ``ImproperlyConfigured`` naming what is unset.
+
+    A named accessor because callers outside this module want the bucket for a
+    message ("Bucket: oiueei") and reaching into ``_config()`` for it is how a
+    private helper becomes public by habit rather than by decision.
+    """
+    return _config()["bucket"]
 
 
 def public_url(key):
@@ -181,6 +223,55 @@ def presign_upload(key, content_type, content_length, max_bytes):
             "Cache-Control": CACHE_CONTROL,
         },
     }
+
+
+def cors_rules(origins, max_age=CORS_MAX_AGE_SECONDS):
+    """The rule set this project needs for ``origins``. Pure — no network.
+
+    One rule holding every origin, not one rule each: a CORS rule already takes a
+    list, and the browser matches the request's ``Origin`` against the whole set.
+
+    ``GET`` is deliberately not among the methods. Reads are ``<img src>``, which
+    works against a bucket with no rules whatsoever — that is exactly what this
+    deployment did for a week — so allowing it would widen the policy for a
+    request nobody makes.
+    """
+    return [
+        {
+            "AllowedOrigins": list(origins),
+            "AllowedMethods": list(CORS_METHODS),
+            "AllowedHeaders": list(CORS_HEADERS),
+            "MaxAgeSeconds": max_age,
+        }
+    ]
+
+
+def get_cors():
+    """The bucket's CORS rules, or ``[]`` when it has none.
+
+    A bucket that was never configured answers ``NoSuchCORSConfiguration``
+    rather than an empty list. Having none is the state every fresh bucket is in,
+    so that is an answer here and not an error.
+    """
+    try:
+        return client().get_bucket_cors(Bucket=_config()["bucket"]).get("CORSRules", [])
+    except ClientError as exc:
+        error = exc.response.get("Error", {})
+        status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if error.get("Code", "").startswith("NoSuchCORSConfiguration") or status == 404:
+            return []
+        raise
+
+
+def put_cors(rules):
+    """Replace the bucket's CORS configuration with ``rules``.
+
+    Replace, not merge — S3 has no partial update for this, and pretending
+    otherwise is how a bucket ends up carrying two half-right policies. Refusing
+    to overwrite rules somebody else wrote is the command's job, not this one's:
+    this is the door, and it does what it is told.
+    """
+    client().put_bucket_cors(Bucket=_config()["bucket"], CORSConfiguration={"CORSRules": rules})
 
 
 def exists(key):
