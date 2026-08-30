@@ -186,7 +186,7 @@ describe('ThingPage — the confirm that was never shown', () => {
   test('accepting a taken gift asks first, and commits only on confirm', async () => {
     renderThing(takenGift);
     await screen.findByText('Blue armchair');
-
+    await screen.findByText(/Lele/); // same seed race as the test below
     fireEvent.click(await screen.findByRole('button', { name: /Confirm hold/i }));
 
     expect(await screen.findByText(/transfers the item/i)).toBeInTheDocument();
@@ -199,6 +199,13 @@ describe('ThingPage — the confirm that was never shown', () => {
   test('an endless gift is accepted without the transfer warning', async () => {
     renderThing({ ...takenGift, status: 'TAKEN', is_endless: true });
     await screen.findByText('Blue armchair');
+    // The headline renders in the commit that lands the thing; the booking list
+    // is seeded by a *passive* effect, which React runs after paint. So the
+    // button is clickable for a moment while `activePendingCode` is still null,
+    // and clicking then POSTs to /bookings/null/accept/. Waiting for the
+    // requester's name waits for the seed that the click depends on — this test
+    // flaked in CI on exactly that window, and passed locally every time.
+    await screen.findByText(/Lele/);
 
     fireEvent.click(await screen.findByRole('button', { name: /Confirm hold/i }));
 
