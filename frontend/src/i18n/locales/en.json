@@ -523,7 +523,9 @@
     "statusCancelled": "Cancelled",
     "statusExpired": "Expired",
     "expiredHelper": "This request expired automatically because the owner didn't reply within 72 hours (3 days).",
-    "pastRequests": "Past requests"
+    "pastRequests": "Past requests",
+    "captionPending": "Requests waiting for an answer",
+    "captionPast": "Requests already closed"
   },
   "ownerBookings": {
     "pageTitle": "Requests to me",
@@ -538,7 +540,9 @@
     "rejected": "Request declined. We've let them know.",
     "errorActing": "Couldn't answer that request. Please try again.",
     "errorLoading": "Error loading requests.",
-    "emptyCta": "Share a collection"
+    "emptyCta": "Share a collection",
+    "captionPending": "Requests waiting for your answer",
+    "captionPast": "Requests you have already answered"
   },
   "manageInvites": {
     "pageTitle": "Manage guests",
@@ -558,7 +562,8 @@
     "invitationSent": "Invitation sent.",
     "errorSending": "Error sending invitation.",
     "errorLoading": "Error loading collection.",
-    "noPermission": "You do not have access to this collection's guests."
+    "noPermission": "You do not have access to this collection's guests.",
+    "caption": "Guests of this collection"
   },
   "recommend": {
     "openLink": "Know someone who'd fit? Recommend them →",
@@ -787,7 +792,8 @@
   },
   "tags": {
     "add": "Add",
-    "tooLong": "One label is over {{limit}} characters (per language)."
+    "tooLong": "One label is over {{limit}} characters (per language).",
+    "remove": "Remove {{tag}}"
   },
   "rental": {
     "durationsLabel": "Rental lengths",

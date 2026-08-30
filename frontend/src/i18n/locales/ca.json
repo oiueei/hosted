@@ -517,7 +517,9 @@
     "statusCancelled": "Cancel·lada",
     "statusExpired": "Caducada",
     "expiredHelper": "Aquesta sol·licitud ha caducat automàticament perquè el propietari no ha respost en 72 hores (3 dies).",
-    "pastRequests": "Sol·licituds anteriors"
+    "pastRequests": "Sol·licituds anteriors",
+    "captionPending": "Sol·licituds a l'espera de resposta",
+    "captionPast": "Sol·licituds ja tancades"
   },
   "ownerBookings": {
     "pageTitle": "Sol·licituds per a mi",
@@ -532,7 +534,9 @@
     "rejected": "Sol·licitud rebutjada. Ja l'hi hem dit.",
     "errorActing": "No s'ha pogut respondre la sol·licitud. Torna-ho a provar.",
     "errorLoading": "Error en carregar les sol·licituds.",
-    "emptyCta": "Comparteix una col·lecció"
+    "emptyCta": "Comparteix una col·lecció",
+    "captionPending": "Sol·licituds esperant la teva resposta",
+    "captionPast": "Sol·licituds que ja has respost"
   },
   "manageInvites": {
     "pageTitle": "Gestionar convidats",
@@ -552,7 +556,8 @@
     "invitationSent": "Invitació enviada.",
     "errorSending": "Error en enviar la invitació.",
     "errorLoading": "Error en carregar la col·lecció.",
-    "noPermission": "No tens accés als convidats d'aquesta col·lecció."
+    "noPermission": "No tens accés als convidats d'aquesta col·lecció.",
+    "caption": "Convidats d'aquesta col·lecció"
   },
   "recommend": {
     "openLink": "Coneixes algú que hi encaixi? Recomana'l →",
@@ -781,7 +786,8 @@
   },
   "tags": {
     "add": "Afegeix",
-    "tooLong": "Una etiqueta supera els {{limit}} caràcters (per idioma)."
+    "tooLong": "Una etiqueta supera els {{limit}} caràcters (per idioma).",
+    "remove": "Treu {{tag}}"
   },
   "errorBoundary": {
     "title": "Alguna cosa ha anat malament",

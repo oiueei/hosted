@@ -13,6 +13,7 @@ import Toast from './Toast';
 import ImageCarousel from './ImageCarousel';
 import { onImageError } from '../utils/imageFallback';
 import { useLocalized } from '../utils/localized';
+import ButtonLink from './ButtonLink';
 
 // Memoised: CollectionPage keeps broadcast/tag-filter state at its root, so a
 // keystroke in the broadcast box re-renders the page. With stable props (the
@@ -120,10 +121,17 @@ function ThingLinkbox({
         if (images.length === 0) return null;
         if (images.length === 1) {
           return (
-            <Link to={thingPath}>
+            // Same destination and same name as the headline link below, so it
+            // is a second tab stop that goes nowhere new — and a second entry
+            // under the same words in a screen reader's list of links, twice per
+            // card. The headline is the real link; this one keeps working for a
+            // pointer and steps out of the way of everything else. The `alt`
+            // empties with it: the name is announced once, by the link that
+            // stayed.
+            <Link to={thingPath} tabIndex={-1} aria-hidden="true">
               <img
                 src={images[0]}
-                alt={headline}
+                alt=""
                 className="thing-card-image"
                 loading="lazy"
                 onError={onImageError}
@@ -212,17 +220,13 @@ function ThingLinkbox({
                   </Button>
                 </>
               )}
-              <Link to={editPath} style={{ display: 'contents' }}>
-                {needsPage && activePendingCode ? (
-                  <Button fullWidth variant="secondary" style={btnSecondaryStyle}>
-                    {t('common.edit')}
-                  </Button>
-                ) : (
-                  <Button fullWidth style={btnStyle}>
-                    {t('common.edit')}
-                  </Button>
-                )}
-              </Link>
+              <ButtonLink
+                to={editPath}
+                fullWidth
+                style={needsPage && activePendingCode ? btnSecondaryStyle : btnStyle}
+              >
+                {t('common.edit')}
+              </ButtonLink>
               {!bookings.some((b) => b.status === 'PENDING') && canDelete && (
                 <Button
                   variant="secondary"
@@ -260,11 +264,9 @@ function ThingLinkbox({
                   ? t('thingCard.cancelling')
                   : t('thingCard.cancelHold')}
               </Button>
-              <Link to={editPath} style={{ display: 'contents' }}>
-                <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
-                  {t('common.edit')}
-                </Button>
-              </Link>
+              <ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>
+                {t('common.edit')}
+              </ButtonLink>
             </>
           )}
           {isOwner && thing.status === 'INACTIVE' && (
@@ -272,11 +274,9 @@ function ThingLinkbox({
               <Button fullWidth disabled={activating} onClick={handleActivate} style={btnStyle}>
                 {activating ? t('thingCard.reactivating') : t('thingCard.reactivate')}
               </Button>
-              <Link to={editPath} style={{ display: 'contents' }}>
-                <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
-                  {t('common.edit')}
-                </Button>
-              </Link>
+              <ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>
+                {t('common.edit')}
+              </ButtonLink>
               {canDelete && (
                 <Button
                   variant="secondary"

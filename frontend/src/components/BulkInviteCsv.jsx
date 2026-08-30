@@ -7,6 +7,7 @@ import { stripSepLine, CSV_DELIMITERS } from '../utils/csv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
+import StatusRegion from './StatusRegion';
 
 const MAX_ROWS = 100;
 // An "email" column (required) and an optional "name" column.
@@ -149,34 +150,38 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
         buttonLabel={t('upload.addFileGeneric')}
         disabled={sending}
       />
-      {error && (
-        <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
-          {error}
-        </Notification>
-      )}
-      {result && (
-        <Notification
-          type={result.invited > 0 ? 'success' : 'info'}
-          size="small"
-          style={{ marginTop: 'var(--spacing-s)' }}
-        >
-          {t('bulkInvite.resultInvited', { count: result.invited })}
-          {result.skipped && result.skipped.length > 0 && (
-            <>
-              <div style={{ marginTop: 'var(--spacing-2-xs)' }}>
-                {t('bulkInvite.resultSkipped', { count: result.skipped.length })}
-              </div>
-              <ul style={{ margin: 'var(--spacing-2-xs) 0 0', paddingLeft: 'var(--spacing-m)' }}>
-                {result.skipped.map((s, i) => (
-                  <li key={i}>
-                    {s.email} — {t(REASON_KEY[s.reason] || 'bulkInvite.reasonInvalid')}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </Notification>
-      )}
+      <StatusRegion>
+        {error && (
+          <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
+            {error}
+          </Notification>
+        )}
+      </StatusRegion>
+      <StatusRegion>
+        {result && (
+          <Notification
+            type={result.invited > 0 ? 'success' : 'info'}
+            size="small"
+            style={{ marginTop: 'var(--spacing-s)' }}
+          >
+            {t('bulkInvite.resultInvited', { count: result.invited })}
+            {result.skipped && result.skipped.length > 0 && (
+              <>
+                <div style={{ marginTop: 'var(--spacing-2-xs)' }}>
+                  {t('bulkInvite.resultSkipped', { count: result.skipped.length })}
+                </div>
+                <ul style={{ margin: 'var(--spacing-2-xs) 0 0', paddingLeft: 'var(--spacing-m)' }}>
+                  {result.skipped.map((s, i) => (
+                    <li key={i}>
+                      {s.email} — {t(REASON_KEY[s.reason] || 'bulkInvite.reasonInvalid')}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </Notification>
+        )}
+      </StatusRegion>
       {rows.length > 0 && (
         <>
           <h3 className="bulk-add-preview-title">

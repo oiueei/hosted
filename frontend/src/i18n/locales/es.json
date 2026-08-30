@@ -517,7 +517,9 @@
     "statusCancelled": "Cancelada",
     "statusExpired": "Caducada",
     "expiredHelper": "Esta solicitud caducó automáticamente porque el propietario no respondió en un plazo de 72 horas (3 días).",
-    "pastRequests": "Solicitudes anteriores"
+    "pastRequests": "Solicitudes anteriores",
+    "captionPending": "Solicitudes a la espera de respuesta",
+    "captionPast": "Solicitudes ya cerradas"
   },
   "ownerBookings": {
     "pageTitle": "Solicitudes para mí",
@@ -532,7 +534,9 @@
     "rejected": "Solicitud rechazada. Ya se lo hemos dicho.",
     "errorActing": "No se ha podido responder a la solicitud. Inténtalo de nuevo.",
     "errorLoading": "Error al cargar las solicitudes.",
-    "emptyCta": "Comparte una colección"
+    "emptyCta": "Comparte una colección",
+    "captionPending": "Solicitudes esperando tu respuesta",
+    "captionPast": "Solicitudes que ya has respondido"
   },
   "manageInvites": {
     "pageTitle": "Gestionar invitados",
@@ -552,7 +556,8 @@
     "invitationSent": "Invitación enviada.",
     "errorSending": "Error al enviar la invitación.",
     "errorLoading": "Error al cargar la colección.",
-    "noPermission": "No tienes acceso a los invitados de esta colección."
+    "noPermission": "No tienes acceso a los invitados de esta colección.",
+    "caption": "Invitados de esta colección"
   },
   "recommend": {
     "openLink": "¿Conoces a alguien que encaje? Recomiéndale →",
@@ -781,7 +786,8 @@
   },
   "tags": {
     "add": "Añadir",
-    "tooLong": "Una etiqueta supera los {{limit}} caracteres (por idioma)."
+    "tooLong": "Una etiqueta supera los {{limit}} caracteres (por idioma).",
+    "remove": "Quitar {{tag}}"
   },
   "errorBoundary": {
     "title": "Algo ha salido mal",

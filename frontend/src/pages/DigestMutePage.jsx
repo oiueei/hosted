@@ -5,6 +5,7 @@ import { Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import { useLocalized } from '../utils/localized';
+import StatusRegion from '../components/StatusRegion';
 
 /**
  * Landing page for the one-click "stop the summaries from this group" link in
@@ -82,22 +83,24 @@ export default function DigestMutePage() {
         />
       </div>
       <div className="page-container">
-        {status === 'working' && <p className="section-mt">{t('digestMute.working')}</p>}
-        {status === 'done' && (
-          <>
-            <Notification label={t('digestMute.doneLabel')} type="success">
-              {headline
-                ? t('digestMute.doneNamed', { collection: L(headline) })
-                : t('digestMute.done')}
+        <StatusRegion>
+          {status === 'working' && <p className="section-mt">{t('digestMute.working')}</p>}
+          {status === 'done' && (
+            <>
+              <Notification label={t('digestMute.doneLabel')} type="success">
+                {headline
+                  ? t('digestMute.doneNamed', { collection: L(headline) })
+                  : t('digestMute.done')}
+              </Notification>
+              <p className="section-mt measure">{t('digestMute.stillGet')}</p>
+            </>
+          )}
+          {status === 'error' && (
+            <Notification label={t('common.error')} type="error">
+              {t('digestMute.error')}
             </Notification>
-            <p className="section-mt measure">{t('digestMute.stillGet')}</p>
-          </>
-        )}
-        {status === 'error' && (
-          <Notification label={t('common.error')} type="error">
-            {t('digestMute.error')}
-          </Notification>
-        )}
+          )}
+        </StatusRegion>
         <p className="section-mt">
           <Link to="/">{t('common.home')}</Link>
         </p>

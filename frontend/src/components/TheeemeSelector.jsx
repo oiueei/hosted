@@ -40,7 +40,7 @@ export default function TheeemeSelector({ theeemes, value, onChange }) {
               <span className="theeeme-name">{th.name}</span>
               {selected && (
                 <span className="theeeme-check">
-                  <IconCheck size="xs" />
+                  <IconCheck size="xs" aria-hidden="true" />
                 </span>
               )}
             </button>

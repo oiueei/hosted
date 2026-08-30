@@ -4,6 +4,7 @@ import { Button, Notification } from 'hds-react';
 import { Link } from 'react-router';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
+import StatusRegion from '../components/StatusRegion';
 
 /**
  * Step one of the right-to-erasure flow (`/me/delete`): states exactly what is
@@ -64,20 +65,22 @@ export default function DeleteAccountPage() {
         <p>{t('deleteAccount.emailStep')}</p>
         <div className="spacer-m" />
         {sent ? (
-          <Notification label={t('deleteAccount.sentLabel')} type="success">
+          <Notification autofocus label={t('deleteAccount.sentLabel')} type="success">
             {t('deleteAccount.sentBody')}
           </Notification>
         ) : (
           <>
-            {error && (
-              <Notification
-                label={t('common.error')}
-                type="error"
-                style={{ marginBottom: 'var(--spacing-s)' }}
-              >
-                {error}
-              </Notification>
-            )}
+            <StatusRegion>
+              {error && (
+                <Notification
+                  label={t('common.error')}
+                  type="error"
+                  style={{ marginBottom: 'var(--spacing-s)' }}
+                >
+                  {error}
+                </Notification>
+              )}
+            </StatusRegion>
             <Button variant="danger" disabled={sending} onClick={handleSend}>
               {sending ? t('deleteAccount.sending') : t('deleteAccount.sendButton')}
             </Button>

@@ -471,16 +471,50 @@ div[class*='Linkbox-module_linkbox'] {
   color: var(--color-white);
 }
 
-/* Keyboard focus for the hand-rolled toggle chips (FRONTEND C3). HDS components
-   carry their own focus styles; these custom buttons leaned on the browser
-   default. Black ring, offset so it reads on the page background even when the
-   chip itself is filled (a selected weekday / pressed tag). */
-.tag-chip:focus-visible,
-.weekday-chip:focus-visible,
-.theeeme-option:focus-visible,
-.koro-option:focus-visible {
-  outline: 3px solid var(--color-black-90);
-  outline-offset: 2px;
+/* One keyboard-focus ring for the whole app, and it is TWO-TONE on purpose.
+
+   A theeeme can put four different colours under this ring — the primary
+   button's fill (color_01), the secondary button's white fill, the hero
+   (color_03) and the page background (color_02) — so across the 12 curated
+   palettes there are 48 surfaces it has to stay visible against, at the 3:1
+   WCAG 1.4.11 asks for. No single colour manages it. HDS's own
+   `--color-coat-of-arms` (#0072c6), which is what shipped before this, failed
+   17 of the 48 and dropped to 1.08:1 on Kesä's tram-green hero. Plain black
+   still fails 3, including 1.00:1 on M&V, whose hero IS black.
+
+   White and black together always work: white carries the dark surfaces, black
+   the light ones, and their passing ranges overlap, so one band is always
+   visible whatever is behind. The two are 21:1 apart, so they never read as one
+   band either. `src/test/paletteContrast.test.js` pins all 48.
+
+   The bands never overlap, so nothing here depends on paint order: `outline` is
+   the outer black band, `outline-offset` opens a 3px gap inside it, and the
+   `box-shadow` fills exactly that gap with white.
+
+   HDS buttons draw their own outline from a higher-specificity rule, so theirs
+   arrives as `--outline-color-focus` from `useTheeeme` instead; the offset and
+   the white band come from here, because their `:focus-visible` sets neither.
+
+   The `body` in the selector is load-bearing, not tidiness. HDS's *base* button
+   class already declares `outline-offset: 2px`, at the same (0,1,0) specificity a
+   bare `:focus-visible` would have — and hds-react injects its CSS at runtime when
+   a component mounts, which lands after this static stylesheet and wins the tie on
+   source order (the trap `oiueei-theme.css` documents for `--font-default`). The
+   descendant combinator takes this to (0,1,1) so the offset is ours; it stays under
+   the (0,2,0) of HDS's own `:focus-visible`, which should go on drawing the outline
+   itself from our token. `main:focus` below is (0,1,1) too and comes later in this
+   file, so it still wins where it has to. */
+/* HDS's `fullWidth` lives on the Button component; `Link` has no such prop and its
+   own `hds-button--fullwidth` class is a hashed CSS-module name we cannot address.
+   One declaration is the whole of it — the base class already centres the label. */
+.button-link--full {
+  width: 100%;
+}
+
+body :focus-visible {
+  outline: 3px solid var(--color-black);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--color-white);
 }
 
 .things-grid {
@@ -1438,9 +1472,33 @@ figure[class*='Highlight-module_highlight'] {
 }
 
 /* The main landmark is focused on route change (RouteFocusReset); the content
-   change and scroll-to-top already signal the move, so suppress the outline. */
+   change and scroll-to-top already signal the move, so suppress the ring. Both
+   halves of it: after a Tab-then-Enter the browser can well count that
+   programmatic focus as `:focus-visible`, and killing only the outline would
+   have left the white band ringing the entire page. */
 main:focus {
   outline: none;
+  box-shadow: none;
+}
+
+/* The wrapper StatusRegion always renders, so it is a box even with nothing in
+   it. In normal flow that is invisible; inside `.form-grid` an empty one would
+   still take a row and so add one `gap`. `display: contents` is deliberately NOT
+   used to avoid that: it is exactly the property that has historically dropped an
+   element out of the accessibility tree, and this element's whole job is to be in
+   it. A hidden 16px of grid gap is the cheaper mistake. */
+.status-region:empty {
+  margin: 0;
+}
+
+/* A <caption> whose only content is screen-reader-only exists to give the table a
+   name — VoiceOver's table rotor lists tables by name, and every one of these was
+   nameless. It must not also reserve HDS's visible caption margin, or naming a
+   table would push it 16px down the page. The heading above each of them already
+   says the same thing on screen; this is for the reader who is not looking at it. */
+caption:has(> .sr-only:only-child) {
+  margin: 0;
+  line-height: 0;
 }
 
 /* Screen-reader-only text (visually hidden, still announced). */

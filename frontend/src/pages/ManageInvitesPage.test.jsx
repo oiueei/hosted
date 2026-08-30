@@ -84,6 +84,14 @@ describe('ManageInvitesPage (the guest list)', () => {
     expect(screen.getByLabelText('Guest email')).toHaveValue('');
   });
 
+  test('the guest table carries a name', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByRole('table', { name: 'Guests of this collection' })
+    ).toBeInTheDocument();
+  });
+
   test('a rejected invite surfaces the backend detail, not a generic error', async () => {
     mockRoutes({ invite: { status: 400, body: { error: 'User is already a member' } } });
     renderPage();

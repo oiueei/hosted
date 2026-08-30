@@ -19,6 +19,7 @@ import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
+import StatusRegion from '../components/StatusRegion';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -507,11 +508,13 @@ export default function EditCollectionPage() {
         >
           {t('stats.downloadStats')}
         </Button>
-        {statsError && (
-          <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
-            {t('stats.downloadStatsError')}
-          </Notification>
-        )}
+        <StatusRegion>
+          {statsError && (
+            <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
+              {t('stats.downloadStatsError')}
+            </Notification>
+          )}
+        </StatusRegion>
         {/* The whole group, not the summary above — a different download, so the
             label and the copy beside it have to say so: it carries other
             members' data, and whoever downloads it is who answers for it. */}
@@ -536,11 +539,13 @@ export default function EditCollectionPage() {
           >
             {t('collectionExport.notice')}
           </p>
-          {collectionExportError && (
-            <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
-              {collectionExportError}
-            </Notification>
-          )}
+          <StatusRegion>
+            {collectionExportError && (
+              <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
+                {collectionExportError}
+              </Notification>
+            )}
+          </StatusRegion>
         </div>
       </div>
       <Toast toast={toast} onClose={() => setToast(null)} />

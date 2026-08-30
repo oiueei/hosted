@@ -9,6 +9,7 @@ import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import ButtonLink from '../components/ButtonLink';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
 // green/red hex). The thing *type* stays a plain Tag (it's a category, not a state).
@@ -219,9 +220,9 @@ export default function MyBookingsPage() {
         <div>
           <p>{t('myBookings.noBookings')}</p>
           <div className="spacer-m" />
-          <Link to="/">
-            <Button style={btnStyle}>{t('myBookings.goHome')}</Button>
-          </Link>
+          <ButtonLink to="/" style={btnStyle}>
+            {t('myBookings.goHome')}
+          </ButtonLink>
         </div>
       ) : (
         <>
@@ -238,6 +239,7 @@ export default function MyBookingsPage() {
                   <div className="table-wrap">
                     <Table
                       cols={cols}
+                      caption={<span className="sr-only">{t('myBookings.captionPending')}</span>}
                       rows={pendingRows}
                       indexKey="_id"
                       renderIndexCol={false}
@@ -258,6 +260,7 @@ export default function MyBookingsPage() {
                     <div className="table-wrap">
                       <Table
                         cols={cols}
+                        caption={<span className="sr-only">{t('myBookings.captionPast')}</span>}
                         rows={otherRows}
                         indexKey="_id"
                         renderIndexCol={false}

@@ -16,6 +16,8 @@ import { aboutPath } from '../deployment';
 import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
+import ButtonLink from '../components/ButtonLink';
+import StatusRegion from '../components/StatusRegion';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -339,19 +341,15 @@ export default function CollectionPage() {
               <>
                 <div className="spacer-m"></div>
                 <div className="button-row-wide">
-                  <Link to={`/collections/${code}/edit`}>
-                    <Button style={btnStyle}>{t('collectionPage.editCollection')}</Button>
-                  </Link>
-                  <Link to={`/collections/${code}/add`}>
-                    <Button variant="secondary" style={btnSecondaryStyle}>
-                      {t('collectionPage.addThing')}
-                    </Button>
-                  </Link>
-                  <Link to={`/collections/${code}/invites`}>
-                    <Button variant="secondary" style={btnSecondaryStyle}>
-                      {t('collectionPage.manageGuests')}
-                    </Button>
-                  </Link>
+                  <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
+                    {t('collectionPage.editCollection')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                    {t('collectionPage.addThing')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
+                    {t('collectionPage.manageGuests')}
+                  </ButtonLink>
                 </div>
                 <div className="spacer-s"></div>
                 <div className="spacer-l" />
@@ -390,11 +388,9 @@ export default function CollectionPage() {
                 instead, which is the thing that actually unlocks this. */}
                 {collection.mode === 'COMMUNITY' && collection.is_member && (
                   <div className="button-row-wide">
-                    <Link to={`/collections/${code}/add`}>
-                      <Button variant="secondary" style={btnSecondaryStyle}>
-                        {t('collectionPage.addThing')}
-                      </Button>
-                    </Link>
+                    <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                      {t('collectionPage.addThing')}
+                    </ButtonLink>
                   </div>
                 )}
                 {collection.is_member && collection.allow_member_proposals && (
@@ -618,19 +614,22 @@ export default function CollectionPage() {
                   maxLength={256}
                   required
                 />
-                {broadcastResult && (
-                  <Notification
-                    label={
-                      broadcastResult.type === 'success' ? t('common.sent') : t('common.error')
-                    }
-                    type={broadcastResult.type}
-                    style={{ marginBottom: 'var(--spacing-s)' }}
-                    dismissible
-                    onClose={() => setBroadcastResult(null)}
-                  >
-                    {broadcastResult.message}
-                  </Notification>
-                )}
+                <StatusRegion>
+                  {broadcastResult && (
+                    <Notification
+                      label={
+                        broadcastResult.type === 'success' ? t('common.sent') : t('common.error')
+                      }
+                      type={broadcastResult.type}
+                      style={{ marginBottom: 'var(--spacing-s)' }}
+                      dismissible
+                      closeButtonLabelText={t('common.close')}
+                      onClose={() => setBroadcastResult(null)}
+                    >
+                      {broadcastResult.message}
+                    </Notification>
+                  )}
+                </StatusRegion>
                 <div className="button-row-wide">
                   <Button
                     style={btnStyle}

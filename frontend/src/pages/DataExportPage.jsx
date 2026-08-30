@@ -4,6 +4,7 @@ import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
+import StatusRegion from '../components/StatusRegion';
 
 // Mirrors export_service.build_account_export's top-level keys, in the order
 // the manifest lists them — this is what "what you take" actually is, not a
@@ -93,15 +94,17 @@ export default function DataExportPage() {
           ))}
         </ol>
         <div className="spacer-m" />
-        {error && (
-          <Notification
-            label={t('common.error')}
-            type="error"
-            style={{ marginBottom: 'var(--spacing-s)' }}
-          >
-            {error}
-          </Notification>
-        )}
+        <StatusRegion>
+          {error && (
+            <Notification
+              label={t('common.error')}
+              type="error"
+              style={{ marginBottom: 'var(--spacing-s)' }}
+            >
+              {error}
+            </Notification>
+          )}
+        </StatusRegion>
         <Button disabled={downloading} onClick={handleDownload}>
           {downloading ? t('dataExport.downloading') : t('dataExport.downloadButton')}
         </Button>

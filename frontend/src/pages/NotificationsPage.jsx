@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import StatusRegion from '../components/StatusRegion';
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
@@ -185,11 +186,13 @@ export default function NotificationsPage() {
               />
             </div>
           </div>
-          {saved && (
-            <Notification type="success" label={t('common.done')}>
-              {t('notifications.saved')}
-            </Notification>
-          )}
+          <StatusRegion>
+            {saved && (
+              <Notification type="success" label={t('common.done')}>
+                {t('notifications.saved')}
+              </Notification>
+            )}
+          </StatusRegion>
           <div className="form-actions">
             <Button fullWidth disabled={submitting} onClick={handleSave} style={btnStyle}>
               {submitting ? t('common.saving') : t('common.save')}

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
+import ButtonLink from '../components/ButtonLink';
 
 /**
  * The verifying / success / error states share the same form-hero + Koros
@@ -184,11 +185,9 @@ export default function VerifyPage() {
   // Both the success and error heroes offer the same way out.
   const exitAction = (
     <div>
-      <Link to={isLoggedIn ? '/' : '/login'}>
-        <Button style={btnStyle}>
-          {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
-        </Button>
-      </Link>
+      <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
+        {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
+      </ButtonLink>
     </div>
   );
 
@@ -238,9 +237,7 @@ export default function VerifyPage() {
           <Button variant="danger" disabled={deleting} onClick={handleAccountDelete}>
             {deleting ? t('verify.accountDeleting') : t('verify.accountDeleteConfirm')}
           </Button>
-          <Link to={isLoggedIn ? '/' : '/login'}>
-            <Button variant="secondary">{t('common.cancel')}</Button>
-          </Link>
+          <ButtonLink to={isLoggedIn ? '/' : '/login'}>{t('common.cancel')}</ButtonLink>
         </div>
       </VerifyScreen>
     );

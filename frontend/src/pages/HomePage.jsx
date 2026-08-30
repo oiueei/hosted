@@ -11,6 +11,8 @@ import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
 import { useLocalized } from '../utils/localized';
+import ButtonLink from '../components/ButtonLink';
+import StatusRegion from '../components/StatusRegion';
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -215,29 +217,23 @@ export default function HomePage() {
           </h1>
           {user.headline && <p className="form-hero-text">{user.headline}</p>}
           <div className="button-row-wide">
-            <Link to="/collections/new">
-              <Button style={btnStyle}>{t('home.createCollection')}</Button>
-            </Link>
-            <Link to="/me">
-              <Button variant="secondary" style={btnSecondaryStyle}>
-                {t('home.myProfile')}
-              </Button>
-            </Link>
-            <Link to="/my-bookings">
-              <Button variant="secondary" style={btnSecondaryStyle}>
-                {t('home.myRequests')}
-              </Button>
-            </Link>
+            <ButtonLink to="/collections/new" style={btnStyle}>
+              {t('home.createCollection')}
+            </ButtonLink>
+            <ButtonLink to="/me" style={btnSecondaryStyle}>
+              {t('home.myProfile')}
+            </ButtonLink>
+            <ButtonLink to="/my-bookings" style={btnSecondaryStyle}>
+              {t('home.myRequests')}
+            </ButtonLink>
             {/* Only for people who can actually receive requests — owning a
                 *thing* is the test, not owning a collection: in a COMMUNITY
                 collection you can contribute a thing to someone else's group and
                 be asked for it there. */}
             {user.things?.length > 0 && (
-              <Link to="/owner-bookings">
-                <Button variant="secondary" style={btnSecondaryStyle}>
-                  {t('home.requestsToMe')}
-                </Button>
-              </Link>
+              <ButtonLink to="/owner-bookings" style={btnSecondaryStyle}>
+                {t('home.requestsToMe')}
+              </ButtonLink>
             )}
           </div>
         </div>
@@ -248,7 +244,7 @@ export default function HomePage() {
         />
       </div>
       <div className="page-container">
-        {offline && offlineBanner}
+        <StatusRegion>{offline && offlineBanner}</StatusRegion>
 
         <InboxNotifications reloadKey={inboxReloads} onNetworkError={handleNetworkError} />
 
@@ -297,9 +293,9 @@ export default function HomePage() {
             <p className="text-muted">{t('userPage.collectionExplainer')}</p>
             <div className="spacer-m" />
             <div className="button-row-wide">
-              <Link to="/collections/new">
-                <Button style={btnStyle}>{t('userPage.createFirst')}</Button>
-              </Link>
+              <ButtonLink to="/collections/new" style={btnStyle}>
+                {t('userPage.createFirst')}
+              </ButtonLink>
               {/* Only where this deployment has a page saying what it is.
                   Upstream there is none — /welcome left with the demo — and this
                   sits on the first screen a brand-new account sees, so a second
@@ -307,11 +303,9 @@ export default function HomePage() {
                   Same rule as the footer's about link and the collection's
                   welcome box: no page, no link. */}
               {aboutPath && (
-                <Link to={aboutPath}>
-                  <Button variant="secondary" style={btnSecondaryStyle}>
-                    {t('userPage.learnHow')}
-                  </Button>
-                </Link>
+                <ButtonLink to={aboutPath} style={btnSecondaryStyle}>
+                  {t('userPage.learnHow')}
+                </ButtonLink>
               )}
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { nestedTabStops } from './nestedInteractive';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import InfoPopover from '../components/InfoPopover';
@@ -117,12 +118,56 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// Nesting that predates the invariant, named per surface so it can only shrink.
+// **It is empty, and that is the state to keep it in.** The 25 entries it was born
+// with were all `<Link>` wrapping an HDS `<Button>` — one control, two tab stops —
+// and every one of them is now `ButtonLink`. An entry that no longer matches fails
+// as loudly as a new violation: a surface that has been cleaned up must lose its
+// line, or the list stops describing the app and starts hiding it.
+const KNOWN_NESTING = [];
+
 describe('CollectionPage (owner, populated) — interactive a11y', () => {
   test('the populated collection with ThingLinkbox cards has no axe violations', async () => {
     const { container } = renderCollection();
     // Wait for the thing card to render (ThingLinkbox — never scanned by smoke).
     await screen.findByText('Test Thing');
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  // The populated card grid is where the `<Link><Button>` pairs live: an owner
+  // sees Edit / Delete / Confirm hold on every thing, and the smoke sweep renders
+  // this collection empty, so none of them reach it. axe reports nothing for the
+  // shape (verified), which is how they accumulated.
+  test('no tab stop on a populated card grid contains another', async () => {
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    const found = nestedTabStops(container);
+    expect(
+      found.filter((f) => !KNOWN_NESTING.includes(f)),
+      'new nesting on the card grid — use Link + useButtonStyles'
+    ).toEqual([]);
+    expect(
+      KNOWN_NESTING.filter((k) => !found.includes(k)),
+      'KNOWN_NESTING entry no longer matches — delete it'
+    ).toEqual([]);
+  });
+
+  test('a card offers one link to its thing, not two', async () => {
+    // The cover photo and the headline both pointed at the same page under the
+    // same name, so every card cost two tab stops to one destination and put two
+    // identical entries in a screen reader's list of links. In a collection
+    // showing 24 things that is 48 entries for 24 places. The headline is the one
+    // that stayed; the photo still works for a pointer.
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    const toThing = [...container.querySelectorAll('a[href]')].filter((a) =>
+      a.getAttribute('href').endsWith('/things/THG001')
+    );
+    expect(toThing).toHaveLength(2);
+    expect(toThing.filter((a) => a.getAttribute('tabindex') !== '-1')).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Test Thing' })).toHaveLength(1);
   });
 
   test('the opened broadcast form has no axe violations', async () => {

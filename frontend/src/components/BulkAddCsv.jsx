@@ -9,6 +9,7 @@ import { MAX_ROWS, mapRow, validateRows } from '../utils/bulkCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
+import StatusRegion from './StatusRegion';
 
 // Image extensions recognised inside a ZIP — kept in sync with the backend's
 // The server's `IMAGE_TYPES` allow-list (core/views/upload.py).
@@ -251,11 +252,13 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         buttonLabel={t('upload.addFileGeneric')}
         disabled={importing}
       />
-      {error && (
-        <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
-          {error}
-        </Notification>
-      )}
+      <StatusRegion>
+        {error && (
+          <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
+            {error}
+          </Notification>
+        )}
+      </StatusRegion>
       {rows.length > 0 && (
         <>
           <h3 className="bulk-add-preview-title">{t('bulkAdd.preview', { count: rows.length })}</h3>

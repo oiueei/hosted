@@ -6,6 +6,7 @@ import { getCsrfToken } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import { popInPath, faqPath } from '../deployment';
+import ButtonLink from '../components/ButtonLink';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -154,6 +155,7 @@ export default function LoginPage() {
         {status ? (
           <>
             <Notification
+              autofocus
               label={
                 status === 'success'
                   ? t('common.sent')
@@ -221,11 +223,9 @@ export default function LoginPage() {
             you get in here by invitation. */}
         {popInPath && (
           <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
-            <Link to={popInPath}>
-              <Button variant="secondary" fullWidth style={btnSecondaryStyle}>
-                {t('login.popIn')}
-              </Button>
-            </Link>
+            <ButtonLink to={popInPath} fullWidth style={btnSecondaryStyle}>
+              {t('login.popIn')}
+            </ButtonLink>
           </div>
         )}
       </div>

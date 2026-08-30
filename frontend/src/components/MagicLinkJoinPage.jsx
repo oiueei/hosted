@@ -54,6 +54,7 @@ export default function MagicLinkJoinPage({
       {status ? (
         <>
           <Notification
+            autofocus
             label={status === 'success' ? t('common.sent') : t('common.error')}
             type={status}
             style={{ marginTop: 'var(--spacing-m)' }}

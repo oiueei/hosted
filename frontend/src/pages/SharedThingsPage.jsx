@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router';
+
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import ThingLinkbox from '../components/ThingLinkbox';
 import useTheeeme from '../hooks/useTheeeme';
+import ButtonLink from '../components/ButtonLink';
 
 /**
  * Everything shared with me, across every group I belong to.
@@ -114,9 +115,9 @@ export default function SharedThingsPage() {
         <div>
           <p>{t('sharedThings.empty')}</p>
           <div className="spacer-m" />
-          <Link to="/">
-            <Button style={btnStyle}>{t('sharedThings.emptyCta')}</Button>
-          </Link>
+          <ButtonLink to="/" style={btnStyle}>
+            {t('sharedThings.emptyCta')}
+          </ButtonLink>
         </div>
       ) : (
         <div className="things-grid">
