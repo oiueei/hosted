@@ -25,6 +25,15 @@ class SecurityHeadersMiddleware:
       hardening is not viable for styles.
     - ``script-src`` gains ``'unsafe-inline'`` only under ``DEBUG`` so the dev-only
       DRF browsable API (inline scripts) keeps working; production stays strict.
+
+    And one that is not a relaxation so much as a correction: ``img-src`` names
+    ``data:``. HDS draws a large part of its iconography as inline
+    ``data:image/svg+xml`` URIs — forty of them in the built ``vendor-hds``
+    chunk — so without it the policy blocked an icon on nearly every page, in
+    production, for as long as this header has existed. A ``data:`` URI in
+    ``img-src`` cannot execute anything: an SVG rendered through ``<img>`` runs
+    no script, and ``object-src 'none'`` still refuses the element that would.
+    ``font-src`` has carried ``data:`` all along for the same practical reason.
     """
 
     # Violations are reported to our own endpoint (core/views/csp.py) — a hosted
@@ -92,7 +101,7 @@ class SecurityHeadersMiddleware:
         connect = "".join(f" {origin}" for origin in connect_origins)
         response["Content-Security-Policy"] = (
             "default-src 'self'; " + script_src + "style-src 'self' 'unsafe-inline'; "
-            f"img-src 'self' blob:{img}; "
+            f"img-src 'self' blob: data:{img}; "
             "font-src 'self' data:; "
             f"connect-src 'self'{connect}; "
             "frame-ancestors 'none'; "
