@@ -1,5 +1,6 @@
 import { render, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { nestedTabStops } from './nestedInteractive';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -170,6 +171,18 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// The nesting that already exists, named so it can only shrink. Each entry is a
+// `<Link>` wrapping an HDS `<Button>` — one control, two tab stops — and the fix
+// for all of them is `Link` + `useButtonStyles` (see frontend/CLAUDE.md). Entries
+// are distinct *shapes*, not occurrences: the debt is the pattern, and the fix
+// removes the pattern rather than instances of it.
+//
+// An entry that no longer matches fails too. That is the point: a page cleaned up
+// must lose its line, or the list stops describing the app and starts hiding it.
+const KNOWN_NESTING = {
+  NotFoundPage: ['a \u203a button \u2014 \u201cGo to homepage\u201d'],
+};
+
 // ── Smoke + axe helper ─────────────────────────────────────────────────
 function smokeAndAxe(name, Component, routeOpts) {
   describe(name, () => {
@@ -192,6 +205,24 @@ function smokeAndAxe(name, Component, routeOpts) {
       });
       const results = await axe(container);
       expect(results).toHaveNoViolations();
+    });
+
+    // axe returns no violation for `<a href><button></a>` and jsx-a11y has no
+    // rule for it, so this invariant is the only thing standing between the app
+    // and another 28 of them. See `nestedInteractive.js` for why it counts tab
+    // stops rather than roles, and KNOWN_NESTING below for the debt it carries.
+    test('no tab stop contains another', () => {
+      const { container } = renderWithRoute(Component, routeOpts);
+      const found = nestedTabStops(container);
+      const allowed = KNOWN_NESTING[name] || [];
+      expect(
+        found.filter((f) => !allowed.includes(f)),
+        `${name}: new nesting. One control, two tab stops — use Link + useButtonStyles`
+      ).toEqual([]);
+      expect(
+        allowed.filter((a) => !found.includes(a)),
+        `${name}: KNOWN_NESTING entry no longer matches — delete it`
+      ).toEqual([]);
     });
   });
 }

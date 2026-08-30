@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { nestedTabStops } from './nestedInteractive';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import InfoPopover from '../components/InfoPopover';
@@ -117,12 +118,46 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// The nesting that already exists, named so it can only shrink. Each entry is a
+// `<Link>` wrapping an HDS `<Button>` — one control, two tab stops — and the fix
+// for all of them is `Link` + `useButtonStyles` (see frontend/CLAUDE.md). Entries
+// are distinct *shapes*, not occurrences: the debt is the pattern, and the fix
+// removes the pattern rather than instances of it.
+//
+// An entry that no longer matches fails too. That is the point: a page cleaned up
+// must lose its line, or the list stops describing the app and starts hiding it.
+const KNOWN_NESTING = [
+  'a \u203a button \u2014 \u201cAdd thing\u201d',
+  'a \u203a button \u2014 \u201cEdit collection\u201d',
+  'a \u203a button \u2014 \u201cEdit\u201d',
+  'a \u203a button \u2014 \u201cManage guests\u201d',
+];
+
 describe('CollectionPage (owner, populated) — interactive a11y', () => {
   test('the populated collection with ThingLinkbox cards has no axe violations', async () => {
     const { container } = renderCollection();
     // Wait for the thing card to render (ThingLinkbox — never scanned by smoke).
     await screen.findByText('Test Thing');
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  // The populated card grid is where the `<Link><Button>` pairs live: an owner
+  // sees Edit / Delete / Confirm hold on every thing, and the smoke sweep renders
+  // this collection empty, so none of them reach it. axe reports nothing for the
+  // shape (verified), which is how they accumulated.
+  test('no tab stop on a populated card grid contains another', async () => {
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    const found = nestedTabStops(container);
+    expect(
+      found.filter((f) => !KNOWN_NESTING.includes(f)),
+      'new nesting on the card grid — use Link + useButtonStyles'
+    ).toEqual([]);
+    expect(
+      KNOWN_NESTING.filter((k) => !found.includes(k)),
+      'KNOWN_NESTING entry no longer matches — delete it'
+    ).toEqual([]);
   });
 
   test('the opened broadcast form has no axe violations', async () => {
