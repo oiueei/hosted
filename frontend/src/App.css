@@ -493,8 +493,18 @@ div[class*='Linkbox-module_linkbox'] {
 
    HDS buttons draw their own outline from a higher-specificity rule, so theirs
    arrives as `--outline-color-focus` from `useTheeeme` instead; the offset and
-   the white band below still reach them, because HDS sets neither. */
-:focus-visible {
+   the white band come from here, because their `:focus-visible` sets neither.
+
+   The `body` in the selector is load-bearing, not tidiness. HDS's *base* button
+   class already declares `outline-offset: 2px`, at the same (0,1,0) specificity a
+   bare `:focus-visible` would have — and hds-react injects its CSS at runtime when
+   a component mounts, which lands after this static stylesheet and wins the tie on
+   source order (the trap `oiueei-theme.css` documents for `--font-default`). The
+   descendant combinator takes this to (0,1,1) so the offset is ours; it stays under
+   the (0,2,0) of HDS's own `:focus-visible`, which should go on drawing the outline
+   itself from our token. `main:focus` below is (0,1,1) too and comes later in this
+   file, so it still wins where it has to. */
+body :focus-visible {
   outline: 3px solid var(--color-black);
   outline-offset: 3px;
   box-shadow: 0 0 0 3px var(--color-white);
