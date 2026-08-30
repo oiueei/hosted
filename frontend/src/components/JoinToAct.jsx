@@ -28,7 +28,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline }) {
   if (status === 'success') {
     return (
       <>
-        <Notification label={t('joinToAct.sent')} type="success">
+        <Notification autofocus label={t('joinToAct.sent')} type="success">
           {message}
         </Notification>
         <p className="section-mt">{t('common.closeThisTab')}</p>

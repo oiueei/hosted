@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach } from 'vitest';
 import LoginPage from './LoginPage';
@@ -45,6 +45,27 @@ describe('LoginPage magic-link request (the front door)', () => {
     // The form is replaced — no double submits from this screen.
     expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try another email' })).toBeInTheDocument();
+  });
+
+  test('the result takes the focus the vanished button was holding', async () => {
+    // The form is replaced by the message, so the Sign in button the reader had
+    // just activated leaves the DOM — and focus with it, down to <body>, costing
+    // them their place. HDS's `autofocus` moves focus onto the message instead,
+    // which is also the only thing that gets it read out: an inline Notification
+    // carries no role, so nothing else would announce it.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderLogin();
+    submitEmail();
+
+    const message = await screen.findByText(/your magic link is on its way/);
+    await waitFor(() => {
+      expect(document.activeElement).not.toBe(document.body);
+      expect(message.closest('section')).toContainElement(document.activeElement);
+    });
   });
 
   test('a rate-limited submit says "wait", not "broken"', async () => {

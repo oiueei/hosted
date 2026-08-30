@@ -17,6 +17,7 @@ import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
+import StatusRegion from '../components/StatusRegion';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -613,20 +614,22 @@ export default function CollectionPage() {
                   maxLength={256}
                   required
                 />
-                {broadcastResult && (
-                  <Notification
-                    label={
-                      broadcastResult.type === 'success' ? t('common.sent') : t('common.error')
-                    }
-                    type={broadcastResult.type}
-                    style={{ marginBottom: 'var(--spacing-s)' }}
-                    dismissible
-                    closeButtonLabelText={t('common.close')}
-                    onClose={() => setBroadcastResult(null)}
-                  >
-                    {broadcastResult.message}
-                  </Notification>
-                )}
+                <StatusRegion>
+                  {broadcastResult && (
+                    <Notification
+                      label={
+                        broadcastResult.type === 'success' ? t('common.sent') : t('common.error')
+                      }
+                      type={broadcastResult.type}
+                      style={{ marginBottom: 'var(--spacing-s)' }}
+                      dismissible
+                      closeButtonLabelText={t('common.close')}
+                      onClose={() => setBroadcastResult(null)}
+                    >
+                      {broadcastResult.message}
+                    </Notification>
+                  )}
+                </StatusRegion>
                 <div className="button-row-wide">
                   <Button
                     style={btnStyle}

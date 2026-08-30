@@ -4,6 +4,7 @@ import { Button, Notification, TextInput, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from './PageLayout';
 import useTheeeme from '../hooks/useTheeeme';
+import StatusRegion from './StatusRegion';
 
 /**
  * The shared operator-message form, rendered by `ContactPage` (support,
@@ -71,7 +72,7 @@ export default function ContactFormPage({
     >
       <div style={{ maxWidth: '600px' }}>
         {sent ? (
-          <Notification label={t('contact.sentLabel')} type="success">
+          <Notification autofocus label={t('contact.sentLabel')} type="success">
             {t('contact.sentBody')}
           </Notification>
         ) : (
@@ -99,11 +100,13 @@ export default function ContactFormPage({
               maxLength={2000}
               onChange={(e) => setMessage(e.target.value)}
             />
-            {error && (
-              <Notification label={t('common.error')} type="error">
-                {error}
-              </Notification>
-            )}
+            <StatusRegion>
+              {error && (
+                <Notification label={t('common.error')} type="error">
+                  {error}
+                </Notification>
+              )}
+            </StatusRegion>
             <div>
               <Button type="submit" disabled={sending || !message.trim()} style={btnStyle}>
                 {sending ? t('common.sending') : t('common.send')}

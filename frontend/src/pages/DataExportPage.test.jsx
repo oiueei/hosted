@@ -65,6 +65,28 @@ describe('DataExportPage', () => {
     expect(filename).toBe('oiueei-ABC123-2026-08-21.json');
   });
 
+  test('the error lands in a live region that was already on the page', async () => {
+    // The announcement only happens if the region pre-exists the message: this
+    // asserts both halves in order, because a page that builds the region and the
+    // message in the same render looks identical and says nothing.
+    apiFetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
+
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download my data' }));
+
+    await waitFor(() => expect(region).not.toBeEmptyDOMElement());
+    // The same node, not a second one that replaced it.
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent(/couldn't|could not|error/i);
+  });
+
   test('a 429 says "too many attempts", not a generic error', async () => {
     apiFetchMock.mockResolvedValue({ ok: false, status: 429 });
     render(

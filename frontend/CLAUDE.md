@@ -465,6 +465,7 @@ Every site that renders owner content calls it: `ThingLinkbox`, `ThingPage`, `Co
 ### Shared Components
 
 - **`ButtonLink`** (`src/components/ButtonLink.jsx`) — A control that navigates and looks like a button: one `<a>`, one tab stop. Replaced 25 `<Link><Button>` pairs, which put one interactive element inside another. Built on HDS `Link` + `useButtonStyles`; see **A link that looks like a button** below for the three things about it that are load-bearing. Props: `to`, `state`, `fullWidth`, `style` (the theeeme tokens), and anything else, which reaches the `<a>`.
+- **`StatusRegion`** (`src/components/StatusRegion.jsx`) — A `role="status"` live region for a message that appears in response to something the reader did. **It renders unconditionally and the condition stays inside it** (`<StatusRegion>{saved && <Notification …/>}</StatusRegion>`): a live region only announces changes made inside a region that already existed, so wrapping the message at the moment it appears looks identical, passes axe, and announces nothing. Polite, not assertive, and one region can therefore hold either outcome of a slot that swaps between success and error. Not for a message that *is* the page.
 - **`BackLink`** (`src/components/BackLink.jsx`) — Reusable `← {label}` back navigation link. Props: `to`, `label`.
 - **`Toast`** (`src/components/Toast.jsx`) — Reusable toast notification wrapping HDS `Notification`. Props: `toast` (`{ type, message }`), `onClose`. Renders at `position="top-right"` with auto-close.
 - **`LoadingSpinner`** (`src/components/LoadingSpinner.jsx`) — Wrapper around HDS `LoadingSpinner` component.
@@ -682,7 +683,19 @@ single colour fails; `#0072c6` clears 3:1 on only 31 of the 48 theeeme surfaces.
 is the only content). There is no default and no lint rule; the audit found two that
 had been missed.
 
-**5. `Link`'s new-tab and external-domain labels default to Finnish**
+**5. An inline `Notification` is announced by nobody.** It gets `role="alert"`
+**only** when it is positioned — a toast. Inline, it gets no role at all, so of the
+42 in this app exactly one was ever announced: press Save, have it fail, and a
+screen reader said nothing. That is WCAG 4.1.3 Status Messages, level AA. The role
+cannot be supplied from outside either — HDS spreads rest props *before* its own
+`role: … : void 0`, so passing one is erased. **Worked around** two ways, by shape:
+a message that is *appended* to the page goes inside `StatusRegion`, a live region
+that renders unconditionally so it pre-dates its own content; a message that
+*replaces* the form gets HDS's `autofocus`, which both rescues the focus the
+vanished submit button was holding and gets the message read. A load error that
+*is* the page needs neither — it is read in document order.
+
+**6. `Link`'s new-tab and external-domain labels default to Finnish**
 (`"avautuu uudessa välilehdessä"`, `"Siirtyy toiseen sivustoon."`) — the same trap as
 `Select`'s `language`, and just as invisible, since it only changes what is announced.
 Any adoption of `Link` with `openInNewTab` or `external` **must** pass

@@ -12,6 +12,7 @@ import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
+import StatusRegion from '../components/StatusRegion';
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -243,7 +244,7 @@ export default function HomePage() {
         />
       </div>
       <div className="page-container">
-        {offline && offlineBanner}
+        <StatusRegion>{offline && offlineBanner}</StatusRegion>
 
         <InboxNotifications reloadKey={inboxReloads} onNetworkError={handleNetworkError} />
 

@@ -182,7 +182,7 @@ export default function RequestThingPage() {
     >
       {success ? (
         <>
-          <Notification label={t('request.successLabel')} type="success">
+          <Notification autofocus label={t('request.successLabel')} type="success">
             {t('request.successMessage')}
           </Notification>
           <div className="spacer-m" />

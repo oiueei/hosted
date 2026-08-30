@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Notification, TextInput, TextArea } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
+import StatusRegion from './StatusRegion';
 
 /**
  * A member recommending someone to the collection's owner.
@@ -68,15 +69,17 @@ export default function RecommendGuest({ collectionCode, ownerName }) {
   return (
     <div className="recommend-box">
       <p className="recommend-intro">{t('recommend.intro', { owner: ownerName })}</p>
-      {result && (
-        <Notification
-          label={result.type === 'success' ? t('common.sent') : t('common.error')}
-          type={result.type}
-          style={{ marginBottom: 'var(--spacing-s)' }}
-        >
-          {result.message}
-        </Notification>
-      )}
+      <StatusRegion>
+        {result && (
+          <Notification
+            label={result.type === 'success' ? t('common.sent') : t('common.error')}
+            type={result.type}
+            style={{ marginBottom: 'var(--spacing-s)' }}
+          >
+            {result.message}
+          </Notification>
+        )}
+      </StatusRegion>
       <form onSubmit={submit} className="form-grid">
         <TextInput
           id="recommend-email"

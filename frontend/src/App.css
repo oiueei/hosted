@@ -1481,6 +1481,16 @@ main:focus {
   box-shadow: none;
 }
 
+/* The wrapper StatusRegion always renders, so it is a box even with nothing in
+   it. In normal flow that is invisible; inside `.form-grid` an empty one would
+   still take a row and so add one `gap`. `display: contents` is deliberately NOT
+   used to avoid that: it is exactly the property that has historically dropped an
+   element out of the accessibility tree, and this element's whole job is to be in
+   it. A hidden 16px of grid gap is the cheaper mistake. */
+.status-region:empty {
+  margin: 0;
+}
+
 /* Screen-reader-only text (visually hidden, still announced). */
 .sr-only {
   position: absolute;

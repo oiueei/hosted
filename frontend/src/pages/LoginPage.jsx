@@ -155,6 +155,7 @@ export default function LoginPage() {
         {status ? (
           <>
             <Notification
+              autofocus
               label={
                 status === 'success'
                   ? t('common.sent')
