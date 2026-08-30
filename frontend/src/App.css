@@ -471,16 +471,33 @@ div[class*='Linkbox-module_linkbox'] {
   color: var(--color-white);
 }
 
-/* Keyboard focus for the hand-rolled toggle chips (FRONTEND C3). HDS components
-   carry their own focus styles; these custom buttons leaned on the browser
-   default. Black ring, offset so it reads on the page background even when the
-   chip itself is filled (a selected weekday / pressed tag). */
-.tag-chip:focus-visible,
-.weekday-chip:focus-visible,
-.theeeme-option:focus-visible,
-.koro-option:focus-visible {
-  outline: 3px solid var(--color-black-90);
-  outline-offset: 2px;
+/* One keyboard-focus ring for the whole app, and it is TWO-TONE on purpose.
+
+   A theeeme can put four different colours under this ring — the primary
+   button's fill (color_01), the secondary button's white fill, the hero
+   (color_03) and the page background (color_02) — so across the 12 curated
+   palettes there are 48 surfaces it has to stay visible against, at the 3:1
+   WCAG 1.4.11 asks for. No single colour manages it. HDS's own
+   `--color-coat-of-arms` (#0072c6), which is what shipped before this, failed
+   17 of the 48 and dropped to 1.08:1 on Kesä's tram-green hero. Plain black
+   still fails 3, including 1.00:1 on M&V, whose hero IS black.
+
+   White and black together always work: white carries the dark surfaces, black
+   the light ones, and their passing ranges overlap, so one band is always
+   visible whatever is behind. The two are 21:1 apart, so they never read as one
+   band either. `src/test/paletteContrast.test.js` pins all 48.
+
+   The bands never overlap, so nothing here depends on paint order: `outline` is
+   the outer black band, `outline-offset` opens a 3px gap inside it, and the
+   `box-shadow` fills exactly that gap with white.
+
+   HDS buttons draw their own outline from a higher-specificity rule, so theirs
+   arrives as `--outline-color-focus` from `useTheeeme` instead; the offset and
+   the white band below still reach them, because HDS sets neither. */
+:focus-visible {
+  outline: 3px solid var(--color-black);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--color-white);
 }
 
 .things-grid {
@@ -1438,9 +1455,13 @@ figure[class*='Highlight-module_highlight'] {
 }
 
 /* The main landmark is focused on route change (RouteFocusReset); the content
-   change and scroll-to-top already signal the move, so suppress the outline. */
+   change and scroll-to-top already signal the move, so suppress the ring. Both
+   halves of it: after a Tab-then-Enter the browser can well count that
+   programmatic focus as `:focus-visible`, and killing only the outline would
+   have left the white band ringing the entire page. */
 main:focus {
   outline: none;
+  box-shadow: none;
 }
 
 /* Screen-reader-only text (visually hidden, still announced). */
