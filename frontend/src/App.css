@@ -1491,6 +1491,16 @@ main:focus {
   margin: 0;
 }
 
+/* A <caption> whose only content is screen-reader-only exists to give the table a
+   name — VoiceOver's table rotor lists tables by name, and every one of these was
+   nameless. It must not also reserve HDS's visible caption margin, or naming a
+   table would push it 16px down the page. The heading above each of them already
+   says the same thing on screen; this is for the reader who is not looking at it. */
+caption:has(> .sr-only:only-child) {
+  margin: 0;
+  line-height: 0;
+}
+
 /* Screen-reader-only text (visually hidden, still announced). */
 .sr-only {
   position: absolute;

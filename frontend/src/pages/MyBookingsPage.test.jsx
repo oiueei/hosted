@@ -57,6 +57,20 @@ describe('MyBookingsPage listing', () => {
     expect(screen.getByText('Tent')).toBeInTheDocument();
   });
 
+  test('both tables carry a name, so they can be told apart in a rotor', async () => {
+    // A <table> with no <caption> is announced as "table, 2 columns" and nothing
+    // else. This page has two of them, one under each heading — and a heading is
+    // not a table's name, so a reader listing the tables on this page got two
+    // identical nameless entries. The captions are screen-reader-only: the
+    // headings already say it on screen.
+    renderPage();
+
+    expect(
+      await screen.findByRole('table', { name: 'Requests waiting for an answer' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Requests already closed' })).toBeInTheDocument();
+  });
+
   test('with nothing pending, the section says so instead of vanishing', async () => {
     // An empty pending table would read as "the page is broken", not "you have
     // no open requests".

@@ -330,6 +330,7 @@ export default function ManageInvitesPage() {
             <div className="table-wrap">
               <Table
                 cols={cols}
+                caption={<span className="sr-only">{t('manageInvites.caption')}</span>}
                 rows={tableRows}
                 indexKey="_id"
                 renderIndexCol={false}

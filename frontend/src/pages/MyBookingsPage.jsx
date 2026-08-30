@@ -239,6 +239,7 @@ export default function MyBookingsPage() {
                   <div className="table-wrap">
                     <Table
                       cols={cols}
+                      caption={<span className="sr-only">{t('myBookings.captionPending')}</span>}
                       rows={pendingRows}
                       indexKey="_id"
                       renderIndexCol={false}
@@ -259,6 +260,7 @@ export default function MyBookingsPage() {
                     <div className="table-wrap">
                       <Table
                         cols={cols}
+                        caption={<span className="sr-only">{t('myBookings.captionPast')}</span>}
                         rows={otherRows}
                         indexKey="_id"
                         renderIndexCol={false}

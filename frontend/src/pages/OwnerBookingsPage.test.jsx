@@ -91,6 +91,17 @@ describe('OwnerBookingsPage listing', () => {
     expect(screen.getByRole('heading', { name: 'Past requests' })).toBeInTheDocument();
   });
 
+  test('both tables carry a name, so they can be told apart in a rotor', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByRole('table', { name: 'Requests waiting for your answer' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('table', { name: 'Requests you have already answered' })
+    ).toBeInTheDocument();
+  });
+
   test('with nothing pending, the section says so rather than vanishing', async () => {
     mockApi([{ results: [booking({ status: 'REJECTED' })], next: null }]);
     renderPage();

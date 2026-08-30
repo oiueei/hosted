@@ -268,6 +268,7 @@ export default function OwnerBookingsPage() {
             <div className="table-wrap">
               <Table
                 cols={cols}
+                caption={<span className="sr-only">{t('ownerBookings.captionPending')}</span>}
                 rows={pendingRows}
                 indexKey="_id"
                 renderIndexCol={false}
@@ -284,6 +285,7 @@ export default function OwnerBookingsPage() {
               <div className="table-wrap">
                 <Table
                   cols={cols}
+                  caption={<span className="sr-only">{t('ownerBookings.captionPast')}</span>}
                   rows={otherRows}
                   indexKey="_id"
                   renderIndexCol={false}
