@@ -131,11 +131,15 @@ value of `/ship` in this case — they are the verification, not the paperwork a
 4. **Write the message in British English:**
    - Imperative subject (e.g. "Add", "Fix", "Update", not "Added"), ≤ 72 characters
    - A body explaining *what* changed and *why* — the why is the part the diff cannot show
-   - The co-author line with your actual current model name, e.g.:
+   - The co-author trailer, composed **from the rules in `CLAUDE.md` §Commit
+     attribution and nowhere else** — not from a previous commit, whose trailers
+     may be wrong (that section says which ones and why). The short version: the
+     live model's own name and version, no parenthesis unless it is `(1M context)`,
+     `via Claude Code` only for non-Anthropic models, and the email by provider.
      ```
-     Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+     Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
      ```
-     (Replace "Opus 4.6" with whatever model you currently are.)
+     Ask rather than guess if any part of the line is unclear.
    - **No "Para revisar (CA)" block** — visual-QA notes go in the chat, never in the message.
 5. Run each commit using a HEREDOC to preserve formatting.
 6. Confirm with `git log --oneline -<n>`, where *n* is the number of commits just made.
