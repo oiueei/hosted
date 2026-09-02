@@ -588,6 +588,10 @@ All UI components are sourced from the [Helsinki Design System](https://hds.hel.
 
 Main pages are validated with [axe DevTools](https://www.deque.com/axe/devtools/) to detect WCAG violations. Automated accessibility checks are integrated into the frontend test suite via `jest-axe`.
 
+## Contributing
+
+**Pull requests are not being accepted for now** — one maintainer, and the time for reviewing outside code currently goes into finishing the product. Issues are welcome, though: bug reports, self-hosting problems, accessibility findings and translation corrections all get read. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Legal
 
 The app ships a public **`/legal`** page (commitment, legal notice, privacy, basic terms — es/ca/en, following the UI language). Its content lives in `frontend/src/legal/{lang}.js` and is **per-deployment**:
