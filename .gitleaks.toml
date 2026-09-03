@@ -6,6 +6,18 @@ title = "OIUEEI gitleaks config"
 [extend]
 useDefault = true
 
+# An operator's legal identity (name, tax ID, address) belongs in VITE_LEGAL_*
+# config vars injected at build time, never in source. This fails the scan if a
+# Spanish-style tax ID (8 digits + a letter) lands in frontend/src/legal/{ca,en,es}.js
+# — a narrow tripwire scoped to those three files, inert where the legal text is
+# generic.
+[[rules]]
+id = "oiueei-legal-identity-in-source"
+description = "Operator tax ID hardcoded into src/legal/ instead of VITE_LEGAL_NIF"
+regex = '''\b[0-9]{8}[A-Za-z]\b'''
+path = '''frontend/src/legal/(?:ca|en|es)\.js$'''
+tags = ["oiueei", "pii", "legal"]
+
 [allowlist]
 description = "Known non-secret test/CI placeholder values"
 regexes = [
