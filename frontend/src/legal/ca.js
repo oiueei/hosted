@@ -1,37 +1,67 @@
-// Text legal de la instància — versió genèrica del repositori standalone.
-// Cada desplegament d'OIUEEI té el seu propi operador, i aquest operador és el
-// responsable del tractament de les dades: si auto-hospedes OIUEEI, edita la
-// secció «Qui opera aquesta instància» amb la teva identitat i contacte.
-// (El desplegament oficial www.oiueei.com substitueix aquest fitxer a la seva
-// branca de desplegament per la versió completa, amb les dades reals del titular.)
+// Text legal complet del desplegament www.oiueei.com. El repositori standalone
+// porta la versió genèrica; aquí aquest fitxer la substitueix. La identitat del
+// titular s'injecta des de VITE_LEGAL_OPERATOR / _NIF / _ADDRESS en temps de
+// compilació (substitució estàtica de Vite — vegeu
+// frontend/scripts/check-legal-env.mjs), de manera que ni el NIF ni l'adreça
+// queden com a codi.
 export default `
 # El nostre compromís
 
 OIUEEI funciona sense publicitat i sense analítica de tercers: ningú no et rastreja mentre la fas servir. Les teves dades no són el producte — no es venen ni se cedeixen a ningú, mai. No hi ha píxels de seguiment als correus ni enllaços embolcallats amb rastrejadors. Aquest compromís està escrit a les regles de disseny del projecte i és el seu punt de partida, no la lletra petita.
 
-# Qui opera aquesta instància
+# Avís legal
 
-OIUEEI és programari de codi obert (llicència EUPL-1.2). Aquesta pàgina descriu **una instància** d'OIUEEI: qui l'opera és el responsable del servei i del tractament de les teves dades.
+En compliment de la Llei 34/2002 (LSSI-CE), el titular de www.oiueei.com és:
 
-*L'operador d'aquesta instància encara no ha completat aquesta secció amb la seva identitat i contacte. Si operes aquest desplegament, edita \`frontend/src/legal/\` amb les teves dades.*
+**${import.meta.env.VITE_LEGAL_OPERATOR}** — NIF ${import.meta.env.VITE_LEGAL_NIF} — ${import.meta.env.VITE_LEGAL_ADDRESS} — contacte: legal@oiueei.com.
 
-# Privadesa
+OIUEEI és un projecte personal: no hi ha cap societat al darrere. En soc el creador, mantenidor i responsable.
 
-**Què desa l'aplicació, per disseny:** el teu email (per entrar amb enllaços màgics — sense contrasenyes), el teu nom i perfil opcional (bio, foto, idioma), el contingut que publiques (col·leccions, coses i les seves fotos, preguntes i respostes, reserves), les teves preferències de correu, i dades demogràfiques **opcionals** (generació de naixement i codi postal) que només veu qui administra les teves comunitats, en agregat — mai no són públiques.
+# Política de privadesa
 
-**On van:** el correu surt pel proveïdor SMTP que l'operador hagi configurat i les imatges i els documents es desen al bucket d'emmagatzematge d'objectes del mateix operador. Res més no surt de la instància: sense SDKs de tercers, sense esdeveniments enviats enfora. Les mètriques d'ús són pròpies, pseudonimitzades i mai no es comparteixen.
+**Responsable del tractament:** el titular indicat a l'Avís legal.
 
-**Cookies:** només tècniques (sessió i seguretat). No hi ha cookies de tercers ni de publicitat, per això no hi ha bàner.
+**Quines dades tracto, per a què i amb quina base:**
 
-**Esborrar el teu compte:** des del teu perfil (Editar perfil → Esborrar el compte), amb confirmació per correu. És immediat i irreversible: el teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds s'eliminen. Les preguntes que vas fer en coses d'altres persones i l'historial de mans es conserven **sense el teu nom** («Antic membre»).
+- **Email i nom** — el teu compte i els enllaços màgics d'accés (sense contrasenyes), i els avisos propis del servei. Base: execució del servei (art. 6.1.b RGPD).
+- **Perfil opcional** (bio, foto, idioma) — el que tu decideixes mostrar. Base: execució del servei.
+- **Demografia opcional** (generació de naixement i codi postal) — només la veu qui administra les teves comunitats, i en agregat; mai no és pública. Base: el teu consentiment (art. 6.1.a); el retires deixant els camps en blanc.
+- **El contingut que publiques** (col·leccions, coses i les seves fotos, preguntes i respostes, reserves) — el servei mateix. Base: execució del servei.
+- **Registres tècnics** (adreça IP en registres de seguretat i límits d'ús) — protegir el servei de l'abús. Base: interès legítim (art. 6.1.f).
+- **Mètriques pròpies pseudonimitzades** — recomptes agregats per operar el servei; mai no surten de la nostra base de dades ni es comparteixen. Base: interès legítim.
+- **Correus:** els essencials (accés, invitacions) s'envien sempre; els d'activitat els pots desactivar; els de notícies només s'envien si tu els actives (art. 6.1.a).
 
-**Emportar-te una còpia de les teves dades:** també en autoservei, des del teu perfil — descarrega-ho tot en un fitxer, quan vulguis, sense confirmació per correu. Si administres un grup, també pots descarregar el grup sencer: membres, coses, tot l'historial. Aquest segon fitxer porta dades d'altres persones, així que desa'l bé i no el reenviïs.
+**Qui tracta dades per encàrrec:** Heroku/Salesforce (allotjament, servidors a Irlanda; empresa estatunidenca), Hetzner Online GmbH (imatges i documents, Alemanya), Mailgun/Sinch (enviament de correu, regió europea), Sentry/Functional Software (monitoratge d'errors, dades allotjades a la regió europea, Alemanya — els esdeveniments es netegen de dades personals abans d'enviar-se) i Tally (el formulari de suggeriments, Bèlgica — només rep res si hi escrius). Les transferències als EUA s'emparen en l'EU-US Data Privacy Framework i/o clàusules contractuals tipus.
 
-# Termes bàsics
+**El que no hi ha:** publicitat, analítica de tercers, venda o cessió de dades, decisions automatitzades ni perfilat. **Galetes i emmagatzematge local:** només el tècnic. Les galetes són de sessió i seguretat; al teu navegador s'hi guarden a més el teu codi d'usuari, les teves preferències d'idioma i d'aspecte, i si ja has vist la benvinguda. Res d'això no necessita consentiment, i per això no hi ha bàner.
 
-OIUEEI es troba en fase alfa i s'ofereix «tal com és», sense garanties, en la mesura que la llei ho permeti. El contingut que publiques és teu i n'ets responsable; no publiquis res il·legal o nociu. Els intercanvis (regals, vendes, préstecs, lloguers) són acords entre persones: la plataforma no n'és part ni processa pagaments — una fiança que aparegui en una fitxa és informació que acorden les dues persones entre elles, i OIUEEI mai no la reté, la mou ni en garanteix la devolució. Hi ha un botó per denunciar contingut, i l'operador pot retirar el que incompleixi aquestes normes.
+**Quant de temps:** mentre el teu compte existeixi. Pots **esborrar el teu compte tu mateix** (Editar perfil → Esborrar el compte, amb confirmació per correu): és immediat i irreversible — el teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds s'eliminen. Les preguntes que vas fer en coses d'altres persones i l'historial de mans es conserven sense el teu nom («Antic membre»). Les còpies de seguretat es fan cada dia i roten soles: les de més d'una setmana desapareixen.
 
-# Per a operadors (self-hosting)
+**Els teus drets:** accés, rectificació, supressió i portabilitat els exerceixes directament des del teu perfil: pots descarregar totes les teves dades en un fitxer quan vulguis i, si gestiones un grup, també el grup sencer —aquest segon fitxer porta dades d'altres persones, així que guarda'l bé—. Per a oposició o limitació escriu-me a legal@oiueei.com. També pots reclamar davant l'Agència Espanyola de Protecció de Dades (www.aepd.es).
 
-Si despleges OIUEEI, el responsable del tractament ets tu: completa aquesta pàgina amb la teva identitat, les teves finalitats i els teus encarregats (proveïdor de correu, emmagatzematge d'objectes, hosting), i atén els drets dels teus usuaris. La llicència EUPL-1.2 permet l'ús en producció; el que demana a canvi és reciprocitat — si ofereixes un OIUEEI modificat com a servei, has de posar el seu codi font a disposició dels teus usuaris sota la mateixa llicència.
+**Si hi has arribat per una invitació:** el teu correu ens el va donar qui et va convidar, i només es fa servir per enviar-te aquesta invitació. Si no l'acceptes i ningú no torna a convidar-te, aquest compte pendent s'esborra sol als 60 dies.
+
+**Menors:** si tens menys de 14 anys, necessites l'autorització dels teus tutors per fer servir OIUEEI.
+
+**Busques una resposta ràpida?** Les [preguntes freqüents](/faq) expliquen el mateix en llenguatge planer. Aquesta pàgina és la versió completa, i és la que val.
+
+# Termes i condicions
+
+1. **Què és.** OIUEEI és una plataforma per compartir coses entre persones que es coneixen. És en fase **alfa**: res no està acabat i hi trobaràs vores per polir.
+2. **El teu compte.** S'hi accedeix amb enllaços màgics per correu; fes servir un email que puguis llegir. Pots esborrar el teu compte quan vulguis, des del teu perfil.
+3. **Preu.** Durant la fase de proves (alfa i beta) el servei és **gratuït**, i els comptes creats en aquesta etapa ho continuaran sent. Més endavant està previst un pla de pagament per als comptes nous; els preus s'anunciaran aquí, i en aquests termes, amb antelació, abans que enlloc més.
+4. **Continuïtat.** Les eines per exportar les teves dades ja existeixen: des del teu perfil, quan vulguis, les teves en un fitxer i —si gestiones un grup— el grup sencer (les seves coses, els seus membres, l'historial). Si algun dia OIUEEI tanqués, avisaré amb un **mínim de 90 dies**, temps de sobra per emportar-t'ho a una altra plataforma o auto-hospedar l'aplicació des de GitHub (la llicència ho permet).
+5. **El teu contingut.** És teu i n'ets responsable. No publiquis res il·legal, nociu o que no et pertanyi. Hi ha un botó per denunciar contingut i puc retirar el que incompleixi aquestes normes.
+6. **Entre persones.** Els intercanvis (regals, vendes, préstecs, lloguers) són acords entre usuaris: OIUEEI no n'és part, no processa pagaments i no garanteix les transaccions. Una **fiança** anotada en una fitxa és informació que acorden les dues persones entre elles: OIUEEI no la cobra, no la reté, no la mou i no en garanteix la devolució.
+7. **Garanties.** El servei es presta «tal com és», sense garanties, en la mesura que la llei ho permeti. Res d'això no limita els drets que la llei et reconegui com a consumidor.
+8. **Canvis.** Si aquests termes canvien, avisaré amb antelació raonable.
+9. **Llei i fur.** Llei espanyola; per a qualsevol conflicte, els jutjats de Barcelona, llevat que com a consumidor et correspongui el fur del teu domicili.
+
+# El codi
+
+OIUEEI és programari de codi obert sota la llicència **EUPL-1.2**, un copyleft fort: pots llegir-lo, modificar-lo i auto-hospedar-lo en producció, també com a servei. El que la llicència demana a canvi és reciprocitat — si ofereixes un OIUEEI modificat com a servei en xarxa, has de posar el seu codi font a disposició dels teus usuaris sota la mateixa llicència; un desplegament sense modificar no deu res més enllà de conservar els avisos. El projecte viu a GitHub (github.com/oiueei/standalone).
+
+---
+
+*Darrera actualització: 3 de setembre de 2026.*
 `;
