@@ -1,0 +1,77 @@
+name: Hosted coverage
+
+# The coverage floor for `hosted/`, which the shared workflow cannot give it.
+#
+# `.github/workflows/tests.yml` is merged unchanged from upstream and measures
+# `--cov=core`. This app's tests live in `core/tests/` so they *run* there (see
+# hosted/README.md for why), but its code is never measured: the door that
+# decides who gets in, the validation of creators and the form that answers
+# them could all lose their guard with every build green.
+#
+# Adding `--cov=hosted` to the shared file would have been cheaper to write and
+# wrong twice. It only merges cleanly from upstream if it is left untouched here
+# — an edit made in this repo conflicts on every future sync. And a combined
+# total is not a floor for a 351-statement app inside a 5,126-statement suite:
+# at 96% combined there is enough slack for `hosted/` to fall from 99% to
+# roughly 59% without anything going red.
+#
+# So: a file that exists only in this repo, which a merge from upstream never
+# touches, running this app's own tests against its own number.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Same two actions the shared workflow uses, pinned to the same commit
+      # SHAs (the trailing comment is the tag they resolved from) for the same
+      # reason: a tag is movable, a SHA is not.
+      - name: Checkout code
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/development.txt
+
+      # No PostgreSQL service: the shared workflow already runs these very
+      # tests on Postgres and is what gates their correctness. This job exists
+      # to measure, and on SQLite it measures the same lines in about two
+      # seconds.
+      #
+      # `-k hosted` rather than a list of paths — the files are named
+      # test_hosted_*.py and live in three different directories, and a hard
+      # list would silently stop covering the one somebody adds in a fourth. If
+      # the selector ever matches nothing, the run fails on coverage rather
+      # than passing on an empty suite.
+      #
+      # 97 is a ratchet like every other number in this repo: the app sits at
+      # 99%, and ~2 points of margin makes a genuine regression visible without
+      # turning one uncovered branch into a red build. Raise it as coverage
+      # grows; never lower it to make a red build pass.
+      #
+      # The env var is the one the shared workflow sets, for the same reason:
+      # the settings module requires a secret key.
+      - name: Measure this deployment's own app
+        env:
+          DJANGO_SECRET_KEY: test-secret-key-for-ci-only-not-for-production
+        run: |
+          pytest core/tests -k hosted --cov=hosted --cov-report=term-missing --cov-fail-under=97

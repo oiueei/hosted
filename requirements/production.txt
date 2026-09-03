@@ -11,3 +11,9 @@ dj-database-url==2.3.0
 # Production server
 gunicorn==23.0.0
 whitenoise==6.12.0
+
+# Error monitoring (active only when SENTRY_DSN is set — see production.py).
+# This deployment's service layer, not part of what OIUEEI distributes. Pinned
+# like every other direct dependency so the Heroku build and pip-audit resolve
+# the same version.
+sentry-sdk==2.66.1

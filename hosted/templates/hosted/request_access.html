@@ -1,0 +1,99 @@
+{# The one page of this deployment that is not React.
+
+   Deliberately plain: no design system, no bundle, no JavaScript. It is read
+   once by somebody who has already decided to ask, and the fastest honest page
+   is better than a styled one. The colours are the app's own tokens so it does
+   not look like a different site. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Request access — OIUEEI</title>
+  <style>
+    :root { --ink: #1a1a1a; --muted: #565656; --line: #d9d9d9; --bg: #fff; --accent: #0000bf; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #f2f2f2; --muted: #b3b3b3; --line: #444; --bg: #1a1a1a; --accent: #a3a3ff; }
+    }
+    body { margin: 0; padding: 2rem 1rem 4rem; background: var(--bg); color: var(--ink);
+           font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+    main { max-width: 34rem; margin: 0 auto; }
+    h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 1rem; }
+    p { margin: 0 0 1rem; }
+    .muted { color: var(--muted); }
+    label { display: block; font-weight: 600; margin: 1.5rem 0 .25rem; }
+    .help { color: var(--muted); font-size: .9rem; margin: 0 0 .5rem; }
+    textarea { width: 100%; box-sizing: border-box; padding: .6rem; font: inherit;
+               color: var(--ink); background: var(--bg);
+               border: 1px solid var(--line); border-radius: 2px; }
+    textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+    button { margin-top: 1.5rem; padding: .7rem 1.4rem; font: inherit; font-weight: 600;
+             color: #fff; background: var(--accent); border: 0; border-radius: 2px;
+             cursor: pointer; }
+    .errors { margin: .25rem 0 0; padding: 0; list-style: none; color: #b01038; font-size: .9rem; }
+    .box { border: 1px solid var(--line); border-left: 4px solid var(--accent);
+           padding: 1rem 1.25rem; margin: 0 0 1.5rem; }
+    a { color: inherit; }
+  </style>
+</head>
+<body>
+<main>
+  {% if needs_login %}
+    <h1>Sign in first</h1>
+    <p>This is where you ask to run a group here — but we need to know who is asking.</p>
+    <p><a href="/login">Sign in</a>, then come back to this page.</p>
+
+  {% elif validation and validation.is_approved %}
+    <h1>You're all set</h1>
+    <div class="box">
+      <p>Your request was approved. Community collections, lending and renting are
+         available on your account.</p>
+    </div>
+    <p><a href="/collections/new">Create a collection</a></p>
+
+  {% elif just_sent %}
+    <h1>Thanks — that's with us</h1>
+    <div class="box">
+      <p>We read these by hand, so it may take a few days. You'll hear back by email
+         at the address on your account.</p>
+    </div>
+    <p><a href="/">Back to OIUEEI</a></p>
+
+  {% else %}
+    <h1>Ask to run a group here</h1>
+    <p>Giving things away and selling them are open to everyone with an account.
+       Two things aren't: a <strong>community collection</strong>, where other people
+       add their own things to a group under your name, and <strong>lending or
+       renting</strong>, where a thing has to come back.</p>
+    <p class="muted">Both put somebody else on the hook, and we answer for what this
+       service is used for — so we read a couple of sentences first. There is no
+       form to game here; just tell us the truth.</p>
+
+    {% if validation and validation.status == "PENDING" %}
+      <div class="box">
+        <p>You already have a request with us, sent {{ validation.created|date:"j F Y" }}.
+           Sending this again replaces it.</p>
+      </div>
+    {% elif validation %}
+      <div class="box">
+        <p>We couldn't say yes to your last request. You're welcome to ask again —
+           if something has changed, or if there's more to say, this is the place.</p>
+      </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+        {{ field }}
+        {% if field.errors %}
+          <ul class="errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+        {% endif %}
+      {% endfor %}
+      <button type="submit">Send it</button>
+    </form>
+  {% endif %}
+</main>
+</body>
+</html>

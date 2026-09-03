@@ -96,3 +96,24 @@ LOGGING = {
         },
     },
 }
+
+# ─────────────────────────────────────────────────────────────
+# THE SERVICE LAYER OF THIS DEPLOYMENT (this deployment only)
+#
+# `hosted/` is this operator's own app: the open sign-up door, the page saying
+# what this service is, who may run a community collection or lend things, and
+# whatever any of it costs. It is not part of what OIUEEI distributes — see
+# SELF_HOSTING.md — and it only ever adds: it mounts its own URLs, supplies
+# its own policy, and imports from `core` while `core` knows nothing about it.
+#
+# Declared in code rather than left to config vars on purpose. An app installed
+# with its routes unmounted fails **silently** — the deployment simply stops
+# answering a URL it used to — and that is not a thing to leave to remembering
+# two Heroku settings. Anything the environment adds is kept alongside.
+# ─────────────────────────────────────────────────────────────
+INSTALLED_APPS += ["hosted"]  # noqa: F405
+DEPLOYMENT_URLCONFS = [*DEPLOYMENT_URLCONFS, "hosted.urls"]  # noqa: F405
+
+# Present in development too so `pytest` — which runs on these settings — sees the
+# app's models and routes. Without it the suite in this repo would exercise the
+# upstream product only, and the service layer would ship untested.

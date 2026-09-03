@@ -18,6 +18,41 @@ DEBUG = False
 if len(SECRET_KEY) < 50 or SECRET_KEY.startswith("test-secret-key"):  # noqa: F405
     raise ImproperlyConfigured("SECRET_KEY must be a strong production value (>= 50 characters).")
 
+# Error monitoring via Sentry — opt-in, only active when SENTRY_DSN is set. Part
+# of this deployment's service layer, not of what OIUEEI distributes. Honours
+# DESIGN.md §9: no PII leaves our servers — default PII is off, and request
+# cookies/auth headers plus user identity are scrubbed before any event is sent.
+#
+# The project lives in Sentry's **EU region**, so events land in Germany — and the
+# only thing that says so is the DSN itself: `…ingest.de.sentry.io` rather than
+# `…ingest.us.sentry.io`. There is no region setting here to check it against, and
+# the region is fixed when the *organisation* is created (Sentry cannot move an
+# existing one, which is why this deployment had to make a new one), so a DSN
+# pasted from a US organisation would quietly ship errors across the Atlantic
+# while the privacy notice keeps naming Germany. If it is ever rotated, look:
+#
+#     heroku config:get SENTRY_DSN -a <app> | sed 's|.*@||'
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+if SENTRY_DSN:
+    import sentry_sdk
+
+    def _scrub_pii(event, _hint):
+        request = event.get("request")
+        if request:
+            request.pop("cookies", None)
+            headers = request.get("headers") or {}
+            for header in ("Authorization", "Cookie", "X-Forwarded-For"):
+                headers.pop(header, None)
+        event.pop("user", None)
+        return event
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        send_default_pii=False,
+        traces_sample_rate=0.0,
+        before_send=_scrub_pii,
+    )
+
 
 def _require_env(name):
     """Fail fast instead of silently shipping a YOUR-DOMAIN.com placeholder."""
@@ -164,3 +199,33 @@ LOGGING = {
         },
     },
 }
+
+# ─────────────────────────────────────────────────────────────
+# THE SERVICE LAYER OF THIS DEPLOYMENT (this deployment only)
+#
+# `hosted/` is this operator's own app: the open sign-up door, the page saying
+# what this service is, who may run a community collection or lend things, and
+# whatever any of it costs. It is not part of what OIUEEI distributes — see
+# SELF_HOSTING.md — and it only ever adds: it mounts its own URLs, supplies
+# its own policy, and imports from `core` while `core` knows nothing about it.
+#
+# Declared in code rather than left to config vars on purpose. An app installed
+# with its routes unmounted fails **silently** — the deployment simply stops
+# answering a URL it used to — and that is not a thing to leave to remembering
+# two Heroku settings. Anything the environment adds is kept alongside.
+# ─────────────────────────────────────────────────────────────
+INSTALLED_APPS += ["hosted"]  # noqa: F405
+DEPLOYMENT_URLCONFS = [*DEPLOYMENT_URLCONFS, "hosted.urls"]  # noqa: F405
+
+# Community collections, lending and renting wait for a person to be read and
+# approved; giving and selling never do. Set here and NOT in development.py: the
+# upstream suite runs on those settings, and narrowing the product there would
+# have OIUEEI's own tests asserting this deployment's rules. The tests for this
+# app turn it on themselves.
+CREATOR_POLICY = "hosted.policy.HostedCreatorPolicy"
+
+# Where `manage.py stats_summary` mails its weekly report, and on which weekday
+# (0=Monday … 6=Sunday). Unset STATS_EMAIL and the command still prints to the
+# log and simply skips the email — which is what a review app should do.
+STATS_EMAIL = os.environ.get("STATS_EMAIL", "")
+STATS_EMAIL_WEEKDAY = int(os.environ.get("STATS_EMAIL_WEEKDAY", "0"))
