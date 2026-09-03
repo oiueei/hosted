@@ -1,54 +1,51 @@
+import { lazy } from 'react';
+
+export { deploymentI18n } from './i18n';
+
 /**
- * What this deployment adds to the SPA — the frontend half of the extension
- * points `DEPLOYMENT_URLCONFS` and `CREATOR_POLICY` give the backend.
+ * What this deployment adds to the SPA.
  *
- * A deployment with pages of its own — an operator's sign-up door, a
- * co-operative's house rules — **replaces this whole directory** rather than
- * editing `App.jsx`, `LoginPage.jsx` or the locale files. That is the point:
- * those are files upstream keeps changing, and a deployment that edits them
- * inherits a merge conflict on every update. A directory it owns outright has
- * none, forever.
+ * Upstream this directory exports nothing but empties — no routes, no open
+ * door, no about page — and `App.jsx`, `LoginPage.jsx`, `SiteFooter.jsx`,
+ * `CollectionPage.jsx` and `VerifyPage.jsx` read these four values and are
+ * **byte-identical on both branches**. That is the entire point: this file is
+ * replaced wholesale, and nothing shared is edited, so a merge from upstream
+ * stays a merge.
  *
- * The same trick already works by accident for `legal/{lang}.js`. Here it is
- * on purpose.
- *
- * @property {Array<{path: string, Component: React.ComponentType}>} deploymentRoutes
- *   Extra SPA routes. `Component` is usually `lazy(() => import(...))` so the
- *   page ships as its own chunk, like every route in `App.jsx`. They mount
- *   **before** the catch-all — see the note there.
- * @property {?string} popInPath
- *   Where the "new here?" button on `/login` and `/welcome` goes, or `null` for
- *   no button at all — which is the honest answer for a deployment whose only
- *   ways in are an invitation and a share link.
- * @property {?string} aboutPath
- *   Where a page explaining what this deployment *is* lives, or `null` for
- *   none. The site footer links it, the collection page offers it to someone
- *   who has just accepted an invitation, and a fresh magic-link login lands
- *   there. Upstream there is no such page: what OIUEEI is belongs in the
- *   README, and a deployment's own answer belongs to the deployment.
- * @property {?string} faqPath
- *   Where this deployment's help/FAQ page lives, or `null` for none. Linked
- *   from `/login`, the door with the most traffic — upstream has nowhere to
- *   send that link, since a FAQ answers questions about a *particular*
- *   deployment: who operates it, what it lets people create, how to ask for
- *   something it holds back. This repository has no answers to give.
- *   Same shape as `aboutPath`: a link to a 404 is worse than one link fewer.
- * @property {Object<string, Object>} deploymentI18n
- *   Extra translations, keyed by language code, merged into the `translation`
- *   namespace at startup. A deployment's copy stays out of
- *   `i18n/locales/*.json` this way — three files upstream edits constantly.
+ * See SELF_HOSTING.md §4.
  */
 
-export const deploymentRoutes = [];
+// Lazy, like every route in App.jsx, so each page ships as its own chunk.
+const PopInPage = lazy(() => import('./pages/PopInPage'));
+const WelcomePage = lazy(() => import('./pages/WelcomePage'));
+const FaqPage = lazy(() => import('./pages/FaqPage'));
 
-// No open door here: an account arrives by invitation or by a link somebody
-// chose to share, so /login is the whole of the front door and the "new here?"
-// button has nowhere to go. A deployment that runs one points this at its own
-// page — and it is the only file it has to write to do so.
-export const popInPath = null;
+export const deploymentRoutes = [
+  // The open door: enter an email, get a magic link, land in the demo
+  // collections. Its API half is the `hosted` Django app.
+  { path: '/popin', Component: PopInPage },
+  // What this service is — the personas, the commitment, the example
+  // collections. One operator's pitch, which is why it is not upstream.
+  { path: '/welcome', Component: WelcomePage },
+  // The help page: price, who runs this, what state it is in. Same reason as
+  // /welcome — the answers are one operator's, not the product's.
+  { path: '/faq', Component: FaqPage },
+];
 
-export const aboutPath = null;
+// The "new here?" button on /login points at the open door above.
+export const popInPath = '/popin';
 
-export const faqPath = null;
+// The footer's "what OIUEEI is" link, the first-time box on a freshly joined
+// collection, and where `landing: "welcome"` sends a brand-new visitor — the
+// three places upstream leaves to the deployment.
+export const aboutPath = '/welcome';
 
-export const deploymentI18n = {};
+// The help/FAQ link under "trouble signing in?" on /login. Upstream added this
+// fourth slot in the August round (S4) for exactly the content this deployment
+// has: what it costs, who runs it, what state it is in.
+//
+// Pointed at the page above now that it answers in all three languages. It was
+// deliberately `null` while only Spanish existed: /login is where a stranger
+// arrives, and handing them a page in a language they did not choose is a worse
+// welcome than one link fewer.
+export const faqPath = '/faq';
