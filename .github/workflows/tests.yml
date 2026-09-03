@@ -150,8 +150,17 @@ jobs:
       - name: Test
         run: npm run test:coverage
 
+      # A deployment whose legal notice interpolates VITE_LEGAL_* at build time
+      # (frontend/scripts/check-legal-env.mjs) sets those three as Actions
+      # *variables* and the build reads them here. Upstream's legal text has no
+      # such reference and the variables are undefined, so `vars.*` renders empty
+      # and this is inert — the file stays identical between the two repos.
       - name: Build
         run: npm run build
+        env:
+          VITE_LEGAL_OPERATOR: ${{ vars.VITE_LEGAL_OPERATOR }}
+          VITE_LEGAL_NIF: ${{ vars.VITE_LEGAL_NIF }}
+          VITE_LEGAL_ADDRESS: ${{ vars.VITE_LEGAL_ADDRESS }}
 
   security:
     runs-on: ubuntu-latest
