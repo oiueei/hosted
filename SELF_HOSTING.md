@@ -186,13 +186,22 @@ waiting for a door you write.
 
 ## Licence, and the honest version of "auditable"
 
-OIUEEI is **source-available**, not open source: BUSL 1.1, converting to MIT in
-2030 (see `LICENSE`). You may run it, modify it, and self-host it for your own
-community today; what the licence reserves is offering it commercially as a
-service.
+OIUEEI is open source under the **EUPL-1.2** (see `LICENSE`) — a strong copyleft
+licence. You may run it, modify it and self-host it for your own community. What
+it asks in return is reciprocity: distribute a modified OIUEEI, *or run one as a
+service*, and those changes are owed to your users under the same licence. An
+unmodified deployment owes nothing beyond keeping the notices.
+
+One consequence is easy to trip over, so it is said here: the **first** thing
+this guide has you do — edit `frontend/src/legal/{lang}.js` with your own
+identity — already makes you a modifier. Private to your group, that changes
+nothing in practice. Run it as a service for others and those edits (and any
+others) are source you owe them. Complying is trivial — publish your fork — but
+nobody tells you.
 
 Every line of the **product** is in this repository and can be read, audited and
 changed. An operator's **service layer** — their sign-up door, their vetting
-queue, their billing — is not part of what is distributed, and saying otherwise
-would be a claim this repository cannot back. What that layer may and may not do
-is bounded by what it plugs into, and that is exactly the four points above.
+queue, their billing — is a separate body of code written against the four
+extension points above. Where it builds on and extends OIUEEI it is likely a
+derivative work, and the EUPL's reciprocity then reaches it too. What that layer
+may and may not do is bounded by what it plugs into — exactly those four points.

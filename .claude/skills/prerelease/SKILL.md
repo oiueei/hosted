@@ -2,6 +2,11 @@
 name: prerelease
 description: Pre-release review in five independent role-play sessions. Invoke as `/prerelease frontend`, `/prerelease code`, `/prerelease security`, `/prerelease design`, or `/prerelease testing`. Each session produces a phased plan; the user decides what to implement. Finish each session with `/ship` then `/clear` before starting the next.
 disable-model-invocation: true
+# A review is judgement, not typing. The session default is `opusplan`, which puts
+# Sonnet on execution — and a `/prerelease` session is execution as far as the mode
+# is concerned, so without this the review inherits Sonnet. The override lasts for
+# the turn that invokes the skill and does not touch the saved setting.
+model: opus
 ---
 
 # Pre-Release Review — $ARGUMENTS

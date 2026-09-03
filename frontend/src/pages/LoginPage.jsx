@@ -94,7 +94,7 @@ export default function LoginPage() {
         </p>
         <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
           <Trans
-            i18nKey="login.openSource"
+            i18nKey="login.licence"
             components={[
               <span key="0" />,
               // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime

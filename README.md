@@ -1,6 +1,6 @@
 ## What is OIUEEI?
 
-A source-available web application (BUSL 1.1 — every line of the product public and auditable; MIT from 2030; self-hosting in production is allowed, offering it as a competing hosted service is not) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
+An open source web application (EUPL-1.2 — strong copyleft, and its reciprocity reaches running a modified copy as a network service; every line of the product public and auditable; self-hosting in production is allowed) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
 
 No ads, no tracking of any kind, no third-party code running in your browser — and no cookie banner, because there is nothing to consent to. Each of those claims comes with a way to check it: **[→ Privacy](#privacy)**.
 
@@ -62,7 +62,7 @@ Our goal is to **stay as close to upstream HDS as possible** to benefit from acc
 ### Why HDS?
 
 - **Accessibility built-in** — All HDS components are WCAG 2.1 AA audited.
-- **Open source (MIT)** — Fully compatible with OIUEEI's source-available licence (BUSL 1.1).
+- **Open source (MIT)** — Fully compatible with OIUEEI's licence (EUPL-1.2).
 - **Production-proven** — Used across hundreds of City of Helsinki digital services.
 - **React-native support** — Aligns with our tech stack (React + Vite).
 
@@ -588,6 +588,10 @@ All UI components are sourced from the [Helsinki Design System](https://hds.hel.
 
 Main pages are validated with [axe DevTools](https://www.deque.com/axe/devtools/) to detect WCAG violations. Automated accessibility checks are integrated into the frontend test suite via `jest-axe`.
 
+## Contributing
+
+**Pull requests are not being accepted for now** — one maintainer, and the time for reviewing outside code currently goes into finishing the product. Issues are welcome, though: bug reports, self-hosting problems, accessibility findings and translation corrections all get read. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Legal
 
 The app ships a public **`/legal`** page (commitment, legal notice, privacy, basic terms — es/ca/en, following the UI language). Its content lives in `frontend/src/legal/{lang}.js` and is **per-deployment**:
@@ -595,7 +599,9 @@ The app ships a public **`/legal`** page (commitment, legal notice, privacy, bas
 - The standalone repo carries a **generic, operator-neutral** text. **If you self-host OIUEEI, you are the data controller of your instance**: edit those files with your identity, contact, legal bases and processors before inviting real users.
 - The official deployment (www.oiueei.com) replaces those files on its deploy branch with the full RGPD/LSSI version of its owner.
 
-**Licence**: [Business Source License 1.1](LICENSE) — the code is public and auditable, production self-hosting is allowed, and the one restriction is offering OIUEEI to third parties as a hosted service that competes with the licensor's paid offering. On the Change Date (2030-02-02) it becomes MIT.
+**Licence**: [EUPL-1.2](LICENSE). OIUEEI is licensed under the EUPL-1.2 — a strong copyleft licence that also covers use over a network. If you modify it and run it as a service, you owe your users the source. Production self-hosting is allowed; an unmodified deployment owes nothing beyond keeping the notices. The EUPL is published by the European Commission in 23 official languages of identical legal value, Spanish among them.
+
+Everything published under the previous licence (Business Source License 1.1) keeps its Change Date and still converts to the MIT License on 2 February 2030. Everything from the relicensing onward is EUPL-1.2, which does not expire — so this is a wider grant than the BSL promised, not a narrower one.
 
 ### Need a hand running your own OIUEEI?
 

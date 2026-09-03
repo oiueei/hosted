@@ -11,7 +11,7 @@ OIUEEI funciona sense publicitat i sense analítica de tercers: ningú no et ras
 
 # Qui opera aquesta instància
 
-OIUEEI és programari de codi públic (llicència BUSL 1.1; MIT a partir de 2030). Aquesta pàgina descriu **una instància** d'OIUEEI: qui l'opera és el responsable del servei i del tractament de les teves dades.
+OIUEEI és programari de codi obert (llicència EUPL-1.2). Aquesta pàgina descriu **una instància** d'OIUEEI: qui l'opera és el responsable del servei i del tractament de les teves dades.
 
 *L'operador d'aquesta instància encara no ha completat aquesta secció amb la seva identitat i contacte. Si operes aquest desplegament, edita \`frontend/src/legal/\` amb les teves dades.*
 
@@ -33,5 +33,5 @@ OIUEEI es troba en fase alfa i s'ofereix «tal com és», sense garanties, en la
 
 # Per a operadors (self-hosting)
 
-Si despleges OIUEEI, el responsable del tractament ets tu: completa aquesta pàgina amb la teva identitat, les teves finalitats i els teus encarregats (proveïdor de correu, emmagatzematge d'objectes, hosting), i atén els drets dels teus usuaris. La llicència BUSL 1.1 permet l'ús en producció; l'única cosa que no permet és oferir OIUEEI a tercers com a servei hospedat que competeixi amb l'oferta de pagament del llicenciant.
+Si despleges OIUEEI, el responsable del tractament ets tu: completa aquesta pàgina amb la teva identitat, les teves finalitats i els teus encarregats (proveïdor de correu, emmagatzematge d'objectes, hosting), i atén els drets dels teus usuaris. La llicència EUPL-1.2 permet l'ús en producció; el que demana a canvi és reciprocitat — si ofereixes un OIUEEI modificat com a servei, has de posar el seu codi font a disposició dels teus usuaris sota la mateixa llicència.
 `;

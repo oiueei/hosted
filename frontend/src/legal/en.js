@@ -11,7 +11,7 @@ OIUEEI runs without ads and without third-party analytics: nobody tracks you whi
 
 # Who operates this instance
 
-OIUEEI is source-available software (BUSL 1.1 licence; MIT from 2030). This page describes **one instance** of OIUEEI: whoever operates it is responsible for the service and for how your data is handled.
+OIUEEI is open source software (EUPL-1.2 licence). This page describes **one instance** of OIUEEI: whoever operates it is responsible for the service and for how your data is handled.
 
 *The operator of this instance has not yet completed this section with their identity and contact details. If you run this deployment, edit \`frontend/src/legal/\` with your details.*
 
@@ -33,5 +33,5 @@ OIUEEI is in alpha and offered "as is", without warranties, to the extent the la
 
 # For operators (self-hosting)
 
-If you deploy OIUEEI, you are the data controller: complete this page with your identity, your purposes and your processors (email provider, object storage, hosting), and honour your users' rights. The BUSL 1.1 licence allows production use; the one thing it does not allow is offering OIUEEI to third parties as a hosted service that competes with the licensor's paid offering.
+If you deploy OIUEEI, you are the data controller: complete this page with your identity, your purposes and your processors (email provider, object storage, hosting), and honour your users' rights. The EUPL-1.2 licence allows production use; what it asks in return is reciprocity — if you run a modified OIUEEI as a service, its source is owed to your users under the same licence.
 `;

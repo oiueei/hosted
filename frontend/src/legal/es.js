@@ -11,7 +11,7 @@ OIUEEI funciona sin publicidad y sin analítica de terceros: nadie te rastrea mi
 
 # Quién opera esta instancia
 
-OIUEEI es software de código público (licencia BUSL 1.1; MIT a partir de 2030). Esta página describe **una instancia** de OIUEEI: quien la opera es el responsable del servicio y del tratamiento de tus datos.
+OIUEEI es software de código abierto (licencia EUPL-1.2). Esta página describe **una instancia** de OIUEEI: quien la opera es el responsable del servicio y del tratamiento de tus datos.
 
 *El operador de esta instancia aún no ha completado esta sección con su identidad y contacto. Si operas este despliegue, edita \`frontend/src/legal/\` con tus datos.*
 
@@ -33,5 +33,5 @@ OIUEEI se encuentra en fase alfa y se ofrece «tal cual», sin garantías, en la
 
 # Para operadores (self-hosting)
 
-Si despliegas OIUEEI, el responsable del tratamiento eres tú: completa esta página con tu identidad, tus finalidades y tus encargados (proveedor de correo, almacenamiento de objetos, hosting), y atiende los derechos de tus usuarios. La licencia BUSL 1.1 permite el uso en producción; lo único que no permite es ofrecer OIUEEI a terceros como servicio hospedado que compita con la oferta de pago del licenciante.
+Si despliegas OIUEEI, el responsable del tratamiento eres tú: completa esta página con tu identidad, tus finalidades y tus encargados (proveedor de correo, almacenamiento de objetos, hosting), y atiende los derechos de tus usuarios. La licencia EUPL-1.2 permite el uso en producción; lo que pide a cambio es reciprocidad — si ofreces un OIUEEI modificado como servicio, debes poner su código fuente a disposición de tus usuarios bajo la misma licencia.
 `;

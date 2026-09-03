@@ -71,4 +71,14 @@ describe('legal content parity', () => {
       expect(ratio).toBeLessThan(3);
     }
   });
+
+  // The /legal page is one of two places the app names its own licence to a
+  // reader (the other is the login page). A partial relicensing that updated
+  // one language and not another would leave that language's reader looking at
+  // a licence OIUEEI no longer uses — so every language must name EUPL-1.2 and
+  // none may still carry the retired BSL wording.
+  test.each(CODES)('%s names the licence as EUPL-1.2 and drops the retired BSL wording', (lang) => {
+    expect(LANGS[lang]).toMatch(/EUPL-1\.2/);
+    expect(LANGS[lang]).not.toMatch(/\bBU?SL\b|Business Source|MIT from 2030|MIT a partir/i);
+  });
 });
