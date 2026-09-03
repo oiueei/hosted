@@ -129,8 +129,8 @@ The app ships a web app manifest (`public/manifest.webmanifest`) plus icons (`pu
 - Uses the standard `form-hero` + `Koros` layout with theeeme colors from localStorage (if available from a previous session).
 - **Hero title is the OIUEEI logo (S9)**: the only hero `<h1>` in the app whose text is the literal string "OIUEEI" — it renders `.form-hero-title-logo` (an 80px masked `oiueei-logo.svg`, coloured via `--hero-text-color`) instead, with `aria-label={t('login.title')}` on the `<h1>` for the accessible name. The hero also carries `form-hero--no-watermark` to suppress the standard 40px logo watermark (see Page Layout Pattern) — no double logo.
 - Leads with a one-sentence pitch (`login.pitch` i18n key), then a brief description of OIUEEI (`login.description` i18n key).
-- Shows an open source paragraph with a link to the GitHub repository (`login.openSource` i18n key, rendered via `Trans` for the inline link).
-- Shows a one-line manifesto under the open-source paragraph (`login.manifesto`): "No ads, no trackers. Your data is not the product." A quiet muted link to `/legal` (`login.legalLink`) sits under it. Below the form, a "trouble signing in?" line (`login.loginHelp`) links to `/contact` — the locked-out user's lifeline.
+- Shows a licence paragraph with a link to the GitHub repository (`login.licence` i18n key — OIUEEI is open source under the EUPL-1.2 — rendered via `Trans` for the inline link).
+- Shows a one-line manifesto under the licence paragraph (`login.manifesto`): "No ads, no trackers. Your data is not the product." A quiet muted link to `/legal` (`login.legalLink`) sits under it. Below the form, a "trouble signing in?" line (`login.loginHelp`) links to `/contact` — the locked-out user's lifeline.
 - Sends a magic link to the provided email address.
 - After submission, replaces the form with a `Notification` component:
   - `success` — Unified message displayed (backend returns 200 regardless of email existence for anti-enumeration)
