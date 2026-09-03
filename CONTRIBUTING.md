@@ -12,11 +12,14 @@ its footing, and it comes down to two things:
 1. **One maintainer.** OIUEEI is built and run by one person. Reviewing,
    testing and maintaining third-party code is real, ongoing work, and right now
    that time goes into finishing the product.
-2. **Licensing is not settled.** The maintainer currently holds all copyright in
-   the codebase, which keeps the project's licensing options open. Accepting
-   outside contributions without a contributor agreement in place would close
-   those options permanently. Until that agreement exists, the honest answer is
-   "not yet".
+2. **There is no contributor agreement yet.** The licence is settled — OIUEEI is
+   EUPL-1.2 — but the maintainer still holds all copyright in the codebase, and
+   that is what keeps the project's options open: relicensing later, or granting
+   different terms to someone who needs them. Accepting outside contributions
+   without a contributor agreement in place would close those options
+   permanently for that code, with no way back — if a contributor moves on,
+   there is no retroactive signature. Until that agreement exists, the honest
+   answer is "not yet".
 
 If and when pull requests open, contributors will be asked to sign a Contributor
 License Agreement. That will be announced here, in this file. No timeline is
@@ -75,20 +78,21 @@ an answer.
 
 ## About the license
 
-OIUEEI is **source-available under the Business Source License 1.1**
-(SPDX: `BUSL-1.1`) — every line of the product is public and auditable,
-production self-hosting is allowed, and the code converts to the MIT License on
-2 February 2030.
+OIUEEI is licensed under the **European Union Public Licence v. 1.2**
+(SPDX: `EUPL-1.2`) — an OSI-approved strong copyleft licence: every line of the
+product is public and auditable, self-hosting in production is allowed, and
+modifications you pass on — including by running them as a service — carry the
+same licence.
 
-Two things that are commonly got wrong, so they are stated plainly here:
+Two things worth stating plainly:
 
-- **BUSL-1.1 is not an open source license**, and the license text says so
-  itself. Please do not describe OIUEEI as open source. "Source-available" is
-  the accurate word.
-- **Self-hosting OIUEEI in production is allowed** — for your group, your
-  cooperative, your organization, with real users. What the license reserves is
-  offering OIUEEI to third parties as a hosted or managed service competing with
-  the licensor's paid offering.
+- **The EUPL's copyleft reaches use over a network.** Running a *modified* copy
+  as a service counts as distribution, so those changes are owed to your users
+  under the same licence — the same as if you shipped them a binary. An
+  unmodified deployment owes nothing beyond keeping the notices.
+- **Self-hosting OIUEEI in production is welcome** — for your group, your
+  cooperative, your organization, with real users. The licence asks for
+  reciprocity, not a fee.
 
 **There is no separate license for the design.** The CSS, the React components,
 the color palettes and the brand files are all covered by the one license
@@ -96,8 +100,10 @@ above. There is no design subtree held apart, and no fork that takes "only the
 code" — here the code *is* the design. The OIUEEI name and logo are trademarks,
 and the license grants no rights in them.
 
-The full terms are in [`LICENSE`](LICENSE). Third-party design components
-(Helsinki Design System) retain their original MIT license.
+The full terms are in [`LICENSE`](LICENSE). The EUPL is published by the
+European Commission in 23 official languages of identical legal value, Spanish
+among them. Third-party design components (Helsinki Design System) retain their
+original MIT license.
 
 ## Contact
 
