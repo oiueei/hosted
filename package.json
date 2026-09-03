@@ -6,6 +6,6 @@
     "node": "24.x"
   },
   "scripts": {
-    "heroku-postbuild": "cd frontend && npm install && npm run build"
+    "heroku-postbuild": "mkdir -p frontend/public/fonts/curiosa && curl -sSfL -o frontend/public/fonts/curiosa/Curiosa-Variable.woff2 \"$CURIOSA_FONT_URL\" && cd frontend && npm install && npm run build"
   }
 }
