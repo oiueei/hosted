@@ -16,4 +16,4 @@ whitenoise==6.12.0
 # This deployment's service layer, not part of what OIUEEI distributes. Pinned
 # like every other direct dependency so the Heroku build and pip-audit resolve
 # the same version.
-sentry-sdk==2.66.1
+sentry-sdk==2.68.1
