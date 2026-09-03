@@ -26,29 +26,21 @@ Runtime (single gunicorn process):
 
 ## Font Notice
 
-The Curiosa typeface (by [Fabio Haag Type](https://fabiohaagtype.com)) used in this project is **not included in this repository** — its licence does not permit redistribution. The font binary (`frontend/public/fonts/curiosa/Curiosa-Variable.woff2`) is listed in `.gitignore`.
+OIUEEI's display typeface is **Curiosa** (by [Fabio Haag Type](https://fabiohaagtype.com)). Its licence **does not permit redistribution**, so the binary (`frontend/public/fonts/curiosa/Curiosa-Variable.woff2`) is **not in this repository** and the folder is listed in `.gitignore`. The app works without it — browsers fall back to a system sans, and only the visual appearance changes.
 
-You have two options before deploying:
+Vite needs the file at `frontend/public/fonts/curiosa/` **when the build runs** for it to reach `frontend/dist/`. Heroku builds from git and rebuilds on every deploy, so it has to be there each time — **without committing it**. Two ways:
 
-**Option A — Supply the font**
-Place `Curiosa-Variable.woff2` in `frontend/public/fonts/curiosa/`. It is a variable font (weight + italic axes) and Vite serves it during the build.
+**Option A — Fetch it during the build** (if you hold a Curiosa licence)
+Keep a copy in storage you control (a private bucket, a presigned URL) and download it in `heroku-postbuild`, before the frontend build. In the root `package.json`:
 
-**Option B — Use a different typeface**
-Edit `frontend/src/fonts/oiueei-fonts.css` and replace the `@font-face` declarations with your chosen font, keeping (or updating) the `Curiosa` family name so the HDS `--font-default` token resolves to it.
-
-> In either case, the app works without the font — browsers fall back to a system sans. Fonts only affect visual appearance.
-
-## Fonts in the build
-
-The font files are gitignored (see [Font Notice](#font-notice)), so a fresh clone does not contain them. Heroku compiles the frontend during the build, so the fonts must be present on the branch you deploy. Add them locally before deploying — a normal `git add` skips them, so force-add:
-
-```bash
-# place Curiosa-Variable.woff2 in frontend/public/fonts/curiosa/, then:
-git add -f frontend/public/fonts/curiosa/*.woff2
-git commit -m "Add fonts for deployment"
+```json
+"heroku-postbuild": "mkdir -p frontend/public/fonts/curiosa && curl -sSfL -o frontend/public/fonts/curiosa/Curiosa-Variable.woff2 \"$CURIOSA_FONT_URL\" && cd frontend && npm install && npm run build"
 ```
 
-If you skip this the app still works — it falls back to system fonts (see Option B above).
+with `CURIOSA_FONT_URL` set as a config var. **Do not `git add` the font** — not on your deploy branch, not on a private one. OIUEEI is EUPL-1.2: run a modified copy as a service and you owe your users its source, and whatever you hand them must not carry a font you have no right to pass on. Keeping it out of git keeps that clean.
+
+**Option B — Use a different typeface**
+Edit `frontend/src/fonts/oiueei-fonts.css`, swap the `@font-face` declarations for a font you may redistribute (or drop them), and keep the `Curiosa` family name so the HDS `--font-default` token still resolves. Nothing else — the app already falls back to a system sans when the file is absent.
 
 ## Step-by-step Setup
 
@@ -194,7 +186,7 @@ heroku config:set \
 
 ### 5. Deploy
 
-Heroku deploys from its `main` branch. Push whichever local branch has your fonts committed:
+Heroku deploys from its `main` branch. Push your branch:
 
 ```bash
 git push heroku HEAD:main
@@ -396,7 +388,7 @@ The app restarts briefly when the throwaway is attached and again when destroyed
 
 **Bad Request (400)** — Check `DJANGO_ALLOWED_HOSTS`. The actual Heroku hostname may include a random suffix. Run `heroku open -a your-app-name` to confirm the exact URL.
 
-**Build fails on collectstatic** — Font files may be missing. See the Font Notice section above.
+**Build fails in `heroku-postbuild`** — if you use Option A for the font, a wrong or unreachable `CURIOSA_FONT_URL` makes `curl -f` exit non-zero and fails the build. Check the URL, or switch to Option B (a different typeface). See the Font Notice section above.
 
 **Release command fails (migrate)** — `DATABASE_URL` may not be set. Verify with `heroku config -a your-app-name` and ensure the Postgres add-on was created.
 
