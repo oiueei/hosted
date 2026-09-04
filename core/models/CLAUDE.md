@@ -407,7 +407,7 @@ For security considerations, view patterns, service layer, and utilities documen
 
 ## InAppNotification
 
-The `InAppNotification` model stores in-app inbox notifications. Every user-action email that targets another party also creates an `InAppNotification` for that party. Rendered by the shared `InboxNotifications` component as dismissible HDS `Notification` banners — on `HomePage` (all of them) and, filtered by `collection_code`, on a collection's own page for its owner (O1).
+The `InAppNotification` model stores in-app inbox notifications. Every user-action email that targets another party also creates an `InAppNotification` for that party. Rendered by the shared `InboxNotifications` component as dismissible HDS `Notification` banners — on `HomePage` (all of them) and, filtered by `collection_code`, on a collection's own page for the owner **and any invited member** (O1) — each viewer sees only their own rows regardless, so this reaches a COMMUNITY member whose own contributed thing got a booking request, not only the collection owner.
 
 ### Fields
 

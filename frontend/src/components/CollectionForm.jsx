@@ -2,6 +2,8 @@ import { Select, ToggleButton } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import { ALLOWED_TYPES } from '../constants/things';
 import hdsLang from '../utils/hdsLang';
+import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
+import ApprovalNotice from './ApprovalNotice';
 
 /**
  * The shared identity cluster of the Create and Edit collection forms — the part
@@ -28,11 +30,24 @@ export default function CollectionForm({
   theeemeColor01,
 }) {
   const { t, i18n } = useTranslation();
+  const capabilities = useCapabilities();
   const toggleTheme = theeemeColor01
     ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
     : undefined;
 
-  const allowedTypesOptions = ALLOWED_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
+  // Every type the product has, labelled — what the Select would offer if
+  // nothing were withheld. `ApprovalNotice` diffs this against the deployment's
+  // capabilities to name what is missing.
+  const typeCatalogue = ALLOWED_TYPES.map((v) => ({ label: t('types.' + v), value: v }));
+  // Narrowed the same way `CollectionModeField` narrows `collection_modes`: a
+  // type this account may not offer here is left off the list rather than
+  // shown selectable and refused at submit. A type already on the collection's
+  // own allowlist stays offered even if the policy no longer allows it — the
+  // server only judges a *change*, and hiding it here would save a wrong list.
+  const allowedTypesOptions = typeCatalogue.filter(
+    (opt) =>
+      isOfferable(capabilities, 'thing_types', opt.value) || allowedThingTypes.includes(opt.value)
+  );
 
   return (
     <>
@@ -109,6 +124,7 @@ export default function CollectionForm({
           onChange={(opts) => setAllowedThingTypes(opts.map((o) => o.value))}
           invalid={!!errors.allowedThingTypes}
         />
+        <ApprovalNotice kind="thing_types" catalogue={typeCatalogue} />
       </div>
     </>
   );

@@ -766,3 +766,149 @@ describe('arriving from an invitation is a one-time fact', () => {
     await waitFor(() => expect(screen.getByTestId('nav-state')).toHaveTextContent(/^\{\}$/));
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// A COMMUNITY member's own notifications and own INACTIVE thing — both used
+// to be gated on `isOwner` (the *collection* owner), which only happened to
+// be right in PROPRIETARY mode, where that person and the thing's owner are
+// the same. In COMMUNITY mode a member owns what they contributed, and
+// stayed stranded: their own hold request never reached them here, and a
+// completed/hidden thing of theirs was reachable nowhere on this page.
+// ════════════════════════════════════════════════════════════════════════
+describe("CollectionPage — a COMMUNITY member's own things and notifications", () => {
+  const MY_INACTIVE_THING = {
+    code: 'THG002',
+    headline: 'My contributed gift',
+    type: 'GIFT_THING',
+    status: 'INACTIVE',
+    owner: 'ABC123', // the signed-in viewer (localStorage userCode), not the collection owner
+    owner_name: 'Me',
+    created: '2026-07-01T10:00:00Z',
+    tags: [],
+    gallery_urls: [],
+  };
+  const MEMBER_COMMUNITY = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    mode: 'COMMUNITY',
+    owner: 'OTHER1',
+    owner_name: 'The Curator',
+    is_member: true,
+    things: [MY_INACTIVE_THING],
+  };
+
+  test('a member sees the "Inactive things" section for their own INACTIVE contribution', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => MEMBER_COMMUNITY });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('heading', { name: 'Inactive things' });
+    expect(screen.getByText('My contributed gift')).toBeInTheDocument();
+    // The per-card owner-button-matrix (isOwner keyed on the *thing*'s owner)
+    // was already right — it is the section wrapping it that used to be hidden.
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  test('a co-member who does not own the thing still does not see the section', async () => {
+    // Not a general "INACTIVE things are visible in COMMUNITY" change — only an
+    // exception for the thing's own owner. The backend enforces this; here we
+    // just confirm the frontend gate doesn't invent visibility of its own by
+    // rendering a section the payload never carries a member's own thing in.
+    const collectionWithSomeoneElsesInactiveThing = {
+      ...MEMBER_COMMUNITY,
+      things: [], // the backend already excluded it for this viewer
+    };
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => collectionWithSomeoneElsesInactiveThing,
+      });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Kitchen Collection');
+    expect(screen.queryByRole('heading', { name: 'Inactive things' })).toBeNull();
+  });
+
+  test('a member (not the collection owner) sees a hold request on their own thing here', async () => {
+    const notification = {
+      code: 'NOT001',
+      type: 'BOOKING_REQUESTED',
+      payload: {
+        thing_headline: 'My contributed gift',
+        requester_name: 'Someone Else',
+        booking_code: 'BOK001',
+        thing_code: 'THG002',
+        collection_code: 'COL001',
+      },
+      created: '2026-09-04T10:00:00Z',
+    };
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) {
+        // Proof this is the collection-scoped call, not the unscoped Home one.
+        expect(url).toBe('/api/v1/inbox/?collection=COL001');
+        return Promise.resolve({ ok: true, status: 200, json: async () => [notification] });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...MEMBER_COMMUNITY, things: [] }),
+      });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('New hold request')).toBeInTheDocument();
+    expect(screen.getByText('Someone Else requested My contributed gift.')).toBeInTheDocument();
+  });
+
+  test('a signed-out visitor on a PUBLIC collection triggers no inbox call at all', async () => {
+    localStorage.clear(); // no userCode: neither isOwner nor is_member can be true
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...MEMBER_COMMUNITY, is_member: false, visibility: 'PUBLIC' }),
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Kitchen Collection');
+    expect(apiFetch.mock.calls.some(([u]) => u.startsWith('/api/v1/inbox/'))).toBe(false);
+  });
+});
