@@ -445,10 +445,16 @@ export default function CollectionPage() {
         />
       </div>
       <div className="page-container">
-        {/* The owner's notifications for this collection — a hold request is answered
-          on the thing, so it should reach them where the things are, not only on
-          Home. A member's own notifications (FAQs) stay on Home. */}
-        {isOwner && <InboxNotifications collection={code} />}
+        {/* Each viewer's own notifications for this collection — a hold request or a
+          FAQ question is answered on the thing, so it should reach whoever owns
+          that thing where it actually lives, not only on Home. The endpoint always
+          scopes to `request.user`, so a member sees only their own (e.g. a
+          COMMUNITY contribution's own booking requests) — never a co-member's or
+          the owner's. Gated on membership rather than `isOwner` alone: in
+          PROPRIETARY mode that was the same person, but a COMMUNITY member who
+          owns a thing here is not the collection owner and was missing this
+          entirely, stranded on Home. */}
+        {(isOwner || collection.is_member) && <InboxNotifications collection={code} />}
         {isOwner && collection.status === 'INACTIVE' && (
           <Notification
             label={t('common.notice')}
@@ -654,7 +660,16 @@ export default function CollectionPage() {
           </>
         )}
 
-        {isOwner && collection.things.some((thg) => thg.status === 'INACTIVE') && (
+        {/* Gated on the payload, not on `isOwner` (the *collection* owner): the
+            backend now sends an INACTIVE thing to two audiences — the
+            collection owner (every one) and that thing's own owner (just
+            theirs), the same "owner can always view their own things" rule
+            `Thing.can_view()` already states. In a COMMUNITY collection a
+            member's own gift going INACTIVE after a completed hand-off, or a
+            listing they hid themselves, must stay reachable from here — not
+            only via the thing's own `/things/{code}` URL — same as it always
+            has for the collection owner. */}
+        {collection.things.some((thg) => thg.status === 'INACTIVE') && (
           <>
             <div className="spacer-l" />
             <h2>{t('collectionPage.inactiveThings')}</h2>
