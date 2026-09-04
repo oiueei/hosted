@@ -314,3 +314,99 @@ describe('EditCollectionPage — load + pause + submit', () => {
     });
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// CollectionForm — the allowed-types select respects the deployment policy
+//
+// A narrowed deployment (e.g. HostedCreatorPolicy: GIFT/SELL open, LEND/RENT
+// wait for approval) must not let an unvetted account choose a withheld type
+// for its own collection — that config would only ever be refused later, at
+// AddThingPage or the create-thing endpoint, with no explanation of why. Bug:
+// this select used to ignore `capabilities` entirely, unlike the mode radios
+// right above it in the same form (see CollectionModeField).
+// ════════════════════════════════════════════════════════════════════════
+describe('CollectionForm — thing_types capability narrows the allowed-types select', () => {
+  function setApiWithCapabilities(capabilities) {
+    apiFetch.mockImplementation((url, opts = {}) => {
+      const method = opts.method || 'GET';
+      if (url === '/api/v1/auth/me/') return Promise.resolve(mockResponse({ capabilities }));
+      if (url === '/api/v1/collections/' && method === 'POST')
+        return Promise.resolve(mockResponse({ code: 'NEW001' }));
+      return Promise.resolve(mockResponse({}));
+    });
+  }
+
+  test('a withheld type is left off the select, with the approval notice underneath', async () => {
+    // The hook caches one request per signed-in account, so a code no other
+    // test in this file uses keeps this answer from being served stale.
+    localStorage.setItem('userCode', 'POPIN01');
+    setApiWithCapabilities({
+      collection_modes: ['PROPRIETARY', 'COMMUNITY'],
+      thing_types: ['GIFT_THING', 'SELL_THING'],
+      request_url: 'https://example.test/request-access/',
+    });
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/new']}>
+        <Routes>
+          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="*" element={<div data-testid="navigated" />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
+    expect(await screen.findByRole('option', { name: 'Gift' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Rental' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Lend' })).toBeNull();
+
+    expect(
+      await screen.findByText('Some options need approval on this deployment: Rental, Lend.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Request access/ })).toHaveAttribute(
+      'href',
+      'https://example.test/request-access/'
+    );
+  });
+
+  test('a type already on the collection stays offered even if the policy no longer allows it', async () => {
+    // Mirrors the server, which only judges a *change* — Edit must not hide
+    // (and silently drop, on the next save) a type the collection already has.
+    localStorage.setItem('userCode', 'POPIN02');
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/v1/auth/me/')
+        return Promise.resolve(
+          mockResponse({
+            capabilities: {
+              collection_modes: ['PROPRIETARY', 'COMMUNITY'],
+              thing_types: ['GIFT_THING', 'SELL_THING'],
+              request_url: 'https://example.test/request-access/',
+            },
+          })
+        );
+      if (/\/collections\/[^/]+\//.test(url))
+        return Promise.resolve(
+          mockResponse({
+            headline: 'Grandfathered',
+            mode: 'PROPRIETARY',
+            allowed_thing_types: ['GIFT_THING', 'LEND_THING'],
+          })
+        );
+      return Promise.resolve(mockResponse({}));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001/edit']}>
+        <Routes>
+          <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Grandfathered');
+    // Already selected, so it renders as a chip rather than a menu option —
+    // present at all is what this test is pinning (HDS renders the chip text
+    // twice — dropdown summary + assistive copy — hence findAllByText).
+    expect((await screen.findAllByText('Lend')).length).toBeGreaterThan(0);
+  });
+});
