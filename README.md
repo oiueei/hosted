@@ -1,6 +1,6 @@
 ## What is OIUEEI?
 
-An open source web application (EUPL-1.2 — strong copyleft, and its reciprocity reaches running a modified copy as a network service; every line of the product public and auditable; self-hosting in production is allowed) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
+An open source web application (EUPL-1.2 — strong copyleft, and its reciprocity reaches running a modified copy as a network service; every line of the product public and auditable; self-hosting in production is allowed) for people to share their belongings with friends and others around. Users can create collections (things to gift, sell, rent or lend) and share them with friends who can then reserve items or ask questions.
 
 No ads, no tracking of any kind, no third-party code running in your browser — and no cookie banner, because there is nothing to consent to. Each of those claims comes with a way to check it: **[→ Privacy](#privacy)**.
 
