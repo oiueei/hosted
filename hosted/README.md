@@ -13,6 +13,27 @@ If you are looking for what upstream offers a deployment, that is
 [SELF_HOSTING.md](../SELF_HOSTING.md). This is what *this* deployment
 did with it.
 
+## Where a fix belongs
+
+Not everything that surfaces while working in this repo belongs in this repo.
+Before committing a fix, ask where the changed files actually live — not
+where the bug was *found*:
+
+- **Product bug** — the changed files are under `core/` or `frontend/` —
+  belongs in `oiueei/standalone`, even when a hosted-specific scenario
+  (COMMUNITY mode, `HostedCreatorPolicy` narrowing a policy) is what surfaced
+  it. Fix it there: commit against `development`, merge to `main`, push both
+  — *then* merge `origin/main` down into this repo's own `main` to bring the
+  fix here. This repo tracks upstream with exactly that merge (`git log` is
+  full of "Merge remote-tracking branch 'origin/main'"), so a fix that lands
+  only here is invisible to it and has to be re-applied by hand on every
+  future sync, forever.
+- **Deployment bug** — the changed files are under `hosted/` itself, and
+  nowhere else — fix it directly in this repo, same as any other commit here.
+
+The tell is the file path, not the repo the session happened to be checked
+out in.
+
 Publishing this code makes the **mechanism** transparent — the form, the
 `CreatorValidation` model, the admin action, the policy class. It does not make
 the **criterion** transparent: which answer to "what are you planning to run
