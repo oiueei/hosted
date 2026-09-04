@@ -35,7 +35,7 @@ OIUEEI es un proyecto personal: no hay ninguna sociedad detrás. Soy su creador,
 
 **Lo que no hay:** publicidad, analítica de terceros, venta o cesión de datos, decisiones automatizadas ni perfilado. **Cookies y almacenamiento local:** solo lo técnico. Las cookies son de sesión y seguridad; en tu navegador se guardan además tu código de usuario, tus preferencias de idioma y de aspecto, y si ya has visto la bienvenida. Nada de eso necesita consentimiento, y por eso no hay banner.
 
-**Cuánto tiempo:** mientras tu cuenta exista. Puedes **borrar tu cuenta tú mismo** (Editar perfil → Borrar cuenta, con confirmación por correo): es inmediato e irreversible — tu cuenta, tus colecciones, tus cosas y sus fotos y tus solicitudes se eliminan. Las preguntas que hiciste en cosas de otras personas y el historial de manos se conservan sin tu nombre («Antiguo miembro»). Las copias de seguridad se hacen a diario y rotan solas: las de más de una semana desaparecen.
+**Cuánto tiempo:** mientras uses OIUEEI, y con un plazo por cada tipo de dato — nada se guarda para siempre. Si nadie inicia sesión en tu cuenta durante **24 meses** te aviso por correo, y si no vuelves en los **30 días** siguientes se borra (volver una sola vez pone el contador a cero); la excepción es una cuenta que es dueña de un grupo en uso, que se marca para que lo decida una persona en vez de borrarse sola. Las notificaciones de la app y las denuncias se guardan **12 meses**, el registro de actividad diaria **26**, y la analítica propia deja de estar ligada a una persona a los **14 meses** — se borra quién, se queda el hecho en agregado. Puedes **borrar tu cuenta tú mismo** (Editar perfil → Borrar cuenta, con confirmación por correo): es inmediato e irreversible — tu cuenta, tus colecciones, tus cosas y sus fotos y tus solicitudes se eliminan. Las preguntas que hiciste en cosas de otras personas y el historial de manos se conservan sin tu nombre («Antiguo miembro»). Las copias de seguridad se hacen a diario y rotan solas: las de más de una semana desaparecen.
 
 **Tus derechos:** acceso, rectificación, supresión y portabilidad los ejerces directamente desde tu perfil: puedes descargar todos tus datos en un fichero cuando quieras y, si gestionas un grupo, también el grupo entero —ese segundo fichero lleva datos de otras personas, así que guárdalo bien—. Para oposición o limitación escríbeme a legal@oiueei.com. También puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).
 
@@ -63,5 +63,5 @@ OIUEEI es software de código abierto bajo la licencia **EUPL-1.2**, un copyleft
 
 ---
 
-*Última actualización: 3 de septiembre de 2026.*
+*Última actualización: 4 de septiembre de 2026.*
 `;

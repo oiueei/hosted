@@ -35,7 +35,7 @@ OIUEEI és un projecte personal: no hi ha cap societat al darrere. En soc el cre
 
 **El que no hi ha:** publicitat, analítica de tercers, venda o cessió de dades, decisions automatitzades ni perfilat. **Galetes i emmagatzematge local:** només el tècnic. Les galetes són de sessió i seguretat; al teu navegador s'hi guarden a més el teu codi d'usuari, les teves preferències d'idioma i d'aspecte, i si ja has vist la benvinguda. Res d'això no necessita consentiment, i per això no hi ha bàner.
 
-**Quant de temps:** mentre el teu compte existeixi. Pots **esborrar el teu compte tu mateix** (Editar perfil → Esborrar el compte, amb confirmació per correu): és immediat i irreversible — el teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds s'eliminen. Les preguntes que vas fer en coses d'altres persones i l'historial de mans es conserven sense el teu nom («Antic membre»). Les còpies de seguretat es fan cada dia i roten soles: les de més d'una setmana desapareixen.
+**Quant de temps:** mentre facis servir OIUEEI, i amb un termini per cada tipus de dada — res no es guarda per sempre. Si ningú no inicia sessió al teu compte durant **24 mesos** t'aviso per correu, i si no tornes en els **30 dies** següents s'esborra (tornar una sola vegada posa el comptador a zero); l'excepció és un compte que és propietari d'un grup en ús, que es marca perquè ho decideixi una persona en lloc d'esborrar-se sol. Les notificacions de l'app i les denúncies es guarden **12 mesos**, el registre d'activitat diària **26**, i l'analítica pròpia deixa d'estar lligada a una persona als **14 mesos** — s'esborra qui, es queda el fet en agregat. Pots **esborrar el teu compte tu mateix** (Editar perfil → Esborrar el compte, amb confirmació per correu): és immediat i irreversible — el teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds s'eliminen. Les preguntes que vas fer en coses d'altres persones i l'historial de mans es conserven sense el teu nom («Antic membre»). Les còpies de seguretat es fan cada dia i roten soles: les de més d'una setmana desapareixen.
 
 **Els teus drets:** accés, rectificació, supressió i portabilitat els exerceixes directament des del teu perfil: pots descarregar totes les teves dades en un fitxer quan vulguis i, si gestiones un grup, també el grup sencer —aquest segon fitxer porta dades d'altres persones, així que guarda'l bé—. Per a oposició o limitació escriu-me a legal@oiueei.com. També pots reclamar davant l'Agència Espanyola de Protecció de Dades (www.aepd.es).
 
@@ -63,5 +63,5 @@ OIUEEI és programari de codi obert sota la llicència **EUPL-1.2**, un copyleft
 
 ---
 
-*Darrera actualització: 3 de setembre de 2026.*
+*Darrera actualització: 4 de setembre de 2026.*
 `;
