@@ -1,6 +1,6 @@
 ## What is OIUEEI?
 
-An open source web application (EUPL-1.2 — strong copyleft, and its reciprocity reaches running a modified copy as a network service; every line of the product public and auditable; self-hosting in production is allowed) for people to share their belongings with friends and others around. Users can create collections (things to lend, rent, give away or sell) and share them with friends who can then reserve items or ask questions.
+An open source web application (EUPL-1.2 — strong copyleft, and its reciprocity reaches running a modified copy as a network service; every line of the product public and auditable; self-hosting in production is allowed) for people to share their belongings with friends and others around. Users can create collections (things to gift, sell, rent or lend) and share them with friends who can then reserve items or ask questions.
 
 No ads, no tracking of any kind, no third-party code running in your browser — and no cookie banner, because there is nothing to consent to. Each of those claims comes with a way to check it: **[→ Privacy](#privacy)**.
 
@@ -111,7 +111,7 @@ core/
 
 | Model | Purpose |
 |-------|---------|
-| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio) and `photo` (profile photo, stored as an object key and exposed as `photo_url`) |
+| **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio); `photo` (profile photo, stored as an object key and exposed as `photo_url`); `age_range` (birth-year generation) and `postal_code`, the optional demographics — shared per-member only with the owner of a COMMUNITY collection the user is in, and otherwise only in aggregate; and `language`, the language this user's own email is written in (`""` = inherit — the collection's language, else the deployment default). All four default to `""` |
 | **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — the owner still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
 | **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
@@ -157,7 +157,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/api/v1/users/{user_code}/` | View profile (requires collection connection) |
-| PUT | `/api/v1/users/{user_code}/` | Update own profile (name, headline, `about` Markdown bio, `photo`, koro, theeeme, `notify_activity`, `notify_news`) |
+| PUT | `/api/v1/users/{user_code}/` | Update own profile (name, headline, `about` Markdown bio, `photo`, koro, theeeme, `notify_activity`, `notify_news`, `age_range`, `postal_code`, `language`) |
 | GET | `/api/v1/notifications/token/{token}/` | Read `notify_activity`/`notify_news` via signed token (no login required; linked from every Cat. 2/3 email footer) |
 | PATCH | `/api/v1/notifications/token/{token}/` | Update `notify_activity`/`notify_news` via signed token |
 | POST | `/api/v1/digest/mute/{token}/` | One-click unsubscribe from **one** collection's digest, via the signed link in that digest's footer (no login). POST-only so an email link-scanner can't unsubscribe anyone |

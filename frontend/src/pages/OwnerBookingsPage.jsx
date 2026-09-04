@@ -58,7 +58,7 @@ export default function OwnerBookingsPage() {
   // confirmation. Accepting a GIFT or SELL that isn't endless flips it INACTIVE,
   // adds the requester to `deal` and writes a ThingTransfer — the owner no
   // longer has it, and there is no undo. A loan, a rental and an endless
-  // give-away all come back or never run out, so those accept straight away.
+  // gift all come back or never run out, so those accept straight away.
   const [transferRow, setTransferRow] = useState(null);
   useEffect(() => {
     document.title = t('titles.ownerBookings');
