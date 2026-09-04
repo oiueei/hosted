@@ -237,3 +237,97 @@ class TestCommunityRemoveThing:
         )
         assert response.status_code == 403
         assert collection.things.filter(code=thing.code).exists()
+
+
+@pytest.mark.django_db
+class TestCommunityInactiveThingVisibility:
+    """A member's own INACTIVE thing must stay visible to *them* on the
+    collection page — `Thing.can_view()` already says "owner can always view
+    their own things", and `CollectionSerializer.get_things()` used to answer
+    a narrower question (are you the *collection* owner) that only happened to
+    agree with it in PROPRIETARY mode, where those are the same person. In
+    COMMUNITY mode they can differ: a contributed GIFT that completed (a
+    non-endless hand-off flips it INACTIVE) or a listing the member hid
+    themselves used to vanish from `/collections/{code}/` for everyone but the
+    collection owner — including the person who owns it.
+    """
+
+    def _community_with_member_thing(self, user, user2, *, status="INACTIVE"):
+        coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
+        coll.invites.add(user2)
+        thing = Thing.objects.create(
+            owner=user2, headline="My gift", type="GIFT_THING", status=status
+        )
+        coll.things.add(thing)
+        return coll, thing
+
+    def test_member_sees_their_own_inactive_thing(self, authenticated_client2, user, user2):
+        """The thing's own owner sees it, even INACTIVE and even as a non-owner
+        of the collection."""
+        coll, thing = self._community_with_member_thing(user, user2)
+
+        response = authenticated_client2.get(f"/api/v1/collections/{coll.code}/")
+
+        assert response.status_code == 200
+        codes = [t["code"] for t in response.json()["things"]]
+        assert thing.code in codes
+
+    def test_a_different_member_does_not_see_it(self, authenticated_client, user, user2, db):
+        """A co-member who isn't the thing's owner still can't — this is not a
+        general INACTIVE-things-are-public change, only an exception for the
+        thing's own owner."""
+        from core.models import User
+
+        coll, thing = self._community_with_member_thing(user, user2)
+        other = User.objects.create(code="TEST03", email="test3@example.com", name="Test User 3")
+        coll.invites.add(other)
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        other_client = APIClient()
+        other_client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(other).access_token}"
+        )
+
+        response = other_client.get(f"/api/v1/collections/{coll.code}/")
+
+        assert response.status_code == 200
+        codes = [t["code"] for t in response.json()["things"]]
+        assert thing.code not in codes
+
+    def test_collection_owner_still_sees_every_members_inactive_thing(
+        self, authenticated_client, user, user2
+    ):
+        """Unchanged: the collection owner's existing "see everything" answer
+        does not depend on this exception."""
+        coll, thing = self._community_with_member_thing(user, user2)
+
+        response = authenticated_client.get(f"/api/v1/collections/{coll.code}/")
+
+        assert response.status_code == 200
+        codes = [t["code"] for t in response.json()["things"]]
+        assert thing.code in codes
+
+    def test_active_things_are_unaffected(self, authenticated_client2, user, user2):
+        """The exception is INACTIVE-only — an ACTIVE contribution was already
+        visible to everyone invited, this must not change that."""
+        coll, thing = self._community_with_member_thing(user, user2, status="ACTIVE")
+
+        response = authenticated_client2.get(f"/api/v1/collections/{coll.code}/")
+
+        assert response.status_code == 200
+        codes = [t["code"] for t in response.json()["things"]]
+        assert thing.code in codes
+
+    def test_anonymous_visitor_never_sees_it(self, api_client, user, user2):
+        """An anonymous reader has no `viewer_code` to match — the exception
+        must not become "nobody" and pass INACTIVE things through by accident."""
+        coll, thing = self._community_with_member_thing(user, user2)
+        coll.visibility = Collection.Visibility.PUBLIC
+        coll.save(update_fields=["visibility"])
+
+        response = api_client.get(f"/api/v1/collections/{coll.code}/")
+
+        assert response.status_code == 200
+        codes = [t["code"] for t in response.json()["things"]]
+        assert thing.code not in codes

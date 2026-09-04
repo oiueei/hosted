@@ -176,12 +176,24 @@ class CollectionSerializer(serializers.ModelSerializer):
         )
         things = obj.things.all()
         # Non-owners (including anonymous visitors on a PUBLIC collection) never
-        # see INACTIVE things; only skip the filter for internal, request-less use.
+        # see someone else's INACTIVE thing; only skip the filter for internal,
+        # request-less use. **A thing's own owner is the one exception** — in a
+        # COMMUNITY collection a member owns what they contributed, not the
+        # collection, and `Thing.can_view()` already says "owner can always view
+        # their own things" regardless of status. This mirrors that rule rather
+        # than re-deriving it (a per-thing `can_view()` call here would walk each
+        # thing's own `collections` queryset — an N+1 this method exists to
+        # avoid), so a member whose gift completed (INACTIVE, non-endless) or who
+        # hid their own listing can still find it on the collection they added it
+        # to, not only via its standalone `/things/{code}` URL.
         # Filtered in Python (not .exclude()) so the prefetched M2M cache is reused
         # instead of firing a fresh query per thing (N+1 on home + anon collection
         # detail).
         if request and not is_owner:
-            things = [t for t in things if t.status != Thing.Status.INACTIVE]
+            viewer_code = request.user.code if request.user.is_authenticated else None
+            things = [
+                t for t in things if t.status != Thing.Status.INACTIVE or t.owner_id == viewer_code
+            ]
         return CollectionThingSummarySerializer(things, many=True, context=ctx).data
 
     def _requester_is_owner(self, obj):
