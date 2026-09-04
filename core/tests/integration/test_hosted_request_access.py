@@ -73,6 +73,39 @@ class TestReachingThePage:
 
 
 @pytest.mark.django_db
+class TestTheSlashLessURL:
+    """`/request-access`, without the trailing slash — a URL nobody wrote on
+    purpose, and the one an address bar or a pasted link produces easily.
+
+    Django's own APPEND_SLASH never rescues it here: that redirect only fires
+    when a URL fails to resolve to *anything*, and this one does resolve —
+    to the SPA catch-all in `config/urls.py`, which answers every non-static/
+    non-api/ non-admin path with `index.html` (200). React Router then took
+    over client-side and its `/:userCode` public-profile route, declared ahead
+    of this app's own routes, claimed "request-access" as a user code and
+    called `GET /api/v1/users/request-access/` — a 404 two layers away from
+    the actual mistake, which is what an operator actually saw and reported
+    (2026-09). The fix is an explicit redirect in this app's own urlconf,
+    mounted ahead of the catch-all for exactly this reason.
+    """
+
+    def test_redirects_to_the_slashed_url(self, api_client):
+        response = api_client.get("/request-access")
+
+        assert response.status_code == status.HTTP_301_MOVED_PERMANENTLY
+        assert response["Location"] == "/request-access/"
+
+    def test_following_it_reaches_the_real_page_not_the_spa(self, api_client):
+        response = api_client.get("/request-access", follow=True)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "/login" in response.content.decode()
+        # The SPA's index.html never mentions this — proof the redirect landed
+        # on the Django page and not on React's catch-all.
+        assert '<div id="root">' not in response.content.decode()
+
+
+@pytest.mark.django_db
 class TestSendingARequest:
     def test_it_is_recorded_as_pending_against_that_account(self, authenticated_client, user):
         response = authenticated_client.post(URL, GOOD)
