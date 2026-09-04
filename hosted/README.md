@@ -1,13 +1,23 @@
 # `hosted/` — the service layer of this deployment
 
-Everything in here is one operator's business decision, not part of what OIUEEI
-distributes. **This app only ever adds.** It mounts its own URLs, supplies its
-own policy, brings its own migrations, and imports from `core` while `core`
-knows nothing about it — so a merge from upstream stays a merge.
+Everything in here is this operator's own service layer — the open door, the
+vetting policy, whatever any of it costs. It is not the OIUEEI product (that is
+`oiueei/standalone`); it is what *this* deployment adds on top, kept in this repo
+under the same EUPL-1.2 licence because a modified copy run as a network service
+owes its source to the people who use it. **This app only ever adds.** It mounts
+its own URLs, supplies its own policy, brings its own migrations, and imports
+from `core` while `core` knows nothing about it — so a merge from upstream stays
+a merge.
 
 If you are looking for what upstream offers a deployment, that is
 [SELF_HOSTING.md](../SELF_HOSTING.md). This is what *this* deployment
 did with it.
+
+Publishing this code makes the **mechanism** transparent — the form, the
+`CreatorValidation` model, the admin action, the policy class. It does not make
+the **criterion** transparent: which answer to "what are you planning to run
+here?" earns a yes is a case-by-case judgement that lives in no file, the same
+honesty note `SELF_HOSTING.md` makes about the extension points.
 
 ## What it does
 

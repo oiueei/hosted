@@ -91,9 +91,11 @@ make a manual gate feel like an honest "not yet" rather than a wall.
 
 ## 4. What is deliberately not in this document
 
-Nothing about **prices, plans, limits or trial periods**. The service is free and there
-is no paid tier — the FAQ and the legal terms say so — so there is no pricing surface to
-design. If that ever changed, the work would add sections here; it would not change
+Nothing about **prices, plans, limits or trial periods**. There is no paid tier today, so
+there is no pricing surface to design. The published terms do say a paid plan for new
+accounts is planned for later (accounts from the testing stage stay free) — but that
+decision is not taken, nothing about it is drawn in advance, and until it is this document
+has nothing to add. When it changes, the work adds sections here; it does not change
 `DESIGN.md`.
 
 ## Checklist — hosted surfaces only
