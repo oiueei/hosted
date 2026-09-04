@@ -62,7 +62,7 @@ export default function useThingActions(
   // Accepting hands the thing over for good: a GIFT or SELL that isn't endless.
   // `accept_booking` flips it INACTIVE, adds the requester to `deal` and writes a
   // ThingTransfer, so the owner no longer has it. A loan or rental comes back and
-  // an endless give-away never runs out, so neither transfers anything.
+  // an endless gift never runs out, so neither transfers anything.
   //
   // This is the inverse of `bookingKeepsStatus` by construction, and it MUST be
   // returned below: `ThingPage` has been destructuring it since it was written,

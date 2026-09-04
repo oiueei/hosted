@@ -244,7 +244,7 @@ class CollectionSerializer(serializers.ModelSerializer):
         # Co-members' emails are owner-only (L2); logged-in guests get only
         # code + name. An ANONYMOUS reader of a PUBLIC collection gets codes
         # alone — the member count survives for the card, but real names of a
-        # group's members don't belong to the open web (early-bird hardening).
+        # group's members don't belong to the open web (early-adopter hardening).
         request = self.context.get("request")
         if not (request and request.user.is_authenticated):
             return [{"code": u.code} for u in members]

@@ -1,5 +1,5 @@
 """
-Contact view — the support channel (early-bird ops).
+Contact view — the support channel (early-adopter ops).
 
 A locked-out user can't authenticate, so the endpoint is anonymous; the cost
 of that openness is a per-IP rate limit and a fixed recipient (the operator) —

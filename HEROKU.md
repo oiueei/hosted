@@ -178,7 +178,7 @@ heroku config:set \
 > so it cannot refuse to start the no-storage checkout the setting is optional for; run
 > `manage.py check --fail-level WARNING` if you would rather it were fatal on yours.
 
-> **Optional — email language:** `EMAIL_LANGUAGE` sets the language ALL outbound email speaks (default `en`; `es` available), e.g. `heroku config:set EMAIL_LANGUAGE=es -a your-app-name`. Per-deployment, not per-user. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
+> **Optional — email language:** `EMAIL_LANGUAGE` sets the **default** language for outbound email (`en`|`es`|`ca`; default `en`), e.g. `heroku config:set EMAIL_LANGUAGE=ca -a your-app-name`. It is the **weakest** level of the hierarchy **deployment → collection (`Collection.language`) → recipient (`User.language`)** (`core/services/email_service.py`, `resolve_email_language`), so it only applies when neither the group nor the member has chosen a language. Catalogues live in `core/services/email_texts/` — to add a language, copy `en.py` → `{lang}.py` and translate the values.
 
 > **Email** is configured separately — see the [Email](#email) section below. Magic-link sign-in does not work until SMTP is set.
 

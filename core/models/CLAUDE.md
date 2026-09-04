@@ -14,7 +14,7 @@ The `User` model represents a person who can own collections, be invited to othe
 |-------|------|----------|-------------|
 | `code` | CharField(6) | Auto | Primary key, 6-character alphanumeric ID |
 | `email` | CharField(64) | **Yes** | Unique email address for authentication |
-| `name` | CharField(32) | No | **Public name** — presented in the profile editor as "Nombre público" with a helper making its reach explicit ("your name, a nickname, anything you like — it's how everyone will see you"). One field, chosen pseudonymity: each user decides how identifying their public name is (early-bird hardening, 2026-07-18). Never auto-filled from anywhere |
+| `name` | CharField(32) | No | **Public name** — presented in the profile editor as "Nombre público" with a helper making its reach explicit ("your name, a nickname, anything you like — it's how everyone will see you"). One field, chosen pseudonymity: each user decides how identifying their public name is (early-adopter hardening, 2026-07-18). Never auto-filled from anywhere |
 | `created` | DateField | Auto | Date the user was created |
 | `last_activity` | DateField | No | Date of last login/activity. Null until the user's first verify — `update_last_activity()` populates it. |
 | `headline` | CharField(64) | No | Short bio/tagline |
