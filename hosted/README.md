@@ -15,24 +15,29 @@ did with it.
 
 ## Where a fix belongs
 
-Not everything that surfaces while working in this repo belongs in this repo.
-Before committing a fix, ask where the changed files actually live — not
+Not every fix that surfaces while working on this deployment belongs in this
+repository. Before committing, ask where the changed files actually live — not
 where the bug was *found*:
 
-- **Product bug** — the changed files are under `core/` or `frontend/` —
-  belongs in `oiueei/standalone`, even when a hosted-specific scenario
-  (COMMUNITY mode, `HostedCreatorPolicy` narrowing a policy) is what surfaced
-  it. Fix it there: commit against `development`, merge to `main`, push both
-  — *then* merge `origin/main` down into this repo's own `main` to bring the
-  fix here. This repo tracks upstream with exactly that merge (`git log` is
-  full of "Merge remote-tracking branch 'origin/main'"), so a fix that lands
-  only here is invisible to it and has to be re-applied by hand on every
-  future sync, forever.
-- **Deployment bug** — the changed files are under `hosted/` itself, and
-  nowhere else — fix it directly in this repo, same as any other commit here.
+- **Product bug** — the changed files are under `core/`, or under `frontend/`
+  outside this deployment's own directories — belongs in `oiueei/standalone`,
+  even when a hosted-specific scenario (COMMUNITY mode, `HostedCreatorPolicy`
+  narrowing a policy) is what surfaced it. Fix it upstream first: commit
+  against `development`, merge into `main`, push both — *then* merge that
+  `main` into this repo's `main` to bring the fix here. This repo tracks
+  upstream with exactly that merge, so a fix that lands only here is invisible
+  to it and has to be re-applied by hand on every future sync, forever.
+- **Deployment bug** — the changed files are this deployment's own: `hosted/`,
+  `frontend/src/deployment/` (all of it except `index.js`, which is upstream's
+  contract and the one file there that both sides edit),
+  `frontend/src/legal/{ca,en,es}.js`, and the settings that mount them — fix it
+  here, same as any other commit.
 
-The tell is the file path, not the repo the session happened to be checked
-out in.
+The tell is the file path, not where the session happened to be checked out.
+That last part earns a second of care when the two repos are two branches of
+one working copy rather than two clones: nothing about the files on disk says
+which `main` they are heading for, so confirm the branch before committing a
+`core/` change.
 
 Publishing this code makes the **mechanism** transparent — the form, the
 `CreatorValidation` model, the admin action, the policy class. It does not make

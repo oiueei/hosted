@@ -30,21 +30,22 @@ Only what belongs to *this* operator's service — never a change to shared beha
 
 ## Keeping in sync with upstream
 
-This repo shares history with `oiueei/standalone` — `origin` points there. When the product
-moves:
+This repo shares history with `oiueei/standalone`, so upstream merges cleanly. Keeping the
+two as separate clones or as two branches of a single working copy is a local choice; either
+way the merge only ever runs in one direction — upstream's `main` into this repo's `main`,
+never the reverse. When the product moves:
 
 ```bash
-git fetch origin
-git merge origin/main
-git push        # to hosted
+git merge origin/main    # or the local branch tracking upstream's main
+git push                 # to this repo
 ```
 
 Expect a conflict in `frontend/src/legal/{ca,en,es}.js` most times upstream touches the legal
 text: keep this repo's version and reapply any structural change by hand. `config/settings/*.py`,
 `frontend/package.json` and `requirements/production.txt` conflict only when upstream edits the
 same lines. This file is marked `merge=ours` in `.gitattributes` so it is left alone
-automatically — run `git config merge.ours.driver true` once in this clone for that to take
-effect.
+automatically — run `git config merge.ours.driver true` once per working copy for that to
+take effect. It lives in `.git/config`, so a fresh clone needs it again.
 
 ## Deploying
 
