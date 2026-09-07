@@ -97,57 +97,59 @@ body {
 /* Share menu (S9, curator only): the ShareCollectionMenu Select restyled to a
    single 44px icon trigger, sitting one slot to the left of .contact-corner.
    HDS renders the trigger as one <button role="combobox"> holding an icon
-   <span>, a text <div> and an arrow <div>; clipping the box to 44px and hiding
-   the two <div>s (both already aria-hidden) leaves an icon-only control with
+   <span>, a text <div> and an arrow <div>; hiding the last two (both already
+   aria-hidden) and clamping the box to 44px leaves an icon-only control with
    HDS's open/close/keyboard logic and the button's composed aria-label intact.
-   Substring class matches dodge HDS's hashed CSS-module suffixes. */
+   HDS's own rules for these parts are three classes deep, so the size/visibility
+   overrides need `!important` to win; substring matches dodge the hashed
+   CSS-module suffixes. NOT testable in jsdom — verify by eye on an hds-react
+   bump (see frontend/CLAUDE.md § HDS Select quirks). */
 .share-corner {
   position: absolute;
   top: calc(var(--spacing-l) - 2px);
   right: calc((100% - min(100%, 1248px)) / 2 + var(--spacing-s) + 44px + var(--spacing-2-xs));
   width: 44px;
+  height: 44px;
   z-index: 1;
 }
 
-/* The Select's own root/container carry a border, a white fill and a min-height
-   meant for a text-input-sized control — none of which belong on an icon. */
+/* The Select's own root/container carry a border, a white fill and a 64px
+   min-height meant for a text-input-sized control — none of which belong on an
+   icon. Height clamped so the box is exactly the 44px target, no dead space. */
 .share-corner [class*='Select-module_root'],
 .share-corner [class*='selectAndListContainer'] {
-  min-width: 0;
-  min-height: 0;
-  max-width: none;
-  border: none;
-  background: transparent;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  height: 44px !important;
+  border: none !important;
+  background: transparent !important;
 }
 
 .share-corner button[role='combobox'] {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  justify-content: center;
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  justify-content: center !important;
   color: var(--hero-text-color, var(--color-black-90));
 }
 
-/* The icon <span> stays; the placeholder text and the arrow (both aria-hidden,
-   so the accessible name is unaffected) go. */
-.share-corner button[role='combobox'] > div {
-  display: none;
+/* Only the icon <span> stays; the placeholder-text <div> and the arrow <div>
+   (both aria-hidden, so the accessible name is unaffected) go. */
+.share-corner button[role='combobox'] > *:not([class*='buttonIcon']) {
+  display: none !important;
 }
 
-.share-corner button[role='combobox'] > span {
+.share-corner button[role='combobox'] > [class*='buttonIcon'] {
+  display: flex;
   color: var(--hero-text-color, var(--color-black-90));
 }
 
-/* Keep the <label> for the a11y tree but out of sight (the button already has
-   its own aria-label — this is belt and braces, never the only name). */
+/* Drop the visible <label> entirely. It is safe: HDS gives the trigger button
+   its own composed `aria-label` (from `texts.label`) — an explicit aria-label,
+   not `aria-labelledby` to this element — so the accessible name survives. */
 .share-corner [class*='FieldLabel-module_label'] {
-  position: absolute;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  width: 1px;
-  height: 1px;
-  white-space: nowrap;
+  display: none !important;
 }
 
 /* The options list inherits width:100% from the now-44px container — give it a
