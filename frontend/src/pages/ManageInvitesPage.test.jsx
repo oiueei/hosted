@@ -8,6 +8,8 @@ const COLLECTION = {
   code: 'COL001',
   headline: 'Book Club',
   owner: 'OWNER1',
+  is_curator: true,
+  co_owners: [],
   invites: [{ code: 'GST001', email: 'ana@example.com', name: 'Ana' }],
   pending_invites: [{ code: 'RSVP01', email: 'pending@example.com' }],
 };
@@ -186,7 +188,9 @@ describe('ManageInvitesPage (the guest list)', () => {
 
   test('a member never sees suggestions meant for the owner', async () => {
     localStorage.setItem('userCode', 'GUEST9');
-    mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
+    mockRoutes({
+      collection: { ...COLLECTION, is_curator: false, pending_proposals: [PROPOSAL] },
+    });
     renderPage();
     await screen.findByText(/Ana/);
 
@@ -207,7 +211,7 @@ describe('ManageInvitesPage (the guest list)', () => {
 
   test('a non-owner sees the list but no invite controls', async () => {
     localStorage.setItem('userCode', 'GUEST9');
-    mockRoutes();
+    mockRoutes({ collection: { ...COLLECTION, is_curator: false } });
     renderPage();
     await screen.findByText(/Ana/);
 
@@ -276,5 +280,94 @@ describe('ManageInvitesPage load failures', () => {
 
     expect(await screen.findByText(/Ana/)).toBeInTheDocument();
     expect(screen.queryByText(/error loading/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('ManageInvitesPage — co-owners', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  const TWO_MEMBERS = {
+    ...COLLECTION,
+    invites: [
+      { code: 'GST001', email: 'ana@example.com', name: 'Ana' },
+      { code: 'GST002', email: 'bea@example.com', name: 'Bea' },
+    ],
+    pending_invites: [],
+    co_owners: [{ code: 'GST002', name: 'Bea' }],
+  };
+
+  function mockCoOwnerRoutes({ collection = TWO_MEMBERS, coOwner = { status: 200 } } = {}) {
+    globalThis.fetch = vi.fn((url) => {
+      const respond = (status, body) =>
+        Promise.resolve({ ok: status < 400, status, json: async () => body });
+      if (url.endsWith('/co-owners/')) {
+        return respond(coOwner.status, coOwner.body ?? { message: 'ok' });
+      }
+      return respond(200, collection);
+    });
+  }
+
+  test('the owner sees a promote toggle on a plain member and a demote toggle on a co-owner', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes();
+    renderPage();
+
+    await screen.findByText(/Ana/);
+    expect(screen.getByRole('button', { name: 'Make co-curator' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove co-curator status' })).toBeInTheDocument();
+  });
+
+  test('promoting posts to /co-owners/ with the member’s code', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes();
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+
+    await screen.findByText('Promoted to co-curator.');
+    const [url, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/co-owners/'));
+    expect(url).toBe('/api/v1/collections/COL001/co-owners/');
+    expect(options.method).toBe('POST');
+    expect(JSON.parse(options.body)).toEqual({ user_code: 'GST001' });
+  });
+
+  test('demoting sends DELETE with the co-owner’s code', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes();
+    renderPage();
+    await screen.findByText(/Bea/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove co-curator status' }));
+
+    await screen.findByText('Removed as co-curator.');
+    const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/co-owners/'));
+    expect(options.method).toBe('DELETE');
+    expect(JSON.parse(options.body)).toEqual({ user_code: 'GST002' });
+  });
+
+  test('a co-owner sees the management controls but not the promote toggle — that stays the founder’s alone', async () => {
+    localStorage.setItem('userCode', 'GST002');
+    mockCoOwnerRoutes({ collection: { ...TWO_MEMBERS, is_curator: true } });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(screen.getByLabelText('Guest email')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Make co-curator' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Remove co-curator status' })
+    ).not.toBeInTheDocument();
+  });
+
+  test('the roster names Bea as a co-curator', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes();
+    renderPage();
+
+    await screen.findByText(/Bea/);
+    expect(screen.getAllByText('Co-curator').length).toBeGreaterThan(0);
   });
 });
