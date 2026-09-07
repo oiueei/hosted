@@ -213,6 +213,13 @@ export default function CollectionPage() {
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
   const isAuthenticated = !!userCode;
+  // The Community/visibility tags in the H1 are purely informational — no
+  // click, no delete, so no hover/focus state to design for — so they follow
+  // the theeeme's primary-button colours (color_01/color_06) instead of a
+  // fixed HDS token pair, matching every other themed surface on the page.
+  const tagTheme = tc.color_01
+    ? { '--tag-background': `var(--color-${tc.color_01})`, '--tag-color': `var(--color-${tc.color_06})` }
+    : undefined;
 
   // Active (non-inactive) things, optionally narrowed to the selected tag chip.
   const visibleThings = collection.things.filter((thg) => thg.status !== 'INACTIVE');
@@ -260,32 +267,13 @@ export default function CollectionPage() {
               {collection.mode === 'COMMUNITY' && (
                 <>
                   {' '}
-                  <Tag
-                    theme={{
-                      '--tag-background': 'var(--color-engel)',
-                      '--tag-color': 'var(--color-black-90)',
-                    }}
-                  >
-                    {t('collectionPage.communityTag')}
-                  </Tag>
+                  <Tag theme={tagTheme}>{t('collectionPage.communityTag')}</Tag>
                 </>
               )}
               {isCurator && (
                 <>
                   {' '}
-                  <Tag
-                    theme={
-                      collection.visibility === 'PUBLIC'
-                        ? {
-                            '--tag-background': 'var(--color-success)',
-                            '--tag-color': 'var(--color-white)',
-                          }
-                        : {
-                            '--tag-background': 'var(--color-black-20)',
-                            '--tag-color': 'var(--color-black-90)',
-                          }
-                    }
-                  >
+                  <Tag theme={tagTheme}>
                     {collection.visibility === 'PUBLIC'
                       ? t('visibility.publicTag')
                       : t('visibility.privateTag')}
