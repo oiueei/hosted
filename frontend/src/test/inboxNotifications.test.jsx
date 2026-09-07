@@ -51,6 +51,7 @@ const COLLECTION = {
   mode: 'PROPRIETARY',
   owner: 'ABC123',
   owner_name: 'Test User',
+  is_curator: true,
   thumbnail_url: '',
   tags: [],
   things: [],
@@ -107,6 +108,14 @@ describe('InboxNotifications (O1)', () => {
 
   test('a guest gets no inbox on the collection page', async () => {
     localStorage.setItem('userCode', 'GUEST1');
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok([]);
+      if (url.startsWith('/api/v1/collections/COL001/')) {
+        return ok({ ...COLLECTION, is_curator: false });
+      }
+      if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
+      return ok([]);
+    });
     renderCollection();
 
     await screen.findByText('Toy library');

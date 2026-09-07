@@ -19,6 +19,7 @@ const COLLECTION_WITH_PHOTO = {
   mode: 'PROPRIETARY',
   owner: 'ABC123',
   owner_name: 'Test User',
+  is_curator: true,
   thumbnail_url: 'https://bucket.example.com/oiueei/collections/cover.jpg',
   tags: [],
   things: [],
@@ -174,6 +175,9 @@ describe('CollectionPage digest switch', () => {
     thumbnail_url: '',
     owner: 'OTHER1',
     is_member: true,
+    // A plain member of somebody else's group, not a curator — override
+    // rather than inherit COLLECTION_WITH_PHOTO's true.
+    is_curator: false,
     digest_frequency: 'WEEKLY',
     is_digest_muted: false,
   };
@@ -262,7 +266,7 @@ describe('CollectionPage digest switch', () => {
 
   test('the owner is not offered a switch for a digest they never receive', async () => {
     // The digest goes to `invites`; an owner changes `digest_frequency` instead.
-    mockPage({ ...MEMBER_VIEW, owner: 'ABC123', is_member: false });
+    mockPage({ ...MEMBER_VIEW, owner: 'ABC123', is_member: false, is_curator: true });
     renderCollection();
 
     await screen.findByText('Things from the kitchen');
@@ -297,6 +301,10 @@ const PUBLIC_COMMUNITY = {
   visibility: 'PUBLIC',
   mode: 'COMMUNITY',
   is_member: false,
+  // Unlike COLLECTION_WITH_PHOTO's own tests, the viewer here (VISITOR1) is
+  // never the owner — is_curator must say so explicitly rather than inherit
+  // the spread owner's true value.
+  is_curator: false,
   digest_frequency: 'NONE',
   allow_member_proposals: false,
 };
@@ -394,6 +402,7 @@ describe('sending a message to the whole group', () => {
     mode: 'PROPRIETARY',
     owner: 'ABC123',
     owner_name: 'Test User',
+    is_curator: true,
     thumbnail_url: '',
     tags: [],
     things: [],
@@ -541,6 +550,7 @@ describe('a broadcast the server turns down', () => {
     mode: 'PROPRIETARY',
     owner: 'ABC123',
     owner_name: 'Test User',
+    is_curator: true,
     thumbnail_url: '',
     tags: [],
     things: [],
@@ -794,6 +804,9 @@ describe("CollectionPage — a COMMUNITY member's own things and notifications",
     owner: 'OTHER1',
     owner_name: 'The Curator',
     is_member: true,
+    // The viewer here is a plain member of somebody else's group, not a
+    // curator — override rather than inherit COLLECTION_WITH_PHOTO's true.
+    is_curator: false,
     things: [MY_INACTIVE_THING],
   };
 
@@ -910,5 +923,90 @@ describe("CollectionPage — a COMMUNITY member's own things and notifications",
 
     await screen.findByText('Kitchen Collection');
     expect(apiFetch.mock.calls.some(([u]) => u.startsWith('/api/v1/inbox/'))).toBe(false);
+  });
+});
+
+describe('CollectionPage as a co-owner', () => {
+  // A co-owner is not the founder (`owner`), but the server says `is_curator:
+  // true` — that field, not the client-side owner comparison, is what now
+  // unlocks every admin control on this page.
+  const CO_OWNED = {
+    code: 'COL001',
+    headline: 'Kitchen Collection',
+    description: 'Things from the kitchen',
+    status: 'ACTIVE',
+    visibility: 'PRIVATE',
+    mode: 'COMMUNITY',
+    owner: 'OTHER1',
+    owner_name: 'The Founder',
+    is_curator: true,
+    is_member: false,
+    co_owners: [{ code: 'ABC123', name: 'Me' }],
+    thumbnail_url: '',
+    tags: [],
+    things: [],
+    invites: [{ code: 'ABC123', name: 'Me' }],
+    is_paused: false,
+    allowed_thing_types: [],
+    digest_frequency: 'WEEKLY',
+    is_digest_muted: false,
+    allow_member_proposals: false,
+  };
+
+  test('sees the same admin controls the founder would, not the "join" nudge', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('link', { name: 'Edit collection' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage guests' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  test('is named on the collection page as a co-curator, alongside the founder', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('The Founder')).toBeInTheDocument();
+    expect(screen.getByText('Me')).toBeInTheDocument();
+  });
+
+  test('still sees their own digest switch, since they remain an ordinary invitee for it', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
   });
 });

@@ -74,6 +74,7 @@ const MOCK_COLLECTION = {
   visibility: 'PUBLIC',
   owner: 'ABC123',
   owner_name: 'Owner',
+  is_curator: true,
   thumbnail_url: '',
   tags: ['Vintage'],
   is_member: false,
