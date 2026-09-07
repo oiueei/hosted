@@ -257,6 +257,14 @@ export default function CollectionPage() {
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
             <ContactCorner />
+            {isCurator && (
+              <ShareCollectionMenu
+                collectionCode={code}
+                collectionHeadline={headline}
+                ownerName={collection.owner_name}
+                isPublic={collection.visibility === 'PUBLIC'}
+              />
+            )}
             {!showWelcome && <BackLink to="/" label={t('common.home')} />}
             <h1 className="form-hero-title">
               {headline}
@@ -354,15 +362,6 @@ export default function CollectionPage() {
                   </ButtonLink>
                 </div>
                 <div className="spacer-s"></div>
-                <div className="spacer-l" />
-                <div className="share-menu-wrap">
-                  <ShareCollectionMenu
-                    collectionCode={code}
-                    collectionHeadline={headline}
-                    ownerName={collection.owner_name}
-                    isPublic={collection.visibility === 'PUBLIC'}
-                  />
-                </div>
                 {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
                 showing but hasn't invited anyone — a quiet one-line pointer, no
                 banner or pressure. It disappears once the first guest joins. */}

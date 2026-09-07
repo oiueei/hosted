@@ -94,6 +94,73 @@ body {
   z-index: 1;
 }
 
+/* Share menu (S9, curator only): the ShareCollectionMenu Select restyled to a
+   single 44px icon trigger, sitting one slot to the left of .contact-corner.
+   HDS renders the trigger as one <button role="combobox"> holding an icon
+   <span>, a text <div> and an arrow <div>; clipping the box to 44px and hiding
+   the two <div>s (both already aria-hidden) leaves an icon-only control with
+   HDS's open/close/keyboard logic and the button's composed aria-label intact.
+   Substring class matches dodge HDS's hashed CSS-module suffixes. */
+.share-corner {
+  position: absolute;
+  top: calc(var(--spacing-l) - 2px);
+  right: calc((100% - min(100%, 1248px)) / 2 + var(--spacing-s) + 44px + var(--spacing-2-xs));
+  width: 44px;
+  z-index: 1;
+}
+
+/* The Select's own root/container carry a border, a white fill and a min-height
+   meant for a text-input-sized control — none of which belong on an icon. */
+.share-corner [class*='Select-module_root'],
+.share-corner [class*='selectAndListContainer'] {
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  border: none;
+  background: transparent;
+}
+
+.share-corner button[role='combobox'] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  color: var(--hero-text-color, var(--color-black-90));
+}
+
+/* The icon <span> stays; the placeholder text and the arrow (both aria-hidden,
+   so the accessible name is unaffected) go. */
+.share-corner button[role='combobox'] > div {
+  display: none;
+}
+
+.share-corner button[role='combobox'] > span {
+  color: var(--hero-text-color, var(--color-black-90));
+}
+
+/* Keep the <label> for the a11y tree but out of sight (the button already has
+   its own aria-label — this is belt and braces, never the only name). */
+.share-corner [class*='FieldLabel-module_label'] {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+}
+
+/* The options list inherits width:100% from the now-44px container — give it a
+   readable width again and anchor it to the icon's right edge so it opens on
+   screen rather than as a 44px sliver off the viewport. */
+.share-corner [class*='listAndInputContainer'] {
+  width: max-content;
+  min-width: 14rem;
+  max-width: calc(100vw - 2 * var(--spacing-s));
+  left: auto;
+  right: 0;
+}
+
 /* Title replacement (S9): the one hero <h1> whose text is the literal string
    "OIUEEI" (LoginPage — verified by grep; share/notFound's hero titles
    turned out to be different copy, not that exact string) renders the logo
@@ -743,11 +810,6 @@ body :focus-visible {
   gap: var(--spacing-s);
 }
 
-/* Share menu: capped on desktop, full-width on mobile (mirrors .button-row-wide) */
-.share-menu-wrap {
-  max-width: 320px;
-}
-
 @media (max-width: 767px) {
   .button-row-wide {
     flex-direction: column;
@@ -756,14 +818,6 @@ body :focus-visible {
   .button-row-wide > a button,
   .button-row-wide > button {
     width: 100%;
-  }
-  .share-menu-wrap {
-    max-width: 100%;
-  }
-  /* HDS Select root is capped at max-width:420px — let it fill the wrap so the
-     share dropdown goes full-width like the buttons above (same breakpoint). */
-  .share-menu-wrap [class*='Select-module_root'] {
-    max-width: 100%;
   }
 }
 
