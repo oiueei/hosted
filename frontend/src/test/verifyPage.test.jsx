@@ -291,9 +291,9 @@ describe('declining an invitation from the email', () => {
  * The most-travelled path in the product — every sign-in goes through it — and
  * it had no test at all. Two separate things happen here: the session is
  * written into this browser, and the **server** decides where the person lands
- * (`landing`). The second used to be decided in the page from `seenWelcome`,
- * which logout wipes, so every re-login looked like a first visit; the fix
- * moved the decision to the server and this is what keeps it there.
+ * (`landing`). It used to be decided in the page from `seenWelcome`, which
+ * logout wipes, so every re-login looked like a first visit; the fix moved the
+ * decision to the server and this is what keeps it there.
  */
 describe('where a magic link lands', () => {
   const USER = {
@@ -312,8 +312,8 @@ describe('where a magic link lands', () => {
   };
 
   function Landing() {
-    const { pathname, state } = useLocation();
-    return <p>{`landed on ${pathname} fromInvite=${!!state?.fromInvite}`}</p>;
+    const { pathname } = useLocation();
+    return <p>{`landed on ${pathname}`}</p>;
   }
 
   function renderMagicLink(body) {
@@ -341,32 +341,40 @@ describe('where a magic link lands', () => {
       invited_collection: 'COL001',
     });
 
-    // `fromInvite` is what makes the collection show its welcome box, so the
-    // two halves of this assertion are two different behaviours: the right
-    // group, and arriving there as somebody who was invited.
-    expect(
-      await screen.findByText('landed on /collections/COL001 fromInvite=true')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('landed on /collections/COL001')).toBeInTheDocument();
     expect(localStorage.getItem('userCode')).toBe('USR002');
     expect(JSON.parse(localStorage.getItem('theeemeColors')).color_01).toBe('bus');
     expect(localStorage.getItem('koro')).toBe('beat');
   });
 
-  test('a returning member with one group lands on it, but not as an invitee', async () => {
-    // Same landing, no invitation: the server sends a lone-collection user
-    // straight to it, and greeting them as a new arrival every time would be
-    // its own small insult.
+  test('a returning member with one group lands on it', async () => {
+    // Same landing, no invitation payload: the server sends a lone-collection
+    // user straight to it.
     renderMagicLink({ landing: 'collection', collection: 'COL001' });
 
+    expect(await screen.findByText('landed on /collections/COL001')).toBeInTheDocument();
+  });
+
+  test('a join that came from a "Reserve" click lands back on that thing (S13)', async () => {
+    // The server sends `thing` when the join carried a thing code and it is
+    // still a live thing in the collection — the visitor came to reserve it,
+    // so drop them on it, not the grid.
+    renderMagicLink({
+      landing: 'collection',
+      collection: 'COL001',
+      invited_collection: 'COL001',
+      thing: 'THG001',
+    });
+
     expect(
-      await screen.findByText('landed on /collections/COL001 fromInvite=false')
+      await screen.findByText('landed on /collections/COL001/things/THG001')
     ).toBeInTheDocument();
   });
 
   test('anyone else goes home', async () => {
     renderMagicLink({ landing: 'home' });
 
-    expect(await screen.findByText('landed on / fromInvite=false')).toBeInTheDocument();
+    expect(await screen.findByText('landed on /')).toBeInTheDocument();
   });
 
   /* A `landing: "welcome"` case belongs in `deployment.test.jsx`, not here: where
@@ -375,31 +383,6 @@ describe('where a magic link lands', () => {
      writes one branch's configuration into a test the other branch then has to
      edit — a merge conflict every release, which is the trap that file opens by
      naming. Both answers are pinned there, with the module mocked. */
-
-  test('a second person on this browser does not inherit the first one’s welcome', async () => {
-    // A shared laptop. `seenWelcome` says "you have already been shown around",
-    // and leaving it set would silently swallow the newcomer's first-visit box.
-    localStorage.setItem('userCode', 'USR001');
-    localStorage.setItem('seenWelcome', '1');
-
-    renderMagicLink({ landing: 'home' });
-
-    expect(await screen.findByText('landed on / fromInvite=false')).toBeInTheDocument();
-    expect(localStorage.getItem('seenWelcome')).toBeNull();
-    expect(localStorage.getItem('userCode')).toBe('USR002');
-  });
-
-  test('the same person signing in again keeps theirs', async () => {
-    // The other half, and the one that pins the comparison rather than a blunt
-    // "always clear it": re-logging in is not a first visit.
-    localStorage.setItem('userCode', 'USR002');
-    localStorage.setItem('seenWelcome', '1');
-
-    renderMagicLink({ landing: 'home' });
-
-    expect(await screen.findByText('landed on / fromInvite=false')).toBeInTheDocument();
-    expect(localStorage.getItem('seenWelcome')).toBe('1');
-  });
 });
 
 describe('a stalled network', () => {

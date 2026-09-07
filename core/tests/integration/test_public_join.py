@@ -13,7 +13,7 @@ from django.core.cache import caches
 from django.test import override_settings
 from rest_framework.test import APIClient
 
-from core.models import RSVP, Collection, Event, User
+from core.models import RSVP, Collection, Event, Thing, User
 
 JOIN_URL = "/api/v1/auth/join/"
 
@@ -190,6 +190,89 @@ class TestPublicAutoJoin:
             format="json",
         )
         assert "Open community" in mail.outbox[0].subject
+
+
+@pytest.mark.django_db
+class TestLoginToActReturnsToTheThing:
+    """S13: a visitor who clicked "Reserve" on a thing lands back on *that thing*
+    after the magic link, not the collection index — so the click they came to
+    make is one tap away, not a hunt through the grid.
+
+    The thing code rides in the join body, gets stashed on the magic-link RSVP's
+    context, and is re-checked at verify time (it may have been hidden or moved
+    out meanwhile). Anything that doesn't check out silently degrades to the
+    collection landing — never an error, never a dead link.
+    """
+
+    def _thing_in_public(self, join_setup, status="ACTIVE"):
+        thing = Thing.objects.create(
+            code=f"THG{status[:3]}",
+            owner=join_setup["public"].owner,
+            type="GIFT_THING",
+            headline="A lamp",
+            status=status,
+        )
+        join_setup["public"].things.add(thing)
+        return thing
+
+    def _join(self, join_setup, email, **extra):
+        join_setup["anon"].post(
+            JOIN_URL, {"email": email, "collection_code": "JPUB01", **extra}, format="json"
+        )
+        user = User.objects.get(email=email)
+        return RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
+
+    def test_a_valid_thing_code_rides_through_to_the_landing(self, join_setup):
+        thing = self._thing_in_public(join_setup)
+        rsvp = self._join(join_setup, "act@test.com", thing_code=thing.code)
+
+        assert rsvp.context == {"thing_code": thing.code}
+
+        resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+        assert resp.data["landing"] == "collection"
+        assert resp.data["collection"] == "JPUB01"
+        assert resp.data["thing"] == thing.code
+
+    def test_no_thing_code_lands_on_the_collection_as_before(self, join_setup):
+        rsvp = self._join(join_setup, "plain@test.com")
+        assert rsvp.context == {}
+        resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+        assert "thing" not in resp.data
+
+    def test_a_thing_from_another_collection_is_ignored(self, join_setup):
+        other = Thing.objects.create(
+            code="THGOTH", owner=join_setup["public"].owner, type="GIFT_THING", headline="Elsewhere"
+        )
+        # not added to JPUB01
+        rsvp = self._join(join_setup, "foreign@test.com", thing_code=other.code)
+        assert rsvp.context == {}
+        resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+        assert "thing" not in resp.data
+        # ...and the join itself still worked.
+        assert join_setup["public"].invites.filter(email="foreign@test.com").exists()
+
+    def test_an_inactive_thing_is_ignored(self, join_setup):
+        thing = self._thing_in_public(join_setup, status="INACTIVE")
+        rsvp = self._join(join_setup, "hidden@test.com", thing_code=thing.code)
+        assert rsvp.context == {}
+
+    def test_an_unknown_thing_code_is_ignored(self, join_setup):
+        rsvp = self._join(join_setup, "ghost@test.com", thing_code="NOPE00")
+        assert rsvp.context == {}
+        resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+        assert "thing" not in resp.data
+
+    def test_a_thing_hidden_between_join_and_click_drops_to_the_collection(self, join_setup):
+        thing = self._thing_in_public(join_setup)
+        rsvp = self._join(join_setup, "raced@test.com", thing_code=thing.code)
+
+        thing.status = "INACTIVE"
+        thing.save(update_fields=["status"])
+
+        resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+        assert resp.data["landing"] == "collection"
+        assert resp.data["collection"] == "JPUB01"
+        assert "thing" not in resp.data
 
 
 @pytest.mark.django_db

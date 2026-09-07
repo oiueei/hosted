@@ -5,6 +5,7 @@ import {
   Dialog,
   IconArrowRedo,
   IconCamera,
+  IconCopy,
   IconCrossCircle,
   IconEnvelope,
   IconShare,
@@ -22,7 +23,14 @@ import Toast from './Toast';
 const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QRCodeSVG })));
 
 /**
- * Share menu for the CollectionPage hero (owner only).
+ * Share menu for the CollectionPage hero (curator only).
+ *
+ * Presents as a single discreet `IconShare` in the hero's top-right, beside
+ * `ContactCorner` — the `.share-corner` rule in App.css restyles the Select's
+ * own trigger (its `icon` prop renders inside the one `<button role="combobox">`)
+ * to a 44px icon-only control, hiding the placeholder text and the arrow, while
+ * every bit of HDS's open/close/Escape/outside-click/keyboard behaviour and the
+ * button's composed `aria-label` (from `texts.label`) stay exactly as shipped.
  *
  * HDS Select is a form input by design — value persists after selection.
  * Here we hijack `onChange`/`onClose` to fire the action and reset the
@@ -157,7 +165,7 @@ export default function ShareCollectionMenu({
     {
       value: 'copy',
       label: t('shareMenu.copy'),
-      iconStart: <IconShare aria-hidden="true" />,
+      iconStart: <IconCopy aria-hidden="true" />,
     },
     {
       value: 'whatsapp',
@@ -191,26 +199,33 @@ export default function ShareCollectionMenu({
 
   return (
     <>
-      <Select
-        id={`share-menu-${collectionCode}`}
-        texts={{
-          label: t('shareMenu.label'),
-          placeholder: t('shareMenu.placeholder'),
-          language: hdsLang(i18n.language),
-        }}
-        options={options}
-        value={[]}
-        onChange={(selected) => {
-          const picked = selected && selected.length > 0 ? selected[0] : null;
-          if (!picked || !picked.value) return;
-          if (picked.value === 'rotate' || picked.value === 'revoke') {
-            setConfirmAction(picked.value);
-          } else {
-            trigger(picked.value);
-          }
-        }}
-        visibleOptions={options.length}
-      />
+      {/* One discreet icon in the hero's top-right, beside ContactCorner. The
+          Select's own trigger is restyled to a 44px icon-only button in
+          `.share-corner` (App.css) — HDS keeps all the open/close/keyboard
+          logic and composes the button's accessible name from `texts.label`. */}
+      <div className="share-corner">
+        <Select
+          id={`share-menu-${collectionCode}`}
+          icon={<IconShare aria-hidden="true" />}
+          texts={{
+            label: t('shareMenu.label'),
+            placeholder: t('shareMenu.placeholder'),
+            language: hdsLang(i18n.language),
+          }}
+          options={options}
+          value={[]}
+          onChange={(selected) => {
+            const picked = selected && selected.length > 0 ? selected[0] : null;
+            if (!picked || !picked.value) return;
+            if (picked.value === 'rotate' || picked.value === 'revoke') {
+              setConfirmAction(picked.value);
+            } else {
+              trigger(picked.value);
+            }
+          }}
+          visibleOptions={options.length}
+        />
+      </div>
       {qrUrl && (
         <Dialog
           id={`share-qr-${collectionCode}`}
@@ -251,7 +266,7 @@ export default function ShareCollectionMenu({
             </Button>
             <Button
               variant="secondary"
-              iconStart={<IconShare aria-hidden="true" />}
+              iconStart={<IconCopy aria-hidden="true" />}
               onClick={() => handleCopy(qrUrl)}
               style={btnSecondaryStyle}
             >

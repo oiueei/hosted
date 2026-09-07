@@ -25,7 +25,6 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   });
 
   test('joining sends the email, the collection code and the page language', async () => {
-    localStorage.setItem('seenWelcome', 'true');
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -45,9 +44,6 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
       collection_code: 'PUB001',
       language: 'en',
     });
-    // A joiner may be brand-new on this browser: their first-time welcome box
-    // must not be suppressed by a stale flag.
-    expect(localStorage.getItem('seenWelcome')).toBeNull();
   });
 
   test('a server failure reports inline and keeps the form usable', async () => {

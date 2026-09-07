@@ -16,13 +16,15 @@ import useJoin from '../hooks/useJoin';
  * The request itself lives in `useJoin`, shared with `MagicLinkJoinPage`
  * (`/share/:token`, and whatever door a deployment adds); only the presentation differs.
  */
-export default function JoinToAct({ collectionCode, collectionHeadline }) {
+export default function JoinToAct({ collectionCode, collectionHeadline, thingCode }) {
   const { t } = useTranslation();
   const { btnStyle } = useTheeeme();
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: 'joinToAct.sentBody',
     errorMessageKey: 'joinToAct.error',
-    extraBody: { collection_code: collectionCode },
+    extraBody: thingCode
+      ? { collection_code: collectionCode, thing_code: thingCode }
+      : { collection_code: collectionCode },
   });
 
   if (status === 'success') {

@@ -38,6 +38,18 @@ describe('RecommendGuest', () => {
     expect(screen.getByText(/nothing is sent to them until they say yes/i)).toBeInTheDocument();
   });
 
+  test('the owner name is interpolated into the note field label, not left as {{owner}}', () => {
+    // recommend.noteLabel carries {{owner}} in all three locales; the label read
+    // "Anything {{owner}} should know?" verbatim because the t() call was missing
+    // the param that the helper text right beside it already passed.
+    renderRecommend();
+    fireEvent.click(screen.getByRole('button', { name: /Recommend them/i }));
+
+    const noteField = screen.getByLabelText(/Anything Lala should know/i);
+    expect(noteField).toBeInTheDocument();
+    expect(screen.queryByText(/\{\{owner\}\}/)).toBeNull();
+  });
+
   test('recommending posts the email and the note to the propose endpoint', async () => {
     apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     renderRecommend();

@@ -42,6 +42,7 @@ from .views.collections import (
     CollectionViewSet,
     InvitedCollectionsView,
     MyPendingInvitationsView,
+    SharePreviewView,
 )
 from .views.contact import ContactView
 from .views.csp import csp_report
@@ -204,6 +205,12 @@ urlpatterns = [
         "collections/<str:collection_code>/share-link/",
         CollectionShareLinkView.as_view(),
         name="collection-share-link",
+    ),
+    # Public: name + description of the collection a /share/{token} link opens
+    path(
+        "share/<str:token>/preview/",
+        SharePreviewView.as_view(),
+        name="share-preview",
     ),
     path(
         "collections/<str:collection_code>/things/bulk/",

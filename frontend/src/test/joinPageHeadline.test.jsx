@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
@@ -15,9 +15,9 @@ import JoinPage from '../pages/JoinPage';
 // navigation state, which just one caller passes (ThingLinkbox). The hero's own
 // "Join to take part" link, a refresh and a shared /join URL all arrived with
 // nothing, so the page asked a stranger to join "Collection".
-function renderJoin(state) {
+function renderJoin(state, search = '') {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/collections/PUB001/join', state }]}>
+    <MemoryRouter initialEntries={[{ pathname: '/collections/PUB001/join', search, state }]}>
       <Routes>
         <Route path="/collections/:code/join" element={<JoinPage />} />
       </Routes>
@@ -69,5 +69,52 @@ describe('JoinPage — the collection is named', () => {
 
     await waitFor(() => expect(apiFetch).toHaveBeenCalled());
     expect(screen.getByText(/Sign in to reserve/)).toBeInTheDocument();
+  });
+
+  test('a ?thing= from a "Reserve" click rides into the join request (S13)', async () => {
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ code: 'PUB001', headline: 'Tool Library' }),
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'sent' }),
+    });
+
+    renderJoin(undefined, '?thing=THG001');
+
+    fireEvent.change(await screen.findByLabelText(/Email/), {
+      target: { value: 'visitor@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send me a magic link' }));
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    const body = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
+    expect(body.collection_code).toBe('PUB001');
+    expect(body.thing_code).toBe('THG001');
+  });
+
+  test('no ?thing= means no thing_code in the request', async () => {
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ code: 'PUB001', headline: 'Tool Library' }),
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'sent' }),
+    });
+
+    renderJoin(undefined);
+
+    fireEvent.change(await screen.findByLabelText(/Email/), {
+      target: { value: 'visitor@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send me a magic link' }));
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    const body = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty('thing_code');
   });
 });

@@ -67,7 +67,7 @@ class TestMagicLinkLanding:
 
         assert res.data["landing"] == "collection"
         assert res.data["collection"] == collection.code
-        # Not an invitation — the SPA must not show the invite welcome box.
+        # A plain login carries no target, so the invitation marker stays absent.
         assert "invited_collection" not in res.data
 
     def test_login_with_one_invited_collection_lands_on_it(self, user, user2, collection):

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 // ── jsdom shims ────────────────────────────────────────────────────────
@@ -320,16 +320,36 @@ describe('ThingPage — owner button matrix', () => {
 // instead of showing the old inline JoinToAct email box.
 // ════════════════════════════════════════════════════════════════════════
 describe('ThingPage — anonymous login-to-act', () => {
-  test('shows the reserve button and routes the click to the join page', async () => {
+  function NavSnapshot() {
+    const { pathname, search } = useLocation();
+    return <div data-testid="nav">{pathname + search}</div>;
+  }
+
+  function renderThingPageWithNav() {
+    return render(
+      <MemoryRouter initialEntries={['/things/THG001']}>
+        <Routes>
+          <Route path="/things/:thingCode" element={<ThingPage />} />
+          <Route path="*" element={<NavSnapshot />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  test('shows the reserve button and routes the click to the join page, carrying ?thing=', async () => {
     localStorage.removeItem('userCode');
     setApi({
       thing: makeThing({ type: 'GIFT_THING', owner: 'OWNER1', collection_code: 'PUB001' }),
     });
-    renderThingPage();
+    renderThingPageWithNav();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Claim' }));
 
-    await waitFor(() => expect(screen.getByTestId('navigated')).toBeInTheDocument());
+    // Lands on the collection's join page, with the thing it was trying to
+    // reserve in the query string (S13) so the magic link comes back to it.
+    expect(await screen.findByTestId('nav')).toHaveTextContent(
+      '/collections/PUB001/join?thing=THG001'
+    );
     // The anonymous click only navigates — it never fires a direct hold POST.
     expect(apiFetch).not.toHaveBeenCalledWith('/api/v1/things/THG001/request/', expect.anything());
     // The old inline JoinToAct email box is gone (replaced by the routing button).

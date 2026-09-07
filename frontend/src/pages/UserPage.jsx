@@ -176,14 +176,7 @@ export default function UserPage() {
     >
       <div
         className={`form-hero${user.photo_url ? ' form-hero--photo' : ''}`}
-        style={
-          tc.color_03
-            ? {
-                backgroundColor: `var(--color-${tc.color_03})`,
-                '--hero-logo-color': `var(--color-${tc.color_02})`,
-              }
-            : undefined
-        }
+        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div className="form-hero-split">{heroContent}</div>
         {user.photo_url && (
