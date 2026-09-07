@@ -135,6 +135,7 @@
     "user": "{{name}} — OIUEEI",
     "notFound": "Page not found — OIUEEI",
     "share": "Join — OIUEEI",
+    "shareNamed": "Join {{name}} — OIUEEI",
     "deleteAccount": "Delete account — OIUEEI",
     "legal": "Legal & privacy — OIUEEI",
     "contact": "Contact — OIUEEI",
@@ -687,7 +688,9 @@
   },
   "share": {
     "pageTitle": "Join us on OIUEEI",
+    "pageTitleNamed": "Join {{name}}",
     "pageDescription": "Enter your email and we'll send you a magic link to join the collection. One click and you're in.",
+    "pageDescriptionNamed": "You've been invited to {{name}}. Enter your email and we'll send you a magic link to join — one click and you're in.",
     "emailLabel": "Email",
     "emailPlaceholder": "you@email.com",
     "join": "Join",

@@ -93,6 +93,10 @@ vi.mock('../services/api', () => ({
     if (url.includes('/notifications/token/'))
       return Promise.resolve(mockResponse({ notify_activity: true, notify_news: true }));
     if (url.includes('/theeemes/')) return Promise.resolve(mockResponse(MOCK_THEEEMES));
+    if (url.match(/\/share\/[^/]+\/preview\//))
+      return Promise.resolve(
+        mockResponse({ headline: 'The Tool Library', description: 'Borrow, do not buy.' })
+      );
     if (url.includes('/my-bookings/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.includes('/my-invitations/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.includes('/invited-collections/')) return Promise.resolve(mockResponse([]));

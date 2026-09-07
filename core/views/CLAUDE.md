@@ -602,6 +602,18 @@ Curator management of the public share token — a co-owner may generate, rotate
 
 **Frontend integration:** `ShareCollectionMenu` (HDS Select with `IconEnvelope` / `IconShare` / `IconWhatsapp`) calls `POST` lazily the first time the owner triggers any share action. The URL is cached for the rest of the session to avoid extra round-trips.
 
+### SharePreviewView
+
+| | |
+|---|---|
+| **Endpoint** | `GET /api/v1/share/{token}/preview/` |
+| **Permission** | `AllowAny`, `authentication_classes = []` — the 22-char token is the whole credential |
+| **Rate limit** | 30 requests/minute per IP |
+
+The **name and description** of the collection a `/share/{token}` link opens, so `SharePage` can render "Join the Chalmercadillo" instead of "Join us on OIUEEI" — a stranger handed the link on WhatsApp has no idea what OIUEEI is. Returns **only** `{headline, description}`, both **raw** (either may be a `{lang: text}` map the SPA resolves against the reader's language, O6 — same as every other collection read). Never the owner, the roster, a member count or even the collection code.
+
+Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked or INACTIVE token — the same `share_token=… , status=ACTIVE` filter `JoinView._resolve_target` uses — so the preview goes dark the instant the link does and reveals nothing the link itself doesn't already. The bearer link is the credential and whoever holds it already knows a real collection is behind it, so naming that collection to them is not a leak; naming anything *else* would be.
+
 ### CollectionBroadcastView
 
 | | |

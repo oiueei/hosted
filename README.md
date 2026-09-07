@@ -179,6 +179,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | DELETE | `/api/v1/collections/{code}/co-owners/` | Demote a co-owner back to a plain member (owner only). Not gated by the deployment policy — an owner can always undo a co-owner they already appointed |
 | POST | `/api/v1/collections/{code}/share-link/` | Generate or rotate the public share token (owner or co-owner). Returns `share_url` and `share_token`. Pass `{"rotate": true}` to force a fresh token. Rate limited: 30/h. |
 | DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner or co-owner) |
+| GET | `/api/v1/share/{token}/preview/` | **Public.** The `headline` and `description` (only) of the collection a `/share/{token}` link opens, so the join page can name it. Generic 404 for an unknown, revoked or inactive token. Rate limited: 30/min per IP |
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
 | POST | `/api/v1/collections/{code}/join/` | Join a PUBLIC collection you are browsing while signed in (self-join) — the half of login-to-act the anonymous `/auth/join/` can't serve, since a magic link is no use to a live session. Honours the same `COLLECTION_JOINS_PER_DAY` ceiling. Rate limited: 30/h |

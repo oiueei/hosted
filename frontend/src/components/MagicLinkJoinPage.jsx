@@ -22,6 +22,12 @@ import PageLayout from './PageLayout';
  *   alreadyHaveAccount) and the email input id (`{ns}-email`).
  * - `docTitleKey` / `titleKey` / `descriptionKey`: full i18n keys for the
  *   document title, hero title and intro paragraph (their names differ per page).
+ * - `docTitleText` / `titleText` / `descriptionText`: literal strings that
+ *   override the corresponding `*Key` when set. `SharePage` uses them to show
+ *   the real collection name once its `/share/{token}/preview/` GET lands, so a
+ *   stranger sees "Join the Chalmercadillo", not "Join us on OIUEEI".
+ * - `collectionDescription`: the collection's own description (already resolved
+ *   to the reader's language) — a quiet paragraph under the intro when present.
  * - `extraBody`: extra fields merged into the POST body.
  * - `endpoint`: which URL the form POSTs to (see `useJoin`) — every upstream
  *   caller leaves this at the default `/auth/join/`; a deployment's own open
@@ -32,13 +38,19 @@ export default function MagicLinkJoinPage({
   docTitleKey,
   titleKey,
   descriptionKey,
+  docTitleText,
+  titleText,
+  descriptionText,
+  collectionDescription,
   extraBody,
   endpoint,
 }) {
   const { t } = useTranslation();
+  const heroTitle = titleText || t(titleKey);
+  const intro = descriptionText || t(descriptionKey);
   useEffect(() => {
-    document.title = t(docTitleKey);
-  }, [t, docTitleKey]);
+    document.title = docTitleText || t(docTitleKey);
+  }, [t, docTitleKey, docTitleText]);
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: `${ns}.magicLinkSent`,
     errorMessageKey: `${ns}.errorSendingLink`,
@@ -49,8 +61,16 @@ export default function MagicLinkJoinPage({
   const { btnStyle } = useTheeeme();
 
   return (
-    <PageLayout title={t(titleKey)}>
-      <p className="section-mt measure">{t(descriptionKey)}</p>
+    <PageLayout title={heroTitle}>
+      <p className="section-mt measure">{intro}</p>
+      {collectionDescription && (
+        <p
+          className="measure"
+          style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}
+        >
+          {collectionDescription}
+        </p>
+      )}
       {status ? (
         <>
           <Notification
