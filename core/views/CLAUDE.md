@@ -480,6 +480,31 @@ Removes a user from the collection's invite list. If the invite is still pending
 { "user_code": "ABC123" }
 ```
 
+### CollectionCoOwnerView
+
+| | |
+|---|---|
+| **Endpoints** | `POST` and `DELETE /api/v1/collections/{collection_code}/co-owners/` |
+| **Permission** | `IsAuthenticated` + collection owner (`require_collection_owner`) |
+| **Rate limit** | POST: 30 requests/hour per user. DELETE: unrestricted. |
+
+Promote or demote a co-owner. **Owner only, deliberately not curator-widened** — appointing (or removing) a second admin stays with the one person accountable for the CASCADE-delete root, never delegated further.
+
+**`POST` behaviour:**
+- 400 if the collection isn't `is_community()` — co-owners are a COMMUNITY-mode feature.
+- 403 (`co_owners_denial`) if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`.
+- 400 if `user_code` isn't already in `invites` — promotion only, never a separate invite door (`co_owners ⊆ invites`).
+- Adds to `co_owners` (idempotent) and, on the first promotion only, creates a `PROMOTED_CO_OWNER` in-app notification for the member. No email — a deliberate v1 simplification.
+
+**`DELETE` behaviour:**
+- Same membership/mode validation as POST, **except no `co_owners_denial` check** — the gate is on bringing co-owner status into existence, never on living in it (the same grandfathering `creator_policy` already applies to a mode or a verb). An owner must always be able to demote, even on a deployment that has since disabled the feature, and even on a collection since switched away from COMMUNITY (a co-owner's status is sticky across a mode change, like `owner` itself).
+- Removes from `co_owners` (idempotent, a harmless no-op on a plain member) and, if they were actually a co-owner, creates a `DEMOTED_CO_OWNER` notification. The member stays in `invites` — demotion removes the admin tier, not the membership.
+
+**Request body:**
+```json
+{ "user_code": "ABC123" }
+```
+
 ### CollectionJoinView
 
 | | |

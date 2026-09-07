@@ -440,6 +440,8 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | Collection owner | `collection_headline`, `collection_code`, `proposer_name`, `email`, `note` |
 | `INVITE_PROPOSAL_APPROVED` | The owner approves that recommendation | The proposer | `collection_headline`, `collection_code`, `email`, `approved: True` |
 | `INVITE_PROPOSAL_DECLINED` | The owner declines it | The proposer | `collection_headline`, `collection_code`, `owner_name`, `email` |
+| `PROMOTED_CO_OWNER` | The owner promotes a member to co-owner (`CollectionCoOwnerView.post`, first promotion only) | The promoted member | `collection_headline`, `collection_code` |
+| `DEMOTED_CO_OWNER` | The owner demotes a co-owner back to a plain member (`CollectionCoOwnerView.delete`) | The demoted member | `collection_headline`, `collection_code` |
 
 **The three above went unrendered until the 2026-08 design round.** `InboxNotifications` had no `case` for any of them, so all three fell through to the `BROADCAST` default and drew a card reading `" — {headline}"` with an empty body — worst of all the decline, whose payload carries `owner_name` and so rendered as a blank message *from the owner*. Approval also used to reuse `INVITE_PROPOSED` with `approved: True`, one type addressing two audiences with opposite meanings; it now has its own type, and the inbox still reads the legacy flag so rows written before the split render correctly. Any new `Type` added here owes a matching `case` in `notificationLabel`/`notificationBody` — the `default` branch is broadcast copy, not a safe fallback.
 

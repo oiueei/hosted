@@ -30,6 +30,7 @@ from .views.booking import (
 from .views.collections import (
     CollectionBroadcastView,
     CollectionBulkInviteView,
+    CollectionCoOwnerView,
     CollectionDigestPrefView,
     CollectionInviteView,
     CollectionJoinView,
@@ -148,6 +149,11 @@ urlpatterns = [
         "collections/<str:collection_code>/invite/",
         CollectionInviteView.as_view(),
         name="collection-invite",
+    ),
+    path(
+        "collections/<str:collection_code>/co-owners/",
+        CollectionCoOwnerView.as_view(),
+        name="collection-co-owners",
     ),
     path(
         "collections/<str:collection_code>/join/",

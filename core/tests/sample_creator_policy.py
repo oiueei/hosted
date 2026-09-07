@@ -37,3 +37,20 @@ class SilentlyRestrictedCreatorPolicy(RestrictedCreatorPolicy):
             thing_types=(Thing.Type.GIFT_THING, Thing.Type.SELL_THING),
             request_url=None,
         )
+
+
+class CoOwnersDisabledCreatorPolicy(CreatorPolicy):
+    """Everything the standalone offers, except a co-owner tier.
+
+    A deployment that wants COMMUNITY collections but not a second admin
+    tier on them — the narrowing is on `co_owners_enabled` alone, unlike
+    `RestrictedCreatorPolicy`, which narrows modes and verbs too.
+    """
+
+    def capabilities(self, user) -> Capabilities:
+        return Capabilities(
+            collection_modes=tuple(Collection.Mode.values),
+            thing_types=tuple(Thing.Type.values),
+            request_url=REQUEST_URL,
+            co_owners_enabled=False,
+        )

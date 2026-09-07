@@ -40,7 +40,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
-from core.services.creator_policy import collection_mode_denial
+from core.services.creator_policy import co_owners_denial, collection_mode_denial
 from core.services.email_service import (
     send_broadcast_email,
     # Still used directly by the bulk-invite fan-out, which batches its RSVP
@@ -66,6 +66,7 @@ from core.validators import SafeHeadlineField
 from core.views._helpers import (
     body_dict,
     require_collection_curator,
+    require_collection_owner,
     type_validity_error,
     viewer_code,
 )
@@ -526,6 +527,124 @@ class CollectionInviteView(APIView):
         return Response(
             {"error": "User is not invited to this collection"},
             status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class CollectionCoOwnerView(APIView):
+    """
+    POST /api/v1/collections/{collection_code}/co-owners/
+    Promote an existing member to co-owner.
+
+    DELETE /api/v1/collections/{collection_code}/co-owners/
+    Demote a co-owner back to a plain member — they stay a member, they just
+    lose the admin powers.
+
+    Owner only, deliberately not curator-widened: appointing (or removing) a
+    second admin stays with the one person accountable for the CASCADE-delete
+    root, never delegated further. COMMUNITY collections only, and gated
+    behind this deployment's `CREATOR_POLICY` the same way a mode or a verb
+    is.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_target(self, collection, request):
+        """Shared validation for POST and DELETE: resolve and return the
+        target ``User``, or a Response explaining why not.
+
+        Only checks membership — **not** ``is_community()``. Promoting is
+        COMMUNITY-only and `post` checks that itself before calling this;
+        demoting must keep working even if the collection's mode changed
+        since, so `delete` never asks (see its own comment).
+        """
+        serializer = CollectionRemoveInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user_code = serializer.validated_data["user_code"]
+
+        try:
+            member = collection.invites.get(code=user_code)
+        except User.DoesNotExist:
+            return None, Response(
+                {"error": "Only an existing member can be promoted or demoted"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return member, None
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    def post(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        denied = require_collection_owner(
+            collection, request.user.code, "Only the owner can promote a co-owner"
+        )
+        if denied:
+            return denied
+
+        if not collection.is_community():
+            return Response(
+                {"error": "Co-owners are a COMMUNITY-mode feature"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        denial = co_owners_denial(request.user)
+        if denial:
+            return Response({"error": denial}, status=status.HTTP_403_FORBIDDEN)
+
+        member, denied = self._get_target(collection, request)
+        if denied:
+            return denied
+
+        already = collection.co_owners.filter(code=member.code).exists()
+        collection.co_owners.add(member)
+        if not already:
+            InAppNotification.objects.create(
+                user=member,
+                type=InAppNotification.Type.PROMOTED_CO_OWNER,
+                payload={
+                    "collection_headline": collection.headline,
+                    "collection_code": collection.code,
+                },
+            )
+
+        return Response(
+            {"message": "Promoted to co-owner", "user_code": member.code},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, collection_code):
+        # No `co_owners_denial()` check here, deliberately: the gate is on
+        # *bringing this state into existence* (see `post`), not on living in
+        # it — the same grandfathering `creator_policy` already applies to a
+        # mode or a verb a deployment later withdraws. An owner must always be
+        # able to demote, even on a deployment that has since disabled the
+        # feature outright.
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        denied = require_collection_owner(
+            collection, request.user.code, "Only the owner can demote a co-owner"
+        )
+        if denied:
+            return denied
+
+        member, denied = self._get_target(collection, request)
+        if denied:
+            return denied
+
+        was_co_owner = collection.co_owners.filter(code=member.code).exists()
+        collection.co_owners.remove(member)
+        if was_co_owner:
+            InAppNotification.objects.create(
+                user=member,
+                type=InAppNotification.Type.DEMOTED_CO_OWNER,
+                payload={
+                    "collection_headline": collection.headline,
+                    "collection_code": collection.code,
+                },
+            )
+
+        return Response(
+            {"message": "Demoted to member", "user_code": member.code},
+            status=status.HTTP_200_OK,
         )
 
 

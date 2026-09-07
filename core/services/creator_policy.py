@@ -56,6 +56,11 @@ class Capabilities:
     collection_modes: tuple[str, ...]
     thing_types: tuple[str, ...]
     request_url: str | None = None
+    # Whether this deployment lets a COMMUNITY collection's owner promote a
+    # member to co-owner at all. True by default — every other capability
+    # here defaults open, and a narrower deployment withholds it the same way
+    # it would a mode or a verb.
+    co_owners_enabled: bool = True
 
     def as_dict(self):
         """The JSON shape served by `GET /auth/me/` (lists, not tuples)."""
@@ -63,6 +68,7 @@ class Capabilities:
             "collection_modes": list(self.collection_modes),
             "thing_types": list(self.thing_types),
             "request_url": self.request_url,
+            "co_owners_enabled": self.co_owners_enabled,
         }
 
 
@@ -222,6 +228,20 @@ def community_contribution_types(collection, user) -> frozenset[str]:
     if code is None or not collection.is_invited(code):
         return frozenset()
     return frozenset(allowlist)
+
+
+def co_owners_denial(user, capabilities=None) -> str | None:
+    """Why this deployment won't let `user` promote a co-owner, else `None`.
+
+    Same shape as `collection_mode_denial`/`thing_type_denial`: the message
+    lives here so the one enforcement point (`CollectionCoOwnerView.post`)
+    can't drift from `capabilities_for`, and `capabilities` lets a caller that
+    already resolved one pass it in rather than asking twice.
+    """
+    caps = capabilities_for(user) if capabilities is None else capabilities
+    if caps.co_owners_enabled:
+        return None
+    return _denial("This deployment does not allow co-owners.", caps.request_url)
 
 
 def _denial(message, request_url):

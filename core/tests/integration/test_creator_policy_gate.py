@@ -26,6 +26,7 @@ from core.models import Collection, Thing
 from core.tests.sample_creator_policy import REQUEST_URL
 
 RESTRICTED = "core.tests.sample_creator_policy.RestrictedCreatorPolicy"
+CO_OWNERS_DISABLED = "core.tests.sample_creator_policy.CoOwnersDisabledCreatorPolicy"
 BULK_URL = "/api/v1/collections/{code}/things/bulk/"
 
 
@@ -435,6 +436,25 @@ class TestTheBulkImportObeysTheSamePolicy:
 
 
 @pytest.mark.django_db
+class TestTheCoOwnersDoorObeysThePolicyToo:
+    """A sixth door: promoting a co-owner (`CollectionCoOwnerView.post`), gated
+    by `co_owners_denial()` the same way the other five are gated by
+    `collection_mode_denial()`/`thing_type_denial()`. HTTP-level promote/demote
+    behaviour itself lives in `test_co_owners.py`; this is the one thing that
+    file can't cover — what `/auth/me/` tells the SPA."""
+
+    def test_a_deployment_that_withholds_co_owners_says_so_on_auth_me(
+        self, authenticated_client, settings
+    ):
+        settings.CREATOR_POLICY = CO_OWNERS_DISABLED
+
+        response = authenticated_client.get("/api/v1/auth/me/")
+
+        assert response.data["capabilities"]["co_owners_enabled"] is False
+        assert response.data["capabilities"]["request_url"] == REQUEST_URL
+
+
+@pytest.mark.django_db
 class TestWhatTheFrontendIsTold:
     """`GET /auth/me/` carries the capabilities the SPA builds its forms from.
 
@@ -453,6 +473,7 @@ class TestWhatTheFrontendIsTold:
             "collection_modes": list(Collection.Mode.values),
             "thing_types": list(Thing.Type.values),
             "request_url": None,
+            "co_owners_enabled": True,
         }
 
     def test_the_user_payload_is_unchanged_beside_it(self, authenticated_client, user):
@@ -473,6 +494,7 @@ class TestWhatTheFrontendIsTold:
             "collection_modes": ["PROPRIETARY"],
             "thing_types": ["GIFT_THING", "SELL_THING"],
             "request_url": REQUEST_URL,
+            "co_owners_enabled": True,
         }
 
     @pytest.mark.parametrize("policy", [None, RESTRICTED])

@@ -271,6 +271,12 @@ class Collection(models.Model):
         queryset`), and a `.filter()` call would bypass that cache and reopen
         the N+1 the prefetch exists to close — the same reasoning behind
         `get_is_member`'s `any(u.code == ... for u in obj.invites.all())`.
+
+        Does **not** check `is_community()` — only *promoting* a member is a
+        COMMUNITY-only action (enforced at `CollectionCoOwnerView.post`). An
+        existing co-owner's status is sticky across a later mode switch, the
+        same way `owner` itself is: nothing here silently revokes power a
+        mode change didn't ask to revoke.
         """
         return self.is_owner(user_code) or any(u.code == user_code for u in self.co_owners.all())
 

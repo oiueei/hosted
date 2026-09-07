@@ -3,15 +3,20 @@
 Promoted from a COMMUNITY collection's own `invites` (never a separate door
 in), a co-owner may do everything the owner can except delete the collection
 or promote/demote another co-owner — those stay owner-only. These tests pin
-the permission surface `is_curator` widened; the promote/demote endpoint
-itself is covered separately once it exists.
+the permission surface `is_curator` widened, and the promote/demote endpoint
+(`CollectionCoOwnerView`) itself.
 """
 
 import pytest
+from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection, InvitationProposal, User
+from core.models.notification import InAppNotification
+
+CO_OWNERS_URL = "/api/v1/collections/{code}/co-owners/"
+CO_OWNERS_DISABLED = "core.tests.sample_creator_policy.CoOwnersDisabledCreatorPolicy"
 
 
 def client_for(user):
@@ -161,3 +166,146 @@ class TestRemovingAMemberStripsCoOwnerStatus:
         assert res.status_code == 200
         assert not group.co_owners.filter(code=co_owner.code).exists()
         assert not group.invites.filter(code=co_owner.code).exists()
+
+
+class TestPromotingACoOwner:
+    def test_the_owner_promotes_a_member(self, group, owner, member):
+        assert not group.co_owners.filter(code=member.code).exists()
+
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
+        )
+
+        assert res.status_code == 200
+        assert group.co_owners.filter(code=member.code).exists()
+        assert group.invites.filter(code=member.code).exists()
+
+    def test_promoting_notifies_the_member_once_even_if_repeated(self, group, owner, member):
+        url = CO_OWNERS_URL.format(code=group.code)
+        client_for(owner).post(url, {"user_code": member.code}, format="json")
+        client_for(owner).post(url, {"user_code": member.code}, format="json")
+
+        assert (
+            InAppNotification.objects.filter(
+                user=member, type=InAppNotification.Type.PROMOTED_CO_OWNER
+            ).count()
+            == 1
+        )
+
+    def test_a_co_owner_cannot_promote_another_member(self, group, co_owner, member):
+        res = client_for(co_owner).post(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
+        )
+        assert res.status_code == 403
+        assert not group.co_owners.filter(code=member.code).exists()
+
+    def test_a_stranger_cannot_promote(self, group, stranger, member):
+        res = client_for(stranger).post(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
+        )
+        assert res.status_code == 403
+
+    def test_a_non_member_cannot_be_promoted(self, group, owner, stranger):
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": stranger.code}, format="json"
+        )
+        assert res.status_code == 400
+        assert not group.co_owners.filter(code=stranger.code).exists()
+
+    def test_a_proprietary_collection_refuses_promotion(self, db, owner, member):
+        proprietary = Collection.objects.create(
+            code="PROP01", owner=owner, headline="Solo", mode=Collection.Mode.PROPRIETARY
+        )
+        proprietary.invites.add(member)
+
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=proprietary.code), {"user_code": member.code}, format="json"
+        )
+
+        assert res.status_code == 400
+        assert "COMMUNITY" in res.data["error"]
+
+    def test_a_deployment_can_withhold_co_owners(self, group, owner, member):
+        with override_settings(CREATOR_POLICY=CO_OWNERS_DISABLED):
+            res = client_for(owner).post(
+                CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
+            )
+
+        assert res.status_code == 403
+        assert not group.co_owners.filter(code=member.code).exists()
+
+
+class TestDemotingACoOwner:
+    def test_demoting_a_stranger_who_was_never_a_member_is_refused(self, group, owner, stranger):
+        res = client_for(owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": stranger.code}, format="json"
+        )
+        assert res.status_code == 400
+
+    def test_the_owner_demotes_a_co_owner(self, group, owner, co_owner):
+        res = client_for(owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": co_owner.code}, format="json"
+        )
+
+        assert res.status_code == 200
+        assert not group.co_owners.filter(code=co_owner.code).exists()
+        # Demoted, not removed — still a plain member.
+        assert group.invites.filter(code=co_owner.code).exists()
+
+    def test_demoting_notifies_the_co_owner(self, group, owner, co_owner):
+        client_for(owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": co_owner.code}, format="json"
+        )
+
+        assert InAppNotification.objects.filter(
+            user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
+        ).exists()
+
+    def test_demoting_a_plain_member_is_a_harmless_no_op(self, group, owner, member):
+        res = client_for(owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
+        )
+
+        assert res.status_code == 200
+        assert not InAppNotification.objects.filter(
+            user=member, type=InAppNotification.Type.DEMOTED_CO_OWNER
+        ).exists()
+
+    def test_a_co_owner_cannot_demote_another_co_owner(self, group, co_owner, member):
+        group.co_owners.add(member)
+        res = client_for(co_owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
+        )
+        assert res.status_code == 403
+        assert group.co_owners.filter(code=member.code).exists()
+
+    def test_demoting_still_works_even_if_the_deployment_has_since_disabled_co_owners(
+        self, group, owner, co_owner
+    ):
+        """Grandfathering: withholding the capability withholds *promoting*,
+        never demoting an owner already has standing to reverse."""
+        with override_settings(CREATOR_POLICY=CO_OWNERS_DISABLED):
+            res = client_for(owner).delete(
+                CO_OWNERS_URL.format(code=group.code), {"user_code": co_owner.code}, format="json"
+            )
+
+        assert res.status_code == 200
+        assert not group.co_owners.filter(code=co_owner.code).exists()
+
+    def test_demoting_still_works_on_a_collection_switched_away_from_community(
+        self, db, owner, co_owner
+    ):
+        """A co-owner's status is sticky across a mode switch — the owner must
+        still be able to clean it up rather than being stuck with it."""
+        legacy = Collection.objects.create(
+            code="LEGACY", owner=owner, headline="Was a group", mode=Collection.Mode.PROPRIETARY
+        )
+        legacy.invites.add(co_owner)
+        legacy.co_owners.add(co_owner)  # sticky from before the mode switch
+
+        res = client_for(owner).delete(
+            CO_OWNERS_URL.format(code=legacy.code), {"user_code": co_owner.code}, format="json"
+        )
+
+        assert res.status_code == 200
+        assert not legacy.co_owners.filter(code=co_owner.code).exists()
