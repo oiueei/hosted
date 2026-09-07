@@ -335,10 +335,6 @@ div[class*='Linkbox-module_linkbox'] {
   max-width: 400px;
 }
 
-.linkbox-full-width div[class*='Linkbox-module_linkbox'] {
-  max-width: 100%;
-}
-
 .thing-card {
   width: 100%;
   background: var(--color-white);
@@ -572,9 +568,8 @@ body :focus-visible {
   gap: 1rem;
 }
 
-/* Neutralise the global 400px Linkbox cap for these full-width rows (the
-   `linkbox-full-width` pattern used elsewhere, e.g. the CollectionPage
-   Welcome Linkbox) and give them the same card look thing cards have. */
+/* Neutralise the global 400px Linkbox cap for these full-width rows and give
+   them the same card look thing cards have. */
 .collections-grid div[class*='Linkbox-module_linkbox'] {
   max-width: 100%;
   background-color: var(--color-white);
