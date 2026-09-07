@@ -22,4 +22,9 @@ tags = ["oiueei", "pii", "legal"]
 description = "Known non-secret test/CI placeholder values"
 regexes = [
   '''test-secret-key-for-ci-only-not-for-production''',
+  # A fake /share/{token} value used in frontend test fixtures
+  # (smoke.test.jsx, and SharePage.test.jsx at commit 7b612ac before it was
+  # swapped for a low-entropy stand-in). Not a real token — the share token is
+  # generated per collection with secrets.token_urlsafe and never committed.
+  '''aB3xK_9-pQrS2tUvWx1y''',
 ]

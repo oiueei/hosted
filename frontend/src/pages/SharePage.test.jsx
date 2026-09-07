@@ -10,7 +10,9 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import SharePage from './SharePage';
 
-const TOKEN = 'aB3xK_9-pQrS2tUvWx1y';
+// A stand-in for the 22-char URL-safe share token; kept low-entropy so a
+// secret scanner doesn't mistake the fixture for a real credential.
+const TOKEN = 'demo-share-token';
 
 function renderShare() {
   return render(
