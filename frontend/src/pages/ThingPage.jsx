@@ -44,7 +44,7 @@ export default function ThingPage() {
   const collectionCode = code || thing?.collection_code;
   const loginToAct = !isAuthenticated && !!collectionCode;
   const goJoin = () =>
-    navigate(`/collections/${collectionCode}/join`, {
+    navigate(`/collections/${collectionCode}/join?thing=${thingCode}`, {
       state: { collectionHeadline: L(thing?.collection_headline) },
     });
 

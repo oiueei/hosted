@@ -145,7 +145,11 @@ export default function VerifyPage() {
           // aboutPath it falls through to home rather than to a 404.
           const target = data.collection || data.invited_collection;
           if (data.landing === 'collection' && target) {
-            navigate(`/collections/${target}`);
+            // `data.thing` is set when the join came from a "Reserve" click on a
+            // specific thing (S13) — land them back on it, ready to act.
+            navigate(
+              data.thing ? `/collections/${target}/things/${data.thing}` : `/collections/${target}`
+            );
           } else if (data.landing === 'welcome' && aboutPath) {
             navigate(aboutPath);
           } else {

@@ -355,6 +355,22 @@ describe('where a magic link lands', () => {
     expect(await screen.findByText('landed on /collections/COL001')).toBeInTheDocument();
   });
 
+  test('a join that came from a "Reserve" click lands back on that thing (S13)', async () => {
+    // The server sends `thing` when the join carried a thing code and it is
+    // still a live thing in the collection — the visitor came to reserve it,
+    // so drop them on it, not the grid.
+    renderMagicLink({
+      landing: 'collection',
+      collection: 'COL001',
+      invited_collection: 'COL001',
+      thing: 'THG001',
+    });
+
+    expect(
+      await screen.findByText('landed on /collections/COL001/things/THG001')
+    ).toBeInTheDocument();
+  });
+
   test('anyone else goes home', async () => {
     renderMagicLink({ landing: 'home' });
 
