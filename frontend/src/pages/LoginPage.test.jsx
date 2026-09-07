@@ -152,13 +152,4 @@ describe('LoginPage hero title-logo (S9)', () => {
     expect(heading.tagName).toBe('H1');
     expect(heading).toHaveTextContent('');
   });
-
-  test('the hero suppresses the 40px watermark so there is never a double logo', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <LoginPage />
-      </MemoryRouter>
-    );
-    expect(container.querySelector('.form-hero')).toHaveClass('form-hero--no-watermark');
-  });
 });

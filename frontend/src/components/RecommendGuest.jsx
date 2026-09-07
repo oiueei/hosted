@@ -92,7 +92,7 @@ export default function RecommendGuest({ collectionCode, ownerName }) {
         />
         <TextArea
           id="recommend-note"
-          label={t('recommend.noteLabel')}
+          label={t('recommend.noteLabel', { owner: ownerName })}
           helperText={t('recommend.noteHelper', { owner: ownerName })}
           value={note}
           onChange={(e) => setNote(e.target.value)}

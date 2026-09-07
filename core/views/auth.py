@@ -21,7 +21,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, Collection, InvitationProposal, Language, User
+from core.models import RSVP, Collection, InvitationProposal, Language, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.event import Event
 from core.models.notification import InAppNotification
@@ -478,6 +478,9 @@ class VerifyLinkView(APIView):
         ):
             invited_collection = rsvp.target_code
         origin = rsvp.origin
+        # The thing the visitor was trying to act on when they hit the join wall
+        # (JoinView stashes it here); resolved to a landing detail below.
+        context_thing = (rsvp.context or {}).get("thing_code")
 
         rsvp.delete()
 
@@ -490,9 +493,19 @@ class VerifyLinkView(APIView):
         if invited_collection:
             response_data["landing"] = self.LANDING_COLLECTION
             response_data["collection"] = invited_collection
-            # Kept for compatibility; it is also what tells the SPA the landing was
-            # an invitation (it shows the collection's welcome box).
+            # Kept for compatibility: an older SPA read the landing collection
+            # from this field, and it still marks that the link carried a target.
             response_data["invited_collection"] = invited_collection
+            # Land on the exact thing, not the collection index, when the join
+            # came from an action on one — and it is still a non-hidden thing in
+            # that collection (it may have been hidden or moved out meanwhile).
+            if (
+                context_thing
+                and Thing.objects.filter(code=context_thing, collections__code=invited_collection)
+                .exclude(status=Thing.Status.INACTIVE)
+                .exists()
+            ):
+                response_data["thing"] = context_thing
         elif origin == RSVP.Origin.POPIN:
             response_data["landing"] = self.LANDING_WELCOME
         else:
@@ -805,6 +818,7 @@ class JoinView(APIView):
         email = serializer.validated_data["email"].lower()
         share_token = (request.data.get("share_token") or "").strip() or None
         collection_code = (request.data.get("collection_code") or "").strip() or None
+        thing_code = (request.data.get("thing_code") or "").strip() or None
         ip = get_client_ip(request)
 
         language = (request.data.get("language") or "").strip().lower()
@@ -856,6 +870,21 @@ class JoinView(APIView):
 
         _join_collection(join_collection, user, source=join_source)
 
+        # The visitor may have been trying to act on one specific thing (they
+        # clicked "Reserve" on a card). Remember it so the magic link lands them
+        # back on *that* thing rather than the collection index. Only a
+        # non-hidden thing that actually lives in the joined collection
+        # qualifies; anything else silently falls back to the collection landing.
+        join_context = {}
+        if (
+            thing_code
+            and join_collection.things.filter(
+                code=thing_code,
+                status__in=[Thing.Status.ACTIVE, Thing.Status.TAKEN],
+            ).exists()
+        ):
+            join_context = {"thing_code": thing_code}
+
         # The collection is stamped on the magic-link RSVP so VerifyLinkView drops
         # them straight onto it after login. There is always one now: this point
         # is unreachable without a resolved target.
@@ -864,6 +893,7 @@ class JoinView(APIView):
             user_email=email,
             target_code=join_collection.code,
             origin=RSVP.Origin.POPIN,
+            context=join_context,
         )
         magic_link_base = getattr(settings, "MAGIC_LINK_BASE_URL", "http://localhost:3000/verify")
         magic_link = f"{magic_link_base}/{rsvp.token}"

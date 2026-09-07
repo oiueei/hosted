@@ -12,7 +12,6 @@ export default function LogoutPage() {
     // the session came back on the next page load, even though we navigated away.
     apiFetch('/api/v1/auth/logout/', { method: 'POST' }).finally(() => {
       localStorage.removeItem('userCode');
-      localStorage.removeItem('seenWelcome');
       navigate('/login');
     });
   }, [navigate]);

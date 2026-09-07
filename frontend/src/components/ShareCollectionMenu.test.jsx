@@ -44,6 +44,28 @@ beforeEach(() => {
   });
 });
 
+describe('ShareCollectionMenu icon trigger (S9)', () => {
+  test('is one combobox with an accessible name, not a nameless icon or a doubled control', () => {
+    // The whole point of restyling HDS's own trigger (rather than driving a
+    // separate icon button) is that there stays exactly ONE focusable element
+    // for the control, and it keeps the name HDS composes from texts.label —
+    // an icon with no accessible name would be a dead end for a screen reader.
+    render(<ShareCollectionMenu {...props} isPublic />);
+    const triggers = screen.getAllByRole('combobox');
+    expect(triggers).toHaveLength(1);
+    expect(triggers[0].tagName).toBe('BUTTON');
+    expect(triggers[0]).toHaveAccessibleName(/share collection/i);
+  });
+
+  test('still opens the full menu from that single trigger', () => {
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+    openMenu();
+    for (const name of [/^email$/i, /copy invite link/i, /whatsapp/i, /qr code/i]) {
+      expect(screen.getByRole('option', { name })).toBeInTheDocument();
+    }
+  });
+});
+
 describe('ShareCollectionMenu revoke / rotate', () => {
   test('a PUBLIC collection offers no revoke/rotate (no token to pull back)', () => {
     render(<ShareCollectionMenu {...props} isPublic />);

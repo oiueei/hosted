@@ -1341,6 +1341,43 @@ class CollectionShareLinkView(APIView):
         )
 
 
+class SharePreviewView(APIView):
+    """
+    GET /api/v1/share/{token}/preview/
+
+    The name and description of the collection a ``/share/{token}`` link opens,
+    so the join page can say "Join the Chalmercadillo" instead of "Join us on
+    OIUEEI" — a stranger handed the link on WhatsApp has no idea what OIUEEI is.
+
+    Public and unauthenticated: the 22-char token **is** the credential, and
+    whoever holds it already knows a real collection sits behind it. It returns
+    **only** ``headline`` and ``description`` — never the owner, the roster or a
+    member count — and a generic **404** for an unknown, revoked or inactive
+    token, so it reveals nothing the link itself does not.
+
+    Both fields are returned raw: either may be a ``{lang: text}`` map the SPA
+    resolves against the reader's language (O6), exactly like every other
+    collection read.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @method_decorator(ratelimit(key="ip", rate="30/m", method="GET", block=True))
+    def get(self, request, token):
+        collection = Collection.objects.filter(
+            share_token=token, status=Collection.Status.ACTIVE
+        ).first()
+        if collection is None:
+            raise Http404
+        return Response(
+            {
+                "headline": collection.headline,
+                "description": collection.description,
+            }
+        )
+
+
 class CollectionBroadcastView(APIView):
     """
     POST /api/v1/collections/{collection_code}/broadcast/

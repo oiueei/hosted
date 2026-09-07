@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 expect.extend(toHaveNoViolations);
@@ -733,47 +733,6 @@ describe('a join that does not take', () => {
     await pressJoin();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't add you to the group/i);
-  });
-});
-
-describe('arriving from an invitation is a one-time fact', () => {
-  /* `fromInvite` is navigation state, and navigation state survives a reload and
-     a back-button — so the first-time welcome box would greet the same person
-     on every visit to the collection they were invited to. The page scrubs it
-     on arrival, which is the only reason "first time" means anything here.
-
-     Asserted on the router state rather than on the box itself: the box needs a
-     deployment with a page to point at (`aboutPath`, null upstream), while the
-     scrub happens for every checkout. */
-  function StateProbe() {
-    const { state } = useLocation();
-    return <p data-testid="nav-state">{JSON.stringify(state)}</p>;
-  }
-
-  test('the invitation flag is cleared off the history entry', async () => {
-    apiFetch.mockImplementation(() =>
-      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(COLLECTION_WITH_PHOTO) })
-    );
-
-    render(
-      <MemoryRouter
-        initialEntries={[{ pathname: '/collections/COL001', state: { fromInvite: true } }]}
-      >
-        <Routes>
-          <Route
-            path="/collections/:code"
-            element={
-              <>
-                <CollectionPage />
-                <StateProbe />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => expect(screen.getByTestId('nav-state')).toHaveTextContent(/^\{\}$/));
   });
 });
 

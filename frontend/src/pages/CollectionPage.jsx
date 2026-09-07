@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router';
+import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Koros, Linkbox, Notification, Tag, TextArea } from 'hds-react';
+import { Button, Koros, Notification, Tag, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
@@ -12,7 +12,6 @@ import ThingLinkbox from '../components/ThingLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
 import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
-import { aboutPath } from '../deployment';
 import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
@@ -38,12 +37,8 @@ const CARDS_PER_PAGE = 24;
 export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useTranslation();
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
-  const [showWelcome, setShowWelcome] = useState(
-    !!location.state?.fromInvite && !localStorage.getItem('seenWelcome')
-  );
   const [collection, setCollection] = useState(null);
   const [error, setError] = useState('');
   const [broadcastOpen, setBroadcastOpen] = useState(false);
@@ -75,12 +70,6 @@ export default function CollectionPage() {
       things: prev.things.map((thg) => (thg.code === thingCode ? { ...thg, ...updates } : thg)),
     }));
   }, []);
-
-  useEffect(() => {
-    if (location.state?.fromInvite) {
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
     // Guard against a fast A→B navigation: without aborting, collection A's
@@ -213,6 +202,16 @@ export default function CollectionPage() {
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
   const isAuthenticated = !!userCode;
+  // The Community/visibility tags in the H1 are purely informational — no
+  // click, no delete, so no hover/focus state to design for — so they follow
+  // the theeeme's primary-button colours (color_01/color_06) instead of a
+  // fixed HDS token pair, matching every other themed surface on the page.
+  const tagTheme = tc.color_01
+    ? {
+        '--tag-background': `var(--color-${tc.color_01})`,
+        '--tag-color': `var(--color-${tc.color_06})`,
+      }
+    : undefined;
 
   // Active (non-inactive) things, optionally narrowed to the selected tag chip.
   const visibleThings = collection.things.filter((thg) => thg.status !== 'INACTIVE');
@@ -239,14 +238,7 @@ export default function CollectionPage() {
     >
       <div
         className={`form-hero${collection.thumbnail_url ? ' form-hero--photo' : ''}`}
-        style={
-          tc.color_03
-            ? {
-                backgroundColor: `var(--color-${tc.color_03})`,
-                '--hero-logo-color': `var(--color-${tc.color_02})`,
-              }
-            : undefined
-        }
+        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div className="form-hero-split">
           <div
@@ -254,38 +246,27 @@ export default function CollectionPage() {
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
             <ContactCorner />
-            {!showWelcome && <BackLink to="/" label={t('common.home')} />}
+            {isCurator && (
+              <ShareCollectionMenu
+                collectionCode={code}
+                collectionHeadline={headline}
+                ownerName={collection.owner_name}
+                isPublic={collection.visibility === 'PUBLIC'}
+              />
+            )}
+            <BackLink to="/" label={t('common.home')} />
             <h1 className="form-hero-title">
               {headline}
               {collection.mode === 'COMMUNITY' && (
                 <>
                   {' '}
-                  <Tag
-                    theme={{
-                      '--tag-background': 'var(--color-engel)',
-                      '--tag-color': 'var(--color-black-90)',
-                    }}
-                  >
-                    {t('collectionPage.communityTag')}
-                  </Tag>
+                  <Tag theme={tagTheme}>{t('collectionPage.communityTag')}</Tag>
                 </>
               )}
               {isCurator && (
                 <>
                   {' '}
-                  <Tag
-                    theme={
-                      collection.visibility === 'PUBLIC'
-                        ? {
-                            '--tag-background': 'var(--color-success)',
-                            '--tag-color': 'var(--color-white)',
-                          }
-                        : {
-                            '--tag-background': 'var(--color-black-20)',
-                            '--tag-color': 'var(--color-black-90)',
-                          }
-                    }
-                  >
+                  <Tag theme={tagTheme}>
                     {collection.visibility === 'PUBLIC'
                       ? t('visibility.publicTag')
                       : t('visibility.privateTag')}
@@ -370,15 +351,6 @@ export default function CollectionPage() {
                   </ButtonLink>
                 </div>
                 <div className="spacer-s"></div>
-                <div className="spacer-l" />
-                <div className="share-menu-wrap">
-                  <ShareCollectionMenu
-                    collectionCode={code}
-                    collectionHeadline={headline}
-                    ownerName={collection.owner_name}
-                    isPublic={collection.visibility === 'PUBLIC'}
-                  />
-                </div>
                 {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
                 showing but hasn't invited anyone — a quiet one-line pointer, no
                 banner or pressure. It disappears once the first guest joins. */}
@@ -501,29 +473,6 @@ export default function CollectionPage() {
           >
             {collection.pause_message}
           </Notification>
-        )}
-
-        {/* Offered to someone who has just accepted an invitation — but only on a
-          deployment that has a page explaining what it is. Upstream there is
-          none, so the box never renders; `seenWelcome` keeps working either way,
-          which is what lets a deployment turn it back on from its own file. */}
-        {showWelcome && aboutPath && (
-          <div className="linkbox-full-width">
-            <Linkbox
-              href={aboutPath}
-              onClick={(e) => {
-                e.preventDefault();
-                setShowWelcome(false);
-                navigate(aboutPath, { state: { collectionHeadline: headline } });
-              }}
-              heading={t('collectionPage.welcomeHeading')}
-              text={t('collectionPage.welcomeText')}
-              linkAriaLabel={t('collectionPage.welcomeAriaLabel')}
-              linkboxAriaLabel={t('collectionPage.welcomeHeading')}
-              border
-            />
-            <div className="spacer-l" />
-          </div>
         )}
 
         <h2>{t('collectionPage.things')}</h2>

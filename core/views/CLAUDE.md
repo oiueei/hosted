@@ -64,11 +64,11 @@ Routes to the appropriate handler based on `rsvp.action`:
 
 **Post-login landing (`landing`).** The successful-login response carries where the SPA should send the user — `"collection"` (plus `collection`, the code), `"welcome"`, or `"home"`. It used to be decided in the browser from the `seenWelcome` localStorage key, but logout clears that key, so every re-login looked like a first visit and dropped returning users on `/welcome`. The rules, in order:
 
-1. The RSVP carries a `target_code` — a share-token or public-collection join — ⇒ **that collection** (they joined it precisely to get there). `invited_collection` is still returned alongside `collection`: it is what tells the SPA the landing came from an invitation (it shows the collection's welcome box).
+1. The RSVP carries a `target_code` — a share-token or public-collection join — ⇒ **that collection** (they joined it precisely to get there). `invited_collection` is still returned alongside `collection` for compatibility (an older SPA read the landing collection from it). If that RSVP's `context` also carries a `thing_code` (S13 — the visitor clicked "Reserve" on one thing, `JoinView` stashed it) **and** that is still a non-INACTIVE thing in the collection, the response adds **`thing`** so the SPA lands on `/collections/{code}/things/{thing}` instead of the index. A thing hidden or moved out between the join and the click drops silently to the collection landing.
 2. Otherwise the link was born at an open door with no target (`RSVP.origin == POPIN`) ⇒ **`"welcome"`** — a genuinely new visitor with nothing else to see. **Nothing in this repository produces that RSVP any more**: every join here carries a collection, and `/welcome` left the standalone with the demo. It is kept because a deployment that adds its own open door stamps exactly this shape, and `VerifyLinkView` is a shared file it must never have to edit; the SPA resolves it against `deployment/aboutPath` and falls through to home when there is none.
 3. Otherwise (`/login`, `origin == LOGIN` — and any legacy magic link with a blank `origin`) ⇒ their **single ACTIVE collection** (owned or invited) when they have exactly one, else **home**. `_solo_collection_code()` stops the query at two rows.
 
-`RSVP.origin` is stamped `LOGIN` by `RequestLinkView` and `POPIN` by `JoinView`; it is blank on every other action. `seenWelcome` survives only as the suppressor for `CollectionPage`'s first-time welcome box — it no longer decides navigation.
+`RSVP.origin` is stamped `LOGIN` by `RequestLinkView` and `POPIN` by `JoinView`; it is blank on every other action. The `seenWelcome` localStorage flag this replaced is gone entirely — the collection welcome box it also fed was removed in 2026-09.
 
 **Common behaviour (`_resolve_rsvp` → `_dispatch`):**
 1. Looks up RSVP by `token` (the high-entropy URL token, not the PK). Returns 401 if not found.
@@ -88,7 +88,7 @@ Routes to the appropriate handler based on `rsvp.action`:
   "invited_collection": "<collection_code>"
 }
 ```
-Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection rather than the default landing (home, or their single collection). A plain `/login` magic link has no `target_code`, so the field is omitted.
+Auth tokens (`access_token`, `refresh_token`) are set as HttpOnly cookies via `_set_auth_cookies()`. `invited_collection` is present **only** when the RSVP carried a `target_code` — i.e. the magic link came from a join (private share token or PUBLIC login-to-act code). The SPA then drops the user straight onto that collection rather than the default landing (home, or their single collection). A plain `/login` magic link has no `target_code`, so the field is omitted. A `thing` key rides alongside when the join came from a "Reserve" click on a specific thing (S13, see the landing rules above).
 
 **COLLECTION_INVITE response (200):**
 ```json
@@ -139,7 +139,7 @@ standalone. `RSVP.Origin.POPIN` keeps its name — see the model for why.
 
 **Request body:**
 ```json
-{ "email": "user@example.com", "share_token": "<optional 22-char token>", "collection_code": "<optional PUBLIC collection code>" }
+{ "email": "user@example.com", "share_token": "<optional 22-char token>", "collection_code": "<optional PUBLIC collection code>", "thing_code": "<optional — the thing the visitor tried to reserve, S13>" }
 ```
 
 **Behaviour:**
@@ -148,7 +148,7 @@ standalone. `RSVP.Origin.POPIN` keeps its name — see the model for why.
 3. **With no target, nothing is created** — no `User`, no RSVP, no email — and the same 200 is returned. Ordering matters here and is the point: `get_or_create` used to run *first*, so a POST carrying only an email minted a real account that joined nothing, which on any deployment without onboarding collections was an open registration door on an otherwise invite-only product.
 4. `get_or_create` user by email; a **newly created** user is stamped with the `language` from the body (`es`/`ca`/`en`) so their first magic link speaks it. An existing user's saved preference is never overwritten.
 5. Adds them to the collection's `invites` M2M (via `_join_collection`, so first-join side effects — `MEMBER_JOINED`, the welcome PDF — fire exactly once) **and stamps it as the RSVP `target_code`**, so verifying the link lands them on that collection.
-6. Creates the `MAGIC_LINK` RSVP (`origin=POPIN`) and sends the magic link, **whose subject names the joined collection** (`"Hello, welcome to '{headline}' - OIUEEI!"`) and whose language follows the collection's.
+6. Creates the `MAGIC_LINK` RSVP (`origin=POPIN`) and sends the magic link, **whose subject names the joined collection** (`"Hello, welcome to '{headline}' - OIUEEI!"`) and whose language follows the collection's. An optional **`thing_code`** in the body — the thing the visitor clicked "Reserve" on — is written to the RSVP's `context` when it names a non-INACTIVE thing that actually lives in the joined collection (anything else is dropped), so the magic link returns them to that thing rather than the collection index (S13).
 7. Logs to the `security` logger with IP, whether the user is new, and which collection — or that nothing was created.
 
 **The per-collection daily cap (`COLLECTION_JOINS_PER_DAY`).** Neither door here
@@ -601,6 +601,18 @@ Curator management of the public share token — a co-owner may generate, rotate
 - Returns `{"message": "Share link revoked"}`.
 
 **Frontend integration:** `ShareCollectionMenu` (HDS Select with `IconEnvelope` / `IconShare` / `IconWhatsapp`) calls `POST` lazily the first time the owner triggers any share action. The URL is cached for the rest of the session to avoid extra round-trips.
+
+### SharePreviewView
+
+| | |
+|---|---|
+| **Endpoint** | `GET /api/v1/share/{token}/preview/` |
+| **Permission** | `AllowAny`, `authentication_classes = []` — the 22-char token is the whole credential |
+| **Rate limit** | 30 requests/minute per IP |
+
+The **name and description** of the collection a `/share/{token}` link opens, so `SharePage` can render "Join the Chalmercadillo" instead of "Join us on OIUEEI" — a stranger handed the link on WhatsApp has no idea what OIUEEI is. Returns **only** `{headline, description}`, both **raw** (either may be a `{lang: text}` map the SPA resolves against the reader's language, O6 — same as every other collection read). Never the owner, the roster, a member count or even the collection code.
+
+Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked or INACTIVE token — the same `share_token=… , status=ACTIVE` filter `JoinView._resolve_target` uses — so the preview goes dark the instant the link does and reveals nothing the link itself doesn't already. The bearer link is the credential and whoever holds it already knows a real collection is behind it, so naming that collection to them is not a leak; naming anything *else* would be.
 
 ### CollectionBroadcastView
 

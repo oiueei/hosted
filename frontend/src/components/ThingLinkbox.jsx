@@ -83,7 +83,10 @@ function ThingLinkbox({
 
   // Anonymous visitor (loginToAct): show the action buttons, but route each click
   // to the collection's join page — they log in there and come back able to act.
-  const joinPath = `/collections/${collectionCode || thing.collection_code}/join`;
+  // `?thing=` rides along so the magic link lands them back on *this* thing, not
+  // the collection index (S13); it survives a refresh of the join page, unlike
+  // navigation state.
+  const joinPath = `/collections/${collectionCode || thing.collection_code}/join?thing=${thing.code}`;
   const goJoin = () =>
     navigate(joinPath, {
       state: { collectionHeadline: collectionHeadline || L(thing.collection_headline) },

@@ -27,8 +27,9 @@ django-otp==1.7.0
 
 # Utils
 python-dotenv==1.2.2
-# boto3 talks to the S3-compatible object storage that is replacing Cloudinary.
-# Both live here until the last Cloudinary call site is gone (see core/services/storage.py).
-# botocore ships with it and is not pinned separately: boto3 already pins it exactly.
+# boto3 is the client for the S3-compatible object storage that holds every
+# uploaded image and document (see core/services/storage.py) — the only thing
+# it is used for. botocore ships with it and is not pinned separately: boto3
+# already pins it exactly.
 boto3==1.43.78
 requests==2.34.2

@@ -274,6 +274,95 @@ class TestJoinWithShareToken:
         assert "Share Club" in mail.outbox[0].subject
 
 
+PREVIEW_URL = "/api/v1/share/{}/preview/"
+
+
+@pytest.mark.django_db
+class TestSharePreview:
+    """`GET /share/{token}/preview/` — what the join page shows a stranger.
+
+    The link is the whole credential, so the preview may name the collection;
+    but it must name *only* that, and it must go dark the moment the link does.
+    """
+
+    def _token(self, setup):
+        return setup["owner_client"].post(URL.format(setup["collection"].code)).data["share_token"]
+
+    def test_a_live_token_returns_the_headline_and_description(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        collection.description = "Lend or give things between neighbours."
+        collection.save(update_fields=["description"])
+        token = self._token(share_link_setup)
+
+        resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
+
+        assert resp.status_code == 200
+        assert resp.data["headline"] == "Share Club"
+        assert resp.data["description"] == "Lend or give things between neighbours."
+
+    def test_no_login_is_needed(self, share_link_setup):
+        token = self._token(share_link_setup)
+        # A bare APIClient — no credentials, no cookies.
+        resp = APIClient().get(PREVIEW_URL.format(token))
+        assert resp.status_code == 200
+
+    def test_an_unknown_token_is_a_generic_404(self, share_link_setup):
+        resp = share_link_setup["anon_client"].get(PREVIEW_URL.format("not-a-real-token"))
+        assert resp.status_code == 404
+
+    def test_a_revoked_token_stops_previewing(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        token = self._token(share_link_setup)
+        share_link_setup["owner_client"].delete(URL.format(collection.code))
+
+        resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
+
+        # The owner revokes when a link has escaped; the preview must die with it.
+        assert resp.status_code == 404
+
+    def test_a_rotated_token_leaves_the_old_one_dark(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        old = self._token(share_link_setup)
+        share_link_setup["owner_client"].post(
+            URL.format(collection.code), {"rotate": True}, format="json"
+        )
+
+        assert share_link_setup["anon_client"].get(PREVIEW_URL.format(old)).status_code == 404
+
+    def test_an_inactive_collection_does_not_preview(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        token = self._token(share_link_setup)
+        collection.status = "INACTIVE"
+        collection.save(update_fields=["status"])
+
+        resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
+        assert resp.status_code == 404
+
+    def test_the_payload_is_only_headline_and_description(self, share_link_setup):
+        """The link reveals a collection exists; it must reveal nothing else —
+        not the owner, not who is in it, not how many, not even the code."""
+        collection = share_link_setup["collection"]
+        collection.invites.add(share_link_setup["stranger"])
+        token = self._token(share_link_setup)
+
+        resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
+
+        assert set(resp.data) == {"headline", "description"}
+
+    def test_a_localized_headline_comes_back_raw(self, share_link_setup):
+        """`headline` may be a `{lang: text}` map — the SPA resolves it against
+        the reader's language (O6), the same as every other collection read, so
+        the endpoint hands back exactly what is stored."""
+        collection = share_link_setup["collection"]
+        collection.headline = '{"es": "El Chalmercadillo", "ca": "El mercadet", "en": "The swap"}'
+        collection.save(update_fields=["headline"])
+        token = self._token(share_link_setup)
+
+        resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
+
+        assert resp.data["headline"] == collection.headline
+
+
 @pytest.mark.django_db
 class TestStaleCookieAuth:
     """A live ``access_token`` cookie whose user was wiped (e.g. ``seed_demo

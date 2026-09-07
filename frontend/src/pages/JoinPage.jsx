@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router';
+import { useParams, useLocation, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Koros } from 'hds-react';
 import BackLink from '../components/BackLink';
@@ -19,6 +19,12 @@ import { useLocalized } from '../utils/localized';
 export default function JoinPage() {
   const { code } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  // The thing the visitor was trying to act on, if they came from a card/detail
+  // "Reserve" click (S13). Passed through to `/auth/join/` so the magic link
+  // lands them back on it, not the collection index. A `/join` URL opened cold
+  // simply has no `?thing=` and behaves as before.
+  const thingCode = searchParams.get('thing') || undefined;
   const { t } = useTranslation();
   const { tc, koro } = useTheeeme();
   const L = useLocalized();
@@ -59,14 +65,7 @@ export default function JoinPage() {
     >
       <div
         className="form-hero"
-        style={
-          tc.color_03
-            ? {
-                backgroundColor: `var(--color-${tc.color_03})`,
-                '--hero-logo-color': `var(--color-${tc.color_02})`,
-              }
-            : undefined
-        }
+        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div
           className="form-hero-content"
@@ -83,7 +82,7 @@ export default function JoinPage() {
         />
       </div>
       <div className="page-container">
-        <JoinToAct collectionCode={code} collectionHeadline={headline} />
+        <JoinToAct collectionCode={code} collectionHeadline={headline} thingCode={thingCode} />
       </div>
     </div>
   );

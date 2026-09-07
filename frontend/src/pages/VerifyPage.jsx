@@ -20,14 +20,7 @@ function VerifyScreen({ tc, koro, title, action, children }) {
     >
       <div
         className="form-hero"
-        style={
-          tc.color_03
-            ? {
-                backgroundColor: `var(--color-${tc.color_03})`,
-                '--hero-logo-color': `var(--color-${tc.color_02})`,
-              }
-            : undefined
-        }
+        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div
           className="form-hero-content"
@@ -139,29 +132,24 @@ export default function VerifyPage() {
           setTitle(t('verify.declined'));
           setSuccess(t('verify.invitationDeclined'));
         } else if (res.ok && data.user) {
-          const prevUserCode = localStorage.getItem('userCode');
           if (data.user?.code) localStorage.setItem('userCode', data.user.code);
           if (data.user?.theeeme_colors)
             localStorage.setItem('theeemeColors', JSON.stringify(data.user.theeeme_colors));
           if (data.user?.koro) localStorage.setItem('koro', data.user.koro);
-          if (data.user?.code && data.user.code !== prevUserCode) {
-            localStorage.removeItem('seenWelcome');
-          }
           // The backend decides where to land (`landing`): the collection the
           // link was for, the deployment's "what this is" page for a genuinely
-          // new visitor, else home (or their single collection). It used to be
-          // decided here from `seenWelcome` — which logout wipes, so every
-          // re-login looked like a first visit. `invited_collection` still marks
-          // an invitation, which is what the collection's welcome box keys off.
+          // new visitor, else home (or their single collection).
           //
           // `landing: "welcome"` only reaches a deployment that produces it (one
           // with an open door of its own); upstream nothing does, and without an
           // aboutPath it falls through to home rather than to a 404.
           const target = data.collection || data.invited_collection;
           if (data.landing === 'collection' && target) {
-            navigate(`/collections/${target}`, {
-              state: { fromInvite: !!data.invited_collection },
-            });
+            // `data.thing` is set when the join came from a "Reserve" click on a
+            // specific thing (S13) — land them back on it, ready to act.
+            navigate(
+              data.thing ? `/collections/${target}/things/${data.thing}` : `/collections/${target}`
+            );
           } else if (data.landing === 'welcome' && aboutPath) {
             navigate(aboutPath);
           } else {
@@ -202,7 +190,6 @@ export default function VerifyPage() {
       if (res.ok && done.action === 'ACCOUNT_DELETE') {
         // The account is gone — so is everything this browser knew about it.
         localStorage.removeItem('userCode');
-        localStorage.removeItem('seenWelcome');
         localStorage.removeItem('theeemeColors');
         localStorage.removeItem('koro');
         setDeletePreview(null);

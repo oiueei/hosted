@@ -15,13 +15,12 @@ import path from 'node:path';
  * `sessionStorage.setItem(` calls and pins the exact set of keys written.
  * A new key lands here unnoticed otherwise: nothing else in CI reads
  * localStorage, and a key that started tracking something non-essential would
- * look, from the outside, identical to one of the four below.
+ * look, from the outside, identical to one of the three below.
  *
- * Inventory as of 2026-08-21 (README §Privacy carries the dated copy):
+ * Inventory as of 2026-09-07 (README §Privacy carries the dated copy):
  *   - `userCode`     — which account is signed in, session bookkeeping
  *   - `theeemeColors`, `koro` — the signed-in user's own display preferences
- *   - `seenWelcome`  — whether the first-visit welcome box has been shown
- * All four are strictly necessary (session state or the visitor's own
+ * All three are strictly necessary (session state or the visitor's own
  * preference, nothing observed about them) and none needs consent.
  *
  * `sessionStorage` is unused entirely — asserted below by the absence of any
@@ -42,7 +41,7 @@ function sourceFiles(dir, found = []) {
   return found;
 }
 
-const EXPECTED_LOCAL_STORAGE_KEYS = new Set(['userCode', 'theeemeColors', 'koro', 'seenWelcome']);
+const EXPECTED_LOCAL_STORAGE_KEYS = new Set(['userCode', 'theeemeColors', 'koro']);
 
 function storageKeys(source, method) {
   const pattern = new RegExp(`${method}\\.setItem\\(\\s*'([^']+)'`, 'g');
@@ -50,7 +49,7 @@ function storageKeys(source, method) {
 }
 
 describe('what this app writes to the browser (LSSI-CE art. 22.2)', () => {
-  test('every localStorage key written by app code is one of the four known ones', () => {
+  test('every localStorage key written by app code is one of the three known ones', () => {
     // Vitest runs from the frontend root, so `src` resolves; a wrong cwd
     // throws here rather than quietly sweeping nothing.
     const files = sourceFiles('src');
