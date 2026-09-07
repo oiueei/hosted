@@ -168,6 +168,17 @@ class Collection(models.Model):
         related_name="muted_digest_collections",
         db_table="collection_digest_muted",
     )
+    # COMMUNITY-only admin tier, promoted from the collection's own `invites` —
+    # never a separate door in. A co-owner gets owner-level powers (edit,
+    # invite/revoke, broadcast, share link, stats/export) but is deliberately
+    # NOT a CASCADE root: deleting a co-owner's account never takes the
+    # collection with it, only the founding `owner` does. See `is_curator`.
+    co_owners = models.ManyToManyField(
+        "User",
+        blank=True,
+        related_name="co_owned_collections",
+        db_table="collection_co_owners",
+    )
 
     class Meta:
         app_label = "core"
@@ -245,6 +256,16 @@ class Collection(models.Model):
     def is_invited(self, user_code):
         """Check if the given user is invited."""
         return self.invites.filter(code=user_code).exists()
+
+    def is_curator(self, user_code):
+        """Owner or co-owner — the group's admin tier.
+
+        The single primitive every co-owner permission gate builds on, the way
+        `is_owner` already was for owner-only ones. A co-owner is always also
+        in `invites` (promotion, not a separate door), so this is strictly
+        wider than `is_owner`, never wider than `is_invited`.
+        """
+        return self.is_owner(user_code) or self.co_owners.filter(code=user_code).exists()
 
     def is_community(self):
         """Check if this is a community collection."""
