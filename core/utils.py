@@ -160,11 +160,11 @@ def asset_url(key):
     """Public URL of a stored image key, or ``None`` if there is no key.
 
     Thin on purpose: the key stored on the model *is* the path in the bucket, so
-    there is nothing to build beyond the base URL. The Cloudinary version this
-    replaces asked for ``f_auto,q_auto`` — automatic format and quality — which
-    an object store does not do. That work moved to where the bytes are: the
-    browser resizes and encodes to WebP before uploading, so the object served
-    here is already the one we want served.
+    there is nothing to build beyond the base URL. An object store serves the
+    bytes as they were uploaded — it does no format or quality transformation of
+    its own — so that work lives in the browser, which resizes and encodes to
+    WebP before uploading. The object served here is already the one we want
+    served.
     """
     from core.services import storage
 
@@ -174,15 +174,9 @@ def asset_url(key):
 def doc_asset_url(key):
     """Public URL of an uploaded PDF (``Collection.welcome_doc``).
 
-    Identical to :func:`asset_url` today, and kept separate anyway. Under
-    Cloudinary a PDF needed its own URL shape — it lived under
-    ``resource_type=image`` and had to be asked for with a ``.pdf`` extension and
-    without the photo transformations. That peculiarity is gone: the object store
-    serves the ``Content-Type`` that was signed at upload.
-
-    What has not gone is the reason for a separate function. A document is the
-    one asset that travels by email and gets opened weeks later, so it is the one
-    most likely to need a ``Content-Disposition``, or a signed URL, or an
+    Identical to :func:`asset_url` today, and kept separate anyway. A document is
+    the one asset that travels by email and gets opened weeks later, so it is the
+    one most likely to need a ``Content-Disposition``, or a signed URL, or an
     expiring link. When that day comes there is already a place to put it, and
     the photos do not follow it there.
     """
