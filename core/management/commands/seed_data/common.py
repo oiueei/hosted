@@ -162,14 +162,18 @@ COLLECTIONS = [
         "mode": "COMMUNITY",
         "visibility": "PRIVATE",
         "invites": ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh"],
+        # Lala is promoted alongside Lulu — the demo's one visible co-curator, so
+        # the feature is reachable without seeding a whole second scenario for it.
+        "co_owners": ["La1aN1"],
         "is_onboarding": True,
         "allowed_thing_types": ["LEND_THING"],
-        # The only COMMUNITY collection in the demo: every member uploads and every
-        # member lends, so the 21 things below are owned by all five, not by Lulu.
-        # It also carries the demo's first rental rules: a loan runs one to five
-        # days and changes hands on a working day. rental_weekdays applies to BOTH
-        # ends, so a Thursday pickup cannot be a three-day loan — it would come
-        # back on Sunday. The dates below are all picked to satisfy that.
+        # One of two COMMUNITY collections in the demo (the other is Lele's
+        # market below): every member uploads and every member lends, so the 21
+        # things below are owned by all five, not by Lulu. It also carries the
+        # demo's first rental rules: a loan runs one to five days and changes
+        # hands on a working day. rental_weekdays applies to BOTH ends, so a
+        # Thursday pickup cannot be a three-day loan — it would come back on
+        # Sunday. The dates below are all picked to satisfy that.
         "rental_durations": [1, 2, 3, 4, 5],
         "rental_weekdays": [0, 1, 2, 3, 4],
         "tags": [

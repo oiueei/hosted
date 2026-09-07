@@ -238,6 +238,10 @@ class Command(BaseCommand):
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))
+            # A subset of invites, promoted — co_owners ⊆ invites is the invariant
+            # the promote endpoint enforces, and re-running the seed must not
+            # violate it either.
+            col.co_owners.set(User.objects.filter(code__in=data.get("co_owners", [])))
 
     def _seed_invitations(self, invitations):
         """Invitations the guest has not answered yet (COLLECTION_INVITE RSVPs).
