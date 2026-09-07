@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { TextInput, Button, Notification, Table, IconEnvelope, IconCrossCircle } from 'hds-react';
+import {
+  TextInput,
+  Button,
+  Notification,
+  Table,
+  IconEnvelope,
+  IconCrossCircle,
+  IconStar,
+  IconStarFill,
+} from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -22,9 +31,9 @@ export default function ManageInvitesPage() {
   const [loadError, setLoadError] = useState('');
   const [invites, setInvites] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
-  // Members' recommendations awaiting the owner's answer. Owner-only from the
-  // serializer: they name someone who has not been contacted and does not know
-  // they were suggested, and they carry the proposer's private note.
+  // Members' recommendations awaiting a curator's answer. Curator-only from
+  // the serializer: they name someone who has not been contacted and does not
+  // know they were suggested, and they carry the proposer's private note.
   const [proposals, setProposals] = useState([]);
   const [answering, setAnswering] = useState(null);
   const [collectionHeadline, setCollectionHeadline] = useState('');
@@ -32,11 +41,18 @@ export default function ManageInvitesPage() {
   useEffect(() => {
     document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault');
   }, [headline, t]);
+  // The strict founder check — only who may promote/demote a co-owner keys on
+  // it now. Everything else that used to be `isOwner`-gated here (the whole
+  // management UI) reads `isCurator` instead, the server-computed field that
+  // also admits a co-owner.
   const [isOwner, setIsOwner] = useState(false);
+  const [isCurator, setIsCurator] = useState(false);
+  const [coOwnerCodes, setCoOwnerCodes] = useState(new Set());
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [resending, setResending] = useState(null);
+  const [promoting, setPromoting] = useState(null);
   const inviteLockRef = useRef(false);
   const resendLockRef = useRef(false);
 
@@ -50,10 +66,12 @@ export default function ManageInvitesPage() {
         setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
         setIsOwner(localStorage.getItem('userCode') === data.owner);
+        setIsCurator(!!data.is_curator);
+        setCoOwnerCodes(new Set((data.co_owners || []).map((u) => u.code)));
         setLoadError('');
       } else {
         // A persistent error, not the auto-closing toast this used to raise.
-        // The toast faded and left the page rendering isOwner=false over an
+        // The toast faded and left the page rendering isCurator=false over an
         // empty list — "no guests, and you can't invite anyone" — which is not
         // what happened. Every other data page in the app stops and says so.
         setLoadError(
@@ -126,6 +144,34 @@ export default function ManageInvitesPage() {
     }
   };
 
+  // Promote/demote a co-owner. Owner-only, like the endpoint it calls —
+  // appointing a second admin stays with the one person accountable for the
+  // CASCADE-delete root. Re-fetches rather than patching state locally: the
+  // set of co-owners is small and this keeps it the server's own word.
+  const togglePromote = async (userCode, promote) => {
+    setPromoting(userCode);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/co-owners/`, {
+        method: promote ? 'POST' : 'DELETE',
+        body: JSON.stringify({ user_code: userCode }),
+      });
+      if (res.ok) {
+        setToast({
+          type: 'success',
+          message: promote ? t('manageInvites.promoted') : t('manageInvites.demoted'),
+        });
+        fetchCollection();
+      } else {
+        const detail = await extractApiError(res);
+        setToast({ type: 'error', message: detail || t('common.error') });
+      }
+    } catch {
+      setToast({ type: 'error', message: t('common.connectionError') });
+    } finally {
+      setPromoting(null);
+    }
+  };
+
   const handleInvite = async () => {
     if (inviteLockRef.current) return;
     inviteLockRef.current = true;
@@ -193,7 +239,7 @@ export default function ManageInvitesPage() {
           note — an owner asked to admit an address they don't recognise needs
           the proposer's word to decide. Nothing has been sent to the person
           named here. */}
-      {isOwner && proposals.length > 0 && (
+      {isCurator && proposals.length > 0 && (
         <>
           <h2>{t('recommend.ownerHeading')}</h2>
           <div className="spacer-s" />
@@ -233,7 +279,7 @@ export default function ManageInvitesPage() {
 
       {invites.length === 0 && pendingInvites.length === 0 ? (
         <p>
-          {t('manageInvites.noGuests')} {isOwner && t('manageInvites.noGuestsCta')}
+          {t('manageInvites.noGuests')} {isCurator && t('manageInvites.noGuestsCta')}
         </p>
       ) : (
         (() => {
@@ -241,8 +287,11 @@ export default function ManageInvitesPage() {
             ...invites.map((inv) => ({
               _id: inv.code,
               guest: inv.name ? `${inv.name} (${inv.email})` : inv.email,
-              status: t('manageInvites.accepted'),
+              status: coOwnerCodes.has(inv.code)
+                ? t('manageInvites.coOwnerStatus')
+                : t('manageInvites.accepted'),
               _isPending: false,
+              _isCoOwner: coOwnerCodes.has(inv.code),
               _email: inv.email,
               _code: inv.code,
               _name: inv.name || inv.email,
@@ -279,7 +328,7 @@ export default function ManageInvitesPage() {
               ),
             },
             { key: 'status', headerName: t('manageInvites.colStatus') },
-            ...(isOwner
+            ...(isCurator
               ? [
                   {
                     key: '_actions',
@@ -300,6 +349,26 @@ export default function ManageInvitesPage() {
                             disabled={resending === row._email}
                           >
                             <IconEnvelope aria-hidden />
+                          </TooltipButton>
+                        )}
+                        {/* Promoting/demoting a co-owner stays owner-only, unlike
+                        every other control in this column — appointing a second
+                        admin doesn't delegate further than the founder. */}
+                        {isOwner && !row._isPending && (
+                          <TooltipButton
+                            tooltip={
+                              row._isCoOwner
+                                ? t('manageInvites.demoteTooltip')
+                                : t('manageInvites.promoteTooltip')
+                            }
+                            onClick={() => togglePromote(row._code, !row._isCoOwner)}
+                            disabled={promoting === row._code}
+                          >
+                            {row._isCoOwner ? (
+                              <IconStarFill aria-hidden />
+                            ) : (
+                              <IconStar aria-hidden />
+                            )}
                           </TooltipButton>
                         )}
                         <TooltipButton
@@ -345,7 +414,7 @@ export default function ManageInvitesPage() {
         })()
       )}
 
-      {isOwner && (
+      {isCurator && (
         <>
           <div className="spacer-xl" />
           <div className="form-grid section-mt">

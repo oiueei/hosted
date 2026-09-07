@@ -206,7 +206,12 @@ export default function CollectionPage() {
   };
 
   const userCode = localStorage.getItem('userCode');
+  // The strict founder check — still what the attribution line and the
+  // INACTIVE/delete-adjacent controls key on. Everything else that used to
+  // read `isOwner` for an admin power now reads `isCurator` instead, the
+  // server-computed field that also admits a co-owner.
   const isOwner = userCode === collection.owner;
+  const isCurator = !!collection.is_curator;
   const isAuthenticated = !!userCode;
 
   // Active (non-inactive) things, optionally narrowed to the selected tag chip.
@@ -265,7 +270,7 @@ export default function CollectionPage() {
                   </Tag>
                 </>
               )}
-              {isOwner && (
+              {isCurator && (
                 <>
                   {' '}
                   <Tag
@@ -305,6 +310,19 @@ export default function CollectionPage() {
                 </Link>
               </p>
             )}
+            {collection.co_owners?.length > 0 && (
+              <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                <strong>{t('collectionPage.coOwnersLabel')}</strong>{' '}
+                {collection.co_owners.map((co, i) => (
+                  <span key={co.code}>
+                    {i > 0 && ', '}
+                    <Link to={`/${co.code}`} className="owner-link">
+                      {co.name}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            )}
             {!isAuthenticated && (
               <p className="invite-nudge">
                 {t('collectionPage.anonIntro')}{' '}
@@ -320,7 +338,7 @@ export default function CollectionPage() {
               invitation, and this is exactly where the page used to offer
               "Add thing" to someone the API would refuse. */}
             {isAuthenticated &&
-              !isOwner &&
+              !isCurator &&
               !collection.is_member &&
               collection.visibility === 'PUBLIC' && (
                 <div className="invite-nudge">
@@ -337,7 +355,7 @@ export default function CollectionPage() {
                   )}
                 </div>
               )}
-            {isOwner && (
+            {isCurator && (
               <>
                 <div className="spacer-m"></div>
                 <div className="button-row-wide">
@@ -374,10 +392,11 @@ export default function CollectionPage() {
                 )}
               </>
             )}
-            {/* Everything in here is a member's control — contributing a thing,
-              recommending a guest, silencing the digest — so membership is the
-              single condition. It used to admit any signed-in reader of a
-              COMMUNITY collection, which is how the dead-end button got here. */}
+            {/* Everything in here is a rank-and-file member's control —
+              contributing a thing, recommending a guest — so membership
+              (excluding a curator, who has the real thing above) is the single
+              condition. It used to admit any signed-in reader of a COMMUNITY
+              collection, which is how the dead-end button got here. */}
             {isAuthenticated && !isOwner && collection.is_member && (
               <>
                 <div className="spacer-m"></div>
@@ -396,29 +415,6 @@ export default function CollectionPage() {
                 {collection.is_member && collection.allow_member_proposals && (
                   <RecommendGuest collectionCode={code} ownerName={collection.owner_name} />
                 )}
-                {collection.is_member && collection.digest_frequency !== 'NONE' && (
-                  <p className="digest-pref">
-                    {collection.is_digest_muted
-                      ? t('collectionPage.digestMuted')
-                      : t('collectionPage.digestSubscribed')}{' '}
-                    <button
-                      type="button"
-                      className="digest-pref-button"
-                      onClick={toggleDigest}
-                      disabled={digestSaving}
-                    >
-                      {collection.is_digest_muted
-                        ? t('collectionPage.digestUnmute')
-                        : t('collectionPage.digestMute')}
-                    </button>
-                    {digestError && (
-                      <>
-                        {' '}
-                        <span role="alert">{t('collectionPage.digestError')}</span>
-                      </>
-                    )}
-                  </p>
-                )}
                 {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only
                 destructive one of the three. It moved to the own profile's "My
@@ -428,6 +424,38 @@ export default function CollectionPage() {
                 (/collections/:code/leave) is unchanged. */}
               </>
             )}
+            {/* The digest switch is a *member* perk, not a rank-and-file-only
+              one — a co-owner is still an ordinary `invites` row for the
+              digest (only the founder never receives their own group's
+              summary), so it reads `is_member || isCurator` rather than
+              nesting inside the block above, which a co-owner's `is_member`
+              is deliberately `false` to keep out of. */}
+            {isAuthenticated &&
+              !isOwner &&
+              (collection.is_member || isCurator) &&
+              collection.digest_frequency !== 'NONE' && (
+                <p className="digest-pref">
+                  {collection.is_digest_muted
+                    ? t('collectionPage.digestMuted')
+                    : t('collectionPage.digestSubscribed')}{' '}
+                  <button
+                    type="button"
+                    className="digest-pref-button"
+                    onClick={toggleDigest}
+                    disabled={digestSaving}
+                  >
+                    {collection.is_digest_muted
+                      ? t('collectionPage.digestUnmute')
+                      : t('collectionPage.digestMute')}
+                  </button>
+                  {digestError && (
+                    <>
+                      {' '}
+                      <span role="alert">{t('collectionPage.digestError')}</span>
+                    </>
+                  )}
+                </p>
+              )}
           </div>
         </div>
         {collection.thumbnail_url && (
@@ -453,9 +481,10 @@ export default function CollectionPage() {
           the owner's. Gated on membership rather than `isOwner` alone: in
           PROPRIETARY mode that was the same person, but a COMMUNITY member who
           owns a thing here is not the collection owner and was missing this
-          entirely, stranded on Home. */}
-        {(isOwner || collection.is_member) && <InboxNotifications collection={code} />}
-        {isOwner && collection.status === 'INACTIVE' && (
+          entirely, stranded on Home. A co-owner needs it too — `isCurator`
+          covers them alongside `is_member`. */}
+        {(isCurator || collection.is_member) && <InboxNotifications collection={code} />}
+        {isCurator && collection.status === 'INACTIVE' && (
           <Notification
             label={t('common.notice')}
             type="info"
@@ -535,7 +564,7 @@ export default function CollectionPage() {
           <>
             <p>
               {t('collectionPage.noThings')}
-              {(isOwner || collection.mode === 'COMMUNITY') && (
+              {(isCurator || collection.mode === 'COMMUNITY') && (
                 <>
                   {' '}
                   <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.
@@ -543,7 +572,7 @@ export default function CollectionPage() {
               )}
             </p>
             <div className="spacer-xxs" />
-            {(isOwner || collection.mode === 'COMMUNITY') && (
+            {(isCurator || collection.mode === 'COMMUNITY') && (
               <p>
                 <Link to={`/collections/${code}/add#bulk-add`}>
                   {t('collectionPage.addManyCsv')}
@@ -588,7 +617,7 @@ export default function CollectionPage() {
           </>
         )}
 
-        {isOwner && collection.invites.length > 0 && (
+        {isCurator && collection.invites.length > 0 && (
           <>
             <div className="spacer-l" />
             <h2>{t('broadcast.heading')}</h2>

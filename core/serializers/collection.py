@@ -67,11 +67,11 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
 
 
 class CollectionListSerializer(serializers.ListSerializer):
-    """List serializer that batch-loads the owner-only ``pending_invites``.
+    """List serializer that batch-loads the curator-only ``pending_invites``.
 
     ``pending_invites`` come from the RSVP table keyed by ``target_code`` (a
     plain CharField, not a FK — so there is no relation to ``prefetch_related``).
-    Serialising a list of an owner's collections would otherwise fire one RSVP
+    Serialising a list of a curator's collections would otherwise fire one RSVP
     query per collection (N+1). Here we fetch them all in a single query and
     stash them on the shared context for the child serializer to read.
     """
@@ -80,7 +80,7 @@ class CollectionListSerializer(serializers.ListSerializer):
         instances = list(data)
         request = self.context.get("request")
         if request and request.user.is_authenticated:
-            owned_codes = [c.code for c in instances if c.owner_id == request.user.code]
+            owned_codes = [c.code for c in instances if c.is_curator(request.user.code)]
             if owned_codes:
                 by_code = {}
                 rows = RSVP.objects.filter(
@@ -106,6 +106,8 @@ class CollectionSerializer(serializers.ModelSerializer):
     invites = serializers.SerializerMethodField()
     pending_invites = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
+    is_curator = serializers.SerializerMethodField()
+    co_owners = serializers.SerializerMethodField()
     is_digest_muted = serializers.SerializerMethodField()
     pending_proposals = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
@@ -141,6 +143,8 @@ class CollectionSerializer(serializers.ModelSerializer):
             "invites",
             "pending_invites",
             "is_member",
+            "is_curator",
+            "co_owners",
             "is_digest_muted",
             "pending_proposals",
         ]
@@ -153,6 +157,8 @@ class CollectionSerializer(serializers.ModelSerializer):
             "invites",
             "pending_invites",
             "is_member",
+            "is_curator",
+            "co_owners",
             "is_digest_muted",
             "pending_proposals",
         ]
@@ -171,25 +177,26 @@ class CollectionSerializer(serializers.ModelSerializer):
     def get_things(self, obj):
         request = self.context.get("request")
         ctx = {**self.context, "parent_collection": obj}
-        is_owner = bool(
-            request and request.user.is_authenticated and obj.is_owner(request.user.code)
+        is_curator = bool(
+            request and request.user.is_authenticated and obj.is_curator(request.user.code)
         )
         things = obj.things.all()
-        # Non-owners (including anonymous visitors on a PUBLIC collection) never
-        # see someone else's INACTIVE thing; only skip the filter for internal,
-        # request-less use. **A thing's own owner is the one exception** — in a
-        # COMMUNITY collection a member owns what they contributed, not the
-        # collection, and `Thing.can_view()` already says "owner can always view
-        # their own things" regardless of status. This mirrors that rule rather
-        # than re-deriving it (a per-thing `can_view()` call here would walk each
-        # thing's own `collections` queryset — an N+1 this method exists to
-        # avoid), so a member whose gift completed (INACTIVE, non-endless) or who
-        # hid their own listing can still find it on the collection they added it
-        # to, not only via its standalone `/things/{code}` URL.
+        # Non-curators (including anonymous visitors on a PUBLIC collection)
+        # never see someone else's INACTIVE thing; only skip the filter for
+        # internal, request-less use. **A thing's own owner is the one
+        # exception** — in a COMMUNITY collection a member owns what they
+        # contributed, not the collection, and `Thing.can_view()` already says
+        # "owner can always view their own things" regardless of status. This
+        # mirrors that rule rather than re-deriving it (a per-thing
+        # `can_view()` call here would walk each thing's own `collections`
+        # queryset — an N+1 this method exists to avoid), so a member whose
+        # gift completed (INACTIVE, non-endless) or who hid their own listing
+        # can still find it on the collection they added it to, not only via
+        # its standalone `/things/{code}` URL.
         # Filtered in Python (not .exclude()) so the prefetched M2M cache is reused
         # instead of firing a fresh query per thing (N+1 on home + anon collection
         # detail).
-        if request and not is_owner:
+        if request and not is_curator:
             viewer_code = request.user.code if request.user.is_authenticated else None
             things = [
                 t for t in things if t.status != Thing.Status.INACTIVE or t.owner_id == viewer_code
@@ -200,22 +207,40 @@ class CollectionSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return bool(request and request.user.is_authenticated and obj.is_owner(request.user.code))
 
-    def get_is_member(self, obj):
-        # True when the requester is an invited member (not the owner). Reads the
-        # prefetched invites so it adds no query. Drives the "Leave the group" button.
+    def _requester_is_curator(self, obj):
         request = self.context.get("request")
-        if not (request and request.user.is_authenticated) or self._requester_is_owner(obj):
+        return bool(request and request.user.is_authenticated and obj.is_curator(request.user.code))
+
+    def get_is_curator(self, obj):
+        """Whether the requester may act as this collection's admin (owner or
+        co-owner) — the one field the frontend needs instead of deriving
+        ownership itself from ``owner``."""
+        return self._requester_is_curator(obj)
+
+    def get_co_owners(self, obj):
+        """The collection's co-owners — public, like ``owner_name``: a curator
+        is someone the group's own page already names, not private roster
+        data. Reads the prefetched M2M so this adds no query."""
+        return [{"code": u.code, "name": u.name} for u in obj.co_owners.all()]
+
+    def get_is_member(self, obj):
+        # True when the requester is an invited member, but not a curator
+        # (owner or co-owner) — a co-owner is staff, not a rank-and-file
+        # member. Reads the prefetched invites so it adds no query. Drives the
+        # "Leave the group" button.
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated) or self._requester_is_curator(obj):
             return False
         return any(u.code == request.user.code for u in obj.invites.all())
 
     def get_pending_proposals(self, obj):
-        """Members' pending recommendations — **owner only**.
+        """Members' pending recommendations — **curator only**.
 
         These name a person who has not been contacted and does not know they
         were suggested, and they carry the proposer's private note. Nobody but
-        the person who has to decide sees them.
+        the people who have to decide see them.
         """
-        if not self._requester_is_owner(obj):
+        if not self._requester_is_curator(obj):
             return []
         # Prefetched by `_optimise_collection_queryset` for signed-in viewers;
         # the fallback keeps a request-less or unoptimised caller working.
@@ -246,14 +271,14 @@ class CollectionSerializer(serializers.ModelSerializer):
 
     def get_invites(self, obj):
         members = obj.invites.all()
-        if self._requester_is_owner(obj):
-            # The owner's view of the roster — emails, and in a COMMUNITY
+        if self._requester_is_curator(obj):
+            # A curator's view of the roster — emails, and in a COMMUNITY
             # collection each member's optional age range and postal code. Built
             # by the model (`Collection.owner_member_rows`) because the data
             # export answers the same question and the two must not drift; other
-            # modes and non-owners never receive the demographics.
+            # modes and non-curators never receive the demographics.
             return obj.owner_member_rows(members)
-        # Co-members' emails are owner-only (L2); logged-in guests get only
+        # Co-members' emails are curator-only (L2); logged-in guests get only
         # code + name. An ANONYMOUS reader of a PUBLIC collection gets codes
         # alone — the member count survives for the card, but real names of a
         # group's members don't belong to the open web (early-adopter hardening).
@@ -263,8 +288,8 @@ class CollectionSerializer(serializers.ModelSerializer):
         return [{"code": u.code, "name": u.name} for u in members]
 
     def get_pending_invites(self, obj):
-        # Pending invitees and their emails are owner-management data only.
-        if not self._requester_is_owner(obj):
+        # Pending invitees and their emails are curator-management data only.
+        if not self._requester_is_curator(obj):
             return []
         # Reuse the batch the list serializer pre-loaded, if present (avoids the
         # per-collection N+1 when serialising a list); fall back to a single

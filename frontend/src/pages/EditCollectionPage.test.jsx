@@ -32,6 +32,7 @@ const COLLECTION = {
   mode: 'PROPRIETARY',
   status: 'ACTIVE',
   visibility: 'PRIVATE',
+  owner: 'USR001', // matches the userCode set in beforeEach — the viewer is the founder
   allowed_thing_types: ['GIFT_THING'],
   rental_durations: [],
   rental_weekdays: [],
@@ -159,6 +160,34 @@ describe('EditCollectionPage — saving', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText(/[Tt]oo many/)).toBeInTheDocument();
+  });
+});
+
+describe('EditCollectionPage — the delete button', () => {
+  // Save, pause, stats and export carry no client-side gate at all — the
+  // server has always been the only thing that decides, and a co-owner
+  // reaching this page now succeeds at every one of them exactly as the
+  // founder would. Delete stays the one exception: never a co-owner power,
+  // so it isn't worth showing a control the server would 403.
+  test('the founder sees it', async () => {
+    mockApi();
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Delete' })).toBeInTheDocument();
+  });
+
+  test('a co-owner reaching this page does not see it', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...COLLECTION, owner: 'FOUNDER1' }),
+      })
+    );
+    renderPage();
+
+    await screen.findByDisplayValue('Kitchen Collection');
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 });
 

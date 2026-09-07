@@ -114,18 +114,19 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `things` | ManyToManyField(Thing) | No | Things in this collection |
 | `invites` | ManyToManyField(User) | No | Users invited to view this collection |
 | `digest_muted` | ManyToManyField(User) | No | Members who have silenced **this** collection's digest. A row means "don't send"; its absence means subscribed, so the on-by-default costs no data and a new member is written nothing. Consulted for `CATEGORY_NEWS` only — a muted group still sends its Cat. 2 activity mail. Reverse: `user.muted_digest_collections`. Table `collection_digest_muted`. |
+| `co_owners` | ManyToManyField(User) | No | **COMMUNITY-only** admin tier, promoted from the collection's own `invites` — never a separate door in (`co_owners ⊆ invites` is enforced at the promote endpoint, not by the schema). A co-owner gets owner-level powers (edit, invite/revoke, broadcast, share link, stats/export) but is deliberately **not** a CASCADE root: deleting a co-owner's account never takes the collection with it, only the founding `owner` does — see `is_curator`. Reverse: `user.co_owned_collections`. Table `collection_co_owners`. |
 
 ### Business Rules
 
 1. **ACTIVE by default** - A collection starts with `status="ACTIVE"`.
 
-2. **Owner manages all fields** - Only the owner can update the collection's headline, description, images, and status. Enforced via `IsCollectionOwner` DRF permission.
+2. **Owner or co-owner manages all fields** - The owner or a co-owner can update the collection's headline, description, images, and status. Enforced via `IsCollectionCurator` DRF permission. Only the owner may delete the collection (`IsCollectionOwner`, deliberately not curator-widened).
 
 3. **Adding things** - In PROPRIETARY mode, only the owner can add things. In COMMUNITY mode, any invited user can add their own things. Enforced via `can_add_thing(user_code)`.
 
-4. **Removing things** - The owner can always remove any thing. In COMMUNITY mode, thing owners can remove their own things.
+4. **Removing things** - The owner or a co-owner can always remove any thing. In COMMUNITY mode, thing owners can remove their own things.
 
-5. **Only owner invites/revokes** - Enforced at the view level (`CollectionInviteView` + `IsCollectionOwner`), which also owns the invitation email/RSVP flow. The model-level `add_invite()`/`remove_invite()` helpers are test-only and perform no checks (see Methods).
+5. **Owner or co-owner invites/revokes** - Enforced at the view level (`CollectionInviteView` + `require_collection_curator`), which also owns the invitation email/RSVP flow. Revoking a member also strips their `co_owners` row, if any (`co_owners ⊆ invites`). Only the owner may promote or demote a co-owner. The model-level `add_invite()`/`remove_invite()` helpers are test-only and perform no checks (see Methods).
 
 6. **Visible to owner, invites, and anyone when PUBLIC** - `can_view(user_code)` returns True for the owner, for an invited member, or for **anyone** (including an anonymous visitor, `user_code=None`) when `visibility=PUBLIC` and the collection is ACTIVE. INACTIVE collections remain owner-only regardless of visibility.
 
@@ -139,6 +140,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 - `is_paused` — Property. Returns `bool(self.pause_message)`. True when the collection has a non-empty `pause_message`.
 - `is_owner(user_code)` - Returns True if user is the owner (`self.owner_id == user_code`)
 - `is_invited(user_code)` - Returns True if user is in invites (`self.invites.filter(code=user_code).exists()`)
+- **`is_curator(user_code)`** — `is_owner(user_code) or self.co_owners.filter(code=user_code).exists()`. The single primitive every co-owner permission gate builds on, the way `is_owner` already was for owner-only ones — strictly wider than `is_owner`, never wider than `is_invited` (a co-owner is always also in `invites`).
 - `is_community()` - Returns True if `mode == "COMMUNITY"`
 - `owner_member_rows(members=None)` - Every member as **their owner** sees them: `code`, `name`, `email`, plus `age_range` and `postal_code` **only in a COMMUNITY group**. The single definition of that privacy gate, used by both surfaces that answer the question — `CollectionSerializer.get_invites` (the guests page) and `export_service._collection_members` (the collection export). It was two near-identical loops in two files that agreed only because somebody kept them agreeing, and the direction they drift in is the dangerous one: an export is a file, so a gate the API applies and the export forgets is a leak that leaves the building. It builds a row and nothing else — **who may ask is the caller's job** (`_requester_is_owner`, `require_collection_owner`). Pass `members` to reuse a prefetched or ordered queryset.
 - `is_public()` - Returns True if `visibility == "PUBLIC"`
@@ -438,6 +440,8 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | Collection owner | `collection_headline`, `collection_code`, `proposer_name`, `email`, `note` |
 | `INVITE_PROPOSAL_APPROVED` | The owner approves that recommendation | The proposer | `collection_headline`, `collection_code`, `email`, `approved: True` |
 | `INVITE_PROPOSAL_DECLINED` | The owner declines it | The proposer | `collection_headline`, `collection_code`, `owner_name`, `email` |
+| `PROMOTED_CO_OWNER` | The owner promotes a member to co-owner (`CollectionCoOwnerView.post`, first promotion only) | The promoted member | `collection_headline`, `collection_code` |
+| `DEMOTED_CO_OWNER` | The owner demotes a co-owner back to a plain member (`CollectionCoOwnerView.delete`) | The demoted member | `collection_headline`, `collection_code` |
 
 **The three above went unrendered until the 2026-08 design round.** `InboxNotifications` had no `case` for any of them, so all three fell through to the `BROADCAST` default and drew a card reading `" — {headline}"` with an empty body — worst of all the decline, whose payload carries `owner_name` and so rendered as a blank message *from the owner*. Approval also used to reuse `INVITE_PROPOSED` with `approved: True`, one type addressing two audiences with opposite meanings; it now has its own type, and the inbox still reads the legacy flag so rows written before the split render correctly. Any new `Type` added here owes a matching `case` in `notificationLabel`/`notificationBody` — the `default` branch is broadcast copy, not a safe fallback.
 

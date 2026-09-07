@@ -33,6 +33,11 @@ class InAppNotification(models.Model):
         INVITE_PROPOSED = "INVITE_PROPOSED"
         INVITE_PROPOSAL_APPROVED = "INVITE_PROPOSAL_APPROVED"
         INVITE_PROPOSAL_DECLINED = "INVITE_PROPOSAL_DECLINED"
+        # The owner promoted/demoted a member's co-owner status. No email for
+        # either — lightweight, in-app only (v1 simplification): gaining or
+        # losing admin power over the group is worth a notice, not a campaign.
+        PROMOTED_CO_OWNER = "PROMOTED_CO_OWNER"
+        DEMOTED_CO_OWNER = "DEMOTED_CO_OWNER"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")

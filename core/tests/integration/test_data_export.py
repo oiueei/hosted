@@ -90,7 +90,7 @@ class TestCollectionExportEndpoint:
 
         # There is no partial export: a member's entitlement is their own copy.
         assert res.status_code == 403
-        assert res.data["error"] == "Only the owner can export this collection"
+        assert res.data["error"] == "Only the owner or a co-owner can export this collection"
 
     def test_a_stranger_gets_403_too(self, authenticated_client2, user, collection):
         assert (

@@ -19,3 +19,14 @@ class IsCollectionOwner(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return obj.is_owner(request.user.code)
+
+
+class IsCollectionCurator(BasePermission):
+    """Object-level: request user is the Collection owner or a co-owner.
+
+    The admin tier — everything except deleting the collection or
+    promoting/demoting a co-owner, both of which stay `IsCollectionOwner`.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return obj.is_curator(request.user.code)
