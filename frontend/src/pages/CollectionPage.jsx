@@ -218,7 +218,10 @@ export default function CollectionPage() {
   // the theeeme's primary-button colours (color_01/color_06) instead of a
   // fixed HDS token pair, matching every other themed surface on the page.
   const tagTheme = tc.color_01
-    ? { '--tag-background': `var(--color-${tc.color_01})`, '--tag-color': `var(--color-${tc.color_06})` }
+    ? {
+        '--tag-background': `var(--color-${tc.color_01})`,
+        '--tag-color': `var(--color-${tc.color_06})`,
+      }
     : undefined;
 
   // Active (non-inactive) things, optionally narrowed to the selected tag chip.
