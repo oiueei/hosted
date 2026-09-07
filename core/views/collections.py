@@ -92,6 +92,11 @@ def _optimise_collection_queryset(queryset, viewer=None):
     """
     queryset = queryset.select_related("owner").prefetch_related(
         "invites",
+        # Public, like `owner_name` — `get_co_owners` serves it to every
+        # viewer, and `is_curator`/`is_member` read it via `.all()` for any
+        # signed-in one, so it is prefetched unconditionally alongside
+        # `invites` rather than gated behind `viewer` the way `digest_muted` is.
+        "co_owners",
         Prefetch("things", queryset=optimise_thing_queryset(Thing.objects.all())),
     )
     if viewer is not None and viewer.is_authenticated:

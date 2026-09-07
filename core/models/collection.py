@@ -264,8 +264,15 @@ class Collection(models.Model):
         `is_owner` already was for owner-only ones. A co-owner is always also
         in `invites` (promotion, not a separate door), so this is strictly
         wider than `is_owner`, never wider than `is_invited`.
+
+        Checks `co_owners` via `.all()` and Python iteration rather than
+        `.filter(...).exists()`, deliberately: `co_owners` is prefetched
+        alongside `invites` for any signed-in viewer (`_optimise_collection_
+        queryset`), and a `.filter()` call would bypass that cache and reopen
+        the N+1 the prefetch exists to close — the same reasoning behind
+        `get_is_member`'s `any(u.code == ... for u in obj.invites.all())`.
         """
-        return self.is_owner(user_code) or self.co_owners.filter(code=user_code).exists()
+        return self.is_owner(user_code) or any(u.code == user_code for u in self.co_owners.all())
 
     def is_community(self):
         """Check if this is a community collection."""

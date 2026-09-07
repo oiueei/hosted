@@ -143,6 +143,48 @@ class TestCollectionSerializer:
         assert data["headline"] == "My Collection"
         assert "theeeme" not in data
 
+    def test_is_curator_and_co_owners(self):
+        """`is_curator` is true for the owner and a co-owner, false for a plain
+        member, a stranger, and an anonymous reader; `co_owners` is public,
+        readable the same by every one of them."""
+        from django.contrib.auth.models import AnonymousUser
+        from rest_framework.test import APIRequestFactory
+
+        owner = User.objects.create(code="OWNR02", email="owner2@example.com", name="Owner")
+        co_owner = User.objects.create(code="COOW02", email="coowner2@example.com", name="Co")
+        member = User.objects.create(code="MEMB02", email="member2@example.com", name="Member")
+        stranger = User.objects.create(code="STRA02", email="stranger2@example.com", name="S")
+        collection = Collection.objects.create(
+            code="CURA01",
+            owner=owner,
+            headline="Curated",
+            mode=Collection.Mode.COMMUNITY,
+            visibility=Collection.Visibility.PUBLIC,
+        )
+        collection.invites.add(co_owner, member)
+        collection.co_owners.add(co_owner)
+
+        def data_for(viewer):
+            request = APIRequestFactory().get("/")
+            request.user = viewer
+            return CollectionSerializer(collection, context={"request": request}).data
+
+        assert data_for(owner)["is_curator"] is True
+        assert data_for(co_owner)["is_curator"] is True
+        assert data_for(member)["is_curator"] is False
+        assert data_for(stranger)["is_curator"] is False
+        assert data_for(AnonymousUser())["is_curator"] is False
+
+        # A co-owner is a curator, not a leavable rank-and-file member.
+        assert data_for(co_owner)["is_member"] is False
+        assert data_for(member)["is_member"] is True
+
+        # co_owners is public — same content for every kind of reader.
+        expected = [{"code": co_owner.code, "name": co_owner.name}]
+        assert data_for(owner)["co_owners"] == expected
+        assert data_for(stranger)["co_owners"] == expected
+        assert data_for(AnonymousUser())["co_owners"] == expected
+
 
 class TestCollectionCreateSerializer:
     """Tests for CollectionCreateSerializer."""
