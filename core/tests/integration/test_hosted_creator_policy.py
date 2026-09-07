@@ -113,6 +113,7 @@ class TestSomebodyWhoHasNotAsked:
             "collection_modes": ["PROPRIETARY"],
             "thing_types": ["GIFT_THING", "SELL_THING"],
             "request_url": FORM_URL,
+            "co_owners_enabled": True,
         }
 
 
