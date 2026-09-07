@@ -25,7 +25,7 @@ from core.services.export_service import (
     export_bytes,
     export_filename,
 )
-from core.views._helpers import require_collection_owner
+from core.views._helpers import require_collection_curator
 
 security_logger = logging.getLogger("security")
 
@@ -78,11 +78,11 @@ class CollectionDataExportView(APIView):
     """
     GET /api/v1/collections/{collection_code}/export/
 
-    A whole group as its owner runs it, other members' things included —
-    **owner-only**, and a member gets 403 rather than a smaller file. There is no
-    partial export by design: "some of the group, depending on who asks" is a
-    second access-control model to keep correct forever, and the thing a member
-    is entitled to is their own account copy.
+    A whole group as its owner (or a co-owner) runs it, other members' things
+    included — **curator-only**, and a plain member gets 403 rather than a
+    smaller file. There is no partial export by design: "some of the group,
+    depending on who asks" is a second access-control model to keep correct
+    forever, and the thing a member is entitled to is their own account copy.
 
     Deliberately not folded into the account export: a collection of 4,000
     things would bloat every personal download, this button belongs next to the
@@ -96,8 +96,8 @@ class CollectionDataExportView(APIView):
     @method_decorator(ratelimit(key="user", rate=EXPORT_RATE, method="GET", block=True))
     def get(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can export this collection"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can export this collection"
         )
         if denied:
             return denied

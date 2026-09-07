@@ -112,7 +112,7 @@ core/
 | Model | Purpose |
 |-------|---------|
 | **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio); `photo` (profile photo, stored as an object key and exposed as `photo_url`); `age_range` (birth-year generation) and `postal_code`, the optional demographics — shared per-member only with the owner of a COMMUNITY collection the user is in, and otherwise only in aggregate; and `language`, the language this user's own email is written in (`""` = inherit — the collection's language, else the deployment default). All four default to `""` |
-| **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — the owner still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
+| **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — a curator still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. In COMMUNITY mode, the owner may promote members to **co-owner** (`co_owners`, a subset of `invites`) — owner-level admin powers (edit, invite/revoke, broadcast, share link, stats/export) without becoming the CASCADE-delete root; only the owner promotes/demotes or deletes the collection. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. |
 | **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING. `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
 | **Theeeme** | Colour palettes (6 HDS colour token names) for customising collections |
@@ -128,6 +128,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 - `Collection.owner` -> FK to User
 - `Collection.things` -> M2M to Thing (via `collection_things` table)
 - `Collection.invites` -> M2M to User (via `collection_invites` table)
+- `Collection.co_owners` -> M2M to User (via `collection_co_owners` table) — COMMUNITY-only, always a subset of `invites`
 - `Collection.theeeme` -> FK to Theeeme (PROTECT)
 - `Thing.owner` -> FK to User
 - `Thing.deal` -> M2M to User (via `thing_deals` table)
@@ -148,7 +149,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |
 | POST | `/api/v1/auth/refresh/` | Rotate access/refresh tokens via HttpOnly cookies |
-| GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url}`, what this deployment lets them create (see [SELF_HOSTING.md](SELF_HOSTING.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything and `request_url` is `null` |
+| GET | `/api/v1/auth/me/` | Get authenticated user, plus a **`capabilities`** block — `{collection_modes, thing_types, request_url, co_owners_enabled}`, what this deployment lets them create (see [SELF_HOSTING.md](SELF_HOSTING.md)). It is the same `CreatorPolicy` answer the create endpoints refuse with, so a client cannot offer what the API would reject; upstream it lists everything, `co_owners_enabled` is `true`, and `request_url` is `null` |
 | POST | `/api/v1/auth/logout/` | Log out (clears auth cookies) |
 | POST | `/api/v1/auth/delete-account/` | Request account deletion (rate limited: 3/h): emails a 24h single-use confirmation link; the deletion itself commits via a POST on the verify endpoint (GET only previews) |
 | GET | `/api/v1/auth/export/` | Download a copy of your own data as one JSON file (rate limited: 10/day). Attachment, `private, no-store`; carries no share tokens, no RSVP tokens and no third-party data beyond what you already see |
@@ -165,28 +166,30 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 ### Collections (ModelViewSet + Router)
 | Method | URL | Description |
 |--------|-----|-------------|
-| GET | `/api/v1/collections/` | List own collections |
+| GET | `/api/v1/collections/` | List own collections (owned or co-owned) |
 | POST | `/api/v1/collections/` | Create collection |
-| GET | `/api/v1/collections/{code}/` | View collection (owner or invited) |
-| PUT | `/api/v1/collections/{code}/` | Update collection (owner only) |
-| DELETE | `/api/v1/collections/{code}/` | Delete collection (owner only) |
+| GET | `/api/v1/collections/{code}/` | View collection (owner, co-owner, or invited) |
+| PUT | `/api/v1/collections/{code}/` | Update collection (owner or co-owner) |
+| DELETE | `/api/v1/collections/{code}/` | Delete collection (owner only — never a co-owner) |
 | POST | `/api/v1/collections/{code}/add-thing/` | Add thing to collection (owner; invited users in COMMUNITY mode) |
-| POST | `/api/v1/collections/{code}/remove-thing/` | Remove thing from collection (owner; thing owner in COMMUNITY mode) |
-| POST | `/api/v1/collections/{code}/invite/` | Invite user (owner only, resend-safe) |
-| DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner only) |
-| POST | `/api/v1/collections/{code}/share-link/` | Generate or rotate the public share token (owner only). Returns `share_url` and `share_token`. Pass `{"rotate": true}` to force a fresh token. Rate limited: 30/h. |
-| DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner only) |
+| POST | `/api/v1/collections/{code}/remove-thing/` | Remove thing from collection (owner or co-owner; thing owner in COMMUNITY mode) |
+| POST | `/api/v1/collections/{code}/invite/` | Invite user (owner or co-owner, resend-safe) |
+| DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it |
+| POST | `/api/v1/collections/{code}/co-owners/` | Promote an existing member to co-owner (owner only, COMMUNITY only, rate limited: 30/h). Refused if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled` |
+| DELETE | `/api/v1/collections/{code}/co-owners/` | Demote a co-owner back to a plain member (owner only). Not gated by the deployment policy — an owner can always undo a co-owner they already appointed |
+| POST | `/api/v1/collections/{code}/share-link/` | Generate or rotate the public share token (owner or co-owner). Returns `share_url` and `share_token`. Pass `{"rotate": true}` to force a fresh token. Rate limited: 30/h. |
+| DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner or co-owner) |
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
 | POST | `/api/v1/collections/{code}/join/` | Join a PUBLIC collection you are browsing while signed in (self-join) — the half of login-to-act the anonymous `/auth/join/` can't serve, since a magic link is no use to a live session. Honours the same `COLLECTION_JOINS_PER_DAY` ceiling. Rate limited: 30/h |
-| POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) |
-| POST | `/api/v1/collections/{code}/invite/propose/` | Members only: recommend a guest to the owner. Nothing reaches the proposed address until the owner approves. Rate limited: 30/day |
-| POST | `/api/v1/proposals/{code}/{approve\|reject}/` | The owner's answer to a member's recommendation (owner only) |
+| POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) — refused for the owner and any co-owner |
+| POST | `/api/v1/collections/{code}/invite/propose/` | Members only, not a curator: recommend a guest to the owner. Nothing reaches the proposed address until a curator approves. Rate limited: 30/day |
+| POST | `/api/v1/proposals/{code}/{approve\|reject}/` | A curator's answer to a member's recommendation (owner or co-owner) |
 | POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h |
-| POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner only, rate limited: 5/h) |
-| GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner only) |
-| GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner only, rate limited: 10/day). A member gets 403, never a partial file |
-| POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner only) |
+| POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner or co-owner, rate limited: 5/h) |
+| GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner or co-owner) |
+| GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner or co-owner, rate limited: 10/day). A plain member gets 403, never a partial file |
+| POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner or co-owner) |
 | POST | `/api/v1/collections/{code}/things/bulk/` | Bulk-create things from a CSV (rate limited: 10/h) |
 
 ### Things (ModelViewSet + Router)

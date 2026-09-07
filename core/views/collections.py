@@ -9,7 +9,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -27,7 +27,7 @@ from core.models import RSVP, Collection, InvitationProposal, Thing, User
 from core.models.collection import generate_share_token
 from core.models.event import Event
 from core.models.notification import InAppNotification
-from core.permissions import IsCollectionOwner
+from core.permissions import IsCollectionCurator, IsCollectionOwner
 from core.serializers import (
     CollectionAddThingSerializer,
     CollectionBroadcastSerializer,
@@ -40,7 +40,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
-from core.services.creator_policy import collection_mode_denial
+from core.services.creator_policy import co_owners_denial, collection_mode_denial
 from core.services.email_service import (
     send_broadcast_email,
     # Still used directly by the bulk-invite fan-out, which batches its RSVP
@@ -65,6 +65,7 @@ from core.utils import redact_email
 from core.validators import SafeHeadlineField
 from core.views._helpers import (
     body_dict,
+    require_collection_curator,
     require_collection_owner,
     type_validity_error,
     viewer_code,
@@ -92,6 +93,11 @@ def _optimise_collection_queryset(queryset, viewer=None):
     """
     queryset = queryset.select_related("owner").prefetch_related(
         "invites",
+        # Public, like `owner_name` — `get_co_owners` serves it to every
+        # viewer, and `is_curator`/`is_member` read it via `.all()` for any
+        # signed-in one, so it is prefetched unconditionally alongside
+        # `invites` rather than gated behind `viewer` the way `digest_muted` is.
+        "co_owners",
         Prefetch("things", queryset=optimise_thing_queryset(Thing.objects.all())),
     )
     if viewer is not None and viewer.is_authenticated:
@@ -127,7 +133,14 @@ class CollectionViewSet(ModelViewSet):
     lookup_field = "code"
 
     def get_queryset(self):
-        qs = Collection.objects.filter(owner=self.request.user).order_by("-created")
+        # "My collections" includes what this account curates, not only what
+        # it owns — a co-owner's group belongs here, next to their own, rather
+        # than only under "Shared with me" (InvitedCollectionsView).
+        qs = (
+            Collection.objects.filter(Q(owner=self.request.user) | Q(co_owners=self.request.user))
+            .distinct()
+            .order_by("-created")
+        )
         if self.action in ("list", "retrieve"):
             # The viewer matters here even though this list is always their own:
             # `pending_proposals` is owner-only, so this is exactly the list that
@@ -150,8 +163,13 @@ class CollectionViewSet(ModelViewSet):
         # rule is broader (in COMMUNITY mode a thing's own owner may remove it), so
         # it is enforced inline in the action. It also fetches via get_object_or_404,
         # so an object-level permission would never run for it anyway (the I3 footgun).
-        if self.action in ("update", "partial_update", "destroy"):
+        #
+        # destroy stays owner-only — deleting the collection is deliberately not
+        # a co-owner power. update/partial_update widen to the curator tier.
+        if self.action == "destroy":
             return [IsAuthenticated(), IsCollectionOwner()]
+        if self.action in ("update", "partial_update"):
+            return [IsAuthenticated(), IsCollectionCurator()]
         # Anonymous read is allowed for retrieve; can_view() (below) still gates
         # it — only PUBLIC, ACTIVE collections are visible without membership.
         if self.action == "retrieve":
@@ -324,9 +342,9 @@ class CollectionViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Collection owner can always remove. In community mode,
+        # Collection owner or a co-owner can always remove. In community mode,
         # thing owners can remove their own things.
-        if not collection.is_owner(request.user.code):
+        if not collection.is_curator(request.user.code):
             if not (collection.is_community() and thing.is_owner(request.user.code)):
                 return Response(
                     {"error": "You do not have permission to remove this thing"},
@@ -376,8 +394,8 @@ class CollectionInviteView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can invite users"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can invite users"
         )
         if denied:
             return denied
@@ -442,8 +460,8 @@ class CollectionInviteView(APIView):
     def delete(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can remove invites"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can remove invites"
         )
         if denied:
             return denied
@@ -461,6 +479,11 @@ class CollectionInviteView(APIView):
 
         if invited_user:
             collection.invites.remove(invited_user)
+            # co_owners is a subset of invites by construction (promotion, never
+            # a separate door in) — losing membership must never leave a stale
+            # co-owner row behind. Unconditional and idempotent: a no-op for
+            # anyone who was never promoted.
+            collection.co_owners.remove(invited_user)
             Event.log(Event.Kind.MEMBER_LEFT, actor=invited_user, collection=collection)
 
             # Notify the removed user — invited_user is already in hand (fetched
@@ -507,11 +530,131 @@ class CollectionInviteView(APIView):
         )
 
 
+class CollectionCoOwnerView(APIView):
+    """
+    POST /api/v1/collections/{collection_code}/co-owners/
+    Promote an existing member to co-owner.
+
+    DELETE /api/v1/collections/{collection_code}/co-owners/
+    Demote a co-owner back to a plain member — they stay a member, they just
+    lose the admin powers.
+
+    Owner only, deliberately not curator-widened: appointing (or removing) a
+    second admin stays with the one person accountable for the CASCADE-delete
+    root, never delegated further. COMMUNITY collections only, and gated
+    behind this deployment's `CREATOR_POLICY` the same way a mode or a verb
+    is.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_target(self, collection, request):
+        """Shared validation for POST and DELETE: resolve and return the
+        target ``User``, or a Response explaining why not.
+
+        Only checks membership — **not** ``is_community()``. Promoting is
+        COMMUNITY-only and `post` checks that itself before calling this;
+        demoting must keep working even if the collection's mode changed
+        since, so `delete` never asks (see its own comment).
+        """
+        serializer = CollectionRemoveInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user_code = serializer.validated_data["user_code"]
+
+        try:
+            member = collection.invites.get(code=user_code)
+        except User.DoesNotExist:
+            return None, Response(
+                {"error": "Only an existing member can be promoted or demoted"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return member, None
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    def post(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        denied = require_collection_owner(
+            collection, request.user.code, "Only the owner can promote a co-owner"
+        )
+        if denied:
+            return denied
+
+        if not collection.is_community():
+            return Response(
+                {"error": "Co-owners are a COMMUNITY-mode feature"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        denial = co_owners_denial(request.user)
+        if denial:
+            return Response({"error": denial}, status=status.HTTP_403_FORBIDDEN)
+
+        member, denied = self._get_target(collection, request)
+        if denied:
+            return denied
+
+        already = collection.co_owners.filter(code=member.code).exists()
+        collection.co_owners.add(member)
+        if not already:
+            InAppNotification.objects.create(
+                user=member,
+                type=InAppNotification.Type.PROMOTED_CO_OWNER,
+                payload={
+                    "collection_headline": collection.headline,
+                    "collection_code": collection.code,
+                },
+            )
+
+        return Response(
+            {"message": "Promoted to co-owner", "user_code": member.code},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, collection_code):
+        # No `co_owners_denial()` check here, deliberately: the gate is on
+        # *bringing this state into existence* (see `post`), not on living in
+        # it — the same grandfathering `creator_policy` already applies to a
+        # mode or a verb a deployment later withdraws. An owner must always be
+        # able to demote, even on a deployment that has since disabled the
+        # feature outright.
+        collection = get_object_or_404(Collection, code=collection_code)
+
+        denied = require_collection_owner(
+            collection, request.user.code, "Only the owner can demote a co-owner"
+        )
+        if denied:
+            return denied
+
+        member, denied = self._get_target(collection, request)
+        if denied:
+            return denied
+
+        was_co_owner = collection.co_owners.filter(code=member.code).exists()
+        collection.co_owners.remove(member)
+        if was_co_owner:
+            InAppNotification.objects.create(
+                user=member,
+                type=InAppNotification.Type.DEMOTED_CO_OWNER,
+                payload={
+                    "collection_headline": collection.headline,
+                    "collection_code": collection.code,
+                },
+            )
+
+        return Response(
+            {"message": "Demoted to member", "user_code": member.code},
+            status=status.HTTP_200_OK,
+        )
+
+
 class CollectionLeaveView(APIView):
     """
     POST /api/v1/collections/{collection_code}/leave/
-    Lets an invited member remove themselves from a collection (self-unlink). The
-    owner cannot leave their own collection — they delete it instead.
+    Lets an invited member remove themselves from a collection (self-unlink).
+    A curator (the owner, or a co-owner) cannot leave this way — the owner
+    deletes the collection instead, and a co-owner is staff, not a
+    rank-and-file member, so the owner demotes them via the co-owners endpoint.
     """
 
     permission_classes = [IsAuthenticated]
@@ -523,6 +666,11 @@ class CollectionLeaveView(APIView):
         if collection.is_owner(request.user.code):
             return Response(
                 {"detail": "The owner can't leave their own collection."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if collection.is_curator(request.user.code):
+            return Response(
+                {"detail": "A co-owner can't leave — ask the owner to demote you first."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not collection.invites.filter(code=request.user.code).exists():
@@ -656,8 +804,8 @@ class CollectionProposeInviteView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        if collection.is_owner(request.user.code):
-            # Owners have the real thing one endpoint over.
+        if collection.is_curator(request.user.code):
+            # A curator (owner or co-owner) has the real thing one endpoint over.
             return Response(
                 {"detail": "You own this collection — invite them directly."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -717,9 +865,9 @@ class CollectionProposalActionView(APIView):
     """
     POST /api/v1/proposals/{proposal_code}/{approve|reject}/
 
-    The owner's in-app answer to a member's suggestion; the email links reach the
-    same decisions through `VerifyLinkView`. Owner only — the proposer must not
-    be able to wave their own suggestion through.
+    The owner's or a co-owner's in-app answer to a member's suggestion; the
+    email links reach the same decisions through `VerifyLinkView`. Curator
+    only — the proposer must not be able to wave their own suggestion through.
     """
 
     permission_classes = [IsAuthenticated]
@@ -727,8 +875,10 @@ class CollectionProposalActionView(APIView):
     def post(self, request, proposal_code, action):
         proposal = get_object_or_404(InvitationProposal, code=proposal_code)
 
-        denied = require_collection_owner(
-            proposal.collection, request.user.code, "Only the owner can answer a suggestion"
+        denied = require_collection_curator(
+            proposal.collection,
+            request.user.code,
+            "Only the owner or a co-owner can answer a suggestion",
         )
         if denied:
             return denied
@@ -870,7 +1020,8 @@ class CollectionBulkInviteView(APIView):
     (``{"invites": [{"email": ..., "name": ...?}, ...]}``). Best-effort: valid,
     new addresses are invited and emailed; the rest are reported as skipped with a
     reason (invalid / duplicate / already_member / already_invited) — one bad row
-    never fails the batch. Owner-only, capped at ``MAX_ROWS`` and rate-limited.
+    never fails the batch. Owner or co-owner, capped at ``MAX_ROWS`` and
+    rate-limited.
     """
 
     permission_classes = [IsAuthenticated]
@@ -880,8 +1031,8 @@ class CollectionBulkInviteView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can invite users"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can invite users"
         )
         if denied:
             return denied
@@ -1018,7 +1169,7 @@ class CollectionStatsView(APIView):
     """
     GET /api/v1/collections/{collection_code}/stats/
 
-    Owner-only usage statistics for any collection, returned as a CSV
+    Owner-or-co-owner usage statistics for any collection, returned as a CSV
     download (metric,value): a snapshot plus a 90-day window, and — since the
     optional member demographics exist — an aggregate age-range and postal-code
     breakdown. Aggregate only; the per-member values live on the guests page
@@ -1029,8 +1180,8 @@ class CollectionStatsView(APIView):
 
     def get(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can view stats"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can view stats"
         )
         if denied:
             return denied
@@ -1137,9 +1288,9 @@ class CollectionShareLinkView(APIView):
     DELETE /api/v1/collections/{collection_code}/share-link/
     Revoke the share token. The link becomes invalid for everyone.
 
-    Owner only. Token is a 22-char URL-safe bearer credential — anyone with
-    the link can join the collection via /share/{token}, so the token must
-    not appear in any read endpoint.
+    Owner or co-owner. Token is a 22-char URL-safe bearer credential — anyone
+    with the link can join the collection via /share/{token}, so the token
+    must not appear in any read endpoint.
     """
 
     permission_classes = [IsAuthenticated]
@@ -1148,8 +1299,8 @@ class CollectionShareLinkView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can manage the share link"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can manage the share link"
         )
         if denied:
             return denied
@@ -1174,8 +1325,8 @@ class CollectionShareLinkView(APIView):
     def delete(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can manage the share link"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can manage the share link"
         )
         if denied:
             return denied
@@ -1193,7 +1344,8 @@ class CollectionShareLinkView(APIView):
 class CollectionBroadcastView(APIView):
     """
     POST /api/v1/collections/{collection_code}/broadcast/
-    Send a broadcast email from the collection owner to all invitees.
+    Send a broadcast email from the collection owner or a co-owner to all
+    invitees.
     """
 
     permission_classes = [IsAuthenticated]
@@ -1202,8 +1354,8 @@ class CollectionBroadcastView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can send broadcasts"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can send broadcasts"
         )
         if denied:
             return denied

@@ -62,6 +62,14 @@ export default function EditCollectionPage() {
   const [welcomeDocUrl, setWelcomeDocUrl] = useState('');
   const [pauseMessage, setPauseMessage] = useState('');
   const [isPaused, setIsPaused] = useState(false);
+  // The one control on this page still stricter than "the server enforces
+  // it": deleting the collection is deliberately not a co-owner power, and
+  // the button isn't worth showing to someone the server would refuse.
+  // Everything else here (save, pause, stats, export) already carries no
+  // client-side gate at all — a co-owner reaching this page saves exactly
+  // as the founder would, no change needed.
+  const [ownerCode, setOwnerCode] = useState(null);
+  const isOwner = userCode === ownerCode;
   const [pauseSubmitting, setPauseSubmitting] = useState(false);
   const [statsError, setStatsError] = useState(false);
   const [collectionExportError, setCollectionExportError] = useState(null);
@@ -122,6 +130,7 @@ export default function EditCollectionPage() {
 
         if (collectionRes.ok) {
           const data = await collectionRes.json();
+          setOwnerCode(data.owner || null);
           setHeadline(data.headline || '');
           setDescription(data.description || '');
           setStatus(data.status || 'ACTIVE');
@@ -407,29 +416,31 @@ export default function EditCollectionPage() {
         <Button disabled={submitting} onClick={handleSubmit} style={{ ...btnStyle, width: '100%' }}>
           {submitting ? t('common.saving') : t('common.save')}
         </Button>
-        <Button
-          variant="secondary"
-          fullWidth
-          disabled={submitting}
-          onClick={() => {
-            navigate(`/collections/${code}/delete`, {
-              state: {
-                backPath: `/collections/${code}/edit`,
-                backLabel: L(headline) || t('common.collection'),
-              },
-            });
-          }}
-          style={{
-            '--background-color': 'var(--color-white)',
-            '--border-color': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
-            '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
-            '--background-color-hover': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
-            '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-            marginTop: 'var(--spacing-s)',
-          }}
-        >
-          {t('common.delete')}
-        </Button>
+        {isOwner && (
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={submitting}
+            onClick={() => {
+              navigate(`/collections/${code}/delete`, {
+                state: {
+                  backPath: `/collections/${code}/edit`,
+                  backLabel: L(headline) || t('common.collection'),
+                },
+              });
+            }}
+            style={{
+              '--background-color': 'var(--color-white)',
+              '--border-color': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
+              '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
+              '--background-color-hover': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
+              '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
+              marginTop: 'var(--spacing-s)',
+            }}
+          >
+            {t('common.delete')}
+          </Button>
+        )}
       </div>
       <div
         style={{

@@ -23,6 +23,7 @@ from core.services.creator_policy import (
     Capabilities,
     CreatorPolicy,
     OpenCreatorPolicy,
+    co_owners_denial,
     collection_mode_denial,
     get_creator_policy,
     thing_type_denial,
@@ -31,6 +32,7 @@ from core.tests.sample_creator_policy import REQUEST_URL
 
 RESTRICTED = "core.tests.sample_creator_policy.RestrictedCreatorPolicy"
 SILENT = "core.tests.sample_creator_policy.SilentlyRestrictedCreatorPolicy"
+CO_OWNERS_DISABLED = "core.tests.sample_creator_policy.CoOwnersDisabledCreatorPolicy"
 
 
 @pytest.mark.django_db
@@ -156,6 +158,30 @@ class TestARestrictedDeployment:
         assert "COMMUNITY" in denial
         assert "Request access" not in denial
         assert "None" not in denial  # the null URL must not be formatted into prose
+
+
+class TestCoOwnersCapability:
+    def test_the_standalone_offers_co_owners_by_default(self, user):
+        """Every other capability here defaults open; this one is no different."""
+        assert OpenCreatorPolicy().capabilities(user).co_owners_enabled is True
+        assert co_owners_denial(user) is None
+
+    def test_a_deployment_can_withhold_co_owners_alone(self, user):
+        """Narrowing this one capability doesn't have to narrow anything else."""
+        with override_settings(CREATOR_POLICY=CO_OWNERS_DISABLED):
+            assert collection_mode_denial(user, Collection.Mode.COMMUNITY) is None
+            assert thing_type_denial(user, Thing.Type.LEND_THING) is None
+            denial = co_owners_denial(user)
+
+        assert denial is not None
+        assert "co-owner" in denial
+        assert REQUEST_URL in denial
+
+    def test_as_dict_carries_the_capability_for_the_frontend(self, user):
+        assert OpenCreatorPolicy().capabilities(user).as_dict()["co_owners_enabled"] is True
+        with override_settings(CREATOR_POLICY=CO_OWNERS_DISABLED):
+            caps = get_creator_policy().capabilities(user)
+        assert caps.as_dict()["co_owners_enabled"] is False
 
 
 @pytest.mark.django_db

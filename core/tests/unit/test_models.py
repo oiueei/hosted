@@ -393,6 +393,23 @@ class TestCollectionModel:
         assert collection.is_invited("USR002") is False
         assert collection.is_invited("ABC123") is False  # Owner is not in invites
 
+    def test_is_curator(self):
+        """Owner and co-owner are curators; a plain member or a stranger are not."""
+        user = self._create_user()
+        co_owner = User.objects.create(code="USR001", email="usr001@example.com")
+        member = User.objects.create(code="USR002", email="usr002@example.com")
+        collection = Collection.objects.create(
+            owner=user,
+            headline="My Collection",
+            mode=Collection.Mode.COMMUNITY,
+        )
+        collection.invites.add(co_owner, member)
+        collection.co_owners.add(co_owner)
+        assert collection.is_curator("ABC123") is True  # Owner
+        assert collection.is_curator("USR001") is True  # Co-owner
+        assert collection.is_curator("USR002") is False  # Plain member
+        assert collection.is_curator("XYZ789") is False  # Stranger
+
     def test_collection_defaults(self):
         """Collection things and invites should default to empty."""
         user = self._create_user()
