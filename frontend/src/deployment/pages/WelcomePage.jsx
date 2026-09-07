@@ -34,7 +34,6 @@ export default function WelcomePage() {
   const { t } = useTranslation();
   useEffect(() => {
     document.title = t('titles.welcome');
-    localStorage.setItem('seenWelcome', 'true');
   }, [t]);
   const [userName, setUserName] = useState('');
   const [accessibleCodes, setAccessibleCodes] = useState(() => new Set());
