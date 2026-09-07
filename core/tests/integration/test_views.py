@@ -431,7 +431,7 @@ class TestCollectionViews:
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data["error"] == "Only the owner can invite users"
+        assert response.data["error"] == "Only the owner or a co-owner can invite users"
 
     def test_invited_collections(self, authenticated_client, user, collection, user2):
         """Should list collections where user is invited."""
@@ -564,7 +564,7 @@ class TestCollectionViews:
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data["error"] == "Only the owner can remove invites"
+        assert response.data["error"] == "Only the owner or a co-owner can remove invites"
 
     def test_remove_invite_user_not_invited(self, authenticated_client, user2, collection):
         """Should return error when user is not invited."""

@@ -429,11 +429,11 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 | `list` | `GET /api/v1/collections/` | `IsAuthenticated` |
 | `create` | `POST /api/v1/collections/` | `IsAuthenticated` |
 | `retrieve` | `GET /api/v1/collections/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: a PUBLIC, ACTIVE collection is readable without login |
-| `update` | `PUT /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` |
-| `partial_update` | `PATCH /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` |
-| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` |
+| `update` | `PUT /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
+| `partial_update` | `PATCH /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
+| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone |
 | `add_thing` | `POST /api/v1/collections/{code}/add-thing/` | `IsAuthenticated` + `can_add_thing()` |
-| `remove_thing` | `POST /api/v1/collections/{code}/remove-thing/` | `IsAuthenticated` + owner or thing owner (COMMUNITY) |
+| `remove_thing` | `POST /api/v1/collections/{code}/remove-thing/` | `IsAuthenticated` + curator (owner or co-owner) or thing owner (COMMUNITY) |
 
 **Serializers:**
 - Create: `CollectionCreateSerializer`
@@ -441,7 +441,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 - Add thing: `CollectionAddThingSerializer`
 - Read: `CollectionSerializer`
 
-**Queryset:** Own collections only, ordered by `-created`. List and retrieve actions use the module-level `_optimise_collection_queryset()` helper for `select_related`/`prefetch_related` optimisation (also reused by `InvitedCollectionsView`).
+**Queryset:** Owned **or co-owned** collections, ordered by `-created` — `list` is "my collections", and a co-owner's curated group belongs there next to their own rather than only under `InvitedCollectionsView`'s "shared with me". List and retrieve actions use the module-level `_optimise_collection_queryset()` helper for `select_related`/`prefetch_related` optimisation (also reused by `InvitedCollectionsView`).
 
 **Deployment policy (`CREATOR_POLICY`).** `perform_create` refuses a mode this deployment does not hand out with **403**, judging the **PROPRIETARY default** when the body names no mode. `perform_update` refuses switching an existing collection *into* a withheld mode — only on a real change, so a collection already in one stays editable by its owner. Both are no-ops under the standalone's open policy. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
 
@@ -449,14 +449,14 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 
 **Add thing:** Uses `collection.can_add_thing(user_code)` — owner can always add; in COMMUNITY mode, invited users can add their own things. Validates thing exists, belongs to user, and is not already in collection.
 
-**Remove thing:** Owner can remove any thing. In COMMUNITY mode, thing owners can remove their own things. Validates thing is in the collection, removes it from the M2M without deleting the thing itself.
+**Remove thing:** Owner or co-owner can remove any thing. In COMMUNITY mode, thing owners can remove their own things. Validates thing is in the collection, removes it from the M2M without deleting the thing itself.
 
 ### CollectionInviteView
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/invite/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 | **Rate limit** | 30 requests/hour per user, plus the shared daily invitation-email quota (below) |
 
 Invites a user to a collection by email. Creates user if they don't exist (`get_or_create`). Returns 400 if the user is already invited (in M2M). Deletes any existing pending RSVPs for the same user+collection before creating new ones (resend-safe). Creates two RSVPs (`COLLECTION_INVITE` for accept and `COLLECTION_REJECT` for decline) and sends invitation email with both links.
@@ -471,9 +471,9 @@ Invites a user to a collection by email. Creates user if they don't exist (`get_
 | | |
 |---|---|
 | **Endpoint** | `DELETE /api/v1/collections/{collection_code}/invite/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 
-Removes a user from the collection's invite list. If the invite is still pending (user has not accepted yet), deletes the pending RSVPs instead of removing from M2M, and no revocation email is sent. If the invite was accepted (user is in M2M), removes from M2M and sends revocation notification email.
+Removes a user from the collection's invite list. If the invite is still pending (user has not accepted yet), deletes the pending RSVPs instead of removing from M2M, and no revocation email is sent. If the invite was accepted (user is in M2M), removes from M2M and sends revocation notification email. **Also strips `co_owners`** if the removed user was promoted — `co_owners ⊆ invites` is enforced here, the one other place `invites` membership is revoked.
 
 **Request body:**
 ```json
@@ -497,19 +497,19 @@ Answers **404** whenever `can_view()` says no, so a PRIVATE or INACTIVE collecti
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/leave/` |
-| **Permission** | `IsAuthenticated` + must be an invited member (not the owner) |
+| **Permission** | `IsAuthenticated` + must be an invited member and not a curator |
 
-Lets an invited member remove **themselves** from a collection (self-unlink) — the inverse of the owner-only `CollectionInviteView` DELETE. Returns 400 if the requester is the collection **owner** ("The owner can't leave their own collection." — owners delete instead) or is **not a member** ("You are not a member of this collection."). On success removes the user from the `invites` M2M, creates a `MEMBER_LEFT` in-app notification for the owner (payload: `collection_headline`, `member_name`, `collection_code`), and returns `200 {"message": "You have left the collection"}`. The frontend shows the "Leave the group" button (hero, `CollectionSerializer.is_member` gate) → `LeaveCollectionPage` confirm → back to Home.
+Lets an invited member remove **themselves** from a collection (self-unlink) — the inverse of the curator-only `CollectionInviteView` DELETE. Returns 400 if the requester is the collection **owner** ("The owner can't leave their own collection." — owners delete instead), a **co-owner** ("A co-owner can't leave — ask the owner to demote you first." — staff, not a rank-and-file member; the owner demotes them via the co-owners endpoint), or is **not a member** ("You are not a member of this collection."). On success removes the user from the `invites` M2M, creates a `MEMBER_LEFT` in-app notification for the owner (payload: `collection_headline`, `member_name`, `collection_code`), and returns `200 {"message": "You have left the collection"}`. The frontend shows the "Leave the group" button (hero, `CollectionSerializer.is_member` gate) → `LeaveCollectionPage` confirm → back to Home.
 
 ### CollectionProposeInviteView
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/invite/propose/` |
-| **Permission** | `IsAuthenticated` + must be a member (not the owner) + `collection.allow_member_proposals` |
+| **Permission** | `IsAuthenticated` + must be a member and not a curator + `collection.allow_member_proposals` |
 | **Rate limit** | 30/day per member |
 
-A member recommends somebody: `{email, note?}` → an `InvitationProposal` plus the owner's email and in-app notification. **Nothing reaches the proposed address** — no `User` row, no email — until the owner approves. Open in **both** modes: PROPRIETARY decides who may add a *thing*, never who may suggest a person, and the owner's approval is the gate either way. 400 for the owner (they invite directly), for a non-member, for someone already in the group, and for a duplicate pending suggestion; **403** when the owner has switched recommendations off.
+A member recommends somebody: `{email, note?}` → an `InvitationProposal` plus the owner's email and in-app notification. **Nothing reaches the proposed address** — no `User` row, no email — until a curator approves. Open in **both** modes: PROPRIETARY decides who may add a *thing*, never who may suggest a person, and a curator's approval is the gate either way. 400 for a curator — owner or co-owner (they invite directly), for a non-member, for someone already in the group, and for a duplicate pending suggestion; **403** when the owner has switched recommendations off.
 
 **The last two 400s share one message, and must keep sharing it.** "Already in the group" and "already suggested" used to read differently, which made the first an email-membership oracle: a member could put any address to this endpoint 30 times a day and read a yes/no on whether it belongs to a co-member — the fact the roster withholds from non-owners (`invites` is `code` + `name`, no email — L2). The single answer ("either they are already in this group, or someone has already suggested them") still tells the proposer the only thing they needed, which is that there is nothing to do. Pinned by `test_an_address_already_inside_is_answered_exactly_like_one_merely_queued`, which compares the two responses byte for byte.
 
@@ -520,9 +520,9 @@ The 30/day cap is high on purpose: abuse is not expected, and an owner has a bet
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/proposals/{proposal_code}/{approve\|reject}/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 
-The owner's in-app answer; the email links reach the same two decisions through `VerifyLinkView`. Owner-only — the proposer must not be able to wave their own suggestion through. Approving runs `invitation_service.proposal_approval_blocked` first — the owner's daily quota (429) and the collection's member ceiling (400), since an approval that can't be delivered should say so rather than half-happen — then goes through `approve_proposal`. Both refusals answer `{error, retryable: true}` — the suggestion stays pending and the owner may come back to it. 400 (with no `retryable`) on a suggestion that is no longer pending.
+The owner's or a co-owner's in-app answer; the email links reach the same two decisions through `VerifyLinkView`. Curator-only — the proposer must not be able to wave their own suggestion through. Approving runs `invitation_service.proposal_approval_blocked` first — the owner's daily quota (429) and the collection's member ceiling (400), since an approval that can't be delivered should say so rather than half-happen — then goes through `approve_proposal`. Both refusals answer `{error, retryable: true}` — the suggestion stays pending and the owner may come back to it. 400 (with no `retryable`) on a suggestion that is no longer pending.
 
 **The guard is shared with the emailed approve link**, which used to apply neither: an owner clicking the link in their mail client instead of the button in the app walked straight past `INVITE_EMAILS_PER_DAY`, a cap that exists to protect the deployment's sending reputation. Nothing documented the difference and this view's own reasoning argued against it, so the two routes now answer identically. A blocked approval decides nothing and consumes no RSVP — "not now", not "never". **Declining is never blocked**: it adds nobody and mails one member who is already inside the count.
 
@@ -561,10 +561,10 @@ Lists pending collection invitations (not yet accepted) for the current user. Re
 | | |
 |---|---|
 | **Endpoints** | `POST` and `DELETE /api/v1/collections/{collection_code}/share-link/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 | **Rate limit** | POST: 30 requests/hour per user. DELETE: unrestricted. |
 
-Owner-only management of the public share token. The token is a 22-character URL-safe bearer credential (`secrets.token_urlsafe(16)`); anyone with the resulting `/share/{token}` link can join the collection by completing the join flow. The token is intentionally excluded from `CollectionSerializer` and any other read endpoint — it must never leak.
+Curator management of the public share token — a co-owner may generate, rotate and revoke it just like the owner. The token is a 22-character URL-safe bearer credential (`secrets.token_urlsafe(16)`); anyone with the resulting `/share/{token}` link can join the collection by completing the join flow. The token is intentionally excluded from `CollectionSerializer` and any other read endpoint — it must never leak.
 
 **`POST` behaviour:**
 - Generates a new token if none exists. Returns the existing token unchanged on subsequent calls (idempotent).
@@ -582,10 +582,10 @@ Owner-only management of the public share token. The token is a 22-character URL
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/broadcast/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 | **Rate limit** | 5 requests/day per user |
 
-Sends a broadcast email from the collection owner to all invitees. Validates `message` (SafeTextField, max 256) via `CollectionBroadcastSerializer`; the subject is auto-generated as `Hey! {collection_headline}` (the owner does not provide one). Returns 400 if the collection has no invitees. Emails carry a `Reply-To` header (the owner) and a link to the collection (labelled "I can help!"); the in-app `BROADCAST` notification carries `collection_code` so it can deep-link there too. The email send is dispatched off the request thread in production (`_send_broadcast` → daemon thread when `EMAIL_SEND_ASYNC`, mirroring `_send_bulk_invites`) so a large group's sequential SMTP can't exhaust the Heroku 30s window (H12); the in-app notifications are still written synchronously.
+Sends a broadcast email from the acting curator — the owner or a co-owner — to all invitees; the `Reply-To` and the name shown are whoever actually sent it, not necessarily the founding owner. Validates `message` (SafeTextField, max 256) via `CollectionBroadcastSerializer`; the subject is auto-generated as `Hey! {collection_headline}` (the owner does not provide one). Returns 400 if the collection has no invitees. Emails carry a `Reply-To` header (the owner) and a link to the collection (labelled "I can help!"); the in-app `BROADCAST` notification carries `collection_code` so it can deep-link there too. The email send is dispatched off the request thread in production (`_send_broadcast` → daemon thread when `EMAIL_SEND_ASYNC`, mirroring `_send_bulk_invites`) so a large group's sequential SMTP can't exhaust the Heroku 30s window (H12); the in-app notifications are still written synchronously.
 
 **Request body:**
 ```json
@@ -602,7 +602,7 @@ Sends a broadcast email from the collection owner to all invitees. Validates `me
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/invite/bulk/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 | **Rate limit** | 5 requests/hour per user, plus the shared daily invitation-email quota (see `CollectionInviteView`) |
 
 Invites many guests at once from a client-parsed CSV (`{"invites": [{"email": ..., "name": ...?}, ...]}`, capped at `MAX_ROWS=100`). Best-effort: valid, new addresses are invited (accept + reject RSVP pair created, invite email sent) and the rest are reported as skipped with a reason (`invalid`, `duplicate`, `already_member`, `already_invited`, `daily_limit`) — one bad row never fails the batch. The **daily quota** (`INVITE_EMAILS_PER_DAY`, shared with the single endpoint) is enforced per email actually sent: an exhausted quota returns **429** outright; a batch that crosses the cap mid-way invites up to the remaining allowance and reports the overflow rows as skipped with reason `daily_limit` (no User row is created for those), so the owner sees exactly which addresses wait for tomorrow.
@@ -614,9 +614,9 @@ Invites many guests at once from a client-parsed CSV (`{"invites": [{"email": ..
 | | |
 |---|---|
 | **Endpoint** | `GET /api/v1/collections/{collection_code}/stats/` |
-| **Permission** | `IsAuthenticated` + collection owner |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 
-Owner-only usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only).
+Curator usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only).
 
 The metrics themselves live in [`export_service.collection_stats_rows()`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); this view only wraps them in a CSV. The collection export renders the same rows as a dict, so the two can't drift.
 
@@ -1086,10 +1086,10 @@ Your own data, as one JSON file — the self-service half of the right the priva
 | | |
 |---|---|
 | **Endpoint** | `GET /api/v1/collections/{collection_code}/export/` |
-| **Permission** | `IsAuthenticated` + collection owner (`require_collection_owner`) |
+| **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
 | **Rate limit** | 10 requests per day per user |
 
-A whole group as its owner runs it, other members' things included. **A member gets 403, not a smaller file**: there is no partial export by design — "some of the group, depending on who asks" is a second access-control model to keep correct forever, and what a member is entitled to is their own account copy.
+A whole group as its owner or a co-owner runs it, other members' things included. **A plain member gets 403, not a smaller file**: there is no partial export by design — "some of the group, depending on who asks" is a second access-control model to keep correct forever, and what a member is entitled to is their own account copy.
 
 Deliberately not folded into the account export: a collection of 4,000 things would bloat every personal download, this button belongs beside the stats CSV, and keeping them apart lets the account copy stay honestly framed as *your* data while this one is what it is — an operational copy of a group, carrying other people's details, which the page has to say out loud.
 
@@ -1110,6 +1110,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 |-----------|-------|
 | `IsThingOwner` | `obj.owner_id == request.user.code` |
 | `IsCollectionOwner` | `obj.owner_id == request.user.code` |
+| `IsCollectionCurator` | `obj.is_curator(request.user.code)` — owner or co-owner. The admin tier: everything except deleting the collection or promoting/demoting a co-owner, both of which stay `IsCollectionOwner`. |
 
 ---
 
@@ -1123,7 +1124,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 4. **CSRF (cookie auth)** — because the access token rides in a cookie, `CookieJWTAuthentication` runs DRF's CSRF check (`enforce_csrf`, mirroring `SessionAuthentication`) for **cookie-authenticated unsafe methods** — defence in depth behind the cookie's `SameSite=Lax`. Bearer-header auth is exempt (the header is never sent cross-site), so API clients and the Bearer-token test suite are unaffected. `MeView` GET sets the `csrftoken` cookie via `@ensure_csrf_cookie` (hit on every app load); the SPA reads it and sends it as `X-CSRFToken` on every unsafe request. The test client disables the check by default (`enforce_csrf_checks=False`), so only `test_csrf.py` (which opts in) exercises it.
 5. **IDOR protection** — `can_view_user()` ensures users can only view profiles of people connected via collections.
 6. **Custom DRF permissions** — `IsThingOwner` and `IsCollectionOwner` in `core/permissions.py`.
-7. **Public collections (anonymous read)** — a collection with `visibility=PUBLIC` (and ACTIVE) is readable without authentication. The read endpoints `CollectionViewSet.retrieve`, `ThingViewSet.retrieve`, the FAQ list (GET on `ThingFAQListView`), `ThingTransferView` and `ThingCalendarView` are `AllowAny`, each gated by an **anonymous-safe** `can_view` (a `viewer_code(request)` helper passes the user's code, or `None` for a visitor, into the model guard — `None` matches PUBLIC collections only). Every *write/act* endpoint (reserve, ask a question, answer, add a thing, manage invites/visibility) still requires authentication plus membership/ownership, so an anonymous visitor may browse a public collection but must log in to act. INACTIVE things are excluded from the serialised `things` for any non-owner, the member roster serialises **codes only** for anonymous readers (names are for logged-in members; emails for the owner), and the collection *list* (`GET /collections/`) stays private (it returns only the caller's own collections).
+7. **Public collections (anonymous read)** — a collection with `visibility=PUBLIC` (and ACTIVE) is readable without authentication. The read endpoints `CollectionViewSet.retrieve`, `ThingViewSet.retrieve`, the FAQ list (GET on `ThingFAQListView`), `ThingTransferView` and `ThingCalendarView` are `AllowAny`, each gated by an **anonymous-safe** `can_view` (a `viewer_code(request)` helper passes the user's code, or `None` for a visitor, into the model guard — `None` matches PUBLIC collections only). Every *write/act* endpoint (reserve, ask a question, answer, add a thing, manage invites/visibility) still requires authentication plus membership/ownership, so an anonymous visitor may browse a public collection but must log in to act. INACTIVE things are excluded from the serialised `things` for any non-owner, the member roster serialises **codes only** for anonymous readers (names are for logged-in members; emails for the owner), and the collection *list* (`GET /collections/`) stays private (it returns only what the caller owns or co-owns).
 
 **No member is named to an anonymous reader, by any of these endpoints.** The roster rule above is the whole rule, and it took three passes to actually be: the FAQ list still carried `questioner_name` and the journey still carried the name of everyone who had held the thing, so a group's membership stayed legible from the open web through a thing rather than through the collection. Both now withhold (`FAQSerializer.get_questioner_name`, `core/serializers/transfer.py::_may_read_names`), both fail closed on a request-less context, and both keep the *content* public — the question, the hop count, the travel story. The third door was the grid itself: in COMMUNITY mode every card carries `owner_name`, the member who **contributed** the thing, so a group's membership stayed enumerable from the open web after both other doors had closed. `ThingComputedFieldsMixin.get_owner_name` now withholds it from a signed-out reader **whenever the thing's owner is not the collection's owner** — the leak stated exactly, with no mode check to drift. The one name such a reader still gets is the **curator's**, the person who published the collection: `CollectionSerializer.get_owner_name` already serves it to them in the page header, so withholding it on that person's own listings would be theatre. They chose to publish; the member who contributed, the person who asked and the people who borrowed did not.
 

@@ -120,13 +120,13 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 
 1. **ACTIVE by default** - A collection starts with `status="ACTIVE"`.
 
-2. **Owner manages all fields** - Only the owner can update the collection's headline, description, images, and status. Enforced via `IsCollectionOwner` DRF permission.
+2. **Owner or co-owner manages all fields** - The owner or a co-owner can update the collection's headline, description, images, and status. Enforced via `IsCollectionCurator` DRF permission. Only the owner may delete the collection (`IsCollectionOwner`, deliberately not curator-widened).
 
 3. **Adding things** - In PROPRIETARY mode, only the owner can add things. In COMMUNITY mode, any invited user can add their own things. Enforced via `can_add_thing(user_code)`.
 
-4. **Removing things** - The owner can always remove any thing. In COMMUNITY mode, thing owners can remove their own things.
+4. **Removing things** - The owner or a co-owner can always remove any thing. In COMMUNITY mode, thing owners can remove their own things.
 
-5. **Only owner invites/revokes** - Enforced at the view level (`CollectionInviteView` + `IsCollectionOwner`), which also owns the invitation email/RSVP flow. The model-level `add_invite()`/`remove_invite()` helpers are test-only and perform no checks (see Methods).
+5. **Owner or co-owner invites/revokes** - Enforced at the view level (`CollectionInviteView` + `require_collection_curator`), which also owns the invitation email/RSVP flow. Revoking a member also strips their `co_owners` row, if any (`co_owners ⊆ invites`). Only the owner may promote or demote a co-owner. The model-level `add_invite()`/`remove_invite()` helpers are test-only and perform no checks (see Methods).
 
 6. **Visible to owner, invites, and anyone when PUBLIC** - `can_view(user_code)` returns True for the owner, for an invited member, or for **anyone** (including an anonymous visitor, `user_code=None`) when `visibility=PUBLIC` and the collection is ACTIVE. INACTIVE collections remain owner-only regardless of visibility.
 
