@@ -4,9 +4,9 @@ import { IconSpeechbubbleText } from 'hds-react';
 
 /**
  * The support channel's entrance (i8): a quiet speech-bubble link at the
- * hero's top-right, beside the logo watermark, on every page. Rendered INSIDE
- * `.form-hero-content` (so `--hero-text-color` resolves — the icon must stay
- * visible on dark theeemes, same rationale as the hero back link) but
+ * hero's top-right, at the content column's right edge, on every page. Rendered
+ * INSIDE `.form-hero-content` (so `--hero-text-color` resolves — the icon must
+ * stay visible on dark theeemes, same rationale as the hero back link) but
  * absolutely positioned against `.form-hero`. 44px touch target.
  */
 export default function ContactCorner() {

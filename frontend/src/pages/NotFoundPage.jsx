@@ -22,14 +22,7 @@ export default function NotFoundPage() {
     >
       <div
         className="form-hero"
-        style={
-          tc.color_03
-            ? {
-                backgroundColor: `var(--color-${tc.color_03})`,
-                '--hero-logo-color': `var(--color-${tc.color_02})`,
-              }
-            : undefined
-        }
+        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div
           className="form-hero-content"
