@@ -64,11 +64,11 @@ Routes to the appropriate handler based on `rsvp.action`:
 
 **Post-login landing (`landing`).** The successful-login response carries where the SPA should send the user — `"collection"` (plus `collection`, the code), `"welcome"`, or `"home"`. It used to be decided in the browser from the `seenWelcome` localStorage key, but logout clears that key, so every re-login looked like a first visit and dropped returning users on `/welcome`. The rules, in order:
 
-1. The RSVP carries a `target_code` — a share-token or public-collection join — ⇒ **that collection** (they joined it precisely to get there). `invited_collection` is still returned alongside `collection`: it is what tells the SPA the landing came from an invitation (it shows the collection's welcome box).
+1. The RSVP carries a `target_code` — a share-token or public-collection join — ⇒ **that collection** (they joined it precisely to get there). `invited_collection` is still returned alongside `collection` for compatibility (an older SPA read the landing collection from it).
 2. Otherwise the link was born at an open door with no target (`RSVP.origin == POPIN`) ⇒ **`"welcome"`** — a genuinely new visitor with nothing else to see. **Nothing in this repository produces that RSVP any more**: every join here carries a collection, and `/welcome` left the standalone with the demo. It is kept because a deployment that adds its own open door stamps exactly this shape, and `VerifyLinkView` is a shared file it must never have to edit; the SPA resolves it against `deployment/aboutPath` and falls through to home when there is none.
 3. Otherwise (`/login`, `origin == LOGIN` — and any legacy magic link with a blank `origin`) ⇒ their **single ACTIVE collection** (owned or invited) when they have exactly one, else **home**. `_solo_collection_code()` stops the query at two rows.
 
-`RSVP.origin` is stamped `LOGIN` by `RequestLinkView` and `POPIN` by `JoinView`; it is blank on every other action. `seenWelcome` survives only as the suppressor for `CollectionPage`'s first-time welcome box — it no longer decides navigation.
+`RSVP.origin` is stamped `LOGIN` by `RequestLinkView` and `POPIN` by `JoinView`; it is blank on every other action. The `seenWelcome` localStorage flag this replaced is gone entirely — the collection welcome box it also fed was removed in 2026-09.
 
 **Common behaviour (`_resolve_rsvp` → `_dispatch`):**
 1. Looks up RSVP by `token` (the high-entropy URL token, not the PK). Returns 401 if not found.

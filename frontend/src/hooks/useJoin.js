@@ -10,8 +10,8 @@ import { getCsrfToken } from '../services/api';
  * components: `MagicLinkJoinPage` is a boxed `PageLayout` page
  * (`/share/:token`), `JoinToAct` renders unboxed inside `JoinPage`'s hero and
  * reports errors inline. But the request itself — the CSRF header, the
- * `language` field, the 429 branch, the `seenWelcome` reset — was identical in
- * both, kept as two copies that had already drifted apart in one place.
+ * `language` field, the 429 branch — was identical in both, kept as two copies
+ * that had already drifted apart in one place.
  *
  * That drift was a re-entry guard only `JoinToAct` carried, and as written it
  * was decorative: it read the `loading` *state*, which a second submit in the
@@ -71,7 +71,6 @@ export default function useJoin({
         }),
       });
       if (res.ok) {
-        localStorage.removeItem('seenWelcome');
         setStatus('success');
         setMessage(t(sentMessageKey));
       } else if (res.status === 429) {

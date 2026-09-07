@@ -490,8 +490,8 @@ class VerifyLinkView(APIView):
         if invited_collection:
             response_data["landing"] = self.LANDING_COLLECTION
             response_data["collection"] = invited_collection
-            # Kept for compatibility; it is also what tells the SPA the landing was
-            # an invitation (it shows the collection's welcome box).
+            # Kept for compatibility: an older SPA read the landing collection
+            # from this field, and it still marks that the link carried a target.
             response_data["invited_collection"] = invited_collection
         elif origin == RSVP.Origin.POPIN:
             response_data["landing"] = self.LANDING_WELCOME

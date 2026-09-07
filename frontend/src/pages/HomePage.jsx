@@ -53,7 +53,6 @@ export default function HomePage() {
           if (data.theeeme_colors)
             localStorage.setItem('theeemeColors', JSON.stringify(data.theeeme_colors));
           if (data.koro) localStorage.setItem('koro', data.koro);
-          localStorage.setItem('seenWelcome', 'true');
           setUser(data);
         }
       } catch (err) {

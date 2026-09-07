@@ -54,10 +54,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     });
   });
 
-  test('success replaces the form, shows the close-tab line, and resets seenWelcome', async () => {
-    // A joiner may be a brand-new user on a shared browser profile: a stale
-    // seenWelcome would suppress their first-time welcome box.
-    localStorage.setItem('seenWelcome', 'true');
+  test('success replaces the form and shows the close-tab line', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -70,11 +67,9 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     await screen.findByText(/Magic link sent! Check your inbox/);
     expect(screen.getByText(/You can close this tab now/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
-    expect(localStorage.getItem('seenWelcome')).toBeNull();
   });
 
-  test('a server failure shows a readable error, and seenWelcome is untouched', async () => {
-    localStorage.setItem('seenWelcome', 'true');
+  test('a server failure shows a readable error, not the success screen', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -86,7 +81,6 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
 
     expect(await screen.findByText('Error sending link.')).toBeInTheDocument();
     expect(screen.queryByText(/You can close this tab now/)).not.toBeInTheDocument();
-    expect(localStorage.getItem('seenWelcome')).toBe('true');
   });
 
   test('two submits in the same tick send only one magic link', async () => {
