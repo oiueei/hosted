@@ -101,6 +101,10 @@ def test_a_reservation_is_confirmed_on_the_spot(reservations, authenticated_clie
     # the owner gets a notice, not a question
     note = InAppNotification.objects.get(user=reservations["owner"], type="RESERVATION_MADE")
     assert note.payload["booking_code"] == booking.code
+    # both emails show the dates DD/MM/YYYY (like the SPA), never ISO
+    for m in mail.outbox:
+        assert mon.strftime("%d/%m/%Y") in m.body
+        assert mon.isoformat() not in m.body
 
 
 def test_the_project_note_reaches_the_owner(reservations, authenticated_client2):

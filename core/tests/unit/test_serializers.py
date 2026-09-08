@@ -229,6 +229,28 @@ class TestCollectionCreateSerializer:
         serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": ""})
         assert serializer.is_valid(), serializer.errors
 
+    def test_description_is_long_form_2000_per_language(self):
+        """`Collection.description` became a `TextField` with a 2000-char *visible*
+        cap the serializer enforces — kept symmetric with `Thing.description`."""
+        ok = CollectionCreateSerializer(data={"headline": "X", "description": "x" * 2000})
+        assert ok.is_valid(), ok.errors
+        too_long = CollectionCreateSerializer(data={"headline": "X", "description": "x" * 2001})
+        assert not too_long.is_valid()
+        assert "description" in too_long.errors
+
+    def test_description_limit_is_per_language_not_total(self):
+        """A `{es, ca}` map may carry the full 2000 in *each* language — the cap
+        is per language, and there is no column width left to overflow."""
+        import json
+
+        both_full = json.dumps({"es": "e" * 2000, "ca": "c" * 2000})
+        ok = CollectionCreateSerializer(data={"headline": "X", "description": both_full})
+        assert ok.is_valid(), ok.errors
+        one_over = json.dumps({"es": "e" * 2001, "ca": "c" * 10})
+        bad = CollectionCreateSerializer(data={"headline": "X", "description": one_over})
+        assert not bad.is_valid()
+        assert "description" in bad.errors
+
 
 @pytest.mark.django_db
 class TestThingSerializer:

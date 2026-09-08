@@ -159,16 +159,36 @@ def test_a_reservation_cannot_span_a_closure_day(db):
 
 
 def test_parse_closed_dates_normalises_the_owners_line(db):
+    from rest_framework import serializers
+
     from core.serializers.collection import _parse_closed_dates
 
     next_year = date.today().year + 1
     out = _parse_closed_dates(f" 26/12/{next_year} ,25/12/{next_year}, 25/12/{next_year} ")
     assert out == [f"{next_year}-12-25", f"{next_year}-12-26"]  # sorted, deduped
-    # a garbage token is a 400
-    with pytest.raises(Exception):
+    # a garbage token is a 400 with a message naming the offending token
+    with pytest.raises(serializers.ValidationError) as exc:
         _parse_closed_dates("not a date")
+    assert "not a date" in str(exc.value)
     # a past date is silently dropped
     assert _parse_closed_dates("01/01/2020") == []
+    # ISO is accepted too (a round-tripped value from the read serializer)
+    assert _parse_closed_dates(f"{next_year}-07-04") == [f"{next_year}-07-04"]
+
+
+def test_parse_closed_dates_caps_the_list(db):
+    """More than 60 closure days is almost certainly a paste error, not a
+    calendar — the owner re-enters this year's."""
+    from rest_framework import serializers
+
+    from core.serializers.collection import _parse_closed_dates
+
+    next_year = date.today().year + 1
+    sixty_one = ", ".join(
+        (date(next_year, 1, 1) + timedelta(days=n)).strftime("%d/%m/%Y") for n in range(61)
+    )
+    with pytest.raises(serializers.ValidationError):
+        _parse_closed_dates(sixty_one)
 
 
 # --- booking enforcement (API) --------------------------------------------
