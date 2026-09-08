@@ -74,6 +74,24 @@ export const isoToDisplay = (iso) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
 };
 
+// Every date the app *displays* goes through here: 'DD/MM/YYYY', the everyday
+// convention in all three of OIUEEI's locales (es/ca/en) and the one the date
+// pickers and `closed_dates` already speak. Plain `toLocaleDateString(lang)`
+// handed 'en' readers American MM/DD/YYYY, so a booking range read one way in
+// the picker and another in the table. Accepts an ISO date, an ISO datetime or
+// a Date; returns '' for anything unparseable (a null booking range renders
+// blank, not 'Invalid Date').
+export const formatDate = (value) => {
+  if (!value) return '';
+  const exact = isoToDisplay(value);
+  if (exact) return exact;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+};
+
 // 'DD/MM/YYYY' (loose D/M/YYYY accepted) → 'YYYY-MM-DD' ('' for malformed or
 // impossible dates like 31/02, which HDS also flags via malformedDateErrorText).
 export const displayToIso = (display) => {

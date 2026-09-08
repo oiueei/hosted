@@ -7,6 +7,7 @@ import {
   IconLocation,
   IconShield,
 } from 'hds-react';
+import { formatDate } from '../utils/rental';
 
 /**
  * The `thing-card-info` rows shared by ThingPage and ThingLinkbox: type, fee,
@@ -16,7 +17,7 @@ import {
  * rows inside the same container.
  */
 export default function ThingInfoRows({ thing, isDateBased, hideType = false, children }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   return (
     <div className="thing-card-info">
       {/* Type row — hidden when the collection allows only one thing type (redundant). */}
@@ -57,10 +58,7 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
               ? t('availability.IMMEDIATE')
               : thing.next_available
                 ? t('availability.nextAvailable', {
-                    date: new Date(thing.next_available).toLocaleDateString(i18n.language, {
-                      day: 'numeric',
-                      month: 'numeric',
-                    }),
+                    date: formatDate(thing.next_available),
                   })
                 : t('availability.noneSoon')}
           </span>

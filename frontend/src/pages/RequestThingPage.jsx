@@ -11,6 +11,7 @@ import {
   derivedReturnDate,
   isoToDisplay,
   displayToIso,
+  formatDate,
   DISPLAY_DATE_FORMAT,
 } from '../utils/rental';
 import { apiFetch } from '../services/api';
@@ -273,10 +274,7 @@ export default function RequestThingPage() {
                     ? t('availability.IMMEDIATE')
                     : thing.next_available
                       ? t('availability.nextAvailable', {
-                          date: new Date(thing.next_available).toLocaleDateString(i18n.language, {
-                            day: 'numeric',
-                            month: 'numeric',
-                          }),
+                          date: formatDate(thing.next_available),
                         })
                       : t('availability.noneSoon')
                 }`}

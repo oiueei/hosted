@@ -12,6 +12,7 @@ import {
   derivedReturnDate,
   isoToDisplay,
   displayToIso,
+  formatDate,
   closedDatesToDisplay,
 } from './rental';
 
@@ -200,5 +201,24 @@ describe('isoToDisplay / displayToIso', () => {
     expect(displayToIso('2026-07-15')).toBe('');
     expect(displayToIso('31/02/2026')).toBe(''); // impossible date
     expect(displayToIso('99/99/9999')).toBe('');
+  });
+});
+
+describe('formatDate', () => {
+  test('renders every accepted shape as DD/MM/YYYY', () => {
+    expect(formatDate('2026-07-15')).toBe('15/07/2026'); // ISO date
+    expect(formatDate('2026-07-15T09:30:00Z')).toBe('15/07/2026'); // ISO datetime
+    expect(formatDate(new Date(2026, 6, 15))).toBe('15/07/2026'); // Date
+  });
+
+  test('pads single-digit day and month', () => {
+    expect(formatDate('2026-01-05')).toBe('05/01/2026');
+  });
+
+  test("is blank — never 'Invalid Date' — for an empty or unparseable value", () => {
+    expect(formatDate(null)).toBe('');
+    expect(formatDate(undefined)).toBe('');
+    expect(formatDate('')).toBe('');
+    expect(formatDate('not a date')).toBe('');
   });
 });

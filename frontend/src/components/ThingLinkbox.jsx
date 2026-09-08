@@ -13,6 +13,7 @@ import Toast from './Toast';
 import ImageCarousel from './ImageCarousel';
 import { onImageError } from '../utils/imageFallback';
 import { useLocalized } from '../utils/localized';
+import { formatDate } from '../utils/rental';
 import ButtonLink from './ButtonLink';
 
 // Memoised: CollectionPage keeps broadcast/tag-filter state at its root, so a
@@ -39,7 +40,7 @@ function ThingLinkbox({
   // grid sits directly under the page `<h1>` — left at 3 it skipped a level, and
   // a screen reader walking the outline was told a heading was missing.
   const Heading = `h${headingLevel}`;
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   // The owner may have written the headline / description once per language.
@@ -160,8 +161,7 @@ function ThingLinkbox({
             ) : (
               thing.owner_name || t('common.aMember')
             )}
-            {thing.created &&
-              ` · ${new Date(thing.created).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })}`}
+            {thing.created && ` · ${formatDate(thing.created)}`}
           </p>
         )}
         <Heading className="thing-card-headline">
