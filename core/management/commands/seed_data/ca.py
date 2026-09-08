@@ -62,6 +62,11 @@ COLLECTIONS = [
         "headline": "El mercadet dels diumenges al pati",
         "description": "Cada diumenge muntem mercadet, festa i dinar al pati. Baixa el que ja no facis servir i emporta't el que et faci falta: aquí tot es regala. Només per a veïnes i veïns de la cooperativa.",
     },
+    {
+        "code": "1u1uRe",
+        "headline": "El taller de la Lulu — reserva un lloc",
+        "description": "Reserva un banc o el racó de reunions per usar-lo aquí, al taller. És teu per un dia (o fins a tres), res no surt de la sala i la reserva es confirma a l'instant. Obert de dilluns a divendres.",
+    },
 ]
 
 THINGS = [
@@ -396,6 +401,16 @@ THINGS = [
         "code": "L3L311",
         "headline": "Nevera portàtil per a platja i pícnic",
         "description": "Nevera portàtil amb tapa verda i nansa grisa, ideal per portar begudes i aliments frescos a la platja o de pícnic. El disseny és pràctic i fàcil de transportar.",
+    },
+    {
+        "code": "1u1uRa",
+        "headline": "El banc de treball gran",
+        "description": "El banc de roure massís, amb el cargol de banc i la bona llum. Reserva'l per a un dia de feina de debò — petita quota de manteniment per a fulles i cola. Es queda al taller.",
+    },
+    {
+        "code": "1u1uRb",
+        "headline": "El racó de reunions",
+        "description": "Taula, sis cadires i una pantalla per a una reunió petita o una classe. Reservar-lo és gratis, fins a tres dies. Deixa'l com el vas trobar, si us plau.",
     },
 ]
 

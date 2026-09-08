@@ -199,6 +199,22 @@ COLLECTIONS = [
         "tags": [TAG_COCINA, TAG_OCIO, TAG_ELECTRONICA, TAG_HOGAR, TAG_CRIANZA],
         "thumbnail": "L3L3C1",
     },
+    {
+        # The demo's one reservations collection: Lulu runs a workshop space, and
+        # members book a bench or the meeting corner to *use on site* — nothing is
+        # carried away. RESERVE forces PROPRIETARY, holds only RESERVE things, and
+        # reuses rental_weekdays as "days the space is open". Bookings auto-confirm.
+        "code": "1u1uRe",
+        "owner_code": "1u1ucs",
+        "mode": "PROPRIETARY",
+        "visibility": "PRIVATE",
+        "invites": ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh"],
+        "is_onboarding": True,
+        "allowed_thing_types": ["RESERVE_THING"],
+        "reservation_max_days": 3,
+        "rental_weekdays": [0, 1, 2, 3, 4],
+        "thumbnail": "1u1uC1",
+    },
 ]
 
 THINGS = [
@@ -855,6 +871,26 @@ THINGS = [
         "availability": "IMMEDIATE",
         "location": "08038",
         "tags": [TAG_HOGAR],
+    },
+    # RESERVE things — Lulu's workshop space. Owned by Lulu (PROPRIETARY), used
+    # on site, never carried away: no deposit, and the meeting corner is free
+    # while the good workbench carries a small upkeep fee.
+    {
+        "code": "1u1uRa",
+        "type": "RESERVE_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["1u1uRe"],
+        "thumbnail": "1u1uC1",
+        "fee": "3.00",
+        "location": "Taller de Lulu, banc gran",
+    },
+    {
+        "code": "1u1uRb",
+        "type": "RESERVE_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["1u1uRe"],
+        "thumbnail": "1u1uC1",
+        "location": "Taller de Lulu, racó de reunions",
     },
 ]
 
