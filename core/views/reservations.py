@@ -22,11 +22,13 @@ from rest_framework.views import APIView
 from core.models import Collection, Thing
 from core.models.booking import DATE_BASED_TYPES
 from core.serializers.booking import (
+    ReservationRequestSerializer,
     ThingRequestWithDatesSerializer,
 )
 from core.services.booking_service import (
     BookingRequestError,
     request_date_based_booking,
+    request_reservation,
     request_standard_booking,
     resolve_rental_collection,
 )
@@ -106,6 +108,8 @@ class ThingRequestView(APIView):
         collection_code = body_dict(request).get("collection_code")
 
         try:
+            if thing.type == Thing.Type.RESERVE_THING:
+                return self._request_reservation(request, thing, owner_email)
             if thing.type in DATE_BASED_TYPES:
                 return self._request_date_based(request, thing, owner_email)
             else:
@@ -118,6 +122,37 @@ class ThingRequestView(APIView):
                 )
         except BookingRequestError as exc:
             return Response({"error": exc.message}, status=exc.status_code)
+
+    def _request_reservation(self, request, thing, owner_email):
+        """RESERVE_THING — validate the pickup date + duration, then delegate.
+
+        The service creates the booking already ACCEPTED (auto-confirmed) and
+        emails both parties. Membership, the weekday/duration rules and the
+        date clash are all checked there and come back as BookingRequestError.
+        """
+        serializer = ReservationRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        collection_code = body_dict(request).get("collection_code")
+        booking = request_reservation(
+            thing,
+            request.user,
+            owner_email,
+            serializer.validated_data["start_date"],
+            serializer.validated_data["duration_days"],
+            serializer.validated_data.get("project_note", ""),
+            collection_code,
+        )
+        return Response(
+            {
+                "message": "Reservation confirmed",
+                "booking_code": booking.code,
+                "start_date": str(booking.start_date),
+                "end_date": str(booking.end_date),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def _request_date_based(self, request, thing, owner_email):
         """Validate LEND/RENT dates then delegate to the service."""

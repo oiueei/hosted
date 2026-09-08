@@ -43,7 +43,11 @@ class TestTheStandaloneDoorIsOpen:
 
         assert response.status_code == status.HTTP_201_CREATED
 
-    @pytest.mark.parametrize("thing_type", Thing.Type.values)
+    # RESERVE_THING is excluded: the open policy *does* advertise it (see
+    # test_every_advertised_verb_is_actually_accepted), but a RESERVE thing has
+    # a structural rule the policy doesn't express — it can only be created in a
+    # reservations collection. Its happy path is in test_reservations.py.
+    @pytest.mark.parametrize("thing_type", [t for t in Thing.Type.values if t != "RESERVE_THING"])
     def test_every_verb_is_available_to_a_plain_account(self, authenticated_client, thing_type):
         response = authenticated_client.post(
             "/api/v1/things/",
@@ -513,6 +517,11 @@ class TestWhatTheFrontendIsTold:
         advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
 
         for index, thing_type in enumerate(advertised["thing_types"]):
+            # RESERVE_THING is advertised (the policy allows it) but needs a
+            # reservations collection to land in — a structural rule outside the
+            # policy's remit. Covered end-to-end in test_reservations.py.
+            if thing_type == "RESERVE_THING":
+                continue
             response = authenticated_client.post(
                 "/api/v1/things/",
                 {"type": thing_type, "headline": f"Thing {index}", "thumbnail": "img/x"},

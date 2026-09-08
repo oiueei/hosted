@@ -87,8 +87,12 @@ class VettedCreatorPolicy(CreatorPolicy):
 
 The default, `core.services.creator_policy.OpenCreatorPolicy`, says **yes to
 everyone, always** — an account is the only requirement to open a collection in
-either mode or offer a thing under any of the four verbs. That is OIUEEI as a
-product, and it is what an upstream checkout runs.
+either mode or offer a thing under any of the verbs (GIFT, SELL, RENT, LEND, and
+RESERVE, the on-site reservation). That is OIUEEI as a product, and it is what an
+upstream checkout runs. An operator running OIUEEI *as a service* usually wants a
+narrower answer for the things that put someone else on the hook — a COMMUNITY
+collection, a loan or a rental that has to come back, a reservation that commits
+their premises — and a `CreatorPolicy` subclass is where that judgement lives.
 
 A subclass overrides **one method**. `allows_collection_mode()` and
 `allows_thing_type()` are derived from it, so a policy cannot enforce something

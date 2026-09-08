@@ -1270,6 +1270,92 @@ def send_return_due_email(owner_name, thing_headline, end_date, requester_email,
     _send(requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
+def send_reservation_confirmed_email(requester, thing, booking, collection=None):
+    """Tell the requester their on-site reservation is confirmed (RESERVE_THING).
+
+    There is no owner decision to wait for, so this is not "request sent" — it
+    is "you have it". Names the space, the dates, and the fee if the owner set
+    one.
+    """
+    user, lang = _recipient(requester.email, collection)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing)
+    headline = L(thing.headline)
+
+    subject = T("reservation_confirmed_subject").format(thing=headline)
+    plain = T("reservation_confirmed_plain").format(
+        thing=headline, start=booking.start_date, end=booking.end_date, url=thing_url
+    )
+    blocks = [
+        _para(T("reservation_confirmed_intro")),
+        _strong(headline),
+        _field(T("dates_label"), f"{booking.start_date} - {booking.end_date}"),
+    ]
+    if thing.fee:
+        blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
+    if thing.location:
+        blocks.append(_field(T("reservation_where_label"), thing.location))
+    blocks.append(_links((thing_url, T("view_thing_cta"))))
+    html = _render_email(blocks, lang=lang)
+    _send(requester.email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+
+
+def send_reservation_notice_email(owner_email, requester, thing, booking, collection=None):
+    """Tell the owner a member reserved their space (RESERVE_THING).
+
+    Carries the requester's optional project note verbatim (escaped) — it is the
+    whole reason the note exists.
+    """
+    user, lang = _recipient(owner_email, collection)
+    T, L = _texts(lang), _local(lang)
+    requester_name = requester.display_name
+    headline = L(thing.headline)
+
+    subject = T("reservation_notice_subject").format(requester=requester_name, thing=headline)
+    plain = T("reservation_notice_plain").format(
+        requester=requester_name, thing=headline, start=booking.start_date, end=booking.end_date
+    )
+    blocks = [
+        _para(T("reservation_notice_intro").format(requester=requester_name)),
+        _strong(headline),
+        _field(T("dates_label"), f"{booking.start_date} - {booking.end_date}"),
+    ]
+    if booking.project_note:
+        plain += "\n\n" + T("reservation_note_label") + ": " + booking.project_note
+        blocks.append(_field(T("reservation_note_label"), booking.project_note))
+    html = _render_email(blocks, lang=lang)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+
+
+def send_reservation_cancelled_email(
+    recipient_email, other_name, thing, booking, cancelled_by_owner
+):
+    """Tell the party who didn't cancel that a reservation is off (RESERVE_THING).
+
+    ``cancelled_by_owner`` picks the wording: the guest reads "X cancelled *your*
+    reservation", the owner reads "X cancelled *their* reservation".
+    """
+    user, lang = _recipient(recipient_email)
+    T, L = _texts(lang), _local(lang)
+    other = _member_name(other_name, lang)
+    headline = L(thing.headline)
+    side = "to_guest" if cancelled_by_owner else "to_owner"
+
+    subject = T("reservation_cancelled_subject").format(thing=headline)
+    plain = T(f"reservation_cancelled_{side}_plain").format(
+        other=other, thing=headline, start=booking.start_date, end=booking.end_date
+    )
+    html = _render_email(
+        [
+            _para(T(f"reservation_cancelled_{side}_intro").format(other=other)),
+            _strong(headline),
+            _field(T("dates_label"), f"{booking.start_date} - {booking.end_date}"),
+        ],
+        lang=lang,
+    )
+    _send(recipient_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+
+
 # --- Category 3: News / broadcast ---------------------------------------------
 
 

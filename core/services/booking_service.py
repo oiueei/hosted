@@ -464,3 +464,172 @@ def send_booking_request_notifications(
         thing=thing,
         thing_type=booking.thing_type,
     )
+
+
+# ── On-site reservations (RESERVE_THING) ──────────────────────────────────
+# A different shape from every other booking: **auto-confirmed**. There is no
+# owner accept/reject step, so the booking is created straight to ACCEPTED, no
+# RSVP pair is minted, and no ThingTransfer is written (the thing is used on the
+# owner's premises and never leaves). Both parties are emailed at once. Either
+# of them may later cancel a reservation that has not started.
+
+
+def resolve_reservations_collection(thing, collection_code=None):
+    """The reservations collection a RESERVE request is made through.
+
+    Prefers the collection named in the request (``collection_code`` — the SPA
+    passes it); otherwise the thing's first reservations collection. Every
+    collection a RESERVE thing lives in is a reservations collection (the
+    allowlist rule), so the fallback is just "the first one". Returns ``None``
+    only for a RESERVE thing that sits in no reservations collection at all — a
+    misconfiguration the caller turns into a refusal.
+    """
+    collections = list(thing.collections.all())
+    code = (collection_code or "").strip()
+    if code:
+        for collection in collections:
+            if collection.code == code and collection.is_reservations_collection():
+                return collection
+    for collection in collections:
+        if collection.is_reservations_collection():
+            return collection
+    return None
+
+
+def request_reservation(
+    thing,
+    requester,
+    owner_email,
+    start_date,
+    duration_days,
+    project_note="",
+    collection_code=None,
+):
+    """RESERVE_THING — create an auto-confirmed on-site reservation.
+
+    Raises ``BookingRequestError`` on any rule failure (403 not a member, 400 a
+    reservation-rule violation, 409 a date clash). On success the booking is
+    already ``ACCEPTED``; both the requester and the owner are emailed and the
+    owner gets an in-app notice.
+    """
+    rc = resolve_reservations_collection(thing, collection_code)
+    if rc is None:
+        raise BookingRequestError("This thing is not in a reservations collection.")
+
+    if not rc.is_invited(requester.code):
+        raise BookingRequestError(
+            "You need to be a member of this group to reserve.", status_code=403
+        )
+
+    violation = rc.reservation_violation(start_date, duration_days)
+    if violation:
+        raise BookingRequestError(violation)
+
+    end_date = start_date + timedelta(days=duration_days)
+    if end_date > date.today() + timedelta(days=DEFAULT_AVAILABILITY_HORIZON_DAYS):
+        raise BookingRequestError("Reservations can be at most 3 months ahead.")
+
+    with transaction.atomic():
+        Thing.objects.select_for_update().get(code=thing.code)
+        if BookingPeriod.has_overlap(thing.code, start_date, end_date):
+            raise BookingRequestError("Those dates are already taken.", status_code=409)
+        booking = BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type=thing.type,
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=thing.owner,
+            start_date=start_date,
+            end_date=end_date,
+            project_note=project_note or "",
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+
+    _send_reservation_notifications(requester, thing, booking, owner_email, rc)
+    return booking
+
+
+def _send_reservation_notifications(requester, thing, booking, owner_email, collection):
+    """Fan out a confirmed reservation: requester email, owner email + in-app
+    notice, and the request→accept event pair (the funnel is instant here)."""
+    from core.services.email_service import (
+        send_reservation_confirmed_email,
+        send_reservation_notice_email,
+    )
+
+    send_reservation_confirmed_email(requester, thing, booking, collection)
+    send_reservation_notice_email(owner_email, requester, thing, booking, collection)
+    InAppNotification.objects.create(
+        user=thing.owner,
+        type=InAppNotification.Type.RESERVATION_MADE,
+        payload={
+            "thing_headline": thing.headline,
+            "requester_name": requester.display_name,
+            "start_date": str(booking.start_date),
+            "end_date": str(booking.end_date),
+            "booking_code": booking.code,
+            "thing_code": thing.code,
+            "collection_code": collection.code if collection else "",
+        },
+    )
+    Event.log(
+        Event.Kind.HOLD_REQUESTED, actor=requester, thing=thing, thing_type=booking.thing_type
+    )
+    Event.log(Event.Kind.HOLD_ACCEPTED, actor=requester, thing=thing, thing_type=booking.thing_type)
+
+
+def cancel_reservation(booking, by_user):
+    """Cancel a not-yet-started reservation — allowed to the **requester or the
+    owner** (rule 4). Frees the slot and tells the other party.
+
+    Raises ``BookingRequestError`` (403 wrong person, 400 nothing to cancel /
+    already started / not a reservation). Returns the booking on success.
+    """
+    if booking.thing_type != Thing.Type.RESERVE_THING:
+        raise BookingRequestError("Not a reservation.")
+    if by_user.code not in (booking.requester_code_id, booking.owner_code_id):
+        raise BookingRequestError("You can't cancel this reservation.", status_code=403)
+    if booking.start_date and booking.start_date < timezone.localdate():
+        raise BookingRequestError("This reservation has already started.")
+
+    with transaction.atomic():
+        locked = BookingPeriod.objects.select_for_update().get(code=booking.code)
+        if locked.status != BookingPeriod.Status.ACCEPTED:
+            raise BookingRequestError("This reservation is no longer active.")
+        locked.status = BookingPeriod.Status.CANCELLED
+        locked.save(update_fields=["status"])
+
+    cancelled_by_owner = by_user.code == booking.owner_code_id
+    thing = booking.thing_code
+    _notify_reservation_cancelled(booking, thing, cancelled_by_owner)
+    return locked
+
+
+def _notify_reservation_cancelled(booking, thing, cancelled_by_owner):
+    from core.services.email_service import send_reservation_cancelled_email
+
+    if cancelled_by_owner:
+        recipient, recipient_email = booking.requester_code, booking.requester_email
+        other = booking.owner_code
+    else:
+        recipient, recipient_email = booking.owner_code, booking.owner_code.email
+        other = booking.requester_code
+
+    # Bare name either way (L2): the reader is a co-member, not someone the API
+    # hands an address to — the email's `_member_name` and the frontend's
+    # `common.aMember` cover an unset name.
+    InAppNotification.objects.create(
+        user=recipient,
+        type=InAppNotification.Type.RESERVATION_CANCELLED,
+        payload={
+            "thing_headline": thing.headline,
+            "other_name": other.name,
+            "start_date": str(booking.start_date),
+            "end_date": str(booking.end_date),
+            "thing_code": thing.code,
+            "cancelled_by_owner": cancelled_by_owner,
+        },
+    )
+    send_reservation_cancelled_email(
+        recipient_email, other.name, thing, booking, cancelled_by_owner=cancelled_by_owner
+    )

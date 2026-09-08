@@ -61,7 +61,20 @@ def type_validity_error(thing_type, collection):
     owner's per-collection allowlist can't be bypassed by any path (L4). A thing
     with no collection has no allowlist to answer to, so it is always valid —
     the type-vs-mode rules that used to live here went with SHARE and SWAP.
+
+    RESERVE_THING is the one type with a rule of its own: it can *only* live in
+    a reservations collection (``allowed_thing_types == ["RESERVE_THING"]``), so
+    a standalone RESERVE thing — or one aimed at any other collection — is
+    refused. The ``["RESERVE_THING"]`` allowlist already blocks the other four
+    types from a reservations collection; this closes the other direction.
     """
+    if thing_type == "RESERVE_THING":
+        if collection is None or not collection.is_reservations_collection():
+            return (
+                "A reservation can only be added to a reservations collection "
+                "(one that offers reservations and nothing else)."
+            )
+        return None
     if collection is None:
         return None
     if collection.allowed_thing_types and thing_type not in collection.allowed_thing_types:

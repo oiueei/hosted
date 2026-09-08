@@ -26,6 +26,7 @@ TEXTS = {
     "action_noun_SELL_THING": "de compra",
     "action_noun_LEND_THING": "de préstec",
     "action_noun_RENT_THING": "de lloguer",
+    "action_noun_RESERVE_THING": "de reserva",
     # Magic link
     "magic_subject": "Hola, et donem la benvinguda a OIUEEI!",
     "magic_subject_collection": "Hola, et donem la benvinguda a '{collection}' - OIUEEI!",
@@ -224,6 +225,28 @@ TEXTS = {
     "return_due_plain": "Un recordatori amable: has de tornar '{thing}' a {owner} el {end}.",
     "return_due_body": "Un recordatori amable: has de tornar {thing} a {owner} el {end}.",
     "view_thing_cta": "Veure la publicació",
+    # Reserves d'espai (RESERVE_THING) — confirmació automàtica, sense decisió
+    "reservation_confirmed_subject": "La teva reserva de '{thing}' està confirmada",
+    "reservation_confirmed_plain": (
+        "La teva reserva de '{thing}' està confirmada del {start} al {end}. "
+        "Veure la publicació: {url}"
+    ),
+    "reservation_confirmed_intro": "La teva reserva està confirmada:",
+    "reservation_fee_label": "Cost",
+    "reservation_where_label": "On",
+    "reservation_notice_subject": "{requester} ha reservat '{thing}'",
+    "reservation_notice_plain": "{requester} ha reservat '{thing}' del {start} al {end}.",
+    "reservation_notice_intro": "{requester} ha reservat:",
+    "reservation_note_label": "El seu missatge",
+    "reservation_cancelled_subject": "Reserva cancel·lada: '{thing}'",
+    "reservation_cancelled_to_guest_plain": (
+        "{other} ha cancel·lat la teva reserva de '{thing}' (del {start} al {end})."
+    ),
+    "reservation_cancelled_to_guest_intro": "{other} ha cancel·lat la teva reserva de:",
+    "reservation_cancelled_to_owner_plain": (
+        "{other} ha cancel·lat la seva reserva de '{thing}' (del {start} al {end})."
+    ),
+    "reservation_cancelled_to_owner_intro": "{other} ha cancel·lat la seva reserva de:",
     # Digest
     "digest_subject": "Novetats a {collection}",
     "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",

@@ -261,6 +261,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_owner = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
+    reservation_max_days = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
     class Meta:
@@ -298,6 +299,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_owner",
             "rental_durations",
             "rental_weekdays",
+            "reservation_max_days",
             "transfer_count",
             "is_endless",
         ]
@@ -403,9 +405,20 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         return list(first.rental_durations) if first else []
 
     def get_rental_weekdays(self, obj):
-        """Allowed pickup/return weekdays (0=Mon…6=Sun) from the first collection."""
+        """Allowed pickup/return weekdays (0=Mon…6=Sun) from the first collection.
+
+        Reused for RESERVE_THING as "days reservations are allowed"."""
         first = self._viewable_collection(obj)
         return list(first.rental_weekdays) if first else []
+
+    def get_reservation_max_days(self, obj):
+        """The longest a RESERVE_THING may be booked for, from its reservations
+        collection. ``None`` for every non-RESERVE thing — RequestThingPage reads
+        it to size the duration picker."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_max_days if first else 1
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available
@@ -435,7 +448,7 @@ class ThingCreateSerializer(serializers.ModelSerializer):
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     thumbnail = ImageIdField(folder="oiueei/things")
-    location = SafeHeadlineField(max_length=32, required=False, allow_blank=True)
+    location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     gallery = serializers.ListField(
         child=ImageIdField(folder="oiueei/things", allow_blank=False),
         max_length=8,
@@ -484,7 +497,7 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
     headline = LocalizedHeadlineField(max_length=64, required=False)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     thumbnail = ImageIdField(folder="oiueei/things")
-    location = SafeHeadlineField(max_length=32, required=False, allow_blank=True)
+    location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     gallery = serializers.ListField(
         child=ImageIdField(folder="oiueei/things", allow_blank=False),
         max_length=8,
@@ -588,7 +601,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
 
     headline = LocalizedHeadlineField(max_length=64)
     description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
-    location = SafeHeadlineField(max_length=32, required=False, allow_blank=True)
+    location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     # LocaleDecimalField (not the plain DecimalField the other Thing
     # serializers use): a CSV row is the one path with no NumberInput to
     # normalise a locale decimal comma before it reaches the server (S9).

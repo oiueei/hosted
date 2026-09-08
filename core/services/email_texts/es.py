@@ -21,6 +21,7 @@ TEXTS = {
     "action_noun_SELL_THING": "compra",
     "action_noun_LEND_THING": "préstamo",
     "action_noun_RENT_THING": "alquiler",
+    "action_noun_RESERVE_THING": "reserva",
     # Magic link
     "magic_subject": "¡Hola, te damos la bienvenida a OIUEEI!",
     "magic_subject_collection": "¡Hola, te damos la bienvenida a '{collection}' - OIUEEI!",
@@ -217,6 +218,27 @@ TEXTS = {
     "return_due_plain": "Un recordatorio amable: tienes que devolver '{thing}' a {owner} el {end}.",
     "return_due_body": "Un recordatorio amable: tienes que devolver {thing} a {owner} el {end}.",
     "view_thing_cta": "Ver la publicación",
+    # Reservas de espacio (RESERVE_THING) — confirmación automática, sin decisión
+    "reservation_confirmed_subject": "Tu reserva de '{thing}' está confirmada",
+    "reservation_confirmed_plain": (
+        "Tu reserva de '{thing}' está confirmada del {start} al {end}. Ver la publicación: {url}"
+    ),
+    "reservation_confirmed_intro": "Tu reserva está confirmada:",
+    "reservation_fee_label": "Coste",
+    "reservation_where_label": "Dónde",
+    "reservation_notice_subject": "{requester} ha reservado '{thing}'",
+    "reservation_notice_plain": "{requester} ha reservado '{thing}' del {start} al {end}.",
+    "reservation_notice_intro": "{requester} ha reservado:",
+    "reservation_note_label": "Su mensaje",
+    "reservation_cancelled_subject": "Reserva cancelada: '{thing}'",
+    "reservation_cancelled_to_guest_plain": (
+        "{other} ha cancelado tu reserva de '{thing}' (del {start} al {end})."
+    ),
+    "reservation_cancelled_to_guest_intro": "{other} ha cancelado tu reserva de:",
+    "reservation_cancelled_to_owner_plain": (
+        "{other} ha cancelado su reserva de '{thing}' (del {start} al {end})."
+    ),
+    "reservation_cancelled_to_owner_intro": "{other} ha cancelado su reserva de:",
     # Digest
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",

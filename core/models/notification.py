@@ -38,6 +38,11 @@ class InAppNotification(models.Model):
         # losing admin power over the group is worth a notice, not a campaign.
         PROMOTED_CO_OWNER = "PROMOTED_CO_OWNER"
         DEMOTED_CO_OWNER = "DEMOTED_CO_OWNER"
+        # A member auto-confirmed an on-site reservation (RESERVE_THING) — a
+        # notice to the owner, not a question (there is nothing to accept). The
+        # cancelled variant reaches whichever party did *not* cancel.
+        RESERVATION_MADE = "RESERVATION_MADE"
+        RESERVATION_CANCELLED = "RESERVATION_CANCELLED"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")

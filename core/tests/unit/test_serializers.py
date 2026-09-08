@@ -371,7 +371,7 @@ class TestThingCreateSerializer:
             data={
                 "headline": "My Thing",
                 "type": "GIFT_THING",
-                "location": "A" * 33,
+                "location": "A" * 65,  # limit is 64 (widened from 32 for RESERVE addresses)
             }
         )
         assert not serializer.is_valid()

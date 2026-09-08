@@ -385,7 +385,7 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 
 **Deployment policy (`CREATOR_POLICY`).** `perform_create` asks whether this deployment offers that verb to this account at all — **403** if not — **unless** it is a member contributing to a COMMUNITY collection they were invited to, of a type its owner allow-listed (`community_contribution_types`; a `CreatorPolicy` gates *initiating*, not *contributing* to a group someone else already vouched for). The collection is resolved before the check now, but a nonexistent or un-addable one still falls through to the **same 403** as no collection at all, so the verb refusal never turns on — or reveals — which collection was named. `perform_update` asks the same, but **only when the type actually changes** (a thing already under a withheld verb stays editable), and the COMMUNITY exception there needs *every* collection the thing sits in to allow the new verb. The standalone's policy allows everything, so none of this does anything upstream. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
 
-**Create behaviour:** Optionally accepts `collection_code` in request body. `perform_create` raises DRF exceptions directly (no `{"error": ...}` two-phase protocol): an unknown `collection_code` → **404 NotFound**; a collection the user can't add to → **403 PermissionDenied**; a type/tag rule violation → **400 ValidationError** (field-keyed: `{"type": [...]}` / `{"tags": [...]}`, like `perform_update`). If valid, the thing is automatically added to it. **Per-collection allowlist** (`Collection.allowed_thing_types`): if non-empty, the thing's type must be in it — returns 400 otherwise. Empty list = no per-collection restriction. **Tags**: any `tags` on the thing must belong to the collection's `Collection.tags` vocabulary — returns 400 otherwise (tags require a collection; on update, `ThingUpdateSerializer.validate_tags` checks the union of the thing's collections' tags). Removing a tag from a collection (via `CollectionUpdateSerializer`) cascade-strips it from that collection's things.
+**Create behaviour:** Optionally accepts `collection_code` in request body. `perform_create` raises DRF exceptions directly (no `{"error": ...}` two-phase protocol): an unknown `collection_code` → **404 NotFound**; a collection the user can't add to → **403 PermissionDenied**; a type/tag rule violation → **400 ValidationError** (field-keyed: `{"type": [...]}` / `{"tags": [...]}`, like `perform_update`). If valid, the thing is automatically added to it. **Per-collection allowlist** (`Collection.allowed_thing_types`): if non-empty, the thing's type must be in it — returns 400 otherwise. Empty list = no per-collection restriction. **`RESERVE_THING`** is the exception with a rule that runs even for an empty allowlist and even standalone: a RESERVE thing can *only* be created in a reservations collection (`allowed_thing_types == ["RESERVE_THING"]`) — 400 `{"type": ...}` otherwise. The check runs **after** `thing_type_denial`, so a deployment that withholds RESERVE still answers 403, not this 400. `perform_update` applies the same rule when the type changes to/from RESERVE. **Tags**: any `tags` on the thing must belong to the collection's `Collection.tags` vocabulary — returns 400 otherwise (tags require a collection; on update, `ThingUpdateSerializer.validate_tags` checks the union of the thing's collections' tags). Removing a tag from a collection (via `CollectionUpdateSerializer`) cascade-strips it from that collection's things.
 
 **`activate` action:** Sets `status = 'ACTIVE'`. Returns 400 if thing is not INACTIVE.
 
@@ -889,16 +889,18 @@ Lists all booking requests for things owned by the current user, ordered by `-cr
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/cancel/` |
-| **Permission** | `IsAuthenticated` + booking requester |
+| **Permission** | `IsAuthenticated` + booking requester (**or the owner**, for a RESERVE booking) |
 
 Allows the requester to cancel their own pending booking. Validates `booking.requester_code == request.user`, checks `is_valid()`. Calls `cancel_booking()` service (restores Thing status to ACTIVE for single-use types), and deletes related RSVPs.
+
+**RESERVE_THING branch:** when `booking.thing_type == RESERVE_THING` the view calls `cancel_reservation(booking, request.user)` instead — **the owner may cancel too** (rule 4: they may need the space), and only while the reservation hasn't started. The other party is notified (in-app + email). A confirmed reservation is `ACCEPTED`, not `PENDING`, so the `is_valid()` path never applied to it.
 
 **Responses:**
 | Status | Condition |
 |--------|-----------|
 | 200 | Cancelled |
-| 400 | Booking expired or already processed |
-| 403 | Not the requester |
+| 400 | Booking expired / already processed / reservation already started / not a reservation |
+| 403 | Not the requester (or, for a reservation, not the requester or owner) |
 | 404 | Booking not found |
 
 ### BookingActionView
@@ -934,10 +936,15 @@ Rejects a pending booking. Same permission and validation as accept. Calls `reje
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/things/{thing_code}/request/` |
-| **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner |
+| **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner. For **RESERVE** the requester must also be a collection **member** (checked in `request_reservation`) — a login-to-act visitor joins first. |
 | **Rate limit** | 10 requests/hour per user |
 
-Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code)`, which the view maps back to `{"error": message}` with the same status. Routes based on thing type:
+Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`, `request_reservation`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code)`, which the view maps back to `{"error": message}` with the same status. Routes based on thing type (RESERVE checked first, since it is also in `DATE_BASED_TYPES`):
+
+**RESERVE_THING (`_request_reservation`):**
+- Body `{ "start_date", "duration_days" (1–7), "project_note"? (≤512) }` via `ReservationRequestSerializer`.
+- `request_reservation` enforces membership (403 unless the requester is a collection member — login-to-act makes an anonymous visitor one first), `Collection.reservation_violation` (400), the 90-day horizon, and `has_overlap` (409).
+- **Auto-confirmed:** the booking is created `ACCEPTED`, both parties are emailed, the owner gets a `RESERVATION_MADE` in-app notice. No RSVP pair, no `ThingTransfer`. Response `201 {"message": "Reservation confirmed", "booking_code", "start_date", "end_date"}`.
 
 **Date-based (LEND/RENT):**
 - Requires `start_date` and `end_date`.
@@ -1055,7 +1062,7 @@ Daily command (`python manage.py close_transfers`) that closes overdue transfers
 ### Management Command: `send_reminders`
 
 Daily command (`python manage.py send_reminders`) that sends reminder emails:
-- **Booking return reminders**: ACCEPTED bookings with `end_date = tomorrow` — notifies **both sides**, one email each: the owner (`send_return_reminder_email` — "somebody's hold ends tomorrow", nothing asked of them) and the **borrower** (`send_return_due_email` — "tomorrow you take it back", naming the owner they owe it to, with a link to the listing).
+- **Booking return reminders**: ACCEPTED bookings with `end_date = tomorrow` — notifies **both sides**, one email each: the owner (`send_return_reminder_email` — "somebody's hold ends tomorrow", nothing asked of them) and the **borrower** (`send_return_due_email` — "tomorrow you take it back", naming the owner they owe it to, with a link to the listing). **RESERVE_THING is excluded** (`.exclude(thing_type=RESERVE_THING)`) — nothing is carried anywhere, so "take it back" is nonsense for an on-site reservation.
 - The borrower's half was missing until the 2026-08 design round: only the owner was told a loan was ending, so the one person who actually had to do something — carry the drill back — heard nothing. A lending library runs on that message.
 - The fan-out is per recipient and swallows a failure with a warning on stderr, so one broken send costs neither the other side their reminder nor the rest of the run theirs (same reasoning as `send_digests`).
 - Outputs count of reminder emails sent (two per due booking).

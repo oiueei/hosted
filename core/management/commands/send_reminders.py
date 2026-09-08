@@ -15,6 +15,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 
 from core.models.booking import BookingPeriod
+from core.models.thing import Thing
 from core.services.email_service import (
     _thing_url,
     send_return_due_email,
@@ -29,11 +30,17 @@ class Command(BaseCommand):
         tomorrow = date.today() + timedelta(days=1)
         total = 0
 
-        # 1. Booking return reminders (end_date = tomorrow)
-        return_bookings = BookingPeriod.objects.filter(
-            end_date=tomorrow,
-            status=BookingPeriod.Status.ACCEPTED,
-        ).select_related("thing_code__owner", "requester_code")
+        # 1. Booking return reminders (end_date = tomorrow). RESERVE_THING is
+        # excluded: nothing is carried anywhere, so "tomorrow you take it back"
+        # is nonsense for an on-site reservation.
+        return_bookings = (
+            BookingPeriod.objects.filter(
+                end_date=tomorrow,
+                status=BookingPeriod.Status.ACCEPTED,
+            )
+            .exclude(thing_type=Thing.Type.RESERVE_THING)
+            .select_related("thing_code__owner", "requester_code")
+        )
 
         for booking in return_bookings:
             thing = booking.thing_code

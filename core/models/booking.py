@@ -4,6 +4,11 @@ BookingPeriod model - unified reservation/booking model for all thing types.
 This model handles all reservation scenarios:
 - GIFT_THING, SELL_THING: Single-use reservations (no dates, thing becomes INACTIVE)
 - LEND_THING, RENT_THING: Date-based bookings (start/end dates, thing stays ACTIVE on return)
+- RESERVE_THING: Date-based **and auto-confirmed** — created straight to ACCEPTED,
+  no owner accept/reject step, no RSVP pair, and no ThingTransfer (the thing is
+  used on the owner's premises and never leaves). Its create + cancel flow lives
+  in ``booking_service.request_reservation`` / ``cancel_reservation``; the
+  accept/reject machinery below is never reached for it.
 """
 
 from datetime import timedelta
@@ -14,11 +19,18 @@ from django.utils import timezone
 
 from core.utils import generate_id
 
-# Thing types that require dates for booking
-DATE_BASED_TYPES = ["LEND_THING", "RENT_THING"]
+# Thing types that require dates for booking. RESERVE_THING is date-based too,
+# but its booking is auto-confirmed (see the module docstring) — routing it
+# through here only gets it the strict-overlap conflict check and the live
+# availability window, not the PENDING → accept/reject flow.
+DATE_BASED_TYPES = ["LEND_THING", "RENT_THING", "RESERVE_THING"]
 
 # Thing types where the thing becomes INACTIVE after acceptance
 SINGLE_USE_TYPES = ["GIFT_THING", "SELL_THING"]
+
+# Thing types booked for on-site use: auto-confirmed, and no ThingTransfer is
+# written on the booking (nothing changes hands).
+ON_SITE_TYPES = ["RESERVE_THING"]
 
 
 class BookingPeriod(models.Model):
@@ -65,6 +77,11 @@ class BookingPeriod(models.Model):
     # carries a deposit, or the history it is meant to preserve starts with a
     # hole in it.
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # RESERVE_THING only: the requester's optional few lines about what they mean
+    # to do with the space ("Explica'ns breument el teu projecte"). Shown to the
+    # owner in the reservation-notice email and on their bookings page; blank for
+    # every other type, and blank when the requester left it empty.
+    project_note = models.CharField(max_length=512, blank=True, default="")
     requester_code = models.ForeignKey(
         "User",
         on_delete=models.CASCADE,
