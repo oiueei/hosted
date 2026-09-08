@@ -9,6 +9,7 @@ import CollectionModeField from '../components/CollectionModeField';
 import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
+import ReservationRulesFields from '../components/ReservationRulesFields';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -53,6 +54,7 @@ export default function EditCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -101,8 +103,11 @@ export default function EditCollectionPage() {
   // showing it while the owner tries the alternatives. The server only judges a
   // change; a form that hid the stored answer would submit a wrong one.
   const capabilities = useCapabilities();
-  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
-    isOfferable(capabilities, 'collection_modes', opt.value, savedMode)
+  const isReservations = allowedThingTypes.length === 1 && allowedThingTypes[0] === 'RESERVE_THING';
+  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter(
+    (opt) =>
+      isOfferable(capabilities, 'collection_modes', opt.value, savedMode) &&
+      !(isReservations && opt.value !== 'PROPRIETARY')
   );
 
   const DIGEST_OPTIONS = [
@@ -121,6 +126,13 @@ export default function EditCollectionPage() {
     if (newMode === mode) return;
     setMode(newMode);
     // Both modes allow the same types, so the selection carries over untouched.
+  };
+
+  const handleTypesChange = (types) => {
+    setAllowedThingTypes(types);
+    if (types.length === 1 && types[0] === 'RESERVE_THING' && mode !== 'PROPRIETARY') {
+      setMode('PROPRIETARY');
+    }
   };
 
   useEffect(() => {
@@ -145,6 +157,7 @@ export default function EditCollectionPage() {
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
+          setReservationMaxDays(data.reservation_max_days || 1);
           setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
@@ -194,14 +207,15 @@ export default function EditCollectionPage() {
       allow_member_proposals: allowProposals,
       digest_frequency: digestFrequency,
       allowed_thing_types: allowedThingTypes,
-      rental_durations: rentalDurations,
+      rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
-      deposit_policy: depositPolicy.trim(),
+      deposit_policy: isReservations ? '' : depositPolicy.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
       welcome_doc: welcomeDoc || '',
     };
+    if (isReservations) body.reservation_max_days = reservationMaxDays;
 
     try {
       const res = await apiFetch(`/api/v1/collections/${code}/`, {
@@ -333,7 +347,8 @@ export default function EditCollectionPage() {
         <CollectionForm
           idPrefix="edit-collection"
           allowedThingTypes={allowedThingTypes}
-          setAllowedThingTypes={setAllowedThingTypes}
+          setAllowedThingTypes={handleTypesChange}
+          mode={mode}
           visibility={visibility}
           setVisibility={setVisibility}
           allowProposals={allowProposals}
@@ -361,16 +376,27 @@ export default function EditCollectionPage() {
             />
             <LocalizedInfo id="edit-collection-tags-info" variant="tags" />
           </div>
-          <RentalRulesFields
-            idPrefix="edit-collection"
-            rentalDurations={rentalDurations}
-            setRentalDurations={setRentalDurations}
-            rentalWeekdays={rentalWeekdays}
-            setRentalWeekdays={setRentalWeekdays}
-            depositPolicy={depositPolicy}
-            setDepositPolicy={setDepositPolicy}
-            theeemeColor01={tc.color_01}
-          />
+          {isReservations ? (
+            <ReservationRulesFields
+              idPrefix="edit-collection"
+              reservationMaxDays={reservationMaxDays}
+              setReservationMaxDays={setReservationMaxDays}
+              rentalWeekdays={rentalWeekdays}
+              setRentalWeekdays={setRentalWeekdays}
+              theeemeColor01={tc.color_01}
+            />
+          ) : (
+            <RentalRulesFields
+              idPrefix="edit-collection"
+              rentalDurations={rentalDurations}
+              setRentalDurations={setRentalDurations}
+              rentalWeekdays={rentalWeekdays}
+              setRentalWeekdays={setRentalWeekdays}
+              depositPolicy={depositPolicy}
+              setDepositPolicy={setDepositPolicy}
+              theeemeColor01={tc.color_01}
+            />
+          )}
           <Select
             id="edit-collection-digest"
             texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}

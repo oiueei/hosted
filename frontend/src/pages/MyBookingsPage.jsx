@@ -134,7 +134,14 @@ export default function MyBookingsPage() {
     _startDate: b.start_date,
     _endDate: b.end_date,
     _created: b.created,
+    _projectNote: b.project_note,
   }));
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  // A confirmed reservation that hasn't started is "current", not "past" — and
+  // the requester can still cancel it (frees the slot; the owner is told).
+  const isFutureReservation = (row) =>
+    row._type === 'RESERVE_THING' && row._status === 'ACCEPTED' && row._startDate >= todayIso;
 
   const cols = [
     {
@@ -202,9 +209,13 @@ export default function MyBookingsPage() {
       key: '_actions',
       headerName: '',
       transform: (row) =>
-        row._status === 'PENDING' ? (
+        row._status === 'PENDING' || isFutureReservation(row) ? (
           <TooltipButton
-            tooltip={t('myBookings.cancelTooltip')}
+            tooltip={
+              isFutureReservation(row)
+                ? t('myBookings.cancelReservation')
+                : t('myBookings.cancelTooltip')
+            }
             onClick={() => handleCancel(row._code)}
             disabled={cancelling === row._code}
           >
@@ -227,11 +238,18 @@ export default function MyBookingsPage() {
       ) : (
         <>
           {(() => {
-            const pendingRows = rows.filter((r) => r._status === 'PENDING');
-            const otherRows = rows.filter((r) => r._status !== 'PENDING');
+            const pendingRows = rows.filter(
+              (r) => r._status === 'PENDING' || isFutureReservation(r)
+            );
+            const otherRows = rows.filter(
+              (r) => !(r._status === 'PENDING' || isFutureReservation(r))
+            );
+            const topHeading = rows.some((r) => r._type === 'RESERVE_THING')
+              ? t('myBookings.currentHeading')
+              : t('myBookings.statusPending');
             return (
               <>
-                <h2>{t('myBookings.statusPending')}</h2>
+                <h2>{topHeading}</h2>
                 <div className="spacer-s" />
                 {pendingRows.length === 0 ? (
                   <p className="text-muted">{t('myBookings.noPending')}</p>

@@ -147,3 +147,21 @@ export const isPickupDisabled = (date, { rentalWeekdays, blockedPeriods, duratio
 
 // Derived return date (ISO string) for a pickup date + fixed length in days.
 export const derivedReturnDate = (pickup, days) => toISODate(addDays(pickup, Number(days)));
+
+// RESERVE_THING pickup validity. Stricter than isPickupDisabled: the space is
+// occupied for the WHOLE span, so EVERY day of [pickup, pickup+duration) must be
+// an allowed weekday (not just pickup and the return day — a reservation can't
+// straddle a closed day). Plus the usual overlap check. `rentalWeekdays` is the
+// collection's `rental_weekdays`, reused as "days reservations are allowed".
+export const reservationPickupDisabled = (
+  date,
+  { rentalWeekdays = [], blockedPeriods = [], duration }
+) => {
+  const len = Math.max(1, Number(duration) || 1);
+  if (rentalWeekdays.length) {
+    for (let offset = 0; offset < len; offset += 1) {
+      if (!weekdayAllowed(addDays(date, offset), rentalWeekdays)) return true;
+    }
+  }
+  return rangeBlocked(date, len, blockedPeriods);
+};

@@ -26,6 +26,7 @@ TEXTS = {
     "action_noun_SELL_THING": "purchase",
     "action_noun_LEND_THING": "loan",
     "action_noun_RENT_THING": "rental",
+    "action_noun_RESERVE_THING": "reservation",
     # Magic link
     "magic_subject": "Hello, welcome to OIUEEI!",
     "magic_subject_collection": "Hello, welcome to '{collection}' - OIUEEI!",
@@ -219,6 +220,27 @@ TEXTS = {
     "return_due_plain": "A friendly nudge: you're due to return '{thing}' to {owner} on {end}.",
     "return_due_body": "A friendly nudge: you're due to return {thing} to {owner} on {end}.",
     "view_thing_cta": "View the listing",
+    # Reservations (RESERVE_THING) — auto-confirmed, so "confirmed", not "requested"
+    "reservation_confirmed_subject": "Your reservation of '{thing}' is confirmed",
+    "reservation_confirmed_plain": (
+        "Your reservation of '{thing}' is confirmed for {start} to {end}. View the listing: {url}"
+    ),
+    "reservation_confirmed_intro": "Your reservation is confirmed:",
+    "reservation_fee_label": "Fee",
+    "reservation_where_label": "Where",
+    "reservation_notice_subject": "{requester} reserved '{thing}'",
+    "reservation_notice_plain": "{requester} reserved '{thing}' for {start} to {end}.",
+    "reservation_notice_intro": "{requester} has reserved:",
+    "reservation_note_label": "Their note",
+    "reservation_cancelled_subject": "Reservation cancelled: '{thing}'",
+    "reservation_cancelled_to_guest_plain": (
+        "{other} has cancelled your reservation of '{thing}' ({start} to {end})."
+    ),
+    "reservation_cancelled_to_guest_intro": "{other} has cancelled your reservation of:",
+    "reservation_cancelled_to_owner_plain": (
+        "{other} has cancelled their reservation of '{thing}' ({start} to {end})."
+    ),
+    "reservation_cancelled_to_owner_intro": "{other} has cancelled their reservation of:",
     # Digest
     "digest_subject": "What's new in {collection}",
     "digest_plain": "New things in {collection}:\n\n{things}\n\nView collection: {url}",

@@ -8,6 +8,7 @@ import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
+import ReservationRulesFields from '../components/ReservationRulesFields';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -37,6 +38,7 @@ export default function CreateCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -67,8 +69,13 @@ export default function CreateCollectionPage() {
   // group rather than disabling it — an unchoosable radio is noise — and
   // ApprovalNotice below is what says it exists and where to ask for it.
   const capabilities = useCapabilities();
-  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
-    isOfferable(capabilities, 'collection_modes', opt.value)
+  // A reservations collection (`allowed_thing_types` is exactly RESERVE) is
+  // always PROPRIETARY — an operator runs the premises.
+  const isReservations = allowedThingTypes.length === 1 && allowedThingTypes[0] === 'RESERVE_THING';
+  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter(
+    (opt) =>
+      isOfferable(capabilities, 'collection_modes', opt.value) &&
+      !(isReservations && opt.value !== 'PROPRIETARY')
   );
 
   const [submitting, setSubmitting] = useState(false);
@@ -89,6 +96,15 @@ export default function CreateCollectionPage() {
     // a proprietary list private. The owner can still flip the toggle afterwards.
     setVisibility(newMode === 'COMMUNITY' ? 'PUBLIC' : 'PRIVATE');
     // Both modes allow the same types, so the selection carries over untouched.
+  };
+
+  // Picking "Reservation" as the type forces PROPRIETARY + PRIVATE.
+  const handleTypesChange = (types) => {
+    setAllowedThingTypes(types);
+    if (types.length === 1 && types[0] === 'RESERVE_THING' && mode !== 'PROPRIETARY') {
+      setMode('PROPRIETARY');
+      setVisibility('PRIVATE');
+    }
   };
 
   const validate = () => {
@@ -114,7 +130,7 @@ export default function CreateCollectionPage() {
       visibility,
       allow_member_proposals: allowProposals,
       allowed_thing_types: allowedThingTypes,
-      rental_durations: rentalDurations,
+      rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
       tags,
       thumbnail: thumbnail || '',
@@ -123,7 +139,8 @@ export default function CreateCollectionPage() {
       welcome_doc: welcomeDoc || '',
     };
     if (description.trim()) body.description = description.trim();
-    if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
+    if (isReservations) body.reservation_max_days = reservationMaxDays;
+    else if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
     try {
       const res = await apiFetch('/api/v1/collections/', {
         method: 'POST',
@@ -180,7 +197,8 @@ export default function CreateCollectionPage() {
         <CollectionForm
           idPrefix="create-collection"
           allowedThingTypes={allowedThingTypes}
-          setAllowedThingTypes={setAllowedThingTypes}
+          setAllowedThingTypes={handleTypesChange}
+          mode={mode}
           visibility={visibility}
           setVisibility={setVisibility}
           allowProposals={allowProposals}
@@ -212,16 +230,27 @@ export default function CreateCollectionPage() {
             />
             <LocalizedInfo id="create-collection-tags-info" variant="tags" />
           </div>
-          <RentalRulesFields
-            idPrefix="create-collection"
-            rentalDurations={rentalDurations}
-            setRentalDurations={setRentalDurations}
-            rentalWeekdays={rentalWeekdays}
-            setRentalWeekdays={setRentalWeekdays}
-            depositPolicy={depositPolicy}
-            setDepositPolicy={setDepositPolicy}
-            theeemeColor01={theeemeColors.color_01}
-          />
+          {isReservations ? (
+            <ReservationRulesFields
+              idPrefix="create-collection"
+              reservationMaxDays={reservationMaxDays}
+              setReservationMaxDays={setReservationMaxDays}
+              rentalWeekdays={rentalWeekdays}
+              setRentalWeekdays={setRentalWeekdays}
+              theeemeColor01={theeemeColors.color_01}
+            />
+          ) : (
+            <RentalRulesFields
+              idPrefix="create-collection"
+              rentalDurations={rentalDurations}
+              setRentalDurations={setRentalDurations}
+              rentalWeekdays={rentalWeekdays}
+              setRentalWeekdays={setRentalWeekdays}
+              depositPolicy={depositPolicy}
+              setDepositPolicy={setDepositPolicy}
+              theeemeColor01={theeemeColors.color_01}
+            />
+          )}
           {/* Same order and same `editCollection.*` keys as EditCollectionPage,
                 so the one field doesn't read differently on the two screens. */}
           <Select

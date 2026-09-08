@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from rest_framework import serializers
 
 from core.models.booking import BookingPeriod
+from core.validators import SafeTextField
 
 # Bookings/orders can't be placed more than ~3 months ahead — matches the
 # frontend's today+90 cap and the availability horizon (L7).
@@ -44,6 +45,7 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "status",
+            "project_note",
         ]
 
 
@@ -75,6 +77,7 @@ class BookingPeriodOwnerCalendarSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "status",
+            "project_note",
         ]
 
     def get_requester_name(self, obj):
@@ -111,6 +114,21 @@ class ThingRequestWithDatesSerializer(serializers.Serializer):
         return data
 
 
+class ReservationRequestSerializer(serializers.Serializer):
+    """RESERVE_THING request: a pickup date + a length in days, plus an optional
+    project note. The real duration cap and the weekday rule are checked in the
+    service against the collection (``Collection.reservation_violation``)."""
+
+    start_date = serializers.DateField()
+    duration_days = serializers.IntegerField(min_value=1, max_value=7)
+    project_note = SafeTextField(max_length=512, required=False, allow_blank=True)
+
+    def validate_start_date(self, value):
+        if value < date.today():
+            raise serializers.ValidationError("Start date must be today or in the future")
+        return value
+
+
 class MyBookingSerializer(serializers.ModelSerializer):
     """Serializer for user's own booking requests."""
 
@@ -132,6 +150,7 @@ class MyBookingSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "status",
+            "project_note",
         ]
 
     def get_owner_name(self, obj):

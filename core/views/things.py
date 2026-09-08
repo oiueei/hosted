@@ -160,6 +160,16 @@ class ThingViewSet(ModelViewSet):
         if denial and thing_type not in community_contribution_types(collection, self.request.user):
             raise PermissionDenied(denial)
 
+        # RESERVE things must land in a reservations collection — checked here
+        # (not only inside the `collection_code` branch below) so a standalone
+        # create can't slip one through with no collection at all. After the
+        # verb-denial check above, so a deployment that withholds RESERVE still
+        # answers 403 rather than this 400.
+        if thing_type == Thing.Type.RESERVE_THING:
+            reserve_err = type_validity_error(thing_type, collection)
+            if reserve_err:
+                raise ValidationError({"type": reserve_err})
+
         if collection_code:
             if collection is None:
                 raise NotFound("Collection not found")

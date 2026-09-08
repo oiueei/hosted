@@ -227,7 +227,10 @@ def community_contribution_types(collection, user) -> frozenset[str]:
     code = getattr(user, "code", None)
     if code is None or not collection.is_invited(code):
         return frozenset()
-    return frozenset(allowlist)
+    # RESERVE_THING is never a COMMUNITY contribution — a reservations collection
+    # is PROPRIETARY by rule, so an allowlist naming it can't be legitimate here.
+    # Belt-and-braces against a hand-edited row.
+    return frozenset(allowlist) - {Thing.Type.RESERVE_THING}
 
 
 def co_owners_denial(user, capabilities=None) -> str | None:

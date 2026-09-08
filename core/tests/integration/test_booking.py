@@ -143,6 +143,7 @@ class TestBookingCalendarView:
             "start_date",
             "end_date",
             "status",
+            "project_note",
         }
         assert response.data[0]["requester_code"] == user2.code
         assert response.data[0]["requester_name"] == user2.name

@@ -359,9 +359,12 @@ describe('CollectionForm — thing_types capability narrows the allowed-types se
     expect(await screen.findByRole('option', { name: 'Gift' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Rental' })).toBeNull();
     expect(screen.queryByRole('option', { name: 'Lend' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Reservation' })).toBeNull();
 
     expect(
-      await screen.findByText('Some options need approval on this deployment: Rental, Lend.')
+      await screen.findByText(
+        'Some options need approval on this deployment: Rental, Lend, Reservation.'
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Request access/ })).toHaveAttribute(
       'href',
@@ -408,5 +411,49 @@ describe('CollectionForm — thing_types capability narrows the allowed-types se
     // present at all is what this test is pinning (HDS renders the chip text
     // twice — dropdown summary + assistive copy — hence findAllByText).
     expect((await screen.findAllByText('Lend')).length).toBeGreaterThan(0);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// A reservations collection is solo-RESERVE and always PROPRIETARY.
+// ════════════════════════════════════════════════════════════════════════
+describe('CollectionForm — picking "Reservation" makes a reservations collection', () => {
+  const createBody = () => {
+    const post = apiFetch.mock.calls.find(
+      ([u, o]) => u === '/api/v1/collections/' && o?.method === 'POST'
+    );
+    return post && JSON.parse(post[1].body);
+  };
+
+  async function pickReservation(container) {
+    fireEvent.change(container.querySelector('#create-collection-headline'), {
+      target: { value: 'Ateneu spaces' },
+    });
+    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Reservation' }));
+  }
+
+  test('it becomes the only allowed type, forces PROPRIETARY, and sends reservation_max_days', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/new']}>
+        <Routes>
+          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="*" element={<div data-testid="navigated" />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await pickReservation(container);
+    // The COMMUNITY radio is gone once this is a reservations collection.
+    expect(screen.queryByRole('radio', { name: /Community/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()).toBeTruthy());
+    const body = createBody();
+    expect(body.allowed_thing_types).toEqual(['RESERVE_THING']);
+    expect(body.mode).toBe('PROPRIETARY');
+    expect(body.visibility).toBe('PRIVATE');
+    expect(body.reservation_max_days).toBe(1);
   });
 });

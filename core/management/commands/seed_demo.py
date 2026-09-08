@@ -235,6 +235,7 @@ class Command(BaseCommand):
                 # collection that says nothing keeps the free date range.
                 "rental_durations": data.get("rental_durations", []),
                 "rental_weekdays": data.get("rental_weekdays", []),
+                "reservation_max_days": data.get("reservation_max_days", 1),
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))

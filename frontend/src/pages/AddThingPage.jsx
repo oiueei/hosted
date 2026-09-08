@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DATE_TYPES, DETAIL_TYPES } from '../constants/things';
+import {
+  TYPE_VALUES,
+  FEE_TYPES,
+  FEE_OPTIONAL_TYPES,
+  DATE_TYPES,
+  DETAIL_TYPES,
+} from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -86,7 +92,7 @@ export default function AddThingPage() {
     if (FEE_TYPES.includes(type) && (fee === '' || fee === undefined)) {
       newErrors.fee = t('addThing.priceRequired');
     }
-    if (location.length > 32) newErrors.location = t('addThing.maxLocation');
+    if (location.length > 64) newErrors.location = t('addThing.maxLocation');
     return newErrors;
   };
 
@@ -107,10 +113,10 @@ export default function AddThingPage() {
     };
     if (thumbnail) body.thumbnail = thumbnail;
     if (description.trim()) body.description = description.trim();
-    if (FEE_TYPES.includes(type) && fee !== '') {
+    if ((FEE_TYPES.includes(type) || FEE_OPTIONAL_TYPES.includes(type)) && fee !== '') {
       body.fee = fee;
     }
-    if (DATE_TYPES.includes(type) && deposit !== '') {
+    if (DATE_TYPES.includes(type) && type !== 'RESERVE_THING' && deposit !== '') {
       body.deposit = deposit;
     }
     if (DETAIL_TYPES.includes(type)) {
@@ -150,8 +156,15 @@ export default function AddThingPage() {
   // Theeeme colors from localStorage (set by HomePage on login)
   const { tc, btnStyle } = useTheeeme();
 
+  // A RESERVE thing can only live in a reservations collection (allowlist is
+  // exactly RESERVE). Anywhere else — a plain collection with no allowlist — it
+  // is never on offer, even though the deployment policy advertises the verb.
+  const isReservationsCollection =
+    collectionAllowedTypes.length === 1 && collectionAllowedTypes[0] === 'RESERVE_THING';
+
   const typeOptions = (() => {
     return TYPE_VALUES.filter((v) => {
+      if (v === 'RESERVE_THING' && !isReservationsCollection) return false;
       // Per-collection allowlist (set on Create/Edit). Empty = no restriction.
       if (collectionAllowedTypes.length > 0 && !collectionAllowedTypes.includes(v)) return false;
       // A type this COMMUNITY collection's owner explicitly allow-listed is open

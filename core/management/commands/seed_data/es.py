@@ -60,6 +60,11 @@ COLLECTIONS = [
         "headline": "El mercadillo de los domingos en el patio",
         "description": "Cada domingo montamos mercadillo, fiesta y comida en el patio. Baja lo que ya no uses y llévate lo que te haga falta: aquí todo se regala. Solo para vecinas y vecinos de la cooperativa.",
     },
+    {
+        "code": "1u1uRe",
+        "headline": "El taller de Lulu — reserva un sitio",
+        "description": "Reserva un banco o el rincón de reuniones para usarlo aquí, en el taller. Es tuyo por un día (o hasta tres), nada sale de la sala y la reserva se confirma al momento. Abierto de lunes a viernes.",
+    },
 ]
 
 THINGS = [
@@ -394,6 +399,16 @@ THINGS = [
         "code": "L3L311",
         "headline": "Nevera portátil para playa y picnic",
         "description": "Nevera portátil con tapa verde y asa gris, ideal para llevar tus bebidas y alimentos frescos a la playa o de picnic. Su diseño es práctico y fácil de transportar.",
+    },
+    {
+        "code": "1u1uRa",
+        "headline": "El banco de trabajo grande",
+        "description": "El banco de roble macizo, con el tornillo de banco y la buena luz. Resérvalo para un día de trabajo de verdad — pequeña cuota de mantenimiento para hojas y cola. Se queda en el taller.",
+    },
+    {
+        "code": "1u1uRb",
+        "headline": "El rincón de reuniones",
+        "description": "Mesa, seis sillas y una pantalla para una reunión pequeña o una clase. Reservarlo es gratis, hasta tres días. Déjalo como lo encontraste, por favor.",
     },
 ]
 
