@@ -91,7 +91,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `owner` | ForeignKey(User) | **Yes** | Owner of the collection |
 | `created` | DateTimeField | Auto | Timestamp when collection was created |
 | `headline` | CharField(256) | **Yes** | Title of the collection. **64 characters per language, 256 stored**: an owner may write one text per language as inline JSON (`{"es": "Las cosas de mamá", "ca": "Les coses de mama"}`) and each reader sees theirs — see the multilingual-content note below. |
-| `description` | CharField(1024) | No | Description of the collection. **256 per language, 1024 stored** — same trick as `headline`. |
+| `description` | TextField | No | Description of the collection — long-form Markdown. **2000 per language**, serializer-enforced (`LocalizedTextField`); the column is a `TextField` so there is nothing to overflow. |
 | `status` | CharField(8) | No | Status: ACTIVE (default) or INACTIVE |
 | `mode` | CharField(12) | No | Mode: PROPRIETARY (default) or COMMUNITY |
 | `visibility` | CharField(7) | No | Visibility: PUBLIC or PRIVATE. A PUBLIC collection is readable by anyone — including anonymous visitors — at `/collections/{code}`; PRIVATE keeps the invite-only behaviour (403 without membership). New collections default **by mode** in `CollectionCreateSerializer` (COMMUNITY→PUBLIC, PROPRIETARY→PRIVATE) and the owner can toggle either way. The DB-level default is PRIVATE (safe fallback for any non-serializer create path). |
@@ -346,7 +346,7 @@ The `Thing` model represents an item in a collection.
 | `owner` | ForeignKey(User) | **Yes** | Owner of the thing |
 | `created` | DateTimeField | Auto | Timestamp when thing was created |
 | `headline` | CharField(256) | **Yes** | Title of the thing. **64 per language, 256 stored** — may be an inline `{lang: text}` map (see the multilingual-content note under Collection). |
-| `description` | CharField(1024) | No | Description of the thing. **256 per language, 1024 stored** — same. |
+| `description` | TextField | No | Description of the thing — long-form Markdown (a space, a machine, a piece of history can need a page). **2000 per language**, serializer-enforced; `TextField`, no column cap. |
 | `thumbnail` | CharField(255) | No | Storage key for the cover thumbnail |
 | `gallery` | JSONField (list) | No | Additional photos beyond the cover `thumbnail`: an ordered list of storage keys. Max 8 (enforced in the serializer). Exposed read-side as `gallery_urls`. Things only (not Collections). Default `[]`. The frontend renders cover + gallery as an "Image pagination" carousel on `ThingPage` **and** inside the collection-grid cards (`ThingLinkbox`) when there is more than one photo. |
 | `tags` | JSONField (list) | No | Owner-defined tags assigned to this thing — a subset of its collection's `Collection.tags` vocabulary (validated on create/update). Max 12. Rendered as HDS `Tag`s on the card and detail. Default `[]`. |

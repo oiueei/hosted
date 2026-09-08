@@ -113,7 +113,7 @@ export default function CreateCollectionPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('createCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('createCollection.maxHeadline');
-    if (localizedCounter(description, 256).over)
+    if (localizedCounter(description, 2000).over)
       newErrors.description = t('createCollection.maxDescription');
     setErrors(newErrors);
     const allowedTypesOk = allowedThingTypes.length > 0;
@@ -186,7 +186,7 @@ export default function CreateCollectionPage() {
           onChange={(e) => setDescription(e.target.value)}
           invalid={!!errors.description}
           errorText={errors.description}
-          helperText={localizedCounter(description, 256).text}
+          helperText={localizedCounter(description, 2000).text}
         />
         <LocalizedInfo id="create-collection-localized-info" />
         <CollectionModeField

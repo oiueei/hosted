@@ -9,6 +9,8 @@ from core.models import Thing
 from core.models.booking import BookingPeriod
 from core.utils import asset_url
 from core.validators import (
+    LOCALIZED_DESCRIPTION_STORAGE,
+    LOCALIZED_DESCRIPTION_VISIBLE,
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
     LocalizedHeadlineField,
@@ -457,7 +459,12 @@ class ThingCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a thing."""
 
     headline = LocalizedHeadlineField(max_length=64)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/things")
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     gallery = serializers.ListField(
@@ -506,7 +513,12 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating a thing."""
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/things")
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     gallery = serializers.ListField(
@@ -611,7 +623,12 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     """
 
     headline = LocalizedHeadlineField(max_length=64)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     # LocaleDecimalField (not the plain DecimalField the other Thing
     # serializers use): a CSV row is the one path with no NumberInput to

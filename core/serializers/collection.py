@@ -9,6 +9,8 @@ from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.serializers.thing import ThingComputedFieldsMixin
 from core.utils import asset_url, doc_asset_url
 from core.validators import (
+    LOCALIZED_DESCRIPTION_STORAGE,
+    LOCALIZED_DESCRIPTION_VISIBLE,
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
     LocalizedHeadlineField,
@@ -314,7 +316,12 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a collection."""
 
     headline = LocalizedHeadlineField(max_length=64)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
@@ -449,7 +456,12 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating a collection."""
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.

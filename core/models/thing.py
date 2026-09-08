@@ -68,7 +68,12 @@ class Thing(models.Model):
     # room for all three plus the JSON scaffolding. The per-language limits are
     # enforced by the serializer (LocalizedHeadlineField / LocalizedTextField).
     headline = models.CharField(max_length=256)
-    description = models.CharField(max_length=1024, blank=True, default="")
+    # TextField, not a capped CharField: a thing's description is long-form
+    # Markdown (a space, a machine, a piece of history can need a page), and the
+    # real limit is the per-language one the serializer enforces
+    # (LocalizedTextField, 2000 visible / language). The column is only a
+    # backstop, and O6 says the serializer is the guard.
+    description = models.TextField(blank=True, default="")
     thumbnail = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
     fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

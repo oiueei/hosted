@@ -410,7 +410,7 @@
     "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "Selecciona etiquetas",
     "tagsHelper": "Elige entre las etiquetas de esta colección",
-    "maxDescription": "La descripción es demasiado larga: 256 caracteres por idioma.",
+    "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma.",
     "priceOptionalLabel": "Precio (opcional)"
   },
   "editThing": {
@@ -480,7 +480,7 @@
     "maxHeadline": "Máximo 64 caracteres por idioma.",
     "errorLoading": "Error al cargar la colección.",
     "errorSaving": "Error al guardar.",
-    "maxDescription": "La descripción es demasiado larga: 256 caracteres por idioma."
+    "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma."
   },
   "createCollection": {
     "pageTitle": "Crear colección",
@@ -502,7 +502,7 @@
     "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "p. ej. Vintage, Cocina, Exterior",
     "tagsHelper": "Etiquetas opcionales para organizar las cosas de esta colección",
-    "maxDescription": "La descripción es demasiado larga: 256 caracteres por idioma.",
+    "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma.",
     "reservationsModeNote": "Una colección de reservas la gestiona una sola persona y solo contiene reservas, así que se queda privada y de tipo propietario."
   },
   "myBookings": {

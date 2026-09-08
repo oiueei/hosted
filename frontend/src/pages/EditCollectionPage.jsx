@@ -188,7 +188,7 @@ export default function EditCollectionPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('editCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('editCollection.maxHeadline');
-    if (localizedCounter(description, 256).over)
+    if (localizedCounter(description, 2000).over)
       newErrors.description = t('editCollection.maxDescription');
     setErrors(newErrors);
     const allowedTypesOk = allowedThingTypes.length > 0;
@@ -326,7 +326,7 @@ export default function EditCollectionPage() {
           onChange={(e) => setDescription(e.target.value)}
           invalid={!!errors.description}
           errorText={errors.description}
-          helperText={localizedCounter(description, 256).text}
+          helperText={localizedCounter(description, 2000).text}
         />
         <LocalizedInfo id="edit-collection-localized-info" />
         <Select

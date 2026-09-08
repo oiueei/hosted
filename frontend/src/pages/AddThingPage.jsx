@@ -87,7 +87,7 @@ export default function AddThingPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('addThing.titleRequired');
     else if (localizedCounter(headline, 64).over) newErrors.headline = t('addThing.maxHeadline');
-    if (localizedCounter(description, 256).over)
+    if (localizedCounter(description, 2000).over)
       newErrors.description = t('addThing.maxDescription');
     if (FEE_TYPES.includes(type) && (fee === '' || fee === undefined)) {
       newErrors.fee = t('addThing.priceRequired');

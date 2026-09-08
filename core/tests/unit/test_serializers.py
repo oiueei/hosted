@@ -377,6 +377,18 @@ class TestThingCreateSerializer:
         assert not serializer.is_valid()
         assert "location" in serializer.errors
 
+    def test_description_takes_long_form_markdown(self):
+        """Description is 2000 chars per language now (long-form, TextField)."""
+        ok = ThingCreateSerializer(
+            data={"headline": "My Thing", "type": "GIFT_THING", "description": "x" * 2000}
+        )
+        assert ok.is_valid(), ok.errors
+        too_long = ThingCreateSerializer(
+            data={"headline": "My Thing", "type": "GIFT_THING", "description": "x" * 2001}
+        )
+        assert not too_long.is_valid()
+        assert "description" in too_long.errors
+
     def test_location_rejects_html(self):
         """Should reject HTML tags in location."""
         serializer = ThingCreateSerializer(

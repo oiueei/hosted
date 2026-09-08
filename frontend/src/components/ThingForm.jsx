@@ -147,7 +147,7 @@ export default function ThingForm({
         onChange={(e) => setDescription(e.target.value)}
         invalid={!!errors.description}
         errorText={errors.description}
-        helperText={localizedCounter(description, 256).text}
+        helperText={localizedCounter(description, 2000).text}
       />
       <LocalizedInfo id={`${idPrefix}-localized-info`} />
       {showFee && (
