@@ -262,6 +262,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
+    reservation_horizon_days = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
     class Meta:
@@ -300,6 +301,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
             "transfer_count",
             "is_endless",
         ]
@@ -419,6 +421,15 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             return None
         first = self._viewable_collection(obj)
         return first.reservation_max_days if first else 1
+
+    def get_reservation_horizon_days(self, obj):
+        """How far ahead a RESERVE_THING can be booked, from its reservations
+        collection. ``None`` for non-RESERVE things — RequestThingPage reads it
+        for the date picker's ``maxDate``."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_horizon_days if first else 90
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available

@@ -212,6 +212,7 @@ COLLECTIONS = [
         "is_onboarding": True,
         "allowed_thing_types": ["RESERVE_THING"],
         "reservation_max_days": 3,
+        "reservation_horizon_days": 30,
         "rental_weekdays": [0, 1, 2, 3, 4],
         "thumbnail": "1u1uC1",
     },

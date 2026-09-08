@@ -954,6 +954,8 @@
     "maxDaysLabel": "Reserva más larga (días)",
     "maxDaysHelper": "Un miembro puede reservar el espacio de 1 hasta este número de días cada vez.",
     "weekdaysLabel": "Días abiertos a reservas",
-    "weekdaysHelper": "Déjalos todos sin marcar para permitir cualquier día. Una reserva no puede abarcar un día en que el espacio esté cerrado."
+    "weekdaysHelper": "Déjalos todos sin marcar para permitir cualquier día. Una reserva no puede abarcar un día en que el espacio esté cerrado.",
+    "horizonLabel": "Con cuánta antelación pueden reservar (días)",
+    "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses."
   }
 }

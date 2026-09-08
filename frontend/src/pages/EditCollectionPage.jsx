@@ -55,6 +55,7 @@ export default function EditCollectionPage() {
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
+  const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -158,6 +159,7 @@ export default function EditCollectionPage() {
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
           setReservationMaxDays(data.reservation_max_days || 1);
+          setReservationHorizonDays(data.reservation_horizon_days || 90);
           setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
@@ -215,7 +217,10 @@ export default function EditCollectionPage() {
       language,
       welcome_doc: welcomeDoc || '',
     };
-    if (isReservations) body.reservation_max_days = reservationMaxDays;
+    if (isReservations) {
+      body.reservation_max_days = reservationMaxDays;
+      body.reservation_horizon_days = reservationHorizonDays;
+    }
 
     try {
       const res = await apiFetch(`/api/v1/collections/${code}/`, {
@@ -381,6 +386,8 @@ export default function EditCollectionPage() {
               idPrefix="edit-collection"
               reservationMaxDays={reservationMaxDays}
               setReservationMaxDays={setReservationMaxDays}
+              reservationHorizonDays={reservationHorizonDays}
+              setReservationHorizonDays={setReservationHorizonDays}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}

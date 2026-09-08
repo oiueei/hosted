@@ -102,6 +102,12 @@ export default function RequestThingPage() {
   // The Select is omitted (length fixed to 1) when the collection caps it at 1.
   const reservationMax = Math.max(1, thing?.reservation_max_days || 1);
   const reservationLengths = Array.from({ length: reservationMax }, (_, i) => i + 1);
+  // How far ahead a reservation may be booked — the collection's own limit,
+  // not the fixed 90 the rental picker uses.
+  const reservationMaxDate = new Date(TODAY);
+  reservationMaxDate.setDate(
+    reservationMaxDate.getDate() + (thing?.reservation_horizon_days || 90)
+  );
 
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
@@ -370,7 +376,7 @@ export default function RequestThingPage() {
                 invalid={attempted && !startDate}
                 errorText={attempted && !startDate ? t('request.startRequired') : undefined}
                 minDate={TODAY}
-                maxDate={MAX_DATE}
+                maxDate={reservationMaxDate}
                 dateOutsideRangeErrorText={t('request.dateRange')}
                 isDateDisabledBy={pickupDisabled}
                 malformedDateErrorText={t('request.dateOverlap')}

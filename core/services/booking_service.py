@@ -521,13 +521,13 @@ def request_reservation(
             "You need to be a member of this group to reserve.", status_code=403
         )
 
+    # reservation_violation covers duration, the every-day-open-weekday rule AND
+    # the collection's "how far ahead" horizon — one backstop.
     violation = rc.reservation_violation(start_date, duration_days)
     if violation:
         raise BookingRequestError(violation)
 
     end_date = start_date + timedelta(days=duration_days)
-    if end_date > date.today() + timedelta(days=DEFAULT_AVAILABILITY_HORIZON_DAYS):
-        raise BookingRequestError("Reservations can be at most 3 months ahead.")
 
     with transaction.atomic():
         Thing.objects.select_for_update().get(code=thing.code)

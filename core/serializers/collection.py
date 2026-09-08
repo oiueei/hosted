@@ -136,6 +136,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -340,6 +341,9 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # for in one reservation. Inert elsewhere. `rental_weekdays` above is reused
     # as "days reservations are allowed".
     reservation_max_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
+    # How far ahead a member may book this space, in days. 1..365 — a year is the
+    # most a "how far ahead" limit should ever need. Default 90.
+    reservation_horizon_days = serializers.IntegerField(min_value=1, max_value=365, required=False)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -360,6 +364,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -469,6 +474,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         allow_empty=True,
     )
     reservation_max_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
+    # How far ahead a member may book this space, in days. 1..365 — a year is the
+    # most a "how far ahead" limit should ever need. Default 90.
+    reservation_horizon_days = serializers.IntegerField(min_value=1, max_value=365, required=False)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -490,6 +498,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
             "deposit_policy",
             "tags",
             "thumbnail",

@@ -192,7 +192,27 @@ class Thing(models.Model):
         else:
             blocked = list(BookingPeriod.get_blocked_periods(self.code))
 
-        from core.services.booking_service import compute_availability, resolve_rental_collection
+        from core.services.booking_service import (
+            compute_availability,
+            resolve_rental_collection,
+            resolve_reservations_collection,
+        )
+
+        # A RESERVE thing follows its reservations collection: weekdays are
+        # reused as "days open", durations don't apply, and the walk stops at
+        # that collection's own "how far ahead" horizon rather than the default.
+        if self.type == Thing.Type.RESERVE_THING:
+            rc = collection or resolve_reservations_collection(self)
+            available_today, next_available = compute_availability(
+                blocked,
+                horizon_days=rc.reservation_horizon_days if rc else horizon_days,
+                allowed_weekdays=rc.rental_weekdays if rc else None,
+            )
+            self._availability_window_cache = {
+                "available_today": available_today,
+                "next_available": next_available,
+            }
+            return self._availability_window_cache
 
         if collection is None:
             collection = resolve_rental_collection(self)

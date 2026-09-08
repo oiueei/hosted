@@ -19,6 +19,8 @@ export default function ReservationRulesFields({
   idPrefix,
   reservationMaxDays = 1,
   setReservationMaxDays = () => {},
+  reservationHorizonDays = 90,
+  setReservationHorizonDays = () => {},
   rentalWeekdays = [],
   setRentalWeekdays = () => {},
   theeemeColor01,
@@ -38,6 +40,19 @@ export default function ReservationRulesFields({
         onChange={(e) => {
           const n = Number(e.target.value);
           setReservationMaxDays(Number.isFinite(n) ? Math.min(7, Math.max(1, n)) : 1);
+        }}
+      />
+      <NumberInput
+        id={`${idPrefix}-reservation-horizon-days`}
+        label={t('reservation.horizonLabel')}
+        helperText={t('reservation.horizonHelper')}
+        min={1}
+        max={365}
+        step={1}
+        value={reservationHorizonDays}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          setReservationHorizonDays(Number.isFinite(n) ? Math.min(365, Math.max(1, n)) : 90);
         }}
       />
       <div className="weekday-field">

@@ -91,6 +91,37 @@ def test_reservation_violation_accepts_exactly_the_max(reservations_collection):
     assert reservations_collection.reservation_violation(mon, 3) is None
 
 
+# --- reservation_violation: the "how far ahead" horizon ---------------------
+
+
+def test_reservation_violation_rejects_past_the_horizon(db):
+    owner = User.objects.create(code="HZOWN1", email="hzown@test.com")
+    coll = Collection.objects.create(
+        code="HZCOL1",
+        owner=owner,
+        headline="Short lead time",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_max_days=1,
+        reservation_horizon_days=14,
+        rental_weekdays=[],
+    )
+    today = date(2026, 6, 1)
+    assert coll.reservation_violation(today + timedelta(days=13), 1, today=today) is None
+    msg = coll.reservation_violation(today + timedelta(days=20), 1, today=today)
+    assert msg is not None and "14" in msg
+
+
+def test_reservation_horizon_defaults_to_90(db):
+    owner = User.objects.create(code="HZOWN2", email="hzown2@test.com")
+    coll = Collection.objects.create(
+        code="HZCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+    )
+    assert coll.reservation_horizon_days == 90
+    today = date(2026, 6, 1)
+    assert coll.reservation_violation(today + timedelta(days=89), 1, today=today) is None
+    assert coll.reservation_violation(today + timedelta(days=95), 1, today=today) is not None
+
+
 # --- reservation_violation: every day of the span must be an open weekday ----
 
 

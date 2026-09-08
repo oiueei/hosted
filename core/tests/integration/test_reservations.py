@@ -409,7 +409,23 @@ def test_the_thing_serializer_exposes_the_reservation_cap(reservations, authenti
     resp = authenticated_client2.get(f"/api/v1/things/{reservations['thing'].code}/")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.data["reservation_max_days"] == 3
+    assert resp.data["reservation_horizon_days"] == 90  # collection default
     assert resp.data["rental_weekdays"] == [0, 1, 2, 3, 4]
+
+
+def test_a_reservation_past_the_horizon_is_refused(reservations, authenticated_client2):
+    reservations["collection"].reservation_horizon_days = 10
+    reservations["collection"].save(update_fields=["reservation_horizon_days"])
+    far = date.today() + timedelta(days=20)
+    while far.weekday() > 4:  # land on a Mon–Fri
+        far += timedelta(days=1)
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(reservations["thing"].code),
+        {"start_date": str(far), "duration_days": 1},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert "10" in str(resp.data)
 
 
 def test_send_reminders_skips_reservations(reservations):

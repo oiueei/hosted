@@ -109,6 +109,11 @@ class Collection(models.Model):
     # reused as "days reservations are allowed" (every day of the span must fall
     # on one). Inert on every other collection.
     reservation_max_days = models.PositiveSmallIntegerField(default=1)
+    # How far ahead a member may book — the owner's call, since lead time is a
+    # fact about the space (a workshop bench next week, an events hall six
+    # months out). Default 90, matching the LEND/RENT horizon it replaces for
+    # this type. Also caps how far the live-availability calendar looks.
+    reservation_horizon_days = models.PositiveSmallIntegerField(default=90)
     # How deposits work in this group, in the owner's own words — "50 €, back
     # when the drill comes home in one piece". A bare number is the beginning of
     # an argument: the condition for getting it back is the actual rule, and that
@@ -342,7 +347,7 @@ class Collection(models.Model):
         """
         return list(self.allowed_thing_types or []) == ["RESERVE_THING"]
 
-    def reservation_violation(self, start_date, duration_days):
+    def reservation_violation(self, start_date, duration_days, today=None):
         """Return an error string if a RESERVE booking breaks this collection's
         reservation rules, else ``None``. Mirrors ``rental_violation``'s shape.
 
@@ -351,7 +356,10 @@ class Collection(models.Model):
         every one of those days must fall on an allowed weekday
         (``rental_weekdays``, reused; empty = any day), because the space is only
         open on those days. A reservation that would span a closed day is
-        refused rather than silently shortened.
+        refused rather than silently shortened. The whole span must also land
+        within ``reservation_horizon_days`` of ``today`` (default
+        ``timezone.localdate()``) — the owner's "how far ahead" limit, and the
+        single backstop the request view relies on.
         """
         if duration_days < 1:
             return "A reservation is at least one day."
@@ -359,6 +367,12 @@ class Collection(models.Model):
             return (
                 f"This space can be reserved for at most "
                 f"{self.reservation_max_days} day(s) at a time."
+            )
+        today = today or timezone.localdate()
+        end_date = start_date + timedelta(days=duration_days)
+        if end_date > today + timedelta(days=self.reservation_horizon_days):
+            return (
+                f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
             )
         weekdays = self.rental_weekdays or []
         if weekdays:
