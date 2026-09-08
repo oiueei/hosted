@@ -9,6 +9,7 @@ import CollectionModeField from '../components/CollectionModeField';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
+import ClosedDatesField from '../components/ClosedDatesField';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -40,6 +41,7 @@ export default function CreateCollectionPage() {
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [closedDates, setClosedDates] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -133,6 +135,7 @@ export default function CreateCollectionPage() {
       allowed_thing_types: allowedThingTypes,
       rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
+      closed_dates: closedDates,
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -256,6 +259,11 @@ export default function CreateCollectionPage() {
               theeemeColor01={theeemeColors.color_01}
             />
           )}
+          <ClosedDatesField
+            id="create-collection-closed-dates"
+            value={closedDates}
+            onChange={setClosedDates}
+          />
           {/* Same order and same `editCollection.*` keys as EditCollectionPage,
                 so the one field doesn't read differently on the two screens. */}
           <Select

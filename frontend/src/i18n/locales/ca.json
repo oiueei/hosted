@@ -957,5 +957,9 @@
     "weekdaysHelper": "Deixa'ls tots sense marcar per permetre qualsevol dia. Una reserva no pot abastar un dia en què l'espai estigui tancat.",
     "horizonLabel": "Amb quanta antelació poden reservar (dies)",
     "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos."
+  },
+  "closedDates": {
+    "label": "Festius i tancaments",
+    "helper": "Una línia, DD/MM/AAAA separats per comes. Aquests dies no hi ha recollida ni devolució, i una reserva no els pot abastar. Les dates passades es descarten."
   }
 }

@@ -95,6 +95,8 @@ export default function RequestThingPage() {
   // Per-collection rental rules (#7): a set of fixed lengths + allowed weekdays.
   const rentalDurations = thing?.rental_durations || [];
   const rentalWeekdays = thing?.rental_weekdays || [];
+  // Holidays / closures — no handoff (LEND/RENT) or reservation span on one.
+  const closedDates = thing?.closed_dates || [];
   const isConstrainedRental =
     !!thing && DATE_TYPES.includes(thing.type) && !isReservation && rentalDurations.length > 0;
 
@@ -133,9 +135,15 @@ export default function RequestThingPage() {
           rentalWeekdays,
           blockedPeriods,
           duration: chosenDuration,
+          closedDates,
         })
-      : isPickupDisabled(date, { rentalWeekdays, blockedPeriods, duration: chosenDuration });
-  const dateBlocked = (date) => isDateBlocked(date, blockedPeriods);
+      : isPickupDisabled(date, {
+          rentalWeekdays,
+          blockedPeriods,
+          duration: chosenDuration,
+          closedDates,
+        });
+  const dateBlocked = (date) => isDateBlocked(date, blockedPeriods, closedDates);
 
   const handleSubmit = async () => {
     setAttempted(true);

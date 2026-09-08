@@ -237,6 +237,7 @@ class Command(BaseCommand):
                 "rental_weekdays": data.get("rental_weekdays", []),
                 "reservation_max_days": data.get("reservation_max_days", 1),
                 "reservation_horizon_days": data.get("reservation_horizon_days", 90),
+                "closed_dates": data.get("closed_dates", []),
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
             col.invites.set(User.objects.filter(code__in=data.get("invites", [])))

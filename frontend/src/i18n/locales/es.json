@@ -957,5 +957,9 @@
     "weekdaysHelper": "Déjalos todos sin marcar para permitir cualquier día. Una reserva no puede abarcar un día en que el espacio esté cerrado.",
     "horizonLabel": "Con cuánta antelación pueden reservar (días)",
     "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses."
+  },
+  "closedDates": {
+    "label": "Festivos y cierres",
+    "helper": "Una línea, DD/MM/AAAA separados por comas. Esos días no hay recogida ni devolución, y una reserva no puede abarcarlos. Las fechas pasadas se descartan."
   }
 }

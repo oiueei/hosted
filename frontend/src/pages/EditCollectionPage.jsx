@@ -10,6 +10,7 @@ import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
+import ClosedDatesField from '../components/ClosedDatesField';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -19,6 +20,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import StatusRegion from '../components/StatusRegion';
 
@@ -56,6 +58,7 @@ export default function EditCollectionPage() {
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [closedDates, setClosedDates] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -160,6 +163,7 @@ export default function EditCollectionPage() {
           setRentalWeekdays(data.rental_weekdays || []);
           setReservationMaxDays(data.reservation_max_days || 1);
           setReservationHorizonDays(data.reservation_horizon_days || 90);
+          setClosedDates(closedDatesToDisplay(data.closed_dates));
           setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
@@ -211,6 +215,7 @@ export default function EditCollectionPage() {
       allowed_thing_types: allowedThingTypes,
       rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
+      closed_dates: closedDates,
       deposit_policy: isReservations ? '' : depositPolicy.trim(),
       tags,
       thumbnail: thumbnail || '',
@@ -404,6 +409,11 @@ export default function EditCollectionPage() {
               theeemeColor01={tc.color_01}
             />
           )}
+          <ClosedDatesField
+            id="edit-collection-closed-dates"
+            value={closedDates}
+            onChange={setClosedDates}
+          />
           <Select
             id="edit-collection-digest"
             texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}

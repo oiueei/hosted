@@ -212,6 +212,7 @@ class Thing(models.Model):
                 blocked,
                 horizon_days=rc.reservation_horizon_days if rc else horizon_days,
                 allowed_weekdays=rc.rental_weekdays if rc else None,
+                closed_dates=rc.closed_date_set() if rc else None,
             )
             self._availability_window_cache = {
                 "available_today": available_today,
@@ -227,6 +228,7 @@ class Thing(models.Model):
             horizon_days=horizon_days,
             allowed_weekdays=collection.rental_weekdays if collection else None,
             durations=collection.rental_durations if collection else None,
+            closed_dates=collection.closed_date_set() if collection else None,
         )
         self._availability_window_cache = {
             "available_today": available_today,

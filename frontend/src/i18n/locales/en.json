@@ -957,5 +957,9 @@
     "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a day the space is closed.",
     "horizonLabel": "How far ahead members can book (days)",
     "horizonHelper": "From 1 to 365. Default 90 — three months."
+  },
+  "closedDates": {
+    "label": "Holidays and closures",
+    "helper": "One line, DD/MM/YYYY separated by commas. No pickup or return on these days; a reservation can't span one. Past dates are dropped."
   }
 }

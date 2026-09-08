@@ -90,11 +90,19 @@ export const weekdayAllowed = (date, rentalWeekdays) =>
   rentalWeekdays.length === 0 ||
   rentalWeekdays.includes(jsToPyWeekday(parseLocalDate(date).getDay()));
 
-// Is `date` inside any blocked [start_date, end_date] period (both ends inclusive)?
-// This is the calendar *display* range — the item is out from pickup through the
-// return day. Pickup selectability uses the stricter [start, end) below.
-export const isDateBlocked = (date, blockedPeriods) => {
+// The collection's holiday / closure days (ISO strings) as a Set for O(1) lookup.
+export const closedSet = (closedDates) => new Set(closedDates || []);
+
+// Is `date` one of the collection's closure days (festivos)?
+export const isClosedDate = (date, closed) => closed.has(toISODate(parseLocalDate(date)));
+
+// Is `date` inside any blocked [start_date, end_date] period (both ends inclusive),
+// OR a closure day? This is the calendar *display* range — the item is out from
+// pickup through the return day. Pickup selectability uses the stricter [start, end)
+// below.
+export const isDateBlocked = (date, blockedPeriods, closedDates = []) => {
   const d = parseLocalDate(date);
+  if (closedSet(closedDates).has(toISODate(d))) return true;
   return blockedPeriods.some((period) => {
     const start = parseLocalDate(period.start_date);
     const end = parseLocalDate(period.end_date);
@@ -134,12 +142,19 @@ export const rangeBlocked = (pickup, len, blockedPeriods) => {
 // return day is pickup + length: a one-week rental picked up on a Wednesday is
 // returned the NEXT Wednesday, so a single allowed weekday stays satisfiable. A
 // day that is only another booking's return day stays selectable (back-to-back).
-export const isPickupDisabled = (date, { rentalWeekdays, blockedPeriods, duration }) => {
+export const isPickupDisabled = (
+  date,
+  { rentalWeekdays, blockedPeriods, duration, closedDates = [] }
+) => {
+  const closed = closedSet(closedDates);
   if (!weekdayAllowed(date, rentalWeekdays)) return true;
+  if (isClosedDate(date, closed)) return true; // no pickup on a closure day
   if (isPickupBlocked(date, blockedPeriods)) return true;
   if (duration) {
     const len = Number(duration);
-    if (!weekdayAllowed(addDays(date, len), rentalWeekdays)) return true;
+    const ret = addDays(date, len);
+    if (!weekdayAllowed(ret, rentalWeekdays)) return true;
+    if (isClosedDate(ret, closed)) return true; // nor a return on one
     if (rangeBlocked(date, len, blockedPeriods)) return true;
   }
   return false;
@@ -148,6 +163,10 @@ export const isPickupDisabled = (date, { rentalWeekdays, blockedPeriods, duratio
 // Derived return date (ISO string) for a pickup date + fixed length in days.
 export const derivedReturnDate = (pickup, days) => toISODate(addDays(pickup, Number(days)));
 
+// A stored `closed_dates` ISO list → the comma-separated DD/MM/YYYY line the
+// owner edits. `["2026-12-25","2026-12-26"]` → "25/12/2026, 26/12/2026".
+export const closedDatesToDisplay = (list) => (list || []).map(isoToDisplay).join(', ');
+
 // RESERVE_THING pickup validity. Stricter than isPickupDisabled: the space is
 // occupied for the WHOLE span, so EVERY day of [pickup, pickup+duration) must be
 // an allowed weekday (not just pickup and the return day — a reservation can't
@@ -155,13 +174,14 @@ export const derivedReturnDate = (pickup, days) => toISODate(addDays(pickup, Num
 // collection's `rental_weekdays`, reused as "days reservations are allowed".
 export const reservationPickupDisabled = (
   date,
-  { rentalWeekdays = [], blockedPeriods = [], duration }
+  { rentalWeekdays = [], blockedPeriods = [], duration, closedDates = [] }
 ) => {
   const len = Math.max(1, Number(duration) || 1);
-  if (rentalWeekdays.length) {
-    for (let offset = 0; offset < len; offset += 1) {
-      if (!weekdayAllowed(addDays(date, offset), rentalWeekdays)) return true;
-    }
+  const closed = closedSet(closedDates);
+  for (let offset = 0; offset < len; offset += 1) {
+    const day = addDays(date, offset);
+    if (rentalWeekdays.length && !weekdayAllowed(day, rentalWeekdays)) return true;
+    if (isClosedDate(day, closed)) return true; // the space can't span a closure
   }
   return rangeBlocked(date, len, blockedPeriods);
 };

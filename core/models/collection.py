@@ -105,6 +105,12 @@ class Collection(models.Model):
     #   Python weekday() numbering (0=Mon … 6=Sun). Empty = any day.
     rental_durations = models.JSONField(default=list, blank=True)
     rental_weekdays = models.JSONField(default=list, blank=True)
+    # Holidays and one-off closures — ISO date strings ("2026-12-25"), sorted,
+    # deduped, past ones dropped on save (the owner re-enters each year). No
+    # pickup or return can land on one for a LEND/RENT booking; a RESERVE
+    # booking can't span one at all. The serializer parses the owner's
+    # comma-separated DD/MM/YYYY line into this. Empty = no closures.
+    closed_dates = models.JSONField(default=list, blank=True)
     # RESERVE_THING collections only (``allowed_thing_types == ["RESERVE_THING"]``).
     # The longest a member may book the space for in one reservation, in days —
     # the renter picks any length from 1 to this. ``rental_weekdays`` above is
@@ -336,7 +342,21 @@ class Collection(models.Model):
 
     def has_rental_rules(self):
         """True if this collection constrains LEND/RENT booking dates (#7)."""
-        return bool(self.rental_durations) or bool(self.rental_weekdays)
+        return bool(self.rental_durations) or bool(self.rental_weekdays) or bool(self.closed_dates)
+
+    def closed_date_set(self):
+        """``closed_dates`` (ISO strings) as a set of ``date`` objects. A bad
+        string is skipped rather than raising — the serializer is what keeps the
+        column clean, this stays defensive."""
+        from datetime import date as _date
+
+        out = set()
+        for raw in self.closed_dates or []:
+            try:
+                out.add(_date.fromisoformat(raw))
+            except (TypeError, ValueError):
+                continue
+        return out
 
     def is_reservations_collection(self):
         """True if this is a RESERVE_THING collection.
@@ -377,10 +397,13 @@ class Collection(models.Model):
                 f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
             )
         weekdays = self.rental_weekdays or []
-        if weekdays:
-            for offset in range(duration_days):
-                if (start_date + timedelta(days=offset)).weekday() not in weekdays:
-                    return "Those dates include a day this space isn't open for reservations."
+        closed = self.closed_date_set()
+        for offset in range(duration_days):
+            day = start_date + timedelta(days=offset)
+            if weekdays and day.weekday() not in weekdays:
+                return "Those dates include a day this space isn't open for reservations."
+            if day in closed:
+                return "Those dates include a day this space is closed."
         return None
 
     # ---- Mass-upload capacity guards -------------------------------------
@@ -524,6 +547,14 @@ class Collection(models.Model):
                 return "The pickup day isn't available for this collection."
             if end_date.weekday() not in weekdays:
                 return "The return day isn't available for this collection."
+        # Holidays / closures: only the handoff days matter for a loan or a
+        # rental — the item is already out in between, so an interior closure
+        # stops nothing.
+        closed = self.closed_date_set()
+        if start_date in closed:
+            return "The pickup day is a closure day for this collection."
+        if end_date in closed:
+            return "The return day is a closure day for this collection."
         return None
 
     def can_add_thing(self, user_code):

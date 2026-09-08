@@ -110,6 +110,67 @@ def test_no_rules_never_violates(db):
     assert coll.rental_violation(today, today + timedelta(days=99)) is None
 
 
+# --- closure days (festivos) --------------------------------------------------
+
+
+def _future(base_weekday, weeks_ahead=1):
+    d = date.today() + timedelta(days=7 * weeks_ahead)
+    while d.weekday() != base_weekday:
+        d += timedelta(days=1)
+    return d
+
+
+def test_closure_day_blocks_pickup_and_return_only(db):
+    """Only the handoff days matter for a loan — an interior closure stops nothing."""
+    owner = User.objects.create(code="CLOS01", email="clos@test.com", name="O")
+    mon = _future(0)
+    coll = Collection.objects.create(
+        code="CLOS02",
+        owner=owner,
+        headline="Tool library",
+        closed_dates=[(mon + timedelta(days=1)).isoformat()],  # the Tuesday
+    )
+    assert coll.has_rental_rules()  # closed_dates alone counts
+    # 3-day loan Mon→Thu: Tuesday is interior, so it's fine
+    assert coll.rental_violation(mon, mon + timedelta(days=3)) is None
+    # pickup ON the closed Tuesday
+    assert (
+        "pickup" in coll.rental_violation(mon + timedelta(days=1), mon + timedelta(days=3)).lower()
+    )
+    # return ON the closed Tuesday
+    assert (
+        "return" in coll.rental_violation(mon - timedelta(days=1), mon + timedelta(days=1)).lower()
+    )
+
+
+def test_a_reservation_cannot_span_a_closure_day(db):
+    owner = User.objects.create(code="CLOS03", email="clos3@test.com", name="O")
+    wed = _future(2)
+    coll = Collection.objects.create(
+        code="CLOS04",
+        owner=owner,
+        headline="Ateneu",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_max_days=3,
+        closed_dates=[(wed + timedelta(days=1)).isoformat()],  # Thursday closed
+    )
+    assert coll.reservation_violation(wed, 1) is None  # just Wednesday
+    assert coll.reservation_violation(wed, 2) is not None  # Wed + Thu → spans the closure
+
+
+def test_parse_closed_dates_normalises_the_owners_line(db):
+    from core.serializers.collection import _parse_closed_dates
+
+    next_year = date.today().year + 1
+    out = _parse_closed_dates(f" 26/12/{next_year} ,25/12/{next_year}, 25/12/{next_year} ")
+    assert out == [f"{next_year}-12-25", f"{next_year}-12-26"]  # sorted, deduped
+    # a garbage token is a 400
+    with pytest.raises(Exception):
+        _parse_closed_dates("not a date")
+    # a past date is silently dropped
+    assert _parse_closed_dates("01/01/2020") == []
+
+
 # --- booking enforcement (API) --------------------------------------------
 
 

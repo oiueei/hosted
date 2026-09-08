@@ -265,6 +265,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
     reservation_horizon_days = serializers.SerializerMethodField()
+    closed_dates = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
     class Meta:
@@ -304,6 +305,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
+            "closed_dates",
             "transfer_count",
             "is_endless",
         ]
@@ -432,6 +434,13 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             return None
         first = self._viewable_collection(obj)
         return first.reservation_horizon_days if first else 90
+
+    def get_closed_dates(self, obj):
+        """The governing collection's holidays / closures (ISO strings) — the
+        date picker greys these out and the request view refuses a handoff or a
+        reservation span that touches one. ``[]`` when there is no collection."""
+        first = self._viewable_collection(obj)
+        return list(first.closed_dates) if first else []
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available
