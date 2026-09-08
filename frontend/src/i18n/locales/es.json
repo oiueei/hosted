@@ -961,5 +961,9 @@
   "closedDates": {
     "label": "Festivos y cierres",
     "helper": "Una línea, DD/MM/AAAA separados por comas. Esos días no hay recogida ni devolución, y una reserva no puede abarcarlos. Las fechas pasadas se descartan."
+  },
+  "homePage": {
+    "label": "Página web",
+    "helper": "Una dirección web opcional para este grupo (máx. 128 caracteres)."
   }
 }

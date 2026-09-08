@@ -143,6 +143,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "reservation_max_days",
             "reservation_horizon_days",
             "closed_dates",
+            "home_page",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -361,6 +362,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # span across one. `write_only` because the read serializer returns the
     # stored ISO list straight off the JSONField.
     closed_dates = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    home_page = serializers.URLField(max_length=128, required=False, allow_blank=True)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -383,6 +385,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "reservation_max_days",
             "reservation_horizon_days",
             "closed_dates",
+            "home_page",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -554,6 +557,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     # span across one. `write_only` because the read serializer returns the
     # stored ISO list straight off the JSONField.
     closed_dates = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    home_page = serializers.URLField(max_length=128, required=False, allow_blank=True)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -577,6 +581,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "reservation_max_days",
             "reservation_horizon_days",
             "closed_dates",
+            "home_page",
             "deposit_policy",
             "tags",
             "thumbnail",

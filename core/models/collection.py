@@ -145,6 +145,10 @@ class Collection(models.Model):
             "free-text labels. Things in the collection may be tagged with a subset. Max 12."
         ),
     )
+    # The group's own website, if it has one — shown in the hero. A URLField, so
+    # Django's URLValidator rejects anything but http(s)/ftp(s); the frontend
+    # still runs it through `sanitizeUrl` before rendering the link.
+    home_page = models.URLField(max_length=128, blank=True, default="")
     thumbnail = models.CharField(max_length=255, blank=True, default="")
     # Storage key of the owner's optional welcome & rules PDF. Emailed as a link
     # (never an attachment) to every member the first time they join, which is why

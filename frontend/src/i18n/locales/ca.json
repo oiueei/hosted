@@ -961,5 +961,9 @@
   "closedDates": {
     "label": "Festius i tancaments",
     "helper": "Una línia, DD/MM/AAAA separats per comes. Aquests dies no hi ha recollida ni devolució, i una reserva no els pot abastar. Les dates passades es descarten."
+  },
+  "homePage": {
+    "label": "Pàgina web",
+    "helper": "Una adreça web opcional per a aquest grup (màx. 128 caràcters)."
   }
 }

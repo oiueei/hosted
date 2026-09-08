@@ -961,5 +961,9 @@
   "closedDates": {
     "label": "Holidays and closures",
     "helper": "One line, DD/MM/YYYY separated by commas. No pickup or return on these days; a reservation can't span one. Past dates are dropped."
+  },
+  "homePage": {
+    "label": "Home page",
+    "helper": "An optional web address for this group (max 128 characters)."
   }
 }

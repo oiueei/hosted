@@ -59,6 +59,7 @@ export default function EditCollectionPage() {
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
   const [closedDates, setClosedDates] = useState('');
+  const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -164,6 +165,7 @@ export default function EditCollectionPage() {
           setReservationMaxDays(data.reservation_max_days || 1);
           setReservationHorizonDays(data.reservation_horizon_days || 90);
           setClosedDates(closedDatesToDisplay(data.closed_dates));
+          setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
@@ -216,6 +218,7 @@ export default function EditCollectionPage() {
       rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
       closed_dates: closedDates,
+      home_page: homePage.trim(),
       deposit_policy: isReservations ? '' : depositPolicy.trim(),
       tags,
       thumbnail: thumbnail || '',
@@ -413,6 +416,16 @@ export default function EditCollectionPage() {
             id="edit-collection-closed-dates"
             value={closedDates}
             onChange={setClosedDates}
+          />
+          <TextInput
+            id="edit-collection-home-page"
+            type="url"
+            label={t('homePage.label')}
+            helperText={t('homePage.helper')}
+            placeholder="https://…"
+            value={homePage}
+            onChange={(e) => setHomePage(e.target.value)}
+            maxLength={128}
           />
           <Select
             id="edit-collection-digest"

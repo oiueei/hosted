@@ -204,6 +204,31 @@ class TestCollectionCreateSerializer:
         assert not serializer.is_valid()
         assert "headline" in serializer.errors
 
+    def test_home_page_accepts_a_url_and_rejects_junk(self):
+        """`home_page` is a URLField — a bare word is not a URL."""
+        ok = CollectionCreateSerializer(
+            data={"headline": "Ateneu", "home_page": "https://ateneu.example/"}
+        )
+        assert ok.is_valid(), ok.errors
+        assert ok.validated_data["home_page"] == "https://ateneu.example/"
+
+        bad = CollectionCreateSerializer(data={"headline": "Ateneu", "home_page": "not a url"})
+        assert not bad.is_valid()
+        assert "home_page" in bad.errors
+
+    def test_home_page_is_capped_at_128_chars(self):
+        """The column is 128 and CI runs Postgres — the serializer must reject
+        an over-long address before it reaches the DB."""
+        long_url = "https://example.com/" + "a" * 120
+        serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": long_url})
+        assert not serializer.is_valid()
+        assert "home_page" in serializer.errors
+
+    def test_home_page_is_optional(self):
+        """An empty string is fine — most groups have no website."""
+        serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": ""})
+        assert serializer.is_valid(), serializer.errors
+
 
 @pytest.mark.django_db
 class TestThingSerializer:

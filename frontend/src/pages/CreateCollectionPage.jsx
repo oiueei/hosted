@@ -42,6 +42,7 @@ export default function CreateCollectionPage() {
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
   const [closedDates, setClosedDates] = useState('');
+  const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -136,6 +137,7 @@ export default function CreateCollectionPage() {
       rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
       closed_dates: closedDates,
+      home_page: homePage.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -263,6 +265,16 @@ export default function CreateCollectionPage() {
             id="create-collection-closed-dates"
             value={closedDates}
             onChange={setClosedDates}
+          />
+          <TextInput
+            id="create-collection-home-page"
+            type="url"
+            label={t('homePage.label')}
+            helperText={t('homePage.helper')}
+            placeholder="https://…"
+            value={homePage}
+            onChange={(e) => setHomePage(e.target.value)}
+            maxLength={128}
           />
           {/* Same order and same `editCollection.*` keys as EditCollectionPage,
                 so the one field doesn't read differently on the two screens. */}
