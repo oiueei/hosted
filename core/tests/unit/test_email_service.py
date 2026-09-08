@@ -213,3 +213,51 @@ def test_a_sender_with_no_lang_in_scope_still_declares_the_deployment_default():
 
     html = mail.outbox[0].alternatives[0][0]
     assert '<html lang="es">' in html
+
+
+# --- Dates in emails render DD/MM/YYYY, not ISO ------------------------------
+
+
+def test_fmt_date_renders_ddmmyyyy_and_tolerates_junk():
+    from datetime import date, datetime
+
+    assert email_service._fmt_date(date(2026, 3, 5)) == "05/03/2026"
+    assert email_service._fmt_date(datetime(2026, 3, 5, 9, 30)) == "05/03/2026"
+    assert email_service._fmt_date("2026-03-05") == "05/03/2026"
+    assert email_service._fmt_date("2026-03-05T09:30:00Z") == "05/03/2026"
+    assert email_service._fmt_date(None) == ""
+    assert email_service._fmt_date("") == ""
+    assert email_service._fmt_date("whenever") == "whenever"  # passed through, not dropped
+
+
+@pytest.mark.django_db
+def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
+    """The SPA and the date pickers speak DD/MM/YYYY; the emails must match, so
+    a member never sees the same booking two ways."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "LEND_THING"
+    thing.save(update_fields=["type"])
+    start, end = date(2026, 3, 5), date(2026, 3, 12)
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=start,
+        end_date=end,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+    email_service.send_booking_request_email(
+        user2, thing, booking, user.email, "http://x/a", "http://x/r"
+    )
+
+    body = mail.outbox[0].body
+    html = mail.outbox[0].alternatives[0][0]
+    assert "05/03/2026" in body and "12/03/2026" in body
+    assert "05/03/2026" in html
+    assert "2026-03-05" not in body and "2026-03-05" not in html
