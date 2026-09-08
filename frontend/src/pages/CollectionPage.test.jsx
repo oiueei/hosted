@@ -969,3 +969,58 @@ describe('CollectionPage as a co-owner', () => {
     expect(await screen.findByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
   });
 });
+
+/**
+ * `Collection.home_page` — when the owner gives the group its own web address,
+ * the hero's "← Inici" link leaves OIUEEI for that address instead of going to
+ * the app home. It's an external URL, so it can't be a react-router <Link>, and
+ * anything that isn't http(s) is ignored (the field is a URLField server-side
+ * and passes through `sanitizeUrl` here as well).
+ */
+describe('CollectionPage back link honours home_page', () => {
+  const renderPage = () =>
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  const mockCollection = (extra) =>
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ ...COLLECTION_WITH_PHOTO, thumbnail_url: '', ...extra }),
+          })
+    );
+
+  test('with no home_page, the back link points at the app home', async () => {
+    mockCollection({});
+    renderPage();
+
+    const back = await screen.findByRole('link', { name: /Home/ });
+    expect(back).toHaveAttribute('href', '/');
+  });
+
+  test('with a home_page, the back link points at that external address', async () => {
+    mockCollection({ home_page: 'https://ateneu.example/' });
+    renderPage();
+
+    const back = await screen.findByRole('link', { name: /Home/ });
+    expect(back).toHaveAttribute('href', 'https://ateneu.example/');
+    expect(back).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  test('a non-http home_page is ignored — the link stays internal', async () => {
+    // The backend URLField would let ftp:// through; `sanitizeUrl` here does not.
+    mockCollection({ home_page: 'ftp://ateneu.example/' });
+    renderPage();
+
+    const back = await screen.findByRole('link', { name: /Home/ });
+    expect(back).toHaveAttribute('href', '/');
+  });
+});

@@ -15,6 +15,7 @@ import Toast from '../components/Toast';
 import MarkdownText from '../components/MarkdownText';
 import ImageCarousel from '../components/ImageCarousel';
 import { onImageError } from '../utils/imageFallback';
+import { formatDate } from '../utils/rental';
 import { useLocalized } from '../utils/localized';
 import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
@@ -23,7 +24,7 @@ import ButtonLink from '../components/ButtonLink';
 export default function ThingPage() {
   const { code, thingCode } = useParams();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const userCode = localStorage.getItem('userCode');
   const isAuthenticated = !!userCode;
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
@@ -189,7 +190,7 @@ export default function ThingPage() {
         })()}
 
         <p className="thing-card-meta">
-          {new Date(thing.created).toLocaleDateString(i18n.language)}
+          {formatDate(thing.created)}
           {/* Withheld from a reader with no account when the owner is not the
               person who published the collection (see the card's meta line).
               Only that reader gets the generic stand-in: an empty name for a
@@ -403,7 +404,7 @@ export default function ThingPage() {
                   {holderLabel(tr.to_user_name)}
                   {' — '}
                   {t('transfers.lentOn', {
-                    date: new Date(tr.lent_date).toLocaleDateString(i18n.language),
+                    date: formatDate(tr.lent_date),
                   })}
                   {/* `auto_closed` means the daily command wrote this date when
                       the booking's end_date passed — nobody said the thing came
@@ -415,7 +416,7 @@ export default function ThingPage() {
                       {' '}
                       ·{' '}
                       {t(tr.auto_closed ? 'transfers.dueBackOn' : 'transfers.returnedOn', {
-                        date: new Date(tr.returned_date).toLocaleDateString(i18n.language),
+                        date: formatDate(tr.returned_date),
                       })}
                     </>
                   )}

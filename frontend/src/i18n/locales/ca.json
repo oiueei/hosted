@@ -410,7 +410,7 @@
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "Selecciona etiquetes",
     "tagsHelper": "Tria entre les etiquetes d'aquesta col·lecció",
-    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma.",
+    "maxDescription": "La descripció és massa llarga: 2000 caràcters per idioma.",
     "priceOptionalLabel": "Preu (opcional)"
   },
   "editThing": {
@@ -480,7 +480,7 @@
     "maxHeadline": "Màxim 64 caràcters per idioma.",
     "errorLoading": "Error en carregar la col·lecció.",
     "errorSaving": "Error en desar.",
-    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma."
+    "maxDescription": "La descripció és massa llarga: 2000 caràcters per idioma."
   },
   "createCollection": {
     "pageTitle": "Crear col·lecció",
@@ -502,7 +502,7 @@
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "p. ex. Vintage, Cuina, Exterior",
     "tagsHelper": "Etiquetes opcionals per organitzar les coses d'aquesta col·lecció",
-    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma.",
+    "maxDescription": "La descripció és massa llarga: 2000 caràcters per idioma.",
     "reservationsModeNote": "Una col·lecció de reserves la gestiona una sola persona i només conté reserves, així que es queda privada i de tipus propietari."
   },
   "myBookings": {
@@ -954,6 +954,16 @@
     "maxDaysLabel": "Reserva més llarga (dies)",
     "maxDaysHelper": "Un membre pot reservar l'espai d'1 fins a aquest nombre de dies cada vegada.",
     "weekdaysLabel": "Dies oberts a reserves",
-    "weekdaysHelper": "Deixa'ls tots sense marcar per permetre qualsevol dia. Una reserva no pot abastar un dia en què l'espai estigui tancat."
+    "weekdaysHelper": "Deixa'ls tots sense marcar per permetre qualsevol dia. Una reserva no pot abastar un dia en què l'espai estigui tancat.",
+    "horizonLabel": "Amb quanta antelació poden reservar (dies)",
+    "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos."
+  },
+  "closedDates": {
+    "label": "Festius i tancaments",
+    "helper": "Una línia, DD/MM/AAAA separats per comes. Aquests dies no hi ha recollida ni devolució, i una reserva no els pot abastar. Les dates passades es descarten."
+  },
+  "homePage": {
+    "label": "Pàgina web",
+    "helper": "Una adreça web opcional per a aquest grup (màx. 128 caràcters)."
   }
 }

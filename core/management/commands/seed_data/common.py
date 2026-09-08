@@ -142,6 +142,9 @@ COLLECTIONS = [
         "invites": ["La1aN1", "L3L3oo", "l0l0oh", "1u1ucs"],
         "is_onboarding": True,
         "allowed_thing_types": ["RENT_THING"],
+        # Lili closes the tool library over the winter holidays — no pickup or
+        # return on these days. (Re-entered each year; stale ones drop on edit.)
+        "closed_dates": ["2026-12-25", "2026-12-26", "2027-01-01", "2027-01-06"],
         "tags": [
             TAG_COCINA,
             TAG_JARDIN,
@@ -212,6 +215,7 @@ COLLECTIONS = [
         "is_onboarding": True,
         "allowed_thing_types": ["RESERVE_THING"],
         "reservation_max_days": 3,
+        "reservation_horizon_days": 30,
         "rental_weekdays": [0, 1, 2, 3, 4],
         "thumbnail": "1u1uC1",
     },

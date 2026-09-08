@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useLocalized } from '../utils/localized';
+import { formatDate } from '../utils/rental';
 
 /**
  * Owner-only list of a thing's future bookings (pending + confirmed), shared by
@@ -8,7 +9,7 @@ import { useLocalized } from '../utils/localized';
  * is the owner and there is at least one booking.
  */
 export default function OwnerBookingsList({ bookings, activePendingCode, isOwner }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // Hooks run before the early return — an offered thing's headline may be a
   // per-language map like any other owner content.
   const L = useLocalized();
@@ -23,19 +24,10 @@ export default function OwnerBookingsList({ bookings, activePendingCode, isOwner
         return (
           <li key={b.code} style={{ fontWeight: isActive ? 'bold' : 'normal' }}>
             {isOwner && b.requester_name && <>{b.requester_name}. </>}
-            {b.created && (
-              <>
-                {new Date(b.created).toLocaleDateString(i18n.language, {
-                  day: 'numeric',
-                  month: 'short',
-                })}
-                .{' '}
-              </>
-            )}
+            {b.created && <>{formatDate(b.created)}. </>}
             {b.start_date && b.end_date && (
               <>
-                {new Date(b.start_date).toLocaleDateString(i18n.language)} –{' '}
-                {new Date(b.end_date).toLocaleDateString(i18n.language)}
+                {formatDate(b.start_date)} – {formatDate(b.end_date)}
               </>
             )}{' '}
             <span

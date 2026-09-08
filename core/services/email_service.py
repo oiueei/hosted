@@ -24,6 +24,7 @@ import functools
 import logging
 import random
 import smtplib
+from datetime import date, datetime
 from email.mime.image import MIMEImage
 
 from django.conf import settings
@@ -579,10 +580,29 @@ def _render_email(blocks, lang=None):
     )
 
 
+def _fmt_date(value):
+    """A date for a reader: ``DD/MM/YYYY``, the convention the SPA and the date
+    pickers use (a plain ``str(date)`` gives ISO ``YYYY-MM-DD``). Accepts a
+    ``date``/``datetime``, an ISO string, or ``None`` (→ ``""``). An unrecognised
+    string is passed through rather than dropped.
+    """
+    if not value:
+        return ""
+    if isinstance(value, str):
+        try:
+            value = date.fromisoformat(value[:10])
+        except ValueError:
+            return value
+    if isinstance(value, (date, datetime)):
+        return value.strftime("%d/%m/%Y")
+    return str(value)
+
+
 def _booking_detail_blocks(booking, lang=None):
     """Date/quantity detail blocks shared by the three booking emails."""
     if booking.start_date and booking.end_date:
-        return [_field(T("dates_label", lang), f"{booking.start_date} - {booking.end_date}")]
+        dates = f"{_fmt_date(booking.start_date)} - {_fmt_date(booking.end_date)}"
+        return [_field(T("dates_label", lang), dates)]
     return []
 
 
@@ -977,8 +997,8 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
             requester=requester_name,
             action=action,
             thing=headline,
-            start=booking.start_date,
-            end=booking.end_date,
+            start=_fmt_date(booking.start_date),
+            end=_fmt_date(booking.end_date),
             accept=accept_link,
             reject=reject_link,
         )
@@ -1022,8 +1042,8 @@ def send_booking_decision_email(booking, thing, accepted=True):
         plain = T("decision_plain_dated").format(
             action=action,
             thing=headline,
-            start=booking.start_date,
-            end=booking.end_date,
+            start=_fmt_date(booking.start_date),
+            end=_fmt_date(booking.end_date),
             decision=decision_word,
             url=thing_url,
         )
@@ -1079,8 +1099,8 @@ def send_booking_confirmation_email(requester, thing, booking):
         plain = T("confirmation_plain_dated").format(
             action=action,
             thing=headline,
-            start=booking.start_date,
-            end=booking.end_date,
+            start=_fmt_date(booking.start_date),
+            end=_fmt_date(booking.end_date),
             owner=owner_name,
             url=thing_url,
         )
@@ -1240,8 +1260,9 @@ def send_return_reminder_email(requester_name, thing_headline, end_date, owner_e
     T, L = _texts(lang), _local(lang)
     headline = L(thing_headline)
     subject = T("reminder_subject")
-    plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end_date)
-    body = T("reminder_body").format(requester=requester_name, thing=headline, end=end_date)
+    end = _fmt_date(end_date)
+    plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end)
+    body = T("reminder_body").format(requester=requester_name, thing=headline, end=end)
     html = _render_email([_para(body)], lang=lang)
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -1261,8 +1282,9 @@ def send_return_due_email(owner_name, thing_headline, end_date, requester_email,
     T, L = _texts(lang), _local(lang)
     headline = L(thing_headline)
     subject = T("return_due_subject").format(thing=headline)
-    plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end_date)
-    body = T("return_due_body").format(owner=owner_name, thing=headline, end=end_date)
+    end = _fmt_date(end_date)
+    plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end)
+    body = T("return_due_body").format(owner=owner_name, thing=headline, end=end)
     blocks = [_para(body)]
     if thing_url:
         blocks.append(_links((thing_url, T("view_thing_cta"))))
@@ -1282,14 +1304,15 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
 
+    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
     subject = T("reservation_confirmed_subject").format(thing=headline)
     plain = T("reservation_confirmed_plain").format(
-        thing=headline, start=booking.start_date, end=booking.end_date, url=thing_url
+        thing=headline, start=start, end=end, url=thing_url
     )
     blocks = [
         _para(T("reservation_confirmed_intro")),
         _strong(headline),
-        _field(T("dates_label"), f"{booking.start_date} - {booking.end_date}"),
+        _field(T("dates_label"), f"{start} - {end}"),
     ]
     if thing.fee:
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
@@ -1311,14 +1334,15 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     requester_name = requester.display_name
     headline = L(thing.headline)
 
+    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
     subject = T("reservation_notice_subject").format(requester=requester_name, thing=headline)
     plain = T("reservation_notice_plain").format(
-        requester=requester_name, thing=headline, start=booking.start_date, end=booking.end_date
+        requester=requester_name, thing=headline, start=start, end=end
     )
     blocks = [
         _para(T("reservation_notice_intro").format(requester=requester_name)),
         _strong(headline),
-        _field(T("dates_label"), f"{booking.start_date} - {booking.end_date}"),
+        _field(T("dates_label"), f"{start} - {end}"),
     ]
     if booking.project_note:
         plain += "\n\n" + T("reservation_note_label") + ": " + booking.project_note
@@ -1341,15 +1365,16 @@ def send_reservation_cancelled_email(
     headline = L(thing.headline)
     side = "to_guest" if cancelled_by_owner else "to_owner"
 
+    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
     subject = T("reservation_cancelled_subject").format(thing=headline)
     plain = T(f"reservation_cancelled_{side}_plain").format(
-        other=other, thing=headline, start=booking.start_date, end=booking.end_date
+        other=other, thing=headline, start=start, end=end
     )
     html = _render_email(
         [
             _para(T(f"reservation_cancelled_{side}_intro").format(other=other)),
             _strong(headline),
-            _field(T("dates_label"), f"{booking.start_date} - {booking.end_date}"),
+            _field(T("dates_label"), f"{start} - {end}"),
         ],
         lang=lang,
     )

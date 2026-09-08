@@ -2,13 +2,18 @@
 Collection serializers for OIUEEI.
 """
 
+from datetime import datetime, timedelta
+
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.serializers.thing import ThingComputedFieldsMixin
 from core.utils import asset_url, doc_asset_url
 from core.validators import (
+    LOCALIZED_DESCRIPTION_STORAGE,
+    LOCALIZED_DESCRIPTION_VISIBLE,
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
     LocalizedHeadlineField,
@@ -136,6 +141,9 @@ class CollectionSerializer(serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
+            "closed_dates",
+            "home_page",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -313,7 +321,12 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a collection."""
 
     headline = LocalizedHeadlineField(max_length=64)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
@@ -340,6 +353,16 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # for in one reservation. Inert elsewhere. `rental_weekdays` above is reused
     # as "days reservations are allowed".
     reservation_max_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
+    # How far ahead a member may book this space, in days. 1..365 — a year is the
+    # most a "how far ahead" limit should ever need. Default 90.
+    reservation_horizon_days = serializers.IntegerField(min_value=1, max_value=365, required=False)
+    # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
+    # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
+    # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
+    # span across one. `write_only` because the read serializer returns the
+    # stored ISO list straight off the JSONField.
+    closed_dates = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    home_page = serializers.URLField(max_length=128, required=False, allow_blank=True)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -360,6 +383,9 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
+            "closed_dates",
+            "home_page",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -375,6 +401,9 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     def validate_rental_weekdays(self, value):
         return sorted(set(value))
 
+    def validate_closed_dates(self, value):
+        return _parse_closed_dates(value)
+
     def validate(self, attrs):
         # Default visibility follows the mode when the client doesn't set it:
         # community collections are born PUBLIC, proprietary ones PRIVATE. The
@@ -388,6 +417,51 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             )
         _validate_allowed_thing_types(attrs.get("allowed_thing_types", []), mode)
         return attrs
+
+
+_CLOSED_DATES_MAX = 60
+
+
+def _parse_closed_dates(raw):
+    """Parse the owner's ``closed_dates`` input into a sorted list of ISO strings.
+
+    Accepts either the comma-separated ``DD/MM/YYYY`` line the form sends
+    ("25/12/2026, 26/12/2026") or an already-parsed list of ISO strings (an API
+    client). Past dates are dropped — the owner re-enters holidays each year and
+    a stale one is only noise — and anything more than two years out is refused
+    as a likely typo. Deduped and sorted. Raises ``ValidationError`` on a token
+    that is not a real date.
+    """
+    if raw in (None, "", []):
+        return []
+    tokens = raw if isinstance(raw, list) else [t.strip() for t in str(raw).split(",")]
+    today = timezone.localdate()
+    horizon = today + timedelta(days=730)
+    seen = set()
+    for token in tokens:
+        token = (token or "").strip()
+        if not token:
+            continue
+        parsed = None
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                parsed = datetime.strptime(token, fmt).date()
+                break
+            except ValueError:
+                continue
+        if parsed is None:
+            raise serializers.ValidationError(
+                f"'{token}' isn't a date — use DD/MM/YYYY, separated by commas."
+            )
+        if parsed < today or parsed > horizon:
+            continue
+        seen.add(parsed.isoformat())
+    result = sorted(seen)
+    if len(result) > _CLOSED_DATES_MAX:
+        raise serializers.ValidationError(
+            f"That's more than {_CLOSED_DATES_MAX} closure days — enter this year's."
+        )
+    return result
 
 
 def _normalize_tags(tags):
@@ -444,7 +518,12 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating a collection."""
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/collections", required=False, allow_blank=True)
     # The welcome PDF is a storage key like any other asset — same
     # path-traversal-safe validation.
@@ -469,6 +548,16 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         allow_empty=True,
     )
     reservation_max_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
+    # How far ahead a member may book this space, in days. 1..365 — a year is the
+    # most a "how far ahead" limit should ever need. Default 90.
+    reservation_horizon_days = serializers.IntegerField(min_value=1, max_value=365, required=False)
+    # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
+    # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
+    # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
+    # span across one. `write_only` because the read serializer returns the
+    # stored ISO list straight off the JSONField.
+    closed_dates = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    home_page = serializers.URLField(max_length=128, required=False, allow_blank=True)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -490,6 +579,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
+            "closed_dates",
+            "home_page",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -502,6 +594,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     def validate_rental_weekdays(self, value):
         return sorted(set(value))
+
+    def validate_closed_dates(self, value):
+        return _parse_closed_dates(value)
 
     def validate(self, attrs):
         instance = self.instance

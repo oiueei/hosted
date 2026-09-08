@@ -9,13 +9,14 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import MarkdownText from '../components/MarkdownText';
 import CollectionLinkbox from '../components/CollectionLinkbox';
 import { useLocalized } from '../utils/localized';
+import { formatDate } from '../utils/rental';
 import HeroPhoto from '../components/HeroPhoto';
 import ContactCorner from '../components/ContactCorner';
 import ButtonLink from '../components/ButtonLink';
 
 export default function UserPage() {
   const { userCode: paramCode } = useParams();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // A group's headline may carry one text per language.
   const L = useLocalized();
   const [user, setUser] = useState(null);
@@ -149,10 +150,7 @@ export default function UserPage() {
       {user.created && (
         <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
           {t('userPage.memberSince', {
-            date: new Date(user.created).toLocaleDateString(i18n.language, {
-              month: 'long',
-              year: 'numeric',
-            }),
+            date: formatDate(user.created),
           })}
         </p>
       )}

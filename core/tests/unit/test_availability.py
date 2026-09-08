@@ -146,6 +146,48 @@ class TestComputeAvailabilityWithRentalRules:
         ) == (False, None)
 
 
+class TestComputeAvailabilityWithClosureDays:
+    """`closed_dates` (festivos) are skipped in the "next available" walk, so the
+    card indicator agrees with the picker (`rental.js::isPickupDisabled`, which
+    greys the same days). `compute_availability` takes a set of `date` objects —
+    `Collection.closed_date_set()`."""
+
+    def test_today_closed_pushes_next_available_to_the_first_open_day(self):
+        closed = {date(2026, 6, 12), date(2026, 6, 13)}
+        # 6/12 and 6/13 are shut; nothing is booked, so the next open day is 6/14.
+        assert compute_availability([], today=TODAY, closed_dates=closed) == (
+            False,
+            date(2026, 6, 14),
+        )
+
+    def test_an_open_today_with_no_bookings_is_still_available(self):
+        # A closure a week out must not make today unavailable.
+        assert compute_availability([], today=TODAY, closed_dates={date(2026, 6, 19)}) == (
+            True,
+            TODAY,
+        )
+
+    def test_a_fixed_length_whose_return_lands_on_a_closure_does_not_count(self):
+        # 3-day length, today (6/12) would return 6/15 — shut. The first pickup
+        # whose return is open is 6/13 → 6/16.
+        assert compute_availability(
+            [], today=TODAY, durations=[3], closed_dates={date(2026, 6, 15)}
+        ) == (False, date(2026, 6, 13))
+
+    def test_empty_closed_set_is_byte_identical_to_no_argument(self):
+        blocked = [_Block(date(2026, 6, 10), date(2026, 6, 15))]
+        assert compute_availability(
+            blocked, today=TODAY, closed_dates=set()
+        ) == compute_availability(blocked, today=TODAY)
+
+    def test_every_day_in_the_horizon_closed_returns_none(self):
+        closed = {TODAY + timedelta(days=n) for n in range(5)}
+        assert compute_availability([], today=TODAY, horizon_days=4, closed_dates=closed) == (
+            False,
+            None,
+        )
+
+
 @pytest.mark.django_db
 class TestAvailabilityWindowMethod:
     def _lend_thing(self, user):

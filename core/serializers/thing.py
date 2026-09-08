@@ -9,6 +9,8 @@ from core.models import Thing
 from core.models.booking import BookingPeriod
 from core.utils import asset_url
 from core.validators import (
+    LOCALIZED_DESCRIPTION_STORAGE,
+    LOCALIZED_DESCRIPTION_VISIBLE,
     LOCALIZED_TAG_STORAGE,
     ImageIdField,
     LocalizedHeadlineField,
@@ -262,6 +264,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
+    reservation_horizon_days = serializers.SerializerMethodField()
+    closed_dates = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
     class Meta:
@@ -300,6 +304,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
+            "reservation_horizon_days",
+            "closed_dates",
             "transfer_count",
             "is_endless",
         ]
@@ -420,6 +426,22 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         first = self._viewable_collection(obj)
         return first.reservation_max_days if first else 1
 
+    def get_reservation_horizon_days(self, obj):
+        """How far ahead a RESERVE_THING can be booked, from its reservations
+        collection. ``None`` for non-RESERVE things — RequestThingPage reads it
+        for the date picker's ``maxDate``."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_horizon_days if first else 90
+
+    def get_closed_dates(self, obj):
+        """The governing collection's holidays / closures (ISO strings) — the
+        date picker greys these out and the request view refuses a handoff or a
+        reservation span that touches one. ``[]`` when there is no collection."""
+        first = self._viewable_collection(obj)
+        return list(first.closed_dates) if first else []
+
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available
         return [faq.code for faq in obj.faq_set.all()]
@@ -446,7 +468,12 @@ class ThingCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a thing."""
 
     headline = LocalizedHeadlineField(max_length=64)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/things")
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     gallery = serializers.ListField(
@@ -495,7 +522,12 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating a thing."""
 
     headline = LocalizedHeadlineField(max_length=64, required=False)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     thumbnail = ImageIdField(folder="oiueei/things")
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     gallery = serializers.ListField(
@@ -600,7 +632,12 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     """
 
     headline = LocalizedHeadlineField(max_length=64)
-    description = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    description = LocalizedTextField(
+        max_length=LOCALIZED_DESCRIPTION_VISIBLE,
+        storage_max_length=LOCALIZED_DESCRIPTION_STORAGE,
+        required=False,
+        allow_blank=True,
+    )
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     # LocaleDecimalField (not the plain DecimalField the other Thing
     # serializers use): a CSV row is the one path with no NumberInput to

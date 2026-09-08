@@ -226,6 +226,19 @@ describe('CreateCollectionPage', () => {
 
     await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(true));
   });
+
+  test('the home-page URL, folded into "More options", reaches the create request', async () => {
+    const { container } = renderCreate();
+    await fillTheRequiredFields(container, 'Ateneu');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const homePage = container.querySelector('#create-collection-home-page');
+    await waitFor(() => expect(homePage).toBeVisible());
+    fireEvent.change(homePage, { target: { value: '  https://ateneu.example/  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()?.home_page).toBe('https://ateneu.example/'));
+  });
 });
 
 describe('EditCollectionPage — load + pause + submit', () => {
@@ -311,6 +324,33 @@ describe('EditCollectionPage — load + pause + submit', () => {
       expect(call).toBeTruthy();
       const body = JSON.parse(call[1].body);
       expect(body).toMatchObject({ headline: 'New Name', mode: 'PROPRIETARY' });
+    });
+  });
+
+  test('loads the stored home page and PATCHes an edited one back', async () => {
+    const { container } = renderEdit({
+      headline: 'Ateneu',
+      mode: 'PROPRIETARY',
+      allowed_thing_types: ['GIFT_THING'],
+      home_page: 'https://old.example/',
+    });
+
+    await screen.findByDisplayValue('Ateneu');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const homePage = () => container.querySelector('#edit-collection-home-page');
+    await waitFor(() => expect(homePage()).toHaveValue('https://old.example/'));
+
+    fireEvent.change(homePage(), { target: { value: 'https://new.example/' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) =>
+          c[0] === '/api/v1/collections/COL001/' &&
+          c[1]?.method === 'PATCH' &&
+          JSON.parse(c[1].body).home_page === 'https://new.example/'
+      );
+      expect(call).toBeTruthy();
     });
   });
 });

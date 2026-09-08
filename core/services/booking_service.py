@@ -45,17 +45,19 @@ def _range_conflicts(start, end, ranges):
     return any(start < e and s < end for s, e in ranges)
 
 
-def _pickup_available(day, ranges, weekdays, durations):
+def _pickup_available(day, ranges, weekdays, durations, closed=frozenset()):
     """Can a rental be picked up on ``day`` under the collection's rental rules?
 
     Mirrors the frontend picker (``frontend/src/utils/rental.js::isPickupDisabled``)
     so the card's availability indicator and the date picker can never contradict
-    each other: the weekday must be allowed, the day must be free for pickup, and —
-    once the collection fixes the rental lengths — at least one of those lengths
-    must both land its return day on an allowed weekday and fit without overlapping
-    a booking.
+    each other: the weekday must be allowed, the day must be free for pickup and
+    not a closure day, and — once the collection fixes the rental lengths — at
+    least one of those lengths must land its return day on an allowed, open
+    weekday and fit without overlapping a booking.
     """
     if weekdays and day.weekday() not in weekdays:
+        return False
+    if day in closed:
         return False
     if _pickup_blocked(day, ranges):
         return False
@@ -63,6 +65,7 @@ def _pickup_available(day, ranges, weekdays, durations):
         return True
     return any(
         (not weekdays or (day + timedelta(days=n)).weekday() in weekdays)
+        and (day + timedelta(days=n)) not in closed
         and not _range_conflicts(day, day + timedelta(days=n), ranges)
         for n in durations
     )
@@ -74,6 +77,7 @@ def compute_availability(
     horizon_days=DEFAULT_AVAILABILITY_HORIZON_DAYS,
     allowed_weekdays=None,
     durations=None,
+    closed_dates=None,
 ):
     """Compute live availability for a date-based thing from its blocked periods.
 
@@ -107,10 +111,11 @@ def compute_availability(
     )
     weekdays = set(allowed_weekdays or ())
     lengths = sorted({int(d) for d in (durations or ())})
+    closed = set(closed_dates or ())
 
     horizon = today + timedelta(days=horizon_days)
 
-    if not weekdays and not lengths:
+    if not weekdays and not lengths and not closed:
         cursor = today
         while cursor <= horizon:
             # A day is blocked for pickup only on [start, end) — the return day
@@ -122,11 +127,11 @@ def compute_availability(
         return (False, None)
 
     # With rules in play a blocked span can't be skipped wholesale (the next legal
-    # pickup depends on the weekday and on which lengths still fit), so walk day
-    # by day — at most horizon_days iterations.
+    # pickup depends on the weekday, which lengths still fit, and closure days),
+    # so walk day by day — at most horizon_days iterations.
     cursor = today
     while cursor <= horizon:
-        if _pickup_available(cursor, ranges, weekdays, lengths):
+        if _pickup_available(cursor, ranges, weekdays, lengths, closed):
             return (cursor == today, cursor)
         cursor += timedelta(days=1)
     return (False, None)
@@ -521,13 +526,13 @@ def request_reservation(
             "You need to be a member of this group to reserve.", status_code=403
         )
 
+    # reservation_violation covers duration, the every-day-open-weekday rule AND
+    # the collection's "how far ahead" horizon — one backstop.
     violation = rc.reservation_violation(start_date, duration_days)
     if violation:
         raise BookingRequestError(violation)
 
     end_date = start_date + timedelta(days=duration_days)
-    if end_date > date.today() + timedelta(days=DEFAULT_AVAILABILITY_HORIZON_DAYS):
-        raise BookingRequestError("Reservations can be at most 3 months ahead.")
 
     with transaction.atomic():
         Thing.objects.select_for_update().get(code=thing.code)

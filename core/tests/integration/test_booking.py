@@ -1052,8 +1052,9 @@ class TestDateBasedThingCompleteFlow:
         assert len(mail.outbox) == 2
         owner_email = mail.outbox[0]
         assert user.email in owner_email.to
-        assert str(start) in owner_email.body
-        assert str(end) in owner_email.body
+        # Emails render dates DD/MM/YYYY, like the SPA — not ISO.
+        assert start.strftime("%d/%m/%Y") in owner_email.body
+        assert end.strftime("%d/%m/%Y") in owner_email.body
         confirmation_email = mail.outbox[1]
         assert user2.email in confirmation_email.to
 
@@ -1071,7 +1072,7 @@ class TestDateBasedThingCompleteFlow:
         requester_email = mail.outbox[0]
         assert user2.email in requester_email.to
         assert "confirmed" in requester_email.body.lower()
-        assert str(start) in requester_email.body
+        assert start.strftime("%d/%m/%Y") in requester_email.body
 
         # Verify thing stays ACTIVE
         lend_thing.refresh_from_db()
@@ -1264,8 +1265,8 @@ class TestBookingConfirmationEmail:
         confirmation_email = mail.outbox[1]
         assert user2.email in confirmation_email.to
         assert lend_thing.headline in confirmation_email.body
-        assert str(start) in confirmation_email.body
-        assert str(end) in confirmation_email.body
+        assert start.strftime("%d/%m/%Y") in confirmation_email.body
+        assert end.strftime("%d/%m/%Y") in confirmation_email.body
 
 
 @pytest.mark.django_db

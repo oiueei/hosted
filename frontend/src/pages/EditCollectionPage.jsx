@@ -10,6 +10,7 @@ import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
+import ClosedDatesField from '../components/ClosedDatesField';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -19,6 +20,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import StatusRegion from '../components/StatusRegion';
 
@@ -55,6 +57,9 @@ export default function EditCollectionPage() {
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
+  const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [closedDates, setClosedDates] = useState('');
+  const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -158,6 +163,9 @@ export default function EditCollectionPage() {
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
           setReservationMaxDays(data.reservation_max_days || 1);
+          setReservationHorizonDays(data.reservation_horizon_days || 90);
+          setClosedDates(closedDatesToDisplay(data.closed_dates));
+          setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
@@ -186,7 +194,7 @@ export default function EditCollectionPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('editCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('editCollection.maxHeadline');
-    if (localizedCounter(description, 256).over)
+    if (localizedCounter(description, 2000).over)
       newErrors.description = t('editCollection.maxDescription');
     setErrors(newErrors);
     const allowedTypesOk = allowedThingTypes.length > 0;
@@ -209,13 +217,18 @@ export default function EditCollectionPage() {
       allowed_thing_types: allowedThingTypes,
       rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
+      closed_dates: closedDates,
+      home_page: homePage.trim(),
       deposit_policy: isReservations ? '' : depositPolicy.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
       welcome_doc: welcomeDoc || '',
     };
-    if (isReservations) body.reservation_max_days = reservationMaxDays;
+    if (isReservations) {
+      body.reservation_max_days = reservationMaxDays;
+      body.reservation_horizon_days = reservationHorizonDays;
+    }
 
     try {
       const res = await apiFetch(`/api/v1/collections/${code}/`, {
@@ -321,7 +334,7 @@ export default function EditCollectionPage() {
           onChange={(e) => setDescription(e.target.value)}
           invalid={!!errors.description}
           errorText={errors.description}
-          helperText={localizedCounter(description, 256).text}
+          helperText={localizedCounter(description, 2000).text}
         />
         <LocalizedInfo id="edit-collection-localized-info" />
         <Select
@@ -381,6 +394,8 @@ export default function EditCollectionPage() {
               idPrefix="edit-collection"
               reservationMaxDays={reservationMaxDays}
               setReservationMaxDays={setReservationMaxDays}
+              reservationHorizonDays={reservationHorizonDays}
+              setReservationHorizonDays={setReservationHorizonDays}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}
@@ -397,6 +412,21 @@ export default function EditCollectionPage() {
               theeemeColor01={tc.color_01}
             />
           )}
+          <ClosedDatesField
+            id="edit-collection-closed-dates"
+            value={closedDates}
+            onChange={setClosedDates}
+          />
+          <TextInput
+            id="edit-collection-home-page"
+            type="url"
+            label={t('homePage.label')}
+            helperText={t('homePage.helper')}
+            placeholder="https://…"
+            value={homePage}
+            onChange={(e) => setHomePage(e.target.value)}
+            maxLength={128}
+          />
           <Select
             id="edit-collection-digest"
             texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}
