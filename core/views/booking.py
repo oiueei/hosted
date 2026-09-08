@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 
 from core.models.booking import BookingPeriod
 from core.models.rsvp import RSVP
+from core.models.thing import Thing
 from core.pagination import StandardResultsPagination
 from core.serializers.booking import (
     BookingPeriodCalendarSerializer,
@@ -21,7 +22,12 @@ from core.serializers.booking import (
     BookingPeriodSerializer,
     MyBookingSerializer,
 )
-from core.services.booking_service import cancel_booking, finalize_booking_decision
+from core.services.booking_service import (
+    BookingRequestError,
+    cancel_booking,
+    cancel_reservation,
+    finalize_booking_decision,
+)
 from core.views._helpers import get_viewable_thing, viewer_code
 
 
@@ -97,13 +103,22 @@ class BookingCancelView(APIView):
     """
     POST /api/v1/bookings/{booking_code}/cancel/
 
-    Allows the requester to cancel their own pending booking.
+    Allows the requester to cancel their own pending booking. For a confirmed
+    on-site reservation (RESERVE_THING) **the owner may cancel too** (rule 4) —
+    and only while it hasn't started; the other party is notified.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_code):
         booking = get_object_or_404(BookingPeriod, code=booking_code)
+
+        if booking.thing_type == Thing.Type.RESERVE_THING:
+            try:
+                cancel_reservation(booking, request.user)
+            except BookingRequestError as exc:
+                return Response({"error": exc.message}, status=exc.status_code)
+            return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
         # Only the requester can cancel
         if booking.requester_code_id != request.user.code:

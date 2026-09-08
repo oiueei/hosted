@@ -22,6 +22,7 @@ export default function CollectionForm({
   idPrefix,
   allowedThingTypes,
   setAllowedThingTypes,
+  mode = 'PROPRIETARY',
   visibility = 'PRIVATE',
   setVisibility = () => {},
   allowProposals = true,
@@ -31,6 +32,7 @@ export default function CollectionForm({
 }) {
   const { t, i18n } = useTranslation();
   const capabilities = useCapabilities();
+  const isReservations = allowedThingTypes.length === 1 && allowedThingTypes[0] === 'RESERVE_THING';
   const toggleTheme = theeemeColor01
     ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
     : undefined;
@@ -46,8 +48,27 @@ export default function CollectionForm({
   // server only judges a *change*, and hiding it here would save a wrong list.
   const allowedTypesOptions = typeCatalogue.filter(
     (opt) =>
-      isOfferable(capabilities, 'thing_types', opt.value) || allowedThingTypes.includes(opt.value)
+      (isOfferable(capabilities, 'thing_types', opt.value) ||
+        allowedThingTypes.includes(opt.value)) &&
+      // RESERVE is never offered for a COMMUNITY collection — an operator runs
+      // the premises, so peer contribution has no meaning for it.
+      !(opt.value === 'RESERVE_THING' && mode === 'COMMUNITY')
   );
+
+  // Picking "Reservation" makes it the *only* allowed type (a reservations
+  // collection holds nothing else) and, in the pages, locks the mode to
+  // PROPRIETARY. Un-picking it, or adding another type, drops it.
+  const handleTypesChange = (opts) => {
+    const values = opts.map((o) => o.value);
+    const justPickedReserve = values.includes('RESERVE_THING') && !isReservations;
+    if (justPickedReserve) {
+      setAllowedThingTypes(['RESERVE_THING']);
+    } else if (values.includes('RESERVE_THING') && values.length > 1) {
+      setAllowedThingTypes(values.filter((v) => v !== 'RESERVE_THING'));
+    } else {
+      setAllowedThingTypes(values);
+    }
+  };
 
   return (
     <>
@@ -121,9 +142,14 @@ export default function CollectionForm({
             label: t('types.' + v),
             value: v,
           }))}
-          onChange={(opts) => setAllowedThingTypes(opts.map((o) => o.value))}
+          onChange={handleTypesChange}
           invalid={!!errors.allowedThingTypes}
         />
+        {isReservations && (
+          <p className="weekday-field-helper" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+            {t('createCollection.reservationsModeNote')}
+          </p>
+        )}
         <ApprovalNotice kind="thing_types" catalogue={typeCatalogue} />
       </div>
     </>

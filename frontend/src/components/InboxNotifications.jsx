@@ -99,6 +99,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     invitee_name: named(payload.invitee_name),
     member_name: named(payload.member_name),
     proposer_name: named(payload.proposer_name),
+    other_name: named(payload.other_name),
   });
 
   const notificationLabel = (n) => {
@@ -132,6 +133,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.proposalDeclinedLabel');
       case 'INVITE_PROPOSED':
         return isProposalApproved(n) ? t('home.proposalApprovedLabel') : t('home.proposedLabel');
+      case 'RESERVATION_MADE':
+        return t('home.reservationMadeLabel');
+      case 'RESERVATION_CANCELLED':
+        return t('home.reservationCancelledLabel');
       default:
         return t('home.broadcastLabel', {
           owner_name: p.owner_name,
@@ -216,6 +221,16 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
               proposer_name: p.proposer_name,
               email: p.email,
             });
+      case 'RESERVATION_MADE':
+        return t('home.reservationMadeBody', {
+          requester_name: p.requester_name,
+          thing_headline: p.thing_headline,
+        });
+      case 'RESERVATION_CANCELLED':
+        return t('home.reservationCancelledBody', {
+          other_name: p.other_name,
+          thing_headline: p.thing_headline,
+        });
       default:
         return t('home.broadcastBody', { message: p.message });
     }

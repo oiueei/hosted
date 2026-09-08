@@ -23,6 +23,14 @@ class Thing(models.Model):
         SELL_THING = "SELL_THING", "Sell Thing"
         RENT_THING = "RENT_THING", "Rent Thing"
         LEND_THING = "LEND_THING", "Lend Thing"
+        # An on-site reservation: booked to be *used on the owner's premises* — a
+        # room, a machine, a workbench — never carried away. Date-based like a
+        # loan (one booking blocks its day and frees the next), but nothing
+        # changes hands: no ThingTransfer, no ownership move, no deposit. The
+        # booking is auto-confirmed (no owner accept step) and lives only in a
+        # PROPRIETARY, reservations-only collection an operator runs. `fee` is
+        # optional; a COMMUNITY collection can never hold one.
+        RESERVE_THING = "RESERVE_THING", "Reserve Thing"
 
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
@@ -44,7 +52,9 @@ class Thing(models.Model):
         ALMOST_JUNK = "ALMOST_JUNK", "Almost junk"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
-    type = models.CharField(max_length=11, choices=Type.choices, default=Type.GIFT_THING)
+    # 16, not 13 ("RESERVE_THING" is the longest value): headroom for the next
+    # verb, matching the slack `BookingPeriod.thing_type` (17) already carries.
+    type = models.CharField(max_length=16, choices=Type.choices, default=Type.GIFT_THING)
     owner = models.ForeignKey(
         "User",
         on_delete=models.CASCADE,
@@ -81,7 +91,9 @@ class Thing(models.Model):
     availability = models.CharField(
         max_length=12, choices=Availability.choices, blank=True, default=""
     )
-    location = models.CharField(max_length=32, blank=True, default="")
+    # 64, not 32: a RESERVE thing's location can be a whole address — "Sala 2,
+    # 1a planta, Ateneu del Poblenou" — where a gift's is just a neighbourhood.
+    location = models.CharField(max_length=64, blank=True, default="")
     condition = models.CharField(max_length=12, choices=Condition.choices, blank=True, default="")
     gallery = models.JSONField(
         default=list,
@@ -148,7 +160,7 @@ class Thing(models.Model):
             pass
 
     def availability_window(self, horizon_days=90, collection=None):
-        """Live availability for date-based things (LEND/RENT) from the booking calendar.
+        """Live availability for date-based things (LEND/RENT/RESERVE) from the calendar.
 
         Returns ``{"available_today": bool, "next_available": date|None}`` for
         DATE_BASED_TYPES, or ``None`` for any other type (where a booking calendar

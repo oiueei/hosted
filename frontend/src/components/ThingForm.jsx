@@ -2,6 +2,7 @@ import { Select, TextInput, TextArea, NumberInput, ToggleButton } from 'hds-reac
 import { useTranslation } from 'react-i18next';
 import {
   FEE_TYPES,
+  FEE_OPTIONAL_TYPES,
   DATE_TYPES,
   DETAIL_TYPES,
   AVAILABILITY_VALUES,
@@ -77,11 +78,13 @@ export default function ThingForm({
   const showEndless = ['GIFT_THING', 'SELL_THING'].includes(type);
   const isFeeType = FEE_TYPES.includes(type);
   const isDetailType = DETAIL_TYPES.includes(type);
-  const showFee = isFeeType;
+  // Fee: required + shown for SELL/RENT; shown but optional for RESERVE.
+  const showFee = isFeeType || FEE_OPTIONAL_TYPES.includes(type);
   // Deposit is a guarantee that comes back, not part of the price — LEND/RENT
   // only (D4). Its own gate, never showFee: RENT carries both, LEND only this.
-  const showDeposit = DATE_TYPES.includes(type);
-  const showSpacer = (isFeeType || showDeposit) && isDetailType;
+  // A RESERVE thing never leaves the premises, so there is nothing to secure.
+  const showDeposit = DATE_TYPES.includes(type) && type !== 'RESERVE_THING';
+  const showSpacer = (showFee || showDeposit) && isDetailType;
   const showDetailFields = isDetailType;
 
   return (
@@ -150,13 +153,13 @@ export default function ThingForm({
       {showFee && (
         <NumberInput
           id={`${idPrefix}-fee`}
-          label={t('addThing.priceLabel')}
+          label={isFeeType ? t('addThing.priceLabel') : t('addThing.priceOptionalLabel')}
           value={fee === '' ? '' : Number(fee)}
           onChange={(e) => setFee(e.target.value)}
           min={0}
           step={feeStep}
           unit="EUR"
-          required
+          required={isFeeType}
           invalid={!!errors.fee}
           errorText={errors.fee}
         />

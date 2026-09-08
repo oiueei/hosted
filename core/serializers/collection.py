@@ -16,14 +16,18 @@ from core.validators import (
     SafeTextField,
 )
 
-# The thing types a collection's allowlist may name. PROPRIETARY and COMMUNITY
-# take the same set — mode decides WHO may add a thing (owner only, or any
-# member), never WHICH types are on offer.
+# The thing types a collection's allowlist may name. The first four take the
+# same set in either mode — mode decides WHO may add a thing (owner only, or any
+# member), never WHICH types are on offer. **RESERVE_THING is the exception**:
+# it stands alone (a reservations collection holds only RESERVE things) and
+# forces PROPRIETARY mode — an operator runs the premises, so COMMUNITY (peer
+# contribution) has no meaning for it. Enforced in `_validate_allowed_thing_types`.
 ALLOWED_THING_TYPES = (
     Thing.Type.GIFT_THING,
     Thing.Type.SELL_THING,
     Thing.Type.RENT_THING,
     Thing.Type.LEND_THING,
+    Thing.Type.RESERVE_THING,
 )
 
 
@@ -131,6 +135,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "reservation_max_days",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -331,6 +336,10 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    # RESERVE_THING collections only: the longest a member may book the space
+    # for in one reservation. Inert elsewhere. `rental_weekdays` above is reused
+    # as "days reservations are allowed".
+    reservation_max_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -350,6 +359,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "reservation_max_days",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -369,14 +379,14 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         # Default visibility follows the mode when the client doesn't set it:
         # community collections are born PUBLIC, proprietary ones PRIVATE. The
         # owner can override either way via the toggle.
+        mode = attrs.get("mode", Collection.Mode.PROPRIETARY)
         if not attrs.get("visibility"):
-            mode = attrs.get("mode", Collection.Mode.PROPRIETARY)
             attrs["visibility"] = (
                 Collection.Visibility.PUBLIC
                 if mode == Collection.Mode.COMMUNITY
                 else Collection.Visibility.PRIVATE
             )
-        _validate_allowed_thing_types(attrs.get("allowed_thing_types", []))
+        _validate_allowed_thing_types(attrs.get("allowed_thing_types", []), mode)
         return attrs
 
 
@@ -402,17 +412,32 @@ def _normalize_tags(tags):
     return result
 
 
-def _validate_allowed_thing_types(allowed_thing_types):
+def _validate_allowed_thing_types(allowed_thing_types, mode=None):
     """Validate the allowed_thing_types list when non-empty.
 
     Empty list means "no restriction" — accepted in any mode (preserves the
     pre-feature behaviour and keeps the API tolerant for non-form callers).
     The "user must pick at least one" rule is enforced in the create/edit
     form on the frontend, where it belongs as a UX nudge.
+
+    RESERVE_THING is special: a reservations collection holds *only* RESERVE
+    things and is always PROPRIETARY (an operator runs the premises), so the
+    allowlist must be exactly ``["RESERVE_THING"]`` and the mode PROPRIETARY.
     """
     invalid = [t for t in allowed_thing_types if t not in ALLOWED_THING_TYPES]
     if invalid:
         raise serializers.ValidationError(f"These types are not allowed: {invalid}")
+    if Thing.Type.RESERVE_THING in allowed_thing_types:
+        if list(allowed_thing_types) != [Thing.Type.RESERVE_THING]:
+            raise serializers.ValidationError(
+                "A reservations collection holds only RESERVE things — "
+                "reservations can't be mixed with the other types."
+            )
+        if mode == Collection.Mode.COMMUNITY:
+            raise serializers.ValidationError(
+                "A reservations collection is run by one operator, so it can't "
+                "be a community collection."
+            )
 
 
 class CollectionUpdateSerializer(serializers.ModelSerializer):
@@ -443,6 +468,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    reservation_max_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
     # Localized like every other owner text (D5): a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
@@ -463,6 +489,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
+            "reservation_max_days",
             "deposit_policy",
             "tags",
             "thumbnail",
@@ -482,7 +509,18 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "allowed_thing_types",
             instance.allowed_thing_types if instance else [],
         )
-        _validate_allowed_thing_types(allowed_thing_types)
+        mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
+        _validate_allowed_thing_types(allowed_thing_types, mode)
+        # A reservations collection can never be switched to COMMUNITY, even if
+        # the allowlist isn't being touched in this request.
+        if (
+            instance is not None
+            and attrs.get("mode") == Collection.Mode.COMMUNITY
+            and instance.is_reservations_collection()
+        ):
+            raise serializers.ValidationError(
+                "A reservations collection can't become a community collection."
+            )
         # Orphan check: if this is an update narrowing the list, every existing
         # thing currently in the collection must keep a valid slot in the new
         # list. Otherwise the rule would become incoherent ("type X is not

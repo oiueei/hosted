@@ -4,6 +4,7 @@ from .booking import (
     BookingPeriodOwnerCalendarSerializer,
     BookingPeriodSerializer,
     MyBookingSerializer,
+    ReservationRequestSerializer,
     ThingRequestWithDatesSerializer,
 )
 from .collection import (
@@ -55,6 +56,7 @@ __all__ = [
     "BookingPeriodCalendarSerializer",
     "BookingPeriodOwnerCalendarSerializer",
     "ThingRequestWithDatesSerializer",
+    "ReservationRequestSerializer",
     "MyBookingSerializer",
     "TheeemeSerializer",
     "ThingTransferSerializer",

@@ -136,7 +136,8 @@
     "collaborate": "Col·labora — OIUEEI",
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
     "sharedThings": "Compartit amb mi — OIUEEI",
-    "dataExport": "Exportar dades — OIUEEI"
+    "dataExport": "Exportar dades — OIUEEI",
+    "reserveThing": "Reservar: {{headline}}"
   },
   "login": {
     "title": "OIUEEI",
@@ -227,7 +228,11 @@
     "proposalDeclinedLabel": "Recomanació no acceptada",
     "proposalDeclinedBody": "Qui porta “{{collection_headline}}” ha decidit no convidar {{email}} aquesta vegada. No s'ha contactat amb ningú, i no se li ha dit per què.",
     "viewProposal": "Decidir ara",
-    "viewGroup": "Obrir el grup"
+    "viewGroup": "Obrir el grup",
+    "reservationMadeLabel": "Nova reserva",
+    "reservationMadeBody": "{{requester_name}} ha reservat {{thing_headline}}.",
+    "reservationCancelledLabel": "Reserva cancel·lada",
+    "reservationCancelledBody": "{{other_name}} ha cancel·lat una reserva de {{thing_headline}}."
   },
   "collectionPage": {
     "editCollection": "Editar col·lecció",
@@ -345,7 +350,8 @@
       "GIFT_THING": "Demanar",
       "SELL_THING": "Comprar",
       "RENT_THING": "Llogar",
-      "LEND_THING": "Demanar prestat"
+      "LEND_THING": "Demanar prestat",
+      "RESERVE_THING": "Reservar"
     }
   },
   "thingTags": {
@@ -399,12 +405,13 @@
     "titleRequired": "El títol és obligatori.",
     "maxHeadline": "Màxim 64 caràcters per idioma.",
     "priceRequired": "El preu és obligatori per a aquest tipus.",
-    "maxLocation": "Màxim 32 caràcters.",
+    "maxLocation": "Màxim 64 caràcters.",
     "errorCreating": "Error en crear l'article.",
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "Selecciona etiquetes",
     "tagsHelper": "Tria entre les etiquetes d'aquesta col·lecció",
-    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma."
+    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma.",
+    "priceOptionalLabel": "Preu (opcional)"
   },
   "editThing": {
     "pageTitle": "Editar article",
@@ -495,7 +502,8 @@
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "p. ex. Vintage, Cuina, Exterior",
     "tagsHelper": "Etiquetes opcionals per organitzar les coses d'aquesta col·lecció",
-    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma."
+    "maxDescription": "La descripció és massa llarga: 256 caràcters per idioma.",
+    "reservationsModeNote": "Una col·lecció de reserves la gestiona una sola persona i només conté reserves, així que es queda privada i de tipus propietari."
   },
   "myBookings": {
     "pageTitle": "Les meves sol·licituds",
@@ -518,7 +526,9 @@
     "expiredHelper": "Aquesta sol·licitud ha caducat automàticament perquè el propietari no ha respost en 72 hores (3 dies).",
     "pastRequests": "Sol·licituds anteriors",
     "captionPending": "Sol·licituds a l'espera de resposta",
-    "captionPast": "Sol·licituds ja tancades"
+    "captionPast": "Sol·licituds ja tancades",
+    "cancelReservation": "Cancel·lar la reserva",
+    "currentHeading": "Actuals"
   },
   "ownerBookings": {
     "pageTitle": "Sol·licituds per a mi",
@@ -535,7 +545,9 @@
     "errorLoading": "Error en carregar les sol·licituds.",
     "emptyCta": "Comparteix una col·lecció",
     "captionPending": "Sol·licituds esperant la teva resposta",
-    "captionPast": "Sol·licituds que ja has respost"
+    "captionPast": "Sol·licituds que ja has respost",
+    "cancelReservation": "Cancel·lar la reserva",
+    "reservationCancelled": "Reserva cancel·lada; n'hem avisat el membre."
   },
   "manageInvites": {
     "pageTitle": "Gestionar convidats",
@@ -634,14 +646,16 @@
     "GIFT_THING": "Regal",
     "SELL_THING": "Venda",
     "RENT_THING": "Lloguer",
-    "LEND_THING": "Préstec"
+    "LEND_THING": "Préstec",
+    "RESERVE_THING": "Reserva"
   },
   "typeInfo": {
     "title": "Què significa cada tipus",
     "GIFT_THING": "Es regala — qui el demana se'l queda.",
     "SELL_THING": "En venda al preu que posis.",
     "RENT_THING": "Es lloga per dies, amb preu.",
-    "LEND_THING": "Es deixa uns dies i torna."
+    "LEND_THING": "Es deixa uns dies i torna.",
+    "RESERVE_THING": "Es reserva per usar-lo al local del propietari, per dates — no t'endús res."
   },
   "availability": {
     "IMMEDIATE": "Immediata",
@@ -925,5 +939,21 @@
     "downloadButton": "Descarregar les meves dades",
     "downloading": "Preparant el teu fitxer…",
     "error": "No hem pogut preparar la teva exportació. Torna-ho a provar d'aquí un moment."
+  },
+  "reservation": {
+    "pageTitle": "Reservar {{headline}}",
+    "durationLabel": "Quants dies?",
+    "days_one": "{{count}} dia",
+    "days_other": "{{count}} dies",
+    "pickupLabel": "A partir del",
+    "projectNoteLabel": "Explica'ns breument el teu projecte (opcional)",
+    "projectNoteHelper": "Queden {{remaining}} caràcters",
+    "successLabel": "Reservat",
+    "successMessage": "La teva reserva està confirmada; n'hem avisat el propietari.",
+    "noteFrom": "El seu missatge: {{note}}",
+    "maxDaysLabel": "Reserva més llarga (dies)",
+    "maxDaysHelper": "Un membre pot reservar l'espai d'1 fins a aquest nombre de dies cada vegada.",
+    "weekdaysLabel": "Dies oberts a reserves",
+    "weekdaysHelper": "Deixa'ls tots sense marcar per permetre qualsevol dia. Una reserva no pot abastar un dia en què l'espai estigui tancat."
   }
 }

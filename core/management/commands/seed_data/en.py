@@ -57,6 +57,11 @@ COLLECTIONS = [
         "headline": "The Sunday swap-meet in the courtyard",
         "description": "Every Sunday we set up a swap-meet, a party and a lunch in the courtyard. Bring down what you no longer use and take home what you need: everything here is a gift. Co-op neighbours only.",
     },
+    {
+        "code": "1u1uRe",
+        "headline": "Lulu's workshop — book a spot",
+        "description": "Reserve a bench or the meeting corner to use here in the workshop. It's yours for the day (or up to three), nothing leaves the room, and the booking is confirmed straight away. Open Monday to Friday.",
+    },
 ]
 
 THINGS = [
@@ -391,6 +396,16 @@ THINGS = [
         "code": "L3L311",
         "headline": "Portable cool box for beach and picnic",
         "description": "A cool box with a green lid and grey handle, ideal for taking drinks and food to the beach or on a picnic. Practical and easy to carry.",
+    },
+    {
+        "code": "1u1uRa",
+        "headline": "The big workbench",
+        "description": "The solid oak bench with the vice and the good light. Reserve it for a day of real work — small upkeep fee towards blades and glue. It stays in the workshop.",
+    },
+    {
+        "code": "1u1uRb",
+        "headline": "The meeting corner",
+        "description": "Table, six chairs and a screen for a small meeting or a class. Free to book, up to three days. Please leave it as you found it.",
     },
 ]
 

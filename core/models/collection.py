@@ -4,6 +4,7 @@ Collection model for OIUEEI.
 
 import logging
 import secrets
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
@@ -102,6 +103,12 @@ class Collection(models.Model):
     #   Python weekday() numbering (0=Mon … 6=Sun). Empty = any day.
     rental_durations = models.JSONField(default=list, blank=True)
     rental_weekdays = models.JSONField(default=list, blank=True)
+    # RESERVE_THING collections only (``allowed_thing_types == ["RESERVE_THING"]``).
+    # The longest a member may book the space for in one reservation, in days —
+    # the renter picks any length from 1 to this. ``rental_weekdays`` above is
+    # reused as "days reservations are allowed" (every day of the span must fall
+    # on one). Inert on every other collection.
+    reservation_max_days = models.PositiveSmallIntegerField(default=1)
     # How deposits work in this group, in the owner's own words — "50 €, back
     # when the drill comes home in one piece". A bare number is the beginning of
     # an argument: the condition for getting it back is the actual rule, and that
@@ -323,6 +330,42 @@ class Collection(models.Model):
     def has_rental_rules(self):
         """True if this collection constrains LEND/RENT booking dates (#7)."""
         return bool(self.rental_durations) or bool(self.rental_weekdays)
+
+    def is_reservations_collection(self):
+        """True if this is a RESERVE_THING collection.
+
+        Derived from the allowlist rather than a marker field: a collection
+        holds RESERVE things **iff** ``allowed_thing_types == ["RESERVE_THING"]``.
+        The serializer enforces that a RESERVE entry stands alone and forces
+        PROPRIETARY mode, so "reservations collection" and "solo-RESERVE
+        PROPRIETARY collection" are the same thing.
+        """
+        return list(self.allowed_thing_types or []) == ["RESERVE_THING"]
+
+    def reservation_violation(self, start_date, duration_days):
+        """Return an error string if a RESERVE booking breaks this collection's
+        reservation rules, else ``None``. Mirrors ``rental_violation``'s shape.
+
+        ``duration_days`` is how many days the member wants the space, 1 to
+        ``reservation_max_days``. The booking occupies ``[start, start + N)`` —
+        every one of those days must fall on an allowed weekday
+        (``rental_weekdays``, reused; empty = any day), because the space is only
+        open on those days. A reservation that would span a closed day is
+        refused rather than silently shortened.
+        """
+        if duration_days < 1:
+            return "A reservation is at least one day."
+        if duration_days > self.reservation_max_days:
+            return (
+                f"This space can be reserved for at most "
+                f"{self.reservation_max_days} day(s) at a time."
+            )
+        weekdays = self.rental_weekdays or []
+        if weekdays:
+            for offset in range(duration_days):
+                if (start_date + timedelta(days=offset)).weekday() not in weekdays:
+                    return "Those dates include a day this space isn't open for reservations."
+        return None
 
     # ---- Mass-upload capacity guards -------------------------------------
     # Two INDEPENDENT counters per collection — things and invitees — because a

@@ -116,6 +116,28 @@ export default function OwnerBookingsPage() {
     }
   };
 
+  // The owner may cancel a member's confirmed reservation that hasn't started
+  // (they need the space). Same endpoint as the guest's cancel; the backend
+  // branches on the thing type and notifies the other party.
+  const handleCancelReservation = async (bookingCode) => {
+    setActing(bookingCode);
+    try {
+      const res = await apiFetch(`/api/v1/bookings/${bookingCode}/cancel/`, { method: 'POST' });
+      if (res.ok) {
+        setBookings((prev) =>
+          prev.map((b) => (b.code === bookingCode ? { ...b, status: 'CANCELLED' } : b))
+        );
+        setToast({ type: 'success', message: t('ownerBookings.reservationCancelled') });
+      } else {
+        setToast({ type: 'error', message: t('ownerBookings.errorActing') });
+      }
+    } catch {
+      setToast({ type: 'error', message: t('common.connectionError') });
+    } finally {
+      setActing(null);
+    }
+  };
+
   const loadMore = async () => {
     if (!next || loadingMore) return;
     setLoadingMore(true);
@@ -164,8 +186,13 @@ export default function OwnerBookingsPage() {
     _startDate: b.start_date,
     _endDate: b.end_date,
     _created: b.created,
+    _projectNote: b.project_note,
     _transfersOwnership: !DATE_TYPES.includes(b.thing_type) && !b.thing_is_endless,
   }));
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const isFutureReservation = (row) =>
+    row._type === 'RESERVE_THING' && row._status === 'ACCEPTED' && row._startDate >= todayIso;
 
   const cols = [
     {
@@ -197,6 +224,18 @@ export default function OwnerBookingsPage() {
               <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
             )}
           </p>
+          {row._projectNote && (
+            <p
+              style={{
+                margin: 'var(--spacing-2-xs) 0 0',
+                fontSize: 'var(--fontsize-body-s)',
+                fontStyle: 'italic',
+                color: 'var(--color-black-70)',
+              }}
+            >
+              {t('reservation.noteFrom', { note: row._projectNote })}
+            </p>
+          )}
         </div>
       ),
     },
@@ -234,6 +273,19 @@ export default function OwnerBookingsPage() {
             >
               <IconCrossCircle aria-hidden />
             </TooltipButton>
+          </div>
+        ) : isFutureReservation(row) ? (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="supplementary"
+              size="small"
+              iconStart={<IconCrossCircle aria-hidden />}
+              onClick={() => handleCancelReservation(row._code)}
+              disabled={acting === row._code}
+              style={btnSecondaryStyle}
+            >
+              {t('ownerBookings.cancelReservation')}
+            </Button>
           </div>
         ) : null,
     },
