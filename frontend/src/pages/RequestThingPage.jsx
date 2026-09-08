@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Checkbox, DateInput, Notification, Select } from 'hds-react';
+import { Button, DateInput, Notification, Select, TextArea } from 'hds-react';
 import { DATE_TYPES } from '../constants/things';
 import {
   durationLabel,
   isPickupDisabled,
+  reservationPickupDisabled,
   isDateBlocked,
   derivedReturnDate,
   isoToDisplay,
@@ -40,15 +41,23 @@ export default function RequestThingPage() {
   const [thing, setThing] = useState(null);
   const L = useLocalized();
   const headline = L(thing?.headline);
+  const isReservation = thing?.type === 'RESERVE_THING';
   useEffect(() => {
-    document.title = thing ? t('titles.holdThing', { headline }) : t('titles.holdDefault');
-  }, [thing, headline, t]);
+    if (!thing) {
+      document.title = t('titles.holdDefault');
+    } else {
+      document.title = isReservation
+        ? t('titles.reserveThing', { headline })
+        : t('titles.holdThing', { headline });
+    }
+  }, [thing, headline, isReservation, t]);
   // Date field state lives in the DISPLAY format (DD/MM/YYYY, what the DateInputs
   // emit); it converts to ISO at the consumption boundaries (POST body, derived
   // return date) via displayToIso.
   const [startDate, setStartDate] = useState(isoToDisplay(location.state?.prefillDate) || '');
   const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState('');
+  const [projectNote, setProjectNote] = useState('');
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [blockedPeriods, setBlockedPeriods] = useState([]);
@@ -87,7 +96,12 @@ export default function RequestThingPage() {
   const rentalDurations = thing?.rental_durations || [];
   const rentalWeekdays = thing?.rental_weekdays || [];
   const isConstrainedRental =
-    !!thing && DATE_TYPES.includes(thing.type) && rentalDurations.length > 0;
+    !!thing && DATE_TYPES.includes(thing.type) && !isReservation && rentalDurations.length > 0;
+
+  // RESERVE: the renter picks a pickup date + a length of 1..reservation_max_days.
+  // The Select is omitted (length fixed to 1) when the collection caps it at 1.
+  const reservationMax = Math.max(1, thing?.reservation_max_days || 1);
+  const reservationLengths = Array.from({ length: reservationMax }, (_, i) => i + 1);
 
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
@@ -96,14 +110,25 @@ export default function RequestThingPage() {
   // and in between the form's own validation called itself incomplete. What the
   // renter picks always wins; the single option only stands in before they have
   // touched the control.
-  const soleDuration =
-    isConstrainedRental && rentalDurations.length === 1 ? String(rentalDurations[0]) : '';
+  const soleDuration = isReservation
+    ? reservationMax === 1
+      ? '1'
+      : ''
+    : isConstrainedRental && rentalDurations.length === 1
+      ? String(rentalDurations[0])
+      : '';
   const chosenDuration = duration || soleDuration;
 
   // Pickup validity and blocked-date checks are pure, timezone-safe, unit-tested
   // helpers in utils/rental.js; bind them to the current rental state here.
   const pickupDisabled = (date) =>
-    isPickupDisabled(date, { rentalWeekdays, blockedPeriods, duration: chosenDuration });
+    isReservation
+      ? reservationPickupDisabled(date, {
+          rentalWeekdays,
+          blockedPeriods,
+          duration: chosenDuration,
+        })
+      : isPickupDisabled(date, { rentalWeekdays, blockedPeriods, duration: chosenDuration });
   const dateBlocked = (date) => isDateBlocked(date, blockedPeriods);
 
   const handleSubmit = async () => {
@@ -112,7 +137,17 @@ export default function RequestThingPage() {
     const isDateBased = thing && DATE_TYPES.includes(thing.type);
 
     let body = {};
-    if (isDateBased) {
+    if (isReservation) {
+      // Pickup date + a length of 1..reservation_max_days; the backend derives
+      // the end date and auto-confirms.
+      const startIso = displayToIso(startDate);
+      if (!chosenDuration || !startIso) return;
+      body = {
+        start_date: startIso,
+        duration_days: Number(chosenDuration),
+        project_note: projectNote.trim(),
+      };
+    } else if (isDateBased) {
       if (isConstrainedRental) {
         // Renter picks a fixed length + a pickup date; the return date is derived
         // as pickup + length (a week rental comes back on the same weekday).
@@ -176,14 +211,22 @@ export default function RequestThingPage() {
 
   return (
     <PageLayout
-      title={t('request.pageTitle', { headline })}
+      title={
+        isReservation
+          ? t('reservation.pageTitle', { headline })
+          : t('request.pageTitle', { headline })
+      }
       backTo={backPath}
       backLabel={backLabel}
     >
       {success ? (
         <>
-          <Notification autofocus label={t('request.successLabel')} type="success">
-            {t('request.successMessage')}
+          <Notification
+            autofocus
+            label={isReservation ? t('reservation.successLabel') : t('request.successLabel')}
+            type="success"
+          >
+            {isReservation ? t('reservation.successMessage') : t('request.successMessage')}
           </Notification>
           <div className="spacer-m" />
           <Button
@@ -279,7 +322,73 @@ export default function RequestThingPage() {
               )}
             </div>
           )}
-          {isDateBased && !isConstrainedRental && (
+          {isReservation && (
+            <div className="summary-grid section-mt">
+              {reservationMax > 1 && (
+                <>
+                  <Select
+                    id="reservation-duration"
+                    texts={{
+                      label: t('reservation.durationLabel'),
+                      placeholder: t('rental.chooseDurationPlaceholder'),
+                      error:
+                        attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
+                      language: hdsLang(i18n.language),
+                    }}
+                    options={reservationLengths.map((d) => ({
+                      label: t('reservation.days', { count: d }),
+                      value: String(d),
+                    }))}
+                    value={
+                      chosenDuration
+                        ? [
+                            {
+                              label: t('reservation.days', { count: Number(chosenDuration) }),
+                              value: chosenDuration,
+                            },
+                          ]
+                        : []
+                    }
+                    onChange={(opts) => {
+                      setDuration(opts.length ? opts[0].value : '');
+                      setStartDate('');
+                    }}
+                    invalid={attempted && !chosenDuration}
+                  />
+                  <div className="spacer-xxxs" />
+                </>
+              )}
+              <DateInput
+                id="reservation-pickup-date"
+                label={t('reservation.pickupLabel')}
+                value={startDate}
+                onChange={(value) => setStartDate(value)}
+                dateFormat={DISPLAY_DATE_FORMAT}
+                language="en"
+                required
+                disabled={!chosenDuration}
+                invalid={attempted && !startDate}
+                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
+                minDate={TODAY}
+                maxDate={MAX_DATE}
+                dateOutsideRangeErrorText={t('request.dateRange')}
+                isDateDisabledBy={pickupDisabled}
+                malformedDateErrorText={t('request.dateOverlap')}
+              />
+              <div className="spacer-xxxs" />
+              <TextArea
+                id="reservation-project-note"
+                label={t('reservation.projectNoteLabel')}
+                helperText={t('reservation.projectNoteHelper', {
+                  remaining: 512 - projectNote.length,
+                })}
+                maxLength={512}
+                value={projectNote}
+                onChange={(e) => setProjectNote(e.target.value)}
+              />
+            </div>
+          )}
+          {isDateBased && !isConstrainedRental && !isReservation && (
             <div className="summary-grid section-mt">
               <DateInput
                 id="request-start-date"

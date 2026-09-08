@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'hds-react';
-import { TYPE_VALUES, FEE_TYPES, DATE_TYPES, DETAIL_TYPES } from '../constants/things';
+import {
+  TYPE_VALUES,
+  FEE_TYPES,
+  FEE_OPTIONAL_TYPES,
+  DATE_TYPES,
+  DETAIL_TYPES,
+} from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -102,7 +108,7 @@ export default function EditThingPage() {
     if (FEE_TYPES.includes(thingType) && (fee === '' || fee === undefined)) {
       newErrors.fee = t('addThing.priceRequired');
     }
-    if (location.length > 32) newErrors.location = t('addThing.maxLocation');
+    if (location.length > 64) newErrors.location = t('addThing.maxLocation');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -115,14 +121,18 @@ export default function EditThingPage() {
     const body = { type: thingType, headline: headline.trim() };
     body.description = description.trim() || '';
     body.thumbnail = thumbnail || '';
-    if (FEE_TYPES.includes(thingType) && fee !== '') {
+    if ((FEE_TYPES.includes(thingType) || FEE_OPTIONAL_TYPES.includes(thingType)) && fee !== '') {
       body.fee = fee;
     }
     // Always explicit, never omitted: the server judges the row that lands, so
     // switching the type away from LEND/RENT while a deposit is still stored
     // has to clear it in the same request or the backend refuses the whole
     // save (core/serializers/CLAUDE.md — "the one field with a type rule").
-    body.deposit = DATE_TYPES.includes(thingType) && deposit !== '' ? deposit : null;
+    // RESERVE never carries one either.
+    body.deposit =
+      DATE_TYPES.includes(thingType) && thingType !== 'RESERVE_THING' && deposit !== ''
+        ? deposit
+        : null;
     if (DETAIL_TYPES.includes(thingType)) {
       body.availability = availability || '';
       body.location = location.trim();
@@ -162,8 +172,12 @@ export default function EditThingPage() {
   // deployment has stopped handing out stays editable, exactly as the server
   // allows — it only refuses a *change* into a withheld one, so the stored verb
   // stays offered however the owner rearranges the form before saving.
-  const typeOptions = TYPE_VALUES.filter((v) =>
-    isOfferable(capabilities, 'thing_types', v, savedType)
+  const typeOptions = TYPE_VALUES.filter(
+    (v) =>
+      isOfferable(capabilities, 'thing_types', v, savedType) &&
+      // RESERVE only ever belongs to a reservations collection; only offer it
+      // here when the thing already is one (never as a target to switch into).
+      (v !== 'RESERVE_THING' || savedType === 'RESERVE_THING')
   ).map((v) => ({ label: t('types.' + v), value: v }));
 
   return (

@@ -142,7 +142,8 @@
     "collaborate": "Collaborate — OIUEEI",
     "ownerBookings": "Requests to me — OIUEEI",
     "sharedThings": "Shared with me — OIUEEI",
-    "dataExport": "Data export — OIUEEI"
+    "dataExport": "Data export — OIUEEI",
+    "reserveThing": "Reserve: {{headline}}"
   },
   "login": {
     "title": "OIUEEI",
@@ -233,7 +234,11 @@
     "proposalDeclinedLabel": "Recommendation not taken up",
     "proposalDeclinedBody": "The owner of “{{collection_headline}}” decided not to invite {{email}} this time. Nobody was contacted, and they haven't been told why.",
     "viewProposal": "Decide now",
-    "viewGroup": "Open the group"
+    "viewGroup": "Open the group",
+    "reservationMadeLabel": "New reservation",
+    "reservationMadeBody": "{{requester_name}} reserved {{thing_headline}}.",
+    "reservationCancelledLabel": "Reservation cancelled",
+    "reservationCancelledBody": "{{other_name}} cancelled a reservation of {{thing_headline}}."
   },
   "collectionPage": {
     "editCollection": "Edit collection",
@@ -351,7 +356,8 @@
       "GIFT_THING": "Claim",
       "SELL_THING": "Buy",
       "RENT_THING": "Rent",
-      "LEND_THING": "Borrow"
+      "LEND_THING": "Borrow",
+      "RESERVE_THING": "Reserve"
     }
   },
   "thingTags": {
@@ -405,12 +411,13 @@
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
     "priceRequired": "Price is required for this type.",
-    "maxLocation": "Maximum 32 characters.",
+    "maxLocation": "Maximum 64 characters.",
     "errorCreating": "Error creating thing.",
     "tagsLabel": "Tags",
     "tagsPlaceholder": "Select tags",
     "tagsHelper": "Choose from this collection's tags",
-    "maxDescription": "Description is too long: 256 characters per language."
+    "maxDescription": "Description is too long: 256 characters per language.",
+    "priceOptionalLabel": "Price (optional)"
   },
   "editThing": {
     "pageTitle": "Edit thing",
@@ -501,7 +508,8 @@
     "tagsLabel": "Tags",
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
-    "maxDescription": "Description is too long: 256 characters per language."
+    "maxDescription": "Description is too long: 256 characters per language.",
+    "reservationsModeNote": "A reservations collection is run by one person and holds only reservations, so it stays private and proprietary."
   },
   "myBookings": {
     "pageTitle": "My requests",
@@ -524,7 +532,9 @@
     "expiredHelper": "This request expired automatically because the owner didn't reply within 72 hours (3 days).",
     "pastRequests": "Past requests",
     "captionPending": "Requests waiting for an answer",
-    "captionPast": "Requests already closed"
+    "captionPast": "Requests already closed",
+    "cancelReservation": "Cancel reservation",
+    "currentHeading": "Current"
   },
   "ownerBookings": {
     "pageTitle": "Requests to me",
@@ -541,7 +551,9 @@
     "errorLoading": "Error loading requests.",
     "emptyCta": "Share a collection",
     "captionPending": "Requests waiting for your answer",
-    "captionPast": "Requests you have already answered"
+    "captionPast": "Requests you have already answered",
+    "cancelReservation": "Cancel reservation",
+    "reservationCancelled": "Reservation cancelled — the member has been told."
   },
   "manageInvites": {
     "pageTitle": "Manage guests",
@@ -640,14 +652,16 @@
     "GIFT_THING": "Gift",
     "SELL_THING": "Sale",
     "RENT_THING": "Rental",
-    "LEND_THING": "Lend"
+    "LEND_THING": "Lend",
+    "RESERVE_THING": "Reservation"
   },
   "typeInfo": {
     "title": "What each type means",
     "GIFT_THING": "A gift — whoever claims it keeps it.",
     "SELL_THING": "For sale at the price you set.",
     "RENT_THING": "Rented out for a fee, by dates.",
-    "LEND_THING": "Borrowed for a few days, then returned."
+    "LEND_THING": "Borrowed for a few days, then returned.",
+    "RESERVE_THING": "Booked to use on the owner's premises, by dates — nothing is taken away."
   },
   "availability": {
     "IMMEDIATE": "Immediate",
@@ -925,5 +939,21 @@
     "downloadButton": "Download my data",
     "downloading": "Preparing your file…",
     "error": "Couldn't build your export. Please try again in a moment."
+  },
+  "reservation": {
+    "pageTitle": "Reserve {{headline}}",
+    "durationLabel": "How many days?",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "pickupLabel": "From",
+    "projectNoteLabel": "Tell us briefly about your project (optional)",
+    "projectNoteHelper": "{{remaining}} characters left",
+    "successLabel": "Reserved",
+    "successMessage": "Your reservation is confirmed — the owner has been told.",
+    "noteFrom": "Their note: {{note}}",
+    "maxDaysLabel": "Longest reservation (days)",
+    "maxDaysHelper": "A member can book the space for 1 up to this many days at a time.",
+    "weekdaysLabel": "Days open for reservations",
+    "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a day the space is closed."
   }
 }
