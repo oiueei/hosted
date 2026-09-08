@@ -6,7 +6,7 @@ import { apiFetch } from '../services/api';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
-import MarkdownText from '../components/MarkdownText';
+import MarkdownText, { sanitizeUrl } from '../components/MarkdownText';
 import ShareCollectionMenu from '../components/ShareCollectionMenu';
 import ThingLinkbox from '../components/ThingLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
@@ -231,6 +231,12 @@ export default function CollectionPage() {
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
 
+  // When the owner has given the group its own web address, the hero's back
+  // link ("← Inici") points there instead of the OIUEEI home. `sanitizeUrl`
+  // returns "#" for anything that isn't http(s), and we ignore that.
+  const homePageUrl = collection.home_page ? sanitizeUrl(collection.home_page) : '';
+  const backHref = homePageUrl && homePageUrl !== '#' ? homePageUrl : null;
+
   return (
     <div
       className="form-page"
@@ -254,7 +260,7 @@ export default function CollectionPage() {
                 isPublic={collection.visibility === 'PUBLIC'}
               />
             )}
-            <BackLink to="/" label={t('common.home')} />
+            <BackLink to="/" href={backHref} label={t('common.home')} />
             <h1 className="form-hero-title">
               {headline}
               {collection.mode === 'COMMUNITY' && (

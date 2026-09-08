@@ -68,7 +68,12 @@ class Thing(models.Model):
     # room for all three plus the JSON scaffolding. The per-language limits are
     # enforced by the serializer (LocalizedHeadlineField / LocalizedTextField).
     headline = models.CharField(max_length=256)
-    description = models.CharField(max_length=1024, blank=True, default="")
+    # TextField, not a capped CharField: a thing's description is long-form
+    # Markdown (a space, a machine, a piece of history can need a page), and the
+    # real limit is the per-language one the serializer enforces
+    # (LocalizedTextField, 2000 visible / language). The column is only a
+    # backstop, and O6 says the serializer is the guard.
+    description = models.TextField(blank=True, default="")
     thumbnail = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
     fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -192,7 +197,28 @@ class Thing(models.Model):
         else:
             blocked = list(BookingPeriod.get_blocked_periods(self.code))
 
-        from core.services.booking_service import compute_availability, resolve_rental_collection
+        from core.services.booking_service import (
+            compute_availability,
+            resolve_rental_collection,
+            resolve_reservations_collection,
+        )
+
+        # A RESERVE thing follows its reservations collection: weekdays are
+        # reused as "days open", durations don't apply, and the walk stops at
+        # that collection's own "how far ahead" horizon rather than the default.
+        if self.type == Thing.Type.RESERVE_THING:
+            rc = collection or resolve_reservations_collection(self)
+            available_today, next_available = compute_availability(
+                blocked,
+                horizon_days=rc.reservation_horizon_days if rc else horizon_days,
+                allowed_weekdays=rc.rental_weekdays if rc else None,
+                closed_dates=rc.closed_date_set() if rc else None,
+            )
+            self._availability_window_cache = {
+                "available_today": available_today,
+                "next_available": next_available,
+            }
+            return self._availability_window_cache
 
         if collection is None:
             collection = resolve_rental_collection(self)
@@ -202,6 +228,7 @@ class Thing(models.Model):
             horizon_days=horizon_days,
             allowed_weekdays=collection.rental_weekdays if collection else None,
             durations=collection.rental_durations if collection else None,
+            closed_dates=collection.closed_date_set() if collection else None,
         )
         self._availability_window_cache = {
             "available_today": available_today,

@@ -204,6 +204,53 @@ class TestCollectionCreateSerializer:
         assert not serializer.is_valid()
         assert "headline" in serializer.errors
 
+    def test_home_page_accepts_a_url_and_rejects_junk(self):
+        """`home_page` is a URLField — a bare word is not a URL."""
+        ok = CollectionCreateSerializer(
+            data={"headline": "Ateneu", "home_page": "https://ateneu.example/"}
+        )
+        assert ok.is_valid(), ok.errors
+        assert ok.validated_data["home_page"] == "https://ateneu.example/"
+
+        bad = CollectionCreateSerializer(data={"headline": "Ateneu", "home_page": "not a url"})
+        assert not bad.is_valid()
+        assert "home_page" in bad.errors
+
+    def test_home_page_is_capped_at_128_chars(self):
+        """The column is 128 and CI runs Postgres — the serializer must reject
+        an over-long address before it reaches the DB."""
+        long_url = "https://example.com/" + "a" * 120
+        serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": long_url})
+        assert not serializer.is_valid()
+        assert "home_page" in serializer.errors
+
+    def test_home_page_is_optional(self):
+        """An empty string is fine — most groups have no website."""
+        serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": ""})
+        assert serializer.is_valid(), serializer.errors
+
+    def test_description_is_long_form_2000_per_language(self):
+        """`Collection.description` became a `TextField` with a 2000-char *visible*
+        cap the serializer enforces — kept symmetric with `Thing.description`."""
+        ok = CollectionCreateSerializer(data={"headline": "X", "description": "x" * 2000})
+        assert ok.is_valid(), ok.errors
+        too_long = CollectionCreateSerializer(data={"headline": "X", "description": "x" * 2001})
+        assert not too_long.is_valid()
+        assert "description" in too_long.errors
+
+    def test_description_limit_is_per_language_not_total(self):
+        """A `{es, ca}` map may carry the full 2000 in *each* language — the cap
+        is per language, and there is no column width left to overflow."""
+        import json
+
+        both_full = json.dumps({"es": "e" * 2000, "ca": "c" * 2000})
+        ok = CollectionCreateSerializer(data={"headline": "X", "description": both_full})
+        assert ok.is_valid(), ok.errors
+        one_over = json.dumps({"es": "e" * 2001, "ca": "c" * 10})
+        bad = CollectionCreateSerializer(data={"headline": "X", "description": one_over})
+        assert not bad.is_valid()
+        assert "description" in bad.errors
+
 
 @pytest.mark.django_db
 class TestThingSerializer:
@@ -376,6 +423,18 @@ class TestThingCreateSerializer:
         )
         assert not serializer.is_valid()
         assert "location" in serializer.errors
+
+    def test_description_takes_long_form_markdown(self):
+        """Description is 2000 chars per language now (long-form, TextField)."""
+        ok = ThingCreateSerializer(
+            data={"headline": "My Thing", "type": "GIFT_THING", "description": "x" * 2000}
+        )
+        assert ok.is_valid(), ok.errors
+        too_long = ThingCreateSerializer(
+            data={"headline": "My Thing", "type": "GIFT_THING", "description": "x" * 2001}
+        )
+        assert not too_long.is_valid()
+        assert "description" in too_long.errors
 
     def test_location_rejects_html(self):
         """Should reject HTML tags in location."""

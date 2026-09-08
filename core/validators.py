@@ -186,6 +186,12 @@ class SafeTextField(serializers.CharField):
 LOCALIZED_HEADLINE_STORAGE = 256
 LOCALIZED_TEXT_STORAGE = 1024
 LOCALIZED_TAG_STORAGE = 160
+# `description` is long-form (2000 visible per language) and lives in a
+# TextField, so this is a serializer sanity bound, not a column width: three
+# languages of 2000 plus the JSON scaffolding. `deposit_policy` keeps the
+# 256/1024 shape above.
+LOCALIZED_DESCRIPTION_VISIBLE = 2000
+LOCALIZED_DESCRIPTION_STORAGE = 6400
 
 
 def _validate_localized(value, visible_max_length, guard):

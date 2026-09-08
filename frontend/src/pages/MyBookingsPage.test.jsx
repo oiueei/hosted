@@ -110,6 +110,16 @@ describe('MyBookingsPage listing', () => {
     expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
   });
 
+  test('dates render DD/MM/YYYY, matching the picker — not ISO, not US order', async () => {
+    mockList([booking({ start_date: '2026-09-01', end_date: '2026-09-08' })]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    expect(screen.getByText(/01\/09\/2026\s*—\s*08\/09\/2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-01/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/9\/1\/2026/)).not.toBeInTheDocument();
+  });
+
   test('the thing links to its page and names the owner', async () => {
     mockList([booking()]);
     renderPage();

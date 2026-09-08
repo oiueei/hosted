@@ -122,6 +122,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Opt into Django 6.0's behaviour now: a scheme-less URL typed into a form
+# URLField (the admin's auto-generated Collection form has one for `home_page`)
+# is completed to https://, not http://.
+FORMS_URLFIELD_ASSUME_HTTPS = True
+
 
 # Cache
 # A shared backend so rate-limit counters are consistent across gunicorn

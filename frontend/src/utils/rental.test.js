@@ -8,9 +8,12 @@ import {
   isDateBlocked,
   isPickupBlocked,
   isPickupDisabled,
+  reservationPickupDisabled,
   derivedReturnDate,
   isoToDisplay,
   displayToIso,
+  formatDate,
+  closedDatesToDisplay,
 } from './rental';
 
 // Run in a UTC-negative timezone so a regression to UTC date parsing
@@ -149,6 +152,34 @@ describe('isPickupDisabled', () => {
     };
     expect(isPickupDisabled('2024-01-08', opts)).toBe(true); // 08 is interior to [03..10)
   });
+  test('disables a closure day for pickup, and a length whose return lands on one', () => {
+    const opts = { rentalWeekdays: [], blockedPeriods: [], closedDates: ['2024-12-25'] };
+    expect(isPickupDisabled('2024-12-25', opts)).toBe(true); // pickup on the holiday
+    expect(isPickupDisabled('2024-12-24', opts)).toBe(false); // interior closure is fine...
+    expect(isPickupDisabled('2024-12-18', { ...opts, duration: '7' })).toBe(true); // ...but not the return
+    expect(isDateBlocked('2024-12-25', [], ['2024-12-25'])).toBe(true);
+  });
+});
+
+describe('reservationPickupDisabled — closures', () => {
+  test('a reservation span cannot include a closure day', () => {
+    const opts = {
+      rentalWeekdays: [],
+      blockedPeriods: [],
+      closedDates: ['2024-12-25'],
+      duration: 2,
+    };
+    expect(reservationPickupDisabled('2024-12-24', opts)).toBe(true); // 24+25
+    expect(reservationPickupDisabled('2024-12-26', opts)).toBe(false);
+  });
+});
+
+describe('closedDatesToDisplay', () => {
+  test('ISO list to the comma-separated DD/MM/YYYY line', () => {
+    expect(closedDatesToDisplay(['2026-12-25', '2026-12-26'])).toBe('25/12/2026, 26/12/2026');
+    expect(closedDatesToDisplay([])).toBe('');
+    expect(closedDatesToDisplay(undefined)).toBe('');
+  });
 });
 
 describe('isoToDisplay / displayToIso', () => {
@@ -170,5 +201,24 @@ describe('isoToDisplay / displayToIso', () => {
     expect(displayToIso('2026-07-15')).toBe('');
     expect(displayToIso('31/02/2026')).toBe(''); // impossible date
     expect(displayToIso('99/99/9999')).toBe('');
+  });
+});
+
+describe('formatDate', () => {
+  test('renders every accepted shape as DD/MM/YYYY', () => {
+    expect(formatDate('2026-07-15')).toBe('15/07/2026'); // ISO date
+    expect(formatDate('2026-07-15T09:30:00Z')).toBe('15/07/2026'); // ISO datetime
+    expect(formatDate(new Date(2026, 6, 15))).toBe('15/07/2026'); // Date
+  });
+
+  test('pads single-digit day and month', () => {
+    expect(formatDate('2026-01-05')).toBe('05/01/2026');
+  });
+
+  test("is blank — never 'Invalid Date' — for an empty or unparseable value", () => {
+    expect(formatDate(null)).toBe('');
+    expect(formatDate(undefined)).toBe('');
+    expect(formatDate('')).toBe('');
+    expect(formatDate('not a date')).toBe('');
   });
 });

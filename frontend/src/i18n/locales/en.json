@@ -416,7 +416,7 @@
     "tagsLabel": "Tags",
     "tagsPlaceholder": "Select tags",
     "tagsHelper": "Choose from this collection's tags",
-    "maxDescription": "Description is too long: 256 characters per language.",
+    "maxDescription": "Description is too long: 2000 characters per language.",
     "priceOptionalLabel": "Price (optional)"
   },
   "editThing": {
@@ -486,7 +486,7 @@
     "maxHeadline": "Maximum 64 characters per language.",
     "errorLoading": "Error loading collection.",
     "errorSaving": "Error saving.",
-    "maxDescription": "Description is too long: 256 characters per language."
+    "maxDescription": "Description is too long: 2000 characters per language."
   },
   "createCollection": {
     "pageTitle": "Create collection",
@@ -508,7 +508,7 @@
     "tagsLabel": "Tags",
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
-    "maxDescription": "Description is too long: 256 characters per language.",
+    "maxDescription": "Description is too long: 2000 characters per language.",
     "reservationsModeNote": "A reservations collection is run by one person and holds only reservations, so it stays private and proprietary."
   },
   "myBookings": {
@@ -954,6 +954,16 @@
     "maxDaysLabel": "Longest reservation (days)",
     "maxDaysHelper": "A member can book the space for 1 up to this many days at a time.",
     "weekdaysLabel": "Days open for reservations",
-    "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a day the space is closed."
+    "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a day the space is closed.",
+    "horizonLabel": "How far ahead members can book (days)",
+    "horizonHelper": "From 1 to 365. Default 90 — three months."
+  },
+  "closedDates": {
+    "label": "Holidays and closures",
+    "helper": "One line, DD/MM/YYYY separated by commas. No pickup or return on these days; a reservation can't span one. Past dates are dropped."
+  },
+  "homePage": {
+    "label": "Home page",
+    "helper": "An optional web address for this group (max 128 characters)."
   }
 }

@@ -9,6 +9,7 @@ strict-overlap / live-availability machinery.
 from datetime import date, timedelta
 
 import pytest
+import time_machine
 
 from core.models import BookingPeriod, Collection, Thing, User
 from core.models.booking import DATE_BASED_TYPES, ON_SITE_TYPES, SINGLE_USE_TYPES
@@ -91,6 +92,37 @@ def test_reservation_violation_accepts_exactly_the_max(reservations_collection):
     assert reservations_collection.reservation_violation(mon, 3) is None
 
 
+# --- reservation_violation: the "how far ahead" horizon ---------------------
+
+
+def test_reservation_violation_rejects_past_the_horizon(db):
+    owner = User.objects.create(code="HZOWN1", email="hzown@test.com")
+    coll = Collection.objects.create(
+        code="HZCOL1",
+        owner=owner,
+        headline="Short lead time",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_max_days=1,
+        reservation_horizon_days=14,
+        rental_weekdays=[],
+    )
+    today = date(2026, 6, 1)
+    assert coll.reservation_violation(today + timedelta(days=13), 1, today=today) is None
+    msg = coll.reservation_violation(today + timedelta(days=20), 1, today=today)
+    assert msg is not None and "14" in msg
+
+
+def test_reservation_horizon_defaults_to_90(db):
+    owner = User.objects.create(code="HZOWN2", email="hzown2@test.com")
+    coll = Collection.objects.create(
+        code="HZCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+    )
+    assert coll.reservation_horizon_days == 90
+    today = date(2026, 6, 1)
+    assert coll.reservation_violation(today + timedelta(days=89), 1, today=today) is None
+    assert coll.reservation_violation(today + timedelta(days=95), 1, today=today) is not None
+
+
 # --- reservation_violation: every day of the span must be an open weekday ----
 
 
@@ -149,6 +181,39 @@ def test_an_accepted_reservation_blocks_its_day_and_frees_the_next(db):
     blocked = list(BookingPeriod.get_blocked_periods(thing.code))
     _, next_available = compute_availability(blocked, today=mon, horizon_days=30)
     assert next_available == mon + timedelta(days=2)  # Wed, the return day, is free
+
+
+def test_availability_window_for_reserve_uses_the_collections_horizon_and_closures(
+    reservations_collection,
+):
+    """The RESERVE branch of `Thing.availability_window` walks to the
+    collection's `reservation_horizon_days` (not the fixed 90) and skips its
+    `closed_dates`, so the card indicator agrees with `RequestThingPage`'s
+    picker."""
+    coll = reservations_collection
+    thing = Thing.objects.create(
+        code="AVWRSV", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Sala"
+    )
+    coll.things.add(thing)
+
+    mon = _next_weekday(0)
+    with time_machine.travel(mon, tick=False):
+        # Baseline: open today.
+        assert thing.availability_window()["available_today"] is True
+
+        # Close today and tomorrow → next_available is the day after.
+        coll.closed_dates = [mon.isoformat(), (mon + timedelta(days=1)).isoformat()]
+        coll.save(update_fields=["closed_dates"])
+        del thing._availability_window_cache  # clear the per-instance memo
+        window = thing.availability_window()
+        assert window["available_today"] is False
+        assert window["next_available"] == mon + timedelta(days=2)
+
+        # A horizon of 1 day with both days shut → nothing in range.
+        coll.reservation_horizon_days = 1
+        coll.save(update_fields=["reservation_horizon_days"])
+        del thing._availability_window_cache
+        assert thing.availability_window()["next_available"] is None
 
 
 def test_request_reservation_refuses_a_thing_with_no_reservations_collection(db):

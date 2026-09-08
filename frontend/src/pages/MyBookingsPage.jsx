@@ -9,6 +9,7 @@ import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import { formatDate } from '../utils/rental';
 import ButtonLink from '../components/ButtonLink';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
@@ -23,7 +24,7 @@ const STATUS_TYPES = {
 
 export default function MyBookingsPage() {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
@@ -169,12 +170,12 @@ export default function MyBookingsPage() {
             }}
           >
             {t('myBookings.requested', {
-              date: new Date(row._created).toLocaleDateString(i18n.language),
+              date: formatDate(row._created),
             })}
           </p>
           <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
             {row._startDate && row._endDate ? (
-              `${new Date(row._startDate).toLocaleDateString(i18n.language)} — ${new Date(row._endDate).toLocaleDateString(i18n.language)}`
+              `${formatDate(row._startDate)} — ${formatDate(row._endDate)}`
             ) : (
               <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
             )}

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
@@ -92,6 +92,20 @@ describe('RequestThingPage — RESERVE_THING', () => {
     renderPage();
     await screen.findByText(/Reserve Sala polivalent/);
     expect(screen.getByRole('combobox', { name: /How many days/ })).toBeInTheDocument();
+  });
+
+  test('the date picker stops at the collection horizon, not the fixed 90', async () => {
+    // horizon 7 days from Mon 2026-06-01 → last bookable day is 2026-06-08
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1, reservation_horizon_days: 7 } });
+    renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+    fireEvent.click(screen.getByRole('button', { name: 'Choose date' }));
+    await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
+    // 2026-06-05 is within the 7-day window — selectable
+    expect(document.querySelector('[data-date="2026-06-05"]')?.tagName).toBe('BUTTON');
+    // 2026-06-09 is past it — rendered disabled (span, not button) or absent
+    const past = document.querySelector('[data-date="2026-06-09"]');
+    expect(past === null || past.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
   test('submitting posts a duration + note and shows the confirmed message', async () => {

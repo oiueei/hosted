@@ -9,6 +9,7 @@ import CollectionModeField from '../components/CollectionModeField';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
+import ClosedDatesField from '../components/ClosedDatesField';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -39,6 +40,9 @@ export default function CreateCollectionPage() {
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
+  const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [closedDates, setClosedDates] = useState('');
+  const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
@@ -112,7 +116,7 @@ export default function CreateCollectionPage() {
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('createCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('createCollection.maxHeadline');
-    if (localizedCounter(description, 256).over)
+    if (localizedCounter(description, 2000).over)
       newErrors.description = t('createCollection.maxDescription');
     setErrors(newErrors);
     const allowedTypesOk = allowedThingTypes.length > 0;
@@ -132,6 +136,8 @@ export default function CreateCollectionPage() {
       allowed_thing_types: allowedThingTypes,
       rental_durations: isReservations ? [] : rentalDurations,
       rental_weekdays: rentalWeekdays,
+      closed_dates: closedDates,
+      home_page: homePage.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -139,8 +145,10 @@ export default function CreateCollectionPage() {
       welcome_doc: welcomeDoc || '',
     };
     if (description.trim()) body.description = description.trim();
-    if (isReservations) body.reservation_max_days = reservationMaxDays;
-    else if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
+    if (isReservations) {
+      body.reservation_max_days = reservationMaxDays;
+      body.reservation_horizon_days = reservationHorizonDays;
+    } else if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
     try {
       const res = await apiFetch('/api/v1/collections/', {
         method: 'POST',
@@ -183,7 +191,7 @@ export default function CreateCollectionPage() {
           onChange={(e) => setDescription(e.target.value)}
           invalid={!!errors.description}
           errorText={errors.description}
-          helperText={localizedCounter(description, 256).text}
+          helperText={localizedCounter(description, 2000).text}
         />
         <LocalizedInfo id="create-collection-localized-info" />
         <CollectionModeField
@@ -235,6 +243,8 @@ export default function CreateCollectionPage() {
               idPrefix="create-collection"
               reservationMaxDays={reservationMaxDays}
               setReservationMaxDays={setReservationMaxDays}
+              reservationHorizonDays={reservationHorizonDays}
+              setReservationHorizonDays={setReservationHorizonDays}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={theeemeColors.color_01}
@@ -251,6 +261,21 @@ export default function CreateCollectionPage() {
               theeemeColor01={theeemeColors.color_01}
             />
           )}
+          <ClosedDatesField
+            id="create-collection-closed-dates"
+            value={closedDates}
+            onChange={setClosedDates}
+          />
+          <TextInput
+            id="create-collection-home-page"
+            type="url"
+            label={t('homePage.label')}
+            helperText={t('homePage.helper')}
+            placeholder="https://…"
+            value={homePage}
+            onChange={(e) => setHomePage(e.target.value)}
+            maxLength={128}
+          />
           {/* Same order and same `editCollection.*` keys as EditCollectionPage,
                 so the one field doesn't read differently on the two screens. */}
           <Select
