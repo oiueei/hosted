@@ -6,9 +6,12 @@ and **what puts somebody else on the hook**:
 
 - Giving and selling are open. Whatever happens, it happens once and ends there.
 - A COMMUNITY collection lets strangers add things to a group under someone's
-  name, and lending or renting means a thing has to come back. Both create an
-  obligation to a third party, and both are what this deployment reads a
-  sentence about a person before handing out.
+  name; lending or renting means a thing has to come back; a reservation
+  commits the operator's own premises to a stranger for a day. Each creates an
+  obligation to a third party, and each is what this deployment reads a
+  sentence about a person before handing out. (RESERVE_THING is withheld the
+  same way — it is simply absent from `OPEN_TYPES` below, so an unvetted
+  account never sees the verb.)
 
 The narrowing is not a claim that people are untrustworthy. It is that the
 operator answers for what this service is used for, and cannot answer for what

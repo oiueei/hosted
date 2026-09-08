@@ -26,7 +26,8 @@ class RequestAccessForm(forms.ModelForm):
             "who": "A couple of lines is plenty. Where you are, what you do, who you do it with.",
             "intent": (
                 "The group you have in mind and what would be shared in it — "
-                "and, if you mean to lend or rent, what sort of things."
+                "and, if you mean to lend, rent, or run a space people book, "
+                "what sort of things."
             ),
         }
         widgets = {

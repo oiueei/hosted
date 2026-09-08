@@ -62,8 +62,9 @@ service* is gets told here.
 
 ## 3. `/request-access/` and the approval notice — the validation gate
 
-Creating `COMMUNITY`, `LEND` or `RENT` needs a person to say yes. The design job is to
-make a manual gate feel like an honest "not yet" rather than a wall.
+Creating `COMMUNITY`, `LEND`, `RENT` or `RESERVE` (an on-site reservation) needs a
+person to say yes. The design job is to make a manual gate feel like an honest
+"not yet" rather than a wall.
 
 - **The notice under the control is a quiet line, not an error.** It names what is
   withheld in the same words the form uses and links to where to ask. It lives in the

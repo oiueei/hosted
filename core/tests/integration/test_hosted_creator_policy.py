@@ -200,6 +200,14 @@ class TestTheAdvertisedListIsTheAcceptedList:
         advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
 
         for index, thing_type in enumerate(advertised["thing_types"]):
+            # RESERVE_THING is advertised to a validated account (the policy
+            # allows it), but a RESERVE thing has a structural rule the policy
+            # doesn't express — it can only be created in a reservations
+            # collection. Its happy path is in core/tests/integration/
+            # test_reservations.py; here it would need a specially-configured
+            # collection this loop has no business building.
+            if thing_type == "RESERVE_THING":
+                continue
             response = authenticated_client.post(
                 "/api/v1/things/",
                 {"type": thing_type, "headline": f"Thing {index}", "thumbnail": "img/x"},

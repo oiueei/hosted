@@ -52,7 +52,7 @@ honesty note `SELF_HOSTING.md` makes about the extension points.
 | `views.PopInView` | The **open door**: an email alone gets an account, membership of every `is_onboarding` collection, and a magic link. Served at the historical `/api/v1/auth/pop-in/`. Upstream refuses exactly this. |
 | `views.RequestAccessView` + `forms.py` | The **request form** at `/request-access/` — two free-text questions, a plain Django page outside the SPA. |
 | `models.CreatorValidation` | One row per person who asked, and the answer. **No column on `core.User`**, so the public schema says nothing about a gate it does not have. |
-| `policy.HostedCreatorPolicy` | The **narrowing**: giving and selling are open to everyone; COMMUNITY collections, lending and renting wait for approval. |
+| `policy.HostedCreatorPolicy` | The **narrowing**: giving and selling are open to everyone; COMMUNITY collections, lending, renting and on-site reservations wait for approval. |
 | `admin.py` | Where you answer, behind the admin's existing OTP. |
 | `management/commands/stats_summary.py` | The weekly **operator report**, with its demo/real partition. |
 | `../frontend/src/deployment/` | The SPA half: the `/popin` and `/welcome` pages, their copy in three languages, and the two paths (`popInPath`, `aboutPath`) that make the shared components behave like a hosted service. |
