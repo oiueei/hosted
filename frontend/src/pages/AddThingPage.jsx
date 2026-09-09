@@ -13,6 +13,7 @@ import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
 import BulkAddCsv from '../components/BulkAddCsv';
+import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
@@ -62,6 +63,7 @@ export default function AddThingPage() {
   // creator policy says about them personally — the same exception the backend
   // applies in `community_contribution_types` (core/services/creator_policy).
   const [contributingToCommunity, setContributingToCommunity] = useState(false);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const [tags, setTags] = useState([]);
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function AddThingPage() {
         const allowed = data.allowed_thing_types || [];
         setCollectionAllowedTypes(allowed);
         setContributingToCommunity(data.mode === 'COMMUNITY' && !!data.is_member);
+        setIsOnboarding(!!data.is_onboarding);
         setCollectionTags(data.tags || []);
         // If the allowlist names a single type, pre-select it so the form
         // immediately shows the right downstream fields.
@@ -192,6 +195,7 @@ export default function AddThingPage() {
       backLabel={L(collectionHeadline) || t('common.collection')}
     >
       <h1 className="page-title-xl">{t('addThing.pageTitle')}</h1>
+      {isOnboarding && <DemoNotice />}
       <div className="form-grid">
         <ThingForm
           idPrefix="add-thing"
