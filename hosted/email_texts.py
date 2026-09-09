@@ -17,14 +17,15 @@ EN = {
     "approved_subject": "Your request was approved",
     "approved_intro": "We read what you sent us, and the answer is yes.",
     "approved_body": (
-        "Community collections, lending and renting are available on your account "
-        "from now on. Nothing else changes, and nothing you already had is affected."
+        "Community collections, lending, renting and on-site reservations are "
+        "available on your account from now on. Nothing else changes, and nothing "
+        "you already had is affected."
     ),
     "approved_cta": "Create a collection",
     "approved_plain": (
         "We read what you sent us, and the answer is yes.\n\n"
-        "Community collections, lending and renting are available on your account "
-        "from now on.\n\n"
+        "Community collections, lending, renting and on-site reservations are "
+        "available on your account from now on.\n\n"
         "Create a collection: {url}\n"
     ),
     "rejected_subject": "About your request",
@@ -47,14 +48,15 @@ ES = {
     "approved_subject": "Tu solicitud está aprobada",
     "approved_intro": "Hemos leído lo que nos escribiste, y la respuesta es sí.",
     "approved_body": (
-        "A partir de ahora tienes disponibles las colecciones comunitarias, prestar "
-        "y alquilar. No cambia nada más, y nada de lo que ya tenías se ve afectado."
+        "A partir de ahora tienes disponibles las colecciones comunitarias, prestar, "
+        "alquilar y las reservas de espacios. No cambia nada más, y nada de lo que "
+        "ya tenías se ve afectado."
     ),
     "approved_cta": "Crear una colección",
     "approved_plain": (
         "Hemos leído lo que nos escribiste, y la respuesta es sí.\n\n"
-        "A partir de ahora tienes disponibles las colecciones comunitarias, prestar "
-        "y alquilar.\n\n"
+        "A partir de ahora tienes disponibles las colecciones comunitarias, prestar, "
+        "alquilar y las reservas de espacios.\n\n"
         "Crear una colección: {url}\n"
     ),
     "rejected_subject": "Sobre tu solicitud",
@@ -77,14 +79,15 @@ CA = {
     "approved_subject": "La teva sol·licitud està aprovada",
     "approved_intro": "Hem llegit el que ens vas escriure, i la resposta és sí.",
     "approved_body": (
-        "A partir d'ara tens disponibles les col·leccions comunitàries, deixar i "
-        "llogar. No canvia res més, i res del que ja tenies no es veu afectat."
+        "A partir d'ara tens disponibles les col·leccions comunitàries, deixar, "
+        "llogar i les reserves d'espais. No canvia res més, i res del que ja tenies "
+        "no es veu afectat."
     ),
     "approved_cta": "Crear una col·lecció",
     "approved_plain": (
         "Hem llegit el que ens vas escriure, i la resposta és sí.\n\n"
-        "A partir d'ara tens disponibles les col·leccions comunitàries, deixar i "
-        "llogar.\n\n"
+        "A partir d'ara tens disponibles les col·leccions comunitàries, deixar, "
+        "llogar i les reserves d'espais.\n\n"
         "Crear una col·lecció: {url}\n"
     ),
     "rejected_subject": "Sobre la teva sol·licitud",

@@ -136,8 +136,9 @@ class RequestAccessView(APIView):
     """
     GET / POST `/request-access/`
 
-    The form somebody fills in to be allowed to run a COMMUNITY collection, or
-    to lend and rent. A plain Django page, not part of the SPA: it is this
+    The form somebody fills in to be allowed to run a COMMUNITY collection, to
+    lend or rent, or to run a space people book. A plain Django page, not part
+    of the SPA: it is this
     deployment's own conversation with a person, it is read once, and putting it
     in the React bundle would mean every visitor downloads a form almost nobody
     fills in.

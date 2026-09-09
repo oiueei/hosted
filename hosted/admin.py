@@ -24,7 +24,9 @@ class CreatorValidationAdmin(admin.ModelAdmin):
     ordering = ("-created",)
     actions = ("approve", "reject")
 
-    @admin.action(description="Approve — grant community collections, lending and renting")
+    @admin.action(
+        description="Approve — grant community collections, lending, renting and reservations"
+    )
     def approve(self, request, queryset):
         self._resolve(request, queryset, CreatorValidation.Status.APPROVED)
 

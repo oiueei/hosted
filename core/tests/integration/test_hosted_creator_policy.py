@@ -3,10 +3,10 @@
 **Tests code that is not in the standalone** (see `test_hosted_popin.py` for why
 the file sits here). What it protects, in the order it matters:
 
-**The narrowing is real.** Community collections, lending and renting are held
-back until somebody has been read and approved. If this quietly stopped
-applying, the deployment would be handing out exactly the two things it answers
-for, and nothing would look wrong.
+**The narrowing is real.** Community collections, lending, renting and on-site
+reservations are held back until somebody has been read and approved. If this
+quietly stopped applying, the deployment would be handing out exactly the two
+things it answers for, and nothing would look wrong.
 
 **The narrowing is not a wall.** Giving and selling stay open to everyone, an
 approved person gets the whole product, and — the part that is easy to get

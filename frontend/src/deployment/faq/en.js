@@ -24,7 +24,7 @@ export default [
   {
     id: 'probar',
     q: 'Do I have to register to try it?',
-    a: 'There is no sign-up form: you type your email at the front door and a link to get in arrives. The account it creates is **real and permanent** — whatever you do inside is yours and nobody touches it — while the example collections you land in are a shared window display that gets reset every so often. Giving and selling are open from the first minute; to run a group collection, or to lend and rent, you have to ask for access, because there somebody is already waiting to get something back.',
+    a: 'There is no sign-up form: you type your email at the front door and a link to get in arrives. The account it creates is **real and permanent** — whatever you do inside is yours and nobody touches it — while the example collections you land in are a shared window display that gets reset every so often. Giving and selling are open from the first minute; to run a group collection, to lend or rent, or to run a space people book, you have to ask for access, because each of those leaves someone else counting on you.',
     link: { to: '/popin', label: 'Come in and look around' },
   },
   {

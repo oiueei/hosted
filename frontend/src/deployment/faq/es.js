@@ -42,7 +42,7 @@ export default [
   {
     id: 'probar',
     q: '¿Tengo que registrarme para probarlo?',
-    a: 'No hay formulario de registro: escribes tu correo en la puerta de entrada y te llega un enlace para entrar. La cuenta que se crea es **real y permanente** —lo que hagas dentro es tuyo y no lo toca nadie—, mientras que las colecciones de ejemplo en las que aterrizas son un escaparate compartido que se reinicia cada cierto tiempo. Regalar y vender están abiertos desde el primer minuto; para montar una colección de grupo o para prestar y alquilar hay que pedir acceso, porque ahí ya hay alguien esperando algo de vuelta.',
+    a: 'No hay formulario de registro: escribes tu correo en la puerta de entrada y te llega un enlace para entrar. La cuenta que se crea es **real y permanente** —lo que hagas dentro es tuyo y no lo toca nadie—, mientras que las colecciones de ejemplo en las que aterrizas son un escaparate compartido que se reinicia cada cierto tiempo. Regalar y vender están abiertos desde el primer minuto; para montar una colección de grupo, para prestar o alquilar, o para gestionar un espacio que se reserva, hay que pedir acceso, porque en todos esos casos hay alguien más contando contigo.',
     link: { to: '/popin', label: 'Entrar y mirar' },
   },
   {

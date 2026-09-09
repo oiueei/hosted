@@ -1,9 +1,10 @@
 """Who has been allowed to run a group here, and what they said to ask.
 
 The product's answer is that an account is enough (`OpenCreatorPolicy`). This
-deployment's answer is narrower for the two things that carry an obligation to
-somebody else — a collection anyone can add to, and a thing that has to come
-back — and this table is where that judgement is recorded.
+deployment's answer is narrower for the things that carry an obligation to
+somebody else — a collection anyone can add to, a thing that has to come back,
+a space committed to a stranger for a day — and this table is where that
+judgement is recorded.
 
 It lives in this app, not in `core`, and that is the point: **there is no
 `is_validated_creator` column on `core.User`.** The state exists only where the

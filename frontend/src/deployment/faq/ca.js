@@ -24,7 +24,7 @@ export default [
   {
     id: 'probar',
     q: "M'he de registrar per provar-ho?",
-    a: "No hi ha formulari de registre: escrius el teu correu a la porta d'entrada i t'arriba un enllaç per entrar. El compte que es crea és **real i permanent** —el que facis a dins és teu i no ho toca ningú—, mentre que les col·leccions d'exemple on aterres són un aparador compartit que es reinicia cada cert temps. Regalar i vendre són oberts des del primer minut; per muntar una col·lecció de grup o per deixar i llogar cal demanar accés, perquè allà ja hi ha algú esperant que li tornin alguna cosa.",
+    a: "No hi ha formulari de registre: escrius el teu correu a la porta d'entrada i t'arriba un enllaç per entrar. El compte que es crea és **real i permanent** —el que facis a dins és teu i no ho toca ningú—, mentre que les col·leccions d'exemple on aterres són un aparador compartit que es reinicia cada cert temps. Regalar i vendre són oberts des del primer minut; per muntar una col·lecció de grup, per deixar o llogar, o per gestionar un espai que es reserva, cal demanar accés, perquè en tots aquests casos hi ha algú més comptant amb tu.",
     link: { to: '/popin', label: 'Entrar i mirar' },
   },
   {

@@ -6,7 +6,8 @@ class HostedConfig(AppConfig):
 
     Everything in this app is one operator's business decision: the open sign-up
     door, the page that explains what *this* service is, who is allowed to run a
-    community collection or lend things, and (one day) what any of it costs.
+    community collection, lend or rent, or offer a space to book, and (one day)
+    what any of it costs.
     None of it belongs upstream, where a self-hoster would have to delete it
     before their own answers could apply.
 
