@@ -368,11 +368,13 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 | `list` | `GET /api/v1/things/` | `IsAuthenticated` |
 | `create` | `POST /api/v1/things/` | `IsAuthenticated` |
 | `retrieve` | `GET /api/v1/things/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: visible when the thing sits in a PUBLIC, ACTIVE collection |
-| `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingOwner` |
-| `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingOwner` |
+| `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
+| `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
 | `destroy` | `DELETE /api/v1/things/{code}/` | `IsAuthenticated` + `_can_delete()` |
-| `activate` | `POST /api/v1/things/{code}/activate/` | `IsAuthenticated` + `IsThingOwner` |
-| `hide` | `POST /api/v1/things/{code}/hide/` | `IsAuthenticated` + `IsThingOwner` |
+| `activate` | `POST /api/v1/things/{code}/activate/` | `IsAuthenticated` + `IsThingManager` |
+| `hide` | `POST /api/v1/things/{code}/hide/` | `IsAuthenticated` + `IsThingManager` |
+
+**`IsThingManager`** (2026-09) is `IsThingOwner` one tier wider: the thing owner, **or a curator of a PROPRIETARY collection it sits in** (`Thing.can_manage`). A PROPRIETARY collection's curators run its whole catalogue. Note `get_object()` fetches the thing with a bare `get_object_or_404` (not the owner-filtered `get_queryset`), so a co-curator reaches a thing they don't own and the permission — not the queryset — is what gates them.
 
 **Serializers:**
 - Create: `ThingCreateSerializer`
@@ -391,7 +393,7 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 
 **`hide` action:** Sets `status = 'INACTIVE'`. Only the current thing owner (`thing.owner`) can hide — returns 403 for everyone else. Returns 400 if thing is not ACTIVE (cannot hide a TAKEN thing — cancel the hold first).
 
-**`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Two cases grant permission: (1) the user owns any collection containing the thing (collection owner can always delete); (2) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for the collection owner regardless of thing status; the thing owner sees it when the thing has never changed hands.
+**`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Three cases grant permission: (1) the user owns any collection containing the thing (a collection owner can always delete, any mode); (2) the user is a **co-curator of a PROPRIETARY** collection it sits in (2026-09 — that catalogue is the curators' collectively); (3) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for a curator regardless of thing status; the thing owner sees it when the thing has never changed hands.
 
 ### InvitedThingsView
 
@@ -447,7 +449,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 
 **Retrieve:** Uses `collection.can_view(user_code)` — owner, or invited user if collection is ACTIVE (INACTIVE collections are only visible to their owner). The `CollectionSerializer.things` field excludes INACTIVE things for non-owners.
 
-**Add thing:** Uses `collection.can_add_thing(user_code)` — owner can always add; in COMMUNITY mode, invited users can add their own things. Validates thing exists, belongs to user, and is not already in collection.
+**Add thing:** Uses `collection.can_add_thing(user_code)` — any curator (owner or co-curator, any mode) can always add; in COMMUNITY mode, invited members can also add their own things. Validates thing exists, belongs to user, and is not already in collection.
 
 **Remove thing:** Owner or co-owner can remove any thing. In COMMUNITY mode, thing owners can remove their own things. Validates thing is in the collection, removes it from the M2M without deleting the thing itself.
 
@@ -485,19 +487,18 @@ Removes a user from the collection's invite list. If the invite is still pending
 | | |
 |---|---|
 | **Endpoints** | `POST` and `DELETE /api/v1/collections/{collection_code}/co-owners/` |
-| **Permission** | `IsAuthenticated` + collection owner (`require_collection_owner`) |
+| **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
 | **Rate limit** | POST: 30 requests/hour per user. DELETE: unrestricted. |
 
-Promote or demote a co-owner. **Owner only, deliberately not curator-widened** — appointing (or removing) a second admin stays with the one person accountable for the CASCADE-delete root, never delegated further.
+Promote or demote a co-curator, **in either mode** (2026-09, co-curators in PROPRIETARY). **Any curator may** — appointing help is part of the founder's reach, which a co-curator now shares over everything except deleting the collection (the CASCADE-delete root, still `IsCollectionOwner`). The accepted trade-off: co-curators can ping-pong demotions, and the founder — an FK, never an `invites` row, so this endpoint structurally cannot demote them (`_get_target` 400s on a non-member) — is the circuit breaker.
 
 **`POST` behaviour:**
-- 400 if the collection isn't `is_community()` — co-owners are a COMMUNITY-mode feature.
 - 403 (`co_owners_denial`) if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`.
 - 400 if `user_code` isn't already in `invites` — promotion only, never a separate invite door (`co_owners ⊆ invites`).
 - Adds to `co_owners` (idempotent) and, on the first promotion only, creates a `PROMOTED_CO_OWNER` in-app notification for the member. No email — a deliberate v1 simplification.
 
 **`DELETE` behaviour:**
-- Same membership/mode validation as POST, **except no `co_owners_denial` check** — the gate is on bringing co-owner status into existence, never on living in it (the same grandfathering `creator_policy` already applies to a mode or a verb). An owner must always be able to demote, even on a deployment that has since disabled the feature, and even on a collection since switched away from COMMUNITY (a co-owner's status is sticky across a mode change, like `owner` itself).
+- Same membership validation as POST, **except no `co_owners_denial` check** — the gate is on bringing co-curator status into existence, never on living in it (the same grandfathering `creator_policy` already applies to a mode or a verb). A curator must always be able to demote, even on a deployment that has since disabled the feature.
 - Removes from `co_owners` (idempotent, a harmless no-op on a plain member) and, if they were actually a co-owner, creates a `DEMOTED_CO_OWNER` notification. The member stays in `invites` — demotion removes the admin tier, not the membership.
 
 **Request body:**
@@ -669,17 +670,17 @@ The metrics themselves live in [`export_service.collection_stats_rows()`](../ser
 | **Permission** | `AllowAny` (part of the public social layer — anyone who can view the thing may read its FAQs) |
 | **Pagination** | `StandardResultsPagination` |
 
-Lists FAQs for a thing. Owner sees all FAQs (including hidden). Invited users see only visible FAQs.
+Lists FAQs for a thing. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees all FAQs including hidden ones. Everyone else sees only visible FAQs.
 
 **Response fields:** `code`, `thing`, `created`, `questioner` (user code), `questioner_name` (user display name — **empty for a reader who is not signed in**; see the anonymous-read note under Security), `question`, `answer`, `is_visible`.
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/things/{thing_code}/faq/` |
-| **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner |
+| **Permission** | `IsAuthenticated` + `thing.can_view()` + not a **manager** (`Thing.can_manage`) |
 | **Rate limit** | 20 requests/hour per user |
 
-Creates a new FAQ question. Owner cannot ask questions about their own thing (400). Sends notification email to thing owner with a "View and reply" link to the thing page.
+Creates a new FAQ question. A manager — the owner, or a PROPRIETARY collection's curator — cannot ask about a thing they run (400). Notifies **every manager** of the thing (`Thing.managers` — owner + a PROPRIETARY collection's curators, minus the asker) by email + in-app, each with a "View and reply" link; in COMMUNITY that is just the thing owner.
 
 **Request body:**
 ```json
@@ -693,16 +694,16 @@ Creates a new FAQ question. Owner cannot ask questions about their own thing (40
 | **Endpoint** | `GET /api/v1/faq/{faq_code}/` |
 | **Permission** | `IsAuthenticated` + `thing.can_view()` |
 
-Returns a single FAQ. Hidden FAQs are only visible to the thing owner and the questioner. Returns 404 for others.
+Returns a single FAQ. Hidden FAQs are only visible to a **manager** of the thing (`Thing.can_manage` — owner or a PROPRIETARY collection's curator) and the questioner. Returns 404 for others.
 
 ### FAQAnswerView
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/answer/` |
-| **Permission** | `IsAuthenticated` + thing owner only |
+| **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Answers a FAQ. Sends notification email to questioner.
+Answers a FAQ. Sends a notification email + in-app to the questioner, naming whoever answered (`request.user.name`, bare — L2).
 
 **Request body:**
 ```json
@@ -714,14 +715,14 @@ Answers a FAQ. Sends notification email to questioner.
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/hide/` |
-| **Permission** | `IsAuthenticated` + thing owner only |
+| **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
 Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text).
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/show/` |
-| **Permission** | `IsAuthenticated` + thing owner only |
+| **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
 Shows a previously hidden FAQ.
 
@@ -862,7 +863,7 @@ Lists all available theeemes. Returns `code` and `name` for each theeeme via `Th
 | **Endpoint** | `GET /api/v1/things/{thing_code}/calendar/` |
 | **Permission** | `AllowAny` + `get_viewable_thing()` (public read on a viewable thing) |
 
-Returns blocked periods for a thing's calendar. Owner sees full details (`BookingPeriodOwnerCalendarSerializer`), guests see only dates and status (`BookingPeriodCalendarSerializer`).
+Returns blocked periods for a thing's calendar. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees full details (`BookingPeriodOwnerCalendarSerializer`); guests see only dates and status (`BookingPeriodCalendarSerializer`).
 
 ### MyBookingsView
 
@@ -882,25 +883,25 @@ Lists all booking requests made by the current user, ordered by `-created`.
 | **Permission** | `IsAuthenticated` |
 | **Pagination** | `StandardResultsPagination` |
 
-Lists all booking requests for things owned by the current user, ordered by `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`. (It was implemented and documented for a long time with no caller at all: an owner's only routes to a pending request were the email, an inbox banner, or opening each collection in turn.)
+Lists booking requests on the current user's own things, **plus** (2026-09) every booking on a thing in a **PROPRIETARY** collection they curate (owner or co-curator) — `.distinct()` over `Q(owner_code=user) | Q(thing_code__collections__mode=PROPRIETARY, …owner=user) | Q(…co_owners=user)`, since a shared catalogue's `booking.owner_code` is the thing's owner, who may be another curator. Ordered `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`.
 
 ### BookingCancelView
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/cancel/` |
-| **Permission** | `IsAuthenticated` + booking requester (**or the owner**, for a RESERVE booking) |
+| **Permission** | `IsAuthenticated` + booking requester (**or any curator of the reservations collection**, for a RESERVE booking) |
 
-Allows the requester to cancel their own pending booking. Validates `booking.requester_code == request.user`, checks `is_valid()`. Calls `cancel_booking()` service (restores Thing status to ACTIVE for single-use types), and deletes related RSVPs.
+Allows the requester to cancel their own pending booking. Validates `booking.requester_code == request.user`, checks `is_valid()`. Calls `cancel_booking()` service (restores Thing status to ACTIVE for single-use types), and deletes related RSVPs. **The non-RESERVE branch stays requester-only** — a curator kills a LEND/RENT/GIFT/SELL hold by *rejecting* it (`BookingActionView`), which mails the requester a decision.
 
-**RESERVE_THING branch:** when `booking.thing_type == RESERVE_THING` the view calls `cancel_reservation(booking, request.user)` instead — **the owner may cancel too** (rule 4: they may need the space), and only while the reservation hasn't started. The other party is notified (in-app + email). A confirmed reservation is `ACCEPTED`, not `PENDING`, so the `is_valid()` path never applied to it.
+**RESERVE_THING branch:** when `booking.thing_type == RESERVE_THING` the view calls `cancel_reservation(booking, request.user)` instead — **any curator of the reservations collection may cancel** (2026-09, `Thing.can_manage`; rule 4: they may need the space), and only while the reservation hasn't started. Everyone who didn't cancel is notified — the member (unless they were the one) and every other curator, in-app + email; `other_name` is always whoever actually cancelled. A confirmed reservation is `ACCEPTED`, not `PENDING`, so the `is_valid()` path never applied to it.
 
 **Responses:**
 | Status | Condition |
 |--------|-----------|
 | 200 | Cancelled |
 | 400 | Booking expired / already processed / reservation already started / not a reservation |
-| 403 | Not the requester (or, for a reservation, not the requester or owner) |
+| 403 | Not the requester (or, for a reservation, not the requester or a curator) |
 | 404 | Booking not found |
 
 ### BookingActionView
@@ -908,23 +909,23 @@ Allows the requester to cancel their own pending booking. Validates `booking.req
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/accept/` |
-| **Permission** | `IsAuthenticated` + booking owner |
+| **Permission** | `IsAuthenticated` + a **manager** of the thing (`booking.owner_code == user` **or** `booking.thing_code.can_manage(user)`) |
 
-Accepts a pending booking. Validates `booking.owner_code == request.user`, checks `is_valid()`. Calls `accept_booking()` service, sends decision email via `send_booking_decision_email()`, and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links.
+Accepts a pending booking. Calls `finalize_booking_decision()`, sends the decision email via `send_booking_decision_email()`, and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links. A curator of a PROPRIETARY collection decides its holds, not only the founder (2026-09).
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/reject/` |
-| **Permission** | `IsAuthenticated` + booking owner |
+| **Permission** | `IsAuthenticated` + a manager of the thing (same as accept) |
 
-Rejects a pending booking. Same permission and validation as accept. Calls `reject_booking()` service, sends decision email, and deletes related RSVPs.
+Rejects a pending booking. Same permission and validation as accept.
 
 **Responses:**
 | Status | Condition |
 |--------|-----------|
 | 200 | Action completed |
 | 400 | Booking expired or already processed |
-| 403 | Not the booking owner |
+| 403 | Not a manager of the thing |
 | 404 | Booking not found |
 
 ---
@@ -1153,8 +1154,9 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 | Permission | Logic |
 |-----------|-------|
 | `IsThingOwner` | `obj.owner_id == request.user.code` |
+| `IsThingManager` | `obj.can_manage(request.user.code)` — the thing owner, or a curator of a PROPRIETARY collection it sits in. Gates the catalogue actions (update, activate, hide); delete keeps its own `_can_delete`. |
 | `IsCollectionOwner` | `obj.owner_id == request.user.code` |
-| `IsCollectionCurator` | `obj.is_curator(request.user.code)` — owner or co-owner. The admin tier: everything except deleting the collection or promoting/demoting a co-owner, both of which stay `IsCollectionOwner`. |
+| `IsCollectionCurator` | `obj.is_curator(request.user.code)` — owner or co-owner. The admin tier: everything except deleting the collection, which stays `IsCollectionOwner`. Promoting/demoting a co-curator is curator-wide now (2026-09). |
 
 ---
 
@@ -1167,7 +1169,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 3. **JWT tokens** — HttpOnly cookie-based. Access tokens expire after 1 hour. Refresh tokens expire after 7 days. Tokens are rotated on refresh via `POST /api/v1/auth/refresh/`, old tokens blacklisted.
 4. **CSRF (cookie auth)** — because the access token rides in a cookie, `CookieJWTAuthentication` runs DRF's CSRF check (`enforce_csrf`, mirroring `SessionAuthentication`) for **cookie-authenticated unsafe methods** — defence in depth behind the cookie's `SameSite=Lax`. Bearer-header auth is exempt (the header is never sent cross-site), so API clients and the Bearer-token test suite are unaffected. `MeView` GET sets the `csrftoken` cookie via `@ensure_csrf_cookie` (hit on every app load); the SPA reads it and sends it as `X-CSRFToken` on every unsafe request. The test client disables the check by default (`enforce_csrf_checks=False`), so only `test_csrf.py` (which opts in) exercises it.
 5. **IDOR protection** — `can_view_user()` ensures users can only view profiles of people connected via collections.
-6. **Custom DRF permissions** — `IsThingOwner` and `IsCollectionOwner` in `core/permissions.py`.
+6. **Custom DRF permissions** — `IsThingOwner`, `IsThingManager`, `IsCollectionOwner`, `IsCollectionCurator` in `core/permissions.py`.
 7. **Public collections (anonymous read)** — a collection with `visibility=PUBLIC` (and ACTIVE) is readable without authentication. The read endpoints `CollectionViewSet.retrieve`, `ThingViewSet.retrieve`, the FAQ list (GET on `ThingFAQListView`), `ThingTransferView` and `ThingCalendarView` are `AllowAny`, each gated by an **anonymous-safe** `can_view` (a `viewer_code(request)` helper passes the user's code, or `None` for a visitor, into the model guard — `None` matches PUBLIC collections only). Every *write/act* endpoint (reserve, ask a question, answer, add a thing, manage invites/visibility) still requires authentication plus membership/ownership, so an anonymous visitor may browse a public collection but must log in to act. INACTIVE things are excluded from the serialised `things` for any non-owner, the member roster serialises **codes only** for anonymous readers (names are for logged-in members; emails for the owner), and the collection *list* (`GET /collections/`) stays private (it returns only what the caller owns or co-owns).
 
 **No member is named to an anonymous reader, by any of these endpoints.** The roster rule above is the whole rule, and it took three passes to actually be: the FAQ list still carried `questioner_name` and the journey still carried the name of everyone who had held the thing, so a group's membership stayed legible from the open web through a thing rather than through the collection. Both now withhold (`FAQSerializer.get_questioner_name`, `core/serializers/transfer.py::_may_read_names`), both fail closed on a request-less context, and both keep the *content* public — the question, the hop count, the travel story. The third door was the grid itself: in COMMUNITY mode every card carries `owner_name`, the member who **contributed** the thing, so a group's membership stayed enumerable from the open web after both other doors had closed. `ThingComputedFieldsMixin.get_owner_name` now withholds it from a signed-out reader **whenever the thing's owner is not the collection's owner** — the leak stated exactly, with no mode check to drift. The one name such a reader still gets is the **curator's**, the person who published the collection: `CollectionSerializer.get_owner_name` already serves it to them in the page header, so withholding it on that person's own listings would be theatre. They chose to publish; the member who contributed, the person who asked and the people who borrowed did not.
@@ -1257,4 +1259,4 @@ Business logic is extracted into `core/services/`:
 - `core/utils.py`: `generate_id()`, `get_client_ip()`, `asset_url()` — `asset_url(key)` joins the stored key onto `MEDIA_PUBLIC_BASE_URL` via `core.services.storage.public_url`. It replaced a Cloudinary SDK call that asked for `fetch_format=auto`/`quality=auto`; an object store does not transform, so that job moved to the browser, which encodes to WebP before uploading.
 - `core/validators.py`: `ImageIdField`, `SafeHeadlineField`, `SafeTextField`, `validate_image_id()`, `validate_headline()`
 - `core/pagination.py`: `StandardResultsPagination` (max 100 items)
-- `core/views/_helpers.py`: `viewer_code()`, `deny_if_cannot_view()`, `get_viewable_thing()`, `type_validity_error()`, `require_collection_owner()`, and **`body_dict(request)`** — `request.data` when the body is a JSON object, else `{}`. DRF parses a JSON *array* body into a `list`, which has no `.get`, so any view reading `request.data.get(...)` **before a serializer has run** answers 500 where it owes a 400. Use it on every such read; a non-object body then means "no fields given" and falls through to the view's own validation. Pinned by `core/tests/integration/test_array_body.py`.
+- `core/views/_helpers.py`: `viewer_code()`, `deny_if_cannot_view()`, `get_viewable_thing()`, `type_validity_error()`, `require_collection_curator()`, and **`body_dict(request)`** — `request.data` when the body is a JSON object, else `{}`. DRF parses a JSON *array* body into a `list`, which has no `.get`, so any view reading `request.data.get(...)` **before a serializer has run** answers 500 where it owes a 400. Use it on every such read; a non-object body then means "no fields given" and falls through to the view's own validation. Pinned by `core/tests/integration/test_array_body.py`.

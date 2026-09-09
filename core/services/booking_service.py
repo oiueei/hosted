@@ -559,28 +559,42 @@ def request_reservation(
 
 
 def _send_reservation_notifications(requester, thing, booking, owner_email, collection):
-    """Fan out a confirmed reservation: requester email, owner email + in-app
-    notice, and the request→accept event pair (the funnel is instant here)."""
+    """Fan out a confirmed reservation: the requester's confirmation, and — to
+    **every manager** of the thing (owner + the reservations collection's
+    co-curators, ``Thing.managers``), minus the requester if they are one — the
+    notice email + in-app record. Plus the request→accept event pair (the
+    funnel is instant here).
+
+    ``owner_email`` is the view's pre-validated ``thing.owner`` address; the
+    owner is one of the managers below and is reached there at their own.
+    """
     from core.services.email_service import (
         send_reservation_confirmed_email,
         send_reservation_notice_email,
     )
 
     send_reservation_confirmed_email(requester, thing, booking, collection)
-    send_reservation_notice_email(owner_email, requester, thing, booking, collection)
-    InAppNotification.objects.create(
-        user=thing.owner,
-        type=InAppNotification.Type.RESERVATION_MADE,
-        payload={
-            "thing_headline": thing.headline,
-            "requester_name": requester.display_name,
-            "start_date": str(booking.start_date),
-            "end_date": str(booking.end_date),
-            "booking_code": booking.code,
-            "thing_code": thing.code,
-            "collection_code": collection.code if collection else "",
-        },
-    )
+
+    payload = {
+        "thing_headline": thing.headline,
+        "requester_name": requester.display_name,
+        "start_date": str(booking.start_date),
+        "end_date": str(booking.end_date),
+        "booking_code": booking.code,
+        "thing_code": thing.code,
+        "collection_code": collection.code if collection else "",
+    }
+    for curator in thing.managers():
+        if curator.code == requester.code:
+            continue
+        if curator.email:
+            send_reservation_notice_email(curator.email, requester, thing, booking, collection)
+        InAppNotification.objects.create(
+            user=curator,
+            type=InAppNotification.Type.RESERVATION_MADE,
+            payload=payload,
+        )
+
     Event.log(
         Event.Kind.HOLD_REQUESTED, actor=requester, thing=thing, thing_type=booking.thing_type
     )
@@ -588,15 +602,17 @@ def _send_reservation_notifications(requester, thing, booking, owner_email, coll
 
 
 def cancel_reservation(booking, by_user):
-    """Cancel a not-yet-started reservation — allowed to the **requester or the
-    owner** (rule 4). Frees the slot and tells the other party.
+    """Cancel a not-yet-started reservation — allowed to the **requester, or
+    any curator** of the reservations collection (owner or co-curator, rule 4;
+    2026-09). Frees the slot and tells everyone who wasn't the one to cancel.
 
     Raises ``BookingRequestError`` (403 wrong person, 400 nothing to cancel /
     already started / not a reservation). Returns the booking on success.
     """
+    thing = booking.thing_code
     if booking.thing_type != Thing.Type.RESERVE_THING:
         raise BookingRequestError("Not a reservation.")
-    if by_user.code not in (booking.requester_code_id, booking.owner_code_id):
+    if by_user.code != booking.requester_code_id and not thing.can_manage(by_user.code):
         raise BookingRequestError("You can't cancel this reservation.", status_code=403)
     if booking.start_date and booking.start_date < timezone.localdate():
         raise BookingRequestError("This reservation has already started.")
@@ -608,37 +624,43 @@ def cancel_reservation(booking, by_user):
         locked.status = BookingPeriod.Status.CANCELLED
         locked.save(update_fields=["status"])
 
-    cancelled_by_owner = by_user.code == booking.owner_code_id
-    thing = booking.thing_code
-    _notify_reservation_cancelled(booking, thing, cancelled_by_owner)
+    _notify_reservation_cancelled(booking, thing, by_user)
     return locked
 
 
-def _notify_reservation_cancelled(booking, thing, cancelled_by_owner):
+def _notify_reservation_cancelled(booking, thing, by_user):
+    """Tell the member (unless they cancelled) and every curator (bar whoever
+    cancelled) that the slot is free again. `other_name` is always the person
+    who actually cancelled, so the copy — "{other} cancelled a reservation of
+    {thing}" — is true for every reader."""
     from core.services.email_service import send_reservation_cancelled_email
 
-    if cancelled_by_owner:
-        recipient, recipient_email = booking.requester_code, booking.requester_email
-        other = booking.owner_code
-    else:
-        recipient, recipient_email = booking.owner_code, booking.owner_code.email
-        other = booking.requester_code
+    requester_id = booking.requester_code_id
 
-    # Bare name either way (L2): the reader is a co-member, not someone the API
-    # hands an address to — the email's `_member_name` and the frontend's
+    recipients = {}  # code -> (User, email)
+    if by_user.code != requester_id:
+        recipients[requester_id] = (booking.requester_code, booking.requester_email)
+    for curator in thing.managers():
+        if curator.code != by_user.code:
+            recipients.setdefault(curator.code, (curator, curator.email))
+
+    # Bare name (L2): the email's `_member_name` and the frontend's
     # `common.aMember` cover an unset name.
-    InAppNotification.objects.create(
-        user=recipient,
-        type=InAppNotification.Type.RESERVATION_CANCELLED,
-        payload={
-            "thing_headline": thing.headline,
-            "other_name": other.name,
-            "start_date": str(booking.start_date),
-            "end_date": str(booking.end_date),
-            "thing_code": thing.code,
-            "cancelled_by_owner": cancelled_by_owner,
-        },
-    )
-    send_reservation_cancelled_email(
-        recipient_email, other.name, thing, booking, cancelled_by_owner=cancelled_by_owner
-    )
+    for code, (user, email) in recipients.items():
+        to_the_member = code == requester_id
+        InAppNotification.objects.create(
+            user=user,
+            type=InAppNotification.Type.RESERVATION_CANCELLED,
+            payload={
+                "thing_headline": thing.headline,
+                "other_name": by_user.name,
+                "start_date": str(booking.start_date),
+                "end_date": str(booking.end_date),
+                "thing_code": thing.code,
+                "cancelled_by_owner": to_the_member,
+            },
+        )
+        if email:
+            send_reservation_cancelled_email(
+                email, by_user.name, thing, booking, cancelled_by_owner=to_the_member
+            )

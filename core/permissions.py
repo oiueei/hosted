@@ -14,6 +14,19 @@ class IsThingOwner(BasePermission):
         return obj.is_owner(request.user.code)
 
 
+class IsThingManager(BasePermission):
+    """Object-level: request user may manage the Thing — its owner, or a
+    curator of a PROPRIETARY collection it sits in (`Thing.can_manage`).
+
+    The mirror of `IsThingOwner`, one tier wider, for the catalogue actions
+    a PROPRIETARY collection's curators run collectively (edit, hide,
+    activate). Deleting keeps its own `_can_delete` check.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return obj.can_manage(request.user.code)
+
+
 class IsCollectionOwner(BasePermission):
     """Object-level: request user is the Collection owner."""
 
@@ -24,8 +37,9 @@ class IsCollectionOwner(BasePermission):
 class IsCollectionCurator(BasePermission):
     """Object-level: request user is the Collection owner or a co-owner.
 
-    The admin tier — everything except deleting the collection or
-    promoting/demoting a co-owner, both of which stay `IsCollectionOwner`.
+    The admin tier — everything except deleting the collection, which stays
+    `IsCollectionOwner` (the CASCADE-delete root). Promoting and demoting a
+    co-curator is curator-wide now (2026-09, co-curators in PROPRIETARY).
     """
 
     def has_object_permission(self, request, view, obj):

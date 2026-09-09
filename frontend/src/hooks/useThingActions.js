@@ -28,9 +28,16 @@ import useThingBooking from './useThingBooking';
  * both views) so callers don't repeat it.
  *
  * Returns everything {@link useThingBooking} returns, plus: `isOwner`,
- * `isCollectionOwner`, `isDateBased`, `needsPage`,
+ * `canManage`, `isCollectionOwner`, `isDateBased`, `needsPage`,
  * `canDelete`, `hasPendingBookings`, `showButton`, `isMine`, `buttonDisabled`,
  * `loginButtonDisabled`, `buttonLabel`.
+ *
+ * **`canManage`** is the backend's `thing.can_manage` — true for the owner, or
+ * a curator of a PROPRIETARY collection the thing sits in, who runs its
+ * catalogue and bookings the same as the founder (2026-09). The owner-button
+ * matrix, the delete button and the "hide the reserve button from staff" guard
+ * all key on it now, not on `isOwner`. `isOwner` is kept for the few genuinely
+ * owner-only bits (the "transfer ownership?" confirm copy).
  */
 export default function useThingActions(
   thing,
@@ -52,6 +59,8 @@ export default function useThingActions(
   const { t } = useTranslation();
 
   const isOwner = thing?.owner === userCode;
+  // The backend field; `isOwner` is the floor for a payload that predates it.
+  const canManage = thing?.can_manage === true || isOwner;
   const isDateBased = DATE_TYPES.includes(thing?.type);
   // `needsPage` drives whether the reserve button navigates to a follow-up form
   // (date-based picks dates) or POSTs directly. `bookingKeepsStatus`
@@ -70,10 +79,10 @@ export default function useThingActions(
   // ownership?" confirm — copy, three locales and all — has never once rendered.
   const acceptTransfersOwnership = !bookingKeepsStatus;
   const isCollectionOwner = (collectionOwner || thing?.collection_owner) === userCode;
-  const canDelete = isCollectionOwner || isOwner;
+  const canDelete = isCollectionOwner || canManage;
 
   const booking = useThingBooking(thing, {
-    isOwner,
+    canManage,
     onThingChange,
     setToast,
     initialActivePending,
@@ -88,7 +97,9 @@ export default function useThingActions(
   const hasPendingBookings = bookings.some((b) => b.status === 'PENDING');
   // `canAct` covers a member; `loginToAct` shows the buttons to an anonymous
   // visitor on a public collection (each click routes to the join page).
-  const showButton = (canAct || loginToAct) && !isOwner && thing?.status !== 'INACTIVE';
+  // Hidden from anyone who manages the thing — staff answer requests, they
+  // don't make them.
+  const showButton = (canAct || loginToAct) && !canManage && thing?.status !== 'INACTIVE';
   // The current viewer holds the pending booking (locally requested, or returned
   // by the serializer). Only they see "waiting"; everyone else sees the reason
   // the disabled button can't be used — so the cause travels with the control.
@@ -113,6 +124,7 @@ export default function useThingActions(
   return {
     ...booking,
     isOwner,
+    canManage,
     isCollectionOwner,
     isDateBased,
     needsPage,

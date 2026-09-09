@@ -296,11 +296,11 @@ class Collection(models.Model):
         the N+1 the prefetch exists to close — the same reasoning behind
         `get_is_member`'s `any(u.code == ... for u in obj.invites.all())`.
 
-        Does **not** check `is_community()` — only *promoting* a member is a
-        COMMUNITY-only action (enforced at `CollectionCoOwnerView.post`). An
-        existing co-owner's status is sticky across a later mode switch, the
-        same way `owner` itself is: nothing here silently revokes power a
-        mode change didn't ask to revoke.
+        Does **not** check `is_community()`, and nothing about co-curators does
+        any more: a curator has the founder's reach in either mode (2026-09,
+        co-curators in PROPRIETARY), and only deleting the collection stays
+        `is_owner`. An existing co-owner's status is sticky across a later mode
+        switch, the same way `owner` itself is.
         """
         return self.is_owner(user_code) or any(u.code == user_code for u in self.co_owners.all())
 
@@ -324,8 +324,8 @@ class Collection(models.Model):
         It lives on the model rather than in either caller because the gate is
         `self.mode` — a fact about the group, not about JSON. It builds a row and
         nothing else: **who may ask is the caller's job** (`_requester_is_owner`
-        in the serializer, `require_collection_owner` on the export view), and
-        calling this does not make anyone an owner.
+        in the serializer, `require_collection_curator` on the export view), and
+        calling this does not make anyone a curator.
 
         `members` defaults to the M2M, so a caller with a prefetched or ordered
         queryset passes it in rather than triggering a second one.
@@ -564,9 +564,11 @@ class Collection(models.Model):
     def can_add_thing(self, user_code):
         """Check if the given user can add things to this collection.
 
-        Owner can always add. Invited users can add in COMMUNITY mode.
+        Any curator (owner or co-curator) can always add — a PROPRIETARY
+        collection's catalogue is run by its curators collectively (2026-09).
+        Beyond that, an invited member can add in COMMUNITY mode.
         """
-        if self.is_owner(user_code):
+        if self.is_curator(user_code):
             return True
         return self.is_community() and self.is_invited(user_code)
 

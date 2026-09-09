@@ -349,17 +349,14 @@ describe('ManageInvitesPage — co-owners', () => {
     expect(JSON.parse(options.body)).toEqual({ user_code: 'GST002' });
   });
 
-  test('a co-owner sees the management controls but not the promote toggle — that stays the founder’s alone', async () => {
+  test('a co-curator gets the promote toggle too (2026-09 — any curator may)', async () => {
     localStorage.setItem('userCode', 'GST002');
     mockCoOwnerRoutes({ collection: { ...TWO_MEMBERS, is_curator: true } });
     renderPage();
     await screen.findByText(/Ana/);
 
     expect(screen.getByLabelText('Guest email')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Make co-curator' })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Remove co-curator status' })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Make co-curator' })).toBeInTheDocument();
   });
 
   test('the roster names Bea as a co-curator', async () => {

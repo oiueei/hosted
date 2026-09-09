@@ -118,7 +118,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `things` | ManyToManyField(Thing) | No | Things in this collection |
 | `invites` | ManyToManyField(User) | No | Users invited to view this collection |
 | `digest_muted` | ManyToManyField(User) | No | Members who have silenced **this** collection's digest. A row means "don't send"; its absence means subscribed, so the on-by-default costs no data and a new member is written nothing. Consulted for `CATEGORY_NEWS` only — a muted group still sends its Cat. 2 activity mail. Reverse: `user.muted_digest_collections`. Table `collection_digest_muted`. |
-| `co_owners` | ManyToManyField(User) | No | **COMMUNITY-only** admin tier, promoted from the collection's own `invites` — never a separate door in (`co_owners ⊆ invites` is enforced at the promote endpoint, not by the schema). A co-owner gets owner-level powers (edit, invite/revoke, broadcast, share link, stats/export) but is deliberately **not** a CASCADE root: deleting a co-owner's account never takes the collection with it, only the founding `owner` does — see `is_curator`. Reverse: `user.co_owned_collections`. Table `collection_co_owners`. |
+| `co_owners` | ManyToManyField(User) | No | The admin tier, in **either mode** (2026-09, co-curators in PROPRIETARY), promoted from the collection's own `invites` — never a separate door in (`co_owners ⊆ invites` is enforced at the promote endpoint, not by the schema). A co-curator gets the founder's collection-level powers (edit, invite/revoke, broadcast, share link, stats/export, decide member proposals, promote/demote another co-curator) but is deliberately **not** a CASCADE root: deleting a co-curator's account never takes the collection with it, only the founding `owner` does — see `is_curator`. Reverse: `user.co_owned_collections`. Table `collection_co_owners`. |
 
 ### Business Rules
 
@@ -126,11 +126,11 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 
 2. **Owner or co-owner manages all fields** - The owner or a co-owner can update the collection's headline, description, images, and status. Enforced via `IsCollectionCurator` DRF permission. Only the owner may delete the collection (`IsCollectionOwner`, deliberately not curator-widened).
 
-3. **Adding things** - In PROPRIETARY mode, only the owner can add things. In COMMUNITY mode, any invited user can add their own things. Enforced via `can_add_thing(user_code)`.
+3. **Adding things** - Any **curator** (owner or co-curator) can add — a PROPRIETARY collection's catalogue is run by its curators collectively (2026-09). Beyond that, in COMMUNITY mode any invited member can add their own things. Enforced via `can_add_thing(user_code)`.
 
-4. **Removing things** - The owner or a co-owner can always remove any thing. In COMMUNITY mode, thing owners can remove their own things.
+4. **Removing / managing things** - The owner or a co-owner can always remove any thing (`remove_thing`, the M2M detach). In a **PROPRIETARY** collection a curator also *manages* every thing in it — edit / hide / activate / delete, via `Thing.can_manage` + `IsThingManager` — because every one was added by a curator for the group. **COMMUNITY is unchanged**: a member owns what they contribute, and a curator's reach there stops at `remove_thing`. In COMMUNITY, thing owners can remove their own things.
 
-5. **Owner or co-owner invites/revokes** - Enforced at the view level (`CollectionInviteView` + `require_collection_curator`), which also owns the invitation email/RSVP flow. Revoking a member also strips their `co_owners` row, if any (`co_owners ⊆ invites`). Only the owner may promote or demote a co-owner. The model-level `add_invite()`/`remove_invite()` helpers are test-only and perform no checks (see Methods).
+5. **Owner or co-owner invites/revokes** - Enforced at the view level (`CollectionInviteView` + `require_collection_curator`), which also owns the invitation email/RSVP flow. Revoking a member also strips their `co_owners` row, if any (`co_owners ⊆ invites`). **Any curator may promote or demote a co-curator, in either mode** (2026-09) — only deleting the collection stays owner-only. The founding `owner` is an FK, not an `invites` row, so the promote/demote endpoint structurally cannot demote them. The model-level `add_invite()`/`remove_invite()` helpers are test-only and perform no checks (see Methods).
 
 6. **Visible to owner, invites, and anyone when PUBLIC** - `can_view(user_code)` returns True for the owner, for an invited member, or for **anyone** (including an anonymous visitor, `user_code=None`) when `visibility=PUBLIC` and the collection is ACTIVE. INACTIVE collections remain owner-only regardless of visibility.
 
@@ -146,7 +146,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 - `is_invited(user_code)` - Returns True if user is in invites (`self.invites.filter(code=user_code).exists()`)
 - **`is_curator(user_code)`** — `is_owner(user_code) or self.co_owners.filter(code=user_code).exists()`. The single primitive every co-owner permission gate builds on, the way `is_owner` already was for owner-only ones — strictly wider than `is_owner`, never wider than `is_invited` (a co-owner is always also in `invites`).
 - `is_community()` - Returns True if `mode == "COMMUNITY"`
-- `owner_member_rows(members=None)` - Every member as **their owner** sees them: `code`, `name`, `email`, plus `age_range` and `postal_code` **only in a COMMUNITY group**. The single definition of that privacy gate, used by both surfaces that answer the question — `CollectionSerializer.get_invites` (the guests page) and `export_service._collection_members` (the collection export). It was two near-identical loops in two files that agreed only because somebody kept them agreeing, and the direction they drift in is the dangerous one: an export is a file, so a gate the API applies and the export forgets is a leak that leaves the building. It builds a row and nothing else — **who may ask is the caller's job** (`_requester_is_owner`, `require_collection_owner`). Pass `members` to reuse a prefetched or ordered queryset.
+- `owner_member_rows(members=None)` - Every member as **their owner** sees them: `code`, `name`, `email`, plus `age_range` and `postal_code` **only in a COMMUNITY group**. The single definition of that privacy gate, used by both surfaces that answer the question — `CollectionSerializer.get_invites` (the guests page) and `export_service._collection_members` (the collection export). It was two near-identical loops in two files that agreed only because somebody kept them agreeing, and the direction they drift in is the dangerous one: an export is a file, so a gate the API applies and the export forgets is a leak that leaves the building. It builds a row and nothing else — **who may ask is the caller's job** (`_requester_is_owner`, `require_collection_curator`). Pass `members` to reuse a prefetched or ordered queryset.
 - `is_public()` - Returns True if `visibility == "PUBLIC"`
 - `has_rental_rules()` - Returns True if the collection constrains LEND/RENT dates (`rental_durations`, `rental_weekdays` **or `closed_dates`** set)
 - `closed_date_set()` - `closed_dates` (ISO strings) as a `set` of `date` objects; a bad string is skipped defensively.
@@ -156,7 +156,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 - **`capacity_ceiling(counter="things")`** — the ceiling in force for that counter, or `0` when there is none (unset threshold, or `capacity_unblocked`). Callers use it as a cheap gate: with no ceiling to judge them, working out how many rows a request would actually add is wasted effort, so the guard costs not one query on a deployment that sets no thresholds.
 - **`capacity_violation(counter="things", adding=1)`** — mass-upload ceiling. Returns an error string (like `rental_violation`) if adding `adding` rows to that counter would cross `COLLECTION_THINGS_BLOCK` / `COLLECTION_INVITES_BLOCK`, else `None`. 0/unset = no ceiling (the standalone default); `capacity_unblocked` lifts it. Checked **before** the add and against the **whole batch**, so a bulk import or bulk invite cannot step over the line 100 rows at a time. **`adding` must be what would genuinely land**: a caller counting rows the request will drop anyway — above all an invitee who is *already a member*, and so already inside the count the ceiling is measured against — would refuse a request that adds nobody. The views therefore count newcomers, not CSV lines.
 - **`note_capacity(counter="things")`** — the silent tripwire. Emails the superusers **once** per collection when that counter crosses its `*_ALARM` threshold, and tells the owner nothing: a legitimate bulk import must not be interrupted, and someone probing the endpoint must not learn where the line sits. Called **after** a successful add so the count is real; send failures are swallowed, since the ceiling is what stops abuse and the alarm is only the early warning. "Once" holds **under concurrency**: the flag is claimed with a conditional `UPDATE … WHERE flag=False`, so two requests crossing the line together both read `False` but only one gets a matched row back and sends.
-- `can_add_thing(user_code)` - Returns True if user is owner, OR if collection is COMMUNITY and user is invited
+- `can_add_thing(user_code)` - Returns True if user is a **curator** (owner or co-curator, any mode), OR if the collection is COMMUNITY and the user is invited
 - `can_view(user_code)` - Returns True if user is owner, OR the collection is PUBLIC and ACTIVE (anonymous-safe — `user_code=None` is accepted), OR the user is invited. INACTIVE collections are owner-only.
 
 ### Validations
@@ -211,11 +211,11 @@ The `FAQ` model represents a question and answer about a thing. Invited users ca
 1. **FK to Thing** - Each FAQ references a thing via ForeignKey.
 2. **FK to User** - Questioner tracked via ForeignKey (`SET_NULL` — the Q&A outlives a deleted account, anonymised).
 3. **Only invited users can ask** - Must be invited to the collection containing the thing.
-4. **Owner cannot ask questions** - Returns 400 Bad Request.
-5. **Only owner can answer** - Returns 403 Forbidden for others.
+4. **A manager cannot ask questions** - the thing owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`) — they answer, they don't ask. Returns 400 Bad Request.
+5. **Only a manager can answer** - The thing owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09 — a PROPRIETARY space's curators run its FAQs together). 403 for everyone else. In COMMUNITY, still the thing owner alone — a member owns what they contribute.
 6. **Default visible** - New FAQs have `is_visible=True`.
-7. **Only owner can change visibility** - Via `/faq/{code}/hide/` or `/faq/{code}/show/`.
-8. **Email notifications** - Owner notified on new question. Questioner notified on answer/hide.
+7. **Only a manager can change visibility** - Via `/faq/{code}/hide/` or `/faq/{code}/show/` (`Thing.can_manage`); a manager and the questioner also see hidden FAQs.
+8. **Email notifications** - A new question notifies **every manager** of the thing (`Thing.managers` — the owner, and a PROPRIETARY collection's curators), so co-curators answer questions shoulder to shoulder with the founder; in COMMUNITY that set is just the thing owner. The questioner is notified on answer/hide, by whoever acted.
 
 ### Methods
 
@@ -311,8 +311,10 @@ the live availability window) but its create/cancel flow lives in
 created straight to `ACCEPTED`, no RSVP accept/reject pair is minted, no
 `ThingTransfer` is written, and both parties are emailed at once. The
 accept/reject/`finalize_booking_decision` machinery is never reached for it.
-Either the requester **or the owner** may cancel one that hasn't started yet
-(`BookingCancelView` branches on `thing_type`); the other party is notified.
+Either the requester **or any curator** of the reservations collection (owner or
+co-curator, `Thing.can_manage`, 2026-09) may cancel one that hasn't started yet
+(`BookingCancelView` branches on `thing_type`); everyone who didn't cancel is
+notified.
 
 ### Business Rules
 
@@ -320,7 +322,7 @@ Either the requester **or the owner** may cancel one that hasn't started yet
 2. **Date-based (LEND/RENT)**: `start_date` and `end_date` required. No **strictly** overlapping bookings — a booking's return day may be the next booking's pickup day (back-to-back handovers); only a shared *interior* day conflicts. Thing stays ACTIVE.
 3. **Single-use (GIFT/SELL)**: No dates. Thing status changes to TAKEN on request, INACTIVE on accept. When `is_endless=True`: multiple simultaneous PENDING bookings allowed, status never TAKEN, thing stays ACTIVE after accept, no ThingTransfer created.
 4. **Accept/reject/cancel via services** - `booking_service.accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status changes.
-5. **Requester can cancel** - Requesters can cancel their own PENDING bookings. For single-use things, cancellation restores status to ACTIVE.
+5. **Requester can cancel** - Requesters can cancel their own PENDING bookings. For single-use things, cancellation restores status to ACTIVE. **For a RESERVE reservation, a curator of its collection may also cancel** (2026-09), and the accept/reject decision on a LEND/RENT/GIFT/SELL hold is a curator's too (`BookingActionView`), not only the founder's.
 
 ### Methods
 
@@ -373,6 +375,8 @@ The `Thing` model represents an item in a collection.
 ### Methods
 
 - `is_owner(user_code)` - Check if user is the owner (`self.owner_id == user_code`)
+- **`can_manage(user_code)`** — the thing owner, **or a curator of a PROPRIETARY collection this thing sits in** (`c.mode == PROPRIETARY and c.is_curator(...)` over `collections.all()`). The thing-level twin of `Collection.is_curator`: in a PROPRIETARY group every thing was added by a curator for the group, so its curators run the whole catalogue — edit / hide / activate / delete any thing, answer any FAQ, decide any booking. COMMUNITY is excluded by the `mode` check. Iterates `.all()` (and `is_curator` iterates `co_owners.all()`) so a view that prefetched `collections__co_owners` pays no extra query. Backs `IsThingManager` and the `can_manage` serializer field.
+- **`managers()`** — the *set* `can_manage` answers a boolean for: `[self.owner]` plus the curators (owner + co-curators) of every PROPRIETARY collection the thing is in, deduped by code. Used to fan a notice out to the whole team that runs the thing — the FAQ-question notice and the reservation notices.
 - `can_view(user_code)` - Check if user can view. Returns `False` if status is `INACTIVE` (unless user is owner). Otherwise True when the thing sits in an ACTIVE collection that the user is invited to, owns, **or that is PUBLIC** (anonymous-safe — `user_code=None` matches PUBLIC collections only; the membership/ownership terms are dropped for anonymous callers so a `NULL` code can't spuriously match an invitee-less collection).
 - `reserve(user_code)` / `release(user_code)` - **Test-only fixture helpers** that add/remove a user on the `deal` M2M directly: no status transitions, no locking, no emails, and unknown codes are silent no-ops. The real reservation flow lives in `core/services/booking_service.py`; production code must not call these.
 - `availability_window(horizon_days=90, collection=None)` - For date-based types (LEND/RENT) only, returns `{"available_today": bool, "next_available": date|None}` computed from the booking calendar via `core.services.booking_service.compute_availability`; returns `None` for all other types. Prefetch-aware (reuses `self._blocked_periods` when set, else queries `BookingPeriod.get_blocked_periods`) and memoised on the instance. **Applies the governing collection's rental rules (#7)** — its `rental_weekdays`/`rental_durations` decide which days a pickup could actually start on, so the indicator agrees with the date picker. `collection` names that collection when the caller already knows it (the collection grid passes the collection being rendered, since it doesn't prefetch each thing's `collections`); otherwise it is resolved via `booking_service.resolve_rental_collection` — a thing in two rule-setting collections uses the first one, the same approximation a booking request makes. Backs the `available_today` / `next_available` serializer fields.
@@ -449,7 +453,7 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `BOOKING_ACCEPTED` | Owner accepts a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
 | `BOOKING_REJECTED` | Owner rejects a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
 | `BOOKING_REQUESTED` | User requests a hold | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code` |
-| `FAQ_QUESTION` | User asks a FAQ question | Thing owner | `thing_headline`, `questioner_name` |
+| `FAQ_QUESTION` | User asks a FAQ question | **Every manager** of the thing (`Thing.managers` — the owner, plus a PROPRIETARY collection's curators), minus the asker. Just the owner in COMMUNITY | `thing_headline`, `questioner_name` |
 | `FAQ_ANSWERED` | Owner answers a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `FAQ_HIDDEN` | Owner hides a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `INVITE_REJECTED` | Invitee declines a collection invite | Collection owner | `collection_headline`, `invitee_name` |
@@ -460,8 +464,8 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `INVITE_PROPOSAL_DECLINED` | The owner declines it | The proposer | `collection_headline`, `collection_code`, `owner_name`, `email` |
 | `PROMOTED_CO_OWNER` | The owner promotes a member to co-owner (`CollectionCoOwnerView.post`, first promotion only) | The promoted member | `collection_headline`, `collection_code` |
 | `DEMOTED_CO_OWNER` | The owner demotes a co-owner back to a plain member (`CollectionCoOwnerView.delete`) | The demoted member | `collection_headline`, `collection_code` |
-| `RESERVATION_MADE` | A member auto-confirms an on-site reservation (RESERVE_THING) | Thing owner (a notice, not a question — nothing to accept) | `thing_headline`, `requester_name`, `start_date`, `end_date`, `booking_code`, `thing_code`, `collection_code` |
-| `RESERVATION_CANCELLED` | Either party cancels a not-yet-started reservation | The party that did **not** cancel | `thing_headline`, `other_name`, `start_date`, `end_date`, `thing_code`, `cancelled_by_owner` |
+| `RESERVATION_MADE` | A member auto-confirms an on-site reservation (RESERVE_THING) | **Every curator** of the reservations collection (owner + co-curators), deduped, minus the requester if they are one — a notice, not a question | `thing_headline`, `requester_name`, `start_date`, `end_date`, `booking_code`, `thing_code`, `collection_code` |
+| `RESERVATION_CANCELLED` | Requester or any curator cancels a not-yet-started reservation | Everyone bar whoever cancelled: the member (if a curator cancelled) **and every other curator** | `thing_headline`, `other_name` (always whoever actually cancelled), `start_date`, `end_date`, `thing_code`, `cancelled_by_owner` (true only on the member's copy) |
 
 **The three above went unrendered until the 2026-08 design round.** `InboxNotifications` had no `case` for any of them, so all three fell through to the `BROADCAST` default and drew a card reading `" — {headline}"` with an empty body — worst of all the decline, whose payload carries `owner_name` and so rendered as a blank message *from the owner*. Approval also used to reuse `INVITE_PROPOSED` with `approved: True`, one type addressing two audiences with opposite meanings; it now has its own type, and the inbox still reads the legacy flag so rows written before the split render correctly. Any new `Type` added here owes a matching `case` in `notificationLabel`/`notificationBody` — the `default` branch is broadcast copy, not a safe fallback.
 
@@ -469,7 +473,7 @@ The booking payloads carry **`thing_code` + `collection_code`** for the same rea
 
 ### Business Rules
 
-1. **One notification per action** — Created atomically alongside the corresponding email.
+1. **One notification per action** — created atomically alongside the corresponding email. **A PROPRIETARY collection's team is the exception (2026-09): one per manager.** `RESERVATION_MADE`, `RESERVATION_CANCELLED` and `FAQ_QUESTION` fan out to every manager of the thing (`Thing.managers`) so the people who run a space all hear it — deduped, and never to whoever performed the action.
 2. **Dismissal via DELETE** — `DELETE /api/v1/inbox/{code}/` removes the record (one-time dismiss).
 3. **A settled request clears its own notification** — `BOOKING_REQUESTED` asks the owner to decide; accept, reject and requester-cancel all answer that question, and `booking_service._clear_request_notifications()` deletes the notification (matched by `payload__booking_code`) so the inbox never asks twice. Rows written before the key existed don't match and stay until dismissed by hand.
 4. **Ordered newest-first** — Default ordering is `-created`.

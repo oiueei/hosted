@@ -85,28 +85,17 @@ def type_validity_error(thing_type, collection):
     return None
 
 
-def require_collection_owner(collection, user_code, message):
-    """Return a 403 ``{"error": message}`` Response if ``user_code`` is not the
-    collection owner, else ``None``.
-
-    Used by the APIViews that stay owner-only even for a co-owner — deleting
-    the collection and promoting/demoting a co-owner. Every other collection
-    APIView uses ``require_collection_curator`` below instead.
-    """
-    if not collection.is_owner(user_code):
-        return Response({"error": message}, status=status.HTTP_403_FORBIDDEN)
-    return None
-
-
 def require_collection_curator(collection, user_code, message):
     """Return a 403 ``{"error": message}`` Response if ``user_code`` is neither
     the collection owner nor a co-owner, else ``None``.
 
-    Used by the collection APIViews (invite, share-link, broadcast, stats,
-    export, proposal decisions) instead of the ``IsCollectionCurator`` DRF
-    permission so each keeps its own specific ``{"error": ...}`` message
-    rather than DRF's generic ``{"detail": ...}`` body — the same reasoning
-    as ``require_collection_owner``, one admin tier wider.
+    Used by every collection APIView that a co-curator shares with the founder
+    (invite, share-link, broadcast, stats, export, proposal decisions, and
+    promoting/demoting a co-curator) instead of the ``IsCollectionCurator``
+    DRF permission, so each keeps its own specific ``{"error": ...}`` message
+    rather than DRF's generic ``{"detail": ...}`` body. Deleting the
+    collection is the one action still owner-only, and it uses the
+    ``IsCollectionOwner`` permission class directly.
     """
     if not collection.is_curator(user_code):
         return Response({"error": message}, status=status.HTTP_403_FORBIDDEN)
