@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { TextInput, TextArea, Select, Button, Notification, Accordion } from 'hds-react';
-import { apiFetch } from '../services/api';
+import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
@@ -240,12 +240,11 @@ export default function EditCollectionPage() {
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else if (res.status === 400) {
-        // Backend rejects narrowing if it would orphan existing things — surface
-        // its detail (which names the offending types) so the user can act on it.
-        const detail = await res.json().catch(() => null);
-        const message =
-          (detail && (detail.non_field_errors || detail.detail)) || t('editCollection.errorSaving');
-        setToast({ type: 'error', message: Array.isArray(message) ? message[0] : message });
+        // Surface the backend's own message — it names the offending types when
+        // narrowing would orphan things, the bad token / far-future date when
+        // `closed_dates` is rejected, etc. — so the owner can act on it.
+        const message = await extractApiError(res);
+        setToast({ type: 'error', message: message || t('editCollection.errorSaving') });
       } else {
         setToast({ type: 'error', message: t('editCollection.errorSaving') });
       }

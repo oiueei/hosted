@@ -427,10 +427,12 @@ def _parse_closed_dates(raw):
 
     Accepts either the comma-separated ``DD/MM/YYYY`` line the form sends
     ("25/12/2026, 26/12/2026") or an already-parsed list of ISO strings (an API
-    client). Past dates are dropped — the owner re-enters holidays each year and
-    a stale one is only noise — and anything more than two years out is refused
-    as a likely typo. Deduped and sorted. Raises ``ValidationError`` on a token
-    that is not a real date.
+    client). Past dates are dropped silently — the owner re-enters holidays each
+    year and a stale one is only noise. A date more than two years out is
+    **rejected**, not dropped: at that range it is far likelier a typo
+    (``2025`` → ``2035``) than a real plan, and silently eating it would leave
+    the owner thinking they set a closure they didn't. Deduped and sorted.
+    Raises ``ValidationError`` on a token that is not a real date.
     """
     if raw in (None, "", []):
         return []
@@ -453,8 +455,13 @@ def _parse_closed_dates(raw):
             raise serializers.ValidationError(
                 f"'{token}' isn't a date — use DD/MM/YYYY, separated by commas."
             )
-        if parsed < today or parsed > horizon:
-            continue
+        if parsed < today:
+            continue  # a stale holiday from a past year is just noise
+        if parsed > horizon:
+            raise serializers.ValidationError(
+                f"'{token}' is more than two years away — closure days are for "
+                "this year or next. Check for a typo."
+            )
         seen.add(parsed.isoformat())
     result = sorted(seen)
     if len(result) > _CLOSED_DATES_MAX:
