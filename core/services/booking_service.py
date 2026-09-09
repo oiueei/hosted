@@ -95,13 +95,17 @@ def compute_availability(
     booking ending today leaves today available. Rows with a null
     ``start_date``/``end_date`` (non-date-based bookings) are skipped defensively.
 
-    ``allowed_weekdays`` (Python weekdays, 0=Mon…6=Sun) and ``durations`` (rental
-    lengths in days) are the governing collection's rental rules (#7). With them,
-    a day only counts as available if a real booking could actually start there —
-    otherwise a Wednesdays-only collection reported "available today" on a Monday
-    while the picker offered no selectable day (the card and the picker disagreed).
-    Either rule may be passed alone; with neither (both ``None``/empty) the result
-    is byte-identical to the unrestricted walk.
+    ``allowed_weekdays`` (Python weekdays, 0=Mon…6=Sun), ``durations`` (rental
+    lengths in days) and ``closed_dates`` (an iterable of ``date`` objects —
+    ``Collection.closed_date_set()``, the collection's holidays/closures) are the
+    governing collection's rental rules (#7). With them, a day only counts as
+    available if a real booking could actually start there: its weekday must be
+    allowed, it (and, when the lengths are fixed, the return day) must not be a
+    closure day, and at least one length must fit — otherwise a Wednesdays-only
+    collection reported "available today" on a Monday while the picker offered no
+    selectable day (the card and the picker disagreed). Any rule may be passed
+    alone; with none (all ``None``/empty) the result is byte-identical to the
+    unrestricted walk. Mirrors ``frontend/src/utils/rental.js::isPickupDisabled``.
     """
     if today is None:
         today = timezone.localdate()

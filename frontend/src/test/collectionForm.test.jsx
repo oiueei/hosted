@@ -353,6 +353,32 @@ describe('EditCollectionPage — load + pause + submit', () => {
       expect(call).toBeTruthy();
     });
   });
+
+  test('a rejected closure date shows the backend’s reason, not a generic error', async () => {
+    // The backend 400s a >2-years-out closure date rather than dropping it
+    // silently; the owner has to be told which token and why.
+    const { extractApiError } = await import('../services/api');
+    extractApiError.mockResolvedValueOnce(
+      "'25/12/2099' is more than two years away — check for a typo."
+    );
+    apiFetch.mockImplementation((url, opts = {}) => {
+      const method = opts.method || 'GET';
+      if (method === 'PATCH') return Promise.resolve(mockResponse({}, false)); // 400
+      return Promise.resolve(mockResponse({ headline: 'X', allowed_thing_types: ['GIFT_THING'] }));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001/edit']}>
+        <Routes>
+          <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByDisplayValue('X');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(/more than two years away/)).toBeInTheDocument();
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════════

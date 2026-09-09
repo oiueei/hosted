@@ -10,9 +10,11 @@ vi.mock('react-router', async () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock('../services/api', () => ({
+// Keep the real `extractApiError` — the 400 tests below feed it real response
+// bodies and check the message it pulls out reaches the toast.
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
   apiFetch: vi.fn(),
-  extractApiError: vi.fn(async () => null),
   getCsrfToken: () => 'tok',
 }));
 

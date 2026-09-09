@@ -170,10 +170,15 @@ def test_parse_closed_dates_normalises_the_owners_line(db):
     with pytest.raises(serializers.ValidationError) as exc:
         _parse_closed_dates("not a date")
     assert "not a date" in str(exc.value)
-    # a past date is silently dropped
+    # a past date is silently dropped — a stale holiday is just noise
     assert _parse_closed_dates("01/01/2020") == []
     # ISO is accepted too (a round-tripped value from the read serializer)
     assert _parse_closed_dates(f"{next_year}-07-04") == [f"{next_year}-07-04"]
+    # but a date >2 years out is a typo, not something to swallow silently
+    far = date.today().year + 5
+    with pytest.raises(serializers.ValidationError) as exc:
+        _parse_closed_dates(f"25/12/{far}")
+    assert f"25/12/{far}" in str(exc.value)
 
 
 def test_parse_closed_dates_caps_the_list(db):
