@@ -31,10 +31,10 @@ TEXTS = {
     # Collection invite
     "invite_subject": "¡Tienes una invitación a '{collection}' - OIUEEI!",
     "invite_plain": (
-        "Te han invitado a ver: {collection}. "
+        "Te han invitado a {collection}. "
         "Aceptar la invitación: {accept} | Rechazar la invitación: {reject}"
     ),
-    "invite_intro": "{inviter} te ha invitado a ver:",
+    "invite_intro": "{inviter} te ha invitado a este grupo.",
     "invite_recommended_by": "{proposer} te ha propuesto para este grupo.",
     "invite_accept_cta": "Aceptar la invitación",
     "invite_decline_cta": "Rechazar la invitación",
@@ -47,7 +47,7 @@ TEXTS = {
     # Collection access revoked
     "revoke_subject": "Tu acceso ha sido revocado",
     "revoke_plain": "{owner} ha revocado tu acceso a '{collection}'.",
-    "revoke_intro": "{owner} ha revocado tu acceso a:",
+    "revoke_intro": "{owner} ha revocado tu acceso a este grupo.",
     "revoke_outro": "Ya no podrás ver esta colección.",
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Te damos la bienvenida a '{collection}'",
@@ -56,6 +56,7 @@ TEXTS = {
         "bienvenida y normas — échale un vistazo: {url}"
     ),
     "welcome_doc_intro": "¡Bienvenida! El grupo tiene un documento de bienvenida y normas:",
+    "welcome_doc_link_label": "Abrir el documento",
     "welcome_doc_outro": "Échale un vistazo antes de empezar.",
     # Account deletion confirmation (right to erasure)
     "account_delete_subject": "¿Borrar tu cuenta de OIUEEI?",
@@ -161,7 +162,7 @@ TEXTS = {
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",
     "invite_rejected_plain": "{invitee} ha rechazado la invitación a '{collection}'.",
-    "invite_rejected_intro": "{invitee} ha rechazado tu invitación a:",
+    "invite_rejected_intro": "{invitee} ha rechazado tu invitación a este grupo.",
     # Booking confirmation (to requester)
     "confirmation_subject": "Solicitud de {action} enviada",
     "confirmation_plain_dated": (
@@ -174,7 +175,6 @@ TEXTS = {
         "Hemos avisado a {owner} — te responderá pronto. Ver la cosa: {url}"
     ),
     "confirmation_intro": "Tu solicitud de {action} se ha enviado:",
-    "part_of_label": "Parte de",
     "confirmation_outro": "Hemos avisado a {owner} — te responderá pronto.",
     # FAQ question (to owner)
     "faq_question_subject": "Hay una pregunta por responder",
@@ -207,8 +207,8 @@ TEXTS = {
     "reported_review_cta": "Revisar el anuncio",
     # Broadcast (owner → invitees)
     "broadcast_subject": "¡Hey! {collection}",
-    "broadcast_plain": "Mensaje de {owner} ({collection}):\n\n{message}\n\n¡Puedo ayudar! {url}",
-    "broadcast_intro": "{owner} ha enviado un mensaje a {collection}:",
+    "broadcast_plain": "Mensaje de {owner}:\n\n{message}\n\n¡Puedo ayudar! {url}",
+    "broadcast_intro": "{owner} ha enviado un mensaje al grupo:",
     "broadcast_help_cta": "¡Puedo ayudar!",
     # Return reminder (to owner)
     "reminder_subject": "Recordatorio: una reserva termina mañana",
@@ -241,8 +241,8 @@ TEXTS = {
     "reservation_cancelled_to_owner_intro": "{other} ha cancelado su reserva de:",
     # Digest
     "digest_subject": "Novedades en {collection}",
-    "digest_plain": "Cosas nuevas en {collection}:\n\n{things}\n\nVer la colección: {url}",
-    "digest_intro": "Cosas nuevas en {collection}:",
+    "digest_plain": "Cosas nuevas:\n\n{things}\n\nVer la colección: {url}",
+    "digest_intro": "Cosas nuevas:",
     "proposal_subject": "{collection}: ¿invitamos a alguien?",
     "proposal_plain": (
         "{proposer} quiere invitar a alguien a {collection}:\n\n  {email}\n\n"
