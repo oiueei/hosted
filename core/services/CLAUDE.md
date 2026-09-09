@@ -209,7 +209,7 @@ Each join sends one magic link, and a **first** join also sends the collection's
 
 ### `creator_policy.py` — Who May Create What, On This Deployment
 
-The one place a deployment says whether an account is enough to open a collection in either mode and offer a thing under any of the four verbs. Upstream the answer is **yes, to everyone, always** — `OpenCreatorPolicy`, the default of the `CREATOR_POLICY` setting — so a standalone checkout has no gate and behaves exactly as it did before this module existed. A deployment with a narrower rule (only the board opens COMMUNITY collections; lending is vetted first) points the setting at its own subclass instead of editing the serializers, and nothing about that rule needs to live in this repository.
+The one place a deployment says whether an account is enough to open a collection in either mode and offer a thing under any of the verbs. Upstream the answer is **yes, to everyone, always** — `OpenCreatorPolicy`, the default of the `CREATOR_POLICY` setting — so a standalone checkout has no gate and behaves exactly as it did before this module existed. A deployment with a narrower rule (only the board opens COMMUNITY collections; lending is vetted first) points the setting at its own subclass instead of editing the serializers, and nothing about that rule needs to live in this repository.
 
 It answers only *may this person bring such a thing into existence here at all*. It is **not** object-level permission (`IsCollectionOwner`), and **not** the owner's per-collection `allowed_thing_types` allowlist (`core.views._helpers.type_validity_error`).
 

@@ -1,7 +1,7 @@
 # Running OIUEEI yourself, and running it for others
 
 This repository is the whole product. Clone it, point it at a database, and you
-have OIUEEI: collections, things, the four verbs, invitations, magic links,
+have OIUEEI: collections, things, the verbs, invitations, magic links,
 digests, the loan chain. Nothing is held back to be sold to you later.
 
 What it does **not** contain is the layer a particular operator wraps around it
@@ -126,8 +126,9 @@ every load:
 ```json
 "capabilities": {
   "collection_modes": ["PROPRIETARY", "COMMUNITY"],
-  "thing_types": ["GIFT_THING", "SELL_THING", "RENT_THING", "LEND_THING"],
-  "request_url": null
+  "thing_types": ["GIFT_THING", "SELL_THING", "RENT_THING", "LEND_THING", "RESERVE_THING"],
+  "request_url": null,
+  "co_owners_enabled": true
 }
 ```
 

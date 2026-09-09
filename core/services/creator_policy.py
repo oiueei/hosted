@@ -1,7 +1,7 @@
 """Who may create what, on this deployment.
 
 OIUEEI as a product says: anyone with an account creates any collection and
-offers a thing under any of the four verbs. That is what `OpenCreatorPolicy`
+offers a thing under any of the verbs. That is what `OpenCreatorPolicy`
 below encodes, and it is what an upstream checkout does — **the standalone has
 no gate, and adding this module does not add one.**
 
