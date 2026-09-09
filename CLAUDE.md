@@ -106,4 +106,4 @@ For React routes, pages, tech stack, Vite configuration, and authentication flow
 
 ## Design Guidelines
 
-When designing or reviewing any frontend view, component, or copy, consult [`DESIGN.md`](DESIGN.md) and apply all nine principles. Use the checklist at the end of that document before considering any view complete.
+When designing or reviewing any frontend view, component, or copy, consult [`DESIGN.md`](DESIGN.md) and apply all twelve principles. Use the checklist at the end of that document before considering any view complete.
