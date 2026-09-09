@@ -71,40 +71,48 @@ Our goal is to **stay as close to upstream HDS as possible** to benefit from acc
 ```
 config/
   settings/
-    base.py          # Shared settings
-    development.py   # Dev overrides (SQLite, DEBUG=True)
-    production.py    # Prod overrides (PostgreSQL, security headers)
-  urls.py            # Root URL config (admin at /oiueei-admin/)
-  wsgi.py            # WSGI entry point (defaults to production)
+    base.py           # Shared settings (CREATOR_POLICY / DEPLOYMENT_URLCONFS defaults)
+    development.py    # Dev overrides (SQLite, DEBUG=True)
+    production.py     # Prod overrides (PostgreSQL, security headers)
+  urls.py             # Root URL config (admin at /oiueei-admin/; mounts DEPLOYMENT_URLCONFS before the SPA catch-all)
+  wsgi.py             # WSGI entry point (defaults to production)
 core/
-  models/            # User, Collection, Thing, FAQ, Theeeme, RSVP, BookingPeriod
-  views/             # Auth, collections, things, bookings, FAQ, users
-  serializers/       # DRF serializers per model
-  services/          # Business logic layer
-    email_service.py   # All email composition and sending (categorised opt-out pipeline)
-    booking_service.py # Accept/reject booking logic (transaction.atomic)
-  permissions.py     # Custom DRF permissions (IsThingOwner, IsCollectionOwner)
-  validators.py      # Input validation (image IDs, headlines, etc.)
-  utils.py           # ID generation, client IP, asset URLs
-  pagination.py      # StandardResultsPagination (max 100)
+  models/             # User, Collection, Thing, FAQ, Theeeme, RSVP, BookingPeriod, Transfer, Notification, Report, Event / DailyActivity (first-party analytics)
+  views/              # Auth, collections, things, bookings, FAQ, users
+  serializers/        # DRF serializers per model
+  services/           # Business logic layer
+    email_service.py      # All email composition and sending (categorised opt-out pipeline)
+    booking_service.py    # Accept/reject booking logic (transaction.atomic)
+    creator_policy.py     # CREATOR_POLICY extension point — who may create what (OpenCreatorPolicy: no gate, the standalone default)
+    export_service.py     # GDPR data export (per user and per collection)
+    storage.py            # S3-compatible object storage (direct-upload tickets)
+  checks.py           # System checks (CREATOR_POLICY importable + instantiable, etc.)
+  permissions.py      # Custom DRF permissions (IsThingOwner, IsCollectionOwner)
+  validators.py       # Input validation (image IDs, headlines, localized-text caps)
+  utils.py            # ID generation, client IP, asset URLs, localized-text parsing
+  pagination.py       # StandardResultsPagination (max 100)
   management/
     commands/
-      expire_bookings.py  # Batch expire stale PENDING bookings
-      cleanup_rsvps.py    # Delete expired RSVPs (24h+)
-      close_transfers.py  # Close overdue loan transfers
-      send_reminders.py   # Daily booking/delivery reminders
-      send_digests.py     # Weekly/monthly digest emails
-      backfill_events.py  # One-off: seed the Event log from existing rows
-      seed_demo.py        # Populate demo data (idempotent; --lang=en|es|ca)
+      expire_bookings.py       # Batch expire stale PENDING bookings
+      cleanup_rsvps.py         # Delete expired RSVPs (24h+)
+      close_transfers.py       # Close overdue loan transfers
+      send_reminders.py        # Daily booking/delivery reminders
+      send_digests.py          # Weekly/monthly digest emails
+      purge_expired_data.py    # Retention sweep (GDPR art. 5.1.e) — dry-run unless --commit
+      cleanup_orphan_images.py # Delete stored images no row references
+      set_bucket_cors.py       # Write the object store's CORS rules (uploads fail without them)
+      add_totp_device.py       # Bootstrap / replace the admin 2FA device
+      backfill_events.py       # One-off: seed the Event log from existing rows
+      seed_demo.py             # Populate demo data (idempotent; --lang=en|es|ca)
       seed_data/
         common.py         # structure + localized tag constants (non-translatable)
         en.py             # English demo content
         es.py             # Spanish demo content
         ca.py             # Catalan demo content
   tests/
-    unit/            # Model, serializer, validator, security tests
-    integration/     # View and booking integration tests
-    scenarios/       # End-to-end user flow tests
+    unit/             # Model, serializer, validator, security tests
+    integration/      # View and booking integration tests
+    scenarios/        # End-to-end user flow tests
 ```
 
 ## Data Models
