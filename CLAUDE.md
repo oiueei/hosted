@@ -1,8 +1,36 @@
 # OIUEEI - Development Guide
 
+## Repositories and branches
+
+OIUEEI ships as **two public repos from one working copy**:
+
+- **`oiueei/standalone`** — the product, everything a self-hoster gets. Branches
+  `development` (work here) and `main`, both pushing to `origin`. `core/` only;
+  `frontend/src/deployment/` exports empty stubs; `CREATOR_POLICY` defaults to
+  `OpenCreatorPolicy` (no gate).
+- **`oiueei/hosted`** — the www.oiueei.com service layer (branch `hosted` →
+  `hosted/main`). It only ever **adds**: the `hosted/` Django app (open sign-up
+  door, creator vetting, weekly operator report), the real
+  `frontend/src/deployment/` pages, the operator's `/legal` identity, Sentry.
+  `core/` never imports from `hosted/`. See `SELF_HOSTING.md` (the extension
+  points) and `hosted/README.md` (what this deployment did with them).
+
+**Flow:** `development` → merge into `main` → merge `main` into `hosted` →
+pushing `hosted` to `oiueei/hosted:main` **is the deploy** — Heroku is
+GitHub-connected with auto-deploy + wait-for-checks, so a red CI holds the
+previous release and there is no `git push` to a dyno.
+
+**A product fix always starts on `development`**, even when a hosted-only
+scenario surfaced it: commit on `development`, merge to `main` and `hosted`,
+*then* it reaches production. A `core/` change committed straight on `hosted` is
+invisible to the sync and has to be re-applied by hand forever
+(`hosted/README.md` §"Where a fix belongs"). **Verify the current branch before
+editing** — legal text (`frontend/src/legal/`) and deployment settings diverge,
+and the working copy may be left on any of the three branches.
+
 ## Project Conventions
 
-- **Single Django app**: All code lives in `core/`
+- **Single Django app**: all product code lives in `core/` (the `hosted` branch adds one service-layer app, `hosted/` — see Repositories and branches above)
 - **Settings**: Split into `base.py`, `development.py`, `production.py` under `config/settings/`
 - **Code style**: Ruff (100-char lines) — `ruff check` (lint + import sort) and `ruff format`; replaces black/isort/flake8. Pre-commit hooks in `.pre-commit-config.yaml` (run `pre-commit install`).
 - **Test structure**: `core/tests/unit/`, `core/tests/integration/`, `core/tests/scenarios/`
