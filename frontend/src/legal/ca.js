@@ -29,7 +29,7 @@ OIUEEI és programari de codi obert (llicència EUPL-1.2). Aquesta pàgina descr
 
 # Termes bàsics
 
-OIUEEI es troba en fase alfa i s'ofereix «tal com és», sense garanties, en la mesura que la llei ho permeti. El contingut que publiques és teu i n'ets responsable; no publiquis res il·legal o nociu. Els intercanvis (regals, vendes, préstecs, lloguers) són acords entre persones: la plataforma no n'és part ni processa pagaments — una fiança que aparegui en una fitxa és informació que acorden les dues persones entre elles, i OIUEEI mai no la reté, la mou ni en garanteix la devolució. Hi ha un botó per denunciar contingut, i l'operador pot retirar el que incompleixi aquestes normes.
+OIUEEI es troba en fase alfa i s'ofereix «tal com és», sense garanties, en la mesura que la llei ho permeti. El contingut que publiques és teu i n'ets responsable; no publiquis res il·legal o nociu. Els intercanvis (regals, vendes, préstecs, lloguers, reserves d'espai) són acords entre persones: la plataforma no n'és part ni processa pagaments — una fiança que aparegui en una fitxa és informació que acorden les dues persones entre elles, i OIUEEI mai no la reté, la mou ni en garanteix la devolució. Hi ha un botó per denunciar contingut, i l'operador pot retirar el que incompleixi aquestes normes.
 
 # Per a operadors (self-hosting)
 
