@@ -100,6 +100,15 @@ export default function LoginPage() {
             ]}
           />
         </p>
+        {/* The open code and the unfinished state are the two expectations this
+            screen owes a newcomer, so they sit together. Same sentence, word
+            for word, as the FAQ and the legal notice (common.alphaNotice). */}
+        <p
+          className="measure"
+          style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)' }}
+        >
+          {t('common.alphaNotice')}
+        </p>
         <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
           {t('login.manifesto')}
         </p>
