@@ -161,3 +161,26 @@ describe('MagicLinkJoinPage privacy information (art. 13 at the point of collect
     expect(screen.getByRole('link', { name: 'Legal notice & privacy' })).toBeInTheDocument();
   });
 });
+
+describe('MagicLinkJoinPage footer children (a deployment door adds its own link)', () => {
+  test('children render under the form; SharePage passes none and gets nothing extra', () => {
+    // Upstream: no children.
+    renderShareVariant();
+    expect(screen.queryByRole('link', { name: 'A deployment link' })).not.toBeInTheDocument();
+
+    // A deployment's door — e.g. the hosted /popin pointing at its /faq.
+    render(
+      <MemoryRouter>
+        <MagicLinkJoinPage
+          ns="share"
+          docTitleKey="titles.share"
+          titleKey="share.pageTitle"
+          descriptionKey="share.pageDescription"
+        >
+          <a href="/faq">A deployment link</a>
+        </MagicLinkJoinPage>
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('link', { name: 'A deployment link' })).toHaveAttribute('href', '/faq');
+  });
+});

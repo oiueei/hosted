@@ -32,6 +32,9 @@ import PageLayout from './PageLayout';
  * - `endpoint`: which URL the form POSTs to (see `useJoin`) — every upstream
  *   caller leaves this at the default `/auth/join/`; a deployment's own open
  *   door passes its own.
+ * - `children`: rendered just under the form, above the `/legal` and `/login`
+ *   links. Upstream `SharePage` passes none; a deployment's door uses it for
+ *   its own footer link (the hosted `/popin` points it at its `/faq`).
  */
 export default function MagicLinkJoinPage({
   ns,
@@ -44,6 +47,7 @@ export default function MagicLinkJoinPage({
   collectionDescription,
   extraBody,
   endpoint,
+  children,
 }) {
   const { t } = useTranslation();
   const heroTitle = titleText || t(titleKey);
@@ -101,6 +105,11 @@ export default function MagicLinkJoinPage({
             </Button>
           </div>
         </form>
+      )}
+      {children && (
+        <div className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+          {children}
+        </div>
       )}
       {/* Every door this component serves (/share/:token, plus any a deployment
           adds) creates a real
