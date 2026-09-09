@@ -317,6 +317,9 @@ export default function RequestThingPage() {
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
                 language="en"
+                openButtonAriaLabel={t('datePicker.open')}
+                selectButtonLabel={t('datePicker.select')}
+                closeButtonLabel={t('datePicker.close')}
                 required
                 disabled={!chosenDuration}
                 invalid={attempted && !startDate}
@@ -379,6 +382,9 @@ export default function RequestThingPage() {
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
                 language="en"
+                openButtonAriaLabel={t('datePicker.open')}
+                selectButtonLabel={t('datePicker.select')}
+                closeButtonLabel={t('datePicker.close')}
                 required
                 disabled={!chosenDuration}
                 invalid={attempted && !startDate}
@@ -411,6 +417,9 @@ export default function RequestThingPage() {
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
                 language="en"
+                openButtonAriaLabel={t('datePicker.open')}
+                selectButtonLabel={t('datePicker.select')}
+                closeButtonLabel={t('datePicker.close')}
                 required
                 invalid={attempted && !startDate}
                 errorText={attempted && !startDate ? t('request.startRequired') : undefined}
@@ -428,6 +437,9 @@ export default function RequestThingPage() {
                 onChange={(value) => setEndDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
                 language="en"
+                openButtonAriaLabel={t('datePicker.open')}
+                selectButtonLabel={t('datePicker.select')}
+                closeButtonLabel={t('datePicker.close')}
                 required
                 invalid={attempted && !endDate}
                 errorText={attempted && !endDate ? t('request.endRequired') : undefined}

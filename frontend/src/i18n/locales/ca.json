@@ -97,7 +97,8 @@
     "back": "Tornar",
     "formerMember": "Antic membre",
     "aMember": "Un membre",
-    "closeThisTab": "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada."
+    "closeThisTab": "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada.",
+    "alphaNotice": "OIUEEI és en fase alfa: res no està acabat i hi trobaràs vores per polir."
   },
   "titles": {
     "home": "Inici — OIUEEI",
@@ -374,6 +375,11 @@
     "successMessage": "Ja hem avisat al propietari — aviat et respondrà.",
     "backTo": "Tornar a {{label}}",
     "errorSending": "Error en enviar la sol·licitud."
+  },
+  "datePicker": {
+    "open": "Triar data",
+    "select": "Seleccionar",
+    "close": "Tancar"
   },
   "upload": {
     "uploading": "Carregant…",

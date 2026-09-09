@@ -36,10 +36,10 @@ TEXTS = {
     # Collection invite
     "invite_subject": "Tens una invitació a '{collection}' - OIUEEI!",
     "invite_plain": (
-        "T'han convidat a veure: {collection}. "
+        "T'han convidat a {collection}. "
         "Acceptar la invitació: {accept} | Rebutjar la invitació: {reject}"
     ),
-    "invite_intro": "{inviter} t'ha convidat a veure:",
+    "invite_intro": "{inviter} t'ha convidat a aquest grup.",
     "invite_recommended_by": "{proposer} t'ha proposat per a aquest grup.",
     "invite_accept_cta": "Acceptar la invitació",
     "invite_decline_cta": "Rebutjar la invitació",
@@ -52,7 +52,7 @@ TEXTS = {
     # Collection access revoked
     "revoke_subject": "S'ha revocat el teu accés",
     "revoke_plain": "{owner} ha revocat el teu accés a '{collection}'.",
-    "revoke_intro": "{owner} ha revocat el teu accés a:",
+    "revoke_intro": "{owner} ha revocat el teu accés a aquest grup.",
     "revoke_outro": "Ja no podràs veure aquesta col·lecció.",
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Et donem la benvinguda a '{collection}'",
@@ -61,6 +61,7 @@ TEXTS = {
         "benvinguda i normes — fes-hi una ullada: {url}"
     ),
     "welcome_doc_intro": "Benvinguda! El grup té un document de benvinguda i normes:",
+    "welcome_doc_link_label": "Obrir el document",
     "welcome_doc_outro": "Fes-hi una ullada abans de començar.",
     # Account deletion confirmation (right to erasure)
     "account_delete_subject": "Vols esborrar el teu compte d'OIUEEI?",
@@ -168,7 +169,7 @@ TEXTS = {
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",
     "invite_rejected_plain": "{invitee} ha rebutjat la invitació a '{collection}'.",
-    "invite_rejected_intro": "{invitee} ha rebutjat la teva invitació a:",
+    "invite_rejected_intro": "{invitee} ha rebutjat la teva invitació a aquest grup.",
     # Booking confirmation (to requester)
     "confirmation_subject": "Sol·licitud {action} enviada",
     "confirmation_plain_dated": (
@@ -181,7 +182,6 @@ TEXTS = {
         "Hem avisat {owner} — et respondrà aviat. Veure la cosa: {url}"
     ),
     "confirmation_intro": "La teva sol·licitud {action} s'ha enviat:",
-    "part_of_label": "Part de",
     "confirmation_outro": "Hem avisat {owner} — et respondrà aviat.",
     # FAQ question (to owner)
     "faq_question_subject": "Hi ha una pregunta per respondre",
@@ -214,8 +214,8 @@ TEXTS = {
     "reported_review_cta": "Revisar l'anunci",
     # Broadcast (owner → invitees)
     "broadcast_subject": "Ei! {collection}",
-    "broadcast_plain": "Missatge de {owner} ({collection}):\n\n{message}\n\nPuc ajudar! {url}",
-    "broadcast_intro": "{owner} ha enviat un missatge a {collection}:",
+    "broadcast_plain": "Missatge de {owner}:\n\n{message}\n\nPuc ajudar! {url}",
+    "broadcast_intro": "{owner} ha enviat un missatge al grup:",
     "broadcast_help_cta": "Puc ajudar!",
     # Return reminder (to owner)
     "reminder_subject": "Recordatori: una reserva acaba demà",
@@ -249,8 +249,8 @@ TEXTS = {
     "reservation_cancelled_to_owner_intro": "{other} ha cancel·lat la seva reserva de:",
     # Digest
     "digest_subject": "Novetats a {collection}",
-    "digest_plain": "Coses noves a {collection}:\n\n{things}\n\nVeure la col·lecció: {url}",
-    "digest_intro": "Coses noves a {collection}:",
+    "digest_plain": "Coses noves:\n\n{things}\n\nVeure la col·lecció: {url}",
+    "digest_intro": "Coses noves:",
     "proposal_subject": "{collection}: convidem algú?",
     "proposal_plain": (
         "{proposer} vol convidar algú a {collection}:\n\n  {email}\n\n"

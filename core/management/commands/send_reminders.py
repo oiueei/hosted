@@ -17,7 +17,6 @@ from django.core.management.base import BaseCommand
 from core.models.booking import BookingPeriod
 from core.models.thing import Thing
 from core.services.email_service import (
-    _thing_url,
     send_return_due_email,
     send_return_reminder_email,
 )
@@ -50,16 +49,15 @@ class Command(BaseCommand):
             for send in (
                 lambda: send_return_reminder_email(
                     requester_name=requester.display_name,
-                    thing_headline=thing.headline,
+                    thing=thing,
                     end_date=booking.end_date,
                     owner_email=thing.owner.email,
                 ),
                 lambda: send_return_due_email(
                     owner_name=thing.owner.display_name,
-                    thing_headline=thing.headline,
+                    thing=thing,
                     end_date=booking.end_date,
                     requester_email=requester.email,
-                    thing_url=_thing_url(thing),
                 ),
             ):
                 try:

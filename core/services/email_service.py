@@ -443,6 +443,7 @@ def _send(
     include_viral=True,
     lang=None,
     collection=None,
+    header=None,
 ):
     """Send a single email through the category + footer + viral pipeline.
 
@@ -468,7 +469,13 @@ def _send(
     ``lang`` is the language the sender composed this email in (see
     ``resolve_email_language``); the footer and the viral line follow it, so the
     whole message speaks one language.
+
+    ``header`` is the collection name for a collection-scoped email — the HTML
+    side is already in ``html`` (the sender passed it to ``_render_email``);
+    this is where its plain-text counterpart is prepended, so a sender only
+    states it once per call site.
     """
+    plain = _headline_prefix(header, plain)
     # Resolve the recipient User once when something downstream needs it: the
     # preference check (non-mandatory) or the viral-line ownership gate. Only
     # the mandatory + include_viral=False send (stats summary) skips it.
@@ -548,8 +555,40 @@ def _links(*links):
     return {"type": "links", "links": [{"url": url, "label": label} for url, label in links]}
 
 
-def _render_email(blocks, lang=None):
+def _thing_collection(thing):
+    """The one collection a thing-scoped email names at its top: the first the
+    thing belongs to — the same one ``_thing_url`` links to — or ``None`` for a
+    standalone thing, where the email keeps the OIUEEI wordmark.
+    """
+    return thing.collections.first() if thing else None
+
+
+def _thing_header(thing, resolve):
+    """The collection-name header for a thing-scoped email — the first
+    collection's headline in the reader's language (``resolve`` is the sender's
+    ``L``), or ``""`` for a standalone thing.
+    """
+    collection = _thing_collection(thing)
+    return resolve(collection.headline) if collection else ""
+
+
+def _headline_prefix(header, plain):
+    """Put the collection name on its own first line of the plain-text body —
+    the plain-text half of the layout's HTML header. A no-op without a header,
+    and harmless to call unconditionally.
+    """
+    return f"{header}\n\n{plain}" if header else plain
+
+
+def _render_email(blocks, lang=None, header=None):
     """Render the HTML body from a list of blocks through the autoescaping layout.
+
+    ``header``, when set, is the collection name: it replaces the OIUEEI logo at
+    the top of the message and the logo drops to a half-size mark below the
+    legal link (``layout.html``). The plain-text counterpart is
+    ``_headline_prefix``, applied at the ``_send`` call. Left unset (operator
+    mail, magic links, account-lifecycle mail) the logo stays at the top as
+    before.
 
     ``has_logo`` mirrors whether ``_send()`` will find the asset to attach —
     the ``cid:`` reference is only rendered when there's a matching attachment
@@ -573,6 +612,7 @@ def _render_email(blocks, lang=None):
         {
             "blocks": blocks,
             "has_logo": _logo_bytes() is not None,
+            "header": header or "",
             "lang": resolved_lang,
             "legal_url": f"{_frontend_base_url()}/legal",
             "legal_label": T("footer_legal", lang=lang),
@@ -698,10 +738,9 @@ def send_collection_invite_email(
     inviter_name = _member_name(inviter_name, lang)
     subject = T("invite_subject").format(collection=headline)
     plain = T("invite_plain").format(collection=headline, accept=accept_link, reject=reject_link)
-    blocks = [
-        _para(T("invite_intro").format(inviter=inviter_name)),
-        _strong(headline),
-    ]
+    # The collection name is the layout's header now (top of the message, where
+    # the logo was), so the body no longer repeats it as a bold line.
+    blocks = [_para(T("invite_intro").format(inviter=inviter_name))]
     if proposer_name:
         recommended = T("invite_recommended_by").format(proposer=proposer_name)
         blocks.append(_para(recommended))
@@ -722,7 +761,7 @@ def send_collection_invite_email(
         email,
         subject,
         plain,
-        _render_email(blocks, lang=lang),
+        _render_email(blocks, lang=lang, header=headline),
         CATEGORY_MANDATORY,
         user=user,
         lang=lang,
@@ -776,7 +815,7 @@ def send_invitation_proposal_email(
         owner_email,
         subject,
         plain,
-        _render_email(blocks, lang=lang),
+        _render_email(blocks, lang=lang, header=headline),
         CATEGORY_ACTIVITY,
         user=user,
         lang=lang,
@@ -804,7 +843,7 @@ def send_proposal_declined_email(
         proposer_email,
         subject,
         body,
-        _render_email([_para(body)], lang=lang),
+        _render_email([_para(body)], lang=lang, header=headline),
         CATEGORY_ACTIVITY,
         user=user,
         lang=lang,
@@ -828,10 +867,11 @@ def send_collection_welcome_doc_email(collection_headline, doc_url, email, colle
     html = _render_email(
         [
             _para(T("welcome_doc_intro")),
-            _links((doc_url, headline)),
+            _links((doc_url, T("welcome_doc_link_label"))),
             _para(T("welcome_doc_outro")),
         ],
         lang=lang,
+        header=headline,
     )
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
 
@@ -973,10 +1013,10 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
     html = _render_email(
         [
             _para(T("revoke_intro").format(owner=owner_name)),
-            _strong(headline),
             _para(T("revoke_outro")),
         ],
         lang=lang,
+        header=headline,
     )
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
 
@@ -991,6 +1031,7 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
     requester_name = requester.display_name
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
+    header = _thing_header(thing, L)
 
     if booking.start_date and booking.end_date:
         plain = T("booking_request_plain_dated").format(
@@ -1020,8 +1061,9 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
             _links((accept_link, T("hold_confirm_cta")), (reject_link, T("hold_cancel_cta"))),
         ],
         lang=lang,
+        header=header,
     )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
 def send_booking_decision_email(booking, thing, accepted=True):
@@ -1056,6 +1098,7 @@ def send_booking_decision_email(booking, thing, accepted=True):
     # a refused hold is unscannable in an inbox, and reads as a teaser rather
     # than as news (DESIGN §2 direct, §6 no curiosity gaps).
     subject = T("decision_subject_confirmed") if accepted else T("decision_subject_cancelled")
+    header = _thing_header(thing, L)
     html = _render_email(
         [
             _para(T("decision_intro").format(action=action, decision=decision_word)),
@@ -1064,8 +1107,18 @@ def send_booking_decision_email(booking, thing, accepted=True):
             _links((thing_url, T("view_thing_cta"))),
         ],
         lang=lang,
+        header=header,
     )
-    _send(booking.requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(
+        booking.requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 def send_invite_rejected_email(invitee_name, collection_headline, owner_email, collection=None):
@@ -1076,11 +1129,9 @@ def send_invite_rejected_email(invitee_name, collection_headline, owner_email, c
     subject = T("invite_rejected_subject")
     plain = T("invite_rejected_plain").format(invitee=invitee_name, collection=headline)
     html = _render_email(
-        [
-            _para(T("invite_rejected_intro").format(invitee=invitee_name)),
-            _strong(headline),
-        ],
+        [_para(T("invite_rejected_intro").format(invitee=invitee_name))],
         lang=lang,
+        header=headline,
     )
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
@@ -1092,6 +1143,7 @@ def send_booking_confirmation_email(requester, thing, booking):
     owner_name = _member_name(thing.owner.name, lang)
     thing_url = _thing_url(thing)
     collection = thing.collections.first()
+    header = L(collection.headline) if collection else ""
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
 
@@ -1110,18 +1162,28 @@ def send_booking_confirmation_email(requester, thing, booking):
         )
 
     subject = T("confirmation_subject").format(action=action)
+    # "Part of: {collection}" is the layout header now — no longer a body field.
     html = _render_email(
         [
             _para(T("confirmation_intro").format(action=action)),
             _strong(headline),
-            *([_field(T("part_of_label"), L(collection.headline))] if collection else []),
             *_booking_detail_blocks(booking, lang),
             _para(T("confirmation_outro").format(owner=owner_name)),
             _links((thing_url, headline)),
         ],
         lang=lang,
+        header=header,
     )
-    _send(requester.email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(
+        requester.email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 def send_faq_question_email(questioner_name, thing, question, owner_email):
@@ -1133,6 +1195,7 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
     questioner_name = _member_name(questioner_name, lang)
 
     subject = T("faq_question_subject")
+    header = _thing_header(thing, L)
     plain = T("faq_question_plain").format(
         questioner=questioner_name, thing=headline, question=question, url=thing_url
     )
@@ -1144,8 +1207,9 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
             _links((thing_url, T("faq_view_reply_cta"))),
         ],
         lang=lang,
+        header=header,
     )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
 def send_faq_answer_email(owner_name, thing, question, answer, questioner_email):
@@ -1156,6 +1220,7 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
     headline = L(thing.headline)
     owner_name = _member_name(owner_name, lang)
     subject = T("faq_answer_subject")
+    header = _thing_header(thing, L)
     plain = T("faq_answer_plain").format(
         owner=owner_name, answer=answer, thing=headline, url=thing_url
     )
@@ -1168,26 +1233,47 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
             _links((thing_url, headline)),
         ],
         lang=lang,
+        header=header,
     )
-    _send(questioner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(
+        questioner_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
-def send_faq_hide_email(owner_name, thing_headline, question, questioner_email):
+def send_faq_hide_email(owner_name, thing, question, questioner_email):
     """Send FAQ hidden notification email to questioner."""
     user, lang = _recipient(questioner_email)
     T, L = _texts(lang), _local(lang)
     owner_name = _member_name(owner_name, lang)
     subject = T("faq_hide_subject")
+    header = _thing_header(thing, L)
     plain = T("faq_hide_plain").format(owner=owner_name, question=question)
     html = _render_email(
         [
             _para(T("faq_hide_intro").format(owner=owner_name)),
-            _strong(L(thing_headline)),
+            _strong(L(thing.headline)),
             _field(T("question_label"), question),
         ],
         lang=lang,
+        header=header,
     )
-    _send(questioner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(
+        questioner_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 def send_thing_reported_email(thing, owner_email):
@@ -1202,6 +1288,7 @@ def send_thing_reported_email(thing, owner_email):
     headline = L(thing.headline)
 
     subject = T("reported_subject")
+    header = _thing_header(thing, L)
     plain = T("reported_plain").format(thing=headline, url=thing_url)
     html = _render_email(
         [
@@ -1211,8 +1298,9 @@ def send_thing_reported_email(thing, owner_email):
             _links((thing_url, T("reported_review_cta"))),
         ],
         lang=lang,
+        header=header,
     )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
 def send_broadcast_email(
@@ -1233,19 +1321,18 @@ def send_broadcast_email(
         owner = _member_name(owner_name, lang)
         return (
             T("broadcast_subject").format(collection=headline),
-            T("broadcast_plain").format(
-                owner=owner,
-                collection=headline,
-                message=message,
-                url=collection_url,
+            _headline_prefix(
+                headline,
+                T("broadcast_plain").format(owner=owner, message=message, url=collection_url),
             ),
             _render_email(
                 [
-                    _para(T("broadcast_intro").format(owner=owner, collection=headline)),
+                    _para(T("broadcast_intro").format(owner=owner)),
                     _para(message),
                     _links((collection_url, T("broadcast_help_cta"))),
                 ],
                 lang=lang,
+                header=headline,
             ),
         )
 
@@ -1254,20 +1341,21 @@ def send_broadcast_email(
     )
 
 
-def send_return_reminder_email(requester_name, thing_headline, end_date, owner_email):
+def send_return_reminder_email(requester_name, thing, end_date, owner_email):
     """Remind the owner that a booking ends tomorrow."""
     user, lang = _recipient(owner_email)
     T, L = _texts(lang), _local(lang)
-    headline = L(thing_headline)
+    headline = L(thing.headline)
+    header = _thing_header(thing, L)
     subject = T("reminder_subject")
     end = _fmt_date(end_date)
     plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end)
     body = T("reminder_body").format(requester=requester_name, thing=headline, end=end)
-    html = _render_email([_para(body)], lang=lang)
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    html = _render_email([_para(body)], lang=lang, header=header)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
-def send_return_due_email(owner_name, thing_headline, end_date, requester_email, thing_url=None):
+def send_return_due_email(owner_name, thing, end_date, requester_email):
     """Remind the **borrower** that they hand the thing back tomorrow.
 
     The counterpart of ``send_return_reminder_email``, and the half that was
@@ -1280,16 +1368,25 @@ def send_return_due_email(owner_name, thing_headline, end_date, requester_email,
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
-    headline = L(thing_headline)
+    headline = L(thing.headline)
+    header = _thing_header(thing, L)
+    thing_url = _thing_url(thing)
     subject = T("return_due_subject").format(thing=headline)
     end = _fmt_date(end_date)
     plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end)
     body = T("return_due_body").format(owner=owner_name, thing=headline, end=end)
-    blocks = [_para(body)]
-    if thing_url:
-        blocks.append(_links((thing_url, T("view_thing_cta"))))
-    html = _render_email(blocks, lang=lang)
-    _send(requester_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    blocks = [_para(body), _links((thing_url, T("view_thing_cta")))]
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 def send_reservation_confirmed_email(requester, thing, booking, collection=None):
@@ -1303,6 +1400,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     T, L = _texts(lang), _local(lang)
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
+    header = L(collection.headline) if collection else _thing_header(thing, L)
 
     start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
     subject = T("reservation_confirmed_subject").format(thing=headline)
@@ -1319,8 +1417,17 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
     blocks.append(_links((thing_url, T("view_thing_cta"))))
-    html = _render_email(blocks, lang=lang)
-    _send(requester.email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester.email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 def send_reservation_notice_email(owner_email, requester, thing, booking, collection=None):
@@ -1333,6 +1440,7 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     T, L = _texts(lang), _local(lang)
     requester_name = requester.display_name
     headline = L(thing.headline)
+    header = L(collection.headline) if collection else _thing_header(thing, L)
 
     start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
     subject = T("reservation_notice_subject").format(requester=requester_name, thing=headline)
@@ -1347,8 +1455,8 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     if booking.project_note:
         plain += "\n\n" + T("reservation_note_label") + ": " + booking.project_note
         blocks.append(_field(T("reservation_note_label"), booking.project_note))
-    html = _render_email(blocks, lang=lang)
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
 def send_reservation_cancelled_email(
@@ -1363,6 +1471,7 @@ def send_reservation_cancelled_email(
     T, L = _texts(lang), _local(lang)
     other = _member_name(other_name, lang)
     headline = L(thing.headline)
+    header = _thing_header(thing, L)
     side = "to_guest" if cancelled_by_owner else "to_owner"
 
     start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
@@ -1377,8 +1486,18 @@ def send_reservation_cancelled_email(
             _field(T("dates_label"), f"{start} - {end}"),
         ],
         lang=lang,
+        header=header,
     )
-    _send(recipient_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(
+        recipient_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 # --- Category 3: News / broadcast ---------------------------------------------
@@ -1398,14 +1517,17 @@ def send_digest_email(
         things_plain = "\n".join(f"  - {h}" for h in headlines)
         return (
             T("digest_subject").format(collection=headline),
-            T("digest_plain").format(collection=headline, things=things_plain, url=collection_url),
+            _headline_prefix(
+                headline, T("digest_plain").format(things=things_plain, url=collection_url)
+            ),
             _render_email(
                 [
-                    _para(T("digest_intro").format(collection=headline)),
+                    _para(T("digest_intro")),
                     _list(headlines),
                     _links((collection_url, T("view_collection_cta"))),
                 ],
                 lang=lang,
+                header=headline,
             ),
         )
 

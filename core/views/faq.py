@@ -218,7 +218,7 @@ class FAQVisibilityView(APIView):
             questioner = faq.questioner
             if questioner and questioner.email:
                 owner_name = request.user.name  # bare name (L2)
-                send_faq_hide_email(owner_name, thing.headline, faq.question, questioner.email)
+                send_faq_hide_email(owner_name, thing, faq.question, questioner.email)
                 InAppNotification.objects.create(
                     user=questioner,
                     type=InAppNotification.Type.FAQ_HIDDEN,
