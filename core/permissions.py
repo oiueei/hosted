@@ -24,8 +24,9 @@ class IsCollectionOwner(BasePermission):
 class IsCollectionCurator(BasePermission):
     """Object-level: request user is the Collection owner or a co-owner.
 
-    The admin tier — everything except deleting the collection or
-    promoting/demoting a co-owner, both of which stay `IsCollectionOwner`.
+    The admin tier — everything except deleting the collection, which stays
+    `IsCollectionOwner` (the CASCADE-delete root). Promoting and demoting a
+    co-curator is curator-wide now (2026-09, co-curators in PROPRIETARY).
     """
 
     def has_object_permission(self, request, view, obj):

@@ -1,10 +1,12 @@
-"""A co-owner gets owner-level admin powers without becoming the CASCADE root.
+"""A co-curator gets the founder's admin reach without becoming the CASCADE root.
 
-Promoted from a COMMUNITY collection's own `invites` (never a separate door
-in), a co-owner may do everything the owner can except delete the collection
-or promote/demote another co-owner — those stay owner-only. These tests pin
-the permission surface `is_curator` widened, and the promote/demote endpoint
-(`CollectionCoOwnerView`) itself.
+Promoted from the collection's own `invites` (never a separate door in), in
+**either** mode (2026-09, co-curators in PROPRIETARY), a co-curator may do
+everything the owner can except delete the collection — that alone stays
+owner-only. Promoting and demoting another co-curator is curator-wide; the
+founding `owner` is an FK, not an `invites` row, so this endpoint structurally
+cannot demote them. These tests pin the permission surface `is_curator`
+widened, and the promote/demote endpoint (`CollectionCoOwnerView`) itself.
 """
 
 import pytest
@@ -192,12 +194,14 @@ class TestPromotingACoOwner:
             == 1
         )
 
-    def test_a_co_owner_cannot_promote_another_member(self, group, co_owner, member):
+    def test_a_co_curator_can_promote_another_member(self, group, co_owner, member):
+        # Curator-wide since 2026-09: a co-curator has the founder's reach over
+        # everything except deleting the collection, appointing help included.
         res = client_for(co_owner).post(
             CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
         )
-        assert res.status_code == 403
-        assert not group.co_owners.filter(code=member.code).exists()
+        assert res.status_code == 200
+        assert group.co_owners.filter(code=member.code).exists()
 
     def test_a_stranger_cannot_promote(self, group, stranger, member):
         res = client_for(stranger).post(
@@ -212,7 +216,9 @@ class TestPromotingACoOwner:
         assert res.status_code == 400
         assert not group.co_owners.filter(code=stranger.code).exists()
 
-    def test_a_proprietary_collection_refuses_promotion(self, db, owner, member):
+    def test_a_proprietary_collection_allows_promotion(self, db, owner, member):
+        # The early adopter's case: a space run PROPRIETARY needs the founder
+        # plus one or two co-curators. Mode is not a factor any more.
         proprietary = Collection.objects.create(
             code="PROP01", owner=owner, headline="Solo", mode=Collection.Mode.PROPRIETARY
         )
@@ -222,8 +228,23 @@ class TestPromotingACoOwner:
             CO_OWNERS_URL.format(code=proprietary.code), {"user_code": member.code}, format="json"
         )
 
-        assert res.status_code == 400
-        assert "COMMUNITY" in res.data["error"]
+        assert res.status_code == 200
+        assert proprietary.co_owners.filter(code=member.code).exists()
+
+    def test_a_co_curator_of_a_proprietary_collection_can_promote_another(self, db, owner, member):
+        proprietary = Collection.objects.create(
+            code="PROP02", owner=owner, headline="Space", mode=Collection.Mode.PROPRIETARY
+        )
+        second = User.objects.create(code="SECND1", email="second@test.com", name="Nil")
+        proprietary.invites.add(member, second)
+        proprietary.co_owners.add(member)
+
+        res = client_for(member).post(
+            CO_OWNERS_URL.format(code=proprietary.code), {"user_code": second.code}, format="json"
+        )
+
+        assert res.status_code == 200
+        assert proprietary.co_owners.filter(code=second.code).exists()
 
     def test_a_deployment_can_withhold_co_owners(self, group, owner, member):
         with override_settings(CREATOR_POLICY=CO_OWNERS_DISABLED):
@@ -271,13 +292,27 @@ class TestDemotingACoOwner:
             user=member, type=InAppNotification.Type.DEMOTED_CO_OWNER
         ).exists()
 
-    def test_a_co_owner_cannot_demote_another_co_owner(self, group, co_owner, member):
+    def test_a_co_curator_can_demote_another_co_curator(self, group, co_owner, member):
+        # Curator-wide, and the accepted trade-off: co-curators can ping-pong
+        # demotions, with the founder as the circuit breaker (next test).
         group.co_owners.add(member)
         res = client_for(co_owner).delete(
             CO_OWNERS_URL.format(code=group.code), {"user_code": member.code}, format="json"
         )
-        assert res.status_code == 403
-        assert group.co_owners.filter(code=member.code).exists()
+        assert res.status_code == 200
+        assert not group.co_owners.filter(code=member.code).exists()
+        assert group.invites.filter(code=member.code).exists()
+
+    def test_the_founding_owner_cannot_be_demoted(self, group, co_owner, owner):
+        # The owner is an FK, never an `invites` row, so `_get_target` cannot
+        # resolve them — the endpoint structurally cannot touch the founder.
+        res = client_for(co_owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": owner.code}, format="json"
+        )
+        assert res.status_code == 400
+        group.refresh_from_db()
+        assert group.owner_id == owner.code
+        assert group.is_curator(owner.code)
 
     def test_demoting_still_works_even_if_the_deployment_has_since_disabled_co_owners(
         self, group, owner, co_owner

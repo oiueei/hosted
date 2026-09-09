@@ -66,7 +66,6 @@ from core.validators import SafeHeadlineField
 from core.views._helpers import (
     body_dict,
     require_collection_curator,
-    require_collection_owner,
     type_validity_error,
     viewer_code,
 )
@@ -533,17 +532,21 @@ class CollectionInviteView(APIView):
 class CollectionCoOwnerView(APIView):
     """
     POST /api/v1/collections/{collection_code}/co-owners/
-    Promote an existing member to co-owner.
+    Promote an existing member to co-curator.
 
     DELETE /api/v1/collections/{collection_code}/co-owners/
-    Demote a co-owner back to a plain member — they stay a member, they just
+    Demote a co-curator back to a plain member — they stay a member, they just
     lose the admin powers.
 
-    Owner only, deliberately not curator-widened: appointing (or removing) a
-    second admin stays with the one person accountable for the CASCADE-delete
-    root, never delegated further. COMMUNITY collections only, and gated
-    behind this deployment's `CREATOR_POLICY` the same way a mode or a verb
-    is.
+    Any curator may promote or demote another, in any mode: a co-curator has
+    the founder's reach over everything except deleting the collection (the
+    CASCADE-delete root, which stays ``IsCollectionOwner``), and appointing
+    help is part of that reach. The founding ``owner`` is an FK, not a
+    ``co_owners`` row, so this endpoint structurally cannot demote them — no
+    guard needed; the accepted trade-off is that co-curators can ping-pong
+    demotions and the founder is the circuit breaker. Promotion is still
+    gated behind this deployment's ``CREATOR_POLICY`` the same way a mode or a
+    verb is.
     """
 
     permission_classes = [IsAuthenticated]
@@ -552,10 +555,9 @@ class CollectionCoOwnerView(APIView):
         """Shared validation for POST and DELETE: resolve and return the
         target ``User``, or a Response explaining why not.
 
-        Only checks membership — **not** ``is_community()``. Promoting is
-        COMMUNITY-only and `post` checks that itself before calling this;
-        demoting must keep working even if the collection's mode changed
-        since, so `delete` never asks (see its own comment).
+        Checks membership only — a co-curator is promoted from ``invites``,
+        never invited separately (``co_owners ⊆ invites``), and the
+        collection's mode is not a factor in either direction.
         """
         serializer = CollectionRemoveInviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -574,17 +576,11 @@ class CollectionCoOwnerView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can promote a co-owner"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only a curator can promote a co-curator"
         )
         if denied:
             return denied
-
-        if not collection.is_community():
-            return Response(
-                {"error": "Co-owners are a COMMUNITY-mode feature"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         denial = co_owners_denial(request.user)
         if denial:
@@ -615,13 +611,13 @@ class CollectionCoOwnerView(APIView):
         # No `co_owners_denial()` check here, deliberately: the gate is on
         # *bringing this state into existence* (see `post`), not on living in
         # it — the same grandfathering `creator_policy` already applies to a
-        # mode or a verb a deployment later withdraws. An owner must always be
+        # mode or a verb a deployment later withdraws. A curator must always be
         # able to demote, even on a deployment that has since disabled the
         # feature outright.
         collection = get_object_or_404(Collection, code=collection_code)
 
-        denied = require_collection_owner(
-            collection, request.user.code, "Only the owner can demote a co-owner"
+        denied = require_collection_curator(
+            collection, request.user.code, "Only a curator can demote a co-curator"
         )
         if denied:
             return denied

@@ -883,8 +883,9 @@ def _collection_transfers(thing_codes):
 
 
 def build_collection_export(collection):
-    """A whole group, as its owner runs it. **Owner-only** — the caller is what
-    enforces that (``require_collection_owner``); this function trusts it."""
+    """A whole group, as a curator runs it. **Curator-only** (owner or
+    co-curator) — the caller is what enforces that
+    (``require_collection_curator``); this function trusts it."""
     things = list(collection.things.select_related("owner").order_by("created"))
     thing_codes = [thing.code for thing in things]
     data = {

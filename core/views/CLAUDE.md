@@ -485,19 +485,18 @@ Removes a user from the collection's invite list. If the invite is still pending
 | | |
 |---|---|
 | **Endpoints** | `POST` and `DELETE /api/v1/collections/{collection_code}/co-owners/` |
-| **Permission** | `IsAuthenticated` + collection owner (`require_collection_owner`) |
+| **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
 | **Rate limit** | POST: 30 requests/hour per user. DELETE: unrestricted. |
 
-Promote or demote a co-owner. **Owner only, deliberately not curator-widened** — appointing (or removing) a second admin stays with the one person accountable for the CASCADE-delete root, never delegated further.
+Promote or demote a co-curator, **in either mode** (2026-09, co-curators in PROPRIETARY). **Any curator may** — appointing help is part of the founder's reach, which a co-curator now shares over everything except deleting the collection (the CASCADE-delete root, still `IsCollectionOwner`). The accepted trade-off: co-curators can ping-pong demotions, and the founder — an FK, never an `invites` row, so this endpoint structurally cannot demote them (`_get_target` 400s on a non-member) — is the circuit breaker.
 
 **`POST` behaviour:**
-- 400 if the collection isn't `is_community()` — co-owners are a COMMUNITY-mode feature.
 - 403 (`co_owners_denial`) if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`.
 - 400 if `user_code` isn't already in `invites` — promotion only, never a separate invite door (`co_owners ⊆ invites`).
 - Adds to `co_owners` (idempotent) and, on the first promotion only, creates a `PROMOTED_CO_OWNER` in-app notification for the member. No email — a deliberate v1 simplification.
 
 **`DELETE` behaviour:**
-- Same membership/mode validation as POST, **except no `co_owners_denial` check** — the gate is on bringing co-owner status into existence, never on living in it (the same grandfathering `creator_policy` already applies to a mode or a verb). An owner must always be able to demote, even on a deployment that has since disabled the feature, and even on a collection since switched away from COMMUNITY (a co-owner's status is sticky across a mode change, like `owner` itself).
+- Same membership validation as POST, **except no `co_owners_denial` check** — the gate is on bringing co-curator status into existence, never on living in it (the same grandfathering `creator_policy` already applies to a mode or a verb). A curator must always be able to demote, even on a deployment that has since disabled the feature.
 - Removes from `co_owners` (idempotent, a harmless no-op on a plain member) and, if they were actually a co-owner, creates a `DEMOTED_CO_OWNER` notification. The member stays in `invites` — demotion removes the admin tier, not the membership.
 
 **Request body:**
@@ -1257,4 +1256,4 @@ Business logic is extracted into `core/services/`:
 - `core/utils.py`: `generate_id()`, `get_client_ip()`, `asset_url()` — `asset_url(key)` joins the stored key onto `MEDIA_PUBLIC_BASE_URL` via `core.services.storage.public_url`. It replaced a Cloudinary SDK call that asked for `fetch_format=auto`/`quality=auto`; an object store does not transform, so that job moved to the browser, which encodes to WebP before uploading.
 - `core/validators.py`: `ImageIdField`, `SafeHeadlineField`, `SafeTextField`, `validate_image_id()`, `validate_headline()`
 - `core/pagination.py`: `StandardResultsPagination` (max 100 items)
-- `core/views/_helpers.py`: `viewer_code()`, `deny_if_cannot_view()`, `get_viewable_thing()`, `type_validity_error()`, `require_collection_owner()`, and **`body_dict(request)`** — `request.data` when the body is a JSON object, else `{}`. DRF parses a JSON *array* body into a `list`, which has no `.get`, so any view reading `request.data.get(...)` **before a serializer has run** answers 500 where it owes a 400. Use it on every such read; a non-object body then means "no fields given" and falls through to the view's own validation. Pinned by `core/tests/integration/test_array_body.py`.
+- `core/views/_helpers.py`: `viewer_code()`, `deny_if_cannot_view()`, `get_viewable_thing()`, `type_validity_error()`, `require_collection_curator()`, and **`body_dict(request)`** — `request.data` when the body is a JSON object, else `{}`. DRF parses a JSON *array* body into a `list`, which has no `.get`, so any view reading `request.data.get(...)` **before a serializer has run** answers 500 where it owes a 400. Use it on every such read; a non-object body then means "no fields given" and falls through to the view's own validation. Pinned by `core/tests/integration/test_array_body.py`.
