@@ -77,7 +77,7 @@ As part of this review:
 - Prop drilling that should be replaced with context or state management
 
 **Consistency with DESIGN.md**
-- Are the nine design principles visibly reflected in the components?
+- Are the twelve design principles visibly reflected in the components?
 - Any components that feel inconsistent with the established visual language?
 
 **Tests**
@@ -306,7 +306,7 @@ Your goal in this session is to produce a prioritised plan — **not** to implem
 
 Start by reading carefully:
 - `README.md` — understand the product, its users, and its goals
-- `DESIGN.md` — internalise all nine design principles and the checklist
+- `DESIGN.md` — internalise all twelve design principles and the checklist
 - `frontend/CLAUDE.md` — understand the current routes and pages
 - All `CLAUDE.md` files — understand what features exist
 
@@ -353,7 +353,7 @@ Then audit `frontend/src/` with fresh eyes, imagining you are a first-time user 
 - Are destructive or irreversible actions clearly signalled?
 
 **Design principles alignment** (per `DESIGN.md`)
-- Go through each of the nine principles and assess whether the current UI honours them
+- Go through each of the twelve principles and assess whether the current UI honours them
 - Use the checklist at the end of `DESIGN.md` as a scoring tool
 
 **Overlooked details**
