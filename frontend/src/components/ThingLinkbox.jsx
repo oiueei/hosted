@@ -61,7 +61,7 @@ function ThingLinkbox({
     handleRequest,
     handleActivate,
     handleBookingAction,
-    isOwner,
+    canManage,
     isCollectionOwner,
     isDateBased,
     needsPage,
@@ -172,7 +172,7 @@ function ThingLinkbox({
         {thing.description && (
           <MarkdownText text={L(thing.description)} className="thing-card-description" />
         )}
-        <ThingTags thing={thing} isOwner={isOwner} showType={false} />
+        <ThingTags thing={thing} isOwner={canManage} showType={false} />
         <ThingInfoRows thing={thing} isDateBased={isDateBased} hideType={hideType}>
           {thing.transfer_count > 0 && (
             <div className="thing-card-info-row">
@@ -195,10 +195,10 @@ function ThingLinkbox({
         <OwnerBookingsList
           bookings={bookings}
           activePendingCode={activePendingCode}
-          isOwner={isOwner}
+          isOwner={canManage}
         />
         <div className="thing-card-buttons">
-          {isOwner && thing.status === 'ACTIVE' && (
+          {canManage && thing.status === 'ACTIVE' && (
             <>
               {needsPage && activePendingCode && (
                 <>
@@ -246,7 +246,7 @@ function ThingLinkbox({
               )}
             </>
           )}
-          {isOwner && thing.status === 'TAKEN' && (
+          {canManage && thing.status === 'TAKEN' && (
             <>
               <Button
                 fullWidth
@@ -272,7 +272,7 @@ function ThingLinkbox({
               </ButtonLink>
             </>
           )}
-          {isOwner && thing.status === 'INACTIVE' && (
+          {canManage && thing.status === 'INACTIVE' && (
             <>
               <Button fullWidth disabled={activating} onClick={handleActivate} style={btnStyle}>
                 {activating ? t('thingCard.reactivating') : t('thingCard.reactivate')}
@@ -320,7 +320,7 @@ function ThingLinkbox({
               {buttonLabel}
             </Button>
           )}
-          {isCollectionOwner && !isOwner && (
+          {isCollectionOwner && !canManage && (
             <Button
               variant="secondary"
               fullWidth

@@ -17,7 +17,9 @@ import { apiFetch, extractApiError } from '../services/api';
  * result on a newer one.
  *
  * Options:
- * - `isOwner`             — gates the owner-calendar fetch.
+ * - `canManage`           — gates the owner-calendar fetch (owner, or a
+ *                           PROPRIETARY collection's curator — both get the
+ *                           requester-detail calendar from the backend).
  * - `onThingChange(patch)`— apply a partial update to the underlying thing
  *                           (ThingPage feeds `setThing`, ThingLinkbox `onUpdateThing`).
  * - `setToast`            — toast setter from the consuming view.
@@ -42,7 +44,7 @@ import { apiFetch, extractApiError } from '../services/api';
 export default function useThingBooking(
   thing,
   {
-    isOwner = false,
+    canManage = false,
     onThingChange = () => {},
     setToast = () => {},
     initialActivePending = null,
@@ -74,7 +76,8 @@ export default function useThingBooking(
   const status = thing?.status;
   const isEndless = thing?.is_endless;
   const isDateBased = DATE_TYPES.includes(type);
-  // Owner-only, and null for everyone else — which is also the signal to fetch.
+  // Manager-only (owner, or a PROPRIETARY collection's curator), and null for
+  // everyone else — which is also the signal to fetch.
   const embeddedBookings = thing?.bookings;
 
   // The owner's bookings now ride along on the thing itself (serializer field
@@ -87,7 +90,7 @@ export default function useThingBooking(
 
   useEffect(() => {
     const shouldLoad =
-      isOwner && (isDateBased || status === 'TAKEN' || (fetchOnEndless && isEndless));
+      canManage && (isDateBased || status === 'TAKEN' || (fetchOnEndless && isEndless));
     if (!shouldLoad || !code) return undefined;
 
     const futureOnly = (rows) =>
@@ -131,7 +134,7 @@ export default function useThingBooking(
     // `embeddedBookings` is deliberately absent: the ref above owns re-seeding,
     // and depending on an array identity that changes every render would defeat it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, status, isEndless, isOwner, isDateBased, fetchOnEndless]);
+  }, [code, status, isEndless, canManage, isDateBased, fetchOnEndless]);
 
   const handleRequest = async () => {
     if (requestLockRef.current) return;
