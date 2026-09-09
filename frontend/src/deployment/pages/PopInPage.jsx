@@ -1,4 +1,7 @@
+import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import MagicLinkJoinPage from '../../components/MagicLinkJoinPage';
+import { faqPath } from '../index';
 
 // This deployment's open door has no target — no share token, no collection
 // code — which is exactly the case `/auth/join/` refuses to create anything
@@ -11,6 +14,7 @@ import MagicLinkJoinPage from '../../components/MagicLinkJoinPage';
 const POP_IN_ENDPOINT = '/api/v1/auth/pop-in/';
 
 export default function PopInPage() {
+  const { t } = useTranslation();
   return (
     <MagicLinkJoinPage
       ns="popin"
@@ -18,6 +22,15 @@ export default function PopInPage() {
       titleKey="popin.title"
       descriptionKey="popin.description"
       endpoint={POP_IN_ENDPOINT}
-    />
+    >
+      {/* The fourth of the four FAQ links the August round asked for — the door
+          with the most first-time traffic. `MagicLinkJoinPage`'s `children`
+          slot renders it under the form. */}
+      {faqPath && (
+        <p>
+          <Link to={faqPath}>{t('popin.faqLink')}</Link>
+        </p>
+      )}
+    </MagicLinkJoinPage>
   );
 }

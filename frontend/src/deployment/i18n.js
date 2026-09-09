@@ -21,6 +21,7 @@ export const deploymentI18n = {
       closeThisTab: 'You can close this tab now — the link is on its way to your inbox.',
       errorSendingLink: 'Error sending link.',
       alreadyHaveAccount: 'Already have an account? Sign in →',
+      faqLink: 'Frequently asked questions →',
     },
     // The "you're looking at demo data" banner. The product (`DemoNotice`)
     // renders it on every page of an `is_onboarding` collection, but only once
@@ -35,9 +36,9 @@ export const deploymentI18n = {
       greeting: 'Hello, {{name}}',
       pageTitle: 'Welcome to OIUEEI!',
       description:
-        'OIUEEI is an open source platform for sharing within trusted communities. Create collections for gifts, sales, rentals and loans — then invite friends to browse, reserve and interact. Everything stays between people who know each other.',
+        'OIUEEI is an open source platform for sharing within trusted communities. Create collections for gifts, sales, rentals, loans and bookable spaces — then invite friends to browse, reserve and interact. Everything stays between people who know each other.',
       createShare:
-        "OIUEEI revolves around your own collections. Create one for anything you'd like to share — gifts, sales, rentals or loans — and invite your circles: family, friends, neighbours, your street. Only the people you invite can see it and join in.",
+        "OIUEEI revolves around your own collections. Create one for anything you'd like to share — gifts, sales, rentals, loans or a space people can book — and invite your circles: family, friends, neighbours, your street. Only the people you invite can see it and join in.",
       commitmentTitle: 'Our commitment',
       commitmentBody1:
         'OIUEEI runs without ads and without third-party analytics: nobody tracks you while you use it. Your data is not the product — it is never sold or shared with anyone.',
@@ -100,6 +101,7 @@ export const deploymentI18n = {
         'Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.',
       alreadyHaveAccount: '¿Ya tienes cuenta? Inicia sesión →',
       errorSendingLink: 'Error al enviar el enlace.',
+      faqLink: 'Preguntas frecuentes →',
     },
     demoNotice: {
       title: 'Esto es una colección de demostración',
@@ -111,9 +113,9 @@ export const deploymentI18n = {
       greeting: 'Hola, {{name}}',
       pageTitle: '¡Bienvenido a OIUEEI!',
       description:
-        'OIUEEI es una plataforma de código abierto para compartir dentro de comunidades de confianza. Crea colecciones para regalos, ventas, alquileres y préstamos — luego invita a amigos a explorar, reservar e interactuar. Todo queda entre personas que se conocen.',
+        'OIUEEI es una plataforma de código abierto para compartir dentro de comunidades de confianza. Crea colecciones para regalos, ventas, alquileres, préstamos y espacios que se reservan — luego invita a amigos a explorar, reservar e interactuar. Todo queda entre personas que se conocen.',
       createShare:
-        'OIUEEI gira en torno a tus propias colecciones. Crea una para lo que quieras compartir —regalos, ventas, alquileres o préstamos— e invita a tus círculos: familia, amigos, vecinos, tu calle. Solo quienes invites pueden verla y participar.',
+        'OIUEEI gira en torno a tus propias colecciones. Crea una para lo que quieras compartir —regalos, ventas, alquileres, préstamos o un espacio que se reserva— e invita a tus círculos: familia, amigos, vecinos, tu calle. Solo quienes invites pueden verla y participar.',
       commitmentTitle: 'Nuestro compromiso',
       commitmentBody1:
         'OIUEEI funciona sin anuncios y sin analíticas de terceros: nadie te rastrea mientras la usas. Tus datos no son el producto — no se venden ni se comparten con nadie.',
@@ -177,6 +179,7 @@ export const deploymentI18n = {
         "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada.",
       alreadyHaveAccount: 'Ja tens un compte? Inicia sessió →',
       errorSendingLink: "Error en enviar l'enllaç.",
+      faqLink: 'Preguntes freqüents →',
     },
     demoNotice: {
       title: 'Això és una col·lecció de demostració',
@@ -188,9 +191,9 @@ export const deploymentI18n = {
       greeting: 'Hola, {{name}}',
       pageTitle: 'Benvingut a OIUEEI!',
       description:
-        'OIUEEI és una plataforma de codi obert per compartir dins de comunitats de confiança. Crea col·leccions per a regals, vendes, lloguers i préstecs — després convida amics a explorar, reservar i interactuar. Tot queda entre persones que es coneixen.',
+        'OIUEEI és una plataforma de codi obert per compartir dins de comunitats de confiança. Crea col·leccions per a regals, vendes, lloguers, préstecs i espais que es reserven — després convida amics a explorar, reservar i interactuar. Tot queda entre persones que es coneixen.',
       createShare:
-        "OIUEEI gira al voltant de les teves pròpies col·leccions. Crea'n una per a allò que vulguis compartir —regals, vendes, lloguers o préstecs— i convida els teus cercles: família, amics, veïns, el teu carrer. Només qui convidis pot veure-la i participar-hi.",
+        "OIUEEI gira al voltant de les teves pròpies col·leccions. Crea'n una per a allò que vulguis compartir —regals, vendes, lloguers, préstecs o un espai que es reserva— i convida els teus cercles: família, amics, veïns, el teu carrer. Només qui convidis pot veure-la i participar-hi.",
       commitmentTitle: 'El nostre compromís',
       commitmentBody1:
         'OIUEEI funciona sense anuncis i sense analítiques de tercers: ningú no et rastreja mentre la fas servir. Les teves dades no són el producte — no es venen ni es comparteixen amb ningú.',
