@@ -1,6 +1,8 @@
-# This repo's README is about this repo (the www.oiueei.com deployment), not the
-# product. Upstream's README is the whole-project document and this one never
-# tracks it, so a merge from `oiueei/standalone` should keep ours untouched.
-# Requires `git config merge.ours.driver true` once per clone; without it git
-# falls back to a normal (conflicting) merge, which is still resolved "keep ours".
+# This repo's README and CONTRIBUTING are about this repo (the www.oiueei.com
+# deployment), not the product. Upstream's are the whole-project documents and
+# these two never track them, so a merge from `oiueei/standalone` should keep
+# ours untouched. Requires `git config merge.ours.driver true` once per clone;
+# without it git falls back to a normal (conflicting) merge, which is still
+# resolved "keep ours".
 README.md merge=ours
+CONTRIBUTING.md merge=ours
