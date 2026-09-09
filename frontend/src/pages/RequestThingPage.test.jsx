@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
+import i18n from 'i18next';
+import en from '../i18n/locales/en.json';
 import RequestThingPage from './RequestThingPage';
 
 // utils/rental.js is unit-tested on its own — these tests protect the PAGE's
@@ -114,5 +116,50 @@ describe('RequestThingPage (what the pickers produce is what the POST carries)',
 
     expect(await screen.findByText('Date overlaps with another booking.')).toBeInTheDocument();
     expect(screen.queryByText("You're all set!")).not.toBeInTheDocument();
+  });
+});
+
+describe('the demo notice on a seed collection', () => {
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'TEST01');
+    // The copy a deployment supplies through `deploymentI18n` — absent upstream.
+    i18n.addResourceBundle(
+      'en',
+      'translation',
+      {
+        demoNotice: { title: 'This is a demo', body: 'Shared and reset.', realNote: 'Yours stay.' },
+      },
+      true,
+      true
+    );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    i18n.removeResourceBundle('en', 'translation');
+    i18n.addResourceBundle('en', 'translation', en);
+  });
+
+  test('shows before and after submit — the confirmation and the "it wasn\'t real" sit together', async () => {
+    mockRoutes({ thing: { ...RENTAL_THING, collection_is_onboarding: true } });
+    renderPage('RCOL01', 'RTHG01');
+
+    expect(await screen.findByText('This is a demo')).toBeInTheDocument();
+
+    const input = screen.getByLabelText(/Pickup date/);
+    fireEvent.change(input, { target: { value: display(nextMonday()) } });
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'Rent' }));
+
+    expect(await screen.findByText("You're all set!")).toBeInTheDocument();
+    expect(screen.getByText('This is a demo')).toBeInTheDocument();
+  });
+
+  test('stays hidden on a normal collection even with the copy present', async () => {
+    mockRoutes({ thing: RENTAL_THING });
+    renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    expect(screen.queryByText('This is a demo')).not.toBeInTheDocument();
   });
 });

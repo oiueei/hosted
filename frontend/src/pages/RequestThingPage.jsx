@@ -17,6 +17,7 @@ import {
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
+import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
@@ -234,6 +235,7 @@ export default function RequestThingPage() {
       backTo={backPath}
       backLabel={backLabel}
     >
+      {thing.collection_is_onboarding && <DemoNotice />}
       {success ? (
         <>
           <Notification

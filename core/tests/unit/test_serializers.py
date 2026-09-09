@@ -8,6 +8,7 @@ from core.models import FAQ, Collection, Thing, User
 from core.serializers import (
     CollectionCreateSerializer,
     CollectionSerializer,
+    CollectionUpdateSerializer,
     FAQCreateSerializer,
     FAQSerializer,
     RequestLinkSerializer,
@@ -185,6 +186,22 @@ class TestCollectionSerializer:
         assert data_for(stranger)["co_owners"] == expected
         assert data_for(AnonymousUser())["co_owners"] == expected
 
+    def test_is_onboarding_is_reported_but_never_writable(self):
+        """The SPA needs to know a collection is a seed/demo one to show the
+        demo notice — but `is_onboarding` is set by `seed_demo`, never by a
+        user, so no create/update path may set it."""
+        owner = User.objects.create(code="ONBD01", email="onbd@example.com")
+        demo = Collection.objects.create(
+            code="DEMO01", owner=owner, headline="Demo", is_onboarding=True
+        )
+        real = Collection.objects.create(code="REAL01", owner=owner, headline="Real")
+
+        assert CollectionSerializer(demo).data["is_onboarding"] is True
+        assert CollectionSerializer(real).data["is_onboarding"] is False
+
+        assert "is_onboarding" not in CollectionCreateSerializer().fields
+        assert "is_onboarding" not in CollectionUpdateSerializer().fields
+
 
 class TestCollectionCreateSerializer:
     """Tests for CollectionCreateSerializer."""
@@ -348,6 +365,25 @@ class TestThingSerializer:
 
         assert data["collection_code"] is None
         assert data["collection_headline"] is None
+        assert data["collection_is_onboarding"] is False
+
+    def test_collection_is_onboarding_follows_the_viewable_collection(self):
+        """`collection_is_onboarding` rides the same `_viewable_collection`
+        resolution as `collection_code` — so a thing shared into a demo group
+        is flagged, one in a real group is not, and (no request context = sees
+        everything) the first row decides."""
+        user = User.objects.create(code="OWN003", email="owner3@example.com")
+        demo_thing = Thing.objects.create(code="THNG04", owner=user, headline="In demo")
+        real_thing = Thing.objects.create(code="THNG05", owner=user, headline="In real")
+        demo = Collection.objects.create(
+            code="COL002", owner=user, headline="Demo", is_onboarding=True
+        )
+        real = Collection.objects.create(code="COL003", owner=user, headline="Real")
+        demo.things.add(demo_thing)
+        real.things.add(real_thing)
+
+        assert ThingSerializer(demo_thing).data["collection_is_onboarding"] is True
+        assert ThingSerializer(real_thing).data["collection_is_onboarding"] is False
 
     def test_pending_questions_excludes_hidden_faqs(self):
         """A question the owner hid is dealt with, not pending — the badge

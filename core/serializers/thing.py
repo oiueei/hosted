@@ -261,6 +261,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_code = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
+    collection_is_onboarding = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
@@ -301,6 +302,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_code",
             "collection_headline",
             "collection_owner",
+            "collection_is_onboarding",
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
@@ -403,6 +405,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     def get_collection_owner(self, obj):
         first = self._viewable_collection(obj)
         return first.owner_id if first else None
+
+    def get_collection_is_onboarding(self, obj):
+        """Whether the collection this viewer sees the thing through is a seed
+        collection — the SPA shows a demo notice on it. Resolved through
+        ``_viewable_collection`` like the three fields above so a thing shared
+        into both a demo and a real group is judged by the row this reader has."""
+        first = self._viewable_collection(obj)
+        return bool(first.is_onboarding) if first else False
 
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).
