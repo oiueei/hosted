@@ -50,8 +50,9 @@ class ThingCalendarView(APIView):
         # Get blocked periods
         blocked_periods = BookingPeriod.get_blocked_periods(thing_code)
 
-        # Owner sees full details; guests see only dates and status.
-        if thing.is_owner(viewer_code(request)):
+        # Owner (and a PROPRIETARY collection's co-curator, who runs its
+        # bookings) sees full details; guests see only dates and status.
+        if thing.can_manage(viewer_code(request)):
             # The owner serializer reads requester_code.name per period — pull it
             # in up front so the calendar stays a fixed number of queries
             # regardless of how many bookings it lists.

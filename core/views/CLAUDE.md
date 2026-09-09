@@ -368,11 +368,13 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 | `list` | `GET /api/v1/things/` | `IsAuthenticated` |
 | `create` | `POST /api/v1/things/` | `IsAuthenticated` |
 | `retrieve` | `GET /api/v1/things/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: visible when the thing sits in a PUBLIC, ACTIVE collection |
-| `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingOwner` |
-| `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingOwner` |
+| `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
+| `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
 | `destroy` | `DELETE /api/v1/things/{code}/` | `IsAuthenticated` + `_can_delete()` |
-| `activate` | `POST /api/v1/things/{code}/activate/` | `IsAuthenticated` + `IsThingOwner` |
-| `hide` | `POST /api/v1/things/{code}/hide/` | `IsAuthenticated` + `IsThingOwner` |
+| `activate` | `POST /api/v1/things/{code}/activate/` | `IsAuthenticated` + `IsThingManager` |
+| `hide` | `POST /api/v1/things/{code}/hide/` | `IsAuthenticated` + `IsThingManager` |
+
+**`IsThingManager`** (2026-09) is `IsThingOwner` one tier wider: the thing owner, **or a curator of a PROPRIETARY collection it sits in** (`Thing.can_manage`). A PROPRIETARY collection's curators run its whole catalogue. Note `get_object()` fetches the thing with a bare `get_object_or_404` (not the owner-filtered `get_queryset`), so a co-curator reaches a thing they don't own and the permission — not the queryset — is what gates them.
 
 **Serializers:**
 - Create: `ThingCreateSerializer`
@@ -391,7 +393,7 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 
 **`hide` action:** Sets `status = 'INACTIVE'`. Only the current thing owner (`thing.owner`) can hide — returns 403 for everyone else. Returns 400 if thing is not ACTIVE (cannot hide a TAKEN thing — cancel the hold first).
 
-**`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Two cases grant permission: (1) the user owns any collection containing the thing (collection owner can always delete); (2) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for the collection owner regardless of thing status; the thing owner sees it when the thing has never changed hands.
+**`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Three cases grant permission: (1) the user owns any collection containing the thing (a collection owner can always delete, any mode); (2) the user is a **co-curator of a PROPRIETARY** collection it sits in (2026-09 — that catalogue is the curators' collectively); (3) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for a curator regardless of thing status; the thing owner sees it when the thing has never changed hands.
 
 ### InvitedThingsView
 
@@ -447,7 +449,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 
 **Retrieve:** Uses `collection.can_view(user_code)` — owner, or invited user if collection is ACTIVE (INACTIVE collections are only visible to their owner). The `CollectionSerializer.things` field excludes INACTIVE things for non-owners.
 
-**Add thing:** Uses `collection.can_add_thing(user_code)` — owner can always add; in COMMUNITY mode, invited users can add their own things. Validates thing exists, belongs to user, and is not already in collection.
+**Add thing:** Uses `collection.can_add_thing(user_code)` — any curator (owner or co-curator, any mode) can always add; in COMMUNITY mode, invited members can also add their own things. Validates thing exists, belongs to user, and is not already in collection.
 
 **Remove thing:** Owner or co-owner can remove any thing. In COMMUNITY mode, thing owners can remove their own things. Validates thing is in the collection, removes it from the M2M without deleting the thing itself.
 
@@ -861,7 +863,7 @@ Lists all available theeemes. Returns `code` and `name` for each theeeme via `Th
 | **Endpoint** | `GET /api/v1/things/{thing_code}/calendar/` |
 | **Permission** | `AllowAny` + `get_viewable_thing()` (public read on a viewable thing) |
 
-Returns blocked periods for a thing's calendar. Owner sees full details (`BookingPeriodOwnerCalendarSerializer`), guests see only dates and status (`BookingPeriodCalendarSerializer`).
+Returns blocked periods for a thing's calendar. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees full details (`BookingPeriodOwnerCalendarSerializer`); guests see only dates and status (`BookingPeriodCalendarSerializer`).
 
 ### MyBookingsView
 
@@ -1152,8 +1154,9 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 | Permission | Logic |
 |-----------|-------|
 | `IsThingOwner` | `obj.owner_id == request.user.code` |
+| `IsThingManager` | `obj.can_manage(request.user.code)` — the thing owner, or a curator of a PROPRIETARY collection it sits in. Gates the catalogue actions (update, activate, hide); delete keeps its own `_can_delete`. |
 | `IsCollectionOwner` | `obj.owner_id == request.user.code` |
-| `IsCollectionCurator` | `obj.is_curator(request.user.code)` — owner or co-owner. The admin tier: everything except deleting the collection or promoting/demoting a co-owner, both of which stay `IsCollectionOwner`. |
+| `IsCollectionCurator` | `obj.is_curator(request.user.code)` — owner or co-owner. The admin tier: everything except deleting the collection, which stays `IsCollectionOwner`. Promoting/demoting a co-curator is curator-wide now (2026-09). |
 
 ---
 
@@ -1166,7 +1169,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 3. **JWT tokens** — HttpOnly cookie-based. Access tokens expire after 1 hour. Refresh tokens expire after 7 days. Tokens are rotated on refresh via `POST /api/v1/auth/refresh/`, old tokens blacklisted.
 4. **CSRF (cookie auth)** — because the access token rides in a cookie, `CookieJWTAuthentication` runs DRF's CSRF check (`enforce_csrf`, mirroring `SessionAuthentication`) for **cookie-authenticated unsafe methods** — defence in depth behind the cookie's `SameSite=Lax`. Bearer-header auth is exempt (the header is never sent cross-site), so API clients and the Bearer-token test suite are unaffected. `MeView` GET sets the `csrftoken` cookie via `@ensure_csrf_cookie` (hit on every app load); the SPA reads it and sends it as `X-CSRFToken` on every unsafe request. The test client disables the check by default (`enforce_csrf_checks=False`), so only `test_csrf.py` (which opts in) exercises it.
 5. **IDOR protection** — `can_view_user()` ensures users can only view profiles of people connected via collections.
-6. **Custom DRF permissions** — `IsThingOwner` and `IsCollectionOwner` in `core/permissions.py`.
+6. **Custom DRF permissions** — `IsThingOwner`, `IsThingManager`, `IsCollectionOwner`, `IsCollectionCurator` in `core/permissions.py`.
 7. **Public collections (anonymous read)** — a collection with `visibility=PUBLIC` (and ACTIVE) is readable without authentication. The read endpoints `CollectionViewSet.retrieve`, `ThingViewSet.retrieve`, the FAQ list (GET on `ThingFAQListView`), `ThingTransferView` and `ThingCalendarView` are `AllowAny`, each gated by an **anonymous-safe** `can_view` (a `viewer_code(request)` helper passes the user's code, or `None` for a visitor, into the model guard — `None` matches PUBLIC collections only). Every *write/act* endpoint (reserve, ask a question, answer, add a thing, manage invites/visibility) still requires authentication plus membership/ownership, so an anonymous visitor may browse a public collection but must log in to act. INACTIVE things are excluded from the serialised `things` for any non-owner, the member roster serialises **codes only** for anonymous readers (names are for logged-in members; emails for the owner), and the collection *list* (`GET /collections/`) stays private (it returns only what the caller owns or co-owns).
 
 **No member is named to an anonymous reader, by any of these endpoints.** The roster rule above is the whole rule, and it took three passes to actually be: the FAQ list still carried `questioner_name` and the journey still carried the name of everyone who had held the thing, so a group's membership stayed legible from the open web through a thing rather than through the collection. Both now withhold (`FAQSerializer.get_questioner_name`, `core/serializers/transfer.py::_may_read_names`), both fail closed on a request-less context, and both keep the *content* public — the question, the hop count, the travel story. The third door was the grid itself: in COMMUNITY mode every card carries `owner_name`, the member who **contributed** the thing, so a group's membership stayed enumerable from the open web after both other doors had closed. `ThingComputedFieldsMixin.get_owner_name` now withholds it from a signed-out reader **whenever the thing's owner is not the collection's owner** — the leak stated exactly, with no mode check to drift. The one name such a reader still gets is the **curator's**, the person who published the collection: `CollectionSerializer.get_owner_name` already serves it to them in the page header, so withholding it on that person's own listings would be theatre. They chose to publish; the member who contributed, the person who asked and the people who borrowed did not.

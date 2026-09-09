@@ -14,6 +14,19 @@ class IsThingOwner(BasePermission):
         return obj.is_owner(request.user.code)
 
 
+class IsThingManager(BasePermission):
+    """Object-level: request user may manage the Thing — its owner, or a
+    curator of a PROPRIETARY collection it sits in (`Thing.can_manage`).
+
+    The mirror of `IsThingOwner`, one tier wider, for the catalogue actions
+    a PROPRIETARY collection's curators run collectively (edit, hide,
+    activate). Deleting keeps its own `_can_delete` check.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return obj.can_manage(request.user.code)
+
+
 class IsCollectionOwner(BasePermission):
     """Object-level: request user is the Collection owner."""
 

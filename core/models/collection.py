@@ -564,9 +564,11 @@ class Collection(models.Model):
     def can_add_thing(self, user_code):
         """Check if the given user can add things to this collection.
 
-        Owner can always add. Invited users can add in COMMUNITY mode.
+        Any curator (owner or co-curator) can always add — a PROPRIETARY
+        collection's catalogue is run by its curators collectively (2026-09).
+        Beyond that, an invited member can add in COMMUNITY mode.
         """
-        if self.is_owner(user_code):
+        if self.is_curator(user_code):
             return True
         return self.is_community() and self.is_invited(user_code)
 
