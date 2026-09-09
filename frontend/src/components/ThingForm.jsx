@@ -87,6 +87,17 @@ export default function ThingForm({
   const showSpacer = (showFee || showDeposit) && isDetailType;
   const showDetailFields = isDetailType;
 
+  // HDS Select wants the selected option object(s), never a bare string: handed
+  // a string it can't resolve against `options`, it renders that string
+  // verbatim — which is how a raw `GIFT_THING` ends up in the type box when the
+  // collection's allowlist doesn't offer the default. Build each list once so
+  // `value` can be matched against the same array `options` is given.
+  const availabilityOptions = AVAILABILITY_VALUES.map((v) => ({
+    label: t('availability.' + v),
+    value: v,
+  }));
+  const conditionOptions = CONDITION_VALUES.map((v) => ({ label: t('condition.' + v), value: v }));
+
   return (
     <>
       {showTypeSelector && (
@@ -95,7 +106,7 @@ export default function ThingForm({
             id={`${idPrefix}-type`}
             texts={{ label: t('addThing.typeLabel'), language: hdsLang(i18n.language) }}
             options={typeOptions}
-            value={type}
+            value={typeOptions.filter((o) => o.value === type)}
             onChange={(selectedOptions) => {
               if (selectedOptions.length > 0) {
                 setType(selectedOptions[0].value);
@@ -188,16 +199,16 @@ export default function ThingForm({
           <Select
             id={`${idPrefix}-availability`}
             texts={{ label: t('addThing.availabilityLabel'), language: hdsLang(i18n.language) }}
-            options={AVAILABILITY_VALUES.map((v) => ({ label: t('availability.' + v), value: v }))}
-            value={availability}
+            options={availabilityOptions}
+            value={availabilityOptions.filter((o) => o.value === availability)}
             onChange={(sel) => setAvailability(sel.length > 0 ? sel[0].value : '')}
             clearable
           />
           <Select
             id={`${idPrefix}-condition`}
             texts={{ label: t('addThing.conditionLabel'), language: hdsLang(i18n.language) }}
-            options={CONDITION_VALUES.map((v) => ({ label: t('condition.' + v), value: v }))}
-            value={condition}
+            options={conditionOptions}
+            value={conditionOptions.filter((o) => o.value === condition)}
             onChange={(sel) => setCondition(sel.length > 0 ? sel[0].value : '')}
             clearable
           />

@@ -104,6 +104,41 @@ describe('AddThingPage — the collection decides which types exist', () => {
     // reached the form rather than only the select's own value.
     expect(await screen.findByLabelText(/Price/)).toBeInTheDocument();
   });
+
+  test('a multi-type allowlist without GIFT still opens on an offered type', async () => {
+    // The GIFT_THING default is not in this list and the list has more than one
+    // entry, so the single-type pre-select does not fire. The box used to show
+    // a raw "GIFT_THING" — a type the backend refuses — with the wrong
+    // downstream fields; now it moves to the first type the collection offers.
+    mockApi({ coll: collection({ allowed_thing_types: ['RENT_THING', 'LEND_THING'] }) });
+    renderPage();
+
+    const combo = await screen.findByRole('combobox', { name: /Type/ });
+    await waitFor(() => expect(combo).toHaveTextContent('Rental'));
+    expect(combo).not.toHaveTextContent('GIFT_THING');
+    // downstream state followed the correction: RENT's price field is shown,
+    // GIFT's "endless" toggle is not
+    expect(await screen.findByLabelText(/Price/)).toBeInTheDocument();
+    expect(screen.queryByText(/Endless/)).toBeNull();
+
+    // and the corrected type is what a submit sends
+    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'The ladder' } });
+    fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(postBody()).toMatchObject({ type: 'RENT_THING' }));
+  });
+
+  test('the type box names the selected type, never its raw code', async () => {
+    mockApi();
+    renderPage();
+    const combo = await screen.findByRole('combobox', { name: /Type/ });
+    // the default, shown by label not value
+    await waitFor(() => expect(combo).toHaveTextContent('Gift'));
+    await openTypePicker();
+    fireEvent.click(screen.getByRole('option', { name: 'Lend' }));
+    await waitFor(() => expect(combo).toHaveTextContent('Lend'));
+    expect(combo).not.toHaveTextContent('LEND_THING');
+  });
 });
 
 describe('AddThingPage — what the form sends', () => {

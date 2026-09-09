@@ -321,7 +321,7 @@ Detail page for a thing with full information and FAQs section.
 - **API:** `POST /api/v1/things/` with `collection_code` in body
 - Redirects to `/login` if no `userCode` in `localStorage`.
 - Simple form with h1 title + `form-grid` layout:
-  - `Select` for thing type. The select is filtered down to `collection.allowed_thing_types` when that field is non-empty (PROPRIETARY collections set this on Create/Edit). When the allowlist contains a single type, it is pre-selected so downstream fields show right away. **Type explainer (design round O2):** directly under the type `Select` (when `showTypeSelector`), an icon-only `InfoPopover` (`.info-popover-row info-popover-row--end` so the (i) sits flush right; accessible name `typeInfo.title` = "What each type means") whose panel lists one line per option — `<b>{label}</b> — {typeInfo.<VALUE>}` — built from the same already-filtered `typeOptions` the Select uses, so it never explains a type the collection can't hold. It tells a first-timer what separates the four types — a gift is kept, a sale has a price, a rental is paid and by dates, a loan comes back. Immediately after the type selector: `ToggleButton` for "Sin límite / Endless" (shown only for GIFT/SELL types). `TextInput` for headline (required, max 64), `TextArea` for description. `NumberInput` for fee (required for SELL/RENT types — `FEE_TYPES` — hidden for others). Right after it, a **deposit** `NumberInput` for LEND/RENT types only (`DATE_TYPES`, S6 2026-08) — optional, no default, its own icon and label on the ficha (`IconLock` vs `IconEuroSign`) so a RENT thing's price and deposit never read as one number; edits that switch the type away from LEND/RENT send `deposit: null` explicitly, since the server judges the row that lands, not the payload (`core/serializers/CLAUDE.md`). For GIFT/SELL/LEND types (`DETAIL_TYPES`): `Select` for availability, `TextInput` for location (max 32), `Select` for condition. `ImageUpload` for thumbnail (last, before button, folder `oiueei/things`).
+  - `Select` for thing type. The select is filtered down to `collection.allowed_thing_types` when that field is non-empty (PROPRIETARY collections set this on Create/Edit). When the allowlist contains a single type, it is pre-selected so downstream fields show right away; when it names **two or more and none is the `GIFT_THING` default**, an effect keyed on the offered set (`allowed_thing_types` ∩ deployment policy) moves `type` to the first entry — otherwise the form opened on a type the backend refuses, with the wrong downstream fields and (until HDS resolved it) the raw `GIFT_THING` code showing in the box. `ThingForm` also passes the `Select`'s `value` as the matched option object (`typeOptions.filter(o => o.value === type)`), never the bare string — see the HDS Select quirks note. **Type explainer (design round O2):** directly under the type `Select` (when `showTypeSelector`), an icon-only `InfoPopover` (`.info-popover-row info-popover-row--end` so the (i) sits flush right; accessible name `typeInfo.title` = "What each type means") whose panel lists one line per option — `<b>{label}</b> — {typeInfo.<VALUE>}` — built from the same already-filtered `typeOptions` the Select uses, so it never explains a type the collection can't hold. It tells a first-timer what separates the four types — a gift is kept, a sale has a price, a rental is paid and by dates, a loan comes back. Immediately after the type selector: `ToggleButton` for "Sin límite / Endless" (shown only for GIFT/SELL types). `TextInput` for headline (required, max 64), `TextArea` for description. `NumberInput` for fee (required for SELL/RENT types — `FEE_TYPES` — hidden for others). Right after it, a **deposit** `NumberInput` for LEND/RENT types only (`DATE_TYPES`, S6 2026-08) — optional, no default, its own icon and label on the ficha (`IconLock` vs `IconEuroSign`) so a RENT thing's price and deposit never read as one number; edits that switch the type away from LEND/RENT send `deposit: null` explicitly, since the server judges the row that lands, not the payload (`core/serializers/CLAUDE.md`). For GIFT/SELL/LEND types (`DETAIL_TYPES`): `Select` for availability, `TextInput` for location (max 32), `Select` for condition. `ImageUpload` for thumbnail (last, before button, folder `oiueei/things`).
   - "Create" button below the form. Validates on submit.
 - On success: navigates to `/collections/{code}`.
 - On error: toast notification (top-right, auto-close).
@@ -626,10 +626,16 @@ is no seam to inject a fourth). What *is* reachable are three label props, and
 would mean replacing the calendar itself — deferred, and if done it goes in
 both editions, not hosted-only. `RequestThingPage.test.jsx` pins the wiring.
 
-Additional API notes: `value` is an array (`[{ label, value }]`), `onChange`
-receives an array (`(sel) => sel[0].value`), error text uses the `error` prop
-(string), not `errorText`. The `icon` prop renders inside the one
-`<button role="combobox">`, before the placeholder text.
+Additional API notes: `value` is an array of the selected **option objects**
+(`[{ label, value }]`), `onChange` receives an array (`(sel) => sel[0].value`),
+error text uses the `error` prop (string), not `errorText`. The `icon` prop
+renders inside the one `<button role="combobox">`, before the placeholder text.
+**Handed a bare string it cannot resolve against `options`, the combobox
+renders that string verbatim** — this is how a raw `GIFT_THING` reached the
+`ThingForm` type box (2026-09): `value={type}` where `type` was the default and
+the collection's allowlist did not offer it. Always pass
+`options.filter(o => o.value === current)`, never the raw value —
+`AddThingPage.test.jsx` pins the type box against its own code showing.
 
 **`ShareCollectionMenu` restyles a Select trigger to a bare icon** (`.share-corner`,
 App.css) — the only place this app does that. It leans on HDS's internal
