@@ -558,28 +558,15 @@ def request_reservation(
     return booking
 
 
-def _reservation_curators(collection):
-    """The people who run a reservations collection — its owner and every
-    co-curator, deduped, so a notice reaches the whole team (2026-09). One
-    query on the prefetch-less service path; the caller has already resolved
-    the collection.
-    """
-    if collection is None:
-        return []
-    seen = {}
-    for u in [collection.owner, *collection.co_owners.all()]:
-        seen.setdefault(u.code, u)
-    return list(seen.values())
-
-
 def _send_reservation_notifications(requester, thing, booking, owner_email, collection):
     """Fan out a confirmed reservation: the requester's confirmation, and — to
-    **every curator** of the reservations collection, minus the requester if
-    they are one — the notice email + in-app record. Plus the request→accept
-    event pair (the funnel is instant here).
+    **every manager** of the thing (owner + the reservations collection's
+    co-curators, ``Thing.managers``), minus the requester if they are one — the
+    notice email + in-app record. Plus the request→accept event pair (the
+    funnel is instant here).
 
     ``owner_email`` is the view's pre-validated ``thing.owner`` address; the
-    owner is one of the curators below and is reached there at their own.
+    owner is one of the managers below and is reached there at their own.
     """
     from core.services.email_service import (
         send_reservation_confirmed_email,
@@ -597,7 +584,7 @@ def _send_reservation_notifications(requester, thing, booking, owner_email, coll
         "thing_code": thing.code,
         "collection_code": collection.code if collection else "",
     }
-    for curator in _reservation_curators(collection) or [thing.owner]:
+    for curator in thing.managers():
         if curator.code == requester.code:
             continue
         if curator.email:
@@ -648,13 +635,12 @@ def _notify_reservation_cancelled(booking, thing, by_user):
     {thing}" — is true for every reader."""
     from core.services.email_service import send_reservation_cancelled_email
 
-    collection = resolve_reservations_collection(thing)
     requester_id = booking.requester_code_id
 
     recipients = {}  # code -> (User, email)
     if by_user.code != requester_id:
         recipients[requester_id] = (booking.requester_code, booking.requester_email)
-    for curator in _reservation_curators(collection):
+    for curator in thing.managers():
         if curator.code != by_user.code:
             recipients.setdefault(curator.code, (curator, curator.email))
 

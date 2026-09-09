@@ -680,7 +680,7 @@ Lists FAQs for a thing. A **manager** — the owner, or a curator of a PROPRIETA
 | **Permission** | `IsAuthenticated` + `thing.can_view()` + not a **manager** (`Thing.can_manage`) |
 | **Rate limit** | 20 requests/hour per user |
 
-Creates a new FAQ question. A manager — the owner, or a PROPRIETARY collection's curator — cannot ask about a thing they run (400). Sends a notification email to the thing **owner** (not fanned out to co-curators) with a "View and reply" link to the thing page.
+Creates a new FAQ question. A manager — the owner, or a PROPRIETARY collection's curator — cannot ask about a thing they run (400). Notifies **every manager** of the thing (`Thing.managers` — owner + a PROPRIETARY collection's curators, minus the asker) by email + in-app, each with a "View and reply" link; in COMMUNITY that is just the thing owner.
 
 **Request body:**
 ```json

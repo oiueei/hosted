@@ -160,6 +160,22 @@ class Thing(models.Model):
             for c in self.collections.all()
         )
 
+    def managers(self):
+        """Every ``User`` for whom ``can_manage`` is true — the thing owner,
+        plus the curators (owner + co-curators) of every PROPRIETARY collection
+        it sits in. Deduped by code. Used to fan a notice out to the whole
+        team that runs the thing (FAQ questions, reservation notices).
+        Prefetch-aware via ``collections`` / ``co_owners`` like ``can_manage``.
+        """
+        from core.models.collection import Collection
+
+        seen = {self.owner.code: self.owner}
+        for c in self.collections.all():
+            if c.mode == Collection.Mode.PROPRIETARY:
+                for u in [c.owner, *c.co_owners.all()]:
+                    seen.setdefault(u.code, u)
+        return list(seen.values())
+
     def reserve(self, user_code):
         """Test-only fixture helper: add a user to the deal M2M.
 

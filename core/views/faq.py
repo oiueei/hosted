@@ -99,16 +99,20 @@ class ThingFAQListView(APIView):
         )
         Event.log(Event.Kind.FAQ_ASKED, actor=request.user, thing=thing)
 
-        # Notify owner by email and in-app
-        owner = thing.owner
-        if owner and owner.email:
-            # Bare name. In a COMMUNITY collection the thing's owner is a
-            # co-member, and nothing in the FAQ API ever serves them the asker's
-            # address — this notification must not be the one thing that does.
-            questioner_name = request.user.name
-            send_faq_question_email(questioner_name, thing, faq.question, owner.email)
+        # Notify every manager — the thing owner, and the curators of a
+        # PROPRIETARY collection it sits in, who answer questions shoulder to
+        # shoulder with the founder. In COMMUNITY that set is just the owner (a
+        # member owns what they contribute). Bare name only: nothing in the FAQ
+        # API ever hands a co-member the asker's address, and this must not be
+        # the one thing that does.
+        questioner_name = request.user.name
+        for manager in thing.managers():
+            if manager.code == request.user.code:
+                continue
+            if manager.email:
+                send_faq_question_email(questioner_name, thing, faq.question, manager.email)
             InAppNotification.objects.create(
-                user=owner,
+                user=manager,
                 type=InAppNotification.Type.FAQ_QUESTION,
                 payload={"thing_headline": thing.headline, "questioner_name": questioner_name},
             )

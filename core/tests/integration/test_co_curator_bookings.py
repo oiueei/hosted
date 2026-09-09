@@ -165,6 +165,49 @@ class TestACoCuratorRunsTheBookings:
         )
         assert res.status_code == 400
 
+    def test_a_new_faq_question_notifies_every_curator(self, space, member, owner, co_curator):
+        mail.outbox.clear()
+        res = client_for(member).post(
+            f"/api/v1/things/{space['thing'].code}/faq/",
+            {"question": "Is there wifi?"},
+            format="json",
+        )
+        assert res.status_code == 201
+
+        told = set(
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_QUESTION).values_list(
+                "user_id", flat=True
+            )
+        )
+        assert told == {owner.code, co_curator.code}
+        assert {owner.email, co_curator.email} <= {m.to[0] for m in mail.outbox}
+
+    def test_a_community_question_still_reaches_only_the_thing_owner(self, db):
+        owner = User.objects.create(code="QOWN01", email="qowner@test.com", name="Owner")
+        co_curator = User.objects.create(code="QCUR01", email="qcur@test.com", name="Curator")
+        contributor = User.objects.create(code="QCON01", email="qcon@test.com", name="Member")
+        asker = User.objects.create(code="QASK01", email="qask@test.com", name="Asker")
+        group = Collection.objects.create(
+            code="QCOM01", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
+        )
+        group.invites.add(co_curator, contributor, asker)
+        group.co_owners.add(co_curator)
+        thing = Thing.objects.create(
+            code="QTHG01", owner=contributor, headline="A tent", type="LEND_THING"
+        )
+        group.things.add(thing)
+
+        res = client_for(asker).post(
+            f"/api/v1/things/{thing.code}/faq/", {"question": "Waterproof?"}, format="json"
+        )
+        assert res.status_code == 201
+        told = set(
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_QUESTION).values_list(
+                "user_id", flat=True
+            )
+        )
+        assert told == {contributor.code}  # the thing's owner, not the group's curators
+
 
 class TestACoCuratorDecidesHolds:
     def test_a_co_curator_accepts_a_hold_on_a_lend_thing(self, db):
