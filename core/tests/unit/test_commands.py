@@ -158,6 +158,11 @@ class TestSendRemindersCommand:
         assert "Owner" in to_borrower.body
         assert "Sent 2 reminder" in out.getvalue()
 
+        # Both halves show the date DD/MM/YYYY (like the SPA), never ISO.
+        assert tomorrow.strftime("%d/%m/%Y") in to_owner.body
+        assert tomorrow.strftime("%d/%m/%Y") in to_borrower.body
+        assert tomorrow.isoformat() not in to_owner.body
+
     def test_a_failing_recipient_does_not_cost_the_other_their_reminder(self, monkeypatch):
         """One broken send must not silence the other half of the same loan."""
         tomorrow = date.today() + timedelta(days=1)
