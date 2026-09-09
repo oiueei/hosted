@@ -670,17 +670,17 @@ The metrics themselves live in [`export_service.collection_stats_rows()`](../ser
 | **Permission** | `AllowAny` (part of the public social layer — anyone who can view the thing may read its FAQs) |
 | **Pagination** | `StandardResultsPagination` |
 
-Lists FAQs for a thing. Owner sees all FAQs (including hidden). Invited users see only visible FAQs.
+Lists FAQs for a thing. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees all FAQs including hidden ones. Everyone else sees only visible FAQs.
 
 **Response fields:** `code`, `thing`, `created`, `questioner` (user code), `questioner_name` (user display name — **empty for a reader who is not signed in**; see the anonymous-read note under Security), `question`, `answer`, `is_visible`.
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/things/{thing_code}/faq/` |
-| **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner |
+| **Permission** | `IsAuthenticated` + `thing.can_view()` + not a **manager** (`Thing.can_manage`) |
 | **Rate limit** | 20 requests/hour per user |
 
-Creates a new FAQ question. Owner cannot ask questions about their own thing (400). Sends notification email to thing owner with a "View and reply" link to the thing page.
+Creates a new FAQ question. A manager — the owner, or a PROPRIETARY collection's curator — cannot ask about a thing they run (400). Sends a notification email to the thing **owner** (not fanned out to co-curators) with a "View and reply" link to the thing page.
 
 **Request body:**
 ```json
@@ -694,16 +694,16 @@ Creates a new FAQ question. Owner cannot ask questions about their own thing (40
 | **Endpoint** | `GET /api/v1/faq/{faq_code}/` |
 | **Permission** | `IsAuthenticated` + `thing.can_view()` |
 
-Returns a single FAQ. Hidden FAQs are only visible to the thing owner and the questioner. Returns 404 for others.
+Returns a single FAQ. Hidden FAQs are only visible to a **manager** of the thing (`Thing.can_manage` — owner or a PROPRIETARY collection's curator) and the questioner. Returns 404 for others.
 
 ### FAQAnswerView
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/answer/` |
-| **Permission** | `IsAuthenticated` + thing owner only |
+| **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Answers a FAQ. Sends notification email to questioner.
+Answers a FAQ. Sends a notification email + in-app to the questioner, naming whoever answered (`request.user.name`, bare — L2).
 
 **Request body:**
 ```json
@@ -715,14 +715,14 @@ Answers a FAQ. Sends notification email to questioner.
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/hide/` |
-| **Permission** | `IsAuthenticated` + thing owner only |
+| **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
 Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text).
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/show/` |
-| **Permission** | `IsAuthenticated` + thing owner only |
+| **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
 Shows a previously hidden FAQ.
 
@@ -883,25 +883,25 @@ Lists all booking requests made by the current user, ordered by `-created`.
 | **Permission** | `IsAuthenticated` |
 | **Pagination** | `StandardResultsPagination` |
 
-Lists all booking requests for things owned by the current user, ordered by `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`. (It was implemented and documented for a long time with no caller at all: an owner's only routes to a pending request were the email, an inbox banner, or opening each collection in turn.)
+Lists booking requests on the current user's own things, **plus** (2026-09) every booking on a thing in a **PROPRIETARY** collection they curate (owner or co-curator) — `.distinct()` over `Q(owner_code=user) | Q(thing_code__collections__mode=PROPRIETARY, …owner=user) | Q(…co_owners=user)`, since a shared catalogue's `booking.owner_code` is the thing's owner, who may be another curator. Ordered `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`.
 
 ### BookingCancelView
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/cancel/` |
-| **Permission** | `IsAuthenticated` + booking requester (**or the owner**, for a RESERVE booking) |
+| **Permission** | `IsAuthenticated` + booking requester (**or any curator of the reservations collection**, for a RESERVE booking) |
 
-Allows the requester to cancel their own pending booking. Validates `booking.requester_code == request.user`, checks `is_valid()`. Calls `cancel_booking()` service (restores Thing status to ACTIVE for single-use types), and deletes related RSVPs.
+Allows the requester to cancel their own pending booking. Validates `booking.requester_code == request.user`, checks `is_valid()`. Calls `cancel_booking()` service (restores Thing status to ACTIVE for single-use types), and deletes related RSVPs. **The non-RESERVE branch stays requester-only** — a curator kills a LEND/RENT/GIFT/SELL hold by *rejecting* it (`BookingActionView`), which mails the requester a decision.
 
-**RESERVE_THING branch:** when `booking.thing_type == RESERVE_THING` the view calls `cancel_reservation(booking, request.user)` instead — **the owner may cancel too** (rule 4: they may need the space), and only while the reservation hasn't started. The other party is notified (in-app + email). A confirmed reservation is `ACCEPTED`, not `PENDING`, so the `is_valid()` path never applied to it.
+**RESERVE_THING branch:** when `booking.thing_type == RESERVE_THING` the view calls `cancel_reservation(booking, request.user)` instead — **any curator of the reservations collection may cancel** (2026-09, `Thing.can_manage`; rule 4: they may need the space), and only while the reservation hasn't started. Everyone who didn't cancel is notified — the member (unless they were the one) and every other curator, in-app + email; `other_name` is always whoever actually cancelled. A confirmed reservation is `ACCEPTED`, not `PENDING`, so the `is_valid()` path never applied to it.
 
 **Responses:**
 | Status | Condition |
 |--------|-----------|
 | 200 | Cancelled |
 | 400 | Booking expired / already processed / reservation already started / not a reservation |
-| 403 | Not the requester (or, for a reservation, not the requester or owner) |
+| 403 | Not the requester (or, for a reservation, not the requester or a curator) |
 | 404 | Booking not found |
 
 ### BookingActionView
@@ -909,23 +909,23 @@ Allows the requester to cancel their own pending booking. Validates `booking.req
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/accept/` |
-| **Permission** | `IsAuthenticated` + booking owner |
+| **Permission** | `IsAuthenticated` + a **manager** of the thing (`booking.owner_code == user` **or** `booking.thing_code.can_manage(user)`) |
 
-Accepts a pending booking. Validates `booking.owner_code == request.user`, checks `is_valid()`. Calls `accept_booking()` service, sends decision email via `send_booking_decision_email()`, and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links.
+Accepts a pending booking. Calls `finalize_booking_decision()`, sends the decision email via `send_booking_decision_email()`, and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links. A curator of a PROPRIETARY collection decides its holds, not only the founder (2026-09).
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/reject/` |
-| **Permission** | `IsAuthenticated` + booking owner |
+| **Permission** | `IsAuthenticated` + a manager of the thing (same as accept) |
 
-Rejects a pending booking. Same permission and validation as accept. Calls `reject_booking()` service, sends decision email, and deletes related RSVPs.
+Rejects a pending booking. Same permission and validation as accept.
 
 **Responses:**
 | Status | Condition |
 |--------|-----------|
 | 200 | Action completed |
 | 400 | Booking expired or already processed |
-| 403 | Not the booking owner |
+| 403 | Not a manager of the thing |
 | 404 | Booking not found |
 
 ---

@@ -5,6 +5,7 @@ All email action links use RSVP codes as intermediaries.
 Accept/reject can also be done by the owner via authenticated API endpoints.
 """
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import ListAPIView
@@ -13,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models.booking import BookingPeriod
+from core.models.collection import Collection
 from core.models.rsvp import RSVP
 from core.models.thing import Thing
 from core.pagination import StandardResultsPagination
@@ -93,9 +95,18 @@ class OwnerBookingsView(ListAPIView):
     pagination_class = StandardResultsPagination
 
     def get_queryset(self):
+        # Bookings on my own things, plus — since 2026-09 — every booking on a
+        # thing in a PROPRIETARY collection I curate (owner or co-curator): its
+        # curators run its bookings collectively, and `booking.owner_code` is
+        # the thing's owner, who in a shared catalogue may be another curator.
+        user = self.request.user
+        curated = Q(thing_code__collections__mode=Collection.Mode.PROPRIETARY) & (
+            Q(thing_code__collections__owner=user) | Q(thing_code__collections__co_owners=user)
+        )
         return (
-            BookingPeriod.objects.filter(owner_code=self.request.user)
+            BookingPeriod.objects.filter(Q(owner_code=user) | curated)
             .select_related("thing_code", "requester_code")
+            .distinct()
             .order_by("-created")
         )
 
@@ -105,8 +116,10 @@ class BookingCancelView(APIView):
     POST /api/v1/bookings/{booking_code}/cancel/
 
     Allows the requester to cancel their own pending booking. For a confirmed
-    on-site reservation (RESERVE_THING) **the owner may cancel too** (rule 4) —
-    and only while it hasn't started; the other party is notified.
+    on-site reservation (RESERVE_THING) **any curator of its collection may
+    cancel too** (rule 4) — and only while it hasn't started; everyone who
+    didn't cancel is notified. The non-RESERVE branch stays requester-only: a
+    curator kills a hold by rejecting it (`BookingActionView`).
     """
 
     permission_classes = [IsAuthenticated]
@@ -157,17 +170,23 @@ class BookingActionView(APIView):
     POST /api/v1/bookings/{booking_code}/accept/
     POST /api/v1/bookings/{booking_code}/reject/
 
-    Allows the thing owner to accept or reject a pending booking
-    via an authenticated API call (as an alternative to email RSVP links).
+    Allows a manager of the thing — its owner, or a curator of a PROPRIETARY
+    collection it sits in — to accept or reject a pending booking via an
+    authenticated API call (as an alternative to email RSVP links).
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_code, action):
-        booking = get_object_or_404(BookingPeriod, code=booking_code)
+        booking = get_object_or_404(
+            BookingPeriod.objects.select_related("thing_code"), code=booking_code
+        )
 
-        # Only the thing owner can accept/reject
-        if booking.owner_code_id != request.user.code:
+        # The thing owner, or a PROPRIETARY collection's curator, decides
+        if not (
+            booking.owner_code_id == request.user.code
+            or booking.thing_code.can_manage(request.user.code)
+        ):
             return Response(
                 {"error": "Not authorized"},
                 status=status.HTTP_403_FORBIDDEN,

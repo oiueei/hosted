@@ -211,11 +211,11 @@ The `FAQ` model represents a question and answer about a thing. Invited users ca
 1. **FK to Thing** - Each FAQ references a thing via ForeignKey.
 2. **FK to User** - Questioner tracked via ForeignKey (`SET_NULL` — the Q&A outlives a deleted account, anonymised).
 3. **Only invited users can ask** - Must be invited to the collection containing the thing.
-4. **Owner cannot ask questions** - Returns 400 Bad Request.
-5. **Only owner can answer** - Returns 403 Forbidden for others.
+4. **A manager cannot ask questions** - the thing owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`) — they answer, they don't ask. Returns 400 Bad Request.
+5. **Only a manager can answer** - The thing owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09 — a PROPRIETARY space's curators run its FAQs together). 403 for everyone else. In COMMUNITY, still the thing owner alone — a member owns what they contribute.
 6. **Default visible** - New FAQs have `is_visible=True`.
-7. **Only owner can change visibility** - Via `/faq/{code}/hide/` or `/faq/{code}/show/`.
-8. **Email notifications** - Owner notified on new question. Questioner notified on answer/hide.
+7. **Only a manager can change visibility** - Via `/faq/{code}/hide/` or `/faq/{code}/show/` (`Thing.can_manage`); a manager and the questioner also see hidden FAQs.
+8. **Email notifications** - The thing **owner** is notified on a new question — **not** fanned out to co-curators (unlike a reservation notice); a co-curator who answers has to find the question themselves. The questioner is notified on answer/hide, by whoever acted.
 
 ### Methods
 
@@ -311,8 +311,10 @@ the live availability window) but its create/cancel flow lives in
 created straight to `ACCEPTED`, no RSVP accept/reject pair is minted, no
 `ThingTransfer` is written, and both parties are emailed at once. The
 accept/reject/`finalize_booking_decision` machinery is never reached for it.
-Either the requester **or the owner** may cancel one that hasn't started yet
-(`BookingCancelView` branches on `thing_type`); the other party is notified.
+Either the requester **or any curator** of the reservations collection (owner or
+co-curator, `Thing.can_manage`, 2026-09) may cancel one that hasn't started yet
+(`BookingCancelView` branches on `thing_type`); everyone who didn't cancel is
+notified.
 
 ### Business Rules
 
@@ -320,7 +322,7 @@ Either the requester **or the owner** may cancel one that hasn't started yet
 2. **Date-based (LEND/RENT)**: `start_date` and `end_date` required. No **strictly** overlapping bookings — a booking's return day may be the next booking's pickup day (back-to-back handovers); only a shared *interior* day conflicts. Thing stays ACTIVE.
 3. **Single-use (GIFT/SELL)**: No dates. Thing status changes to TAKEN on request, INACTIVE on accept. When `is_endless=True`: multiple simultaneous PENDING bookings allowed, status never TAKEN, thing stays ACTIVE after accept, no ThingTransfer created.
 4. **Accept/reject/cancel via services** - `booking_service.accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status changes.
-5. **Requester can cancel** - Requesters can cancel their own PENDING bookings. For single-use things, cancellation restores status to ACTIVE.
+5. **Requester can cancel** - Requesters can cancel their own PENDING bookings. For single-use things, cancellation restores status to ACTIVE. **For a RESERVE reservation, a curator of its collection may also cancel** (2026-09), and the accept/reject decision on a LEND/RENT/GIFT/SELL hold is a curator's too (`BookingActionView`), not only the founder's.
 
 ### Methods
 
@@ -461,8 +463,8 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `INVITE_PROPOSAL_DECLINED` | The owner declines it | The proposer | `collection_headline`, `collection_code`, `owner_name`, `email` |
 | `PROMOTED_CO_OWNER` | The owner promotes a member to co-owner (`CollectionCoOwnerView.post`, first promotion only) | The promoted member | `collection_headline`, `collection_code` |
 | `DEMOTED_CO_OWNER` | The owner demotes a co-owner back to a plain member (`CollectionCoOwnerView.delete`) | The demoted member | `collection_headline`, `collection_code` |
-| `RESERVATION_MADE` | A member auto-confirms an on-site reservation (RESERVE_THING) | Thing owner (a notice, not a question — nothing to accept) | `thing_headline`, `requester_name`, `start_date`, `end_date`, `booking_code`, `thing_code`, `collection_code` |
-| `RESERVATION_CANCELLED` | Either party cancels a not-yet-started reservation | The party that did **not** cancel | `thing_headline`, `other_name`, `start_date`, `end_date`, `thing_code`, `cancelled_by_owner` |
+| `RESERVATION_MADE` | A member auto-confirms an on-site reservation (RESERVE_THING) | **Every curator** of the reservations collection (owner + co-curators), deduped, minus the requester if they are one — a notice, not a question | `thing_headline`, `requester_name`, `start_date`, `end_date`, `booking_code`, `thing_code`, `collection_code` |
+| `RESERVATION_CANCELLED` | Requester or any curator cancels a not-yet-started reservation | Everyone bar whoever cancelled: the member (if a curator cancelled) **and every other curator** | `thing_headline`, `other_name` (always whoever actually cancelled), `start_date`, `end_date`, `thing_code`, `cancelled_by_owner` (true only on the member's copy) |
 
 **The three above went unrendered until the 2026-08 design round.** `InboxNotifications` had no `case` for any of them, so all three fell through to the `BROADCAST` default and drew a card reading `" — {headline}"` with an empty body — worst of all the decline, whose payload carries `owner_name` and so rendered as a blank message *from the owner*. Approval also used to reuse `INVITE_PROPOSED` with `approved: True`, one type addressing two audiences with opposite meanings; it now has its own type, and the inbox still reads the legacy flag so rows written before the split render correctly. Any new `Type` added here owes a matching `case` in `notificationLabel`/`notificationBody` — the `default` branch is broadcast copy, not a safe fallback.
 
@@ -470,7 +472,7 @@ The booking payloads carry **`thing_code` + `collection_code`** for the same rea
 
 ### Business Rules
 
-1. **One notification per action** — Created atomically alongside the corresponding email.
+1. **One notification per action** — created atomically alongside the corresponding email. **Reservations are the exception (2026-09): one per curator.** `RESERVATION_MADE` / `RESERVATION_CANCELLED` fan out to every curator of the reservations collection so a team that runs a space all hears it — deduped, and never to whoever performed the action.
 2. **Dismissal via DELETE** — `DELETE /api/v1/inbox/{code}/` removes the record (one-time dismiss).
 3. **A settled request clears its own notification** — `BOOKING_REQUESTED` asks the owner to decide; accept, reject and requester-cancel all answer that question, and `booking_service._clear_request_notifications()` deletes the notification (matched by `payload__booking_code`) so the inbox never asks twice. Rows written before the key existed don't match and stay until dismissed by hand.
 4. **Ordered newest-first** — Default ordering is `-created`.
