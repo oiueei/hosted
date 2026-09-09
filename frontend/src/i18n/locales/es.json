@@ -375,6 +375,11 @@
     "backTo": "Volver a {{label}}",
     "errorSending": "Error al enviar la solicitud."
   },
+  "datePicker": {
+    "open": "Elegir fecha",
+    "select": "Seleccionar",
+    "close": "Cerrar"
+  },
   "upload": {
     "uploading": "Cargando…",
     "uploadError": "Error al cargar. Inténtalo de nuevo.",

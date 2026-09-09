@@ -381,6 +381,11 @@
     "backTo": "Back to {{label}}",
     "errorSending": "Error sending request."
   },
+  "datePicker": {
+    "open": "Choose date",
+    "select": "Select",
+    "close": "Close"
+  },
   "upload": {
     "uploading": "Uploading…",
     "uploadError": "Upload failed. Please try again.",

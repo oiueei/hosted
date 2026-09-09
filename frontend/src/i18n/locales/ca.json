@@ -375,6 +375,11 @@
     "backTo": "Tornar a {{label}}",
     "errorSending": "Error en enviar la sol·licitud."
   },
+  "datePicker": {
+    "open": "Triar data",
+    "select": "Seleccionar",
+    "close": "Tancar"
+  },
   "upload": {
     "uploading": "Carregant…",
     "uploadError": "Error en carregar. Torna-ho a intentar.",
