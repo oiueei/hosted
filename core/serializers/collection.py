@@ -120,6 +120,10 @@ class CollectionSerializer(serializers.ModelSerializer):
     is_digest_muted = serializers.SerializerMethodField()
     pending_proposals = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
+    # Seed/onboarding collection — `seed_demo` sets it, no API path writes it.
+    # The SPA shows a demo notice on it when this deployment supplies the copy
+    # (`demoNotice.*` i18n keys); upstream there are none, so nothing renders.
+    is_onboarding = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Collection
@@ -152,6 +156,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "welcome_doc_url",
             "pause_message",
             "is_paused",
+            "is_onboarding",
             "things",
             "invites",
             "pending_invites",
@@ -166,6 +171,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "owner",
             "created",
             "is_paused",
+            "is_onboarding",
             "things",
             "invites",
             "pending_invites",

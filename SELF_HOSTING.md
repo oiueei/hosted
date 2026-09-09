@@ -170,6 +170,15 @@ both**.
 language file lands, so a deployment's strings stay out of
 `i18n/locales/*.json` — three files upstream edits constantly.
 
+One string set is worth knowing about because it turns a feature on rather than
+just relabelling one: **`demoNotice.title` / `.body` / `.realNote`**. Supply them
+and every page of an `is_onboarding` collection — the collection, its things, a
+hold request — carries a "this is a demo" banner (`components/DemoNotice.jsx`,
+which renders nothing until the keys exist). `.body` says what *is* demo (shared,
+periodically reset); `.realNote` says what is not (the visitor's own collections
+are real and kept) — a demo warning that scared people off their own work would
+be worse than none.
+
 ---
 
 ## What upstream deliberately does not have
@@ -187,7 +196,8 @@ If you want an open door, `is_onboarding` is still on `Collection` and
 `DEPLOYMENT_URLCONFS`, can create the account and join it to every collection
 carrying that flag. The column, the flag and the landing contract
 (`landing: "welcome"` on a targetless magic link) are all still here, working,
-waiting for a door you write.
+waiting for a door you write — and the `demoNotice.*` strings above put an
+honest banner on the seed collections your visitors land in.
 
 ## Licence, and the honest version of "auditable"
 

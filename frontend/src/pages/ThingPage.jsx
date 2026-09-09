@@ -11,6 +11,7 @@ import ThingInfoRows from '../components/ThingInfoRows';
 import OwnerBookingsList from '../components/OwnerBookingsList';
 import ThingReportFooter from '../components/ThingReportFooter';
 import ThingFaqSection from '../components/ThingFaqSection';
+import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
 import MarkdownText from '../components/MarkdownText';
 import ImageCarousel from '../components/ImageCarousel';
@@ -172,6 +173,7 @@ export default function ThingPage() {
   return (
     <PageLayout backTo={backPath} backLabel={backLabel}>
       <div className="form-grid">
+        {thing.collection_is_onboarding && <DemoNotice />}
         {(() => {
           const images = [thing.thumbnail_url, ...(thing.gallery_urls || [])].filter(Boolean);
           if (images.length === 0) return null;

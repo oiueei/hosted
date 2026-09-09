@@ -10,6 +10,7 @@ import MarkdownText, { sanitizeUrl } from '../components/MarkdownText';
 import ShareCollectionMenu from '../components/ShareCollectionMenu';
 import ThingLinkbox from '../components/ThingLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
+import DemoNotice from '../components/DemoNotice';
 import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
@@ -451,6 +452,7 @@ export default function CollectionPage() {
         />
       </div>
       <div className="page-container">
+        {collection.is_onboarding && <DemoNotice />}
         {/* Each viewer's own notifications for this collection — a hold request or a
           FAQ question is answered on the thing, so it should reach whoever owns
           that thing where it actually lives, not only on Home. The endpoint always
