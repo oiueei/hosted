@@ -137,6 +137,14 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
     const paragraphs = [...container.querySelectorAll('p')];
     expect(paragraphs.some((p) => p.textContent.trim() === '')).toBe(false);
   });
+
+  test('the front door says out loud that OIUEEI is in alpha', () => {
+    // The same sentence the FAQ and the legal notice carry (common.alphaNotice).
+    // Buried nowhere: a newcomer deciding whether to trust this reads it before
+    // they type an email.
+    renderLogin();
+    expect(screen.getByText(/OIUEEI is in alpha: nothing is finished/i)).toBeInTheDocument();
+  });
 });
 
 describe('LoginPage hero title-logo (S9)', () => {

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import i18n from 'i18next';
@@ -116,6 +116,44 @@ describe('RequestThingPage (what the pickers produce is what the POST carries)',
 
     expect(await screen.findByText('Date overlaps with another booking.')).toBeInTheDocument();
     expect(screen.queryByText("You're all set!")).not.toBeInTheDocument();
+  });
+});
+
+describe('the date picker chrome speaks the UI language', () => {
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'TEST01');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    i18n.removeResourceBundle('en', 'translation');
+    i18n.addResourceBundle('en', 'translation', en);
+  });
+
+  // HDS's DateInput only localises its calendar to en/fi/sv (the `language`
+  // prop); es and ca are not options. What it does expose are these three label
+  // props. Overriding the i18n keys and watching the labels follow proves they
+  // are wired — a hard-coded string, or leaning on `language` alone, would
+  // ignore this.
+  test('the open, confirm and close labels come from i18n, not HDS defaults', async () => {
+    i18n.addResourceBundle(
+      'en',
+      'translation',
+      { datePicker: { open: 'Abrir calendario', select: 'Confirmar', close: 'Cerrar' } },
+      true,
+      true
+    );
+    mockRoutes({ thing: RENTAL_THING });
+    const { container } = renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    const openBtn = screen.getByRole('button', { name: 'Abrir calendario' });
+    expect(screen.queryByRole('button', { name: 'Choose date' })).not.toBeInTheDocument();
+
+    fireEvent.click(openBtn);
+    await waitFor(() => expect(container.querySelector('[data-date]')).toBeTruthy());
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cerrar' })).toBeInTheDocument();
   });
 });
 

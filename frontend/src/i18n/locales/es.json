@@ -97,7 +97,8 @@
     "back": "Volver",
     "formerMember": "Antiguo miembro",
     "aMember": "Un miembro",
-    "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada."
+    "closeThisTab": "Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.",
+    "alphaNotice": "OIUEEI está en fase alfa: nada está terminado y encontrarás bordes sin pulir."
   },
   "titles": {
     "home": "Inicio — OIUEEI",
@@ -374,6 +375,11 @@
     "successMessage": "Ya hemos avisado al propietario — te responderá pronto.",
     "backTo": "Volver a {{label}}",
     "errorSending": "Error al enviar la solicitud."
+  },
+  "datePicker": {
+    "open": "Elegir fecha",
+    "select": "Seleccionar",
+    "close": "Cerrar"
   },
   "upload": {
     "uploading": "Cargando…",

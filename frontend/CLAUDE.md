@@ -615,7 +615,16 @@ the dead prop, since the failure is invisible on screen.
 product's three locales is among the other two.
 
 `language="en"` is still right on `DateInput` and `Accordion`, which do honour
-it — verified, not assumed.
+it — verified, not assumed. `DateInput`'s `language` only reaches fi/sv/en, so
+its calendar's **month and weekday names stay English** for an es/ca reader
+(HDS bundles only those three date-fns locales, hard-keyed off the prop — there
+is no seam to inject a fourth). What *is* reachable are three label props, and
+`RequestThingPage`'s four `DateInput`s now pass them from i18n
+(`datePicker.open` / `.select` / `.close` → `openButtonAriaLabel` /
+`selectButtonLabel` / `closeButtonLabel`); `dateOutsideRangeErrorText` /
+`malformedDateErrorText` were already localised. Full es/ca months/weekdays
+would mean replacing the calendar itself — deferred, and if done it goes in
+both editions, not hosted-only. `RequestThingPage.test.jsx` pins the wiring.
 
 Additional API notes: `value` is an array (`[{ label, value }]`), `onChange`
 receives an array (`(sel) => sel[0].value`), error text uses the `error` prop

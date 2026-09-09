@@ -261,3 +261,114 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "05/03/2026" in body and "12/03/2026" in body
     assert "05/03/2026" in html
     assert "2026-03-05" not in body and "2026-03-05" not in html
+
+
+# --- The collection name is the header, not the OIUEEI logo -----------------
+#
+# People recognise the group they're in, not the software. So a collection-
+# scoped email leads with the collection name where the logo used to sit, and
+# the logo drops to a half-size mark below the legal link.
+
+
+@pytest.mark.django_db
+def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, thing):
+    """The `thing` fixture lives in "Test Collection". A reservation-style email
+    about it names that collection at the top, drops the wordmark to the
+    half-size mark at the foot, and puts the name on the first line of the
+    plain body too."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 3, 5),
+        end_date=date(2026, 3, 6),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    email_service.send_reservation_notice_email(user.email, user2, thing, booking)
+
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+    # The name is the header: bold, before the body, before the legal link.
+    assert "Test Collection" in html
+    assert html.index("Test Collection") < html.index("Legal")
+    # The wordmark is the half-size mark now, after the legal link, not the
+    # full one at the top.
+    assert 'height="15"' in html and 'height="30"' not in html
+    assert html.index("Legal") < html.index('height="15"')
+    # Plain-text body opens with the collection name.
+    assert msg.body.startswith("Test Collection")
+
+
+@pytest.mark.django_db
+def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
+    """A thing in no collection has no group to name, so the OIUEEI wordmark
+    stays where it was — full size, at the top — and nothing is prepended to
+    the plain body."""
+    from datetime import date
+
+    from core.models import BookingPeriod, Thing
+
+    loner = Thing.objects.create(code="LONER1", type="LEND_THING", owner=user, headline="Ladder")
+    booking = BookingPeriod.objects.create(
+        thing_code=loner,
+        thing_type=loner.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 3, 5),
+        end_date=date(2026, 3, 12),
+        status=BookingPeriod.Status.PENDING,
+    )
+
+    email_service.send_booking_request_email(
+        user2, loner, booking, user.email, "http://x/a", "http://x/r"
+    )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert 'height="30"' in html and 'height="15"' not in html
+    assert not mail.outbox[0].body.startswith("Ladder")
+
+
+@pytest.mark.django_db
+def test_a_non_collection_email_is_unchanged(user):
+    """Account-lifecycle mail (here: the erasure link) has no collection, so it
+    keeps the wordmark on top and grows no header."""
+    email_service.send_account_delete_email(user, "http://x/confirm")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert 'height="30"' in html and 'height="15"' not in html
+
+
+@pytest.mark.django_db
+def test_the_header_speaks_the_readers_language(user):
+    """A bilingual collection headline resolves to the reader's own language in
+    the header, like every other owner-written value in an email."""
+    import json
+
+    from core.models import Collection, User
+
+    catalan = User.objects.create(email="ca@example.com", language="ca")
+    collection = Collection.objects.create(
+        code="BILN01",
+        owner=user,
+        headline=json.dumps({"es": "Cosas de casa", "ca": "Coses de casa"}),
+    )
+    collection.invites.add(catalan)
+
+    email_service.send_collection_revoke_email(
+        "Owner", collection.headline, catalan.email, collection=collection
+    )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert "Coses de casa" in html and "Cosas de casa" not in html
+    # No bold repeat of the name in the body — the header carries it now.
+    assert "<strong>Coses de casa</strong>" not in html
