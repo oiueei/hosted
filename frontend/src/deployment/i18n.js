@@ -22,6 +22,15 @@ export const deploymentI18n = {
       errorSendingLink: 'Error sending link.',
       alreadyHaveAccount: 'Already have an account? Sign in →',
     },
+    // The "you're looking at demo data" banner. The product (`DemoNotice`)
+    // renders it on every page of an `is_onboarding` collection, but only once
+    // these three keys exist — see SELF_HOSTING.md §4.
+    demoNotice: {
+      title: 'This is a demo collection',
+      body: 'The example collections are shared with everyone who pops in, and get reset every so often — reserving, borrowing or buying here does nothing real. Click around and see how OIUEEI works.',
+      realNote:
+        'Collections you create yourself are the real thing: private to the people you invite, and never reset.',
+    },
     welcome: {
       greeting: 'Hello, {{name}}',
       pageTitle: 'Welcome to OIUEEI!',
@@ -91,6 +100,12 @@ export const deploymentI18n = {
         'Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.',
       alreadyHaveAccount: '¿Ya tienes cuenta? Inicia sesión →',
       errorSendingLink: 'Error al enviar el enlace.',
+    },
+    demoNotice: {
+      title: 'Esto es una colección de demostración',
+      body: 'Las colecciones de ejemplo son compartidas por todo el que entra, y se reinician cada cierto tiempo: reservar, pedir prestado o comprar aquí no ejecuta ninguna acción real. Prueba lo que quieras y mira cómo funciona OIUEEI.',
+      realNote:
+        'Las colecciones que crees tú son de verdad: privadas para quien invites, y no se reinician nunca.',
     },
     welcome: {
       greeting: 'Hola, {{name}}',
@@ -162,6 +177,12 @@ export const deploymentI18n = {
         "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada.",
       alreadyHaveAccount: 'Ja tens un compte? Inicia sessió →',
       errorSendingLink: "Error en enviar l'enllaç.",
+    },
+    demoNotice: {
+      title: 'Això és una col·lecció de demostració',
+      body: "Les col·leccions d'exemple són compartides per tothom qui entra, i es reinicien cada cert temps: reservar, demanar en préstec o comprar aquí no executa cap acció real. Prova el que vulguis i mira com funciona OIUEEI.",
+      realNote:
+        'Les col·leccions que creïs tu són de debò: privades per a qui convidis, i no es reinicien mai.',
     },
     welcome: {
       greeting: 'Hola, {{name}}',
