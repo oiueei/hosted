@@ -284,33 +284,36 @@ export default function CollectionPage() {
             {collection.description && (
               <MarkdownText text={L(collection.description)} className="form-hero-text" />
             )}
-            {!isOwner && collection.owner_name && (
-              <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
-                <strong>
-                  {t(
-                    collection.mode === 'COMMUNITY'
-                      ? 'collectionPage.curator'
-                      : 'collectionPage.owner'
-                  )}
-                </strong>{' '}
-                <Link to={`/${collection.owner}`} className="owner-link">
-                  {collection.owner_name}
-                </Link>
-              </p>
-            )}
-            {collection.co_owners?.length > 0 && (
-              <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
-                <strong>{t('collectionPage.coOwnersLabel')}</strong>{' '}
-                {collection.co_owners.map((co, i) => (
-                  <span key={co.code}>
-                    {i > 0 && ', '}
-                    <Link to={`/${co.code}`} className="owner-link">
-                      {co.name}
+            {/* Attribution. With co-curators, one line names the whole team,
+                founder first, everyone at the same level and shown to everyone
+                (2026-09). Without, the single founder line, and only to
+                non-owners — the owner knows who they are. */}
+            {collection.co_owners?.length > 0
+              ? collection.owner_name && (
+                  <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                    <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
+                    {[
+                      { code: collection.owner, name: collection.owner_name },
+                      ...collection.co_owners,
+                    ].map((c, i) => (
+                      <span key={c.code}>
+                        {i > 0 && ', '}
+                        <Link to={`/${c.code}`} className="owner-link">
+                          {c.name}
+                        </Link>
+                      </span>
+                    ))}
+                  </p>
+                )
+              : !isOwner &&
+                collection.owner_name && (
+                  <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                    <strong>{t('collectionPage.curator')}</strong>{' '}
+                    <Link to={`/${collection.owner}`} className="owner-link">
+                      {collection.owner_name}
                     </Link>
-                  </span>
-                ))}
-              </p>
-            )}
+                  </p>
+                )}
             {!isAuthenticated && (
               <p className="invite-nudge">
                 {t('collectionPage.anonIntro')}{' '}

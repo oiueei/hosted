@@ -60,7 +60,7 @@ export default function ThingPage() {
     handleRequest,
     handleActivate,
     handleBookingAction,
-    isOwner,
+    canManage,
     isCollectionOwner,
     isDateBased,
     needsPage,
@@ -143,7 +143,7 @@ export default function ThingPage() {
     return <LoadingSpinner />;
   }
 
-  // isOwner, type flags, canDelete, showButton, buttonDisabled and
+  // canManage, type flags, canDelete, showButton, buttonDisabled and
   // buttonLabel all come from useThingActions (destructured at the top).
 
   const editPath = code
@@ -207,7 +207,7 @@ export default function ThingPage() {
 
         {thing.description && <MarkdownText text={L(thing.description)} />}
 
-        <ThingTags thing={thing} isOwner={isOwner} showType={false} />
+        <ThingTags thing={thing} isOwner={canManage} showType={false} />
 
         <ThingInfoRows thing={thing} isDateBased={isDateBased} />
 
@@ -215,11 +215,11 @@ export default function ThingPage() {
         <OwnerBookingsList
           bookings={bookings}
           activePendingCode={activePendingCode}
-          isOwner={isOwner}
+          isOwner={canManage}
         />
 
         {/* Owner actions */}
-        {isOwner && thing.status === 'ACTIVE' && (
+        {canManage && thing.status === 'ACTIVE' && (
           <div className="button-col">
             {needsPage && activePendingCode && (
               <>
@@ -270,7 +270,7 @@ export default function ThingPage() {
           </div>
         )}
 
-        {isOwner && thing.status === 'TAKEN' && (
+        {canManage && thing.status === 'TAKEN' && (
           <div className="button-col">
             {acceptTransfersOwnership ? (
               <InlineConfirm
@@ -310,7 +310,7 @@ export default function ThingPage() {
           </div>
         )}
 
-        {isOwner && thing.status === 'INACTIVE' && (
+        {canManage && thing.status === 'INACTIVE' && (
           <div className="button-row">
             <Button
               style={{ ...btnStyle, width: '100%' }}
@@ -361,7 +361,7 @@ export default function ThingPage() {
           </Button>
         )}
 
-        {isCollectionOwner && !isOwner && (
+        {isCollectionOwner && !canManage && (
           <div className="button-row">
             <Button
               variant="secondary"
@@ -376,7 +376,7 @@ export default function ThingPage() {
         {/* FAQs Section */}
         <ThingFaqSection
           thingCode={thing.code}
-          isOwner={isOwner}
+          isOwner={canManage}
           isAuthenticated={isAuthenticated}
           btnStyle={btnStyle}
           btnSecondaryStyle={btnSecondaryStyle}
@@ -428,7 +428,7 @@ export default function ThingPage() {
           </>
         )}
         {/* Report footer — logged-in non-owners can flag the listing. */}
-        {isAuthenticated && !isOwner && (
+        {isAuthenticated && !canManage && (
           <ThingReportFooter thingCode={thing.code} onToast={setToast} />
         )}
       </div>

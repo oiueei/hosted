@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
@@ -932,11 +932,21 @@ describe('CollectionPage as a co-owner', () => {
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  test('is named on the collection page as a co-curator, alongside the founder', async () => {
+  test('the hero names the whole team on one "Co-curators:" line, founder first', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
-        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
+        : Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              ...CO_OWNED,
+              co_owners: [
+                { code: 'ABC123', name: 'Me' },
+                { code: 'XYZ999', name: 'Nil' },
+              ],
+            }),
+          })
     );
 
     render(
@@ -947,8 +957,40 @@ describe('CollectionPage as a co-owner', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('The Founder')).toBeInTheDocument();
-    expect(screen.getByText('Me')).toBeInTheDocument();
+    const line = (await screen.findByText(/Co-curators:/)).closest('p');
+    // founder first, then each co-curator, all linked
+    expect(line).toHaveTextContent('Co-curators: The Founder, Me, Nil');
+    expect(within(line).getByRole('link', { name: 'The Founder' })).toHaveAttribute(
+      'href',
+      '/OTHER1'
+    );
+    expect(within(line).getByRole('link', { name: 'Nil' })).toHaveAttribute('href', '/XYZ999');
+    // the separate single-owner line is gone
+    expect(screen.queryByText('Curator:')).not.toBeInTheDocument();
+  });
+
+  test('with no co-curators the hero shows the single "Curator:" line (non-owner viewer)', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ ...CO_OWNED, co_owners: [], is_curator: false, is_member: true }),
+          })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const line = (await screen.findByText(/Curator:/)).closest('p');
+    expect(line).toHaveTextContent('Curator: The Founder');
+    expect(screen.queryByText(/Co-curators:/)).not.toBeInTheDocument();
   });
 
   test('still sees their own digest switch, since they remain an ordinary invitee for it', async () => {

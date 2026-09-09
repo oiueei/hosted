@@ -259,6 +259,26 @@ describe('ThingLinkbox — owner button matrix', () => {
     // The Delete button is suppressed while a pending hold exists.
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
   });
+
+  test('a co-curator (can_manage, not owner) gets the owner matrix, not the hold button', () => {
+    // A PROPRIETARY collection's curator runs its catalogue — the backend says
+    // so via `thing.can_manage`, and the card keys off that, not `owner`.
+    const thing = makeThing({ status: 'ACTIVE', owner: 'OWNER1', can_manage: true });
+    renderLinkbox({ thing, userCode: 'CURATOR2' });
+
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Claim' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hold' })).toBeNull();
+  });
+
+  test('a plain member (can_manage false) still sees the hold button, not the matrix', () => {
+    const thing = makeThing({ status: 'ACTIVE', owner: 'OWNER1', can_manage: false });
+    renderLinkbox({ thing, userCode: 'MEMBER3' });
+
+    expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Claim|Hold/ })).toBeInTheDocument();
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════════

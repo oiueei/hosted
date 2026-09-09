@@ -18,7 +18,7 @@ from rest_framework.viewsets import ModelViewSet
 from core.models import Collection, Thing
 from core.models.event import Event
 from core.pagination import StandardResultsPagination
-from core.permissions import IsThingOwner
+from core.permissions import IsThingManager
 from core.serializers import (
     ThingBulkRowSerializer,
     ThingCreateSerializer,
@@ -113,7 +113,9 @@ class ThingViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("update", "partial_update", "activate", "hide"):
-            return [IsAuthenticated(), IsThingOwner()]
+            # IsThingManager: the thing owner, or a curator of a PROPRIETARY
+            # collection it sits in — those curators run the catalogue.
+            return [IsAuthenticated(), IsThingManager()]
         # Anonymous read for retrieve; can_view() still gates it (a thing is only
         # visible without membership when it sits in a PUBLIC, ACTIVE collection).
         if self.action == "retrieve":
@@ -121,8 +123,14 @@ class ThingViewSet(ModelViewSet):
         return [IsAuthenticated()]
 
     def _can_delete(self, thing, user_code):
-        """Collection owner always; thing owner only if no transfers have occurred."""
+        """A collection owner (any mode); a co-curator of a PROPRIETARY
+        collection it sits in; or the thing owner while it has never changed
+        hands."""
         if thing.collections.filter(owner_id=user_code).exists():
+            return True
+        if thing.collections.filter(
+            mode=Collection.Mode.PROPRIETARY, co_owners__code=user_code
+        ).exists():
             return True
         return thing.is_owner(user_code) and not thing.transfers.exists()
 
@@ -285,7 +293,7 @@ class ThingViewSet(ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="hide")
     def hide(self, request, code=None):
-        # Owner-only via IsThingOwner (get_permissions) + get_object()'s
+        # Manager-gated via IsThingManager (get_permissions) + get_object()'s
         # check_object_permissions — same as activate, instead of a hand-rolled
         # owner check with a bespoke 403 body.
         thing = self.get_object()

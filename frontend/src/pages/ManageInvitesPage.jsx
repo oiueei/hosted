@@ -41,11 +41,9 @@ export default function ManageInvitesPage() {
   useEffect(() => {
     document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault');
   }, [headline, t]);
-  // The strict founder check — only who may promote/demote a co-owner keys on
-  // it now. Everything else that used to be `isOwner`-gated here (the whole
-  // management UI) reads `isCurator` instead, the server-computed field that
-  // also admits a co-owner.
-  const [isOwner, setIsOwner] = useState(false);
+  // The whole management UI — promoting/demoting a co-curator included, since
+  // 2026-09 — reads `isCurator`, the server-computed field that admits a
+  // co-owner. The founder is no longer a distinct client-side tier here.
   const [isCurator, setIsCurator] = useState(false);
   const [coOwnerCodes, setCoOwnerCodes] = useState(new Set());
   const [inviteEmail, setInviteEmail] = useState('');
@@ -65,7 +63,6 @@ export default function ManageInvitesPage() {
         setPendingInvites(data.pending_invites || []);
         setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
-        setIsOwner(localStorage.getItem('userCode') === data.owner);
         setIsCurator(!!data.is_curator);
         setCoOwnerCodes(new Set((data.co_owners || []).map((u) => u.code)));
         setLoadError('');
@@ -144,10 +141,9 @@ export default function ManageInvitesPage() {
     }
   };
 
-  // Promote/demote a co-owner. Owner-only, like the endpoint it calls —
-  // appointing a second admin stays with the one person accountable for the
-  // CASCADE-delete root. Re-fetches rather than patching state locally: the
-  // set of co-owners is small and this keeps it the server's own word.
+  // Promote/demote a co-curator. Any curator may, like the endpoint it calls
+  // (2026-09). Re-fetches rather than patching state locally: the set of
+  // co-owners is small and this keeps it the server's own word.
   const togglePromote = async (userCode, promote) => {
     setPromoting(userCode);
     try {
@@ -351,10 +347,11 @@ export default function ManageInvitesPage() {
                             <IconEnvelope aria-hidden />
                           </TooltipButton>
                         )}
-                        {/* Promoting/demoting a co-owner stays owner-only, unlike
-                        every other control in this column — appointing a second
-                        admin doesn't delegate further than the founder. */}
-                        {isOwner && !row._isPending && (
+                        {/* Any curator promotes or demotes a co-curator now
+                        (2026-09) — the founder is not a distinct tier here.
+                        The founder's own row cannot be demoted (they are an
+                        FK, not an invites row), so it never carries this. */}
+                        {isCurator && !row._isPending && (
                           <TooltipButton
                             tooltip={
                               row._isCoOwner

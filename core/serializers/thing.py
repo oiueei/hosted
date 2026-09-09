@@ -57,7 +57,11 @@ def optimise_thing_queryset(queryset, *, with_collections=False):
     """
     related = ["faq_set", "deal"]
     if with_collections:
+        # `collections__co_owners` feeds the `can_manage` field: a PROPRIETARY
+        # collection's curator manages its whole catalogue (2026-09), and
+        # `Collection.is_curator` reads `co_owners` via `.all()`.
         related.insert(0, "collections")
+        related.insert(1, "collections__co_owners")
     return (
         queryset.select_related("owner")
         .annotate(_transfer_count=Count("transfers", distinct=True))
@@ -109,6 +113,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     transfer_count = serializers.SerializerMethodField()
     available_today = serializers.SerializerMethodField()
     next_available = serializers.SerializerMethodField()
+    can_manage = serializers.SerializerMethodField()
 
     def _reading_collection(self, obj):
         """The collection this thing is being read *through*, or ``None``.
@@ -124,6 +129,34 @@ class ThingComputedFieldsMixin(serializers.Serializer):
             return collection
         resolver = getattr(self, "_viewable_collection", None)
         return resolver(obj) if resolver else None
+
+    def get_can_manage(self, obj):
+        """Whether the reader may run this thing's catalogue entry — edit,
+        hide, activate, delete — which the frontend gates those controls on.
+        True for the thing owner, or a curator of a **PROPRIETARY** collection
+        it is being read through (`Thing.can_manage`, one tier wider than
+        `is_owner`).
+
+        Judged against the *reading* collection only — the one the grid or the
+        thing endpoint resolved — never by walking every collection the thing
+        sits in: that keeps it prefetch-safe, and the worst it can do is hide
+        a control the API would still allow (`IsThingManager` re-checks the
+        real `Thing.can_manage` on the mutation itself).
+        """
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated):
+            return False
+        code = request.user.code
+        if obj.is_owner(code):
+            return True
+        from core.models.collection import Collection
+
+        collection = self._reading_collection(obj)
+        return bool(
+            collection is not None
+            and collection.mode == Collection.Mode.PROPRIETARY
+            and collection.is_curator(code)
+        )
 
     def get_owner_name(self, obj):
         # Withheld from readers with no account when the owner is *not* the
@@ -191,14 +224,18 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         rows were already in memory: `_blocked_periods` is the same PENDING +
         ACCEPTED set, prefetched to compute availability.
 
-        `None` for anyone who isn't the thing's owner — requester names are not
+        `None` for anyone who can't manage the thing — requester names are not
         public — which also tells the client to fall back to fetching, so a
         serializer that hasn't been given a request still behaves as before.
+        A PROPRIETARY collection's co-curator manages its bookings, so they
+        see this list the same as the founder (`can_manage`, not `owner_id`).
         """
         from core.serializers.booking import BookingPeriodOwnerCalendarSerializer
 
         request = self.context.get("request")
-        if not (request and request.user.is_authenticated and obj.owner_id == request.user.code):
+        if not (request and request.user.is_authenticated):
+            return None
+        if not (obj.owner_id == request.user.code or self.get_can_manage(obj)):
             return None
         periods = (
             obj._blocked_periods
@@ -299,6 +336,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "bookings",
             "my_pending_booking",
             "pending_questions",
+            "can_manage",
             "collection_code",
             "collection_headline",
             "collection_owner",

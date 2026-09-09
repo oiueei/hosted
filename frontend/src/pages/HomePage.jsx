@@ -218,11 +218,13 @@ export default function HomePage() {
             <ButtonLink to="/my-bookings" style={btnSecondaryStyle}>
               {t('home.myRequests')}
             </ButtonLink>
-            {/* Only for people who can actually receive requests — owning a
-                *thing* is the test, not owning a collection: in a COMMUNITY
-                collection you can contribute a thing to someone else's group and
-                be asked for it there. */}
-            {user.things?.length > 0 && (
+            {/* For people who can actually receive requests — owning a *thing*
+                (a COMMUNITY contribution can be asked for in someone else's
+                group), or curating a PROPRIETARY collection whose whole
+                catalogue's bookings are the curators' collectively (2026-09), so
+                a co-curator who owns nothing still gets here. */}
+            {(user.things?.length > 0 ||
+              myCollections?.some((c) => c.mode === 'PROPRIETARY' && c.is_curator)) && (
               <ButtonLink to="/owner-bookings" style={btnSecondaryStyle}>
                 {t('home.requestsToMe')}
               </ButtonLink>

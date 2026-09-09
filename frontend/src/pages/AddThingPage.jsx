@@ -180,6 +180,18 @@ export default function AddThingPage() {
       return isOfferable(capabilities, 'thing_types', v);
     });
   })().map((v) => ({ label: t('types.' + v), value: v }));
+  // The `GIFT_THING` default can sit outside what the collection actually
+  // offers — an allowlist of two or more types, none of them GIFT — and then
+  // the form opens on a type the backend would refuse, showing the wrong
+  // downstream fields and (until HDS resolves it) the raw code in the selector.
+  // The single-type case is pre-selected in the fetch effect; this covers the
+  // rest, once the offered set (allowlist + deployment policy) is known.
+  const offeredTypes = typeOptions.map((o) => o.value).join(',');
+  useEffect(() => {
+    if (!offeredTypes) return;
+    const offered = offeredTypes.split(',');
+    if (!offered.includes(type)) setType(offered[0]);
+  }, [offeredTypes, type]);
   // What the "needs approval" notice diffs against: the collection's own
   // allowlist applied, the deployment's policy not yet — except a type an
   // invited member may already contribute here is not withheld, so it drops out.

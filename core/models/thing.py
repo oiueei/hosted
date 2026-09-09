@@ -135,6 +135,47 @@ class Thing(models.Model):
         """Check if the given user is the owner."""
         return self.owner_id == user_code
 
+    def can_manage(self, user_code):
+        """The thing owner, or a curator of a **PROPRIETARY** collection this
+        thing sits in — the thing-level twin of ``Collection.is_curator``.
+
+        In a PROPRIETARY collection every thing was added by a curator *for*
+        the group, so its curators (owner + co-curators) collectively run the
+        catalogue: edit / hide / activate / delete any thing, answer any FAQ,
+        decide any booking. COMMUNITY is deliberately excluded — there a member
+        owns what they contribute and a curator's reach stops at
+        ``remove_thing``.
+
+        Iterates ``collections.all()`` (and ``is_curator`` iterates
+        ``co_owners.all()``) rather than ``.filter().exists()`` so a view that
+        prefetched ``collections__co_owners`` pays no extra query — the same
+        reasoning as ``is_curator`` itself.
+        """
+        if self.is_owner(user_code):
+            return True
+        from core.models.collection import Collection
+
+        return any(
+            c.mode == Collection.Mode.PROPRIETARY and c.is_curator(user_code)
+            for c in self.collections.all()
+        )
+
+    def managers(self):
+        """Every ``User`` for whom ``can_manage`` is true — the thing owner,
+        plus the curators (owner + co-curators) of every PROPRIETARY collection
+        it sits in. Deduped by code. Used to fan a notice out to the whole
+        team that runs the thing (FAQ questions, reservation notices).
+        Prefetch-aware via ``collections`` / ``co_owners`` like ``can_manage``.
+        """
+        from core.models.collection import Collection
+
+        seen = {self.owner.code: self.owner}
+        for c in self.collections.all():
+            if c.mode == Collection.Mode.PROPRIETARY:
+                for u in [c.owner, *c.co_owners.all()]:
+                    seen.setdefault(u.code, u)
+        return list(seen.values())
+
     def reserve(self, user_code):
         """Test-only fixture helper: add a user to the deal M2M.
 

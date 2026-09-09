@@ -50,8 +50,9 @@ class ThingFAQListView(APIView):
         if denied:
             return denied
 
-        # Get visible FAQs (or all if owner)
-        if thing.is_owner(viewer):
+        # Get visible FAQs (or all for a manager — the owner, or a PROPRIETARY
+        # collection's curator, who runs its FAQs)
+        if thing.can_manage(viewer):
             faqs = FAQ.objects.filter(thing=thing).select_related("questioner").order_by("-created")
         else:
             faqs = (
@@ -73,8 +74,10 @@ class ThingFAQListView(APIView):
     def post(self, request, thing_code):
         thing = self.get_thing(thing_code)
 
-        # Owner cannot ask questions about their own thing
-        if thing.is_owner(request.user.code):
+        # A manager cannot ask questions about a thing they run — the owner, or
+        # a curator of a PROPRIETARY collection it sits in (they answer, they
+        # don't ask).
+        if thing.can_manage(request.user.code):
             return Response(
                 {"error": "Owner cannot ask questions about their own thing"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -96,16 +99,20 @@ class ThingFAQListView(APIView):
         )
         Event.log(Event.Kind.FAQ_ASKED, actor=request.user, thing=thing)
 
-        # Notify owner by email and in-app
-        owner = thing.owner
-        if owner and owner.email:
-            # Bare name. In a COMMUNITY collection the thing's owner is a
-            # co-member, and nothing in the FAQ API ever serves them the asker's
-            # address — this notification must not be the one thing that does.
-            questioner_name = request.user.name
-            send_faq_question_email(questioner_name, thing, faq.question, owner.email)
+        # Notify every manager — the thing owner, and the curators of a
+        # PROPRIETARY collection it sits in, who answer questions shoulder to
+        # shoulder with the founder. In COMMUNITY that set is just the owner (a
+        # member owns what they contribute). Bare name only: nothing in the FAQ
+        # API ever hands a co-member the asker's address, and this must not be
+        # the one thing that does.
+        questioner_name = request.user.name
+        for manager in thing.managers():
+            if manager.code == request.user.code:
+                continue
+            if manager.email:
+                send_faq_question_email(questioner_name, thing, faq.question, manager.email)
             InAppNotification.objects.create(
-                user=owner,
+                user=manager,
                 type=InAppNotification.Type.FAQ_QUESTION,
                 payload={"thing_headline": thing.headline, "questioner_name": questioner_name},
             )
@@ -136,8 +143,8 @@ class FAQDetailView(APIView):
 
         # Check visibility for non-owners
         if not faq.is_visible:
-            # Only owner of thing or questioner can see hidden FAQs
-            if not thing.is_owner(request.user.code) and faq.questioner_id != request.user.code:
+            # Only a manager of the thing or the questioner can see hidden FAQs
+            if not thing.can_manage(request.user.code) and faq.questioner_id != request.user.code:
                 return Response(
                     {"error": "FAQ not found"},
                     status=status.HTTP_404_NOT_FOUND,
@@ -150,7 +157,8 @@ class FAQDetailView(APIView):
 class FAQAnswerView(APIView):
     """
     POST /api/v1/faq/{faq_code}/answer/
-    Answer a FAQ (thing owner only).
+    Answer a FAQ (a manager of the thing — its owner, or a PROPRIETARY
+    collection's curator).
     """
 
     permission_classes = [IsAuthenticated]
@@ -158,10 +166,9 @@ class FAQAnswerView(APIView):
     def post(self, request, faq_code):
         faq = get_object_or_404(FAQ.objects.select_related("questioner", "thing"), code=faq_code)
 
-        # Check if user is thing owner
         thing = faq.thing
 
-        if not thing.is_owner(request.user.code):
+        if not thing.can_manage(request.user.code):
             return Response(
                 {"error": "Only the thing owner can answer questions"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -189,10 +196,10 @@ class FAQAnswerView(APIView):
 class FAQVisibilityView(APIView):
     """
     POST /api/v1/faq/{faq_code}/hide/
-    Hide a FAQ (thing owner only).
+    Hide a FAQ (a manager of the thing).
 
     POST /api/v1/faq/{faq_code}/show/
-    Show a FAQ (thing owner only).
+    Show a FAQ (a manager of the thing).
     """
 
     permission_classes = [IsAuthenticated]
@@ -204,7 +211,7 @@ class FAQVisibilityView(APIView):
     def post(self, request, faq_code, action):
         faq, thing = self._get_faq_and_thing(faq_code)
 
-        if not thing.is_owner(request.user.code):
+        if not thing.can_manage(request.user.code):
             return Response(
                 {"error": "Only the thing owner can change FAQ visibility"},
                 status=status.HTTP_403_FORBIDDEN,
