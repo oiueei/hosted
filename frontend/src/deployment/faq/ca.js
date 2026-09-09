@@ -35,7 +35,7 @@ export default [
   {
     id: 'terminado',
     q: 'Està acabat?',
-    a: "No. OIUEEI és en **fase alfa**: res no està acabat i hi trobaràs vores per polir. Ho diu igual l'avís legal i ho diu el repositori, i el dia que això canviï canviarà als tres llocs alhora.",
+    a: "No. OIUEEI és en **fase alfa**: res no està acabat i hi trobaràs vores per polir. Ho diuen també l'avís legal i el repositori, i el dia que això canviï ho farà a tot arreu alhora.",
   },
   {
     id: 'idiomas',

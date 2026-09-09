@@ -58,9 +58,9 @@ OIUEEI is a personal project: there is no company behind it. I am its creator, m
 
 # The code
 
-OIUEEI is open source software under the **EUPL-1.2**, a strong copyleft licence: you can read it, modify it and self-host it in production, including as a service. What the licence asks in return is reciprocity — run a modified OIUEEI as a network service and its source is owed to your users under the same licence; an unmodified deployment owes nothing beyond keeping the notices. The project lives on GitHub (github.com/oiueei/standalone).
+OIUEEI is open source software under the **EUPL-1.2**, a strong copyleft licence: you can read it, modify it and self-host it in production, including as a service. What the licence asks in return is reciprocity — run a modified OIUEEI as a network service and its source is owed to your users under the same licence; an unmodified deployment owes nothing beyond keeping the notices. The project lives on GitHub (github.com/oiueei/standalone). OIUEEI is in alpha: nothing is finished and you will find rough edges.
 
 ---
 
-*Last updated: 4 September 2026.*
+*Last updated: 9 September 2026.*
 `;

@@ -35,7 +35,7 @@ export default [
   {
     id: 'terminado',
     q: 'Is it finished?',
-    a: 'No. OIUEEI is in **alpha**: nothing is finished and you will find rough edges. The legal notice says the same and so does the repository, and the day that changes it will change in all three at once.',
+    a: 'No. OIUEEI is in **alpha**: nothing is finished and you will find rough edges. The legal notice and the repository say the same, and the day that changes it will change everywhere at once.',
   },
   {
     id: 'idiomas',

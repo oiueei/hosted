@@ -59,9 +59,9 @@ OIUEEI es un proyecto personal: no hay ninguna sociedad detrás. Soy su creador,
 
 # El código
 
-OIUEEI es software de código abierto bajo la licencia **EUPL-1.2**, un copyleft fuerte: puedes leerlo, modificarlo y auto-hospedarlo en producción, también como servicio. Lo que la licencia pide a cambio es reciprocidad — si ofreces un OIUEEI modificado como servicio en red, debes poner su código fuente a disposición de tus usuarios bajo la misma licencia; un despliegue sin modificar no debe nada más allá de conservar los avisos. El proyecto vive en GitHub (github.com/oiueei/standalone).
+OIUEEI es software de código abierto bajo la licencia **EUPL-1.2**, un copyleft fuerte: puedes leerlo, modificarlo y auto-hospedarlo en producción, también como servicio. Lo que la licencia pide a cambio es reciprocidad — si ofreces un OIUEEI modificado como servicio en red, debes poner su código fuente a disposición de tus usuarios bajo la misma licencia; un despliegue sin modificar no debe nada más allá de conservar los avisos. El proyecto vive en GitHub (github.com/oiueei/standalone). OIUEEI está en fase alfa: nada está terminado y encontrarás bordes sin pulir.
 
 ---
 
-*Última actualización: 4 de septiembre de 2026.*
+*Última actualización: 9 de septiembre de 2026.*
 `;

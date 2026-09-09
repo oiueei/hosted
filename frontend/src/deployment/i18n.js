@@ -12,7 +12,7 @@ export const deploymentI18n = {
     popin: {
       title: 'Come meet us!',
       description:
-        "Enter your email and we'll send you a magic link. One click and you're in — no password, no faff.",
+        "Enter your email and we'll send you a magic link. One click and you're in — no password, no faff. OIUEEI is in alpha: nothing is finished and you will find rough edges.",
       emailLabel: 'Email',
       emailPlaceholder: 'you@email.com',
       join: 'Pop in',
@@ -43,7 +43,7 @@ export const deploymentI18n = {
       commitmentBody1:
         'OIUEEI runs without ads and without third-party analytics: nobody tracks you while you use it. Your data is not the product — it is never sold or shared with anyone.',
       commitmentBody2:
-        "The code is public and you can read all of it; this commitment is <1>written into our design rules</1>. It's not the fine print: it's the starting point.",
+        'The code is public and you can read all of it; this commitment is <1>written into our design rules</1>. OIUEEI is in alpha — much is still unfinished — but this is not the fine print, it is the starting point.',
       createCollection: 'Create collection',
       editProfile: 'Edit profile',
       whoUsesTitle: 'Who uses OIUEEI?',
@@ -91,7 +91,7 @@ export const deploymentI18n = {
     popin: {
       title: '¡Ven a conocernos!',
       description:
-        'Introduce tu email y te enviaremos un enlace mágico. Un clic y ya estás dentro — sin contraseñas, sin líos.',
+        'Introduce tu email y te enviaremos un enlace mágico. Un clic y ya estás dentro — sin contraseñas, sin líos. OIUEEI está en fase alfa: nada está terminado y encontrarás bordes sin pulir.',
       emailLabel: 'Email',
       emailPlaceholder: 'tu@email.com',
       join: 'Pásate',
@@ -120,7 +120,7 @@ export const deploymentI18n = {
       commitmentBody1:
         'OIUEEI funciona sin anuncios y sin analíticas de terceros: nadie te rastrea mientras la usas. Tus datos no son el producto — no se venden ni se comparten con nadie.',
       commitmentBody2:
-        'El código es público y puedes leerlo todo; este compromiso está <1>escrito en nuestras reglas de diseño</1>. No es la letra pequeña: es el punto de partida.',
+        'El código es público y puedes leerlo todo; este compromiso está <1>escrito en nuestras reglas de diseño</1>. OIUEEI está en fase alfa —queda mucho por pulir— pero esto no es la letra pequeña: es el punto de partida.',
       createCollection: 'Crear colección',
       editProfile: 'Editar perfil',
       whoUsesTitle: '¿Quién usa OIUEEI?',
@@ -169,7 +169,7 @@ export const deploymentI18n = {
     popin: {
       title: 'Vine a conèixer-nos!',
       description:
-        "Introdueix el teu correu i t'enviarem un enllaç màgic. Un clic i ja hi ets — sense contrasenya, sense complicacions.",
+        "Introdueix el teu correu i t'enviarem un enllaç màgic. Un clic i ja hi ets — sense contrasenya, sense complicacions. OIUEEI és en fase alfa: res no està acabat i hi trobaràs vores per polir.",
       emailLabel: 'Correu',
       emailPlaceholder: 'tu@correu.com',
       join: 'Passa',
@@ -198,7 +198,7 @@ export const deploymentI18n = {
       commitmentBody1:
         'OIUEEI funciona sense anuncis i sense analítiques de tercers: ningú no et rastreja mentre la fas servir. Les teves dades no són el producte — no es venen ni es comparteixen amb ningú.',
       commitmentBody2:
-        'El codi és públic i pots llegir-lo tot; aquest compromís està <1>escrit a les nostres regles de disseny</1>. No és la lletra petita: és el punt de partida.',
+        'El codi és públic i pots llegir-lo tot; aquest compromís està <1>escrit a les nostres regles de disseny</1>. OIUEEI és en fase alfa —queda molt per polir— però això no és la lletra petita: és el punt de partida.',
       createCollection: 'Crear col·lecció',
       editProfile: 'Editar perfil',
       whoUsesTitle: 'Qui fa servir OIUEEI?',

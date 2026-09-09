@@ -59,9 +59,9 @@ OIUEEI és un projecte personal: no hi ha cap societat al darrere. En soc el cre
 
 # El codi
 
-OIUEEI és programari de codi obert sota la llicència **EUPL-1.2**, un copyleft fort: pots llegir-lo, modificar-lo i auto-hospedar-lo en producció, també com a servei. El que la llicència demana a canvi és reciprocitat — si ofereixes un OIUEEI modificat com a servei en xarxa, has de posar el seu codi font a disposició dels teus usuaris sota la mateixa llicència; un desplegament sense modificar no deu res més enllà de conservar els avisos. El projecte viu a GitHub (github.com/oiueei/standalone).
+OIUEEI és programari de codi obert sota la llicència **EUPL-1.2**, un copyleft fort: pots llegir-lo, modificar-lo i auto-hospedar-lo en producció, també com a servei. El que la llicència demana a canvi és reciprocitat — si ofereixes un OIUEEI modificat com a servei en xarxa, has de posar el seu codi font a disposició dels teus usuaris sota la mateixa llicència; un desplegament sense modificar no deu res més enllà de conservar els avisos. El projecte viu a GitHub (github.com/oiueei/standalone). OIUEEI és en fase alfa: res no està acabat i hi trobaràs vores per polir.
 
 ---
 
-*Darrera actualització: 4 de setembre de 2026.*
+*Darrera actualització: 9 de setembre de 2026.*
 `;

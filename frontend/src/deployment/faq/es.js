@@ -53,7 +53,7 @@ export default [
   {
     id: 'terminado',
     q: '¿Está terminado?',
-    a: 'No. OIUEEI está en **fase alfa**: nada está terminado y encontrarás bordes sin pulir. Lo dice igual el aviso legal y lo dice el repositorio, y el día que eso cambie cambiará en los tres sitios a la vez.',
+    a: 'No. OIUEEI está en **fase alfa**: nada está terminado y encontrarás bordes sin pulir. Lo dicen también el aviso legal y el repositorio, y el día que eso cambie lo hará en todos a la vez.',
   },
   {
     id: 'idiomas',
