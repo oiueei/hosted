@@ -293,7 +293,7 @@ Detail page for a thing with full information and FAQs section.
 - Lists all booking requests made by the current user.
 - Each booking card shows: thing type tag, status label (HDS `StatusLabel`, semantic — Pending/Confirmed/Rejected/Cancelled/Expired), thing headline (linked to thing page), owner name, dates, and creation date.
 - PENDING bookings show a "Cancel request" button. Non-pending bookings are grouped under "Past requests".
-- **RESERVE_THING bookings** are auto-confirmed (status `ACCEPTED`), so a future one is grouped under a "Current" heading (not "Past requests") and shows a **"Cancel reservation"** button — same `POST /bookings/{code}/cancel/` endpoint, which the backend branches on the thing type. `OwnerBookingsPage` mirrors it: a RESERVE booking has nothing to accept/reject, and a future one gets a "Cancel reservation" (owner override) plus the requester's `project_note` shown under the dates.
+- **RESERVE_THING bookings** are auto-confirmed (status `ACCEPTED`), so a future one is grouped under a "Current" heading (not "Past requests") and shows a **"Cancel reservation"** button — same `POST /bookings/{code}/cancel/` endpoint, which the backend branches on the thing type. `OwnerBookingsPage` mirrors it: a RESERVE booking has nothing to accept/reject, and a future one gets a "Cancel reservation" (any curator of the reservations collection may — owner or co-curator) plus the requester's `project_note` shown under the dates.
 - Accessible from HomePage via "My requests" button.
 
 ### NotFoundPage (`src/pages/NotFoundPage.jsx`)

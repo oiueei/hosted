@@ -192,11 +192,14 @@ class Collection(models.Model):
         related_name="muted_digest_collections",
         db_table="collection_digest_muted",
     )
-    # COMMUNITY-only admin tier, promoted from the collection's own `invites` —
-    # never a separate door in. A co-owner gets owner-level powers (edit,
-    # invite/revoke, broadcast, share link, stats/export) but is deliberately
-    # NOT a CASCADE root: deleting a co-owner's account never takes the
-    # collection with it, only the founding `owner` does. See `is_curator`.
+    # The admin tier, in **either mode** (2026-09, co-curators in PROPRIETARY),
+    # promoted from the collection's own `invites` — never a separate door in. A
+    # co-curator gets the founder's collection-level powers (edit, invite/revoke,
+    # broadcast, share link, stats/export, decide member proposals, promote/demote
+    # another co-curator; and in a PROPRIETARY collection, run its whole catalogue,
+    # FAQs and bookings via `Thing.can_manage`) but is deliberately NOT a CASCADE
+    # root: deleting a co-curator's account never takes the collection with it,
+    # only the founding `owner` does. See `is_curator`.
     co_owners = models.ManyToManyField(
         "User",
         blank=True,
