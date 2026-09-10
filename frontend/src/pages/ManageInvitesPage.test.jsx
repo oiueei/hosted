@@ -320,7 +320,7 @@ describe('ManageInvitesPage — co-owners', () => {
     expect(screen.getByRole('button', { name: 'Remove co-curator status' })).toBeInTheDocument();
   });
 
-  test('promoting posts to /co-owners/ with the member’s code', async () => {
+  test('promoting confirms first, then posts to /co-owners/ with the member’s code', async () => {
     localStorage.setItem('userCode', 'OWNER1');
     mockCoOwnerRoutes();
     renderPage();
@@ -328,11 +328,33 @@ describe('ManageInvitesPage — co-owners', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
 
+    // The star opens a confirm — promotion hands over the member list (emails
+    // included) and the power to appoint more curators, so it is not one click.
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(/everything you can except delete the group/i);
+    expect(globalThis.fetch.mock.calls.some(([u]) => u.endsWith('/co-owners/'))).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make them a co-curator' }));
+
     await screen.findByText('Promoted to co-curator.');
     const [url, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/co-owners/'));
     expect(url).toBe('/api/v1/collections/COL001/co-owners/');
     expect(options.method).toBe('POST');
     expect(JSON.parse(options.body)).toEqual({ user_code: 'GST001' });
+  });
+
+  test('cancelling the promote confirm posts nothing', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes();
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(globalThis.fetch.mock.calls.some(([u]) => u.endsWith('/co-owners/'))).toBe(false);
   });
 
   test('demoting sends DELETE with the co-owner’s code', async () => {
