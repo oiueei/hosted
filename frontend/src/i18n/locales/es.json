@@ -521,7 +521,7 @@
     "tagsPlaceholder": "p. ej. Vintage, Cocina, Exterior",
     "tagsHelper": "Etiquetas opcionales para organizar las cosas de esta colección",
     "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma.",
-    "reservationsModeNote": "Una colección de reservas la gestiona una sola persona y solo contiene reservas, así que se queda privada y de tipo propietario."
+    "reservationsModeNote": "Una colección de reservas solo contiene reservas y sus curadores gestionan lo que se puede reservar, así que siempre es de tipo propietario."
   },
   "myBookings": {
     "pageTitle": "Mis solicitudes",

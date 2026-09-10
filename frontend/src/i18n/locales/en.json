@@ -527,7 +527,7 @@
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
     "maxDescription": "Description is too long: 2000 characters per language.",
-    "reservationsModeNote": "A reservations collection is run by one person and holds only reservations, so it stays private and proprietary."
+    "reservationsModeNote": "A reservations collection holds only reservations, and its curators manage what can be booked — so it's always proprietary."
   },
   "myBookings": {
     "pageTitle": "My requests",
