@@ -81,6 +81,9 @@ export default function EditCollectionPage() {
   const [statsError, setStatsError] = useState(false);
   const [collectionExportError, setCollectionExportError] = useState(null);
   const [collectionExportDownloading, setCollectionExportDownloading] = useState(false);
+  const [calendarError, setCalendarError] = useState(null);
+  const [calendarInfo, setCalendarInfo] = useState(null);
+  const [calendarDownloading, setCalendarDownloading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -290,6 +293,36 @@ export default function EditCollectionPage() {
       downloadBlob(await res.blob(), `${code}-stats.csv`);
     } catch {
       setStatsError(true);
+    }
+  };
+
+  const handleDownloadCalendar = async () => {
+    setCalendarError(null);
+    setCalendarInfo(null);
+    setCalendarDownloading(true);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/calendar-export/`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        // The server counts the events it put in the file; 0 means everything
+        // was already exported, so there is nothing to hand the browser.
+        const count = Number(res.headers.get('X-Calendar-Events') || '0');
+        if (count > 0) {
+          downloadBlob(await res.blob(), `${code}-calendar.csv`);
+          setCalendarInfo(t('calendarExport.done', { count }));
+        } else {
+          setCalendarInfo(t('calendarExport.nothingNew'));
+        }
+      } else if (res.status === 429) {
+        setCalendarError(t('common.tooManyAttempts'));
+      } else {
+        setCalendarError(t('calendarExport.error'));
+      }
+    } catch {
+      setCalendarError(t('common.connectionError'));
+    } finally {
+      setCalendarDownloading(false);
     }
   };
 
@@ -609,6 +642,43 @@ export default function EditCollectionPage() {
             {collectionExportError && (
               <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
                 {collectionExportError}
+              </Notification>
+            )}
+          </StatusRegion>
+        </div>
+        {/* The calendar CSV — only the date-based reservations (loans, rentals,
+            on-site reservations), and only the ones added since the last
+            download, so importing it twice never doubles the calendar. */}
+        <div style={{ marginTop: 'var(--spacing-s)' }}>
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={calendarDownloading}
+            onClick={handleDownloadCalendar}
+            style={btnSecondaryStyle}
+          >
+            {calendarDownloading
+              ? t('calendarExport.downloading')
+              : t('calendarExport.downloadButton')}
+          </Button>
+          <p
+            style={{
+              marginTop: 'var(--spacing-2-xs)',
+              fontSize: 'var(--fontsize-body-s)',
+              color: 'var(--color-black-60)',
+            }}
+          >
+            {t('calendarExport.notice')}
+          </p>
+          <StatusRegion>
+            {calendarError && (
+              <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
+                {calendarError}
+              </Notification>
+            )}
+            {calendarInfo && (
+              <Notification type="success" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
+                {calendarInfo}
               </Notification>
             )}
           </StatusRegion>

@@ -46,6 +46,7 @@ function mockApi({
   save = { ok: true },
   stats = { ok: true },
   collectionExport = { ok: true },
+  calendar = { ok: true, count: '1' },
 } = {}) {
   apiFetch.mockImplementation((url, opts) => {
     if (opts?.method === 'PATCH') {
@@ -53,6 +54,14 @@ function mockApi({
         ok: save.ok,
         status: save.status ?? (save.ok ? 200 : 400),
         json: async () => save.body ?? {},
+      });
+    }
+    if (url.includes('/calendar-export/')) {
+      return Promise.resolve({
+        ok: calendar.ok,
+        status: calendar.status ?? (calendar.ok ? 200 : 500),
+        headers: { get: (name) => (name === 'X-Calendar-Events' ? calendar.count : null) },
+        blob: async () => new Blob(['Subject,Start Date\n'], { type: 'text/csv' }),
       });
     }
     if (url.includes('/stats/')) {
@@ -332,6 +341,73 @@ describe('EditCollectionPage — the collection export', () => {
 
     expect(
       await screen.findByText("Couldn't build the export. Please try again in a moment.")
+    ).toBeInTheDocument();
+  });
+});
+
+describe('EditCollectionPage — the calendar export', () => {
+  const button = { name: /download reservations for your calendar/i };
+
+  test('it POSTs to the calendar-export endpoint and downloads the file', async () => {
+    mockApi({ calendar: { ok: true, count: '2' } });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', button));
+
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    const call = apiFetch.mock.calls.find((c) => c[0].includes('/calendar-export/'));
+    expect(call[0]).toBe('/api/v1/collections/COL001/calendar-export/');
+    expect(call[1].method).toBe('POST');
+    expect(click.mock.contexts[0].download).toBe('COL001-calendar.csv');
+    expect(await screen.findByText('2 new event(s) — check your downloads.')).toBeInTheDocument();
+  });
+
+  test('nothing new: no download, and it says so', async () => {
+    mockApi({ calendar: { ok: true, count: '0' } });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', button));
+
+    expect(
+      await screen.findByText('Nothing new since your last download.')
+    ).toBeInTheDocument();
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  test('the "only the new ones" promise is stated on the page before any click', async () => {
+    mockApi();
+    renderPage();
+
+    expect(
+      await screen.findByText(/only the ones added since your last download/i)
+    ).toBeInTheDocument();
+  });
+
+  test('a 429 says "too many attempts", like every other rate-limited action', async () => {
+    mockApi({ calendar: { ok: false, status: 429 } });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', button));
+
+    expect(
+      await screen.findByText('Too many attempts — please wait a moment and try again.')
+    ).toBeInTheDocument();
+  });
+
+  test('any other failure is shown, not swallowed', async () => {
+    mockApi({ calendar: { ok: false, status: 500 } });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', button));
+
+    expect(
+      await screen.findByText("Couldn't build the calendar file. Please try again in a moment.")
     ).toBeInTheDocument();
   });
 });
