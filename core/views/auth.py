@@ -366,17 +366,14 @@ class VerifyLinkView(APIView):
             data["things"] = user.owned_things.count()
             return Response(data, status=status.HTTP_200_OK)
         if rsvp.action in (RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT):
-            # The owner cannot decide without seeing who is being suggested, by
-            # whom, and for which group. The proposed address is theirs to judge;
-            # the note is the proposer's word for them. None of it has been sent
-            # to the proposed person, who does not know they were suggested.
-            proposal = InvitationProposal.objects.filter(code=rsvp.target_code).first()
-            if proposal:
-                data["email"] = proposal.email
-                data["note"] = proposal.note
-                data["proposer_name"] = proposal.proposer.display_name
-                data["collection_headline"] = proposal.collection.headline
-                data["resolved"] = proposal.status != InvitationProposal.Status.PENDING
+            # Nothing but the two keys above. A GET is what a mail client's link
+            # scanner issues, and the proposed address, the proposer's private
+            # note, and the proposer's own name (whose display fallback is *their*
+            # email) are precisely what this flow promises never to expose — the
+            # person suggested does not know they were suggested, and if the
+            # answer is no they never will. The SPA auto-commits the decision with
+            # a POST (real JS a scanner never runs) and reads the invited address
+            # from that response, so it never needed any of it here.
             return Response(data, status=status.HTTP_200_OK)
         booking = BookingPeriod.objects.filter(code=rsvp.target_code).first()
         if booking and booking.thing_code:
