@@ -168,13 +168,15 @@ class ThingViewSet(ModelViewSet):
         if denial and thing_type not in community_contribution_types(collection, self.request.user):
             raise PermissionDenied(denial)
 
-        # RESERVE things must land in a reservations collection — checked here
-        # (not only inside the `collection_code` branch below) so a standalone
-        # create can't slip one through with no collection at all. After the
-        # verb-denial check above, so a deployment that withholds RESERVE still
-        # answers 403 rather than this 400.
-        if thing_type == Thing.Type.RESERVE_THING:
-            reserve_err = type_validity_error(thing_type, collection)
+        # A standalone RESERVE create (no collection_code) has no reservations
+        # collection to land in — refuse it here, with the same 400 a
+        # non-reservations collection gets. A named collection is checked below
+        # instead: a *missing* one is the 404, and a non-reservations one is the
+        # in-block 400 *after* the can-add 403 — so that 400 never doubles as a
+        # "does this code name a reservations collection?" probe for someone with
+        # no standing there.
+        if thing_type == Thing.Type.RESERVE_THING and not collection_code:
+            reserve_err = type_validity_error(thing_type, None)
             if reserve_err:
                 raise ValidationError({"type": reserve_err})
 
@@ -186,8 +188,9 @@ class ThingViewSet(ModelViewSet):
                     "You do not have permission to add things to this collection"
                 )
 
-            # Type must be valid for the collection (its owner-defined allowlist)
-            # — shared with update, so key it under "type" like perform_update.
+            # Type must be valid for the collection: its owner-defined allowlist,
+            # and — for RESERVE — that it is a reservations collection at all.
+            # Shared with update, so key it under "type" like perform_update.
             err = type_validity_error(thing_type, collection)
             if err:
                 raise ValidationError({"type": err})

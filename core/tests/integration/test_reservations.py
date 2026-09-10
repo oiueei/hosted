@@ -278,6 +278,37 @@ def test_a_standalone_reservation_thing_is_refused(authenticated_client):
     assert not Thing.objects.filter(headline="Nowhere room").exists()
 
 
+def test_a_reserve_create_naming_a_missing_collection_is_a_404_not_a_400(authenticated_client):
+    """The documented contract for an unknown ``collection_code`` is 404, for
+    every type. The RESERVE-only "must be a reservations collection" 400 used to
+    fire first — turning a typo'd code into a wrong status and skipping the
+    existence check entirely."""
+    resp = authenticated_client.post(
+        "/api/v1/things/",
+        {"type": "RESERVE_THING", "headline": "Ghost room", "collection_code": "ZZZZZZ"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+    assert not Thing.objects.filter(headline="Ghost room").exists()
+
+
+def test_a_reserve_create_on_someone_elses_collection_is_a_403_not_a_reservations_probe(
+    authenticated_client2, user
+):
+    """A stranger naming a real non-reservations collection gets the same 403 any
+    other type would — not the RESERVE 400. Otherwise the 400-vs-403 split told
+    an outsider "this code names a reservations collection" one guess at a time.
+    """
+    Collection.objects.create(code="OTHER1", owner=user, headline="Someone else's")
+    resp = authenticated_client2.post(
+        "/api/v1/things/",
+        {"type": "RESERVE_THING", "headline": "Sneaky room", "collection_code": "OTHER1"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert not Thing.objects.filter(headline="Sneaky room").exists()
+
+
 def test_a_reservations_collection_holds_only_reservations(authenticated_client):
     coll = Collection.objects.create(
         code="RSVC04",
