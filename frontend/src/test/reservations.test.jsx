@@ -95,7 +95,9 @@ describe('RequestThingPage — RESERVE_THING', () => {
   });
 
   test('the date picker stops at the collection horizon, not the fixed 90', async () => {
-    // horizon 7 days from Mon 2026-06-01 → last bookable day is 2026-06-08
+    // horizon 7 days from Mon 2026-06-01 → pickup on 2026-06-08 is the last day,
+    // and the backend's reservation_violation now agrees (it judges the pickup
+    // day, not the exclusive end_date — Collection.reservation_violation).
     setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1, reservation_horizon_days: 7 } });
     renderPage();
     await screen.findByText(/Reserve Sala polivalent/);
@@ -103,6 +105,9 @@ describe('RequestThingPage — RESERVE_THING', () => {
     await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
     // 2026-06-05 is within the 7-day window — selectable
     expect(document.querySelector('[data-date="2026-06-05"]')?.tagName).toBe('BUTTON');
+    // 2026-06-08 is exactly the horizon — still selectable (the off-by-one the
+    // server used to reject on this very day).
+    expect(document.querySelector('[data-date="2026-06-08"]')?.tagName).toBe('BUTTON');
     // 2026-06-09 is past it — rendered disabled (span, not button) or absent
     const past = document.querySelector('[data-date="2026-06-09"]');
     expect(past === null || past.getAttribute('aria-disabled') === 'true').toBe(true);

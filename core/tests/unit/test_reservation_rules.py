@@ -112,6 +112,32 @@ def test_reservation_violation_rejects_past_the_horizon(db):
     assert msg is not None and "14" in msg
 
 
+def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
+    """A pickup exactly ``reservation_horizon_days`` out is allowed; the day
+    after is not. The bug this pins: the check judged the exclusive ``end_date``
+    (start + duration), so with any duration the last few days the picker
+    offered — and every day of them when ``reservation_max_days`` > 1 — were
+    refused by the server the picker's own ``maxDate`` had just allowed.
+    """
+    owner = User.objects.create(code="HZOWN3", email="hzown3@test.com")
+    coll = Collection.objects.create(
+        code="HZCOL3",
+        owner=owner,
+        headline="Exact horizon",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_max_days=3,
+        reservation_horizon_days=7,
+        rental_weekdays=[],
+    )
+    today = date(2026, 6, 1)
+    # Pickup ON the horizon, whatever the duration — the picker offers this day.
+    assert coll.reservation_violation(today + timedelta(days=7), 1, today=today) is None
+    assert coll.reservation_violation(today + timedelta(days=7), 3, today=today) is None
+    # One day past it: refused, and the message names the limit.
+    msg = coll.reservation_violation(today + timedelta(days=8), 1, today=today)
+    assert msg is not None and "7" in msg
+
+
 def test_reservation_horizon_defaults_to_90(db):
     owner = User.objects.create(code="HZOWN2", email="hzown2@test.com")
     coll = Collection.objects.create(

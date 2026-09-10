@@ -382,10 +382,16 @@ class Collection(models.Model):
         every one of those days must fall on an allowed weekday
         (``rental_weekdays``, reused; empty = any day), because the space is only
         open on those days. A reservation that would span a closed day is
-        refused rather than silently shortened. The whole span must also land
-        within ``reservation_horizon_days`` of ``today`` (default
-        ``timezone.localdate()``) — the owner's "how far ahead" limit, and the
-        single backstop the request view relies on.
+        refused rather than silently shortened.
+
+        The **pickup day** must land within ``reservation_horizon_days`` of
+        ``today`` (default ``timezone.localdate()``) — the owner's "how far
+        ahead" limit, and the single backstop the request view relies on. It is
+        the pickup day, not the return day: that is what ``RequestThingPage``'s
+        date picker caps (``maxDate = today + reservation_horizon_days``) and
+        what ``Thing.availability_window`` walks, so judging the exclusive
+        ``end_date`` here rejected the last day of the picker's own range
+        (horizon 7 ⇒ day 7 selectable, ``end_date`` day 8, refused).
         """
         if duration_days < 1:
             return "A reservation is at least one day."
@@ -395,8 +401,7 @@ class Collection(models.Model):
                 f"{self.reservation_max_days} day(s) at a time."
             )
         today = today or timezone.localdate()
-        end_date = start_date + timedelta(days=duration_days)
-        if end_date > today + timedelta(days=self.reservation_horizon_days):
+        if start_date > today + timedelta(days=self.reservation_horizon_days):
             return (
                 f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
             )
