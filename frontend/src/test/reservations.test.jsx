@@ -113,6 +113,38 @@ describe('RequestThingPage — RESERVE_THING', () => {
     expect(past === null || past.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
+  test('the pickup field explains why some days are greyed out', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+    expect(screen.getByText(/greyed out/i)).toBeInTheDocument();
+  });
+
+  test('a multi-day reservation shows the span it will book before you confirm', async () => {
+    // Default RESERVE_THING: max 3 days, weekdays unrestricted. System time is
+    // Mon 2026-06-01, so 03/06 is a Wednesday and free.
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /How many days/ }));
+    fireEvent.click(await screen.findByRole('option', { name: '3 days' }));
+    typePickup(container, '03/06/2026');
+
+    // Three days from the 3rd covers the 3rd, 4th and 5th — the last day is
+    // inclusive, and the reservation auto-confirms with no owner step to catch
+    // a wrong end.
+    expect(await screen.findByText('Reserved from 03/06/2026 to 05/06/2026.')).toBeInTheDocument();
+  });
+
+  test('a date past the collection horizon is rejected with the collection’s own limit', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1, reservation_horizon_days: 7 } });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '30/06/2026'); // well past today + 7 days
+    expect(await screen.findByText(/between today and 7 days from now/i)).toBeInTheDocument();
+  });
+
   test('submitting posts a duration + note and shows the confirmed message', async () => {
     setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
     const { container } = renderPage();

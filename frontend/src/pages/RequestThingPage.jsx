@@ -374,6 +374,7 @@ export default function RequestThingPage() {
               <DateInput
                 id="reservation-pickup-date"
                 label={t('reservation.pickupLabel')}
+                helperText={t('reservation.pickupHelper')}
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
@@ -387,10 +388,26 @@ export default function RequestThingPage() {
                 errorText={attempted && !startDate ? t('request.startRequired') : undefined}
                 minDate={TODAY}
                 maxDate={reservationMaxDate}
-                dateOutsideRangeErrorText={t('request.dateRange')}
+                dateOutsideRangeErrorText={t('reservation.dateRange', {
+                  days: thing.reservation_horizon_days || 90,
+                })}
                 isDateDisabledBy={pickupDisabled}
                 malformedDateErrorText={t('request.dateOverlap')}
               />
+              {/* The span the member is about to book, once both parts are set
+                  — the reservation auto-confirms, so there is no owner step
+                  that would catch a wrong end date. Shown only when the length
+                  is more than a day (a 1-day slot IS the pickup date). */}
+              {Number(chosenDuration) > 1 && displayToIso(startDate) && (
+                <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+                  {t('reservation.dateSummary', {
+                    start: startDate,
+                    end: isoToDisplay(
+                      derivedReturnDate(displayToIso(startDate), Number(chosenDuration) - 1)
+                    ),
+                  })}
+                </p>
+              )}
               <div className="spacer-xxxs" />
               <TextArea
                 id="reservation-project-note"
