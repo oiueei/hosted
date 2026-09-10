@@ -1,19 +1,61 @@
+import { useEffect, useState } from 'react';
 import { NumberInput } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { WEEKDAY_VALUES, weekdayLabel, weekdayNarrow } from '../utils/rental';
+import WeekdayChips from './WeekdayChips';
+
+/**
+ * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
+ * bound straight to `Math.min(max, Math.max(min, n))` snaps to the bound on
+ * every keystroke — you cannot clear "3" to type "5", and an empty field jumps
+ * to 1. This keeps a local draft string so the field can be emptied or briefly
+ * hold an out-of-range value while editing, and clamps once, on blur. The parent
+ * only ever hears a valid number, and only when it actually changes.
+ */
+function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onChange }) {
+  const [draft, setDraft] = useState(String(value));
+  // Re-sync when the value arrives from outside — e.g. the Edit form finishing
+  // its load. Our own commits set `draft` first, so this is then a no-op.
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const n = Math.round(Number(draft));
+    const fixed =
+      draft.trim() !== '' && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    setDraft(String(fixed));
+    if (fixed !== value) onChange(fixed);
+  };
+
+  return (
+    <NumberInput
+      id={id}
+      label={label}
+      helperText={helperText}
+      min={min}
+      max={max}
+      step={1}
+      value={draft === '' ? '' : Number(draft)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+    />
+  );
+}
 
 /**
  * The rules a reservations collection's owner sets: how many days a member may
- * book the space for in one go, and which weekdays it is open for reservations.
+ * book the space for in one go, how far ahead they may book, and which weekdays
+ * it is open for reservations.
  *
  * Shown (in the "More options" accordion) *instead of* `RentalRulesFields` when
  * the collection is a reservations collection — `allowed_thing_types` is exactly
  * `["RESERVE_THING"]`. It reuses the same `rental_weekdays` state the rental
- * rules use (the backend reuses the column), and the same weekday chip markup.
+ * rules use (the backend reuses the column), and the same `WeekdayChips` row.
  *
  * Controlled: value + setter owned by the page. `idPrefix` is
- * `create-collection` / `edit-collection`; `theeemeColor01` fills the selected
- * chip.
+ * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
+ * are the theeeme token names for a selected weekday chip (fill + text — see
+ * `WeekdayChips`).
  */
 export default function ReservationRulesFields({
   idPrefix,
@@ -24,81 +66,41 @@ export default function ReservationRulesFields({
   rentalWeekdays = [],
   setRentalWeekdays = () => {},
   theeemeColor01,
+  theeemeColor06,
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <>
-      <NumberInput
+      <BoundedDayInput
         id={`${idPrefix}-reservation-max-days`}
         label={t('reservation.maxDaysLabel')}
         helperText={t('reservation.maxDaysHelper')}
         min={1}
         max={7}
-        step={1}
+        fallback={1}
         value={reservationMaxDays}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          setReservationMaxDays(Number.isFinite(n) ? Math.min(7, Math.max(1, n)) : 1);
-        }}
+        onChange={setReservationMaxDays}
       />
-      <NumberInput
+      <BoundedDayInput
         id={`${idPrefix}-reservation-horizon-days`}
         label={t('reservation.horizonLabel')}
         helperText={t('reservation.horizonHelper')}
         min={1}
         max={365}
-        step={1}
+        fallback={90}
         value={reservationHorizonDays}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          setReservationHorizonDays(Number.isFinite(n) ? Math.min(365, Math.max(1, n)) : 90);
-        }}
+        onChange={setReservationHorizonDays}
       />
-      <div className="weekday-field">
-        <p className="weekday-field-label" id={`${idPrefix}-reservation-weekdays-label`}>
-          {t('reservation.weekdaysLabel')}
-        </p>
-        <div
-          className="weekday-chips"
-          role="group"
-          aria-labelledby={`${idPrefix}-reservation-weekdays-label`}
-        >
-          {WEEKDAY_VALUES.map((w) => {
-            const selected = rentalWeekdays.includes(w);
-            const full = weekdayLabel(w, i18n.language);
-            return (
-              <button
-                key={w}
-                type="button"
-                className={`weekday-chip${selected ? ' selected' : ''}`}
-                aria-pressed={selected}
-                aria-label={full}
-                title={full}
-                onClick={() =>
-                  setRentalWeekdays(
-                    selected
-                      ? rentalWeekdays.filter((x) => x !== w)
-                      : [...rentalWeekdays, w].sort((a, b) => a - b)
-                  )
-                }
-                style={
-                  selected && theeemeColor01
-                    ? {
-                        backgroundColor: `var(--color-${theeemeColor01})`,
-                        borderColor: `var(--color-${theeemeColor01})`,
-                        color: 'var(--color-white)',
-                      }
-                    : undefined
-                }
-              >
-                {weekdayNarrow(w, i18n.language)}
-              </button>
-            );
-          })}
-        </div>
-        <p className="weekday-field-helper">{t('reservation.weekdaysHelper')}</p>
-      </div>
+      <WeekdayChips
+        labelId={`${idPrefix}-reservation-weekdays-label`}
+        labelKey="reservation.weekdaysLabel"
+        helperKey="reservation.weekdaysHelper"
+        weekdays={rentalWeekdays}
+        setWeekdays={setRentalWeekdays}
+        color01={theeemeColor01}
+        color06={theeemeColor06}
+      />
     </>
   );
 }

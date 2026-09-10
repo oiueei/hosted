@@ -1500,6 +1500,47 @@ def send_reservation_cancelled_email(
     )
 
 
+def send_reservation_reminder_email(requester_email, thing, booking):
+    """Remind the member their on-site reservation starts tomorrow (RESERVE_THING).
+
+    The return reminder is nonsense for a reservation — nothing is carried
+    anywhere — so ``send_reminders`` excludes RESERVE from it. What a
+    reservation does need is the *arrival* nudge: a member can book a slot up to
+    a year ahead and hear nothing between the confirmation and the day, and a
+    no-show costs a real slot. Requester-only — they are the one who has to
+    turn up.
+    """
+    user, lang = _recipient(requester_email)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing)
+    headline = L(thing.headline)
+    header = _thing_header(thing, L)
+    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    subject = T("reservation_reminder_subject").format(thing=headline)
+    plain = T("reservation_reminder_plain").format(
+        thing=headline, start=start, end=end, url=thing_url
+    )
+    blocks = [
+        _para(T("reservation_reminder_intro")),
+        _strong(headline),
+        _field(T("dates_label"), f"{start} - {end}"),
+    ]
+    if thing.location:
+        blocks.append(_field(T("reservation_where_label"), thing.location))
+    blocks.append(_links((thing_url, T("view_thing_cta"))))
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
 # --- Category 3: News / broadcast ---------------------------------------------
 
 

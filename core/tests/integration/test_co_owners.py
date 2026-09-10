@@ -9,12 +9,16 @@ cannot demote them. These tests pin the permission surface `is_curator`
 widened, and the promote/demote endpoint (`CollectionCoOwnerView`) itself.
 """
 
+import csv
+import json
+
 import pytest
+from django.core import mail
 from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import Collection, InvitationProposal, User
+from core.models import RSVP, Collection, InvitationProposal, User
 from core.models.notification import InAppNotification
 
 CO_OWNERS_URL = "/api/v1/collections/{code}/co-owners/"
@@ -68,12 +72,23 @@ class TestACoOwnerHasOwnerLevelPowers:
         assert group.headline == "New name"
 
     def test_a_co_owner_can_invite(self, group, co_owner):
+        mail.outbox.clear()
         res = client_for(co_owner).post(
             f"/api/v1/collections/{group.code}/invite/",
             {"email": "friend@test.com"},
             format="json",
         )
         assert res.status_code == 200
+        # The invitation actually went out — a pending RSVP the invitee can act
+        # on, and the email carrying it. 200 alone said only "the endpoint let
+        # the co-owner in", not "a stranger was invited".
+        assert RSVP.objects.filter(
+            user_email="friend@test.com",
+            target_code=group.code,
+            action=RSVP.Action.COLLECTION_INVITE,
+        ).exists()
+        assert [m.to[0] for m in mail.outbox] == ["friend@test.com"]
+        assert "The street" in mail.outbox[0].body
 
     def test_a_co_owner_can_revoke_a_member(self, group, co_owner, member):
         res = client_for(co_owner).delete(
@@ -84,13 +99,23 @@ class TestACoOwnerHasOwnerLevelPowers:
         assert res.status_code == 200
         assert not group.invites.filter(code=member.code).exists()
 
-    def test_a_co_owner_can_broadcast(self, group, co_owner):
+    def test_a_co_owner_can_broadcast(self, group, co_owner, member):
+        mail.outbox.clear()
         res = client_for(co_owner).post(
             f"/api/v1/collections/{group.code}/broadcast/",
             {"message": "Bring snacks"},
             format="json",
         )
         assert res.status_code == 200
+        # The message actually reached the members, and it is the co-owner's
+        # address a reply lands on — the one screen where a member learns an
+        # address the API otherwise never serves. 200 alone proved neither.
+        member_mail = next(m for m in mail.outbox if member.email in m.to)
+        assert "Bring snacks" in member_mail.body
+        assert member_mail.reply_to == [co_owner.email]
+        assert InAppNotification.objects.filter(
+            user=member, type=InAppNotification.Type.BROADCAST
+        ).exists()
 
     def test_a_co_owner_can_manage_the_share_link(self, group, co_owner):
         res = client_for(co_owner).post(f"/api/v1/collections/{group.code}/share-link/")
@@ -100,10 +125,23 @@ class TestACoOwnerHasOwnerLevelPowers:
     def test_a_co_owner_can_view_stats(self, group, co_owner):
         res = client_for(co_owner).get(f"/api/v1/collections/{group.code}/stats/")
         assert res.status_code == 200
+        # It is the stats CSV, not just a 200: the co-owner gets the same
+        # member-count metric the founder would.
+        assert f"{group.code}-stats.csv" in res["Content-Disposition"]
+        rows = {r[0]: r[1] for r in csv.reader(res.content.decode().splitlines()) if len(r) >= 2}
+        assert rows["Members"] == "2"  # co_owner + member
 
-    def test_a_co_owner_can_export_the_collection(self, group, co_owner):
+    def test_a_co_owner_can_export_the_collection(self, group, co_owner, member):
         res = client_for(co_owner).get(f"/api/v1/collections/{group.code}/export/")
         assert res.status_code == 200
+        # The whole point of this file: it carries the operational copy of the
+        # group, member emails included — the thing the page warns a curator
+        # they are about to have on their laptop. A bare 200 proved none of it.
+        assert f'filename="oiueei-{group.code}-' in res["Content-Disposition"]
+        payload = json.loads(res.content.decode())
+        assert payload["_manifest"]["collection_code"] == group.code
+        member_emails = {m["email"] for m in payload["members"]}
+        assert {co_owner.email, member.email} <= member_emails
 
     def test_a_co_owner_can_answer_a_members_proposal(self, group, co_owner, member):
         group.allow_member_proposals = True
@@ -115,8 +153,22 @@ class TestACoOwnerHasOwnerLevelPowers:
             format="json",
         )
         proposal = InvitationProposal.objects.get(collection=group, email="suggested@test.com")
+        mail.outbox.clear()
+
         res = client_for(co_owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
         assert res.status_code == 200
+        # Approving does the real work: the proposal is settled and the actual
+        # invitation goes out (an RSVP the suggested person can act on, and the
+        # email carrying it). Until now the co-owner reached suggested@ only
+        # because nobody checked whether anything happened after the 200.
+        proposal.refresh_from_db()
+        assert proposal.status == InvitationProposal.Status.APPROVED
+        assert RSVP.objects.filter(
+            user_email="suggested@test.com",
+            target_code=group.code,
+            action=RSVP.Action.COLLECTION_INVITE,
+        ).exists()
+        assert [m.to[0] for m in mail.outbox] == ["suggested@test.com"]
 
 
 class TestACoOwnerIsNotTheOwner:
@@ -281,6 +333,27 @@ class TestDemotingACoOwner:
         assert InAppNotification.objects.filter(
             user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
         ).exists()
+
+    def test_a_demoted_co_owner_loses_the_curator_reach(self, group, owner, co_owner):
+        # The M2M row going is half the story; the half that matters is that the
+        # endpoints stop obeying them. Before this, nothing asked a demoted
+        # co-owner for a curator action and checked it was refused.
+        edit_url = f"/api/v1/collections/{group.code}/"
+        before = client_for(co_owner).patch(edit_url, {"headline": "Still mine"}, format="json")
+        assert before.status_code == 200
+
+        client_for(owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": co_owner.code}, format="json"
+        )
+
+        after = client_for(co_owner).patch(edit_url, {"headline": "Hijack"}, format="json")
+        assert after.status_code == 403
+        group.refresh_from_db()
+        assert group.headline == "Still mine"
+        # ...and stats, another curator-gated endpoint, is refused too.
+        assert (
+            client_for(co_owner).get(f"/api/v1/collections/{group.code}/stats/").status_code == 403
+        )
 
     def test_demoting_a_plain_member_is_a_harmless_no_op(self, group, owner, member):
         res = client_for(owner).delete(

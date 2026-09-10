@@ -1,6 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { axe, toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
 
 window.scrollTo = vi.fn();
 
@@ -352,6 +355,32 @@ describe('EditCollectionPage — load + pause + submit', () => {
       );
       expect(call).toBeTruthy();
     });
+  });
+
+  // The smoke suite axe-sweeps every route, but its EditCollectionPage fixture
+  // is a GIFT collection, so the reservations branch of "More options"
+  // (ReservationRulesFields — two NumberInputs wrapped in role="group", the
+  // WeekdayChips row) never reaches axe there. Sweep it here, opened.
+  test('the reservations rules branch, opened, has no accessibility violations', async () => {
+    const { container } = renderEdit({
+      headline: 'Ateneu spaces',
+      mode: 'PROPRIETARY',
+      allowed_thing_types: ['RESERVE_THING'],
+      reservation_max_days: 3,
+      reservation_horizon_days: 120,
+      rental_weekdays: [0, 2, 4],
+    });
+
+    await screen.findByDisplayValue('Ateneu spaces');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await waitFor(() =>
+      expect(screen.getByRole('spinbutton', { name: 'Longest reservation (days)' })).toBeVisible()
+    );
+    // The reservations branch, not the rental one — otherwise the sweep proves
+    // nothing about ReservationRulesFields.
+    expect(screen.getByRole('group', { name: 'Days open for reservations' })).toBeInTheDocument();
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   test('a rejected closure date shows the backend’s reason, not a generic error', async () => {

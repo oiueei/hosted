@@ -28,6 +28,11 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
     # transfer that isn't going to happen. The owner-requests page uses it to
     # decide whether accepting needs a confirmation first.
     thing_is_endless = serializers.BooleanField(source="thing_code.is_endless", read_only=True)
+    # The group the request belongs to, for the /owner-bookings label: the page
+    # now pools requests across every PROPRIETARY collection the viewer curates,
+    # so a co-curator of two groups needs to see which one each row is about.
+    collection_code = serializers.SerializerMethodField()
+    collection_headline = serializers.SerializerMethodField()
 
     class Meta:
         model = BookingPeriod
@@ -38,6 +43,8 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "thing_headline",
             "thing_type",
             "thing_is_endless",
+            "collection_code",
+            "collection_headline",
             "requester_code",
             "requester_name",
             "requester_email",
@@ -47,6 +54,22 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "status",
             "project_note",
         ]
+
+    def _collection(self, obj):
+        # A thing can sit in several collections; this takes the first (the view
+        # prefetches `thing_code__collections`, so it costs no extra query). The
+        # rare multi-collection thing whose curated group isn't first is a known
+        # imprecision, not a correctness bug — the label is orientation only.
+        cols = list(obj.thing_code.collections.all())
+        return cols[0] if cols else None
+
+    def get_collection_code(self, obj):
+        collection = self._collection(obj)
+        return collection.code if collection else None
+
+    def get_collection_headline(self, obj):
+        collection = self._collection(obj)
+        return collection.headline if collection else None
 
 
 class BookingPeriodCalendarSerializer(serializers.ModelSerializer):

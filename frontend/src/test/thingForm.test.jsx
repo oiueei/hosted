@@ -112,9 +112,24 @@ describe('AddThingPage — field visibility', () => {
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     // The Select still renders even when the allowlist leaves one option.
     expect(screen.getByText('Type')).toBeInTheDocument();
-    // LEND is a DETAIL_TYPE but not a FEE_TYPE: availability shows, fee hidden.
+    // LEND has no fee, and no static availability either — a date-based type
+    // shows *live* availability from the calendar, so collecting the static
+    // hint would be data that never surfaces. Condition and location still show.
     expect(container.querySelector('#add-thing-fee')).toBeNull();
-    expect(screen.getByText('Availability')).toBeInTheDocument();
+    expect(screen.queryByText('Availability')).toBeNull();
+    expect(container.querySelector('#add-thing-location')).toBeTruthy();
+  });
+
+  test('RESERVE: no static availability field, but location and condition stay', async () => {
+    const { container } = renderAdd({
+      collection: { mode: 'PROPRIETARY', allowed_thing_types: ['RESERVE_THING'] },
+    });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    // Date-based like LEND — live calendar availability, not the static hint.
+    expect(screen.queryByText('Availability')).toBeNull();
+    expect(screen.getByText('Condition')).toBeInTheDocument();
+    expect(container.querySelector('#add-thing-location')).toBeTruthy();
   });
 });
 

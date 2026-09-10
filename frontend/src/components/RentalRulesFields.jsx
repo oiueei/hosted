@@ -1,12 +1,7 @@
 import { Select, TextArea } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import {
-  RENTAL_DURATION_PRESETS,
-  WEEKDAY_VALUES,
-  durationLabel,
-  weekdayLabel,
-  weekdayNarrow,
-} from '../utils/rental';
+import { RENTAL_DURATION_PRESETS, durationLabel } from '../utils/rental';
+import WeekdayChips from './WeekdayChips';
 import LocalizedInfo from './LocalizedInfo';
 import { localizedCounter } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
@@ -21,8 +16,9 @@ import hdsLang from '../utils/hdsLang';
  * leaving them empty is the "no fixed durations" default.
  *
  * Controlled: value + setter owned by the page. `idPrefix` is
- * `create-collection` / `edit-collection`; `theeemeColor01` is the theeeme
- * `color_01` token name (the selected weekday chip's fill).
+ * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
+ * are the theeeme token names for a selected weekday chip (fill + text — see
+ * `WeekdayChips`).
  *
  * `depositPolicy` (D5, 2026-08) rides along here rather than getting its own
  * component: it is the same class of statement as the duration/weekday rules
@@ -39,6 +35,7 @@ export default function RentalRulesFields({
   depositPolicy = '',
   setDepositPolicy = () => {},
   theeemeColor01,
+  theeemeColor06,
 }) {
   const { t, i18n } = useTranslation();
 
@@ -59,50 +56,15 @@ export default function RentalRulesFields({
           setRentalDurations(opts.map((o) => Number(o.value)).sort((a, b) => a - b))
         }
       />
-      <div className="weekday-field">
-        <p className="weekday-field-label" id={`${idPrefix}-rental-weekdays-label`}>
-          {t('rental.weekdaysLabel')}
-        </p>
-        <div
-          className="weekday-chips"
-          role="group"
-          aria-labelledby={`${idPrefix}-rental-weekdays-label`}
-        >
-          {WEEKDAY_VALUES.map((w) => {
-            const selected = rentalWeekdays.includes(w);
-            const full = weekdayLabel(w, i18n.language);
-            return (
-              <button
-                key={w}
-                type="button"
-                className={`weekday-chip${selected ? ' selected' : ''}`}
-                aria-pressed={selected}
-                aria-label={full}
-                title={full}
-                onClick={() =>
-                  setRentalWeekdays(
-                    selected
-                      ? rentalWeekdays.filter((x) => x !== w)
-                      : [...rentalWeekdays, w].sort((a, b) => a - b)
-                  )
-                }
-                style={
-                  selected && theeemeColor01
-                    ? {
-                        backgroundColor: `var(--color-${theeemeColor01})`,
-                        borderColor: `var(--color-${theeemeColor01})`,
-                        color: 'var(--color-white)',
-                      }
-                    : undefined
-                }
-              >
-                {weekdayNarrow(w, i18n.language)}
-              </button>
-            );
-          })}
-        </div>
-        <p className="weekday-field-helper">{t('rental.weekdaysHelper')}</p>
-      </div>
+      <WeekdayChips
+        labelId={`${idPrefix}-rental-weekdays-label`}
+        labelKey="rental.weekdaysLabel"
+        helperKey="rental.weekdaysHelper"
+        weekdays={rentalWeekdays}
+        setWeekdays={setRentalWeekdays}
+        color01={theeemeColor01}
+        color06={theeemeColor06}
+      />
       {/* Empty by default, never suggested (DESIGN §6 — no dark pattern nudges
           a group towards deposits) and its own field, not folded into the
           duration/weekday cluster's copy: this is prose an owner writes, those

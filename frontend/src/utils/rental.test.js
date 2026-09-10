@@ -161,7 +161,7 @@ describe('isPickupDisabled', () => {
   });
 });
 
-describe('reservationPickupDisabled — closures', () => {
+describe('reservationPickupDisabled', () => {
   test('a reservation span cannot include a closure day', () => {
     const opts = {
       rentalWeekdays: [],
@@ -171,6 +171,43 @@ describe('reservationPickupDisabled — closures', () => {
     };
     expect(reservationPickupDisabled('2024-12-24', opts)).toBe(true); // 24+25
     expect(reservationPickupDisabled('2024-12-26', opts)).toBe(false);
+  });
+
+  test('EVERY day of the span must be an allowed weekday, not just pickup and return', () => {
+    // The whole reason this is a separate function from isPickupDisabled: the
+    // space is occupied for the entire span, so it can't straddle a closed
+    // weekday. rentalWeekdays [Mon, Wed]; a 3-day pickup on Mon 2024-01-01
+    // covers Mon / Tue / Wed — the interior Tuesday is closed, even though
+    // pickup (Mon) and the last day (Wed) are both fine.
+    const opts = { rentalWeekdays: [0, 2], blockedPeriods: [], duration: 3 };
+    expect(reservationPickupDisabled('2024-01-01', opts)).toBe(true);
+    // One day only — just the Monday — is allowed.
+    expect(reservationPickupDisabled('2024-01-01', { ...opts, duration: 1 })).toBe(false);
+    // A span where every day lands on an allowed weekday is allowed.
+    expect(
+      reservationPickupDisabled('2024-01-01', { rentalWeekdays: [0, 1, 2], duration: 3 })
+    ).toBe(false);
+  });
+
+  test('a span that overlaps an existing reservation is disabled', () => {
+    // Mid-span day already booked → the whole pickup is off the table (the
+    // reservation auto-confirms, so there is no owner step to catch a clash).
+    const opts = {
+      rentalWeekdays: [],
+      blockedPeriods: [{ start_date: '2024-01-02', end_date: '2024-01-03' }],
+      duration: 3,
+    };
+    expect(reservationPickupDisabled('2024-01-01', opts)).toBe(true);
+    expect(reservationPickupDisabled('2024-01-01', { ...opts, blockedPeriods: [] })).toBe(false);
+  });
+
+  test('a pickup on the day an existing reservation ends is still allowed (back-to-back)', () => {
+    const opts = {
+      rentalWeekdays: [],
+      blockedPeriods: [{ start_date: '2023-12-29', end_date: '2024-01-01' }],
+      duration: 2,
+    };
+    expect(reservationPickupDisabled('2024-01-01', opts)).toBe(false);
   });
 });
 

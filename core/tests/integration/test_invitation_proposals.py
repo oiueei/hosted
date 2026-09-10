@@ -316,11 +316,37 @@ class TestTheEmailLinks:
 
         assert resp.status_code == 200
         assert resp.data["requires_confirmation"] is True
-        assert resp.data["email"] == "friend@test.com"
         proposal.refresh_from_db()
         assert proposal.status == InvitationProposal.Status.PENDING
         assert mail.outbox == [], "a bare GET must send nothing"
         assert not User.objects.filter(email="friend@test.com").exists()
+
+    def test_the_get_preview_carries_none_of_the_proposed_persons_details(self, group, member):
+        """A GET is what a mail client's link scanner issues. The proposed
+        address, the proposer's private note and the proposer's name (its display
+        fallback is *their* email) are exactly what this flow promises never to
+        leak — the person suggested does not know they were suggested. The
+        preview must answer 'a decision is needed' and nothing more; the SPA
+        auto-commits with a POST and reads the address it shows from that."""
+        client_for(member).post(
+            PROPOSE_URL.format(code=group.code),
+            {"email": "friend@test.com", "note": "she still owes me twenty euros"},
+            format="json",
+        )
+        proposal = InvitationProposal.objects.get(collection=group)
+        tokens = RSVP.objects.filter(
+            target_code=proposal.code,
+            action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
+        ).values_list("token", flat=True)
+
+        for token in tokens:
+            resp = APIClient().get(f"/api/v1/rsvp/{token}/")
+            assert resp.status_code == 200
+            assert set(resp.data) == {"action", "requires_confirmation"}
+            blob = str(resp.data)
+            assert "friend@test.com" not in blob
+            assert "still owes me" not in blob
+            assert "Lele" not in blob  # the proposer's name
 
     def test_a_post_commits_and_burns_both_links(self, group, member):
         proposal, approve, reject = self._proposal_rsvps(group, member)

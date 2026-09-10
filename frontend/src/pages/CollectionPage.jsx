@@ -261,7 +261,11 @@ export default function CollectionPage() {
                 isPublic={collection.visibility === 'PUBLIC'}
               />
             )}
-            <BackLink to="/" href={backHref} label={t('common.home')} />
+            <BackLink
+              to="/"
+              href={backHref}
+              label={backHref ? t('collectionPage.backToSite') : t('common.home')}
+            />
             <h1 className="form-hero-title">
               {headline}
               {collection.mode === 'COMMUNITY' && (

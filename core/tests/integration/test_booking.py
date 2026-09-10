@@ -805,9 +805,15 @@ class TestMyBookingsAndOwnerBookings:
         response = authenticated_client.get("/api/v1/owner-bookings/")
 
         assert response.status_code == status.HTTP_200_OK
-        by_thing = {r["thing_code"]: r["thing_is_endless"] for r in response.data["results"]}
-        assert by_thing[once.code] is False
-        assert by_thing[endless.code] is True
+        rows = {r["thing_code"]: r for r in response.data["results"]}
+        assert rows[once.code]["thing_is_endless"] is False
+        assert rows[endless.code]["thing_is_endless"] is True
+        # These things sit in no collection, so the group label is null — the
+        # ordinary case for a standalone thing, and the branch `_collection`
+        # takes when `collections` is empty. The SPA reads this null and links
+        # the row to `/things/{code}` rather than `/collections/…`.
+        assert rows[once.code]["collection_code"] is None
+        assert rows[once.code]["collection_headline"] is None
 
     def test_my_bookings_empty_when_no_bookings(self, authenticated_client):
         """my-bookings returns empty list when user has no bookings."""

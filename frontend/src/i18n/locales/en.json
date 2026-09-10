@@ -247,7 +247,11 @@
     "reservationMadeLabel": "New reservation",
     "reservationMadeBody": "{{requester_name}} reserved {{thing_headline}}.",
     "reservationCancelledLabel": "Reservation cancelled",
-    "reservationCancelledBody": "{{other_name}} cancelled a reservation of {{thing_headline}}."
+    "reservationCancelledBody": "{{other_name}} cancelled a reservation of {{thing_headline}}.",
+    "promotedLabel": "You're a co-curator now",
+    "promotedBody": "You can help run “{{collection_headline}}” now: invite and remove guests, edit it, message the group, and handle its questions and bookings. Your name now shows on the group's page as a curator; only the founder can delete the group.",
+    "demotedLabel": "You're no longer a co-curator",
+    "demotedBody": "You're a regular member of “{{collection_headline}}” again."
   },
   "collectionPage": {
     "editCollection": "Edit collection",
@@ -276,6 +280,7 @@
     "notFound": "Collection not found.",
     "errorLoading": "Error loading collection.",
     "curator": "Curator:",
+    "backToSite": "The group's site",
     "curatorsLabel": "Co-curators:",
     "showMoreThings_one": "Show 1 more thing",
     "showMoreThings_other": "Show {{count}} more things",
@@ -522,7 +527,7 @@
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
     "maxDescription": "Description is too long: 2000 characters per language.",
-    "reservationsModeNote": "A reservations collection is run by one person and holds only reservations, so it stays private and proprietary."
+    "reservationsModeNote": "A reservations collection holds only reservations, and its curators manage what can be booked — so it's always proprietary."
   },
   "myBookings": {
     "pageTitle": "My requests",
@@ -584,6 +589,9 @@
     "removeTooltip": "Remove guest from this collection",
     "promoteTooltip": "Make co-curator",
     "demoteTooltip": "Remove co-curator status",
+    "promoteConfirmTitle": "Make {{name}} a co-curator?",
+    "promoteConfirmBody": "A co-curator can do everything you can except delete the group: invite and remove guests, edit the collection, message everyone, answer questions, manage bookings, download the member list (with everyone's email), and promote other co-curators. Their name will show on the group's page. You can undo it whenever you like.",
+    "promoteConfirm": "Make them a co-curator",
     "promoted": "Promoted to co-curator.",
     "demoted": "Removed as co-curator.",
     "invitationResent": "Invitation resent.",
@@ -959,10 +967,13 @@
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
     "pickupLabel": "From",
+    "pickupHelper": "Closed days and days already booked are greyed out. A reservation can't run across a closed day.",
     "projectNoteLabel": "Tell us briefly about your project (optional)",
     "projectNoteHelper": "{{remaining}} characters left",
     "successLabel": "Reserved",
     "successMessage": "Your reservation is confirmed — the owner has been told.",
+    "dateSummary": "Reserved from {{start}} to {{end}}.",
+    "dateRange": "Pick a date between today and {{days}} days from now.",
     "noteFrom": "Their note: {{note}}",
     "maxDaysLabel": "Longest reservation (days)",
     "maxDaysHelper": "A member can book the space for 1 up to this many days at a time.",

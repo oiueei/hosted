@@ -241,7 +241,11 @@
     "reservationMadeLabel": "Nova reserva",
     "reservationMadeBody": "{{requester_name}} ha reservat {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancel·lada",
-    "reservationCancelledBody": "{{other_name}} ha cancel·lat una reserva de {{thing_headline}}."
+    "reservationCancelledBody": "{{other_name}} ha cancel·lat una reserva de {{thing_headline}}.",
+    "promotedLabel": "Ara ets co-curador",
+    "promotedBody": "Ara pots ajudar a gestionar “{{collection_headline}}”: convidar i treure convidats, editar-la, escriure al grup i ocupar-te de les seves preguntes i reserves. El teu nom apareix ara a la pàgina del grup com a curador; només qui el va crear pot esborrar-lo.",
+    "demotedLabel": "Ja no ets co-curador",
+    "demotedBody": "Tornes a ser un membre normal de “{{collection_headline}}”."
   },
   "collectionPage": {
     "editCollection": "Editar col·lecció",
@@ -270,6 +274,7 @@
     "notFound": "Col·lecció no trobada.",
     "errorLoading": "Error en carregar la col·lecció.",
     "curator": "Curador:",
+    "backToSite": "Web del grup",
     "curatorsLabel": "Co-curadors:",
     "showMoreThings_one": "Veure 1 cosa més",
     "showMoreThings_other": "Veure {{count}} coses més",
@@ -516,7 +521,7 @@
     "tagsPlaceholder": "p. ex. Vintage, Cuina, Exterior",
     "tagsHelper": "Etiquetes opcionals per organitzar les coses d'aquesta col·lecció",
     "maxDescription": "La descripció és massa llarga: 2000 caràcters per idioma.",
-    "reservationsModeNote": "Una col·lecció de reserves la gestiona una sola persona i només conté reserves, així que es queda privada i de tipus propietari."
+    "reservationsModeNote": "Una col·lecció de reserves només conté reserves i els seus curadors gestionen el que es pot reservar, així que sempre és de tipus propietari."
   },
   "myBookings": {
     "pageTitle": "Les meves sol·licituds",
@@ -578,6 +583,9 @@
     "removeTooltip": "Treure convidat d'aquesta col·lecció",
     "promoteTooltip": "Nomenar co-curador",
     "demoteTooltip": "Treure estatus de co-curador",
+    "promoteConfirmTitle": "Nomenar {{name}} co-curador?",
+    "promoteConfirmBody": "Un co-curador pot fer tot el que pots tu tret d'esborrar el grup: convidar i treure convidats, editar la col·lecció, escriure a tothom, respondre preguntes, gestionar reserves, baixar la llista de membres (amb el correu de cadascú) i nomenar altres co-curadors. El seu nom apareixerà a la pàgina del grup. Ho pots desfer quan vulguis.",
+    "promoteConfirm": "Nomenar-lo co-curador",
     "promoted": "Nomenat co-curador.",
     "demoted": "Ja no és co-curador.",
     "invitationResent": "Invitació reenviada.",
@@ -959,10 +967,13 @@
     "days_one": "{{count}} dia",
     "days_other": "{{count}} dies",
     "pickupLabel": "A partir del",
+    "pickupHelper": "Els dies tancats o ja reservats apareixen en gris. Una reserva no pot abastar un dia tancat.",
     "projectNoteLabel": "Explica'ns breument el teu projecte (opcional)",
     "projectNoteHelper": "Queden {{remaining}} caràcters",
     "successLabel": "Reservat",
     "successMessage": "La teva reserva està confirmada; n'hem avisat el propietari.",
+    "dateSummary": "Reservat del {{start}} al {{end}}.",
+    "dateRange": "Tria una data entre avui i d'aquí a {{days}} dies.",
     "noteFrom": "El seu missatge: {{note}}",
     "maxDaysLabel": "Reserva més llarga (dies)",
     "maxDaysHelper": "Un membre pot reservar l'espai d'1 fins a aquest nombre de dies cada vegada.",

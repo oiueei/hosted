@@ -241,7 +241,11 @@
     "reservationMadeLabel": "Nueva reserva",
     "reservationMadeBody": "{{requester_name}} ha reservado {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancelada",
-    "reservationCancelledBody": "{{other_name}} ha cancelado una reserva de {{thing_headline}}."
+    "reservationCancelledBody": "{{other_name}} ha cancelado una reserva de {{thing_headline}}.",
+    "promotedLabel": "Ahora eres co-curador",
+    "promotedBody": "Ahora puedes ayudar a gestionar “{{collection_headline}}”: invitar y quitar invitados, editarla, escribir al grupo y ocuparte de sus preguntas y reservas. Tu nombre aparece ahora en la página del grupo como curador; solo quien lo creó puede borrarlo.",
+    "demotedLabel": "Ya no eres co-curador",
+    "demotedBody": "Vuelves a ser un miembro normal de “{{collection_headline}}”."
   },
   "collectionPage": {
     "editCollection": "Editar colección",
@@ -270,6 +274,7 @@
     "notFound": "Colección no encontrada.",
     "errorLoading": "Error al cargar la colección.",
     "curator": "Curador:",
+    "backToSite": "Web del grupo",
     "curatorsLabel": "Co-curadores:",
     "showMoreThings_one": "Ver 1 cosa más",
     "showMoreThings_other": "Ver {{count}} cosas más",
@@ -516,7 +521,7 @@
     "tagsPlaceholder": "p. ej. Vintage, Cocina, Exterior",
     "tagsHelper": "Etiquetas opcionales para organizar las cosas de esta colección",
     "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma.",
-    "reservationsModeNote": "Una colección de reservas la gestiona una sola persona y solo contiene reservas, así que se queda privada y de tipo propietario."
+    "reservationsModeNote": "Una colección de reservas solo contiene reservas y sus curadores gestionan lo que se puede reservar, así que siempre es de tipo propietario."
   },
   "myBookings": {
     "pageTitle": "Mis solicitudes",
@@ -578,6 +583,9 @@
     "removeTooltip": "Quitar invitado de esta colección",
     "promoteTooltip": "Nombrar co-curador",
     "demoteTooltip": "Quitar estatus de co-curador",
+    "promoteConfirmTitle": "¿Nombrar co-curador a {{name}}?",
+    "promoteConfirmBody": "Un co-curador puede hacer todo lo que puedes tú salvo borrar el grupo: invitar y quitar invitados, editar la colección, escribir a todo el mundo, responder preguntas, gestionar reservas, descargar la lista de miembros (con el correo de cada uno) y nombrar a otros co-curadores. Su nombre aparecerá en la página del grupo. Puedes deshacerlo cuando quieras.",
+    "promoteConfirm": "Nombrarle co-curador",
     "promoted": "Nombrado co-curador.",
     "demoted": "Ya no es co-curador.",
     "invitationResent": "Invitación reenviada.",
@@ -959,10 +967,13 @@
     "days_one": "{{count}} día",
     "days_other": "{{count}} días",
     "pickupLabel": "A partir del",
+    "pickupHelper": "Los días cerrados o ya reservados aparecen en gris. Una reserva no puede abarcar un día cerrado.",
     "projectNoteLabel": "Cuéntanos brevemente tu proyecto (opcional)",
     "projectNoteHelper": "Quedan {{remaining}} caracteres",
     "successLabel": "Reservado",
     "successMessage": "Tu reserva está confirmada; hemos avisado al propietario.",
+    "dateSummary": "Reservado del {{start}} al {{end}}.",
+    "dateRange": "Elige una fecha entre hoy y dentro de {{days}} días.",
     "noteFrom": "Su mensaje: {{note}}",
     "maxDaysLabel": "Reserva más larga (días)",
     "maxDaysHelper": "Un miembro puede reservar el espacio de 1 hasta este número de días cada vez.",

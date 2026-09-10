@@ -119,6 +119,47 @@ describe('RequestThingPage (what the pickers produce is what the POST carries)',
   });
 });
 
+describe('RequestThingPage — the availability notice states the status once', () => {
+  beforeEach(() => localStorage.setItem('userCode', 'TEST01'));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  test('available today: the heading is "Availability." and the body is just "Immediate"', async () => {
+    mockRoutes({ thing: { ...RENTAL_THING, available_today: true } });
+    renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    // The bug: the body was `${availabilityLabel} ${status}`, so with the
+    // Notification's own label the word "Availability." printed twice.
+    expect(screen.getByText('Immediate')).toBeInTheDocument();
+    expect(screen.queryByText(/Availability\.\s*Immediate/)).toBeNull();
+  });
+
+  test('not available today: the body is the next-available date, once', async () => {
+    const soon = plusDays(new Date(), 5);
+    mockRoutes({
+      thing: { ...RENTAL_THING, available_today: false, next_available: iso(soon) },
+    });
+    renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    expect(screen.getByText(display(soon))).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`Availability\\.\\s*${display(soon)}`))).toBeNull();
+  });
+
+  test('nothing on the horizon: the body is the "not available soon" line', async () => {
+    mockRoutes({
+      thing: { ...RENTAL_THING, available_today: false, next_available: null },
+    });
+    renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    expect(screen.getByText('Not available soon')).toBeInTheDocument();
+  });
+});
+
 describe('the date picker chrome speaks the UI language', () => {
   beforeEach(() => {
     localStorage.setItem('userCode', 'TEST01');

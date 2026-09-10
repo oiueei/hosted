@@ -125,7 +125,7 @@ core/
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
 | **Theeeme** | Colour palettes (6 HDS colour token names) for customising collections |
 | **RSVP** | One-time-use tokens (24h expiry) for auth and email actions. FK to User |
-| **BookingPeriod** | Unified booking model for all thing types (72h PENDING expiry). FKs to Thing, User (requester), User (owner). LEND/RENT/RESERVE carry dates; GIFT/SELL don't. **RESERVE_THING bookings are auto-confirmed** — created straight to ACCEPTED with no accept/reject step, no `ThingTransfer`, both parties emailed at once — and either the requester **or** the owner may cancel one that hasn't started. `project_note` (RESERVE only) carries the requester's optional note about what the space is for. |
+| **BookingPeriod** | Unified booking model for all thing types (72h PENDING expiry). FKs to Thing, User (requester), User (owner). LEND/RENT/RESERVE carry dates; GIFT/SELL don't. **RESERVE_THING bookings are auto-confirmed** — created straight to ACCEPTED with no accept/reject step, no `ThingTransfer`, both parties emailed at once — and either the requester **or any curator** of the reservations collection (owner or co-curator) may cancel one that hasn't started. `project_note` (RESERVE only) carries the requester's optional note about what the space is for. |
 | **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires; read only by whatever reporting the deployment runs over it. Never exposed to users |
 | **DailyActivity** | One `(user, date)` row per user per active day, written by `DailyActivityMiddleware` (cache-gated to ≤1 DB write per user per day). Powers WAU/MAU and retention. Records less than the web-server logs already hold and never leaves our DB |
 
@@ -136,7 +136,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 - `Collection.owner` -> FK to User
 - `Collection.things` -> M2M to Thing (via `collection_things` table)
 - `Collection.invites` -> M2M to User (via `collection_invites` table)
-- `Collection.co_owners` -> M2M to User (via `collection_co_owners` table) — COMMUNITY-only, always a subset of `invites`
+- `Collection.co_owners` -> M2M to User (via `collection_co_owners` table) — the co-curator tier in either mode, always a subset of `invites`
 - `Collection.theeeme` -> FK to Theeeme (PROTECT)
 - `Thing.owner` -> FK to User
 - `Thing.deal` -> M2M to User (via `thing_deals` table)
@@ -225,7 +225,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/owner-bookings/` | Bookings on my things, plus every booking on a thing in a PROPRIETARY collection I curate (with requester name) |
 | POST | `/api/v1/bookings/{code}/accept/` | Accept a pending booking — a manager of the thing (owner or PROPRIETARY-collection curator) |
 | POST | `/api/v1/bookings/{code}/reject/` | Reject a pending booking — a manager of the thing |
-| POST | `/api/v1/bookings/{code}/cancel/` | Cancel a booking. Own pending booking (requester); for a RESERVE_THING reservation that hasn't started, either the requester or the owner |
+| POST | `/api/v1/bookings/{code}/cancel/` | Cancel a booking. Own pending booking (requester); for a RESERVE_THING reservation that hasn't started, the requester or any curator (owner or co-curator) of the reservations collection |
 
 ### FAQ
 | Method | URL | Description |
@@ -321,7 +321,7 @@ python manage.py set_bucket_cors --show     # what the bucket allows right now
 python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
-python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
+python manage.py send_reminders    # loan return reminders (both sides) + reservation arrival reminders (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
 # Retention sweep (GDPR art. 5.1.e) — the sixth link in that daily chain, and the

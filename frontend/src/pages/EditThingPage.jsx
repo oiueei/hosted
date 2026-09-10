@@ -134,7 +134,10 @@ export default function EditThingPage() {
         ? deposit
         : null;
     if (DETAIL_TYPES.includes(thingType)) {
-      body.availability = availability || '';
+      // Date-based detail types (LEND/RESERVE) show live availability, not this
+      // static hint — clear any value a previous non-date type left stored so a
+      // dormant "IMMEDIATE" can't outlive the type it belonged to.
+      body.availability = DATE_TYPES.includes(thingType) ? '' : availability || '';
       body.location = location.trim();
       body.condition = condition || '';
     }

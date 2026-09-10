@@ -79,7 +79,7 @@ class ThingFAQListView(APIView):
         # don't ask).
         if thing.can_manage(request.user.code):
             return Response(
-                {"error": "Owner cannot ask questions about their own thing"},
+                {"error": "You manage this thing — you answer its questions, you don't ask them"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -170,7 +170,7 @@ class FAQAnswerView(APIView):
 
         if not thing.can_manage(request.user.code):
             return Response(
-                {"error": "Only the thing owner can answer questions"},
+                {"error": "Only a manager of this thing can answer questions"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -213,7 +213,7 @@ class FAQVisibilityView(APIView):
 
         if not thing.can_manage(request.user.code):
             return Response(
-                {"error": "Only the thing owner can change FAQ visibility"},
+                {"error": "Only a manager of this thing can change FAQ visibility"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

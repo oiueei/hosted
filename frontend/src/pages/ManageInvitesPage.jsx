@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   TextInput,
   Button,
+  Dialog,
   Notification,
   Table,
   IconEnvelope,
@@ -26,7 +27,7 @@ export default function ManageInvitesPage() {
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
-  const { tc, btnStyle } = useTheeeme();
+  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [invites, setInvites] = useState([]);
@@ -51,6 +52,12 @@ export default function ManageInvitesPage() {
   const [toast, setToast] = useState(null);
   const [resending, setResending] = useState(null);
   const [promoting, setPromoting] = useState(null);
+  // The member a curator has clicked to promote, pending confirmation. Promotion
+  // hands over nearly the founder's whole reach — the member list (with emails)
+  // and the power to appoint more co-curators included — and makes the person's
+  // name public on the group's page, so it gets a confirm (DESIGN §6). Demotion
+  // only removes access, so it stays a one-click toggle.
+  const [promoteCandidate, setPromoteCandidate] = useState(null);
   const inviteLockRef = useRef(false);
   const resendLockRef = useRef(false);
 
@@ -358,7 +365,11 @@ export default function ManageInvitesPage() {
                                 ? t('manageInvites.demoteTooltip')
                                 : t('manageInvites.promoteTooltip')
                             }
-                            onClick={() => togglePromote(row._code, !row._isCoOwner)}
+                            onClick={() =>
+                              row._isCoOwner
+                                ? togglePromote(row._code, false)
+                                : setPromoteCandidate(row)
+                            }
                             disabled={promoting === row._code}
                           >
                             {row._isCoOwner ? (
@@ -435,6 +446,43 @@ export default function ManageInvitesPage() {
           <h2>{t('bulkInvite.heading')}</h2>
           <BulkInviteCsv collectionCode={code} onInvited={fetchCollection} />
         </>
+      )}
+
+      {promoteCandidate && (
+        <Dialog
+          id="promote-confirm"
+          aria-labelledby="promote-confirm-title"
+          isOpen
+          close={() => setPromoteCandidate(null)}
+          closeButtonLabelText={t('common.close')}
+        >
+          <Dialog.Header
+            id="promote-confirm-title"
+            title={t('manageInvites.promoteConfirmTitle', { name: promoteCandidate._name })}
+          />
+          <Dialog.Content>
+            <p style={{ marginBottom: 0 }}>{t('manageInvites.promoteConfirmBody')}</p>
+          </Dialog.Content>
+          <Dialog.ActionButtons>
+            <Button
+              style={btnStyle}
+              onClick={() => {
+                const row = promoteCandidate;
+                setPromoteCandidate(null);
+                togglePromote(row._code, true);
+              }}
+            >
+              {t('manageInvites.promoteConfirm')}
+            </Button>
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => setPromoteCandidate(null)}
+            >
+              {t('common.cancel')}
+            </Button>
+          </Dialog.ActionButtons>
+        </Dialog>
       )}
 
       <Toast toast={toast} onClose={() => setToast(null)} />

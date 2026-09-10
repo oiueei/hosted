@@ -183,6 +183,8 @@ export default function OwnerBookingsPage() {
     _status: b.status,
     _thingCode: b.thing_code,
     _thingHeadline: L(b.thing_headline) || b.thing_code,
+    _collectionCode: b.collection_code,
+    _collectionHeadline: L(b.collection_headline),
     _requesterName: b.requester_name,
     _startDate: b.start_date,
     _endDate: b.end_date,
@@ -201,12 +203,38 @@ export default function OwnerBookingsPage() {
       headerName: t('ownerBookings.colRequest'),
       transform: (row) => (
         <div>
-          <Link to={`/things/${row._thingCode}`}>{row._thingHeadline}</Link>
-          {row._requesterName && (
-            <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
-              {t('ownerBookings.requestedBy', { name: row._requesterName })}
+          <Link
+            to={
+              row._collectionCode
+                ? `/collections/${row._collectionCode}/things/${row._thingCode}`
+                : `/things/${row._thingCode}`
+            }
+          >
+            {row._thingHeadline}
+          </Link>
+          {/* Which group this request is about. The page pools requests across
+              every PROPRIETARY collection the viewer curates, so a co-curator
+              of more than one needs it to tell the rows apart. */}
+          {row._collectionHeadline && (
+            <p
+              style={{
+                margin: 'var(--spacing-2-xs) 0 0',
+                fontSize: 'var(--fontsize-body-s)',
+                color: 'var(--color-black-50)',
+              }}
+            >
+              {row._collectionHeadline}
             </p>
           )}
+          {/* Always shown: a requester who never set a name arrives as '' from
+              the serializer (the email fallback is withheld, L2), and dropping
+              the line entirely loses "who asked". `common.aMember` is the same
+              stand-in the inbox and the cards use. */}
+          <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
+            {t('ownerBookings.requestedBy', {
+              name: row._requesterName || t('common.aMember'),
+            })}
+          </p>
           <p
             style={{
               margin: 'var(--spacing-2-xs) 0 0',
@@ -378,9 +406,9 @@ export default function OwnerBookingsPage() {
             <p>{t('thingCard.transferConfirmBody')}</p>
             <p style={{ marginBottom: 0 }}>
               <strong>{transferRow._thingHeadline}</strong>
-              {transferRow._requesterName
-                ? ` — ${t('ownerBookings.requestedBy', { name: transferRow._requesterName })}`
-                : ''}
+              {` — ${t('ownerBookings.requestedBy', {
+                name: transferRow._requesterName || t('common.aMember'),
+              })}`}
             </p>
           </Dialog.Content>
           <Dialog.ActionButtons>

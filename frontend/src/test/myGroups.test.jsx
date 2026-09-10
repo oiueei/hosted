@@ -127,3 +127,51 @@ describe('UserPage — My groups', () => {
     expect(screen.queryByText('Private business')).not.toBeInTheDocument();
   });
 });
+
+/**
+ * UserPage builds its own hero rather than using PageLayout, so it derives the
+ * theeeme button styles itself. It hand-rolled them for a long time and omitted
+ * the `*-focus` pins that stop HDS repainting a button when the keyboard reaches
+ * it — a suomenlinna/engel theeeme turned its light button a different colour
+ * under focus, exactly when it had to stay readable. It now goes through
+ * `useTheeeme`, which pins them.
+ */
+describe('UserPage — the hero action buttons carry the full theeeme', () => {
+  const THEEEME = {
+    color_01: 'engel',
+    color_02: 'bus-medium-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  };
+
+  test('own profile: the buttons are themed from the fetched colours', async () => {
+    setApi({ profile: { ...ME, theeeme_colors: THEEEME } });
+    renderOwn();
+
+    const edit = await screen.findByRole('link', { name: /edit profile/i });
+    // engel is a light accent — white text on it is 1.22:1. The primary style
+    // pairs color_06 with color_01, the pairing paletteContrast.test.js pins at
+    // >= 4.5:1 for every palette.
+    expect(edit.style.getPropertyValue('--background-color')).toBe('var(--color-engel)');
+    expect(edit.style.getPropertyValue('--color')).toBe('var(--color-black)');
+  });
+
+  test('own profile: focus does not recolour a button — the *-focus tokens are pinned', async () => {
+    setApi({ profile: { ...ME, theeeme_colors: THEEEME } });
+    renderOwn();
+
+    const edit = await screen.findByRole('link', { name: /edit profile/i });
+    const logout = screen.getByRole('link', { name: /log ?out/i });
+    for (const btn of [edit, logout]) {
+      expect(btn.style.getPropertyValue('--background-color-focus')).toBe(
+        btn.style.getPropertyValue('--background-color')
+      );
+      expect(btn.style.getPropertyValue('--color-focus')).toBe(
+        btn.style.getPropertyValue('--color')
+      );
+      expect(btn.style.getPropertyValue('--outline-color-focus')).toBe('var(--color-black)');
+    }
+  });
+});
