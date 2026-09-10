@@ -195,6 +195,16 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 
 CORS_ALLOW_CREDENTIALS = True
 
+# Response headers the browser is allowed to read from JS on a cross-origin
+# request. Same-origin (how this is served by default) ignores this list, but a
+# frontend on another domain — a documented deployment shape — cannot see a
+# custom header without it. `X-Calendar-Events` is load-bearing: the calendar
+# export marks its reservations delivered server-side, so a client that reads a
+# missing count as 0 skips the download and those events never come back out.
+# `Content-Disposition` lets the two JSON exports name their file from the
+# server rather than guessing.
+CORS_EXPOSE_HEADERS = ["Content-Disposition", "X-Calendar-Events"]
+
 
 # CSRF settings
 CSRF_COOKIE_HTTPONLY = False  # React needs to read the cookie

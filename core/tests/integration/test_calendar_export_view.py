@@ -137,3 +137,28 @@ class TestTheFile:
         assert res["X-Calendar-Events"] == "1"
         rows = list(csv.DictReader(io.StringIO(res.content.decode())))
         assert len(rows) == 1
+
+
+class TestACrossOriginClientCanReadTheCount:
+    """The event count rides only in ``X-Calendar-Events``, and the export has
+    already marked those reservations delivered by the time the client reads it.
+    A frontend on another domain (a documented deployment shape) cannot see a
+    custom response header unless it is in ``Access-Control-Expose-Headers`` —
+    without it the SPA reads a missing count as 0, skips the download, and the
+    marked events never come back out. ``CORS_EXPOSE_HEADERS`` in ``base.py``
+    names it; this pins that the header actually reaches such a client.
+    """
+
+    def test_the_count_and_filename_headers_are_exposed_cross_origin(
+        self, authenticated_client, user, user2, collection
+    ):
+        _loan(collection, user, user2)
+
+        res = authenticated_client.post(
+            URL.format(code=collection.code),
+            HTTP_ORIGIN="http://localhost:3000",
+        )
+
+        exposed = {h.strip().lower() for h in res["Access-Control-Expose-Headers"].split(",")}
+        assert "x-calendar-events" in exposed
+        assert "content-disposition" in exposed
