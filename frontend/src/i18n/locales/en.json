@@ -9,6 +9,14 @@
     "notice": "The whole group — every thing, every member's email, the full history. Not the summary above: it carries other people's data, so keep it somewhere safe and don't forward it.",
     "error": "Couldn't build the export. Please try again in a moment."
   },
+  "calendarExport": {
+    "downloadButton": "Download reservations for your calendar (CSV)",
+    "downloading": "Preparing the file…",
+    "notice": "Loans, rentals and space reservations as all-day calendar events. Only the ones added since your last download, so importing the file twice never doubles up.",
+    "done": "{{count}} new event(s) — check your downloads.",
+    "nothingNew": "Nothing new since your last download.",
+    "error": "Couldn't build the calendar file. Please try again in a moment."
+  },
   "ageRange": {
     "PRE_1946": "1945 or earlier",
     "BOOMER": "Boomers (1946–1964)",
