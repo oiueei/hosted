@@ -247,7 +247,11 @@
     "reservationMadeLabel": "New reservation",
     "reservationMadeBody": "{{requester_name}} reserved {{thing_headline}}.",
     "reservationCancelledLabel": "Reservation cancelled",
-    "reservationCancelledBody": "{{other_name}} cancelled a reservation of {{thing_headline}}."
+    "reservationCancelledBody": "{{other_name}} cancelled a reservation of {{thing_headline}}.",
+    "promotedLabel": "You're a co-curator now",
+    "promotedBody": "You can help run “{{collection_headline}}” now: invite and remove guests, edit it, message the group, and handle its questions and bookings. Your name now shows on the group's page as a curator; only the founder can delete the group.",
+    "demotedLabel": "You're no longer a co-curator",
+    "demotedBody": "You're a regular member of “{{collection_headline}}” again."
   },
   "collectionPage": {
     "editCollection": "Edit collection",

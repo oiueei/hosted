@@ -241,7 +241,11 @@
     "reservationMadeLabel": "Nova reserva",
     "reservationMadeBody": "{{requester_name}} ha reservat {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancel·lada",
-    "reservationCancelledBody": "{{other_name}} ha cancel·lat una reserva de {{thing_headline}}."
+    "reservationCancelledBody": "{{other_name}} ha cancel·lat una reserva de {{thing_headline}}.",
+    "promotedLabel": "Ara ets co-curador",
+    "promotedBody": "Ara pots ajudar a gestionar “{{collection_headline}}”: convidar i treure convidats, editar-la, escriure al grup i ocupar-te de les seves preguntes i reserves. El teu nom apareix ara a la pàgina del grup com a curador; només qui el va crear pot esborrar-lo.",
+    "demotedLabel": "Ja no ets co-curador",
+    "demotedBody": "Tornes a ser un membre normal de “{{collection_headline}}”."
   },
   "collectionPage": {
     "editCollection": "Editar col·lecció",

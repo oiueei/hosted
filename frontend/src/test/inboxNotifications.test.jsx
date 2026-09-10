@@ -220,6 +220,31 @@ describe('InboxNotifications — every type says something', () => {
       says: [/nou@vei\.cat/, /nobody was contacted/i, /haven't been told why/i],
       links: '/collections/COL001',
     },
+    {
+      // The backend sends NO email for this (a deliberate v1 simplification),
+      // so this card is the whole notice. It fell through to the broadcast
+      // default and rendered blank until the design round.
+      what: 'a promotion to co-curator says what the member can now do',
+      notification: {
+        code: 'NOTA06',
+        type: 'PROMOTED_CO_OWNER',
+        payload: { collection_headline: 'Toy library', collection_code: 'COL001' },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/co-curator now/i, /Toy library/, /founder can delete/i],
+      links: '/collections/COL001',
+    },
+    {
+      what: 'a demotion says the member is a regular member again',
+      notification: {
+        code: 'NOTA07',
+        type: 'DEMOTED_CO_OWNER',
+        payload: { collection_headline: 'Toy library', collection_code: 'COL001' },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/no longer a co-curator/i, /regular member/i, /Toy library/],
+      links: '/collections/COL001',
+    },
   ];
 
   test.each(CASES)('$what', async ({ notification, says, links }) => {
