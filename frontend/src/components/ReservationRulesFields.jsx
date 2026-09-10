@@ -1,19 +1,21 @@
 import { NumberInput } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { WEEKDAY_VALUES, weekdayLabel, weekdayNarrow } from '../utils/rental';
+import WeekdayChips from './WeekdayChips';
 
 /**
  * The rules a reservations collection's owner sets: how many days a member may
- * book the space for in one go, and which weekdays it is open for reservations.
+ * book the space for in one go, how far ahead they may book, and which weekdays
+ * it is open for reservations.
  *
  * Shown (in the "More options" accordion) *instead of* `RentalRulesFields` when
  * the collection is a reservations collection — `allowed_thing_types` is exactly
  * `["RESERVE_THING"]`. It reuses the same `rental_weekdays` state the rental
- * rules use (the backend reuses the column), and the same weekday chip markup.
+ * rules use (the backend reuses the column), and the same `WeekdayChips` row.
  *
  * Controlled: value + setter owned by the page. `idPrefix` is
- * `create-collection` / `edit-collection`; `theeemeColor01` fills the selected
- * chip.
+ * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
+ * are the theeeme token names for a selected weekday chip (fill + text — see
+ * `WeekdayChips`).
  */
 export default function ReservationRulesFields({
   idPrefix,
@@ -24,8 +26,9 @@ export default function ReservationRulesFields({
   rentalWeekdays = [],
   setRentalWeekdays = () => {},
   theeemeColor01,
+  theeemeColor06,
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -55,50 +58,15 @@ export default function ReservationRulesFields({
           setReservationHorizonDays(Number.isFinite(n) ? Math.min(365, Math.max(1, n)) : 90);
         }}
       />
-      <div className="weekday-field">
-        <p className="weekday-field-label" id={`${idPrefix}-reservation-weekdays-label`}>
-          {t('reservation.weekdaysLabel')}
-        </p>
-        <div
-          className="weekday-chips"
-          role="group"
-          aria-labelledby={`${idPrefix}-reservation-weekdays-label`}
-        >
-          {WEEKDAY_VALUES.map((w) => {
-            const selected = rentalWeekdays.includes(w);
-            const full = weekdayLabel(w, i18n.language);
-            return (
-              <button
-                key={w}
-                type="button"
-                className={`weekday-chip${selected ? ' selected' : ''}`}
-                aria-pressed={selected}
-                aria-label={full}
-                title={full}
-                onClick={() =>
-                  setRentalWeekdays(
-                    selected
-                      ? rentalWeekdays.filter((x) => x !== w)
-                      : [...rentalWeekdays, w].sort((a, b) => a - b)
-                  )
-                }
-                style={
-                  selected && theeemeColor01
-                    ? {
-                        backgroundColor: `var(--color-${theeemeColor01})`,
-                        borderColor: `var(--color-${theeemeColor01})`,
-                        color: 'var(--color-white)',
-                      }
-                    : undefined
-                }
-              >
-                {weekdayNarrow(w, i18n.language)}
-              </button>
-            );
-          })}
-        </div>
-        <p className="weekday-field-helper">{t('reservation.weekdaysHelper')}</p>
-      </div>
+      <WeekdayChips
+        labelId={`${idPrefix}-reservation-weekdays-label`}
+        labelKey="reservation.weekdaysLabel"
+        helperKey="reservation.weekdaysHelper"
+        weekdays={rentalWeekdays}
+        setWeekdays={setRentalWeekdays}
+        color01={theeemeColor01}
+        color06={theeemeColor06}
+      />
     </>
   );
 }

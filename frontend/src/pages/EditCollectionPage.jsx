@@ -431,6 +431,7 @@ export default function EditCollectionPage() {
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}
+              theeemeColor06={tc.color_06}
             />
           ) : (
             <RentalRulesFields
@@ -442,6 +443,7 @@ export default function EditCollectionPage() {
               depositPolicy={depositPolicy}
               setDepositPolicy={setDepositPolicy}
               theeemeColor01={tc.color_01}
+              theeemeColor06={tc.color_06}
             />
           )}
           <ClosedDatesField
