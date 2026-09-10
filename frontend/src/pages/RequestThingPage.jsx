@@ -271,15 +271,11 @@ export default function RequestThingPage() {
                 size="small"
                 label={t('thingPage.availabilityLabel')}
               >
-                {`${t('thingPage.availabilityLabel')} ${
-                  thing.available_today
-                    ? t('availability.IMMEDIATE')
-                    : thing.next_available
-                      ? t('availability.nextAvailable', {
-                          date: formatDate(thing.next_available),
-                        })
-                      : t('availability.noneSoon')
-                }`}
+                {thing.available_today
+                  ? t('availability.IMMEDIATE')
+                  : thing.next_available
+                    ? t('availability.nextAvailable', { date: formatDate(thing.next_available) })
+                    : t('availability.noneSoon')}
               </Notification>
               <div className="spacer-s" />
             </>
