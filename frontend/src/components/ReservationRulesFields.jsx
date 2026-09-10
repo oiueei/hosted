@@ -1,6 +1,46 @@
+import { useEffect, useState } from 'react';
 import { NumberInput } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import WeekdayChips from './WeekdayChips';
+
+/**
+ * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
+ * bound straight to `Math.min(max, Math.max(min, n))` snaps to the bound on
+ * every keystroke — you cannot clear "3" to type "5", and an empty field jumps
+ * to 1. This keeps a local draft string so the field can be emptied or briefly
+ * hold an out-of-range value while editing, and clamps once, on blur. The parent
+ * only ever hears a valid number, and only when it actually changes.
+ */
+function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onChange }) {
+  const [draft, setDraft] = useState(String(value));
+  // Re-sync when the value arrives from outside — e.g. the Edit form finishing
+  // its load. Our own commits set `draft` first, so this is then a no-op.
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const n = Math.round(Number(draft));
+    const fixed =
+      draft.trim() !== '' && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    setDraft(String(fixed));
+    if (fixed !== value) onChange(fixed);
+  };
+
+  return (
+    <NumberInput
+      id={id}
+      label={label}
+      helperText={helperText}
+      min={min}
+      max={max}
+      step={1}
+      value={draft === '' ? '' : Number(draft)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+    />
+  );
+}
 
 /**
  * The rules a reservations collection's owner sets: how many days a member may
@@ -32,31 +72,25 @@ export default function ReservationRulesFields({
 
   return (
     <>
-      <NumberInput
+      <BoundedDayInput
         id={`${idPrefix}-reservation-max-days`}
         label={t('reservation.maxDaysLabel')}
         helperText={t('reservation.maxDaysHelper')}
         min={1}
         max={7}
-        step={1}
+        fallback={1}
         value={reservationMaxDays}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          setReservationMaxDays(Number.isFinite(n) ? Math.min(7, Math.max(1, n)) : 1);
-        }}
+        onChange={setReservationMaxDays}
       />
-      <NumberInput
+      <BoundedDayInput
         id={`${idPrefix}-reservation-horizon-days`}
         label={t('reservation.horizonLabel')}
         helperText={t('reservation.horizonHelper')}
         min={1}
         max={365}
-        step={1}
+        fallback={90}
         value={reservationHorizonDays}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          setReservationHorizonDays(Number.isFinite(n) ? Math.min(365, Math.max(1, n)) : 90);
-        }}
+        onChange={setReservationHorizonDays}
       />
       <WeekdayChips
         labelId={`${idPrefix}-reservation-weekdays-label`}
