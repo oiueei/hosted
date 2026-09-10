@@ -46,7 +46,11 @@ from .views.collections import (
 )
 from .views.contact import ContactView
 from .views.csp import csp_report
-from .views.export import AccountDataExportView, CollectionDataExportView
+from .views.export import (
+    AccountDataExportView,
+    CollectionCalendarExportView,
+    CollectionDataExportView,
+)
 from .views.faq import FAQAnswerView, FAQDetailView, FAQVisibilityView, ThingFAQListView
 from .views.inbox import InboxView
 from .views.notifications import DigestMuteByTokenView, NotificationsByTokenView
@@ -195,6 +199,11 @@ urlpatterns = [
         "collections/<str:collection_code>/export/",
         CollectionDataExportView.as_view(),
         name="collection-export",
+    ),
+    path(
+        "collections/<str:collection_code>/calendar-export/",
+        CollectionCalendarExportView.as_view(),
+        name="collection-calendar-export",
     ),
     path(
         "collections/<str:collection_code>/broadcast/",

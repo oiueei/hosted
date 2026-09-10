@@ -198,6 +198,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner or co-owner, rate limited: 5/h) |
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner or co-owner) |
 | GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner or co-owner, rate limited: 10/day). A plain member gets 403, never a partial file |
+| POST | `/api/v1/collections/{code}/calendar-export/` | Download the collection's upcoming LEND/RENT/RESERVE reservations as a Google Calendar CSV (owner or co-owner, rate limited: 20/h). Incremental — each download carries only what hasn't gone out before; `X-Calendar-Events` gives the count. POST because it marks them delivered |
 | POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner or co-owner) |
 | POST | `/api/v1/collections/{code}/things/bulk/` | Bulk-create things from a CSV (rate limited: 10/h) |
 
