@@ -280,6 +280,7 @@
     "notFound": "Collection not found.",
     "errorLoading": "Error loading collection.",
     "curator": "Curator:",
+    "backToSite": "The group's site",
     "curatorsLabel": "Co-curators:",
     "showMoreThings_one": "Show 1 more thing",
     "showMoreThings_other": "Show {{count}} more things",

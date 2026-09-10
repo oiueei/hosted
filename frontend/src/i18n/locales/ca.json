@@ -274,6 +274,7 @@
     "notFound": "Col·lecció no trobada.",
     "errorLoading": "Error en carregar la col·lecció.",
     "curator": "Curador:",
+    "backToSite": "Web del grup",
     "curatorsLabel": "Co-curadors:",
     "showMoreThings_one": "Veure 1 cosa més",
     "showMoreThings_other": "Veure {{count}} coses més",
