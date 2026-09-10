@@ -372,9 +372,7 @@ describe('EditCollectionPage — the calendar export', () => {
 
     fireEvent.click(screen.getByRole('button', button));
 
-    expect(
-      await screen.findByText('Nothing new since your last download.')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Nothing new since your last download.')).toBeInTheDocument();
     expect(click).not.toHaveBeenCalled();
   });
 
