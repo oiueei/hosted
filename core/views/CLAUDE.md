@@ -1064,9 +1064,10 @@ Daily command (`python manage.py close_transfers`) that closes overdue transfers
 
 Daily command (`python manage.py send_reminders`) that sends reminder emails:
 - **Booking return reminders**: ACCEPTED bookings with `end_date = tomorrow` — notifies **both sides**, one email each: the owner (`send_return_reminder_email` — "somebody's hold ends tomorrow", nothing asked of them) and the **borrower** (`send_return_due_email` — "tomorrow you take it back", naming the owner they owe it to, with a link to the listing). **RESERVE_THING is excluded** (`.exclude(thing_type=RESERVE_THING)`) — nothing is carried anywhere, so "take it back" is nonsense for an on-site reservation.
+- **Reservation arrival reminders**: ACCEPTED `RESERVE_THING` bookings with `start_date = tomorrow` — one email to the **member who booked the slot** (`send_reservation_reminder_email` — "your reservation starts tomorrow"). A reservation auto-confirms and can be booked up to a year ahead, so this is the *only* nudge between the confirmation and the day, and a no-show costs a real slot. Owner not pinged — nobody has to carry anything.
 - The borrower's half was missing until the 2026-08 design round: only the owner was told a loan was ending, so the one person who actually had to do something — carry the drill back — heard nothing. A lending library runs on that message.
 - The fan-out is per recipient and swallows a failure with a warning on stderr, so one broken send costs neither the other side their reminder nor the rest of the run theirs (same reasoning as `send_digests`).
-- Outputs count of reminder emails sent (two per due booking).
+- Outputs the total count of reminder emails sent (two per due loan, one per due reservation).
 
 ### Management Command: `send_digests`
 

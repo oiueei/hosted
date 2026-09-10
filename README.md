@@ -321,7 +321,7 @@ python manage.py set_bucket_cors --show     # what the bucket allows right now
 python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
-python manage.py send_reminders    # return reminders to BOTH sides of a loan (daily)
+python manage.py send_reminders    # loan return reminders (both sides) + reservation arrival reminders (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
 # Retention sweep (GDPR art. 5.1.e) — the sixth link in that daily chain, and the

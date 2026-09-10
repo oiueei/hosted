@@ -239,6 +239,11 @@ TEXTS = {
         "{other} ha cancelado su reserva de '{thing}' (del {start} al {end})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} ha cancelado su reserva de:",
+    "reservation_reminder_subject": "Tu reserva de '{thing}' empieza mañana",
+    "reservation_reminder_plain": (
+        "Un recordatorio: tu reserva de '{thing}' va del {start} al {end}. Ver la ficha: {url}"
+    ),
+    "reservation_reminder_intro": "Tu reserva empieza mañana:",
     # Digest
     "digest_subject": "Novedades en {collection}",
     "digest_plain": "Cosas nuevas:\n\n{things}\n\nVer la colección: {url}",
