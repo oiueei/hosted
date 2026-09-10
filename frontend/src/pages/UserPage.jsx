@@ -13,6 +13,7 @@ import { formatDate } from '../utils/rental';
 import HeroPhoto from '../components/HeroPhoto';
 import ContactCorner from '../components/ContactCorner';
 import ButtonLink from '../components/ButtonLink';
+import useTheeeme from '../hooks/useTheeeme';
 
 export default function UserPage() {
   const { userCode: paramCode } = useParams();
@@ -30,6 +31,12 @@ export default function UserPage() {
 
   const userCode = paramCode || localStorage.getItem('userCode');
   const isOwnProfile = !paramCode || paramCode === localStorage.getItem('userCode');
+
+  // This page builds its own hero (not PageLayout), so it derives the theeeme
+  // styles itself — via the shared hook, so the keyboard-focus pins ride along.
+  // Own profile: the freshly-fetched colours; other profiles: the viewer's,
+  // from localStorage (the hook's fallback).
+  const { tc, koro: koroType, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
   useEffect(() => {
     // Both branches always fell back to the same word, and it was English in
     // every locale — the one string on this page that never got externalised.
@@ -94,36 +101,6 @@ export default function UserPage() {
   if (!user) {
     return <LoadingSpinner />;
   }
-
-  // Use theeeme colors from user data (own profile) or localStorage (other profiles)
-  const tc =
-    user.theeeme_colors ||
-    (() => {
-      try {
-        return JSON.parse(localStorage.getItem('theeemeColors')) || {};
-      } catch {
-        return {};
-      }
-    })();
-  const btnStyle = tc.color_01
-    ? {
-        '--background-color': `var(--color-${tc.color_01})`,
-        '--background-color-hover': `var(--color-${tc.color_01}-dark)`,
-        '--color': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-        '--border-color': `var(--color-${tc.color_01})`,
-      }
-    : undefined;
-  const btnSecondaryStyle = tc.color_01
-    ? {
-        '--background-color': 'var(--color-white)',
-        '--border-color': `var(--color-${tc.color_01})`,
-        '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
-        '--background-color-hover': `var(--color-${tc.color_01})`,
-        '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-      }
-    : undefined;
-
-  const koroType = localStorage.getItem('koro') || 'basic';
 
   const heroContent = (
     <div

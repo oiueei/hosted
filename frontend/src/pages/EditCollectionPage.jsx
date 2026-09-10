@@ -519,14 +519,7 @@ export default function EditCollectionPage() {
                 },
               });
             }}
-            style={{
-              '--background-color': 'var(--color-white)',
-              '--border-color': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
-              '--color': tc.color_04 ? `var(--color-${tc.color_04})` : undefined,
-              '--background-color-hover': tc.color_01 ? `var(--color-${tc.color_01})` : undefined,
-              '--color-hover': tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)',
-              marginTop: 'var(--spacing-s)',
-            }}
+            style={{ ...btnSecondaryStyle, marginTop: 'var(--spacing-s)' }}
           >
             {t('common.delete')}
           </Button>
