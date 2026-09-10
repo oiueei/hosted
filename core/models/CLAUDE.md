@@ -607,3 +607,25 @@ nothing about — so **the member proposes and the owner decides**.
 5. **Rejection tells the proposer, with no reason** — silence would leave them waiting and asking again; a reason would put words in the owner's mouth about rules that are not the product's business.
 6. **Two owner routes, one decision**: `POST /api/v1/proposals/{code}/{approve|reject}/` in-app, or the email links (RSVP `PROPOSAL_APPROVE`/`PROPOSAL_REJECT`, **POST-only** so a link scanner cannot invite a stranger). Either consumes both links, and both apply the same approval guard (`invitation_service.proposal_approval_blocked`) — the emailed link is not a way past the owner's daily invitation quota or the collection's member ceiling.
 7. **`Collection.allow_member_proposals` gates the whole thing** — off means the owner is not asked at all (403).
+
+---
+
+## CalendarExportMark
+
+One reservation already delivered to a collection's **calendar CSV** download (`POST /collections/{code}/calendar-export/` → [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv)). The download is incremental — "solo lo nuevo desde la última descarga" — and this table is the watermark.
+
+### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `code` | CharField(6) | Auto | Primary key |
+| `collection` | ForeignKey(Collection) | **Yes** | CASCADE, reverse `calendar_export_marks` |
+| `booking` | ForeignKey(BookingPeriod) | **Yes** | CASCADE, reverse `calendar_export_marks` |
+| `exported_at` | DateTimeField | Auto | When this reservation went out |
+
+### Business Rules
+
+1. **One mark per `(collection, booking)`** — `UniqueConstraint(collection, booking)` (`uniq_calendar_export_collection_booking`). `build_calendar_export` reads the unmarked reservations and `bulk_create`s their marks inside a transaction that `select_for_update`s the collection row, so two curators pressing the button at once can't both carry — or both mark — the same reservation.
+2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exports a reservation it's done for the group. It also can't be a flag on `BookingPeriod`: a thing can sit in two collections and each keeps its own watermark on the same booking.
+3. **Both FKs CASCADE** — a booking or collection that no longer exists can't be re-exported anyway.
+4. **No un-mark, no "export everything"** (CA's call) — the download is purely forward. Losing the file means those events don't come back out; the reservations themselves are still on `/owner-bookings` and each thing's calendar.

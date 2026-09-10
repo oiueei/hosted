@@ -9,6 +9,14 @@
     "notice": "El grupo entero — cada cosa, el correo de cada miembro, el historial completo. No es el resumen de arriba: lleva datos de otras personas, guárdalo en un sitio seguro y no lo reenvíes.",
     "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
   },
+  "calendarExport": {
+    "downloadButton": "Descargar reservas para el calendario (CSV)",
+    "downloading": "Preparando el fichero…",
+    "notice": "Los préstamos, alquileres y reservas de espacio como eventos de todo el día. Solo los aparecidos desde la última descarga, así que importar el fichero dos veces no duplica nada.",
+    "done": "{{count}} evento(s) nuevo(s) — mira tus descargas.",
+    "nothingNew": "Nada nuevo desde la última descarga.",
+    "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
+  },
   "ageRange": {
     "PRE_1946": "1945 o antes",
     "BOOMER": "Boomers (1946–1964)",

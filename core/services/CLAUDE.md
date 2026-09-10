@@ -287,6 +287,27 @@ The mirror of `account_service`: *what dies with you is what you get to take wit
 
 ---
 
+### `calendar_export_service.py` — The Collection Calendar CSV
+
+A curator downloads their collection's upcoming **date-based** reservations (LEND / RENT / RESERVE) as a CSV in **Google Calendar's import column order** (`Subject, Start Date, Start Time, End Date, End Time, All Day Event, Description, Location, Private`). Each reservation is **one all-day event that spans its block** — pickup day to return day. Consumed only by `CollectionCalendarExportView` (POST) and its button on `EditCollectionPage`.
+
+| Function | Returns |
+|---|---|
+| `build_calendar_export(collection, user=None)` | `(csv_bytes, count)`. Reads the reservations not yet exported *for this collection*, renders the CSV, and records every one in `CalendarExportMark` — **atomically, behind a `select_for_update` on the collection row** so two curators pressing the button at once can't both receive the same reservation. `count` is how many events the file holds (`0` ⇒ header only; the SPA then offers no download). Copy speaks `resolve_email_language(user, collection)` — the downloading curator's language, then the group's, then `EMAIL_LANGUAGE`. |
+| `calendar_filename(code)` | `ABC123-calendar.csv` — the stats CSV's shape. |
+
+**Which reservations.** `status == ACCEPTED`, `thing_type in DATE_BASED_TYPES`, `end_date >= today` (upcoming **or in progress**), the thing sits in this collection, and there is no `CalendarExportMark` for `(collection, booking)` yet. Ordered by `start_date`.
+
+**Incremental, per collection.** Each download carries only what hasn't gone out before; `CalendarExportMark` is the watermark, keyed `(collection, booking)` with a unique constraint. Per collection, not per curator — a PROPRIETARY collection's curators run its catalogue together — and not a flag on `BookingPeriod`, because a thing can sit in two collections and each keeps its own watermark. There is **no "download everything" escape hatch** (CA's call): pure incremental.
+
+**Dates.** The `Start Date` / `End Date` columns are `MM/DD/YYYY` — the one format Google's CSV importer parses regardless of account locale. Both `Start Date` and `End Date` map **straight** from `booking.start_date` / `booking.end_date`: Google's CSV End Date is **exclusive** (a row `09/14 … 09/16` imports as an event covering the 14th and 15th only — verified against a real import 2026-09-10), which is exactly OIUEEI's `end_date` (the day the thing is free again for the next booking, matches `has_overlap`). So a one-week loan picked up Monday the 14th (`end_date` the 21st) blocks the 14th–20th and leaves the 21st open; a 3-day reservation (`end_date` = start + 3) blocks all three days. Do **not** subtract a day. Dates *inside* the Description stay `DD/MM/YYYY` like everywhere else a person reads a date.
+
+**CSV-formula injection.** `_csv_cell` prefixes a `'` to any cell whose first non-space character is `= + - @`. `Subject` and `Description` are already safe by construction (they start with a label — the same trick `collection_stats_rows` uses); `Location` is the one cell whose first character is raw owner content, so the quote does its work there. Localized headlines (`{"es": …, "ca": …}`) resolve to the reader's language via `resolve_localized`. A member with no display name is `"a member"` / `"un miembro"` / `"un membre"` — never a blank, never their email (L2).
+
+`CALENDAR_TEXTS` (en/es/ca) is an inline catalogue like `export_service.README_TEXTS`, kept in parity by `test_calendar_export_service.py` — it's a file for a machine, not a message, so it stays out of `email_texts/`.
+
+---
+
 ### `asset_cleanup.py` — Delete Stored Files on Delete
 
 Frees the stored objects a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned files piling up (storage cost + clutter). The bucket has no notion of a foreign key, so nothing else would ever notice they had become unreachable.

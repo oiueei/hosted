@@ -1140,6 +1140,22 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 
 **Query budgets.** `test_query_counts.py` pins both exports as constant in what they carry (a 200-thing group costs the same queries as a 5-thing one) plus a size ceiling on the 200-thing case — the half a query count can't see, and the reason photos travel as URLs rather than bytes. An N+1 here isn't a slow page; it's a 30-second Heroku timeout on the one request somebody makes when they're already unhappy enough to be leaving.
 
+### CollectionCalendarExportView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/calendar-export/` |
+| **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
+| **Rate limit** | 20 requests per hour per user |
+
+The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as a **Google Calendar CSV** — one all-day event per reservation, spanning its block. The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv); this view is who may ask and what the browser may keep.
+
+**Incremental.** Each call returns only the reservations not exported *for this collection* before and records that it has (`CalendarExportMark`), so importing the file twice never doubles the calendar. The response header **`X-Calendar-Events`** carries the count; `0` means header-only CSV and the SPA shows "nothing new" instead of triggering a download. There is no "download everything" variant.
+
+**POST, not GET** — the same anti-prefetch reasoning as `DigestMuteByTokenView`: the call **mutates** (marks the reservations delivered), so a mail-client link scanner or a browser prefetch (a bare GET, no JS) must not be able to fire it. A GET gets 405.
+
+Response: `text/csv` attachment named `{code}-calendar.csv`, `Cache-Control: private, no-store` (it carries member names), and a `security` log line with the event count and byte size. Curator-only; a plain member gets the standard `{"error": ...}` 403.
+
 ---
 
 ## Middleware (`core/middleware.py`)
@@ -1217,6 +1233,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/auth/delete-account/` POST — 3 requests per hour per user
 - `/auth/export/` GET — 10 requests per day per user
 - `/collections/{code}/export/` GET — 10 requests per day per user. Building an export is the heaviest read in the app; the cap is what keeps "download my data" from being a way to walk a server out one file at a time
+- `/collections/{code}/calendar-export/` POST — 20 requests per hour per user. A download that also writes (it marks the reservations delivered); higher than the JSON exports since a curator may legitimately retry or pick up a just-confirmed reservation
 - `/contact/` POST — 5 requests per hour per IP
 - `/csp-report/` POST — 30 requests per hour per IP (violation reports; browser extensions make these noisy)
 - `/health/` GET+HEAD — 60 requests per minute per IP. The only anonymous endpoint that reaches the database on every hit, so uncapped it is DB amplification rather than a monitor. Far above a real monitor's cadence (5 minutes = 0.2/m). It is a plain Django view, so it answers **429 itself** (`block=False` + `request.limited`) rather than letting `Ratelimited` surface as Django's 403 — DRF's exception handler doesn't run here
