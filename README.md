@@ -87,7 +87,7 @@ core/
     export_service.py     # GDPR data export (per user and per collection)
     storage.py            # S3-compatible object storage (direct-upload tickets)
   checks.py           # System checks (CREATOR_POLICY importable + instantiable, etc.)
-  permissions.py      # Custom DRF permissions (IsThingOwner, IsCollectionOwner)
+  permissions.py      # Custom DRF permissions (IsThingOwner, IsThingManager, IsCollectionOwner, IsCollectionCurator)
   validators.py       # Input validation (image IDs, headlines, localized-text caps)
   utils.py            # ID generation, client IP, asset URLs, localized-text parsing
   pagination.py       # StandardResultsPagination (max 100)
@@ -120,7 +120,7 @@ core/
 | Model | Purpose |
 |-------|---------|
 | **User** | Custom user with `code` as PK (6-char alphanumeric). Magic link auth, no passwords. `notify_activity` and `notify_news` (both default on) control Cat. 2 / Cat. 3 email delivery (magic links and invitations are always sent). News is narrowed per group by `Collection.digest_muted`, so silencing one noisy collection never costs you the transactional mail — which is what keeps an on-by-default news flag off the DESIGN §6 dark-pattern list. Optional profile extras: `about` (free Markdown bio); `photo` (profile photo, stored as an object key and exposed as `photo_url`); `age_range` (birth-year generation) and `postal_code`, the optional demographics — shared per-member only with the owner of a COMMUNITY collection the user is in, and otherwise only in aggregate; and `language`, the language this user's own email is written in (`""` = inherit — the collection's language, else the deployment default). All four default to `""` |
-| **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — a curator still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (only owner adds things) or COMMUNITY (invited users can add their own things) — mode decides WHO may add a thing, never which types. In COMMUNITY mode, the owner may promote members to **co-owner** (`co_owners`, a subset of `invites`) — owner-level admin powers (edit, invite/revoke, broadcast, share link, stats/export) without becoming the CASCADE-delete root; only the owner promotes/demotes or deletes the collection. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. `headline`/`description`/each `tags` label may hold one text per language as inline `{lang: text}` JSON (each reader resolves their own); `description` is long-form Markdown (2000 characters per language). `closed_dates` is an owner-listed set of holiday/closure days on which no LEND/RENT pickup or return can fall and a reservation cannot span; `home_page` is an optional URL for the group. A **reservations collection** (`allowed_thing_types` is exactly `["RESERVE_THING"]`, always PROPRIETARY) additionally sets `reservation_max_days` (1–7) and `reservation_horizon_days` (how far ahead its space can be booked). |
+| **Collection** | Lists of things owned by a user. Shared via M2M `invites`. FK to `Theeeme`. `allow_member_proposals` (default on) decides whether members may recommend new guests — a curator still approves every one, and nothing reaches the proposed person before that. Mode: PROPRIETARY (its curators add things) or COMMUNITY (invited members can add their own too) — mode decides WHO may add a thing, never which types. A curator may promote members to **co-curator** (`co_owners`, a subset of `invites`) in either mode — the founder's reach (edit, invite/revoke, broadcast, share link, stats/export, decide member proposals, and — in a PROPRIETARY collection — run the whole catalogue, FAQs and bookings: `Thing.can_manage`) without becoming the CASCADE-delete root. Any curator promotes or demotes another; **only the owner deletes the collection**, and the founder (an FK, not an `invites` row) can never be demoted. `share_token` is a 22-char URL-safe bearer credential generated on demand for the public `/share/{token}` link — never exposed in any read serializer. `tags` is an owner-defined free-text tag vocabulary (max 12) that the collection's things can be tagged with; removing a tag here cascade-strips it from those things. `headline`/`description`/each `tags` label may hold one text per language as inline `{lang: text}` JSON (each reader resolves their own); `description` is long-form Markdown (2000 characters per language). `closed_dates` is an owner-listed set of holiday/closure days on which no LEND/RENT pickup or return can fall and a reservation cannot span; `home_page` is an optional URL for the group. A **reservations collection** (`allowed_thing_types` is exactly `["RESERVE_THING"]`, always PROPRIETARY) additionally sets `reservation_max_days` (1–7) and `reservation_horizon_days` (how far ahead its space can be booked). |
 | **Thing** | Items in collections. Types: GIFT_THING, SELL_THING, RENT_THING, LEND_THING, RESERVE_THING (an on-site reservation — booked to use on the owner's premises, auto-confirmed, no deposit, lives only in a reservations-only PROPRIETARY collection). `status` controls both visibility and reservation state (ACTIVE/TAKEN/INACTIVE). `gallery` JSONField holds up to 8 additional photos (exposed as `gallery_urls`), shown as an image carousel. For date-based types (LEND/RENT/RESERVE), `available_today`/`next_available` expose live availability computed from the booking calendar. `tags` holds owner-defined labels chosen from the collection's `tags` vocabulary, shown as HDS Tags on the card and detail |
 | **FAQ** | Questions/answers about things. FK to Thing and User (questioner) |
 | **Theeeme** | Colour palettes (6 HDS colour token names) for customising collections |
@@ -183,8 +183,8 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/collections/{code}/remove-thing/` | Remove thing from collection (owner or co-owner; thing owner in COMMUNITY mode) |
 | POST | `/api/v1/collections/{code}/invite/` | Invite user (owner or co-owner, resend-safe) |
 | DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it |
-| POST | `/api/v1/collections/{code}/co-owners/` | Promote an existing member to co-owner (owner only, COMMUNITY only, rate limited: 30/h). Refused if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled` |
-| DELETE | `/api/v1/collections/{code}/co-owners/` | Demote a co-owner back to a plain member (owner only). Not gated by the deployment policy — an owner can always undo a co-owner they already appointed |
+| POST | `/api/v1/collections/{code}/co-owners/` | Promote an existing member to co-curator — any curator, in either mode (rate limited: 30/h). Refused if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled` |
+| DELETE | `/api/v1/collections/{code}/co-owners/` | Demote a co-curator back to a plain member — any curator. Not gated by the deployment policy. The founding owner is an FK, not an `invites` row, so this endpoint cannot demote them |
 | POST | `/api/v1/collections/{code}/share-link/` | Generate or rotate the public share token (owner or co-owner). Returns `share_url` and `share_token`. Pass `{"rotate": true}` to force a fresh token. Rate limited: 30/h. |
 | DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner or co-owner) |
 | GET | `/api/v1/share/{token}/preview/` | **Public.** The `headline` and `description` (only) of the collection a `/share/{token}` link opens, so the join page can name it. Generic 404 for an unknown, revoked or inactive token. Rate limited: 30/min per IP |
@@ -207,13 +207,13 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/things/` | List own things |
 | POST | `/api/v1/things/` | Create thing |
 | GET | `/api/v1/things/{code}/` | View thing (owner or invited) |
-| PUT | `/api/v1/things/{code}/` | Update thing (owner only) |
-| DELETE | `/api/v1/things/{code}/` | Delete thing (owner only) |
+| PUT / PATCH | `/api/v1/things/{code}/` | Update thing — a **manager**: its owner, or a curator of a PROPRIETARY collection it's in (`IsThingManager`) |
+| DELETE | `/api/v1/things/{code}/` | Delete thing — any collection owner, a co-curator of a PROPRIETARY collection it's in, or its own owner while it has never changed hands |
 | POST | `/api/v1/things/{code}/request/` | Request reservation (invited only) |
-| GET | `/api/v1/things/{code}/calendar/` | View booking calendar (any thing — bookings without dates are listed too) |
+| GET | `/api/v1/things/{code}/calendar/` | View booking calendar (any thing). A manager sees requester details; guests see dates + status only |
 | GET | `/api/v1/things/{code}/transfers/` | View transfer history and stats (Loan Chain) |
-| POST | `/api/v1/things/{code}/activate/` | Reactivate an inactive thing (owner only) |
-| POST | `/api/v1/things/{code}/hide/` | Set an active thing to inactive (owner only) |
+| POST | `/api/v1/things/{code}/activate/` | Reactivate an inactive thing — a manager (`IsThingManager`) |
+| POST | `/api/v1/things/{code}/hide/` | Set an active thing to inactive — a manager (`IsThingManager`) |
 | POST | `/api/v1/things/{code}/report/` | Report a listing anonymously (logged-in non-owners) |
 | GET | `/api/v1/invited-things/` | List things from invited collections (paginated). Backs the frontend's `/shared` page — everything your groups are sharing, in one place |
 
@@ -221,9 +221,9 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/api/v1/my-bookings/` | List my booking requests (with thing headline, owner name) |
-| GET | `/api/v1/owner-bookings/` | List bookings for my things (with requester name) |
-| POST | `/api/v1/bookings/{code}/accept/` | Accept a pending booking (owner only) |
-| POST | `/api/v1/bookings/{code}/reject/` | Reject a pending booking (owner only) |
+| GET | `/api/v1/owner-bookings/` | Bookings on my things, plus every booking on a thing in a PROPRIETARY collection I curate (with requester name) |
+| POST | `/api/v1/bookings/{code}/accept/` | Accept a pending booking — a manager of the thing (owner or PROPRIETARY-collection curator) |
+| POST | `/api/v1/bookings/{code}/reject/` | Reject a pending booking — a manager of the thing |
 | POST | `/api/v1/bookings/{code}/cancel/` | Cancel a booking. Own pending booking (requester); for a RESERVE_THING reservation that hasn't started, either the requester or the owner |
 
 ### FAQ
@@ -232,9 +232,9 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/things/{code}/faq/` | List FAQs for a thing |
 | POST | `/api/v1/things/{code}/faq/` | Ask question — any signed-in reader who can view the thing, except its owner. On a PUBLIC collection that is anyone with an account, not only invitees (`thing.can_view()`, the same guard the read uses) |
 | GET | `/api/v1/faq/{code}/` | View FAQ |
-| POST | `/api/v1/faq/{code}/answer/` | Answer FAQ (owner only) |
-| POST | `/api/v1/faq/{code}/hide/` | Hide FAQ (owner only) |
-| POST | `/api/v1/faq/{code}/show/` | Show FAQ (owner only) |
+| POST | `/api/v1/faq/{code}/answer/` | Answer FAQ — a manager of the thing (owner or PROPRIETARY-collection curator) |
+| POST | `/api/v1/faq/{code}/hide/` | Hide FAQ — a manager of the thing |
+| POST | `/api/v1/faq/{code}/show/` | Show FAQ — a manager of the thing |
 
 ### Other
 | Method | URL | Description |
@@ -247,7 +247,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/health/` | Health check: verifies app **and** database (`SELECT 1`) — 200 ok / 503 degraded. Point your uptime monitor here (rate limited: 60/min per IP, GET and HEAD — far above any real monitor's cadence) |
 | - | `/oiueei-admin/` | Django Admin (requires password) |
 
-**Note:** Booking accept/reject actions (GIFT/SELL/LEND/RENT) can be performed via RSVP links sent by email or via authenticated API endpoints (`/bookings/{code}/accept/` and `/bookings/{code}/reject/`). Requesters can cancel their own pending bookings via `/bookings/{code}/cancel/`. **RESERVE_THING bookings skip this entirely** — they are auto-confirmed, so there is no accept/reject; `/bookings/{code}/cancel/` is open to the requester or the owner while the reservation hasn't started. Email links use RSVP codes as intermediaries to avoid exposing real codes in URLs.
+**Note:** Booking accept/reject actions (GIFT/SELL/LEND/RENT) can be performed via RSVP links sent by email or via authenticated API endpoints (`/bookings/{code}/accept/` and `/bookings/{code}/reject/`). Requesters can cancel their own pending bookings via `/bookings/{code}/cancel/`. **RESERVE_THING bookings skip this entirely** — they are auto-confirmed, so there is no accept/reject; `/bookings/{code}/cancel/` is open to the requester or any curator of the reservations collection while it hasn't started. Email links use RSVP codes as intermediaries to avoid exposing real codes in URLs.
 
 ## Deploying to Heroku
 
@@ -440,7 +440,7 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Authentication | JWT | HttpOnly cookie-based. 1-hour access, 7-day refresh with rotation and blacklist |
 | Authentication | Invite-Only | New accounts come from an owner's invitation, an owner-enabled public share link/QR, or joining a PUBLIC collection to act on it. No endpoint creates an account that belongs to no collection. |
 | Authentication | Admin 2FA | Django admin login requires a verified TOTP device (`django-otp` `OTPAdminSite`), on top of the password. Bootstrap the first device via `manage.py add_totp_device <email>`. |
-| Authorization | DRF Permissions | Custom `IsThingOwner`, `IsCollectionOwner` permission classes |
+| Authorization | DRF Permissions | Custom `IsThingOwner` / `IsThingManager` / `IsCollectionOwner` / `IsCollectionCurator` permission classes |
 | Authorization | IDOR Protection | Profile access only via collection connections |
 | Input Validation | XSS Prevention | HTML escaped in emails via `django.utils.html.escape()`. Headlines sanitized |
 | Input Validation | Image ID | Alphanumeric validation prevents path traversal; each field is also bound to its own storage folder, so a key may not name another one |
