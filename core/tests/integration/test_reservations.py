@@ -156,13 +156,28 @@ def test_a_non_member_cannot_reserve(reservations, api_client):
 # --- the reservation rules -------------------------------------------------
 
 
-def test_over_the_max_days_is_refused(reservations, authenticated_client2):
-    resp = authenticated_client2.post(
-        REQUEST_URL.format(reservations["thing"].code),
-        {"start_date": str(_next_weekday(0)), "duration_days": 4},
+def test_duration_is_capped_at_the_collections_max(reservations, authenticated_client2):
+    """The collection sets `reservation_max_days=3`. Four is refused, and the
+    refusal names the limit; exactly three still books. Boundary, not just
+    'something over the top 400s'."""
+    thing = reservations["thing"]
+    mon = _next_weekday(0)  # Mon–Wed is three weekdays, inside the space's rules
+
+    over = authenticated_client2.post(
+        REQUEST_URL.format(thing.code),
+        {"start_date": str(mon), "duration_days": 4},
         format="json",
     )
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert over.status_code == status.HTTP_400_BAD_REQUEST
+    assert "3" in str(over.data)
+    assert not BookingPeriod.objects.exists()
+
+    at_the_cap = authenticated_client2.post(
+        REQUEST_URL.format(thing.code),
+        {"start_date": str(mon), "duration_days": 3},
+        format="json",
+    )
+    assert at_the_cap.status_code == status.HTTP_201_CREATED
 
 
 def test_a_span_over_a_closed_day_is_refused(reservations, authenticated_client2):
@@ -278,6 +293,37 @@ def test_a_standalone_reservation_thing_is_refused(authenticated_client):
     assert not Thing.objects.filter(headline="Nowhere room").exists()
 
 
+def test_a_reserve_create_naming_a_missing_collection_is_a_404_not_a_400(authenticated_client):
+    """The documented contract for an unknown ``collection_code`` is 404, for
+    every type. The RESERVE-only "must be a reservations collection" 400 used to
+    fire first — turning a typo'd code into a wrong status and skipping the
+    existence check entirely."""
+    resp = authenticated_client.post(
+        "/api/v1/things/",
+        {"type": "RESERVE_THING", "headline": "Ghost room", "collection_code": "ZZZZZZ"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+    assert not Thing.objects.filter(headline="Ghost room").exists()
+
+
+def test_a_reserve_create_on_someone_elses_collection_is_a_403_not_a_reservations_probe(
+    authenticated_client2, user
+):
+    """A stranger naming a real non-reservations collection gets the same 403 any
+    other type would — not the RESERVE 400. Otherwise the 400-vs-403 split told
+    an outsider "this code names a reservations collection" one guess at a time.
+    """
+    Collection.objects.create(code="OTHER1", owner=user, headline="Someone else's")
+    resp = authenticated_client2.post(
+        "/api/v1/things/",
+        {"type": "RESERVE_THING", "headline": "Sneaky room", "collection_code": "OTHER1"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert not Thing.objects.filter(headline="Sneaky room").exists()
+
+
 def test_a_reservations_collection_holds_only_reservations(authenticated_client):
     coll = Collection.objects.create(
         code="RSVC04",
@@ -292,22 +338,34 @@ def test_a_reservations_collection_holds_only_reservations(authenticated_client)
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert "type" in resp.data  # field-keyed, like every other thing-type refusal
+    assert not Thing.objects.filter(headline="A gift").exists()
 
 
 @pytest.mark.parametrize(
-    "payload",
+    ("payload", "reason"),
     [
-        {"headline": "Mixed", "allowed_thing_types": ["RESERVE_THING", "GIFT_THING"]},
-        {
-            "headline": "Community reservations",
-            "mode": "COMMUNITY",
-            "allowed_thing_types": ["RESERVE_THING"],
-        },
+        (
+            {"headline": "Mixed", "allowed_thing_types": ["RESERVE_THING", "GIFT_THING"]},
+            "can't be mixed",
+        ),
+        (
+            {
+                "headline": "Community reservations",
+                "mode": "COMMUNITY",
+                "allowed_thing_types": ["RESERVE_THING"],
+            },
+            "community collection",
+        ),
     ],
 )
-def test_reserve_allowlist_rules_at_collection_creation(authenticated_client, payload):
+def test_reserve_allowlist_rules_at_collection_creation(authenticated_client, payload, reason):
     resp = authenticated_client.post("/api/v1/collections/", payload, format="json")
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    # The refusal says which rule was broken — mixing types, or COMMUNITY mode —
+    # not just "400". And no half-made collection is left behind.
+    assert reason in str(resp.data)
+    assert not Collection.objects.filter(headline=payload["headline"]).exists()
 
 
 def test_a_reservations_collection_cannot_become_community(authenticated_client):
@@ -322,6 +380,9 @@ def test_a_reservations_collection_cannot_become_community(authenticated_client)
         f"/api/v1/collections/{coll.code}/", {"mode": "COMMUNITY"}, format="json"
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert "community collection" in str(resp.data)
+    coll.refresh_from_db()
+    assert coll.mode == Collection.Mode.PROPRIETARY  # the switch did not take
 
 
 # --- cancellation (both sides) -----------------------------------------
@@ -404,6 +465,9 @@ def test_a_started_reservation_cannot_be_cancelled(reservations, authenticated_c
     )
     resp = authenticated_client2.post(CANCEL_URL.format(booking.code))
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert "already started" in str(resp.data)
+    booking.refresh_from_db()
+    assert booking.status == BookingPeriod.Status.ACCEPTED  # still confirmed, not cancelled
 
 
 # --- serializer surface --------------------------------------------------

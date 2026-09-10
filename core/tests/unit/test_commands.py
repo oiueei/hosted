@@ -198,6 +198,125 @@ class TestSendRemindersCommand:
         assert "Sent 1 reminder" in out.getvalue()
         assert "Reminder failed" in err.getvalue()
 
+    def test_a_reservation_starting_tomorrow_reminds_the_member(self):
+        """An on-site reservation auto-confirms weeks ahead; this is the only nudge.
+
+        The return reminder is nonsense for RESERVE (nothing is carried), so the
+        member would otherwise hear nothing between the confirmation and the day
+        — and a no-show costs a real slot.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RSVOW1", email="rsvowner@test.com", name="Space owner")
+        member = User.objects.create(code="RSVME1", email="rsvmember@test.com", name="Member")
+        thing = Thing.objects.create(
+            code="RSVTH1",
+            owner=owner,
+            headline="Sala polivalent",
+            type="RESERVE_THING",
+            location="Planta 1",
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=1),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        # Only the member — nobody has to "take it back", so the owner is not pinged.
+        assert [m.to[0] for m in mail.outbox] == ["rsvmember@test.com"]
+        msg = mail.outbox[0]
+        assert "Sala polivalent" in msg.subject
+        assert "tomorrow" in msg.subject.lower()
+        assert tomorrow.strftime("%d/%m/%Y") in msg.body
+        assert "Sent 1 reminder" in out.getvalue()
+
+    def test_a_reservation_further_out_is_left_alone(self):
+        """Only start_date == tomorrow is due; a reservation in three days is not."""
+        owner = User.objects.create(code="RSVOW2", email="rsvowner2@test.com")
+        member = User.objects.create(code="RSVME2", email="rsvmember2@test.com")
+        thing = Thing.objects.create(
+            code="RSVTH2", owner=owner, headline="Torn", type="RESERVE_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=date.today() + timedelta(days=3),
+            end_date=date.today() + timedelta(days=4),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert len(mail.outbox) == 0
+        assert "Sent 0 reminder" in out.getvalue()
+
+    def test_a_cancelled_reservation_starting_tomorrow_is_not_nudged(self):
+        """A member who cancelled must not get "your reservation starts tomorrow".
+
+        Cancelling leaves `start_date` where it was and only flips `status`, so
+        the arrival query has to filter on ACCEPTED — without that filter a
+        cancelled (or otherwise settled) slot still mails the person who is not
+        coming.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RSVOW4", email="rsvowner4@test.com")
+        member = User.objects.create(code="RSVME4", email="rsvmember4@test.com")
+        thing = Thing.objects.create(
+            code="RSVTH4", owner=owner, headline="Sala", type="RESERVE_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=1),
+            status="CANCELLED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert mail.outbox == []
+        assert "Sent 0 reminder" in out.getvalue()
+
+    def test_a_reservation_ending_tomorrow_gets_no_return_reminder(self):
+        """RESERVE is carried nowhere, so "take it back tomorrow" must never fire."""
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RSVOW3", email="rsvowner3@test.com")
+        member = User.objects.create(code="RSVME3", email="rsvmember3@test.com")
+        thing = Thing.objects.create(
+            code="RSVTH3", owner=owner, headline="Sala", type="RESERVE_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=date.today() - timedelta(days=1),
+            end_date=tomorrow,
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert len(mail.outbox) == 0
+        assert "Sent 0 reminder" in out.getvalue()
+
     def test_no_reminders(self):
         """Should report zero when nothing is due tomorrow."""
         out = StringIO()

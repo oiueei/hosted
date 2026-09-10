@@ -139,8 +139,14 @@ class TestACoCuratorRunsTheBookings:
         _reserve(space, member)
         res = client_for(co_curator).get("/api/v1/owner-bookings/")
         assert res.status_code == 200
-        codes = [b["thing_code"] for b in res.data["results"]]
+        rows = res.data["results"]
+        codes = [b["thing_code"] for b in rows]
         assert space["thing"].code in codes
+        # Each row names the group it belongs to — a co-curator of more than one
+        # group needs it to tell the rows apart (the page pools them all).
+        row = next(b for b in rows if b["thing_code"] == space["thing"].code)
+        assert row["collection_code"] == space["collection"].code
+        assert row["collection_headline"] == "Ateneu spaces"
 
     def test_a_co_curator_answers_a_faq_on_the_founders_thing(self, space, member, co_curator):
         faq = FAQ.objects.create(

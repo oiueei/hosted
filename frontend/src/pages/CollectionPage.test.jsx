@@ -1014,10 +1014,11 @@ describe('CollectionPage as a co-owner', () => {
 
 /**
  * `Collection.home_page` — when the owner gives the group its own web address,
- * the hero's "← Inici" link leaves OIUEEI for that address instead of going to
- * the app home. It's an external URL, so it can't be a react-router <Link>, and
- * anything that isn't http(s) is ignored (the field is a URLField server-side
- * and passes through `sanitizeUrl` here as well).
+ * the hero's back link leaves OIUEEI for that address instead of going to the
+ * app home. It's an external URL, so it can't be a react-router <Link>, it
+ * carries an external-link icon and names the destination ("The group's site"
+ * — not "Home", which it isn't), and anything that isn't http(s) is ignored
+ * (the field is a URLField server-side and passes through `sanitizeUrl` here).
  */
 describe('CollectionPage back link honours home_page', () => {
   const renderPage = () =>
@@ -1048,13 +1049,15 @@ describe('CollectionPage back link honours home_page', () => {
     expect(back).toHaveAttribute('href', '/');
   });
 
-  test('with a home_page, the back link points at that external address', async () => {
+  test('with a home_page, the back link points at that external address and names it', async () => {
     mockCollection({ home_page: 'https://ateneu.example/' });
     renderPage();
 
-    const back = await screen.findByRole('link', { name: /Home/ });
+    // Not "Home" any more — it leaves the app, so it says where it goes.
+    const back = await screen.findByRole('link', { name: /group's site/i });
     expect(back).toHaveAttribute('href', 'https://ateneu.example/');
     expect(back).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.queryByRole('link', { name: /^Home$/ })).not.toBeInTheDocument();
   });
 
   test('a non-http home_page is ignored — the link stays internal', async () => {

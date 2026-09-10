@@ -91,7 +91,29 @@ describe('OwnerBookingsPage listing', () => {
     expect(screen.getByRole('heading', { name: 'Past requests' })).toBeInTheDocument();
   });
 
+  test('each request names its group, and the thing link carries that group', async () => {
+    mockApi([
+      {
+        results: [booking({ collection_code: 'COL9', collection_headline: 'Ateneu tools' })],
+        next: null,
+      },
+    ]);
+    renderPage();
+
+    expect(await screen.findByText('Ateneu tools')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Cordless drill' })).toHaveAttribute(
+      'href',
+      '/collections/COL9/things/THG001'
+    );
+  });
+
   test('both tables carry a name, so they can be told apart in a rotor', async () => {
+    mockApi([
+      {
+        results: [booking(), booking({ code: 'BKG002', status: 'ACCEPTED' })],
+        next: null,
+      },
+    ]);
     renderPage();
 
     expect(

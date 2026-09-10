@@ -14,7 +14,11 @@ const ALERT_TYPES = new Set([
   'THING_REPORTED',
   'INVITE_PROPOSAL_DECLINED',
 ]);
-const SUCCESS_TYPES = new Set(['BOOKING_ACCEPTED', 'INVITE_PROPOSAL_APPROVED']);
+const SUCCESS_TYPES = new Set([
+  'BOOKING_ACCEPTED',
+  'INVITE_PROPOSAL_APPROVED',
+  'PROMOTED_CO_OWNER',
+]);
 
 // The owner said yes to a recommendation. Written as INVITE_PROPOSAL_APPROVED
 // since the 2026-08 design round; rows created before that are an
@@ -137,6 +141,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.reservationMadeLabel');
       case 'RESERVATION_CANCELLED':
         return t('home.reservationCancelledLabel');
+      case 'PROMOTED_CO_OWNER':
+        return t('home.promotedLabel');
+      case 'DEMOTED_CO_OWNER':
+        return t('home.demotedLabel');
       default:
         return t('home.broadcastLabel', {
           owner_name: p.owner_name,
@@ -231,6 +239,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           other_name: p.other_name,
           thing_headline: p.thing_headline,
         });
+      case 'PROMOTED_CO_OWNER':
+        return t('home.promotedBody', { collection_headline: p.collection_headline });
+      case 'DEMOTED_CO_OWNER':
+        return t('home.demotedBody', { collection_headline: p.collection_headline });
       default:
         return t('home.broadcastBody', { message: p.message });
     }
@@ -254,7 +266,9 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       (n.type === 'MEMBER_LEFT' ||
         n.type === 'INVITE_PROPOSAL_APPROVED' ||
         n.type === 'INVITE_PROPOSAL_DECLINED' ||
-        n.type === 'INVITE_PROPOSED') &&
+        n.type === 'INVITE_PROPOSED' ||
+        n.type === 'PROMOTED_CO_OWNER' ||
+        n.type === 'DEMOTED_CO_OWNER') &&
       p.collection_code
     ) {
       return { to: `/collections/${p.collection_code}`, label: t('home.viewGroup') };

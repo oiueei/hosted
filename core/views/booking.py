@@ -106,6 +106,7 @@ class OwnerBookingsView(ListAPIView):
         return (
             BookingPeriod.objects.filter(Q(owner_code=user) | curated)
             .select_related("thing_code", "requester_code")
+            .prefetch_related("thing_code__collections")
             .distinct()
             .order_by("-created")
         )

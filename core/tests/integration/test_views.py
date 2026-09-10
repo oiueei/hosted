@@ -1100,7 +1100,7 @@ class TestFAQViews:
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data["error"] == "Only the thing owner can answer questions"
+        assert response.data["error"] == "Only a manager of this thing can answer questions"
 
     def test_create_faq_denied_for_owner(self, authenticated_client, thing):
         """Owner cannot ask questions about their own thing."""
@@ -1110,7 +1110,9 @@ class TestFAQViews:
             format="json",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["error"] == "Owner cannot ask questions about their own thing"
+        assert response.data["error"] == (
+            "You manage this thing — you answer its questions, you don't ask them"
+        )
 
     def test_hide_faq(self, authenticated_client, faq):
         """Owner can hide a FAQ."""
@@ -1144,7 +1146,7 @@ class TestFAQViews:
 
         response = client2.post(f"/api/v1/faq/{faq.code}/hide/")
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data["error"] == "Only the thing owner can change FAQ visibility"
+        assert response.data["error"] == "Only a manager of this thing can change FAQ visibility"
 
     def test_create_faq_sends_email_to_owner(self, user, user2, thing, collection):
         """Creating FAQ should send email to thing owner."""
