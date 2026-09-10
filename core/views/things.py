@@ -3,6 +3,7 @@ Thing views for OIUEEI.
 """
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
@@ -126,11 +127,10 @@ class ThingViewSet(ModelViewSet):
         """A collection owner (any mode); a co-curator of a PROPRIETARY
         collection it sits in; or the thing owner while it has never changed
         hands."""
-        if thing.collections.filter(owner_id=user_code).exists():
-            return True
-        if thing.collections.filter(
+        is_curator = Q(owner_id=user_code) | Q(
             mode=Collection.Mode.PROPRIETARY, co_owners__code=user_code
-        ).exists():
+        )
+        if thing.collections.filter(is_curator).exists():
             return True
         return thing.is_owner(user_code) and not thing.transfers.exists()
 
