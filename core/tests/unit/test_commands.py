@@ -261,6 +261,37 @@ class TestSendRemindersCommand:
         assert len(mail.outbox) == 0
         assert "Sent 0 reminder" in out.getvalue()
 
+    def test_a_cancelled_reservation_starting_tomorrow_is_not_nudged(self):
+        """A member who cancelled must not get "your reservation starts tomorrow".
+
+        Cancelling leaves `start_date` where it was and only flips `status`, so
+        the arrival query has to filter on ACCEPTED — without that filter a
+        cancelled (or otherwise settled) slot still mails the person who is not
+        coming.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RSVOW4", email="rsvowner4@test.com")
+        member = User.objects.create(code="RSVME4", email="rsvmember4@test.com")
+        thing = Thing.objects.create(
+            code="RSVTH4", owner=owner, headline="Sala", type="RESERVE_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=1),
+            status="CANCELLED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert mail.outbox == []
+        assert "Sent 0 reminder" in out.getvalue()
+
     def test_a_reservation_ending_tomorrow_gets_no_return_reminder(self):
         """RESERVE is carried nowhere, so "take it back tomorrow" must never fire."""
         tomorrow = date.today() + timedelta(days=1)
