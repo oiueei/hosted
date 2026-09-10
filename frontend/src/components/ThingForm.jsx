@@ -86,6 +86,11 @@ export default function ThingForm({
   const showDeposit = DATE_TYPES.includes(type) && type !== 'RESERVE_THING';
   const showSpacer = (showFee || showDeposit) && isDetailType;
   const showDetailFields = isDetailType;
+  // The static availability hint (IMMEDIATE / NEXT_WEEK / …) is only ever shown
+  // for non-date types: LEND and RESERVE render *live* availability from the
+  // booking calendar instead (ThingInfoRows), so a value collected here would
+  // never surface anywhere. Condition and location still matter for them.
+  const showAvailability = showDetailFields && !DATE_TYPES.includes(type);
 
   // HDS Select wants the selected option object(s), never a bare string: handed
   // a string it can't resolve against `options`, it renders that string
@@ -194,16 +199,18 @@ export default function ThingForm({
         />
       )}
       {showSpacer && <div className="spacer-xxxx" />}
+      {showAvailability && (
+        <Select
+          id={`${idPrefix}-availability`}
+          texts={{ label: t('addThing.availabilityLabel'), language: hdsLang(i18n.language) }}
+          options={availabilityOptions}
+          value={availabilityOptions.filter((o) => o.value === availability)}
+          onChange={(sel) => setAvailability(sel.length > 0 ? sel[0].value : '')}
+          clearable
+        />
+      )}
       {showDetailFields && (
         <>
-          <Select
-            id={`${idPrefix}-availability`}
-            texts={{ label: t('addThing.availabilityLabel'), language: hdsLang(i18n.language) }}
-            options={availabilityOptions}
-            value={availabilityOptions.filter((o) => o.value === availability)}
-            onChange={(sel) => setAvailability(sel.length > 0 ? sel[0].value : '')}
-            clearable
-          />
           <Select
             id={`${idPrefix}-condition`}
             texts={{ label: t('addThing.conditionLabel'), language: hdsLang(i18n.language) }}
@@ -217,7 +224,7 @@ export default function ThingForm({
             label={t('addThing.locationLabel')}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            helperText={`${location.length}/32`}
+            helperText={`${location.length}/64`}
             invalid={!!errors.location}
             errorText={errors.location}
           />
