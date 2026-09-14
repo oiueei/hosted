@@ -141,6 +141,71 @@ def compute_availability(
     return (False, None)
 
 
+def _day_has_a_free_hour(day, collection, blocked_periods):
+    """Does ``day`` have at least one free 60-minute slot within an
+    HOUR-unit collection's opening blocks, given the thing's booked periods?
+
+    A booking counts as occupying ``day`` when ``start_date <= day < end_date``
+    — the same half-open day range every other date-based check uses. A
+    whole-day booking (``start_time`` NULL — a LEND/RENT or a DAY-unit RESERVE
+    sharing the thing) closes the whole day outright. Existing HOUR-unit
+    bookings on the day are swept, in order, against each opening block to find
+    any gap of at least an hour; overlapping sub-ranges can't occur between two
+    ACCEPTED/PENDING bookings (``has_overlap`` already refuses that).
+    """
+    if day in collection.closed_date_set():
+        return False
+    blocks = collection.day_opening_blocks(day)
+    if not blocks:
+        return False
+
+    occupied = []
+    for b in blocked_periods:
+        if not (b.start_date and b.end_date and b.start_date <= day < b.end_date):
+            continue
+        if b.start_time is None:
+            return False  # a whole-day booking blocks everything
+        occupied.append((b.start_time, b.end_time))
+    occupied.sort()
+
+    for block_start, block_end in blocks:
+        cursor = block_start
+        for occ_start, occ_end in occupied:
+            if occ_end <= cursor or occ_start >= block_end:
+                continue  # outside this block
+            gap_minutes = (occ_start.hour * 60 + occ_start.minute) - (
+                cursor.hour * 60 + cursor.minute
+            )
+            if gap_minutes >= 60:
+                return True
+            if occ_end > cursor:
+                cursor = occ_end
+        tail_minutes = (block_end.hour * 60 + block_end.minute) - (cursor.hour * 60 + cursor.minute)
+        if tail_minutes >= 60:
+            return True
+    return False
+
+
+def compute_hourly_availability(blocked_periods, collection, today=None):
+    """The HOUR-unit twin of ``compute_availability``: same
+    ``(available_today, next_available)`` shape, so ``Thing.availability_window``
+    treats both units alike, but "available" means *some* opening block that
+    day still has a free hour-long gap — never mind whether a specific
+    duration/start-time combination is offered; ``RequestThingPage`` works
+    that out from ``opening_hours`` + the calendar once a day is picked.
+    Walks ``collection.reservation_horizon_days`` ahead, at most, like the
+    day-based walk above does with its own horizon.
+    """
+    today = today or timezone.localdate()
+    horizon = today + timedelta(days=collection.reservation_horizon_days)
+    cursor = today
+    while cursor <= horizon:
+        if _day_has_a_free_hour(cursor, collection, blocked_periods):
+            return (cursor == today, cursor)
+        cursor += timedelta(days=1)
+    return (False, None)
+
+
 def cancel_booking(booking):
     """Cancel a booking by the requester and restore the Thing if single-use.
 

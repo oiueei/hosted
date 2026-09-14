@@ -15,8 +15,10 @@ from core.models import BookingPeriod, Collection, Thing, User
 from core.models.booking import DATE_BASED_TYPES, ON_SITE_TYPES, SINGLE_USE_TYPES
 from core.services.booking_service import (
     BookingRequestError,
+    _day_has_a_free_hour,
     cancel_reservation,
     compute_availability,
+    compute_hourly_availability,
     request_reservation,
     resolve_reservations_collection,
 )
@@ -265,6 +267,187 @@ def test_availability_window_for_reserve_uses_the_collections_horizon_and_closur
         coll.save(update_fields=["reservation_horizon_days"])
         del thing._availability_window_cache
         assert thing.availability_window()["next_available"] is None
+
+
+# --- _day_has_a_free_hour / compute_hourly_availability -----------------------
+
+
+def test_day_has_a_free_hour_true_when_the_day_is_entirely_open(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    assert _day_has_a_free_hour(mon, hourly_reservations_collection, []) is True
+
+
+def test_day_has_a_free_hour_false_when_closed_that_weekday(hourly_reservations_collection):
+    sat = _next_weekday(5)
+    assert _day_has_a_free_hour(sat, hourly_reservations_collection, []) is False
+
+
+def test_day_has_a_free_hour_false_on_a_closed_date(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    hourly_reservations_collection.closed_dates = [mon.isoformat()]
+    hourly_reservations_collection.save(update_fields=["closed_dates"])
+    assert _day_has_a_free_hour(mon, hourly_reservations_collection, []) is False
+
+
+def test_day_has_a_free_hour_false_when_a_whole_day_booking_exists(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    whole_day = BookingPeriod(start_date=mon, end_date=mon + timedelta(days=1))  # no times
+    assert _day_has_a_free_hour(mon, hourly_reservations_collection, [whole_day]) is False
+
+
+def test_day_has_a_free_hour_true_between_two_bookings_leaving_a_gap(
+    hourly_reservations_collection,
+):
+    """Block 10:00-14:00 with bookings 10:00-11:00 and 12:00-13:00 leaves an
+    11:00-12:00 gap — exactly one hour, still enough."""
+    mon = _next_weekday(0)
+    b1 = BookingPeriod(
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(11, 0),
+    )
+    b2 = BookingPeriod(
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        start_time=time(12, 0),
+        end_time=time(13, 0),
+    )
+    assert _day_has_a_free_hour(mon, hourly_reservations_collection, [b1, b2]) is True
+
+
+def test_day_has_a_free_hour_false_when_every_block_is_fully_packed(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    bookings = [
+        BookingPeriod(start_date=mon, end_date=mon + timedelta(days=1), start_time=s, end_time=e)
+        for s, e in [(time(10, 0), time(14, 0)), (time(16, 0), time(20, 0))]
+    ]
+    assert _day_has_a_free_hour(mon, hourly_reservations_collection, bookings) is False
+
+
+def test_day_has_a_free_hour_false_when_the_only_gap_is_under_an_hour(
+    hourly_reservations_collection,
+):
+    """Friday has one block only, 10:00-14:00. Bookings 10:00-11:30 and
+    12:00-14:00 leave a 30-minute gap — not enough for even the shortest
+    reservation, and there is no second block to fall back on."""
+    fri = _next_weekday(4)
+    b1 = BookingPeriod(
+        start_date=fri,
+        end_date=fri + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(11, 30),
+    )
+    b2 = BookingPeriod(
+        start_date=fri,
+        end_date=fri + timedelta(days=1),
+        start_time=time(12, 0),
+        end_time=time(14, 0),
+    )
+    assert _day_has_a_free_hour(fri, hourly_reservations_collection, [b1, b2]) is False
+
+
+def test_day_has_a_free_hour_true_when_one_block_is_packed_but_another_is_free(
+    hourly_reservations_collection,
+):
+    """Monday's morning block (10:00-14:00) is fully booked, but the evening
+    block (16:00-20:00) is untouched — the day overall still has a free hour."""
+    mon = _next_weekday(0)
+    packed_morning = BookingPeriod(
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(14, 0),
+    )
+    assert _day_has_a_free_hour(mon, hourly_reservations_collection, [packed_morning]) is True
+
+
+def test_compute_hourly_availability_available_today(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    available_today, next_available = compute_hourly_availability(
+        [], hourly_reservations_collection, today=mon
+    )
+    assert available_today is True
+    assert next_available == mon
+
+
+def test_compute_hourly_availability_skips_a_fully_booked_day(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    bookings = [
+        BookingPeriod(
+            thing_code_id="X",
+            start_date=mon,
+            end_date=mon + timedelta(days=1),
+            start_time=s,
+            end_time=e,
+        )
+        for s, e in [(time(10, 0), time(14, 0)), (time(16, 0), time(20, 0))]
+    ]
+    available_today, next_available = compute_hourly_availability(
+        bookings, hourly_reservations_collection, today=mon
+    )
+    assert available_today is False
+    assert next_available == mon + timedelta(days=1)  # Tuesday, still Mon-Thu hours
+
+
+def test_compute_hourly_availability_respects_the_horizon(db):
+    owner = User.objects.create(code="HAVOW1", email="havow1@test.com")
+    coll = Collection.objects.create(
+        code="HAVCO1",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_horizon_days=1,
+        opening_hours={"5": [], "6": []},  # closed the only two days in range
+    )
+    today = date(2026, 6, 1)  # a Monday, but only Sat/Sun are configured here
+    available_today, next_available = compute_hourly_availability([], coll, today=today)
+    assert available_today is False
+    assert next_available is None
+
+
+def test_availability_window_for_hourly_reserve_uses_compute_hourly_availability(
+    hourly_reservations_collection,
+):
+    coll = hourly_reservations_collection
+    thing = Thing.objects.create(
+        code="AVWHRL", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Sala"
+    )
+    coll.things.add(thing)
+    mon = _next_weekday(0)
+
+    with time_machine.travel(mon, tick=False):
+        assert thing.availability_window()["available_today"] is True
+
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=User.objects.create(code="AVWHM1", email="avwhm1@test.com"),
+            requester_email="avwhm1@test.com",
+            owner_code=coll.owner,
+            start_date=mon,
+            end_date=mon + timedelta(days=1),
+            start_time=time(10, 0),
+            end_time=time(14, 0),
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=User.objects.create(code="AVWHM2", email="avwhm2@test.com"),
+            requester_email="avwhm2@test.com",
+            owner_code=coll.owner,
+            start_date=mon,
+            end_date=mon + timedelta(days=1),
+            start_time=time(16, 0),
+            end_time=time(20, 0),
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+        del thing._availability_window_cache
+        window = thing.availability_window()
+        assert window["available_today"] is False
+        assert window["next_available"] == _next_weekday(1)
 
 
 def test_request_reservation_refuses_a_thing_with_no_reservations_collection(db):

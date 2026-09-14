@@ -240,6 +240,7 @@ class Thing(models.Model):
 
         from core.services.booking_service import (
             compute_availability,
+            compute_hourly_availability,
             resolve_rental_collection,
             resolve_reservations_collection,
         )
@@ -249,12 +250,15 @@ class Thing(models.Model):
         # that collection's own "how far ahead" horizon rather than the default.
         if self.type == Thing.Type.RESERVE_THING:
             rc = collection or resolve_reservations_collection(self)
-            available_today, next_available = compute_availability(
-                blocked,
-                horizon_days=rc.reservation_horizon_days if rc else horizon_days,
-                allowed_weekdays=rc.rental_weekdays if rc else None,
-                closed_dates=rc.closed_date_set() if rc else None,
-            )
+            if rc and rc.is_hourly_reservations():
+                available_today, next_available = compute_hourly_availability(blocked, rc)
+            else:
+                available_today, next_available = compute_availability(
+                    blocked,
+                    horizon_days=rc.reservation_horizon_days if rc else horizon_days,
+                    allowed_weekdays=rc.rental_weekdays if rc else None,
+                    closed_dates=rc.closed_date_set() if rc else None,
+                )
             self._availability_window_cache = {
                 "available_today": available_today,
                 "next_available": next_available,
