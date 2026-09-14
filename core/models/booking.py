@@ -99,6 +99,12 @@ class BookingPeriod(models.Model):
     )
     start_date = models.DateField(null=True, blank=True)  # For LEND/RENT/SHARE
     end_date = models.DateField(null=True, blank=True)  # For LEND/RENT/SHARE
+    # HOUR-unit RESERVE_THING only. NULL means "whole day" — true of every
+    # booking today (LEND/RENT included) and of a DAY-unit reservation forever.
+    # A HOUR-unit reservation still carries `end_date = start_date + 1` (never
+    # spans midnight); these two narrow that one day to a slot within it.
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
     status = models.CharField(
         max_length=9, choices=Status.choices, default=Status.PENDING, db_index=True
     )

@@ -44,6 +44,14 @@ class Collection(models.Model):
         WEEKLY = "WEEKLY", "Weekly"
         MONTHLY = "MONTHLY", "Monthly"
 
+    class ReservationUnit(models.TextChoices):
+        """RESERVE_THING collections only. A collection is booked by whole DAYs
+        (the original shape) or by HOUR-long slots within a day's opening
+        hours — never both; see `opening_hours` and `reservation_max_hours`."""
+
+        DAY = "DAY", "Day"
+        HOUR = "HOUR", "Hour"
+
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     owner = models.ForeignKey(
         "User",
@@ -127,6 +135,29 @@ class Collection(models.Model):
     # a courtesy cap against one member sitting on the whole calendar, not a
     # security invariant (see active_reservation_count). 1-50, default 10.
     reservation_max_active_per_member = models.PositiveSmallIntegerField(default=10)
+    # RESERVE_THING collections only. DAY (default) is the original shape above:
+    # a reservation occupies one or more whole days. HOUR books a single day in
+    # slots of 1+ hours within that day's opening_hours. Never both at once — a
+    # collection picks one unit, and the fields below are inert under the other
+    # (reservation_max_days/rental_weekdays-as-open-days for DAY; opening_hours/
+    # reservation_max_hours for HOUR).
+    reservation_unit = models.CharField(
+        max_length=4, choices=ReservationUnit.choices, default=ReservationUnit.DAY
+    )
+    # HOUR unit only. The venue's opening hours per weekday, keyed by Django's
+    # string form of Python's weekday() (0=Mon…6=Sun, so keys are "0".."6"),
+    # each a list of non-overlapping [start, end] "HH:MM" pairs sorted within
+    # the day — e.g. {"0": [["10:00","14:00"],["16:00","20:00"]], "6": []}. A
+    # day with an empty list (or an absent key) is closed — this REPLACES
+    # rental_weekdays as "which days are open" for a HOUR-unit collection, since
+    # keeping both risked the two disagreeing. Default {} = every day closed
+    # (an owner switching to HOUR mode must set hours before anyone can book).
+    opening_hours = models.JSONField(default=dict, blank=True)
+    # HOUR unit only. The longest a single reservation may run, in hours — the
+    # one cap radio-button durations (1h/2h/3h/half day/full day) are offered
+    # against; "half day" or "full day" only appear when they fit under it.
+    # 1-12, default 3. Inert under DAY (reservation_max_days governs there).
+    reservation_max_hours = models.PositiveSmallIntegerField(default=3)
     # How deposits work in this group, in the owner's own words — "50 €, back
     # when the drill comes home in one piece". A bare number is the beginning of
     # an argument: the condition for getting it back is the actual rule, and that

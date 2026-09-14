@@ -398,6 +398,40 @@ def test_request_reservation_refuses_past_the_active_cap(db):
         request_reservation(things[2], member, owner.email, _next_weekday(2), 1)
 
 
+# --- hourly-reservation fields (dormant — no behaviour reads them yet) ------
+
+
+def test_reservation_unit_defaults_to_day(db):
+    owner = User.objects.create(code="HRUOW1", email="hruow1@test.com")
+    coll = Collection.objects.create(
+        code="HRUCO1", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+    )
+    assert coll.reservation_unit == Collection.ReservationUnit.DAY
+    assert coll.opening_hours == {}
+    assert coll.reservation_max_hours == 3
+
+
+def test_booking_start_time_and_end_time_default_to_none(db):
+    owner = User.objects.create(code="HRUOW2", email="hruow2@test.com")
+    requester = User.objects.create(code="HRUME2", email="hrume2@test.com")
+    thing = Thing.objects.create(
+        code="HRUTH2", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type="RESERVE_THING",
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=_next_weekday(0),
+        end_date=_next_weekday(0) + timedelta(days=1),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+    booking.refresh_from_db()
+    assert booking.start_time is None
+    assert booking.end_time is None
+
+
 def test_project_note_defaults_blank_and_holds_512(db):
     owner = User.objects.create(code="PNOWN1", email="pnown@test.com")
     requester = User.objects.create(code="PNREQ1", email="pnreq@test.com")
