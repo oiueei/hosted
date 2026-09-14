@@ -88,22 +88,43 @@ Co-Authored-By: <model name and version>[ (<context>)][ via Claude Code] <email>
   A provider that is not in the table is a **stop and ask**. Do not infer an
   address from the model name or a domain, and never use a provider's real contact
   mailbox — those are people, not co-author identities.
-- **One line per model that genuinely took part.** Opus planned and Sonnet executed
-  means two lines. A phase whose model is uncertain is omitted, not guessed at, and
-  never filled in for symmetry.
+- **Exactly one `Co-Authored-By` line — never two on the same commit.** A commit
+  carries the model that actually produced *that commit's* changes. Under
+  `opusplan` that is almost always Sonnet, since Opus only reasons in plan mode
+  and writes nothing to the tree itself; credit Opus instead only when Opus's own
+  output, not just its plan, is what landed in that diff. If two models' work
+  truly can't be told apart within one commit, that is a sign the commit should
+  have been split by concern — not a reason to stack trailers.
 - **Never copy a trailer from git history.** The body's style is worth imitating;
   the trailers are not. Commits from August 2026 carry a wrong format — a task
   descriptor in the parenthesis and invented addresses of the `opus5@anthropic.com`
-  shape. They are a known error, left in place deliberately because the history is
-  not being rewritten, and they are not a precedent.
+  shape — and some commits stack two `Co-Authored-By` lines on one change. Both are
+  known errors, left in place deliberately because the history is not being
+  rewritten, and neither is a precedent.
 
-Valid:
+Valid — one trailer per commit:
+
+```
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+```
+
+```
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+```
+
+```
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+```
+
+```
+Co-Authored-By: GLM-5.2 (1M context) via Claude Code <noreply@z.ai>
+```
+
+Invalid — two models stacked on one commit, even when both genuinely took part:
 
 ```
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
-Co-Authored-By: GLM-5.2 (1M context) via Claude Code <noreply@z.ai>
 ```
 
 When in doubt about how to compose the line, ask rather than decide.
