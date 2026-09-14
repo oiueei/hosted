@@ -220,6 +220,37 @@ def test_a_clash_is_a_409_and_blocks_only_its_days(reservations, authenticated_c
     assert free.status_code == status.HTTP_201_CREATED
 
 
+def test_the_active_reservation_cap_is_per_member_per_collection(
+    reservations, authenticated_client2
+):
+    """`reservation_max_active_per_member=1`: a first reservation (on any thing
+    in the collection) succeeds; a second, on a different thing so it can't
+    collide on dates, is refused — the cap counts across the whole collection,
+    not per thing."""
+    coll = reservations["collection"]
+    coll.reservation_max_active_per_member = 1
+    coll.save(update_fields=["reservation_max_active_per_member"])
+    second_thing = Thing.objects.create(
+        code="RSVT02", type=Thing.Type.RESERVE_THING, owner=reservations["owner"], headline="Sala 2"
+    )
+    coll.things.add(second_thing)
+
+    first = authenticated_client2.post(
+        REQUEST_URL.format(reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "duration_days": 1},
+        format="json",
+    )
+    assert first.status_code == status.HTTP_201_CREATED
+
+    over_cap = authenticated_client2.post(
+        REQUEST_URL.format(second_thing.code),
+        {"start_date": str(_next_weekday(1)), "duration_days": 1},
+        format="json",
+    )
+    assert over_cap.status_code == status.HTTP_400_BAD_REQUEST
+    assert BookingPeriod.objects.filter(status=BookingPeriod.Status.ACCEPTED).count() == 1
+
+
 # --- money ---------------------------------------------------------------
 
 

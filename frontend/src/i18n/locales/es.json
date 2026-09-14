@@ -980,7 +980,9 @@
     "weekdaysLabel": "Días abiertos a reservas",
     "weekdaysHelper": "Déjalos todos sin marcar para permitir cualquier día. Una reserva no puede abarcar un día en que el espacio esté cerrado.",
     "horizonLabel": "Con cuánta antelación pueden reservar (días)",
-    "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses."
+    "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses.",
+    "maxActiveLabel": "Máximo de reservas activas por miembro",
+    "maxActiveHelper": "De 1 a 50. Por defecto 10 — cuántas reservas propias de un miembro para este espacio pueden estar activas a la vez."
   },
   "closedDates": {
     "label": "Festivos y cierres",

@@ -41,6 +41,7 @@ export default function CreateCollectionPage() {
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [reservationMaxActivePerMember, setReservationMaxActivePerMember] = useState(10);
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
@@ -148,6 +149,7 @@ export default function CreateCollectionPage() {
     if (isReservations) {
       body.reservation_max_days = reservationMaxDays;
       body.reservation_horizon_days = reservationHorizonDays;
+      body.reservation_max_active_per_member = reservationMaxActivePerMember;
     } else if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
     try {
       const res = await apiFetch('/api/v1/collections/', {
@@ -245,6 +247,8 @@ export default function CreateCollectionPage() {
               setReservationMaxDays={setReservationMaxDays}
               reservationHorizonDays={reservationHorizonDays}
               setReservationHorizonDays={setReservationHorizonDays}
+              reservationMaxActivePerMember={reservationMaxActivePerMember}
+              setReservationMaxActivePerMember={setReservationMaxActivePerMember}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={theeemeColors.color_01}

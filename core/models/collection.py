@@ -122,6 +122,11 @@ class Collection(models.Model):
     # months out). Default 90, matching the LEND/RENT horizon it replaces for
     # this type. Also caps how far the live-availability calendar looks.
     reservation_horizon_days = models.PositiveSmallIntegerField(default=90)
+    # RESERVE_THING collections only. How many of a member's own reservations
+    # in THIS collection may be active (ACCEPTED, not yet finished) at once —
+    # a courtesy cap against one member sitting on the whole calendar, not a
+    # security invariant (see active_reservation_count). 1-50, default 10.
+    reservation_max_active_per_member = models.PositiveSmallIntegerField(default=10)
     # How deposits work in this group, in the owner's own words — "50 €, back
     # when the drill comes home in one piece". A bare number is the beginning of
     # an argument: the condition for getting it back is the actual rule, and that
@@ -417,6 +422,30 @@ class Collection(models.Model):
             if day in closed:
                 return "Those dates include a day this space is closed."
         return None
+
+    def active_reservation_count(self, requester_code, today=None):
+        """How many of ``requester_code``'s RESERVE bookings in THIS collection
+        are still active — ``ACCEPTED`` and not yet finished (``end_date`` in
+        the future). The backstop for ``reservation_max_active_per_member``.
+
+        A courtesy limit, not a locked invariant: unlike ``has_overlap`` (which
+        the Thing row's ``select_for_update`` serialises), two simultaneous
+        requests on two different things by the same member could both read
+        the count before either is created and both land — the same shape as
+        every other "how many do you already have" check that isn't itself
+        the row being contended for. Good enough to stop one member from
+        sitting on the whole calendar; not a security control.
+        """
+        from core.models.booking import BookingPeriod
+
+        today = today or timezone.localdate()
+        return BookingPeriod.objects.filter(
+            thing_code__collections=self,
+            thing_type="RESERVE_THING",
+            requester_code=requester_code,
+            status=BookingPeriod.Status.ACCEPTED,
+            end_date__gt=today,
+        ).count()
 
     # ---- Mass-upload capacity guards -------------------------------------
     # Two INDEPENDENT counters per collection — things and invitees — because a

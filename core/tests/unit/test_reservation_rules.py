@@ -303,6 +303,101 @@ def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
         cancel_reservation(booking, owner)  # already cancelled
 
 
+# --- active_reservation_count / reservation_max_active_per_member -----------
+
+
+def test_reservation_max_active_per_member_defaults_to_10(db):
+    owner = User.objects.create(code="ACOWN1", email="acown1@test.com")
+    coll = Collection.objects.create(
+        code="ACCOL1", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+    )
+    assert coll.reservation_max_active_per_member == 10
+
+
+def test_active_reservation_count_only_counts_this_collections_accepted_future_bookings(db):
+    """Counts ACCEPTED, not-yet-finished bookings for THIS requester in THIS
+    collection only — a different requester, a different collection, an
+    already-finished booking and a CANCELLED one all fall outside it."""
+    owner = User.objects.create(code="ACOWN2", email="acown2@test.com")
+    member = User.objects.create(code="ACMEM2", email="acmem2@test.com")
+    other_member = User.objects.create(code="ACMEM3", email="acmem3@test.com")
+    coll = Collection.objects.create(
+        code="ACCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+    )
+    other_coll = Collection.objects.create(
+        code="ACCOL3", owner=owner, headline="Y", allowed_thing_types=["RESERVE_THING"]
+    )
+    thing = Thing.objects.create(
+        code="ACTHG2", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    coll.things.add(thing)
+    other_thing = Thing.objects.create(
+        code="ACTHG3", type=Thing.Type.RESERVE_THING, owner=owner, headline="Other room"
+    )
+    other_coll.things.add(other_thing)
+
+    today = date(2026, 6, 1)
+    tomorrow = today + timedelta(days=1)
+
+    def _booking(t, requester, start, end, status):
+        return BookingPeriod.objects.create(
+            thing_code=t,
+            thing_type="RESERVE_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=start,
+            end_date=end,
+            status=status,
+        )
+
+    # Counts: ACCEPTED, this collection, this requester, still active.
+    _booking(thing, member, tomorrow, tomorrow + timedelta(days=1), BookingPeriod.Status.ACCEPTED)
+    # Doesn't count: a different requester.
+    _booking(
+        thing, other_member, tomorrow, tomorrow + timedelta(days=1), BookingPeriod.Status.ACCEPTED
+    )
+    # Doesn't count: a different collection's thing.
+    _booking(
+        other_thing, member, tomorrow, tomorrow + timedelta(days=1), BookingPeriod.Status.ACCEPTED
+    )
+    # Doesn't count: already finished (end_date is today, not after it).
+    _booking(thing, member, today - timedelta(days=1), today, BookingPeriod.Status.ACCEPTED)
+    # Doesn't count: cancelled.
+    _booking(thing, member, tomorrow, tomorrow + timedelta(days=1), BookingPeriod.Status.CANCELLED)
+
+    assert coll.active_reservation_count(member.code, today=today) == 1
+
+
+def test_request_reservation_refuses_past_the_active_cap(db):
+    """At the cap a request still succeeds; one more is refused — a courtesy
+    limit, not the date-clash 409."""
+    owner = User.objects.create(code="ACOWN4", email="acown4@test.com")
+    member = User.objects.create(code="ACMEM4", email="acmem4@test.com")
+    coll = Collection.objects.create(
+        code="ACCOL4",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_max_days=1,
+        reservation_max_active_per_member=2,
+    )
+    coll.invites.add(member)
+    things = [
+        Thing.objects.create(
+            code=f"ACTH{i}", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+        )
+        for i in range(3)
+    ]
+    for t in things:
+        coll.things.add(t)
+
+    request_reservation(things[0], member, owner.email, _next_weekday(0), 1)
+    request_reservation(things[1], member, owner.email, _next_weekday(1), 1)
+    with pytest.raises(BookingRequestError):
+        request_reservation(things[2], member, owner.email, _next_weekday(2), 1)
+
+
 def test_project_note_defaults_blank_and_holds_512(db):
     owner = User.objects.create(code="PNOWN1", email="pnown@test.com")
     requester = User.objects.create(code="PNREQ1", email="pnreq@test.com")

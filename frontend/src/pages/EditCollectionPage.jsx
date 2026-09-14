@@ -58,6 +58,7 @@ export default function EditCollectionPage() {
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [reservationMaxActivePerMember, setReservationMaxActivePerMember] = useState(10);
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
@@ -167,6 +168,7 @@ export default function EditCollectionPage() {
           setRentalWeekdays(data.rental_weekdays || []);
           setReservationMaxDays(data.reservation_max_days || 1);
           setReservationHorizonDays(data.reservation_horizon_days || 90);
+          setReservationMaxActivePerMember(data.reservation_max_active_per_member || 10);
           setClosedDates(closedDatesToDisplay(data.closed_dates));
           setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
@@ -231,6 +233,7 @@ export default function EditCollectionPage() {
     if (isReservations) {
       body.reservation_max_days = reservationMaxDays;
       body.reservation_horizon_days = reservationHorizonDays;
+      body.reservation_max_active_per_member = reservationMaxActivePerMember;
     }
 
     try {
@@ -428,6 +431,8 @@ export default function EditCollectionPage() {
               setReservationMaxDays={setReservationMaxDays}
               reservationHorizonDays={reservationHorizonDays}
               setReservationHorizonDays={setReservationHorizonDays}
+              reservationMaxActivePerMember={reservationMaxActivePerMember}
+              setReservationMaxActivePerMember={setReservationMaxActivePerMember}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}

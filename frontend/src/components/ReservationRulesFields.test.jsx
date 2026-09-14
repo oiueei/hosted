@@ -14,6 +14,8 @@ function renderFields(over = {}) {
     setReservationMaxDays: vi.fn(),
     reservationHorizonDays: 90,
     setReservationHorizonDays: vi.fn(),
+    reservationMaxActivePerMember: 10,
+    setReservationMaxActivePerMember: vi.fn(),
     rentalWeekdays: [],
     setRentalWeekdays: vi.fn(),
     ...over,
@@ -26,6 +28,8 @@ function renderFields(over = {}) {
 const maxField = () => screen.getByRole('spinbutton', { name: 'Longest reservation (days)' });
 const horizonField = () =>
   screen.getByRole('spinbutton', { name: 'How far ahead members can book (days)' });
+const maxActiveField = () =>
+  screen.getByRole('spinbutton', { name: 'Maximum active reservations per member' });
 
 describe('ReservationRulesFields — the bounded day fields', () => {
   test('show the stored values', () => {
@@ -84,6 +88,19 @@ describe('ReservationRulesFields — the bounded day fields', () => {
     expect(maxField()).toHaveValue(3);
     rerender(<ReservationRulesFields {...props} reservationMaxDays={6} />);
     expect(maxField()).toHaveValue(6);
+  });
+
+  test('the active-reservations cap shows the stored value and clamps to 1..50 on blur', () => {
+    const { props } = renderFields({ reservationMaxActivePerMember: 25 });
+    expect(maxActiveField()).toHaveValue(25);
+
+    fireEvent.change(maxActiveField(), { target: { value: '99' } });
+    fireEvent.blur(maxActiveField());
+    expect(props.setReservationMaxActivePerMember).toHaveBeenCalledWith(50);
+
+    fireEvent.change(maxActiveField(), { target: { value: '' } });
+    fireEvent.blur(maxActiveField());
+    expect(props.setReservationMaxActivePerMember).toHaveBeenCalledWith(10); // fallback
   });
 });
 

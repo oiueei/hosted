@@ -540,6 +540,10 @@ def request_reservation(
 
     with transaction.atomic():
         Thing.objects.select_for_update().get(code=thing.code)
+        if rc.active_reservation_count(requester.code) >= rc.reservation_max_active_per_member:
+            raise BookingRequestError(
+                "You've reached the maximum number of active reservations for this space."
+            )
         if BookingPeriod.has_overlap(thing.code, start_date, end_date):
             raise BookingRequestError("Those dates are already taken.", status_code=409)
         booking = BookingPeriod.objects.create(

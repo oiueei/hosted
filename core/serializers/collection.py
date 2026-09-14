@@ -147,6 +147,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
+            "reservation_max_active_per_member",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -363,6 +364,12 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # How far ahead a member may book this space, in days. 1..365 — a year is the
     # most a "how far ahead" limit should ever need. Default 90.
     reservation_horizon_days = serializers.IntegerField(min_value=1, max_value=365, required=False)
+    # RESERVE_THING collections only: how many of a member's own reservations in
+    # THIS collection may be active at once. A courtesy cap, not a security
+    # invariant — see Collection.active_reservation_count. 1..50, default 10.
+    reservation_max_active_per_member = serializers.IntegerField(
+        min_value=1, max_value=50, required=False
+    )
     # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
     # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
     # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
@@ -391,6 +398,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
+            "reservation_max_active_per_member",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -565,6 +573,12 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     # How far ahead a member may book this space, in days. 1..365 — a year is the
     # most a "how far ahead" limit should ever need. Default 90.
     reservation_horizon_days = serializers.IntegerField(min_value=1, max_value=365, required=False)
+    # RESERVE_THING collections only: how many of a member's own reservations in
+    # THIS collection may be active at once. A courtesy cap, not a security
+    # invariant — see Collection.active_reservation_count. 1..50, default 10.
+    reservation_max_active_per_member = serializers.IntegerField(
+        min_value=1, max_value=50, required=False
+    )
     # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
     # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
     # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
@@ -594,6 +608,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
+            "reservation_max_active_per_member",
             "closed_dates",
             "home_page",
             "deposit_policy",

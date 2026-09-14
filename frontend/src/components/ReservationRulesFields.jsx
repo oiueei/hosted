@@ -63,6 +63,8 @@ export default function ReservationRulesFields({
   setReservationMaxDays = () => {},
   reservationHorizonDays = 90,
   setReservationHorizonDays = () => {},
+  reservationMaxActivePerMember = 10,
+  setReservationMaxActivePerMember = () => {},
   rentalWeekdays = [],
   setRentalWeekdays = () => {},
   theeemeColor01,
@@ -91,6 +93,16 @@ export default function ReservationRulesFields({
         fallback={90}
         value={reservationHorizonDays}
         onChange={setReservationHorizonDays}
+      />
+      <BoundedDayInput
+        id={`${idPrefix}-reservation-max-active`}
+        label={t('reservation.maxActiveLabel')}
+        helperText={t('reservation.maxActiveHelper')}
+        min={1}
+        max={50}
+        fallback={10}
+        value={reservationMaxActivePerMember}
+        onChange={setReservationMaxActivePerMember}
       />
       <WeekdayChips
         labelId={`${idPrefix}-reservation-weekdays-label`}

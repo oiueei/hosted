@@ -980,7 +980,9 @@
     "weekdaysLabel": "Dies oberts a reserves",
     "weekdaysHelper": "Deixa'ls tots sense marcar per permetre qualsevol dia. Una reserva no pot abastar un dia en què l'espai estigui tancat.",
     "horizonLabel": "Amb quanta antelació poden reservar (dies)",
-    "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos."
+    "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos.",
+    "maxActiveLabel": "Màxim de reserves actives per membre",
+    "maxActiveHelper": "D'1 a 50. Per defecte 10 — quantes reserves pròpies d'un membre per a aquest espai poden estar actives alhora."
   },
   "closedDates": {
     "label": "Festius i tancaments",
