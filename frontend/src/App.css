@@ -339,6 +339,7 @@ div[class*='Linkbox-module_linkbox'] {
 
 .thing-card {
   width: 100%;
+  min-width: 0;
   background: var(--color-white);
   border-radius: 2px;
   display: flex;
@@ -393,6 +394,14 @@ div[class*='Linkbox-module_linkbox'] {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* An owner-written line with no break opportunity (e.g. a run of dashes)
+   has no wrap point, so it would spill past the card's edge instead of
+   clamping with the rest of the description. */
+.markdown-text.thing-card-description span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .thing-card-info {
