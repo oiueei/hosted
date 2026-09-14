@@ -140,9 +140,11 @@ class ThingRequestView(APIView):
             request.user,
             owner_email,
             serializer.validated_data["start_date"],
-            serializer.validated_data["duration_days"],
+            serializer.validated_data.get("duration_days"),
             serializer.validated_data.get("project_note", ""),
             collection_code,
+            start_time=serializer.validated_data.get("start_time"),
+            end_time=serializer.validated_data.get("end_time"),
         )
         return Response(
             {
@@ -150,6 +152,8 @@ class ThingRequestView(APIView):
                 "booking_code": booking.code,
                 "start_date": str(booking.start_date),
                 "end_date": str(booking.end_date),
+                "start_time": str(booking.start_time) if booking.start_time else None,
+                "end_time": str(booking.end_time) if booking.end_time else None,
             },
             status=status.HTTP_201_CREATED,
         )

@@ -943,9 +943,9 @@ Rejects a pending booking. Same permission and validation as accept.
 Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`, `request_reservation`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code)`, which the view maps back to `{"error": message}` with the same status. Routes based on thing type (RESERVE checked first, since it is also in `DATE_BASED_TYPES`):
 
 **RESERVE_THING (`_request_reservation`):**
-- Body `{ "start_date", "duration_days" (1–7), "project_note"? (≤512) }` via `ReservationRequestSerializer`.
-- `request_reservation` enforces membership (403 unless the requester is a collection member — login-to-act makes an anonymous visitor one first), `Collection.reservation_violation` (400), the 90-day horizon, and `has_overlap` (409).
-- **Auto-confirmed:** the booking is created `ACCEPTED`, both parties are emailed, the owner gets a `RESERVATION_MADE` in-app notice. No RSVP pair, no `ThingTransfer`. Response `201 {"message": "Reservation confirmed", "booking_code", "start_date", "end_date"}`.
+- Body `{ "start_date", "duration_days"? (1–7), "start_time"?, "end_time"?, "project_note"? (≤512) }` via `ReservationRequestSerializer` — **either `duration_days` or `start_time`+`end_time`, never both, never neither**, matching whichever unit (`DAY`/`HOUR`) the resolved collection is in.
+- `request_reservation` enforces membership (403 unless the requester is a collection member — login-to-act makes an anonymous visitor one first), `Collection.reservation_violation` or `reservation_hour_violation` (400, by unit), the horizon, the active-reservations cap, and `has_overlap` (409).
+- **Auto-confirmed:** the booking is created `ACCEPTED`, both parties are emailed, the owner gets a `RESERVATION_MADE` in-app notice. No RSVP pair, no `ThingTransfer`. Response `201 {"message": "Reservation confirmed", "booking_code", "start_date", "end_date", "start_time", "end_time"}` — the last two `null` for a `DAY`-unit booking.
 
 **Date-based (LEND/RENT):**
 - Requires `start_date` and `end_date`.

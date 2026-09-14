@@ -148,6 +148,9 @@ class CollectionSerializer(serializers.ModelSerializer):
             "reservation_max_days",
             "reservation_horizon_days",
             "reservation_max_active_per_member",
+            "reservation_unit",
+            "opening_hours",
+            "reservation_max_hours",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -370,6 +373,17 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     reservation_max_active_per_member = serializers.IntegerField(
         min_value=1, max_value=50, required=False
     )
+    # RESERVE_THING collections only: DAY (default) or HOUR — never both. See
+    # Collection.ReservationUnit.
+    reservation_unit = serializers.ChoiceField(
+        choices=Collection.ReservationUnit.choices, required=False
+    )
+    # HOUR-unit collections only: per-weekday opening blocks. See
+    # `_validate_opening_hours` for the wire shape.
+    opening_hours = serializers.JSONField(required=False)
+    # HOUR-unit collections only: the longest a single reservation may run, in
+    # hours. Inert under DAY (`reservation_max_days` governs there).
+    reservation_max_hours = serializers.IntegerField(min_value=1, max_value=12, required=False)
     # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
     # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
     # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
@@ -399,6 +413,9 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "reservation_max_days",
             "reservation_horizon_days",
             "reservation_max_active_per_member",
+            "reservation_unit",
+            "opening_hours",
+            "reservation_max_hours",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -406,6 +423,9 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "thumbnail",
             "welcome_doc",
         ]
+
+    def validate_opening_hours(self, value):
+        return _validate_opening_hours(value)
 
     def validate_tags(self, value):
         return _normalize_tags(value)
@@ -484,6 +504,63 @@ def _parse_closed_dates(raw):
             f"That's more than {_CLOSED_DATES_MAX} closure days — enter this year's."
         )
     return result
+
+
+_OPENING_HOURS_DAY_KEYS = {"0", "1", "2", "3", "4", "5", "6"}
+_OPENING_HOURS_MAX_BLOCKS_PER_DAY = 4
+
+
+def _parse_hhmm(value):
+    """ "HH:MM" -> `datetime.time`. Raises ValueError on anything else — an
+    out-of-range hour/minute included, since `time()` itself rejects those."""
+    if not isinstance(value, str):
+        raise ValueError("not a string")
+    hour_str, _, minute_str = value.partition(":")
+    if not minute_str:
+        raise ValueError("not HH:MM")
+    return datetime.strptime(f"{int(hour_str):02d}:{int(minute_str):02d}", "%H:%M").time()
+
+
+def _validate_opening_hours(value):
+    """Validate + normalise a HOUR-unit collection's per-weekday opening hours.
+
+    ``value`` is ``{"0".."6": [["HH:MM","HH:MM"], ...]}`` — Django's own string
+    form of ``weekday()`` (0=Mon…6=Sun) as the JSON key, each a list of that
+    day's opening blocks. Missing key / empty list = closed that day. Blocks
+    are sorted and must not overlap; each one's start must be strictly before
+    its end. Raises ``ValidationError`` on any other shape.
+    """
+    if not isinstance(value, dict):
+        raise serializers.ValidationError("Opening hours must be a day-keyed object.")
+    cleaned = {}
+    for key, blocks in value.items():
+        if key not in _OPENING_HOURS_DAY_KEYS:
+            raise serializers.ValidationError(f"'{key}' is not a day of the week (use 0-6).")
+        if not isinstance(blocks, list):
+            raise serializers.ValidationError(f"Day {key}: expected a list of time ranges.")
+        if len(blocks) > _OPENING_HOURS_MAX_BLOCKS_PER_DAY:
+            raise serializers.ValidationError(
+                f"Day {key}: at most {_OPENING_HOURS_MAX_BLOCKS_PER_DAY} opening blocks."
+            )
+        parsed = []
+        for block in blocks:
+            if not isinstance(block, (list, tuple)) or len(block) != 2:
+                raise serializers.ValidationError(f"Day {key}: each block is [start, end].")
+            try:
+                start, end = _parse_hhmm(block[0]), _parse_hhmm(block[1])
+            except ValueError:
+                raise serializers.ValidationError(f"Day {key}: times must be HH:MM.")
+            if start >= end:
+                raise serializers.ValidationError(
+                    f"Day {key}: a block's start must be before its end."
+                )
+            parsed.append((start, end))
+        parsed.sort()
+        for (_start, end), (next_start, _end) in zip(parsed, parsed[1:]):
+            if next_start < end:
+                raise serializers.ValidationError(f"Day {key}: opening blocks overlap.")
+        cleaned[key] = [[s.strftime("%H:%M"), e.strftime("%H:%M")] for s, e in parsed]
+    return cleaned
 
 
 def _normalize_tags(tags):
@@ -579,6 +656,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     reservation_max_active_per_member = serializers.IntegerField(
         min_value=1, max_value=50, required=False
     )
+    reservation_unit = serializers.ChoiceField(
+        choices=Collection.ReservationUnit.choices, required=False
+    )
+    opening_hours = serializers.JSONField(required=False)
+    reservation_max_hours = serializers.IntegerField(min_value=1, max_value=12, required=False)
     # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
     # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
     # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
@@ -609,6 +691,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "reservation_max_days",
             "reservation_horizon_days",
             "reservation_max_active_per_member",
+            "reservation_unit",
+            "opening_hours",
+            "reservation_max_hours",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -626,6 +711,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     def validate_closed_dates(self, value):
         return _parse_closed_dates(value)
+
+    def validate_opening_hours(self, value):
+        return _validate_opening_hours(value)
 
     def validate(self, attrs):
         instance = self.instance

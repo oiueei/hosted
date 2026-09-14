@@ -510,16 +510,27 @@ def request_reservation(
     requester,
     owner_email,
     start_date,
-    duration_days,
+    duration_days=None,
     project_note="",
     collection_code=None,
+    *,
+    start_time=None,
+    end_time=None,
 ):
     """RESERVE_THING — create an auto-confirmed on-site reservation.
 
+    Two shapes, chosen by ``rc.is_hourly_reservations()`` — never both at once:
+    a **DAY**-unit collection takes ``duration_days`` (the original shape,
+    unchanged); an **HOUR**-unit one takes ``start_time``/``end_time`` instead,
+    and the stored booking still gets ``end_date = start_date + 1`` — never a
+    date range — so every date-only consumer downstream (reminders,
+    ``close_transfers``, the calendar export's date filter) keeps working
+    without change; only ``has_overlap`` is told about the hours.
+
     Raises ``BookingRequestError`` on any rule failure (403 not a member, 400 a
-    reservation-rule violation, 409 a date clash). On success the booking is
-    already ``ACCEPTED``; both the requester and the owner are emailed and the
-    owner gets an in-app notice.
+    reservation-rule violation, 409 a clash). On success the booking is already
+    ``ACCEPTED``; both the requester and the owner are emailed and the owner
+    gets an in-app notice.
     """
     rc = resolve_reservations_collection(thing, collection_code)
     if rc is None:
@@ -530,13 +541,26 @@ def request_reservation(
             "You need to be a member of this group to reserve.", status_code=403
         )
 
-    # reservation_violation covers duration, the every-day-open-weekday rule AND
-    # the collection's "how far ahead" horizon — one backstop.
-    violation = rc.reservation_violation(start_date, duration_days)
-    if violation:
-        raise BookingRequestError(violation)
-
-    end_date = start_date + timedelta(days=duration_days)
+    if rc.is_hourly_reservations():
+        if start_time is None or end_time is None:
+            raise BookingRequestError(
+                "This space is booked by the hour — pick a start and end time."
+            )
+        violation = rc.reservation_hour_violation(start_date, start_time, end_time)
+        if violation:
+            raise BookingRequestError(violation)
+        end_date = start_date + timedelta(days=1)
+    else:
+        if duration_days is None:
+            raise BookingRequestError("This space is booked by the day — pick a length in days.")
+        # reservation_violation covers duration, the every-day-open-weekday rule
+        # AND the collection's "how far ahead" horizon — one backstop.
+        violation = rc.reservation_violation(start_date, duration_days)
+        if violation:
+            raise BookingRequestError(violation)
+        end_date = start_date + timedelta(days=duration_days)
+        start_time = None
+        end_time = None
 
     with transaction.atomic():
         Thing.objects.select_for_update().get(code=thing.code)
@@ -544,8 +568,13 @@ def request_reservation(
             raise BookingRequestError(
                 "You've reached the maximum number of active reservations for this space."
             )
-        if BookingPeriod.has_overlap(thing.code, start_date, end_date):
-            raise BookingRequestError("Those dates are already taken.", status_code=409)
+        if BookingPeriod.has_overlap(
+            thing.code, start_date, end_date, start_time=start_time, end_time=end_time
+        ):
+            clash_message = (
+                "That time is already taken." if start_time else "Those dates are already taken."
+            )
+            raise BookingRequestError(clash_message, status_code=409)
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type=thing.type,
@@ -554,6 +583,8 @@ def request_reservation(
             owner_code=thing.owner,
             start_date=start_date,
             end_date=end_date,
+            start_time=start_time,
+            end_time=end_time,
             project_note=project_note or "",
             status=BookingPeriod.Status.ACCEPTED,
         )

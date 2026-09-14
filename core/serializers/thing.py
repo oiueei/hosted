@@ -303,6 +303,9 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
     reservation_horizon_days = serializers.SerializerMethodField()
+    reservation_unit = serializers.SerializerMethodField()
+    opening_hours = serializers.SerializerMethodField()
+    reservation_max_hours = serializers.SerializerMethodField()
     closed_dates = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
@@ -345,6 +348,9 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
+            "reservation_unit",
+            "opening_hours",
+            "reservation_max_hours",
             "closed_dates",
             "transfer_count",
             "is_endless",
@@ -489,6 +495,30 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         reservation span that touches one. ``[]`` when there is no collection."""
         first = self._viewable_collection(obj)
         return list(first.closed_dates) if first else []
+
+    def get_reservation_unit(self, obj):
+        """DAY or HOUR — which reservation flow ``RequestThingPage`` renders for
+        this RESERVE_THING. ``None`` for every non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_unit if first else "DAY"
+
+    def get_opening_hours(self, obj):
+        """HOUR-unit only: the collection's per-weekday opening blocks, so the
+        picker knows what to offer. ``{}`` for a DAY-unit or non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return {}
+        first = self._viewable_collection(obj)
+        return dict(first.opening_hours) if first else {}
+
+    def get_reservation_max_hours(self, obj):
+        """HOUR-unit only: the longest a single reservation may run, in hours.
+        ``None`` for every non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_max_hours if first else 3
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available

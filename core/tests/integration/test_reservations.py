@@ -56,6 +56,39 @@ def reservations(db, user, user2, api_client):
     return {"collection": coll, "thing": thing, "owner": user, "member": user2}
 
 
+@pytest.fixture
+def hourly_reservations(db, user, user2, api_client):
+    """An HOUR-unit twin of ``reservations``: Mon-Thu 10-14 & 16-20, Fri 10-14,
+    weekend closed, max 3h per reservation."""
+    coll = Collection.objects.create(
+        code="HRVC01",
+        owner=user,
+        headline="Ateneu spaces (hourly)",
+        status="ACTIVE",
+        mode=Collection.Mode.PROPRIETARY,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_max_hours=3,
+        opening_hours={
+            "0": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "1": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "2": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "3": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "4": [["10:00", "14:00"]],
+        },
+    )
+    coll.invites.add(user2)
+    thing = Thing.objects.create(
+        code="HRVT01",
+        type=Thing.Type.RESERVE_THING,
+        owner=user,
+        headline="Sala polivalent",
+        location="Planta 1, sala 2",
+    )
+    coll.things.add(thing)
+    return {"collection": coll, "thing": thing, "owner": user, "member": user2}
+
+
 def _member_client(api_client, member):
     from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -251,6 +284,150 @@ def test_the_active_reservation_cap_is_per_member_per_collection(
     assert BookingPeriod.objects.filter(status=BookingPeriod.Status.ACCEPTED).count() == 1
 
 
+# --- HOUR-unit reservations (API) -----------------------------------------
+
+
+def test_an_hourly_reservation_is_confirmed_on_the_spot(hourly_reservations, authenticated_client2):
+    thing = hourly_reservations["thing"]
+    mon = _next_weekday(0)
+    mail.outbox.clear()
+
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(thing.code),
+        {"start_date": str(mon), "start_time": "11:00", "end_time": "13:00"},
+        format="json",
+    )
+
+    assert resp.status_code == status.HTTP_201_CREATED
+    assert resp.data["start_date"] == str(mon)
+    assert resp.data["end_date"] == str(mon + timedelta(days=1))
+    assert resp.data["start_time"] == "11:00:00"
+    assert resp.data["end_time"] == "13:00:00"
+    booking = BookingPeriod.objects.get(code=resp.data["booking_code"])
+    assert booking.status == BookingPeriod.Status.ACCEPTED
+    assert len(mail.outbox) == 2  # requester confirmation + owner notice
+
+
+def test_an_hourly_request_outside_opening_hours_is_refused(
+    hourly_reservations, authenticated_client2
+):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": "13:00", "end_time": "17:00"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert not BookingPeriod.objects.exists()
+
+
+def test_an_hourly_clash_is_a_409_and_leaves_the_rest_of_the_day_free(
+    hourly_reservations, authenticated_client2, api_client
+):
+    thing = hourly_reservations["thing"]
+    mon = _next_weekday(0)
+    first = authenticated_client2.post(
+        REQUEST_URL.format(thing.code),
+        {"start_date": str(mon), "start_time": "10:00", "end_time": "12:00"},
+        format="json",
+    )
+    assert first.status_code == status.HTTP_201_CREATED
+
+    other = User.objects.create(code="HMEMB2", email="hm2@test.com")
+    hourly_reservations["collection"].invites.add(other)
+    clash = _member_client(api_client, other).post(
+        REQUEST_URL.format(thing.code),
+        {"start_date": str(mon), "start_time": "11:00", "end_time": "13:00"},
+        format="json",
+    )
+    assert clash.status_code == status.HTTP_409_CONFLICT
+
+    free = _member_client(api_client, other).post(
+        REQUEST_URL.format(thing.code),
+        {"start_date": str(mon), "start_time": "12:00", "end_time": "14:00"},
+        format="json",
+    )
+    assert free.status_code == status.HTTP_201_CREATED
+
+
+def test_a_full_day_hourly_reservation_is_accepted_despite_the_hour_cap(
+    hourly_reservations, authenticated_client2
+):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": "10:00", "end_time": "20:00"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+
+
+def test_sending_both_duration_days_and_hours_is_a_400(hourly_reservations, authenticated_client2):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {
+            "start_date": str(_next_weekday(0)),
+            "duration_days": 1,
+            "start_time": "10:00",
+            "end_time": "12:00",
+        },
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_sending_neither_duration_nor_hours_is_a_400(hourly_reservations, authenticated_client2):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0))},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_a_reservation_request_for_a_past_date_is_refused(reservations, authenticated_client2):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(reservations["thing"].code),
+        {"start_date": str(date.today() - timedelta(days=1)), "duration_days": 1},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert not BookingPeriod.objects.exists()
+
+
+def test_an_hourly_request_missing_end_time_is_a_400(hourly_reservations, authenticated_client2):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": "10:00"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_an_hourly_request_with_end_before_start_is_a_400(
+    hourly_reservations, authenticated_client2
+):
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": "12:00", "end_time": "10:00"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_the_day_mode_endpoint_is_unaffected_by_the_hour_serializer_fields(
+    reservations, authenticated_client2
+):
+    """A DAY-unit collection's own flow is untouched by the new optional
+    fields — the exact request that worked before still does."""
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "duration_days": 1},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    assert resp.data["start_time"] is None
+    assert resp.data["end_time"] is None
+
+
 # --- money ---------------------------------------------------------------
 
 
@@ -416,6 +593,64 @@ def test_a_reservations_collection_cannot_become_community(authenticated_client)
     assert coll.mode == Collection.Mode.PROPRIETARY  # the switch did not take
 
 
+def test_creating_an_hourly_reservations_collection_stores_opening_hours(authenticated_client):
+    resp = authenticated_client.post(
+        "/api/v1/collections/",
+        {
+            "headline": "Ateneu (hourly)",
+            "allowed_thing_types": ["RESERVE_THING"],
+            "reservation_unit": "HOUR",
+            "reservation_max_hours": 3,
+            "opening_hours": {"0": [["16:00", "20:00"], ["10:00", "14:00"]]},
+        },
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    assert resp.data["reservation_unit"] == "HOUR"
+    # Sorted by the validator, regardless of the order the owner sent them in.
+    assert resp.data["opening_hours"] == {"0": [["10:00", "14:00"], ["16:00", "20:00"]]}
+    assert resp.data["reservation_max_hours"] == 3
+
+
+def test_creating_a_collection_with_overlapping_opening_hours_is_a_400(authenticated_client):
+    resp = authenticated_client.post(
+        "/api/v1/collections/",
+        {
+            "headline": "Bad hours",
+            "allowed_thing_types": ["RESERVE_THING"],
+            "reservation_unit": "HOUR",
+            "opening_hours": {"0": [["10:00", "15:00"], ["14:00", "20:00"]]},
+        },
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert not Collection.objects.filter(headline="Bad hours").exists()
+
+
+def test_updating_a_reservations_collection_switches_it_to_hourly(authenticated_client):
+    coll = Collection.objects.create(
+        code="RSVC06",
+        owner=User.objects.get(code="TEST01"),
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_max_days=1,
+    )
+    resp = authenticated_client.patch(
+        f"/api/v1/collections/{coll.code}/",
+        {
+            "reservation_unit": "HOUR",
+            "opening_hours": {"0": [["10:00", "14:00"]]},
+            "reservation_max_hours": 2,
+        },
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    coll.refresh_from_db()
+    assert coll.reservation_unit == Collection.ReservationUnit.HOUR
+    assert coll.opening_hours == {"0": [["10:00", "14:00"]]}
+    assert coll.reservation_max_hours == 2
+
+
 # --- cancellation (both sides) -----------------------------------------
 
 
@@ -510,6 +745,33 @@ def test_the_thing_serializer_exposes_the_reservation_cap(reservations, authenti
     assert resp.data["reservation_max_days"] == 3
     assert resp.data["reservation_horizon_days"] == 90  # collection default
     assert resp.data["rental_weekdays"] == [0, 1, 2, 3, 4]
+    assert resp.data["reservation_unit"] == "DAY"
+
+
+def test_the_thing_serializer_exposes_the_hourly_rules(hourly_reservations, authenticated_client2):
+    resp = authenticated_client2.get(f"/api/v1/things/{hourly_reservations['thing'].code}/")
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.data["reservation_unit"] == "HOUR"
+    assert resp.data["reservation_max_hours"] == 3
+    assert resp.data["opening_hours"]["0"] == [["10:00", "14:00"], ["16:00", "20:00"]]
+
+
+def test_the_thing_serializer_hides_reservation_unit_for_non_reserve_types(authenticated_client):
+    coll = Collection.objects.create(
+        code="RSVC07", owner=User.objects.get(code="TEST01"), headline="X"
+    )
+    thing = Thing.objects.create(
+        code="RSVT07",
+        type=Thing.Type.GIFT_THING,
+        owner=User.objects.get(code="TEST01"),
+        headline="A gift",
+    )
+    coll.things.add(thing)
+    resp = authenticated_client.get(f"/api/v1/things/{thing.code}/")
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.data["reservation_unit"] is None
+    assert resp.data["reservation_max_hours"] is None
+    assert resp.data["opening_hours"] == {}
 
 
 def test_a_reservation_past_the_horizon_is_refused(reservations, authenticated_client2):

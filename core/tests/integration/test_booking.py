@@ -109,7 +109,13 @@ class TestBookingCalendarView:
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-        assert set(response.data[0]) == {"start_date", "end_date", "status"}
+        assert set(response.data[0]) == {
+            "start_date",
+            "end_date",
+            "start_time",
+            "end_time",
+            "status",
+        }
         assert response.data[0]["status"] == "ACCEPTED"
 
     def test_owner_sees_full_calendar_info(
@@ -142,6 +148,8 @@ class TestBookingCalendarView:
             "requester_name",
             "start_date",
             "end_date",
+            "start_time",
+            "end_time",
             "status",
             "project_note",
         }

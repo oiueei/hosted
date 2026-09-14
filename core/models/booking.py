@@ -163,7 +163,16 @@ class BookingPeriod(models.Model):
         self.save(update_fields=["status"])
 
     @classmethod
-    def has_overlap(cls, thing_code, start_date, end_date, exclude_booking_code=None):
+    def has_overlap(
+        cls,
+        thing_code,
+        start_date,
+        end_date,
+        exclude_booking_code=None,
+        *,
+        start_time=None,
+        end_time=None,
+    ):
         """
         Check if there's a conflict with existing PENDING or ACCEPTED bookings.
 
@@ -174,6 +183,16 @@ class BookingPeriod(models.Model):
         ``end == s``) is NOT a conflict.
 
         existing.start_date < requested.end_date AND existing.end_date > requested.start_date
+
+        ``start_time``/``end_time`` (keyword-only) narrow a same-day clash to a
+        time-of-day check, for an HOUR-unit RESERVE_THING request: once the date
+        filter above has found bookings sharing that one day, a request for
+        ``[start_time, end_time)`` conflicts with an existing row only if that row
+        is itself a whole-day booking (``start_time`` NULL — every LEND/RENT and
+        every DAY-unit RESERVE booking ever made) or its own time range strictly
+        overlaps, by the identical boundary-touching-is-fine rule as the dates.
+        Passing neither keyword preserves the exact whole-day check above — this
+        is what every existing caller (LEND/RENT, DAY-unit RESERVE) keeps doing.
         """
         queryset = cls.objects.filter(
             thing_code=thing_code,
@@ -184,7 +203,13 @@ class BookingPeriod(models.Model):
         if exclude_booking_code:
             queryset = queryset.exclude(code=exclude_booking_code)
 
-        return queryset.exists()
+        if start_time is None or end_time is None:
+            return queryset.exists()
+
+        return queryset.filter(
+            models.Q(start_time__isnull=True)
+            | models.Q(start_time__lt=end_time, end_time__gt=start_time)
+        ).exists()
 
     @classmethod
     def get_blocked_periods(cls, thing_code):

@@ -246,7 +246,15 @@ def test_the_anonymous_calendar_says_when_not_who(api_client, user, user2):
     body = res.json()
 
     assert res.status_code == 200
-    assert body == [{"start_date": "2026-03-02", "end_date": "2026-03-09", "status": "ACCEPTED"}]
+    assert body == [
+        {
+            "start_date": "2026-03-02",
+            "end_date": "2026-03-09",
+            "start_time": None,
+            "end_time": None,
+            "status": "ACCEPTED",
+        }
+    ]
     # Against the raw bytes, so a field added under any name is caught by what
     # it carries rather than by what it is called.
     assert "borrower@example.com" not in res.content.decode()

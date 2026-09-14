@@ -6,7 +6,7 @@ request view calls), plus the fact that a RESERVE booking participates in the
 strict-overlap / live-availability machinery.
 """
 
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 import pytest
 import time_machine
@@ -44,6 +44,31 @@ def reservations_collection(db):
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=3,
         rental_weekdays=[0, 1, 2, 3, 4],  # Mon–Fri
+    )
+    return coll
+
+
+@pytest.fixture
+def hourly_reservations_collection(db):
+    """CA's own example: Mon–Thu 10:00-14:00 & 16:00-20:00, Fri 10:00-14:00,
+    weekend closed. Max 3 hours per reservation."""
+    owner = User.objects.create(code="HRLOWN", email="hrlown@test.com", name="Ateneu")
+    coll = Collection.objects.create(
+        code="HRLCOL",
+        owner=owner,
+        headline="Ateneu spaces (hourly)",
+        status="ACTIVE",
+        mode=Collection.Mode.PROPRIETARY,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_max_hours=3,
+        opening_hours={
+            "0": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "1": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "2": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "3": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "4": [["10:00", "14:00"]],
+        },
     )
     return coll
 
@@ -398,7 +423,7 @@ def test_request_reservation_refuses_past_the_active_cap(db):
         request_reservation(things[2], member, owner.email, _next_weekday(2), 1)
 
 
-# --- hourly-reservation fields (dormant — no behaviour reads them yet) ------
+# --- hourly-reservation fields: defaults -------------------------------------
 
 
 def test_reservation_unit_defaults_to_day(db):
@@ -430,6 +455,416 @@ def test_booking_start_time_and_end_time_default_to_none(db):
     booking.refresh_from_db()
     assert booking.start_time is None
     assert booking.end_time is None
+
+
+# --- day_opening_blocks --------------------------------------------------------
+
+
+def test_day_opening_blocks_returns_sorted_tuples(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    assert hourly_reservations_collection.day_opening_blocks(mon) == [
+        (time(10, 0), time(14, 0)),
+        (time(16, 0), time(20, 0)),
+    ]
+
+
+def test_day_opening_blocks_empty_when_the_weekday_has_no_entry(hourly_reservations_collection):
+    sat = _next_weekday(5)
+    assert hourly_reservations_collection.day_opening_blocks(sat) == []
+
+
+def test_day_opening_blocks_skips_malformed_entries_defensively(db):
+    owner = User.objects.create(code="HBLOW1", email="hblow1@test.com")
+    coll = Collection.objects.create(
+        code="HBLCO1",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        opening_hours={"0": [["not-a-time", "14:00"], ["10:00", "14:00"]]},
+    )
+    mon = _next_weekday(0)
+    assert coll.day_opening_blocks(mon) == [(time(10, 0), time(14, 0))]
+
+
+# --- reservation_hour_violation: duration -------------------------------------
+
+
+def test_reservation_hour_violation_rejects_end_before_or_equal_start(
+    hourly_reservations_collection,
+):
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(11, 0), time(10, 0))
+        is not None
+    )
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(10, 0))
+        is not None
+    )
+
+
+def test_reservation_hour_violation_rejects_under_an_hour(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    msg = hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(10, 30))
+    assert msg is not None
+
+
+def test_reservation_hour_violation_rejects_over_the_max_hours(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    msg = hourly_reservations_collection.reservation_hour_violation(
+        mon, time(10, 0), time(14, 0)
+    )  # 4h, max is 3
+    assert msg is not None and "3" in msg
+
+
+def test_reservation_hour_violation_accepts_exactly_the_max(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(13, 0))
+        is None
+    )
+
+
+# --- reservation_hour_violation: horizon / closures ---------------------------
+
+
+def test_reservation_hour_violation_rejects_past_the_horizon(db):
+    owner = User.objects.create(code="HHZOW1", email="hhzow1@test.com")
+    coll = Collection.objects.create(
+        code="HHZCO1",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_horizon_days=14,
+        reservation_max_hours=3,
+        opening_hours={str(d): [["10:00", "14:00"]] for d in range(7)},
+    )
+    today = date(2026, 6, 1)  # a Monday
+    assert (
+        coll.reservation_hour_violation(
+            today + timedelta(days=13), time(10, 0), time(11, 0), today=today
+        )
+        is None
+    )
+    msg = coll.reservation_hour_violation(
+        today + timedelta(days=20), time(10, 0), time(11, 0), today=today
+    )
+    assert msg is not None and "14" in msg
+
+
+def test_reservation_hour_violation_rejects_a_closed_date(hourly_reservations_collection):
+    mon = _next_weekday(0)
+    hourly_reservations_collection.closed_dates = [mon.isoformat()]
+    hourly_reservations_collection.save(update_fields=["closed_dates"])
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(11, 0))
+        is not None
+    )
+
+
+def test_reservation_hour_violation_rejects_a_day_with_no_opening_blocks(
+    hourly_reservations_collection,
+):
+    sat = _next_weekday(5)  # not in opening_hours at all
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(sat, time(10, 0), time(11, 0))
+        is not None
+    )
+
+
+# --- reservation_hour_violation: the block / full-day rule --------------------
+
+
+def test_reservation_hour_violation_accepts_a_span_inside_one_block(
+    hourly_reservations_collection,
+):
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(11, 0), time(13, 0))
+        is None
+    )
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(17, 0), time(19, 0))
+        is None
+    )
+
+
+def test_reservation_hour_violation_rejects_starting_before_a_block_opens(
+    hourly_reservations_collection,
+):
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(9, 0), time(11, 0))
+        is not None
+    )
+
+
+def test_reservation_hour_violation_rejects_ending_after_a_block_closes(
+    hourly_reservations_collection,
+):
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(13, 0), time(15, 0))
+        is not None
+    )
+
+
+def test_reservation_hour_violation_rejects_a_span_crossing_the_lunch_gap(
+    hourly_reservations_collection,
+):
+    """13:00-17:00 crosses the 14:00-16:00 gap without being the full day —
+    refused, not silently clipped to whichever block it started in."""
+    mon = _next_weekday(0)
+    msg = hourly_reservations_collection.reservation_hour_violation(mon, time(13, 0), time(17, 0))
+    assert msg is not None
+
+
+def test_reservation_hour_violation_accepts_the_exact_full_day_including_the_gap(
+    hourly_reservations_collection,
+):
+    """10:00-20:00 is exactly the first block's open to the last block's close —
+    a full-day reservation, gap included, even though max_hours is 3."""
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 0))
+        is None
+    )
+
+
+def test_reservation_hour_violation_full_day_rule_is_exact_not_a_superset(
+    hourly_reservations_collection,
+):
+    """One minute either side of the exact full-day span is refused — it isn't
+    "the full day or more", it's specifically that one span."""
+    mon = _next_weekday(0)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(9, 59), time(20, 0))
+        is not None
+    )
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 1))
+        is not None
+    )
+
+
+def test_reservation_hour_violation_on_a_single_block_day_full_day_equals_that_block(
+    hourly_reservations_collection,
+):
+    """Friday has one block only (10:00-14:00, 4h) — the full-day span is that
+    block, and it's accepted despite exceeding max_hours=3."""
+    fri = _next_weekday(4)
+    assert (
+        hourly_reservations_collection.reservation_hour_violation(fri, time(10, 0), time(14, 0))
+        is None
+    )
+
+
+# --- has_overlap with hours -----------------------------------------------
+
+
+def test_has_overlap_with_hours_conflicts_on_overlapping_times_same_day(db):
+    owner = User.objects.create(code="HOVOW1", email="hovow1@test.com")
+    requester = User.objects.create(code="HOVRQ1", email="hovrq1@test.com")
+    thing = Thing.objects.create(
+        code="HOVTH1", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    mon = _next_weekday(0)
+    BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type="RESERVE_THING",
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(12, 0),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+    assert (
+        BookingPeriod.has_overlap(
+            thing.code, mon, mon + timedelta(days=1), start_time=time(11, 0), end_time=time(13, 0)
+        )
+        is True
+    )
+
+
+def test_has_overlap_with_hours_touching_boundary_is_not_a_conflict(db):
+    owner = User.objects.create(code="HOVOW2", email="hovow2@test.com")
+    requester = User.objects.create(code="HOVRQ2", email="hovrq2@test.com")
+    thing = Thing.objects.create(
+        code="HOVTH2", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    mon = _next_weekday(0)
+    BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type="RESERVE_THING",
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(12, 0),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+    assert (
+        BookingPeriod.has_overlap(
+            thing.code, mon, mon + timedelta(days=1), start_time=time(12, 0), end_time=time(13, 0)
+        )
+        is False
+    )
+
+
+def test_has_overlap_with_hours_a_whole_day_booking_blocks_any_hour(db):
+    """An existing DAY-unit (or LEND/RENT) booking has `start_time=NULL` — it
+    blocks the entire day, so a later HOUR-unit request against the same thing
+    and date must clash regardless of which hours it asks for."""
+    owner = User.objects.create(code="HOVOW3", email="hovow3@test.com")
+    requester = User.objects.create(code="HOVRQ3", email="hovrq3@test.com")
+    thing = Thing.objects.create(
+        code="HOVTH3", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    mon = _next_weekday(0)
+    BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type="RESERVE_THING",
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        status=BookingPeriod.Status.ACCEPTED,  # whole day, no times
+    )
+    assert (
+        BookingPeriod.has_overlap(
+            thing.code, mon, mon + timedelta(days=1), start_time=time(18, 0), end_time=time(19, 0)
+        )
+        is True
+    )
+
+
+def test_has_overlap_with_hours_two_bookings_the_same_day_can_coexist(db):
+    owner = User.objects.create(code="HOVOW4", email="hovow4@test.com")
+    requester = User.objects.create(code="HOVRQ4", email="hovrq4@test.com")
+    thing = Thing.objects.create(
+        code="HOVTH4", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    mon = _next_weekday(0)
+    BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type="RESERVE_THING",
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=mon,
+        end_date=mon + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(12, 0),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+    assert (
+        BookingPeriod.has_overlap(
+            thing.code, mon, mon + timedelta(days=1), start_time=time(17, 0), end_time=time(19, 0)
+        )
+        is False
+    )
+
+
+# --- request_reservation: HOUR-unit path --------------------------------------
+
+
+def test_request_reservation_hour_mode_creates_a_slot_booking(hourly_reservations_collection):
+    coll = hourly_reservations_collection
+    member = User.objects.create(code="HRQMB1", email="hrqmb1@test.com")
+    coll.invites.add(member)
+    thing = Thing.objects.create(
+        code="HRQTH1", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
+    )
+    coll.things.add(thing)
+    mon = _next_weekday(0)
+
+    booking = request_reservation(
+        thing, member, coll.owner.email, mon, start_time=time(11, 0), end_time=time(13, 0)
+    )
+
+    assert booking.start_date == mon
+    assert booking.end_date == mon + timedelta(days=1)  # never a date range
+    assert booking.start_time == time(11, 0)
+    assert booking.end_time == time(13, 0)
+    assert booking.status == BookingPeriod.Status.ACCEPTED
+
+
+def test_request_reservation_hour_mode_rejects_a_span_outside_opening_hours(
+    hourly_reservations_collection,
+):
+    coll = hourly_reservations_collection
+    member = User.objects.create(code="HRQMB2", email="hrqmb2@test.com")
+    coll.invites.add(member)
+    thing = Thing.objects.create(
+        code="HRQTH2", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
+    )
+    coll.things.add(thing)
+    mon = _next_weekday(0)
+
+    with pytest.raises(BookingRequestError):
+        request_reservation(
+            thing, member, coll.owner.email, mon, start_time=time(13, 0), end_time=time(17, 0)
+        )
+
+
+def test_request_reservation_hour_mode_requires_both_times(hourly_reservations_collection):
+    coll = hourly_reservations_collection
+    member = User.objects.create(code="HRQMB3", email="hrqmb3@test.com")
+    coll.invites.add(member)
+    thing = Thing.objects.create(
+        code="HRQTH3", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
+    )
+    coll.things.add(thing)
+    mon = _next_weekday(0)
+
+    with pytest.raises(BookingRequestError):
+        request_reservation(thing, member, coll.owner.email, mon)  # neither days nor times
+
+
+def test_request_reservation_day_mode_ignores_stray_hour_kwargs(reservations_collection):
+    """A DAY-unit collection's create path stays exactly as before, even if a
+    caller passed start_time/end_time by mistake — they must not reach the row."""
+    coll = reservations_collection
+    member = User.objects.create(code="HRQMB4", email="hrqmb4@test.com")
+    coll.invites.add(member)
+    thing = Thing.objects.create(
+        code="HRQTH4", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
+    )
+    coll.things.add(thing)
+    mon = _next_weekday(0)
+
+    booking = request_reservation(
+        thing,
+        member,
+        coll.owner.email,
+        mon,
+        duration_days=1,
+        start_time=time(10, 0),
+        end_time=time(11, 0),
+    )
+    assert booking.start_time is None
+    assert booking.end_time is None
+
+
+def test_request_reservation_day_mode_requires_duration_days(reservations_collection):
+    coll = reservations_collection
+    member = User.objects.create(code="HRQMB5", email="hrqmb5@test.com")
+    coll.invites.add(member)
+    thing = Thing.objects.create(
+        code="HRQTH5", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
+    )
+    coll.things.add(thing)
+
+    with pytest.raises(BookingRequestError):
+        request_reservation(thing, member, coll.owner.email, _next_weekday(0))
 
 
 def test_project_note_defaults_blank_and_holds_512(db):

@@ -80,6 +80,8 @@ class BookingPeriodCalendarSerializer(serializers.ModelSerializer):
         fields = [
             "start_date",
             "end_date",
+            "start_time",
+            "end_time",
             "status",
         ]
 
@@ -99,6 +101,8 @@ class BookingPeriodOwnerCalendarSerializer(serializers.ModelSerializer):
             "requester_name",
             "start_date",
             "end_date",
+            "start_time",
+            "end_time",
             "status",
             "project_note",
         ]
@@ -138,18 +142,43 @@ class ThingRequestWithDatesSerializer(serializers.Serializer):
 
 
 class ReservationRequestSerializer(serializers.Serializer):
-    """RESERVE_THING request: a pickup date + a length in days, plus an optional
-    project note. The real duration cap and the weekday rule are checked in the
-    service against the collection (``Collection.reservation_violation``)."""
+    """RESERVE_THING request: a pickup date, plus either a length in days
+    (DAY-unit collections) or a start/end time (HOUR-unit collections) — never
+    both. Which shape applies is a property of the collection
+    (``reservation_unit``), not of the request, so this serializer accepts
+    either and ``request_reservation`` uses whichever one the collection is in.
+    The real caps — day count, hour count, weekday/opening-hours rules — are
+    checked in the service against the collection (``Collection.
+    reservation_violation`` / ``reservation_hour_violation``). An optional
+    project note rides along either way."""
 
     start_date = serializers.DateField()
-    duration_days = serializers.IntegerField(min_value=1, max_value=7)
+    duration_days = serializers.IntegerField(min_value=1, max_value=7, required=False)
+    start_time = serializers.TimeField(required=False)
+    end_time = serializers.TimeField(required=False)
     project_note = SafeTextField(max_length=512, required=False, allow_blank=True)
 
     def validate_start_date(self, value):
         if value < date.today():
             raise serializers.ValidationError("Start date must be today or in the future")
         return value
+
+    def validate(self, attrs):
+        has_days = "duration_days" in attrs
+        has_hours = "start_time" in attrs or "end_time" in attrs
+        if has_days and has_hours:
+            raise serializers.ValidationError(
+                "Send either duration_days or start_time/end_time, not both."
+            )
+        if not has_days and not has_hours:
+            raise serializers.ValidationError(
+                "Send duration_days (day-based) or start_time and end_time (hour-based)."
+            )
+        if has_hours and ("start_time" not in attrs or "end_time" not in attrs):
+            raise serializers.ValidationError("Send both start_time and end_time.")
+        if has_hours and attrs["end_time"] <= attrs["start_time"]:
+            raise serializers.ValidationError({"end_time": "Must be after start_time."})
+        return attrs
 
 
 class MyBookingSerializer(serializers.ModelSerializer):
