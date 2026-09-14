@@ -467,12 +467,25 @@ div[class*='Linkbox-module_linkbox'] {
   font-size: var(--fontsize-body-s) !important;
 }
 
-/* Collection tag filter chips (below the "Things" heading) */
+/* Collection tag filter chips (below the "Things" heading). A collection can
+   define more tags than fit one row at any breakpoint, so this scrolls
+   horizontally instead of wrapping onto a second line — same "wide content
+   scrolls inside itself, the page never scrolls sideways" rule as
+   `.table-wrap` above. Works for both input modes without extra JS: touch
+   gets native swipe + momentum, a mouse/trackpad gets the (thin) scrollbar
+   itself, a shift+wheel, or a trackpad's horizontal two-finger swipe, and a
+   keyboard reaches off-screen chips by tabbing into them — same as
+   `.table-wrap`, no `tabindex` needed. */
 .tag-filter-bar {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--spacing-2-xs);
   margin-bottom: var(--spacing-m);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  padding-bottom: var(--spacing-3-xs);
 }
 
 .tag-chip {
@@ -485,6 +498,8 @@ div[class*='Linkbox-module_linkbox'] {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-size: var(--fontsize-body-s);
   font-family: inherit;
   cursor: pointer;
