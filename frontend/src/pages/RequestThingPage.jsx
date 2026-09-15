@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, DateInput, Notification, Select, TextArea } from 'hds-react';
@@ -81,16 +81,22 @@ export default function RequestThingPage() {
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
   // RESERVE_THING's "you need to be a member of this group to reserve" (403)
-  // gets its own persistent block with a one-click fix, not just a toast —
-  // the reader can join a PUBLIC collection themselves without ever leaving
-  // this page (the signed-in half of login-to-act, CollectionPage's own
-  // handleJoin reused). `joined` flips once that succeeds; the reader then
-  // presses the submit button again themselves — no auto-retry, so what
-  // happens is always something they chose.
+  // can only happen on a PUBLIC collection (can_view already gated everything
+  // else, and a non-member reaches it only there), so joining is always
+  // genuinely possible — CA's call: don't hand the reader a second button for
+  // a step that was never really a choice, just join them (the signed-in half
+  // of login-to-act, CollectionPage's own handleJoin) and retry the exact
+  // same reservation, transparently, from inside handleSubmit. `notMemberError`
+  // (+ the manual "Join this group" fallback button) only ever shows if that
+  // auto-join itself fails — a real problem the reader does need to act on.
   const [notMemberError, setNotMemberError] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
-  const [joined, setJoined] = useState(false);
+  // The body handleSubmit built for the attempt that hit the 403 — kept so
+  // the manual "Join this group" fallback button can retry the *exact* same
+  // reservation on a later click, without asking the reader to fill anything
+  // in twice. A ref, not state: it never needs to trigger a render itself.
+  const lastBodyRef = useRef(null);
   // Which thing the load failed for — same reason as the delete pages: a boolean
   // needs clearing at the top of the effect, which is a render spent undoing the
   // previous one.
@@ -213,6 +219,76 @@ export default function RequestThingPage() {
         });
   const dateBlocked = (date) => isDateBlocked(date, blockedPeriods, closedDates);
 
+  // Shared by the first attempt's non-403 branches and the retry after an
+  // auto-join below — a business-rule failure reads the same either way.
+  const showRequestError = async (res) => {
+    if (res.status === 429) {
+      setToast({ type: 'error', message: t('common.tooManyAttempts') });
+    } else if (res.status === 400) {
+      const data = await res.json();
+      let message = data.detail;
+      if (!message) {
+        const errors = Object.values(data).flat();
+        message = errors.join(' ') || t('thingPage.invalidRequest');
+      }
+      setToast({ type: 'error', message });
+    } else if (res.status === 403) {
+      const data = await res.json();
+      setToast({ type: 'error', message: data.error || t('request.errorSending') });
+    } else if (res.status === 409) {
+      setToast({ type: 'error', message: t('request.dateOverlap') });
+    } else {
+      setToast({ type: 'error', message: t('request.errorSending') });
+    }
+  };
+
+  // The signed-in half of login-to-act (CollectionPage's own handleJoin,
+  // reused): a PUBLIC collection's own member roster is one POST away for
+  // someone who already has an account. `code` covers the collection-context
+  // route; the standalone `/things/:code/request` route carries none, so it
+  // falls back to the collection the thing itself resolved to server-side.
+  //
+  // RESERVE_THING's only 403 here is "not a member of this group", and it can
+  // only happen on a PUBLIC collection — can_view already gated everything
+  // else, and a non-member reaches it only there — so joining is always
+  // genuinely possible. Membership was never really a choice being offered,
+  // so it isn't asked for: join, then retry the *exact* same reservation,
+  // transparently (CA's call). `notMemberError` + the manual fallback button
+  // only ever show if this auto-join itself fails.
+  const joinThenRetry = async (body, fallbackMessage) => {
+    const collectionCode = code || thing?.collection_code;
+    if (!collectionCode) {
+      setNotMemberError(fallbackMessage || t('request.errorSending'));
+      return;
+    }
+    setJoining(true);
+    setJoinError(false);
+    let joinRes;
+    try {
+      joinRes = await apiFetch(`/api/v1/collections/${collectionCode}/join/`, {
+        method: 'POST',
+      });
+    } catch {
+      joinRes = null;
+    }
+    setJoining(false);
+    if (!joinRes?.ok) {
+      setJoinError(true);
+      setNotMemberError(fallbackMessage || t('request.errorSending'));
+      return;
+    }
+    setNotMemberError('');
+    const retryRes = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (retryRes.ok) {
+      setSuccess(true);
+    } else {
+      await showRequestError(retryRes);
+    }
+  };
+
   const handleSubmit = async () => {
     setAttempted(true);
 
@@ -260,6 +336,7 @@ export default function RequestThingPage() {
     // rules (harmless for other flows / collections without rules).
     if (code) body.collection_code = code;
 
+    lastBodyRef.current = body;
     setSubmitting(true);
     setToast(null);
     setNotMemberError('');
@@ -270,34 +347,11 @@ export default function RequestThingPage() {
       });
       if (res.ok) {
         setSuccess(true);
-      } else if (res.status === 429) {
-        setToast({ type: 'error', message: t('common.tooManyAttempts') });
-      } else if (res.status === 400) {
+      } else if (isReservation && res.status === 403) {
         const data = await res.json();
-        let message = data.detail;
-        if (!message) {
-          const errors = Object.values(data).flat();
-          message = errors.join(' ') || t('thingPage.invalidRequest');
-        }
-        setToast({ type: 'error', message });
-      } else if (res.status === 403) {
-        // RESERVE_THING's "you need to be a member of this group to reserve"
-        // lands here — a specific, actionable reason the reader should see.
-        // It gets the persistent join block below, not a toast, since a
-        // toast auto-closes before the reader has finished reading it, let
-        // alone acted on it. Any other 403 (e.g. access genuinely revoked
-        // mid-session) still gets the toast — joining wouldn't fix that one.
-        const data = await res.json();
-        const message = data.error || t('request.errorSending');
-        if (isReservation) {
-          setNotMemberError(message);
-        } else {
-          setToast({ type: 'error', message });
-        }
-      } else if (res.status === 409) {
-        setToast({ type: 'error', message: t('request.dateOverlap') });
+        await joinThenRetry(body, data.error);
       } else {
-        setToast({ type: 'error', message: t('request.errorSending') });
+        await showRequestError(res);
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });
@@ -306,31 +360,10 @@ export default function RequestThingPage() {
     }
   };
 
-  // The signed-in half of login-to-act (CollectionPage's own handleJoin,
-  // reused): a PUBLIC collection's own member roster is one POST away for
-  // someone who already has an account. `code` covers the collection-context
-  // route; the standalone `/things/:code/request` route carries none, so it
-  // falls back to the collection the thing itself resolved to server-side.
-  const handleJoinGroup = async () => {
-    const collectionCode = code || thing?.collection_code;
-    if (!collectionCode) return;
-    setJoining(true);
-    setJoinError(false);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${collectionCode}/join/`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        setJoined(true);
-        setNotMemberError('');
-      } else {
-        setJoinError(true);
-      }
-    } catch {
-      setJoinError(true);
-    }
-    setJoining(false);
-  };
+  // The manual fallback — shown only when the automatic join above itself
+  // failed — retries with the exact reservation the failed attempt already
+  // built, so the reader never has to fill the form in again.
+  const handleJoinGroup = () => joinThenRetry(lastBodyRef.current, notMemberError);
 
   if (error) {
     return (
@@ -374,11 +407,6 @@ export default function RequestThingPage() {
             </p>
           )}
         </div>
-      )}
-      {joined && (
-        <p className="invite-nudge" role="status">
-          {t('reservation.joinedNowRetry')}
-        </p>
       )}
       {success ? (
         <>

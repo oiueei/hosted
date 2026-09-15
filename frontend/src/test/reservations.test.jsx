@@ -169,49 +169,28 @@ describe('RequestThingPage — RESERVE_THING', () => {
     });
   });
 
-  test("a 403 (not a member of the reservations collection) shows the backend's own reason", async () => {
-    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
-    apiFetch.mockImplementation((url, opts = {}) => {
-      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
-        return Promise.resolve({
-          ok: false,
-          status: 403,
-          json: () =>
-            Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
-        });
-      }
-      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
-      if (/\/things\/[^/]+\/$/.test(url))
-        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
-      return Promise.resolve(mockResponse({}));
-    });
-    const { container } = renderPage();
-    await screen.findByText(/Reserve Sala polivalent/);
-
-    typePickup(container, '03/06/2026');
-    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
-
-    expect(
-      await screen.findByText('You need to be a member of this group to reserve.')
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/Your reservation is confirmed/)).not.toBeInTheDocument();
-  });
-
-  test('the 403 offers a one-click "join this group" that clears the error on success', async () => {
+  test('a 403 (not a member) auto-joins the PUBLIC collection and completes the reservation, with no extra click', async () => {
     setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
     let joinCalled = false;
+    let requestCalls = 0;
     apiFetch.mockImplementation((url, opts = {}) => {
       if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
         joinCalled = true;
         return Promise.resolve(mockResponse({ message: 'Joined' }));
       }
       if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
-        return Promise.resolve({
-          ok: false,
-          status: 403,
-          json: () =>
-            Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
-        });
+        requestCalls += 1;
+        if (requestCalls === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 403,
+            json: () =>
+              Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+          });
+        }
+        return Promise.resolve(
+          mockResponse({ message: 'Reservation confirmed', booking_code: 'B1' })
+        );
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
       if (/\/things\/[^/]+\/$/.test(url))
@@ -223,22 +202,19 @@ describe('RequestThingPage — RESERVE_THING', () => {
 
     typePickup(container, '03/06/2026');
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
-    await screen.findByText('You need to be a member of this group to reserve.');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Join this group' }));
-
-    expect(
-      await screen.findByText("You're a member now — try reserving again.")
-    ).toBeInTheDocument();
+    // one click, and it just works — no "not a member" text, no join button
+    // ever shown, straight to the confirmation.
+    expect(await screen.findByText(/Your reservation is confirmed/)).toBeInTheDocument();
     expect(joinCalled).toBe(true);
-    // the error line is gone — a stale reason next to a "you're in" message
-    // would read as if joining didn't work
+    expect(requestCalls).toBe(2); // the failed attempt, then the auto-retry
     expect(
       screen.queryByText('You need to be a member of this group to reserve.')
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  test('a failed join shows its own error and leaves the original reason visible', async () => {
+  test('a failed auto-join falls back to the reason plus a manual retry button', async () => {
     setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
     apiFetch.mockImplementation((url, opts = {}) => {
       if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
@@ -262,17 +238,60 @@ describe('RequestThingPage — RESERVE_THING', () => {
 
     typePickup(container, '03/06/2026');
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
-    await screen.findByText('You need to be a member of this group to reserve.');
+
+    // the auto-join attempt failed silently in the background, so the reader
+    // sees the original reason plus a way to try again themselves
+    expect(
+      await screen.findByText('You need to be a member of this group to reserve.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+    expect(screen.queryByText(/Your reservation is confirmed/)).not.toBeInTheDocument();
+  });
+
+  test('the manual fallback button retries the join and the exact same reservation', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    let joinCalls = 0;
+    let requestCalls = 0;
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
+        joinCalls += 1;
+        // fails the first (automatic) attempt, succeeds the second (manual)
+        if (joinCalls === 1) {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      }
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        requestCalls += 1;
+        if (requestCalls === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 403,
+            json: () =>
+              Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+          });
+        }
+        return Promise.resolve(
+          mockResponse({ message: 'Reservation confirmed', booking_code: 'B1' })
+        );
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+    await screen.findByRole('button', { name: 'Join this group' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Join this group' }));
 
-    expect(
-      await screen.findByText("We couldn't add you to the group. Please try again.")
-    ).toBeInTheDocument();
-    // still there — the reader hasn't fixed anything yet
-    expect(
-      screen.getByText('You need to be a member of this group to reserve.')
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Your reservation is confirmed/)).toBeInTheDocument();
+    expect(joinCalls).toBe(2);
+    expect(requestCalls).toBe(2); // never re-typed — the same body both times
   });
 });
 

@@ -998,8 +998,7 @@
     "durationHalfDay": "Half day",
     "durationFullDay": "Full day",
     "startTimeLabel": "What time?",
-    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one.",
-    "joinedNowRetry": "You're a member now — try reserving again."
+    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
   },
   "closedDates": {
     "label": "Holidays and closures",

@@ -998,8 +998,7 @@
     "durationHalfDay": "Media jornada",
     "durationFullDay": "Día completo",
     "startTimeLabel": "¿A qué hora?",
-    "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta.",
-    "joinedNowRetry": "Ya eres miembro — vuelve a intentar la reserva."
+    "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta."
   },
   "closedDates": {
     "label": "Festivos y cierres",
