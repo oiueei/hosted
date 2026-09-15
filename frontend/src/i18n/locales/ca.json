@@ -998,7 +998,8 @@
     "durationHalfDay": "Mitja jornada",
     "durationFullDay": "Dia complet",
     "startTimeLabel": "A quina hora?",
-    "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
+    "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta.",
+    "joinedNowRetry": "Ja ets membre — torna a provar la reserva."
   },
   "closedDates": {
     "label": "Festius i tancaments",

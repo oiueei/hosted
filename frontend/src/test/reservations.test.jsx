@@ -196,6 +196,84 @@ describe('RequestThingPage — RESERVE_THING', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Your reservation is confirmed/)).not.toBeInTheDocument();
   });
+
+  test('the 403 offers a one-click "join this group" that clears the error on success', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    let joinCalled = false;
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
+        joinCalled = true;
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      }
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          status: 403,
+          json: () =>
+            Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+        });
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+    await screen.findByText('You need to be a member of this group to reserve.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join this group' }));
+
+    expect(
+      await screen.findByText("You're a member now — try reserving again.")
+    ).toBeInTheDocument();
+    expect(joinCalled).toBe(true);
+    // the error line is gone — a stale reason next to a "you're in" message
+    // would read as if joining didn't work
+    expect(
+      screen.queryByText('You need to be a member of this group to reserve.')
+    ).not.toBeInTheDocument();
+  });
+
+  test('a failed join shows its own error and leaves the original reason visible', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
+        return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+      }
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          status: 403,
+          json: () =>
+            Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+        });
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+    await screen.findByText('You need to be a member of this group to reserve.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join this group' }));
+
+    expect(
+      await screen.findByText("We couldn't add you to the group. Please try again.")
+    ).toBeInTheDocument();
+    // still there — the reader hasn't fixed anything yet
+    expect(
+      screen.getByText('You need to be a member of this group to reserve.')
+    ).toBeInTheDocument();
+  });
 });
 
 describe("RequestThingPage — the collection's request-page note", () => {

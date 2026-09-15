@@ -80,6 +80,17 @@ export default function RequestThingPage() {
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
+  // RESERVE_THING's "you need to be a member of this group to reserve" (403)
+  // gets its own persistent block with a one-click fix, not just a toast —
+  // the reader can join a PUBLIC collection themselves without ever leaving
+  // this page (the signed-in half of login-to-act, CollectionPage's own
+  // handleJoin reused). `joined` flips once that succeeds; the reader then
+  // presses the submit button again themselves — no auto-retry, so what
+  // happens is always something they chose.
+  const [notMemberError, setNotMemberError] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(false);
+  const [joined, setJoined] = useState(false);
   // Which thing the load failed for — same reason as the delete pages: a boolean
   // needs clearing at the top of the effect, which is a render spent undoing the
   // previous one.
@@ -251,6 +262,7 @@ export default function RequestThingPage() {
 
     setSubmitting(true);
     setToast(null);
+    setNotMemberError('');
     try {
       const res = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
         method: 'POST',
@@ -270,10 +282,18 @@ export default function RequestThingPage() {
         setToast({ type: 'error', message });
       } else if (res.status === 403) {
         // RESERVE_THING's "you need to be a member of this group to reserve"
-        // lands here — a specific, actionable reason the reader should see,
-        // not the generic errorSending fallback below.
+        // lands here — a specific, actionable reason the reader should see.
+        // It gets the persistent join block below, not a toast, since a
+        // toast auto-closes before the reader has finished reading it, let
+        // alone acted on it. Any other 403 (e.g. access genuinely revoked
+        // mid-session) still gets the toast — joining wouldn't fix that one.
         const data = await res.json();
-        setToast({ type: 'error', message: data.error || t('request.errorSending') });
+        const message = data.error || t('request.errorSending');
+        if (isReservation) {
+          setNotMemberError(message);
+        } else {
+          setToast({ type: 'error', message });
+        }
       } else if (res.status === 409) {
         setToast({ type: 'error', message: t('request.dateOverlap') });
       } else {
@@ -284,6 +304,32 @@ export default function RequestThingPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // The signed-in half of login-to-act (CollectionPage's own handleJoin,
+  // reused): a PUBLIC collection's own member roster is one POST away for
+  // someone who already has an account. `code` covers the collection-context
+  // route; the standalone `/things/:code/request` route carries none, so it
+  // falls back to the collection the thing itself resolved to server-side.
+  const handleJoinGroup = async () => {
+    const collectionCode = code || thing?.collection_code;
+    if (!collectionCode) return;
+    setJoining(true);
+    setJoinError(false);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${collectionCode}/join/`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setJoined(true);
+        setNotMemberError('');
+      } else {
+        setJoinError(true);
+      }
+    } catch {
+      setJoinError(true);
+    }
+    setJoining(false);
   };
 
   if (error) {
@@ -314,6 +360,26 @@ export default function RequestThingPage() {
       backLabel={backLabel}
     >
       {thing.collection_is_onboarding && <DemoNotice />}
+      {notMemberError && (
+        <div className="invite-nudge" role="alert">
+          <p style={{ margin: 0 }}>{notMemberError}</p>
+          <div style={{ marginTop: 'var(--spacing-xs)' }}>
+            <Button style={btnStyle} disabled={joining} onClick={handleJoinGroup}>
+              {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
+            </Button>
+          </div>
+          {joinError && (
+            <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
+              {t('collectionPage.visitorJoinError')}
+            </p>
+          )}
+        </div>
+      )}
+      {joined && (
+        <p className="invite-nudge" role="status">
+          {t('reservation.joinedNowRetry')}
+        </p>
+      )}
       {success ? (
         <>
           <Notification
