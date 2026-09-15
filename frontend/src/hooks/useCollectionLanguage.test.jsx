@@ -73,12 +73,15 @@ describe('no collection language', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  test('an unsupported code is treated the same as none', async () => {
+  test('an unsupported code is treated the same as none — no fetch, no override', async () => {
     render(<Wrapper mounted collectionLanguage="fr" />);
 
-    await waitFor(() => expect(loadUserLanguage).toHaveBeenCalled());
-    // loadUserLanguage resolves, but the code fails the supported-langs guard.
     await new Promise((resolve) => setTimeout(resolve, 10));
+    // Never even asks who the visitor is: pointless for a code the hook could
+    // not apply anyway, and every truthy `collectionLanguage` used to fetch
+    // `/auth/me/` regardless — the exact call an anonymous visitor must never
+    // make (found in review, 2026-09-15; see `useCapabilities.loadUserLanguage`).
+    expect(loadUserLanguage).not.toHaveBeenCalled();
     expect(i18n.language).toBe('en');
   });
 });
@@ -111,6 +114,59 @@ describe('a visitor with no preference of their own', () => {
 
     await waitFor(() => expect(i18n.language).toBe('en'));
     expect(localStorage.getItem(STORAGE_KEY)).toBe('en');
+  });
+
+  test('reverts with nothing cached, leaving nothing cached — a leaked write would show up here', async () => {
+    // The previous test seeds the key with the SAME value the revert target
+    // would itself produce if the cleanup ever leaked its own `changeLanguage`
+    // write, so it cannot distinguish "restored correctly" from "wrote 'en'
+    // again by accident". Starting from *absent* can.
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    loadUserLanguage.mockResolvedValue('');
+    const { rerender } = render(<Wrapper mounted collectionLanguage="ca" />);
+
+    await waitFor(() => expect(i18n.language).toBe('ca'));
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    await act(async () => {
+      rerender(<Wrapper mounted={false} collectionLanguage="ca" />);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    await waitFor(() => expect(i18n.language).toBe('en'));
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  test("restores the cache before changeLanguage's own promise settles, not just eventually", async () => {
+    // `ca`'s translation file is a lazy `import()` (`i18n/index.js`), so
+    // `changeLanguage('ca')`'s returned promise does not resolve on this same
+    // tick — but `i18next` caches the new language into `localStorage`
+    // *synchronously*, inside the call itself, before that promise settles
+    // (verified against the real i18next source in review). A restore
+    // chained only onto `.then()` would leave the wrong value sitting in
+    // `localStorage` for the whole chunk download. `i18n.changeLanguage` is
+    // replaced here with a stand-in that reproduces exactly that one fact —
+    // a synchronous cache write, then a promise this test controls — so the
+    // assertion below does not depend on how many real microtasks a dynamic
+    // import happens to take.
+    loadUserLanguage.mockResolvedValue('');
+    let resolveChange;
+    const spy = vi.spyOn(i18n, 'changeLanguage').mockImplementation((lng) => {
+      localStorage.setItem(STORAGE_KEY, lng);
+      return new Promise((resolve) => {
+        resolveChange = resolve;
+      });
+    });
+
+    render(<Wrapper mounted collectionLanguage="ca" />);
+    await waitFor(() => expect(spy).toHaveBeenCalledWith('ca'));
+
+    // The stand-in's own write already landed; its promise has not resolved
+    // yet. Restoring only in `.then()` would still show 'ca' here.
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    resolveChange();
+    spy.mockRestore();
   });
 });
 

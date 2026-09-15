@@ -6,7 +6,7 @@ import './styles/oiueei-theme.css';
 import { useEffect, useRef, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import i18n from './i18n';
+import i18n, { SUPPORTED_LANGUAGES } from './i18n';
 import RequireAuth from './components/RequireAuth';
 import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
@@ -79,20 +79,42 @@ function RouteFocusReset() {
 function App() {
   const { t } = useTranslation();
 
-  // Warm the csrftoken cookie, which is the only reason this call exists — the
-  // response is deliberately thrown away. `MeView` carries `@ensure_csrf_cookie`
-  // precisely because the SPA hits it on every app load, so this is the request
-  // that guarantees `getCsrfToken()` has something to put in `X-CSRFToken` on
-  // the first unsafe request of a brand-new visit.
+  // Warm the csrftoken cookie — the original reason this call exists.
+  // `MeView` carries `@ensure_csrf_cookie` precisely because the SPA hits it on
+  // every app load, so this is the request that guarantees `getCsrfToken()` has
+  // something to put in `X-CSRFToken` on the first unsafe request of a
+  // brand-new visit.
   //
-  // Failure is ignored on purpose: the endpoint is `IsAuthenticated`, so it 401s
-  // for a signed-out visitor — but `ensure_csrf_cookie` has already set the
-  // cookie by then, which is all this call was after. Nothing races it either:
+  // A plain `fetch`, deliberately not `apiFetch`: the endpoint is
+  // `IsAuthenticated`, so it 401s for a signed-out visitor, and `apiFetch`
+  // would then run its refresh-then-redirect-to-login dance over a request
+  // nobody asked for — `ensure_csrf_cookie` has already set the cookie by
+  // then, which is all this call needs. Nothing races it either:
   // `CookieJWTAuthentication` only enforces CSRF once the `access_token` cookie
   // has authenticated the request, so the anonymous POSTs that can happen this
   // early (request-link, join) are not checked at all.
+  //
+  // Since 2026-09-15 the response is also read for `language` — the top tier
+  // of the hierarchy `useCollectionLanguage` (per-page) otherwise only ever
+  // *vetoes*: a signed-in visitor's own deliberately-saved preference stopped
+  // a collection's language from overriding it, but nothing actually applied
+  // that preference on a device where it wasn't already the cached browser
+  // default (found in review, 2026-09-15 — a member who saved Catalan on one
+  // device saw plain Spanish on another, having asked for neither). This one
+  // app-wide effect is where it now genuinely applies, once per visit, ahead
+  // of every page — unlike the per-page override, a real preference is a
+  // proper `changeLanguage`, meant to persist exactly like the profile page's
+  // own Select already does.
   useEffect(() => {
-    fetch('/api/v1/auth/me/', { credentials: 'same-origin' }).catch(() => {});
+    fetch('/api/v1/auth/me/', { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const language = data?.language;
+        if (language && SUPPORTED_LANGUAGES.some((l) => l.code === language)) {
+          i18n.changeLanguage(language);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

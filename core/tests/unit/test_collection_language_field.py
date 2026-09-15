@@ -8,6 +8,8 @@ already resolves through `_viewable_collection`. Mirrors that field's tests
 """
 
 import pytest
+from django.contrib.auth.models import AnonymousUser
+from rest_framework.test import APIRequestFactory
 
 from core.models import Collection, Language, Thing
 from core.serializers import ThingSerializer
@@ -47,3 +49,25 @@ def test_a_thing_in_two_collections_uses_the_first_ones_language(user, collectio
     other.things.add(thing)
 
     assert ThingSerializer(thing).data["collection_language"] == "ca"
+
+
+def test_an_anonymous_reader_never_sees_a_private_collections_language(user, public_collection):
+    """`collection_language` goes through `_viewable_collection`, the same
+    viewer-scoping `collection_headline` uses — not `collections.all()[0]`.
+    A thing shared into both a private group and a public one must not leak
+    the private one's language (or anything else about it) to a stranger who
+    can only see the public one, the exact leak `_viewable_collection`'s
+    docstring exists to close."""
+    private = Collection.objects.create(owner=user, headline="Private", language=Language.CA)
+    public_collection.language = Language.ES
+    public_collection.save(update_fields=["language"])
+
+    thing = Thing.objects.create(code="CLPRIV", type=Thing.Type.GIFT_THING, owner=user)
+    private.things.add(thing)
+    public_collection.things.add(thing)
+
+    request = APIRequestFactory().get("/")
+    request.user = AnonymousUser()
+    data = ThingSerializer(thing, context={"request": request}).data
+
+    assert data["collection_language"] == "es"

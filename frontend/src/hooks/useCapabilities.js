@@ -60,9 +60,38 @@ export function loadCapabilities() {
  * `useCollectionLanguage` applies: a real preference here always wins over a
  * collection's own language, which in turn only ever wins over the plain
  * browser default.
+ *
+ * **Checks for `userCode` before ever calling `loadMe()`.** Every existing
+ * caller of `loadMe()` (`loadCapabilities`) only ever ran from a page already
+ * behind `RequireAuth`, so `apiFetch`'s 401-then-refresh-then-redirect-to-login
+ * dance (`services/api.js`) never fired for a signed-out visitor in practice.
+ * `useCollectionLanguage` is the first caller reached from genuinely public
+ * pages — `CollectionPage`, `JoinPage`, an anonymous `ThingPage` — so without
+ * this guard, opening any of them for a collection with a `language` set would
+ * silently hard-navigate every anonymous visitor to `/login` (found in review,
+ * 2026-09-15). `loadCapabilities` is deliberately left untouched: it is a
+ * separately-hardened, widely-tested cache (`test/capabilities.test.jsx`) and
+ * none of its callers are reachable while signed out.
  */
 export function loadUserLanguage() {
+  if (!localStorage.getItem('userCode')) return Promise.resolve('');
   return loadMe().then((data) => data?.language ?? '');
+}
+
+/**
+ * Drops the shared `/auth/me/` cache so the next `loadCapabilities()` /
+ * `loadUserLanguage()` call re-fetches instead of serving a stale answer.
+ *
+ * `capabilities` never changes from inside the SPA, but `language` does — one
+ * click away in `EditProfilePage` — and that page neither reads nor updates
+ * this module's cache when it saves. Without this, a member who opens a
+ * Catalan collection (caching `language: ''`), switches their profile to
+ * Spanish, and clicks straight back into the group would see it flip back to
+ * Catalan: the cached empty answer overriding a preference saved seconds
+ * earlier, self-healing only on a full reload (found in review, 2026-09-15).
+ */
+export function invalidateMe() {
+  cached = { userCode: null, promise: null };
 }
 
 export default function useCapabilities() {
