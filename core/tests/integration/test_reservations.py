@@ -349,11 +349,43 @@ def test_an_hourly_clash_is_a_409_and_leaves_the_rest_of_the_day_free(
     assert free.status_code == status.HTTP_201_CREATED
 
 
-def test_a_full_day_hourly_reservation_is_accepted_despite_the_hour_cap(
+def test_a_full_day_hourly_reservation_is_refused_when_it_exceeds_the_hour_cap(
     hourly_reservations, authenticated_client2
 ):
+    """CA's call, made explicitly when this feature was scoped: the hour cap
+    applies to a full-day reservation too, no exception. Monday's full day is
+    10h (10:00-20:00 across the lunch gap); this collection's cap is 3h."""
     resp = authenticated_client2.post(
         REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": "10:00", "end_time": "20:00"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert "3" in str(resp.data)
+
+
+def test_a_full_day_hourly_reservation_is_accepted_when_it_fits_under_a_generous_cap(
+    db, user, user2, authenticated_client2
+):
+    coll = Collection.objects.create(
+        code="HRVC02",
+        owner=user,
+        headline="Ateneu spaces (hourly, generous cap)",
+        status="ACTIVE",
+        mode=Collection.Mode.PROPRIETARY,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_max_hours=12,
+        opening_hours={"0": [["10:00", "14:00"], ["16:00", "20:00"]]},
+    )
+    coll.invites.add(user2)
+    thing = Thing.objects.create(
+        code="HRVT02", type=Thing.Type.RESERVE_THING, owner=user, headline="Sala 2"
+    )
+    coll.things.add(thing)
+
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(thing.code),
         {"start_date": str(_next_weekday(0)), "start_time": "10:00", "end_time": "20:00"},
         format="json",
     )

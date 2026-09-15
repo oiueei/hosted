@@ -488,36 +488,23 @@ class Collection(models.Model):
 
         A valid span is either **entirely inside one opening block** for that
         weekday, or **exactly the full day** — from the first block's open to
-        the last block's close, gaps (a lunch break) included. That second form
-        is what "book the whole day" means for a venue that closes for lunch: a
-        full-day reservation blocks the day even though nobody could show up
-        during the gap anyway. Anything else — a span crossing a gap without
-        covering the whole day, one that starts or ends off a block boundary
-        without being the full-day case — is refused rather than silently
-        clipped, the same stance ``reservation_violation`` takes on days.
+        the last block's close, gaps (a lunch break) included; that second form
+        is what "book the whole day" means for a venue that closes for lunch.
+        Anything else — a span crossing a gap without covering the whole day,
+        one that starts or ends off a block boundary without being the
+        full-day case — is refused rather than silently clipped, the same
+        stance ``reservation_violation`` takes on days.
 
-        The duration/horizon/closure checks mirror ``reservation_violation``
-        exactly, just in hours instead of days.
+        ``reservation_max_hours`` is a hard cap with **no exception for the
+        full-day form** — CA's own call (the alternative, exempting it, was
+        offered and turned down): a venue whose day adds up to more hours than
+        the cap simply never offers "the whole day" as a choice; the owner
+        raises the cap if they want it offered. The duration/horizon/closure
+        checks mirror ``reservation_violation`` exactly, just in hours instead
+        of days.
         """
         if end_time <= start_time:
             return "A reservation must end after it starts."
-        today = today or timezone.localdate()
-        if start_date > today + timedelta(days=self.reservation_horizon_days):
-            return (
-                f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
-            )
-        if start_date in self.closed_date_set():
-            return "This space is closed that day."
-        blocks = self.day_opening_blocks(start_date)
-        if not blocks:
-            return "This space isn't open that day."
-
-        # The full-day span is exempt from the hour cap below — "book the whole
-        # day" has to mean the whole day even when that is more hours than any
-        # single reservation may otherwise run.
-        if (start_time, end_time) == (blocks[0][0], blocks[-1][1]):
-            return None
-
         duration_minutes = (
             end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute)
         )
@@ -528,6 +515,18 @@ class Collection(models.Model):
                 f"This space can be reserved for at most "
                 f"{self.reservation_max_hours} hour(s) at a time."
             )
+        today = today or timezone.localdate()
+        if start_date > today + timedelta(days=self.reservation_horizon_days):
+            return (
+                f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
+            )
+        if start_date in self.closed_date_set():
+            return "This space is closed that day."
+        blocks = self.day_opening_blocks(start_date)
+        if not blocks:
+            return "This space isn't open that day."
+        if (start_time, end_time) == (blocks[0][0], blocks[-1][1]):
+            return None
         for block_start, block_end in blocks:
             if block_start <= start_time and end_time <= block_end:
                 return None

@@ -75,6 +75,29 @@ def hourly_reservations_collection(db):
     return coll
 
 
+@pytest.fixture
+def generous_hourly_reservations_collection(db):
+    """Same weekly schedule as ``hourly_reservations_collection``, but a cap
+    generous enough that a full-day span never runs into it — isolates the
+    shape rule (inside one block, or exactly the full day) from the hour cap,
+    which by design (CA's call) applies to the full-day form too."""
+    owner = User.objects.create(code="GHRLOW", email="ghrlow@test.com", name="Ateneu")
+    return Collection.objects.create(
+        code="GHRLCO",
+        owner=owner,
+        headline="Ateneu spaces (hourly, generous cap)",
+        status="ACTIVE",
+        mode=Collection.Mode.PROPRIETARY,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_max_hours=12,
+        opening_hours={
+            "0": [["10:00", "14:00"], ["16:00", "20:00"]],
+            "4": [["10:00", "14:00"]],
+        },
+    )
+
+
 # --- is_reservations_collection -----------------------------------------------
 
 
@@ -805,43 +828,72 @@ def test_reservation_hour_violation_rejects_a_span_crossing_the_lunch_gap(
 
 
 def test_reservation_hour_violation_accepts_the_exact_full_day_including_the_gap(
-    hourly_reservations_collection,
+    generous_hourly_reservations_collection,
 ):
     """10:00-20:00 is exactly the first block's open to the last block's close —
-    a full-day reservation, gap included, even though max_hours is 3."""
+    accepted as a full-day reservation when it fits under the cap (this
+    fixture's cap is generous precisely so the shape rule, not the cap, is
+    what's under test — see test_..._the_hour_cap_has_no_full_day_exception
+    for CA's call that the cap gets no such exemption in general)."""
     mon = _next_weekday(0)
     assert (
-        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 0))
+        generous_hourly_reservations_collection.reservation_hour_violation(
+            mon, time(10, 0), time(20, 0)
+        )
         is None
     )
 
 
 def test_reservation_hour_violation_full_day_rule_is_exact_not_a_superset(
-    hourly_reservations_collection,
+    generous_hourly_reservations_collection,
 ):
     """One minute either side of the exact full-day span is refused — it isn't
     "the full day or more", it's specifically that one span."""
     mon = _next_weekday(0)
     assert (
-        hourly_reservations_collection.reservation_hour_violation(mon, time(9, 59), time(20, 0))
+        generous_hourly_reservations_collection.reservation_hour_violation(
+            mon, time(9, 59), time(20, 0)
+        )
         is not None
     )
     assert (
-        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 1))
+        generous_hourly_reservations_collection.reservation_hour_violation(
+            mon, time(10, 0), time(20, 1)
+        )
         is not None
     )
 
 
 def test_reservation_hour_violation_on_a_single_block_day_full_day_equals_that_block(
-    hourly_reservations_collection,
+    generous_hourly_reservations_collection,
 ):
-    """Friday has one block only (10:00-14:00, 4h) — the full-day span is that
-    block, and it's accepted despite exceeding max_hours=3."""
+    """Friday has one block only (10:00-14:00) — the full-day span is that
+    block, accepted when it fits under the cap."""
     fri = _next_weekday(4)
     assert (
-        hourly_reservations_collection.reservation_hour_violation(fri, time(10, 0), time(14, 0))
+        generous_hourly_reservations_collection.reservation_hour_violation(
+            fri, time(10, 0), time(14, 0)
+        )
         is None
     )
+
+
+def test_reservation_hour_violation_the_hour_cap_has_no_full_day_exception(
+    hourly_reservations_collection,
+):
+    """CA's call, made explicitly when this feature was scoped: a single
+    ``reservation_max_hours`` governs every reservation, full-day included —
+    exempting the full day was offered as an alternative and turned down. A
+    venue whose day (or its only block) adds up to more hours than the cap
+    simply can't be booked for "the whole day"; the owner raises the cap
+    instead of the product carving out a silent exception."""
+    mon = _next_weekday(0)  # full day 10:00-20:00 = 10h, this fixture's cap is 3h
+    msg = hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 0))
+    assert msg is not None and "3" in msg
+
+    fri = _next_weekday(4)  # Friday's only block is 10:00-14:00 = 4h, cap is 3h
+    msg = hourly_reservations_collection.reservation_hour_violation(fri, time(10, 0), time(14, 0))
+    assert msg is not None and "3" in msg
 
 
 # --- has_overlap with hours -----------------------------------------------
