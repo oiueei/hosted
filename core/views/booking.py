@@ -132,7 +132,10 @@ class BookingCancelView(APIView):
             try:
                 cancel_reservation(booking, request.user)
             except BookingRequestError as exc:
-                return Response({"error": exc.message}, status=exc.status_code)
+                body = {"error": exc.message}
+                if exc.code:
+                    body["code"] = exc.code
+                return Response(body, status=exc.status_code)
             return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
         # Only the requester can cancel

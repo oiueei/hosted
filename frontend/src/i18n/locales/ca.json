@@ -873,6 +873,8 @@
     "tagsInfoBody": "Una etiqueta funciona igual: escriu-la com un mapa i cada membre veurà la seva.",
     "policyHint": "La política de fiances també admet un text per idioma.",
     "policyInfoBody": "Funciona igual: escriu-la com un petit mapa i cada membre llegirà la seva.",
+    "requestInfoHint": "L'avís de la pàgina de sol·licitud també admet un text per idioma.",
+    "requestInfoInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu.",
     "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
   },
   "deleteAccount": {
@@ -980,14 +982,40 @@
     "weekdaysLabel": "Dies oberts a reserves",
     "weekdaysHelper": "Deixa'ls tots sense marcar per permetre qualsevol dia. Una reserva no pot abastar un dia en què l'espai estigui tancat.",
     "horizonLabel": "Amb quanta antelació poden reservar (dies)",
-    "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos."
+    "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos.",
+    "maxActiveLabel": "Màxim de reserves actives per membre",
+    "maxActiveHelper": "D'1 a 50. Per defecte 10 — quantes reserves pròpies d'un membre per a aquest espai poden estar actives alhora.",
+    "unitLabel": "Com es reserva aquest espai?",
+    "unitDay": "Per dies",
+    "unitHour": "Per hores",
+    "maxHoursLabel": "Reserva més llarga (hores)",
+    "maxHoursHelper": "D'1 a 12. Un membre pot reservar l'espai d'1 fins a aquest nombre d'hores cada vegada — el dia complet també compta, així que només s'ofereix quan hi cap dins d'aquest límit.",
+    "pickupLabelHourly": "Escollir data de reserva",
+    "pickupHelperHourly": "Els dies tancats o completament reservats apareixen en gris.",
+    "durationLabelHourly": "Quanta estona?",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} hores",
+    "durationHalfDay": "Mitja jornada",
+    "durationFullDay": "Dia complet",
+    "startTimeLabel": "A quina hora?",
+    "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
   },
   "closedDates": {
     "label": "Festius i tancaments",
     "helper": "Una línia, DD/MM/AAAA separats per comes. Aquests dies no hi ha recollida ni devolució, i una reserva no els pot abastar. Les dates passades es descarten."
   },
+  "openingHours": {
+    "label": "Horari setmanal",
+    "helper": "En JSON: una clau per dia de la setmana (\"0\" dilluns … \"6\" diumenge), cadascuna amb una llista de trams [\"HH:MM\",\"HH:MM\"] — p. ex. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deixa un dia fora, o posa-hi una llista buida, perquè quedi tancat.",
+    "invalidJson": "Això no és JSON vàlid — revisa les claus i les cometes."
+  },
   "homePage": {
     "label": "Pàgina web",
     "helper": "Una adreça web opcional per a aquest grup (màx. 128 caràcters)."
+  },
+  "requestInfo": {
+    "label": "Avís per a la pàgina de sol·licitud (opcional)",
+    "helper": "Es mostra a dalt de la pàgina de sol·licitud — la veu qui demana un préstec, un lloguer o una reserva; un regal o una venda mai hi arriben, es completen directament des de la targeta. P. ex. «porta el DNI», «la recollida és només els dimarts». Admet Markdown.",
+    "maxLength": "Màxim 512 caràcters per idioma."
   }
 }

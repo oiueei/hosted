@@ -297,6 +297,76 @@ describe('EditCollectionPage — the deposit policy (S6)', () => {
   });
 });
 
+describe('EditCollectionPage — the request-page note', () => {
+  test('a stored note pre-fills the field, once "More options" is open', async () => {
+    mockApi();
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'PATCH')
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      if (url.includes('/stats/') || url.includes('/export/')) {
+        return Promise.resolve({ ok: true, status: 200, blob: async () => new Blob(['x']) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...COLLECTION, request_info: 'Bring photo ID.' }),
+      });
+    });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    expect(screen.getByLabelText(/note for the request page/i).value).toBe('Bring photo ID.');
+  });
+
+  test('an edited note reaches the PATCH body', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+      target: { value: 'Pickup is Tuesdays only.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).request_info).toBe('Pickup is Tuesdays only.');
+    });
+  });
+
+  test('the counter reflects the 512-per-language limit, not the old 256', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+      target: { value: 'Bring ID.' },
+    });
+
+    expect(screen.getByText('9/512')).toBeInTheDocument();
+  });
+
+  test('typing past 512 shows the limit error right away, with no submit needed', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const field = screen.getByLabelText(/note for the request page/i);
+    fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
+
+    expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
+    // The field references the error via aria-describedby, so a screen
+    // reader announces it without waiting for a submit attempt.
+    expect(field.getAttribute('aria-describedby')).toContain('edit-collection-request-info-error');
+  });
+});
+
 describe('EditCollectionPage — the collection export', () => {
   test('downloading names the file after the one the server set, not a guess', async () => {
     mockApi();

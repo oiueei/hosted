@@ -873,6 +873,8 @@
     "tagsInfoBody": "A tag label works the same way — write it as a map and each member sees their own.",
     "policyHint": "The deposit policy can hold one text per language too.",
     "policyInfoBody": "It works the same way — write it as a small map and each member reads their own.",
+    "requestInfoHint": "The request-page note can hold one text per language too.",
+    "requestInfoInfoBody": "It works the same way — write it as a small map and each member reads their own.",
     "infoFallback": "Languages: es (Spanish), ca (Catalan), en (English). Write in one only if you prefer — anything that isn't a map is shown exactly as you typed it."
   },
   "deleteAccount": {
@@ -980,14 +982,40 @@
     "weekdaysLabel": "Days open for reservations",
     "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a day the space is closed.",
     "horizonLabel": "How far ahead members can book (days)",
-    "horizonHelper": "From 1 to 365. Default 90 — three months."
+    "horizonHelper": "From 1 to 365. Default 90 — three months.",
+    "maxActiveLabel": "Maximum active reservations per member",
+    "maxActiveHelper": "From 1 to 50. Default 10 — how many of a member's own reservations for this space may be active at once.",
+    "unitLabel": "How is this space booked?",
+    "unitDay": "By day",
+    "unitHour": "By hour",
+    "maxHoursLabel": "Longest reservation (hours)",
+    "maxHoursHelper": "From 1 to 12. A member can book the space for 1 up to this many hours at a time — the full day counts too, so it's only offered when it fits under this limit.",
+    "pickupLabelHourly": "Choose reservation date",
+    "pickupHelperHourly": "Closed days and fully booked days are greyed out.",
+    "durationLabelHourly": "How long?",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "durationHalfDay": "Half day",
+    "durationFullDay": "Full day",
+    "startTimeLabel": "What time?",
+    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
   },
   "closedDates": {
     "label": "Holidays and closures",
     "helper": "One line, DD/MM/YYYY separated by commas. No pickup or return on these days; a reservation can't span one. Past dates are dropped."
   },
+  "openingHours": {
+    "label": "Weekly opening hours",
+    "helper": "As JSON: one key per weekday (\"0\" Monday … \"6\" Sunday), each a list of [\"HH:MM\",\"HH:MM\"] ranges — e.g. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Leave a day out, or give it an empty list, to keep it closed.",
+    "invalidJson": "That's not valid JSON — check the brackets and quotes."
+  },
   "homePage": {
     "label": "Home page",
     "helper": "An optional web address for this group (max 128 characters)."
+  },
+  "requestInfo": {
+    "label": "Note for the request page (optional)",
+    "helper": "Shown at the top of the request page — seen by anyone requesting a loan, a rental or a reservation; a gift or sale never reaches that page, since those complete straight from the card. E.g. \"bring ID\", \"pickup is Tuesdays only\". Markdown supported.",
+    "maxLength": "Maximum 512 characters per language."
   }
 }

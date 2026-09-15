@@ -120,6 +120,24 @@ describe('MyBookingsPage listing', () => {
     expect(screen.queryByText(/9\/1\/2026/)).not.toBeInTheDocument();
   });
 
+  test('an HOUR-unit reservation shows the date once and both clock times', async () => {
+    mockList([
+      booking({
+        thing_type: 'RESERVE_THING',
+        status: 'ACCEPTED',
+        start_date: '2026-09-01',
+        end_date: '2026-09-02', // the day-based "free again" marker — must not show
+        start_time: '11:00:00',
+        end_time: '13:00:00',
+      }),
+    ]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    expect(screen.getByText(/01\/09\/2026, 11:00–13:00/)).toBeInTheDocument();
+    expect(screen.queryByText(/02\/09\/2026/)).not.toBeInTheDocument();
+  });
+
   test('the thing links to its page and names the owner', async () => {
     mockList([booking()]);
     renderPage();

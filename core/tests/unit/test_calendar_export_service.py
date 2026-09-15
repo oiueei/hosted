@@ -87,6 +87,8 @@ def _booking(
     status="ACCEPTED",
     deposit=None,
     note="",
+    start_time=None,
+    end_time=None,
 ):
     return BookingPeriod.objects.create(
         code=code,
@@ -100,6 +102,8 @@ def _booking(
         status=status,
         deposit_amount=deposit,
         project_note=note,
+        start_time=start_time,
+        end_time=end_time,
     )
 
 
@@ -219,6 +223,56 @@ class TestOneEventPerReservation:
 
         assert "Fianza: 25.00" in rows["Alquiler: Taladre → Júlia"]
         assert "Proyecto: Ensayo de teatro" in rows["Reserva: Sala — Júlia"]
+
+
+class TestHourlyReservation:
+    def test_an_hour_unit_reservation_is_a_timed_event_ending_the_same_day(
+        self, group, owner, member
+    ):
+        # HOUR-unit RESERVE_THING stores end_date = start_date + 1 (the
+        # day-based "free again" marker every other consumer reads) — the
+        # calendar export must not treat that as the real end, or the event
+        # lands a day late.
+        thing = _thing(owner, thing_type="RESERVE_THING", headline="Sala")
+        group.things.add(thing)
+        _booking(
+            thing,
+            member,
+            owner,
+            thing_type="RESERVE_THING",
+            start=datetime.date(2026, 9, 20),
+            days=1,
+            start_time=datetime.time(10, 0),
+            end_time=datetime.time(13, 0),
+        )
+
+        (row,) = _rows(build_calendar_export(group)[0])
+
+        assert row["All Day Event"] == "False"
+        assert row["Start Date"] == "09/20/2026"
+        assert row["End Date"] == "09/20/2026"  # same day — not the exclusive end_date (21st)
+        assert row["Start Time"] == "10:00 AM"
+        assert row["End Time"] == "01:00 PM"
+
+    def test_a_whole_day_reservation_stays_an_all_day_event(self, group, owner, member):
+        # A DAY-unit reservation has start_time = NULL and must keep the
+        # original all-day shape — the two code paths must not bleed together.
+        thing = _thing(owner, thing_type="RESERVE_THING", headline="Sala")
+        group.things.add(thing)
+        _booking(
+            thing,
+            member,
+            owner,
+            thing_type="RESERVE_THING",
+            start=datetime.date(2026, 9, 20),
+            days=1,
+        )
+
+        (row,) = _rows(build_calendar_export(group)[0])
+
+        assert row["All Day Event"] == "True"
+        assert row["Start Time"] == "" and row["End Time"] == ""
+        assert row["End Date"] == "09/21/2026"  # exclusive, as ever
 
 
 class TestOnlyRealCommitments:

@@ -196,6 +196,60 @@ def test_parse_closed_dates_caps_the_list(db):
         _parse_closed_dates(sixty_one)
 
 
+def test_validate_opening_hours_sorts_and_normalises_blocks(db):
+    from core.serializers.collection import _validate_opening_hours
+
+    out = _validate_opening_hours({"0": [["16:00", "20:00"], ["10:00", "14:00"]]})
+    assert out == {"0": [["10:00", "14:00"], ["16:00", "20:00"]]}
+
+
+def test_validate_opening_hours_rejects_an_unknown_day_key(db):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError):
+        _validate_opening_hours({"7": [["10:00", "14:00"]]})
+    with pytest.raises(serializers.ValidationError):
+        _validate_opening_hours({"monday": [["10:00", "14:00"]]})
+
+
+def test_validate_opening_hours_rejects_a_block_where_start_is_not_before_end(db):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError):
+        _validate_opening_hours({"0": [["14:00", "10:00"]]})
+    with pytest.raises(serializers.ValidationError):
+        _validate_opening_hours({"0": [["10:00", "10:00"]]})
+
+
+def test_validate_opening_hours_rejects_overlapping_blocks(db):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError):
+        _validate_opening_hours({"0": [["10:00", "15:00"], ["14:00", "20:00"]]})
+
+
+def test_validate_opening_hours_rejects_a_malformed_time(db):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError):
+        _validate_opening_hours({"0": [["10h00", "14:00"]]})
+
+
+def test_validate_opening_hours_accepts_empty_and_closed_days(db):
+    from core.serializers.collection import _validate_opening_hours
+
+    assert _validate_opening_hours({}) == {}
+    assert _validate_opening_hours({"5": [], "6": []}) == {"5": [], "6": []}
+
+
 # --- booking enforcement (API) --------------------------------------------
 
 

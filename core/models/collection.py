@@ -44,6 +44,14 @@ class Collection(models.Model):
         WEEKLY = "WEEKLY", "Weekly"
         MONTHLY = "MONTHLY", "Monthly"
 
+    class ReservationUnit(models.TextChoices):
+        """RESERVE_THING collections only. A collection is booked by whole DAYs
+        (the original shape) or by HOUR-long slots within a day's opening
+        hours — never both; see `opening_hours` and `reservation_max_hours`."""
+
+        DAY = "DAY", "Day"
+        HOUR = "HOUR", "Hour"
+
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     owner = models.ForeignKey(
         "User",
@@ -122,6 +130,34 @@ class Collection(models.Model):
     # months out). Default 90, matching the LEND/RENT horizon it replaces for
     # this type. Also caps how far the live-availability calendar looks.
     reservation_horizon_days = models.PositiveSmallIntegerField(default=90)
+    # RESERVE_THING collections only. How many of a member's own reservations
+    # in THIS collection may be active (ACCEPTED, not yet finished) at once —
+    # a courtesy cap against one member sitting on the whole calendar, not a
+    # security invariant (see active_reservation_count). 1-50, default 10.
+    reservation_max_active_per_member = models.PositiveSmallIntegerField(default=10)
+    # RESERVE_THING collections only. DAY (default) is the original shape above:
+    # a reservation occupies one or more whole days. HOUR books a single day in
+    # slots of 1+ hours within that day's opening_hours. Never both at once — a
+    # collection picks one unit, and the fields below are inert under the other
+    # (reservation_max_days/rental_weekdays-as-open-days for DAY; opening_hours/
+    # reservation_max_hours for HOUR).
+    reservation_unit = models.CharField(
+        max_length=4, choices=ReservationUnit.choices, default=ReservationUnit.DAY
+    )
+    # HOUR unit only. The venue's opening hours per weekday, keyed by Django's
+    # string form of Python's weekday() (0=Mon…6=Sun, so keys are "0".."6"),
+    # each a list of non-overlapping [start, end] "HH:MM" pairs sorted within
+    # the day — e.g. {"0": [["10:00","14:00"],["16:00","20:00"]], "6": []}. A
+    # day with an empty list (or an absent key) is closed — this REPLACES
+    # rental_weekdays as "which days are open" for a HOUR-unit collection, since
+    # keeping both risked the two disagreeing. Default {} = every day closed
+    # (an owner switching to HOUR mode must set hours before anyone can book).
+    opening_hours = models.JSONField(default=dict, blank=True)
+    # HOUR unit only. The longest a single reservation may run, in hours — the
+    # one cap radio-button durations (1h/2h/3h/half day/full day) are offered
+    # against; "half day" or "full day" only appear when they fit under it.
+    # 1-12, default 3. Inert under DAY (reservation_max_days governs there).
+    reservation_max_hours = models.PositiveSmallIntegerField(default=3)
     # How deposits work in this group, in the owner's own words — "50 €, back
     # when the drill comes home in one piece". A bare number is the beginning of
     # an argument: the condition for getting it back is the actual rule, and that
@@ -136,6 +172,15 @@ class Collection(models.Model):
     # 256/1024 like `description`, for the same reason: the visible limit is per
     # language and the column has to hold all three plus the JSON scaffolding.
     deposit_policy = models.CharField(max_length=1024, blank=True, default="")
+    # A short note the owner writes for anyone reaching the request page —
+    # LEND/RENT/RESERVE alike, not RESERVE_THING only, but never GIFT/SELL:
+    # those complete straight from the card and never visit that page, so a
+    # note written here is invisible to them ("bring ID", "reservations must
+    # be confirmed 24h ahead"...). Rendered as Markdown like `description`.
+    # 512/2048 (CA's call, 2026-09: 256 was too short for this one) — same
+    # `deposit_policy` shape, wider: the visible limit is per language and the
+    # column has to hold all three plus the JSON scaffolding.
+    request_info = models.CharField(max_length=2048, blank=True, default="")
     allowed_thing_types = models.JSONField(default=list, blank=True)
     tags = models.JSONField(
         default=list,
@@ -417,6 +462,108 @@ class Collection(models.Model):
             if day in closed:
                 return "Those dates include a day this space is closed."
         return None
+
+    def is_hourly_reservations(self):
+        """True for a reservations collection booked in HOUR slots rather than
+        whole DAYs. Meaningless (and unchecked) on a non-reservations collection —
+        callers guard with ``is_reservations_collection()`` first."""
+        return self.reservation_unit == self.ReservationUnit.HOUR
+
+    def day_opening_blocks(self, day):
+        """The HOUR-unit opening blocks for one date, as a sorted list of
+        ``(time, time)`` pairs — e.g. ``[(10:00, 14:00), (16:00, 20:00)]``.
+
+        Empty when the collection is closed that weekday: no entry for it in
+        ``opening_hours``, an empty list, or every pair malformed (skipped
+        defensively, mirroring ``closed_date_set``).
+        """
+        from datetime import time as _time
+
+        raw = (self.opening_hours or {}).get(str(day.weekday()), [])
+        blocks = []
+        for pair in raw:
+            try:
+                start_h, start_m = (int(x) for x in pair[0].split(":"))
+                end_h, end_m = (int(x) for x in pair[1].split(":"))
+                blocks.append((_time(start_h, start_m), _time(end_h, end_m)))
+            except (TypeError, ValueError, IndexError, AttributeError, KeyError):
+                continue
+        return sorted(blocks)
+
+    def reservation_hour_violation(self, start_date, start_time, end_time, today=None):
+        """The HOUR-unit twin of ``reservation_violation``: an error string if an
+        ``[start_time, end_time)`` reservation on ``start_date`` breaks this
+        collection's hourly rules, else ``None``.
+
+        A valid span is either **entirely inside one opening block** for that
+        weekday, or **exactly the full day** — from the first block's open to
+        the last block's close, gaps (a lunch break) included; that second form
+        is what "book the whole day" means for a venue that closes for lunch.
+        Anything else — a span crossing a gap without covering the whole day,
+        one that starts or ends off a block boundary without being the
+        full-day case — is refused rather than silently clipped, the same
+        stance ``reservation_violation`` takes on days.
+
+        ``reservation_max_hours`` is a hard cap with **no exception for the
+        full-day form** — CA's own call (the alternative, exempting it, was
+        offered and turned down): a venue whose day adds up to more hours than
+        the cap simply never offers "the whole day" as a choice; the owner
+        raises the cap if they want it offered. The duration/horizon/closure
+        checks mirror ``reservation_violation`` exactly, just in hours instead
+        of days.
+        """
+        if end_time <= start_time:
+            return "A reservation must end after it starts."
+        duration_minutes = (
+            end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute)
+        )
+        if duration_minutes < 60:
+            return "A reservation is at least one hour."
+        if duration_minutes > self.reservation_max_hours * 60:
+            return (
+                f"This space can be reserved for at most "
+                f"{self.reservation_max_hours} hour(s) at a time."
+            )
+        today = today or timezone.localdate()
+        if start_date > today + timedelta(days=self.reservation_horizon_days):
+            return (
+                f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
+            )
+        if start_date in self.closed_date_set():
+            return "This space is closed that day."
+        blocks = self.day_opening_blocks(start_date)
+        if not blocks:
+            return "This space isn't open that day."
+        if (start_time, end_time) == (blocks[0][0], blocks[-1][1]):
+            return None
+        for block_start, block_end in blocks:
+            if block_start <= start_time and end_time <= block_end:
+                return None
+        return "That time falls outside this space's opening hours."
+
+    def active_reservation_count(self, requester_code, today=None):
+        """How many of ``requester_code``'s RESERVE bookings in THIS collection
+        are still active — ``ACCEPTED`` and not yet finished (``end_date`` in
+        the future). The backstop for ``reservation_max_active_per_member``.
+
+        A courtesy limit, not a locked invariant: unlike ``has_overlap`` (which
+        the Thing row's ``select_for_update`` serialises), two simultaneous
+        requests on two different things by the same member could both read
+        the count before either is created and both land — the same shape as
+        every other "how many do you already have" check that isn't itself
+        the row being contended for. Good enough to stop one member from
+        sitting on the whole calendar; not a security control.
+        """
+        from core.models.booking import BookingPeriod
+
+        today = today or timezone.localdate()
+        return BookingPeriod.objects.filter(
+            thing_code__collections=self,
+            thing_type="RESERVE_THING",
+            requester_code=requester_code,
+            status=BookingPeriod.Status.ACCEPTED,
+            end_date__gt=today,
+        ).count()
 
     # ---- Mass-upload capacity guards -------------------------------------
     # Two INDEPENDENT counters per collection — things and invitees — because a

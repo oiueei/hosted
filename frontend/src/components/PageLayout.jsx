@@ -17,7 +17,12 @@ import useTheeeme from '../hooks/useTheeeme';
  * Props:
  * - `title`: hero `<h1>` text.
  * - `backTo` / `backLabel`: optional back link (rendered only when `backTo` is set).
- * - `description`: optional hero paragraph under the title.
+ * - `description`: optional hero content under the title — a string or a
+ *   node (e.g. `<MarkdownText>`). Rendered in a `<div>`, not a `<p>`, since
+ *   Markdown can produce block content (lists, headings) a `<p>` can't legally
+ *   contain; the class name (`form-hero-text`) is what styling and tests key
+ *   on, so this is a same-look, same-selector change for every plain-string
+ *   caller.
  * - `children`: page-container content.
  */
 export default function PageLayout({ title, backTo, backLabel, description, children }) {
@@ -38,7 +43,7 @@ export default function PageLayout({ title, backTo, backLabel, description, chil
           <ContactCorner />
           {backTo && <BackLink to={backTo} label={backLabel} />}
           {title && <h1 className="form-hero-title">{title}</h1>}
-          {description && <p className="form-hero-text">{description}</p>}
+          {description && <div className="form-hero-text">{description}</div>}
         </div>
         <Koros
           className="form-hero-koros"

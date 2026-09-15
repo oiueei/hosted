@@ -92,6 +92,23 @@ export const formatDate = (value) => {
   return `${dd}/${mm}/${d.getFullYear()}`;
 };
 
+// A booking's date/time range for a listing row — MyBookingsPage,
+// OwnerBookingsPage, OwnerBookingsList — read straight off the API's own
+// field names (`start_date`/`end_date` ISO dates, `start_time`/`end_time`
+// 'HH:MM:SS' or absent). A whole-day booking (every LEND/RENT, every
+// DAY-unit RESERVE — `start_time` unset) renders exactly as before this
+// helper existed: 'DD/MM/YYYY — DD/MM/YYYY'. An HOUR-unit RESERVE_THING slot
+// renders the date once plus both clock times: 'DD/MM/YYYY, HH:MM–HH:MM'.
+// '' when there are no dates at all (GIFT/SELL).
+export const formatBookingWhen = (booking) => {
+  if (!booking?.start_date || !booking?.end_date) return '';
+  const date = formatDate(booking.start_date);
+  if (booking.start_time && booking.end_time) {
+    return `${date}, ${booking.start_time.slice(0, 5)}–${booking.end_time.slice(0, 5)}`;
+  }
+  return `${date} — ${formatDate(booking.end_date)}`;
+};
+
 // 'DD/MM/YYYY' (loose D/M/YYYY accepted) → 'YYYY-MM-DD' ('' for malformed or
 // impossible dates like 31/02, which HDS also flags via malformedDateErrorText).
 export const displayToIso = (display) => {
@@ -202,4 +219,124 @@ export const reservationPickupDisabled = (
     if (isClosedDate(day, closed)) return true; // the space can't span a closure
   }
   return rangeBlocked(date, len, blockedPeriods);
+};
+
+// --- HOUR-unit RESERVE_THING: time-of-day helpers ---------------------------
+//
+// Everything below deals in "HH:MM" strings or plain minutes-since-midnight
+// integers, mirroring `Collection.opening_hours` / a reservation's
+// `start_time`/`end_time` exactly — there is no Date or timezone concept for a
+// wall-clock time within one already-chosen day. Kept as pure functions on
+// purpose: `Collection.day_opening_blocks` / `reservation_hour_violation` on
+// the backend walk the identical shapes, and a client-side mirror that agreed
+// with itself but not the server would just move the disagreement, not close it.
+
+// "HH:MM" -> minutes since midnight.
+export const parseHM = (hm) => {
+  const [h, m] = hm.split(':').map(Number);
+  return h * 60 + m;
+};
+
+// minutes since midnight -> "HH:MM".
+export const formatHM = (minutes) => {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+// The opening blocks for one JS Date, as `[{start, end}]` in minutes since
+// midnight, sorted by start. Empty when the collection is closed that weekday
+// — no entry in `opening_hours` (Python weekday() string keys, translated via
+// `jsToPyWeekday`) or an empty list for it. A malformed pair is skipped
+// defensively, mirroring `Collection.day_opening_blocks` on the backend —
+// `opening_hours` is validated before it's ever stored, so this is a belt for
+// a braces that should already be fastened, not a path this app expects to hit.
+export const dayBlocks = (openingHours, date) => {
+  const pyDay = jsToPyWeekday(date.getDay());
+  const raw = (openingHours || {})[String(pyDay)] || [];
+  return raw
+    .map(([start, end]) => ({ start: parseHM(start), end: parseHM(end) }))
+    .filter(({ start, end }) => Number.isFinite(start) && Number.isFinite(end))
+    .sort((a, b) => a.start - b.start);
+};
+
+// The selected day's existing bookings from the thing's calendar
+// (`GET /things/{code}/calendar/`), reduced to what matters for slot maths:
+// `wholeDay` (a LEND/RENT or a DAY-unit RESERVE sharing the thing blocks the
+// entire day, `start_time` NULL) and, otherwise, the day's booked
+// `[{start, end}]` ranges in minutes. `isoDate` is the selected day.
+export const dayBookings = (blockedPeriods, isoDate) => {
+  const onThatDay = (blockedPeriods || []).filter(
+    (b) => b.start_date <= isoDate && isoDate < b.end_date
+  );
+  if (onThatDay.some((b) => !b.start_time)) return { wholeDay: true, ranges: [] };
+  return {
+    wholeDay: false,
+    ranges: onThatDay.map((b) => ({ start: parseHM(b.start_time), end: parseHM(b.end_time) })),
+  };
+};
+
+const minutesRangeOverlaps = (start, end, ranges) =>
+  ranges.some((r) => start < r.end && r.start < end);
+
+// The duration choices to offer for a day's opening blocks, under the
+// collection's `reservation_max_hours` cap: every whole hour from 1 to the
+// cap, plus "half day" (the longest single block — only distinct from "full
+// day" with 2+ blocks) and "full day" (the whole day's span, any gap
+// included) — each offered only if it fits the cap. **The cap applies to the
+// full-day form too, with no exception** (CA's call, mirroring
+// `Collection.reservation_hour_violation`): a day whose total span exceeds
+// the cap just doesn't offer "the whole day".
+export const durationOptions = (blocks, maxHours) => {
+  const options = [];
+  for (let h = 1; h <= maxHours; h += 1) options.push({ key: String(h), minutes: h * 60 });
+  if (blocks.length >= 2) {
+    const longestBlock = Math.max(...blocks.map((b) => b.end - b.start));
+    if (longestBlock <= maxHours * 60) options.push({ key: 'halfDay', minutes: longestBlock });
+  }
+  if (blocks.length >= 1) {
+    const fullDayMinutes = blocks[blocks.length - 1].end - blocks[0].start;
+    if (fullDayMinutes <= maxHours * 60) options.push({ key: 'fullDay', minutes: fullDayMinutes });
+  }
+  return options;
+};
+
+// The valid start times ("HH:MM") for a chosen duration, stepped hour by
+// hour within each opening block. "Full day" has exactly one candidate start
+// — the first block's own opening time — accepted only if nothing already
+// booked overlaps the whole span. Empty whenever the day is `wholeDay`-booked.
+export const freeStartTimes = (blocks, durationMinutes, dayBookingsResult, isFullDay) => {
+  if (dayBookingsResult.wholeDay) return [];
+  if (isFullDay) {
+    if (!blocks.length) return [];
+    const start = blocks[0].start;
+    const end = blocks[blocks.length - 1].end;
+    return minutesRangeOverlaps(start, end, dayBookingsResult.ranges) ? [] : [formatHM(start)];
+  }
+  const starts = [];
+  for (const block of blocks) {
+    for (let cursor = block.start; cursor + durationMinutes <= block.end; cursor += 60) {
+      if (!minutesRangeOverlaps(cursor, cursor + durationMinutes, dayBookingsResult.ranges)) {
+        starts.push(formatHM(cursor));
+      }
+    }
+  }
+  return starts;
+};
+
+// Disable a day in the HOUR-unit picker when it's a closure day, the
+// collection is closed that weekday, or — walking every duration choice —
+// nothing on the calendar leaves even one free start that day. `maxHours` is
+// the collection's `reservation_max_hours`.
+export const isHourlyPickupDisabled = (
+  date,
+  { openingHours = {}, closedDates = [], blockedPeriods = [], maxHours = 3 }
+) => {
+  if (isClosedDate(date, closedSet(closedDates))) return true;
+  const blocks = dayBlocks(openingHours, date);
+  if (!blocks.length) return true;
+  const bookings = dayBookings(blockedPeriods, toISODate(parseLocalDate(date)));
+  return !durationOptions(blocks, maxHours).some(
+    (opt) => freeStartTimes(blocks, opt.minutes, bookings, opt.key === 'fullDay').length > 0
+  );
 };

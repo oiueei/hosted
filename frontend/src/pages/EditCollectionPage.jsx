@@ -56,11 +56,19 @@ export default function EditCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [reservationUnit, setReservationUnit] = useState('DAY');
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
+  const [reservationMaxActivePerMember, setReservationMaxActivePerMember] = useState(10);
+  const [reservationMaxHours, setReservationMaxHours] = useState(3);
+  const [openingHours, setOpeningHours] = useState({});
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
+  // Shown on the request page for every verb (GIFT/SELL/RENT/LEND/RESERVE),
+  // not only reservations — general to the collection, so it lives outside
+  // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
+  const [requestInfo, setRequestInfo] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -165,11 +173,16 @@ export default function EditCollectionPage() {
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
+          setReservationUnit(data.reservation_unit || 'DAY');
           setReservationMaxDays(data.reservation_max_days || 1);
           setReservationHorizonDays(data.reservation_horizon_days || 90);
+          setReservationMaxActivePerMember(data.reservation_max_active_per_member || 10);
+          setReservationMaxHours(data.reservation_max_hours || 3);
+          setOpeningHours(data.opening_hours || {});
           setClosedDates(closedDatesToDisplay(data.closed_dates));
           setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
+          setRequestInfo(data.request_info || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
           setThumbnailUrl(data.thumbnail_url || '');
@@ -223,14 +236,22 @@ export default function EditCollectionPage() {
       closed_dates: closedDates,
       home_page: homePage.trim(),
       deposit_policy: isReservations ? '' : depositPolicy.trim(),
+      request_info: requestInfo.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
       welcome_doc: welcomeDoc || '',
     };
     if (isReservations) {
-      body.reservation_max_days = reservationMaxDays;
       body.reservation_horizon_days = reservationHorizonDays;
+      body.reservation_max_active_per_member = reservationMaxActivePerMember;
+      body.reservation_unit = reservationUnit;
+      if (reservationUnit === 'HOUR') {
+        body.reservation_max_hours = reservationMaxHours;
+        body.opening_hours = openingHours;
+      } else {
+        body.reservation_max_days = reservationMaxDays;
+      }
     }
 
     try {
@@ -424,10 +445,18 @@ export default function EditCollectionPage() {
           {isReservations ? (
             <ReservationRulesFields
               idPrefix="edit-collection"
+              reservationUnit={reservationUnit}
+              setReservationUnit={setReservationUnit}
               reservationMaxDays={reservationMaxDays}
               setReservationMaxDays={setReservationMaxDays}
               reservationHorizonDays={reservationHorizonDays}
               setReservationHorizonDays={setReservationHorizonDays}
+              reservationMaxActivePerMember={reservationMaxActivePerMember}
+              setReservationMaxActivePerMember={setReservationMaxActivePerMember}
+              reservationMaxHours={reservationMaxHours}
+              setReservationMaxHours={setReservationMaxHours}
+              openingHours={openingHours}
+              setOpeningHours={setOpeningHours}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}
@@ -451,6 +480,21 @@ export default function EditCollectionPage() {
             value={closedDates}
             onChange={setClosedDates}
           />
+          <div>
+            <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
+            <TextArea
+              id="edit-collection-request-info"
+              label={t('requestInfo.label')}
+              value={requestInfo}
+              onChange={(e) => setRequestInfo(e.target.value)}
+              invalid={localizedCounter(requestInfo, 512).over}
+              errorText={
+                localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
+              }
+              helperText={localizedCounter(requestInfo, 512).text}
+            />
+            <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
+          </div>
           <TextInput
             id="edit-collection-home-page"
             type="url"
