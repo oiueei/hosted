@@ -268,6 +268,12 @@ export default function RequestThingPage() {
           message = errors.join(' ') || t('thingPage.invalidRequest');
         }
         setToast({ type: 'error', message });
+      } else if (res.status === 403) {
+        // RESERVE_THING's "you need to be a member of this group to reserve"
+        // lands here — a specific, actionable reason the reader should see,
+        // not the generic errorSending fallback below.
+        const data = await res.json();
+        setToast({ type: 'error', message: data.error || t('request.errorSending') });
       } else if (res.status === 409) {
         setToast({ type: 'error', message: t('request.dateOverlap') });
       } else {

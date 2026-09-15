@@ -168,6 +168,34 @@ describe('RequestThingPage — RESERVE_THING', () => {
       collection_code: 'COL001',
     });
   });
+
+  test("a 403 (not a member of the reservations collection) shows the backend's own reason", async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          status: 403,
+          json: () =>
+            Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+        });
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(
+      await screen.findByText('You need to be a member of this group to reserve.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Your reservation is confirmed/)).not.toBeInTheDocument();
+  });
 });
 
 describe("RequestThingPage — the collection's request-page note", () => {
