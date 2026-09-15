@@ -300,6 +300,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
     collection_request_info = serializers.SerializerMethodField()
+    collection_language = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
@@ -346,6 +347,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_owner",
             "collection_is_onboarding",
             "collection_request_info",
+            "collection_language",
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
@@ -471,6 +473,19 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         collection."""
         first = self._viewable_collection(obj)
         return first.request_info if first else ""
+
+    def get_collection_language(self, obj):
+        """The collection's own language, resolved the same way as the four
+        fields above — for the frontend's `useCollectionLanguage` hook, which a
+        thing-only page (`ThingPage`, `RequestThingPage`, `EditThingPage`,
+        `DeleteThingPage`) has no other way to learn: those pages fetch
+        `/things/{code}/` and never see the collection object itself. `""`
+        (never the collection's actual blank default) when there is no
+        viewable collection, so the hook's own falsy check needs no special
+        case for "collection unknown" vs. "collection has no language set" —
+        both mean "don't override"."""
+        first = self._viewable_collection(obj)
+        return (first.language if first else "") or ""
 
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).

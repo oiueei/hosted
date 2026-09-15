@@ -20,6 +20,7 @@ import TooltipButton from '../components/TooltipButton';
 import BulkInviteCsv from '../components/BulkInviteCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function ManageInvitesPage() {
   const { code } = useParams();
@@ -38,6 +39,8 @@ export default function ManageInvitesPage() {
   const [proposals, setProposals] = useState([]);
   const [answering, setAnswering] = useState(null);
   const [collectionHeadline, setCollectionHeadline] = useState('');
+  const [collectionLanguage, setCollectionLanguage] = useState('');
+  useCollectionLanguage(collectionLanguage);
   const headline = L(collectionHeadline);
   useEffect(() => {
     document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault');
@@ -70,6 +73,7 @@ export default function ManageInvitesPage() {
         setPendingInvites(data.pending_invites || []);
         setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
+        setCollectionLanguage(data.language || '');
         setIsCurator(!!data.is_curator);
         setCoOwnerCodes(new Set((data.co_owners || []).map((u) => u.code)));
         setLoadError('');

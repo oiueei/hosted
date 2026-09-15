@@ -17,6 +17,7 @@ import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 
 export default function AddThingPage() {
@@ -65,6 +66,8 @@ export default function AddThingPage() {
   const [contributingToCommunity, setContributingToCommunity] = useState(false);
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [tags, setTags] = useState([]);
+  const [collectionLanguage, setCollectionLanguage] = useState('');
+  useCollectionLanguage(collectionLanguage);
 
   useEffect(() => {
     if (!userCode) return;
@@ -77,6 +80,7 @@ export default function AddThingPage() {
         setContributingToCommunity(data.mode === 'COMMUNITY' && !!data.is_member);
         setIsOnboarding(!!data.is_onboarding);
         setCollectionTags(data.tags || []);
+        setCollectionLanguage(data.language || '');
         // If the allowlist names a single type, pre-select it so the form
         // immediately shows the right downstream fields.
         if (allowed.length === 1) {

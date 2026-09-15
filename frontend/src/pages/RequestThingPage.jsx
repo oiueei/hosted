@@ -32,6 +32,7 @@ import RadioOptionGroup from '../components/RadioOptionGroup';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function RequestThingPage() {
   const { code, thingCode } = useParams();
@@ -54,6 +55,7 @@ export default function RequestThingPage() {
   const L = useLocalized();
   const headline = L(thing?.headline);
   const isReservation = thing?.type === 'RESERVE_THING';
+  useCollectionLanguage(thing?.collection_language);
   useEffect(() => {
     if (!thing) {
       document.title = t('titles.holdDefault');

@@ -18,20 +18,18 @@ import { apiFetch } from '../services/api';
  */
 
 // One request per signed-in account, shared by every page that asks. The four
-// forms that consume this are otherwise four extra calls to an endpoint the app
-// already hits on load. Keyed by user so it cannot outlive a logout and answer
-// for whoever signs in next.
+// forms that consume `loadCapabilities` are otherwise four extra calls to an
+// endpoint the app already hits on load; `loadUserLanguage` (below) shares the
+// same cached fetch rather than opening a fifth. Keyed by user so it cannot
+// outlive a logout and answer for whoever signs in next.
 let cached = { userCode: null, promise: null };
 
-export function loadCapabilities() {
+function loadMe() {
   const userCode = localStorage.getItem('userCode');
   if (cached.promise && cached.userCode === userCode) return cached.promise;
 
   const promise = apiFetch('/api/v1/auth/me/')
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`me ${res.status}`))))
-    // An answer without the field is still an answer — an older or narrower
-    // backend saying "no restrictions" — so it caches like any other.
-    .then((data) => data?.capabilities ?? null)
     .catch(() => {
       // A request that never got an answer is **not** cached. Failing open is
       // deliberate (the server is the gate), but *remembering* the failure is
@@ -46,6 +44,25 @@ export function loadCapabilities() {
 
   cached = { userCode, promise };
   return promise;
+}
+
+export function loadCapabilities() {
+  // An answer without the field is still an answer — an older or narrower
+  // backend saying "no restrictions" — so it caches like any other.
+  return loadMe().then((data) => data?.capabilities ?? null);
+}
+
+/**
+ * The signed-in account's own, deliberately-saved UI language (`EditProfilePage`),
+ * or `''` for a signed-out visitor, one with no preference of their own, or a
+ * failed request — every one of those means "no preference", the same fail-open
+ * shape as `loadCapabilities`. This is the top tier of the hierarchy
+ * `useCollectionLanguage` applies: a real preference here always wins over a
+ * collection's own language, which in turn only ever wins over the plain
+ * browser default.
+ */
+export function loadUserLanguage() {
+  return loadMe().then((data) => data?.language ?? '');
 }
 
 export default function useCapabilities() {
