@@ -1003,14 +1003,8 @@
   },
   "openingHours": {
     "label": "Horario semanal",
-    "helper": "Añade uno o varios tramos horarios por día — deja un día sin ninguno para que quede cerrado. Un miembro también puede reservar el día completo exacto, con cualquier pausa entre tramos incluida.",
-    "closed": "Cerrado",
-    "fromLabel": "Desde",
-    "toLabel": "Hasta",
-    "hoursLabel": "Horas",
-    "minutesLabel": "Minutos",
-    "addBlock": "Añadir un tramo horario",
-    "removeBlock": "Eliminar"
+    "helper": "En JSON: una clave por día de la semana (\"0\" lunes … \"6\" domingo), cada una con una lista de tramos [\"HH:MM\",\"HH:MM\"] — p. ej. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deja un día fuera, o ponle una lista vacía, para que quede cerrado.",
+    "invalidJson": "Eso no es JSON válido — revisa las llaves y las comillas."
   },
   "homePage": {
     "label": "Página web",

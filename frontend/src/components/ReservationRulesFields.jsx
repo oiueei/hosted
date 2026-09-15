@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NumberInput, RadioButton, SelectionGroup } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import WeekdayChips from './WeekdayChips';
-import OpeningHoursEditor from './OpeningHoursEditor';
+import OpeningHoursField from './OpeningHoursField';
 
 /**
  * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
@@ -143,7 +143,11 @@ export default function ReservationRulesFields({
             value={reservationMaxHours}
             onChange={setReservationMaxHours}
           />
-          <OpeningHoursEditor idPrefix={idPrefix} value={openingHours} onChange={setOpeningHours} />
+          <OpeningHoursField
+            id={`${idPrefix}-opening-hours`}
+            value={openingHours}
+            onChange={setOpeningHours}
+          />
         </>
       ) : (
         <>

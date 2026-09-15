@@ -1003,14 +1003,8 @@
   },
   "openingHours": {
     "label": "Horari setmanal",
-    "helper": "Afegeix un o més trams horaris per dia — deixa un dia sense cap per mantenir-lo tancat. Un membre també pot reservar el dia complet exacte, amb qualsevol pausa entre trams inclosa.",
-    "closed": "Tancat",
-    "fromLabel": "Des de",
-    "toLabel": "Fins a",
-    "hoursLabel": "Hores",
-    "minutesLabel": "Minuts",
-    "addBlock": "Afegir un tram horari",
-    "removeBlock": "Eliminar"
+    "helper": "En JSON: una clau per dia de la setmana (\"0\" dilluns … \"6\" diumenge), cadascuna amb una llista de trams [\"HH:MM\",\"HH:MM\"] — p. ex. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deixa un dia fora, o posa-hi una llista buida, perquè quedi tancat.",
+    "invalidJson": "Això no és JSON vàlid — revisa les claus i les cometes."
   },
   "homePage": {
     "label": "Pàgina web",
