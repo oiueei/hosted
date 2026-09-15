@@ -51,6 +51,8 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "owner_code",
             "start_date",
             "end_date",
+            "start_time",
+            "end_time",
             "status",
             "project_note",
         ]
@@ -201,6 +203,8 @@ class MyBookingSerializer(serializers.ModelSerializer):
             "owner_name",
             "start_date",
             "end_date",
+            "start_time",
+            "end_time",
             "status",
             "project_note",
         ]

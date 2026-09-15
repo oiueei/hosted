@@ -9,7 +9,7 @@ import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
-import { formatDate } from '../utils/rental';
+import { formatDate, formatBookingWhen } from '../utils/rental';
 import ButtonLink from '../components/ButtonLink';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
@@ -134,6 +134,7 @@ export default function MyBookingsPage() {
     _ownerName: b.owner_name,
     _startDate: b.start_date,
     _endDate: b.end_date,
+    _when: formatBookingWhen(b),
     _created: b.created,
     _projectNote: b.project_note,
   }));
@@ -174,9 +175,7 @@ export default function MyBookingsPage() {
             })}
           </p>
           <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
-            {row._startDate && row._endDate ? (
-              `${formatDate(row._startDate)} — ${formatDate(row._endDate)}`
-            ) : (
+            {row._when || (
               <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
             )}
           </p>

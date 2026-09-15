@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useLocalized } from '../utils/localized';
-import { formatDate } from '../utils/rental';
+import { formatDate, formatBookingWhen } from '../utils/rental';
 
 /**
  * Owner-only list of a thing's future bookings (pending + confirmed), shared by
@@ -21,15 +21,12 @@ export default function OwnerBookingsList({ bookings, activePendingCode, isOwner
       {bookings.map((b) => {
         const isActive = isOwner && b.code === activePendingCode;
         const showStar = isActive && pendingCount > 1;
+        const when = formatBookingWhen(b);
         return (
           <li key={b.code} style={{ fontWeight: isActive ? 'bold' : 'normal' }}>
             {isOwner && b.requester_name && <>{b.requester_name}. </>}
             {b.created && <>{formatDate(b.created)}. </>}
-            {b.start_date && b.end_date && (
-              <>
-                {formatDate(b.start_date)} – {formatDate(b.end_date)}
-              </>
-            )}{' '}
+            {when && <>{when}</>}{' '}
             <span
               style={{
                 color: b.status === 'ACCEPTED' ? 'var(--color-success)' : 'var(--color-alert-dark)',

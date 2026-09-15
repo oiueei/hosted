@@ -830,6 +830,35 @@ class TestMyBookingsAndOwnerBookings:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["results"] == []
 
+    def test_both_lists_carry_hours_for_an_hourly_reservation(
+        self, authenticated_client, user, user2
+    ):
+        """An HOUR-unit RESERVE_THING booking's start_time/end_time reach both
+        the requester's own list and the owner's — a whole-day booking still
+        serializes them as null, same as the calendar serializers already did."""
+        from datetime import time
+
+        space = ThingFactory(owner=user, type="RESERVE_THING")
+        BookingPeriod.objects.create(
+            thing_code=space,
+            thing_type="RESERVE_THING",
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+            start_date=date.today() + timedelta(days=1),
+            end_date=date.today() + timedelta(days=2),
+            start_time=time(11, 0),
+            end_time=time(13, 0),
+            status="ACCEPTED",
+        )
+
+        client2 = get_client_for_user(user2)
+        mine = client2.get("/api/v1/my-bookings/").data["results"][0]
+        assert mine["start_time"] == "11:00:00" and mine["end_time"] == "13:00:00"
+
+        owners = authenticated_client.get("/api/v1/owner-bookings/").data["results"][0]
+        assert owners["start_time"] == "11:00:00" and owners["end_time"] == "13:00:00"
+
 
 @pytest.mark.django_db
 class TestRentArticleWithFee:

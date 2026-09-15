@@ -306,6 +306,17 @@ def test_an_hourly_reservation_is_confirmed_on_the_spot(hourly_reservations, aut
     booking = BookingPeriod.objects.get(code=resp.data["booking_code"])
     assert booking.status == BookingPeriod.Status.ACCEPTED
     assert len(mail.outbox) == 2  # requester confirmation + owner notice
+    # the notice names the date once and both times — not the day-based
+    # end_date (mon + 1), which would read as the reservation crossing a day
+    for m in mail.outbox:
+        assert f"{mon.strftime('%d/%m/%Y')} 11:00" in m.body
+        assert "13:00" in m.body
+        assert (mon + timedelta(days=1)).strftime("%d/%m/%Y") not in m.body
+    # the owner's in-app notice carries the hours too (unrendered by the SPA
+    # today, but the data is there for when it is)
+    note = InAppNotification.objects.get(user=hourly_reservations["owner"], type="RESERVATION_MADE")
+    assert note.payload["start_time"] == "11:00"
+    assert note.payload["end_time"] == "13:00"
 
 
 def test_an_hourly_request_outside_opening_hours_is_refused(
@@ -719,6 +730,31 @@ def test_the_member_can_cancel_and_it_frees_the_slot(
         format="json",
     )
     assert again.status_code == status.HTTP_201_CREATED
+
+
+def test_cancelling_an_hourly_reservation_carries_the_hours_in_the_notice(
+    hourly_reservations, authenticated_client2
+):
+    mon = _next_weekday(0)
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(mon), "start_time": "11:00", "end_time": "13:00"},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    booking = BookingPeriod.objects.get(code=resp.data["booking_code"])
+    mail.outbox.clear()
+
+    resp = authenticated_client2.post(CANCEL_URL.format(booking.code))
+    assert resp.status_code == status.HTTP_200_OK
+
+    note = InAppNotification.objects.get(
+        user=hourly_reservations["owner"], type="RESERVATION_CANCELLED"
+    )
+    assert note.payload["start_time"] == "11:00"
+    assert note.payload["end_time"] == "13:00"
+    (m,) = mail.outbox
+    assert f"{mon.strftime('%d/%m/%Y')} 11:00" in m.body and "13:00" in m.body
 
 
 def test_the_owner_can_cancel_a_members_reservation(

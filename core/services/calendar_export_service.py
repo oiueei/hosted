@@ -1,11 +1,13 @@
 """The collection calendar export — date-based reservations as a Google Calendar CSV.
 
 A curator downloads their collection's upcoming loans, rentals and on-site
-reservations as a CSV in Google Calendar's import column order. Each reservation
-is **one all-day event covering the days the thing is unavailable** — from the
-pickup day up to (not including) the return day, since the return day is already
-free for the next booking. A one-week loan picked up Monday blocks Mon–Sun and
-leaves the next Monday open.
+reservations as a CSV in Google Calendar's import column order. A whole-day
+booking (every LEND/RENT, and a DAY-unit RESERVE) is **one all-day event
+covering the days the thing is unavailable** — from the pickup day up to (not
+including) the return day, since the return day is already free for the next
+booking. A one-week loan picked up Monday blocks Mon–Sun and leaves the next
+Monday open. An **HOUR-unit RESERVE_THING** (`booking.start_time` set) is
+instead one *timed* event on a single day, with real start/end clock times.
 
 **Incremental.** Each download carries only reservations not delivered before
 and records them in ``CalendarExportMark`` (per collection — the curators share
@@ -50,7 +52,13 @@ CSV_COLUMNS = [
 # regardless of the account's locale. The one format it reads reliably.
 _GCAL_DATE = "%m/%d/%Y"
 
-# Google Calendar's CSV importer treats an all-day event's End Date as
+# Google's CSV importer expects a 12-hour clock with AM/PM for a timed event —
+# same American-locale assumption as the date column. Only an HOUR-unit
+# RESERVE_THING (`booking.start_time` set) uses this; every other row leaves
+# Start Time/End Time blank and is an all-day event (see below).
+_GCAL_TIME = "%I:%M %p"
+
+# Google Calendar's CSV importer treats an **all-day** event's End Date as
 # **exclusive** — a row `09/14 … 09/16` imports as an event covering the 14th
 # and 15th only (verified against a real import, 2026-09-10). That is exactly
 # OIUEEI's own `end_date`: the day the thing is back / the space is free again,
@@ -59,6 +67,16 @@ _GCAL_DATE = "%m/%d/%Y"
 # Monday the 14th has `end_date` the 21st, blocks the 14th–20th on the calendar,
 # and leaves the 21st open, which is the rule. Do NOT "fix" this by subtracting
 # a day; that reintroduces the bug it documents.
+#
+# **That exclusivity rule is for all-day events only.** An HOUR-unit
+# reservation is a *timed* event, and Google's End Date there is the literal
+# calendar day it ends on — same day as Start Date for an on-site reservation,
+# never `booking.end_date`, which for an HOUR-unit booking stores
+# `start_date + 1` purely as the day-based "free again" marker every other
+# consumer (reminders, `close_transfers`, the export's own upcoming-reservations
+# filter) reads — not a real end. Using it here would push every hourly event
+# one day late on the calendar. So a timed row's End Date is `start_date`,
+# **not** `end_date`; only a whole-day row uses the exclusive `end_date` above.
 
 # Spreadsheet-formula prefixes (CSV injection). Mirrors
 # ``core.validators._FORMULA_PREFIXES`` — kept local rather than importing a
@@ -145,10 +163,14 @@ def _row(booking, texts, lang, collection_headline):
     person = (booking.requester_code.name or "").strip() or texts["a_member"]
     subject = texts[f"subject_{booking.thing_type}"].format(thing=headline, person=person)
 
-    # Both dates map straight to Google's columns: OIUEEI's exclusive `end_date`
-    # is exactly what Google's exclusive CSV End Date wants (see _GCAL_DATE note).
+    # A whole-day booking's dates map straight to Google's columns: OIUEEI's
+    # exclusive `end_date` is exactly what Google's exclusive all-day End Date
+    # wants (see _GCAL_DATE note). An HOUR-unit reservation (RESERVE_THING only)
+    # is a timed event instead, so its End Date is the real end day —
+    # `start_date`, not `end_date` (see _GCAL_TIME note).
+    is_hourly = booking.start_time is not None
     start = booking.start_date
-    end = booking.end_date
+    end = start if is_hourly else booking.end_date
 
     description = []
     if booking.thing_type in (Thing.Type.LEND_THING, Thing.Type.RENT_THING):
@@ -164,10 +186,10 @@ def _row(booking, texts, lang, collection_headline):
     return {
         "Subject": _csv_cell(subject),
         "Start Date": start.strftime(_GCAL_DATE),
-        "Start Time": "",
+        "Start Time": booking.start_time.strftime(_GCAL_TIME) if is_hourly else "",
         "End Date": end.strftime(_GCAL_DATE),
-        "End Time": "",
-        "All Day Event": "True",
+        "End Time": booking.end_time.strftime(_GCAL_TIME) if is_hourly else "",
+        "All Day Event": "False" if is_hourly else "True",
         "Description": _csv_cell(" — ".join(description)),
         "Location": _csv_cell((thing.location or "").strip()),
         "Private": "True",

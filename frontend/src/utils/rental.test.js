@@ -13,6 +13,7 @@ import {
   isoToDisplay,
   displayToIso,
   formatDate,
+  formatBookingWhen,
   closedDatesToDisplay,
   parseHM,
   formatHM,
@@ -264,6 +265,31 @@ describe('formatDate', () => {
     expect(formatDate(undefined)).toBe('');
     expect(formatDate('')).toBe('');
     expect(formatDate('not a date')).toBe('');
+  });
+});
+
+describe('formatBookingWhen', () => {
+  test('a whole-day booking (start_time absent) renders a date range, unchanged', () => {
+    expect(formatBookingWhen({ start_date: '2026-10-05', end_date: '2026-10-06' })).toBe(
+      '05/10/2026 — 06/10/2026'
+    );
+  });
+
+  test('an HOUR-unit reservation names the date once and both clock times', () => {
+    expect(
+      formatBookingWhen({
+        start_date: '2026-10-05',
+        end_date: '2026-10-06', // the day-based "free again" marker — must not appear
+        start_time: '10:00:00',
+        end_time: '13:00:00',
+      })
+    ).toBe('05/10/2026, 10:00–13:00');
+  });
+
+  test('is blank when there are no dates at all (GIFT/SELL)', () => {
+    expect(formatBookingWhen({})).toBe('');
+    expect(formatBookingWhen(null)).toBe('');
+    expect(formatBookingWhen(undefined)).toBe('');
   });
 });
 
