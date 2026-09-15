@@ -175,6 +175,13 @@ def test_no_note_means_no_note(reservations, authenticated_client2):
 
 
 def test_a_non_member_cannot_reserve(reservations, api_client):
+    """The `reservations` fixture is PRIVATE (the model default), so a total
+    stranger fails `can_view` before `request_reservation` is ever reached —
+    this is `get_viewable_thing`'s generic "not authorized" 403, not the
+    membership-specific one below, and it carries no `code`. See
+    `test_a_signed_in_non_member_of_a_public_collection_gets_the_not_a_member_code`
+    for the one that does — the two must stay tellable apart, since the
+    frontend's auto-join only ever fires for the latter."""
     stranger = User.objects.create(code="STRNGR", email="stranger@test.com")
     client = _member_client(api_client, stranger)
     resp = client.post(
@@ -183,6 +190,30 @@ def test_a_non_member_cannot_reserve(reservations, api_client):
         format="json",
     )
     assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert "code" not in resp.data
+    assert not BookingPeriod.objects.exists()
+
+
+def test_a_signed_in_non_member_of_a_public_collection_gets_the_not_a_member_code(
+    reservations, api_client
+):
+    """A PUBLIC collection lets anyone view it and reach `request_reservation`,
+    where `is_invited` is what actually refuses a non-member — this is the one
+    403 the frontend's auto-join is meant to catch, so it has to carry the
+    `code` the test above's `can_view` 403 does not."""
+    reservations["collection"].visibility = Collection.Visibility.PUBLIC
+    reservations["collection"].save(update_fields=["visibility"])
+    stranger = User.objects.create(code="STRNG2", email="stranger2@test.com")
+    client = _member_client(api_client, stranger)
+
+    resp = client.post(
+        REQUEST_URL.format(reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "duration_days": 1},
+        format="json",
+    )
+
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert resp.data["code"] == "not_a_member"
     assert not BookingPeriod.objects.exists()
 
 

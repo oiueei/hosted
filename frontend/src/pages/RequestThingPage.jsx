@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, DateInput, Notification, Select, TextArea } from 'hds-react';
@@ -92,11 +92,6 @@ export default function RequestThingPage() {
   const [notMemberError, setNotMemberError] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
-  // The body handleSubmit built for the attempt that hit the 403 — kept so
-  // the manual "Join this group" fallback button can retry the *exact* same
-  // reservation on a later click, without asking the reader to fill anything
-  // in twice. A ref, not state: it never needs to trigger a render itself.
-  const lastBodyRef = useRef(null);
   // Which thing the load failed for — same reason as the delete pages: a boolean
   // needs clearing at the top of the effect, which is a render spent undoing the
   // previous one.
@@ -219,6 +214,58 @@ export default function RequestThingPage() {
         });
   const dateBlocked = (date) => isDateBlocked(date, blockedPeriods, closedDates);
 
+  // The request body, built fresh from current form state — `null` when a
+  // required field is still empty. A function, not a one-off inline block, so
+  // both the normal submit and the manual "Join this group" fallback (a
+  // *separate* click, its own later render) build it the same way — the
+  // fallback used to replay whatever body the earlier failed attempt had
+  // captured, which could book a date the reader had since changed on screen.
+  const buildReservationBody = () => {
+    const isDateBased = thing && DATE_TYPES.includes(thing.type);
+    let body = null;
+    if (isReservation && isHourlyReservation) {
+      // Pickup date + a chosen slot; the backend derives end_date = start + 1
+      // and auto-confirms.
+      const startIso = displayToIso(startDate);
+      if (!startIso || !chosenDurationOption || !hourlyStartTime) return null;
+      const endTime = formatHM(parseHM(hourlyStartTime) + chosenDurationOption.minutes);
+      body = {
+        start_date: startIso,
+        start_time: hourlyStartTime,
+        end_time: endTime,
+        project_note: projectNote.trim(),
+      };
+    } else if (isReservation) {
+      // Pickup date + a length of 1..reservation_max_days; the backend derives
+      // the end date and auto-confirms.
+      const startIso = displayToIso(startDate);
+      if (!chosenDuration || !startIso) return null;
+      body = {
+        start_date: startIso,
+        duration_days: Number(chosenDuration),
+        project_note: projectNote.trim(),
+      };
+    } else if (isDateBased) {
+      if (isConstrainedRental) {
+        // Renter picks a fixed length + a pickup date; the return date is derived
+        // as pickup + length (a week rental comes back on the same weekday).
+        const startIso = displayToIso(startDate);
+        if (!chosenDuration || !startIso) return null;
+        const end = derivedReturnDate(startIso, chosenDuration);
+        body = { start_date: startIso, end_date: end };
+      } else {
+        const startIso = displayToIso(startDate);
+        const endIso = displayToIso(endDate);
+        if (!startIso || !endIso) return null;
+        body = { start_date: startIso, end_date: endIso };
+      }
+    }
+    // Pass the collection context so the backend applies that collection's
+    // rental rules (harmless for other flows / collections without rules).
+    if (body && code) body.collection_code = code;
+    return body;
+  };
+
   // Shared by the first attempt's non-403 branches and the retry after an
   // auto-join below — a business-rule failure reads the same either way.
   const showRequestError = async (res) => {
@@ -248,13 +295,13 @@ export default function RequestThingPage() {
   // route; the standalone `/things/:code/request` route carries none, so it
   // falls back to the collection the thing itself resolved to server-side.
   //
-  // RESERVE_THING's only 403 here is "not a member of this group", and it can
-  // only happen on a PUBLIC collection — can_view already gated everything
-  // else, and a non-member reaches it only there — so joining is always
-  // genuinely possible. Membership was never really a choice being offered,
-  // so it isn't asked for: join, then retry the *exact* same reservation,
-  // transparently (CA's call). `notMemberError` + the manual fallback button
-  // only ever show if this auto-join itself fails.
+  // Only ever called for the backend's `code: "not_a_member"` marker (see
+  // handleSubmit), which can only fire on a PUBLIC collection — can_view
+  // already gated everything else, and a non-member reaches it only there —
+  // so joining is always genuinely possible. Membership was never really a
+  // choice being offered, so it isn't asked for: join, then retry the
+  // reservation, transparently (CA's call). `notMemberError` + the manual
+  // fallback button only ever show if this auto-join itself fails.
   const joinThenRetry = async (body, fallbackMessage) => {
     const collectionCode = code || thing?.collection_code;
     if (!collectionCode) {
@@ -263,80 +310,44 @@ export default function RequestThingPage() {
     }
     setJoining(true);
     setJoinError(false);
-    let joinRes;
     try {
-      joinRes = await apiFetch(`/api/v1/collections/${collectionCode}/join/`, {
-        method: 'POST',
-      });
-    } catch {
-      joinRes = null;
-    }
-    setJoining(false);
-    if (!joinRes?.ok) {
-      setJoinError(true);
-      setNotMemberError(fallbackMessage || t('request.errorSending'));
-      return;
-    }
-    setNotMemberError('');
-    const retryRes = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    if (retryRes.ok) {
-      setSuccess(true);
-    } else {
-      await showRequestError(retryRes);
+      let joinRes;
+      try {
+        joinRes = await apiFetch(`/api/v1/collections/${collectionCode}/join/`, {
+          method: 'POST',
+        });
+      } catch {
+        joinRes = null;
+      }
+      if (!joinRes?.ok) {
+        setJoinError(true);
+        setNotMemberError(fallbackMessage || t('request.errorSending'));
+        return;
+      }
+      setNotMemberError('');
+      try {
+        const retryRes = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        if (retryRes.ok) {
+          setSuccess(true);
+        } else {
+          await showRequestError(retryRes);
+        }
+      } catch {
+        setToast({ type: 'error', message: t('common.connectionError') });
+      }
+    } finally {
+      setJoining(false);
     }
   };
 
   const handleSubmit = async () => {
     setAttempted(true);
+    const body = buildReservationBody();
+    if (!body) return;
 
-    const isDateBased = thing && DATE_TYPES.includes(thing.type);
-
-    let body = {};
-    if (isReservation && isHourlyReservation) {
-      // Pickup date + a chosen slot; the backend derives end_date = start + 1
-      // and auto-confirms.
-      const startIso = displayToIso(startDate);
-      if (!startIso || !chosenDurationOption || !hourlyStartTime) return;
-      const endTime = formatHM(parseHM(hourlyStartTime) + chosenDurationOption.minutes);
-      body = {
-        start_date: startIso,
-        start_time: hourlyStartTime,
-        end_time: endTime,
-        project_note: projectNote.trim(),
-      };
-    } else if (isReservation) {
-      // Pickup date + a length of 1..reservation_max_days; the backend derives
-      // the end date and auto-confirms.
-      const startIso = displayToIso(startDate);
-      if (!chosenDuration || !startIso) return;
-      body = {
-        start_date: startIso,
-        duration_days: Number(chosenDuration),
-        project_note: projectNote.trim(),
-      };
-    } else if (isDateBased) {
-      if (isConstrainedRental) {
-        // Renter picks a fixed length + a pickup date; the return date is derived
-        // as pickup + length (a week rental comes back on the same weekday).
-        const startIso = displayToIso(startDate);
-        if (!chosenDuration || !startIso) return;
-        const end = derivedReturnDate(startIso, chosenDuration);
-        body = { start_date: startIso, end_date: end };
-      } else {
-        const startIso = displayToIso(startDate);
-        const endIso = displayToIso(endDate);
-        if (!startIso || !endIso) return;
-        body = { start_date: startIso, end_date: endIso };
-      }
-    }
-    // Pass the collection context so the backend applies that collection's rental
-    // rules (harmless for other flows / collections without rules).
-    if (code) body.collection_code = code;
-
-    lastBodyRef.current = body;
     setSubmitting(true);
     setToast(null);
     setNotMemberError('');
@@ -347,9 +358,17 @@ export default function RequestThingPage() {
       });
       if (res.ok) {
         setSuccess(true);
-      } else if (isReservation && res.status === 403) {
+      } else if (res.status === 403) {
+        // Only this specific marker means "not a member" — any *other* 403
+        // (e.g. the thing going INACTIVE while this form was open) must not
+        // be mistaken for it and silently join the reader to a group over an
+        // unrelated error.
         const data = await res.json();
-        await joinThenRetry(body, data.error);
+        if (isReservation && data.code === 'not_a_member') {
+          await joinThenRetry(body, data.error);
+        } else {
+          setToast({ type: 'error', message: data.error || t('request.errorSending') });
+        }
       } else {
         await showRequestError(res);
       }
@@ -361,9 +380,17 @@ export default function RequestThingPage() {
   };
 
   // The manual fallback — shown only when the automatic join above itself
-  // failed — retries with the exact reservation the failed attempt already
-  // built, so the reader never has to fill the form in again.
-  const handleJoinGroup = () => joinThenRetry(lastBodyRef.current, notMemberError);
+  // failed. Rebuilds the body fresh rather than replaying the failed
+  // attempt's — the reader may well have changed the date while this was
+  // showing, and a fixed old body would confirm the wrong one.
+  const handleJoinGroup = () => {
+    const body = buildReservationBody();
+    if (!body) {
+      setAttempted(true);
+      return;
+    }
+    return joinThenRetry(body, notMemberError);
+  };
 
   if (error) {
     return (

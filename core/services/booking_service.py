@@ -26,12 +26,22 @@ class BookingRequestError(Exception):
     live in this service layer without importing DRF. The view translates it to
     ``Response({"error": message}, status=status_code)`` — preserving the exact
     response shape the API had when these handlers lived on ``ThingRequestView``.
+
+    ``code`` is an optional machine-readable marker, added on top of that shape
+    rather than replacing it — most callers still get a bare ``{"error": ...}``.
+    It exists so a client can act on *which* rule failed without pattern-matching
+    English prose (or worse, any 403 at all): ``RequestThingPage``'s auto-join
+    checks for ``code == "not_a_member"`` specifically, so a *different* 403 on
+    this endpoint — e.g. the thing going INACTIVE out from under an open form —
+    can't be mistaken for a membership gap and silently join the reader to a
+    group over an unrelated error.
     """
 
-    def __init__(self, message, status_code=400):
+    def __init__(self, message, status_code=400, code=None):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+        self.code = code
 
 
 def _pickup_blocked(day, ranges):
@@ -603,7 +613,9 @@ def request_reservation(
 
     if not rc.is_invited(requester.code):
         raise BookingRequestError(
-            "You need to be a member of this group to reserve.", status_code=403
+            "You need to be a member of this group to reserve.",
+            status_code=403,
+            code="not_a_member",
         )
 
     if rc.is_hourly_reservations():

@@ -185,7 +185,10 @@ describe('RequestThingPage — RESERVE_THING', () => {
             ok: false,
             status: 403,
             json: () =>
-              Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+              Promise.resolve({
+                error: 'You need to be a member of this group to reserve.',
+                code: 'not_a_member',
+              }),
           });
         }
         return Promise.resolve(
@@ -225,7 +228,10 @@ describe('RequestThingPage — RESERVE_THING', () => {
           ok: false,
           status: 403,
           json: () =>
-            Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+            Promise.resolve({
+              error: 'You need to be a member of this group to reserve.',
+              code: 'not_a_member',
+            }),
         });
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
@@ -268,7 +274,10 @@ describe('RequestThingPage — RESERVE_THING', () => {
             ok: false,
             status: 403,
             json: () =>
-              Promise.resolve({ error: 'You need to be a member of this group to reserve.' }),
+              Promise.resolve({
+                error: 'You need to be a member of this group to reserve.',
+                code: 'not_a_member',
+              }),
           });
         }
         return Promise.resolve(
@@ -291,7 +300,90 @@ describe('RequestThingPage — RESERVE_THING', () => {
 
     expect(await screen.findByText(/Your reservation is confirmed/)).toBeInTheDocument();
     expect(joinCalls).toBe(2);
-    expect(requestCalls).toBe(2); // never re-typed — the same body both times
+    expect(requestCalls).toBe(2); // never re-typed — the form still says 03/06
+  });
+
+  test('a 403 without the not_a_member marker never auto-joins — it just shows the reason', async () => {
+    // The thing going INACTIVE while this form was open, say: still a 403,
+    // still carries an `error`, but not the one auto-join is for.
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    let joinCalled = false;
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
+        joinCalled = true;
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      }
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          status: 403,
+          json: () => Promise.resolve({ error: 'Not authorized to request this thing' }),
+        });
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(await screen.findByText('Not authorized to request this thing')).toBeInTheDocument();
+    expect(joinCalled).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  test('the manual fallback books the date on screen now, not the one from the failed attempt', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    let joinCalls = 0;
+    const requestDates = [];
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST') {
+        joinCalls += 1;
+        if (joinCalls === 1) {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      }
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        const parsed = JSON.parse(opts.body);
+        requestDates.push(parsed.start_date);
+        if (requestDates.length === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 403,
+            json: () =>
+              Promise.resolve({
+                error: 'You need to be a member of this group to reserve.',
+                code: 'not_a_member',
+              }),
+          });
+        }
+        return Promise.resolve(
+          mockResponse({ message: 'Reservation confirmed', booking_code: 'B1' })
+        );
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+    await screen.findByRole('button', { name: 'Join this group' });
+
+    // the reader changes their mind about the date while the fallback is showing
+    typePickup(container, '05/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Join this group' }));
+
+    expect(await screen.findByText(/Your reservation is confirmed/)).toBeInTheDocument();
+    expect(requestDates).toEqual(['2026-06-03', '2026-06-05']);
   });
 });
 
