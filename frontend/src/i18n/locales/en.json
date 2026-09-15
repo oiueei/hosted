@@ -987,7 +987,15 @@
     "unitDay": "By day",
     "unitHour": "By hour",
     "maxHoursLabel": "Longest reservation (hours)",
-    "maxHoursHelper": "From 1 to 12. A member can book the space for 1 up to this many hours at a time — except a reservation for the exact full day, which is always allowed."
+    "maxHoursHelper": "From 1 to 12. A member can book the space for 1 up to this many hours at a time — the full day counts too, so it's only offered when it fits under this limit.",
+    "pickupHelperHourly": "Closed days and fully booked days are greyed out.",
+    "durationLabelHourly": "How long?",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "durationHalfDay": "Half day",
+    "durationFullDay": "Full day",
+    "startTimeLabel": "What time?",
+    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
   },
   "closedDates": {
     "label": "Holidays and closures",

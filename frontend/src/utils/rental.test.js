@@ -14,6 +14,13 @@ import {
   displayToIso,
   formatDate,
   closedDatesToDisplay,
+  parseHM,
+  formatHM,
+  dayBlocks,
+  dayBookings,
+  durationOptions,
+  freeStartTimes,
+  isHourlyPickupDisabled,
 } from './rental';
 
 // Run in a UTC-negative timezone so a regression to UTC date parsing
@@ -257,5 +264,234 @@ describe('formatDate', () => {
     expect(formatDate(undefined)).toBe('');
     expect(formatDate('')).toBe('');
     expect(formatDate('not a date')).toBe('');
+  });
+});
+
+// HOUR-unit RESERVE_THING: time-of-day helpers. CA's own example schedule —
+// Mon-Thu 10:00-14:00 & 16:00-20:00, Fri 10:00-14:00, weekend closed — used
+// throughout, mirroring the backend fixtures in
+// core/tests/unit/test_reservation_rules.py.
+// Constructed lazily (inside `beforeAll`, not here at module scope) so the
+// `TZ` stub above is already active — `new Date(y, m, d)` reads local
+// components at construction time, and building these before the stub runs
+// would date them to whatever the real system timezone is, which then
+// disagrees with every `.getDay()` read afterwards under the stubbed one.
+let MON, FRI, SAT; // Monday / Friday / Saturday (see the anchor note above)
+beforeAll(() => {
+  MON = new Date(2024, 0, 1);
+  FRI = new Date(2024, 0, 5);
+  SAT = new Date(2024, 0, 6);
+});
+const OPENING_HOURS = {
+  0: [
+    ['10:00', '14:00'],
+    ['16:00', '20:00'],
+  ],
+  1: [
+    ['10:00', '14:00'],
+    ['16:00', '20:00'],
+  ],
+  2: [
+    ['10:00', '14:00'],
+    ['16:00', '20:00'],
+  ],
+  3: [
+    ['10:00', '14:00'],
+    ['16:00', '20:00'],
+  ],
+  4: [['10:00', '14:00']],
+};
+
+describe('parseHM / formatHM', () => {
+  test('round-trip "HH:MM" through minutes since midnight', () => {
+    expect(parseHM('10:00')).toBe(600);
+    expect(parseHM('00:00')).toBe(0);
+    expect(parseHM('23:59')).toBe(1439);
+    expect(formatHM(600)).toBe('10:00');
+    expect(formatHM(0)).toBe('00:00');
+    expect(formatHM(65)).toBe('01:05');
+  });
+});
+
+describe('dayBlocks', () => {
+  test('returns a weekday’s blocks sorted by start', () => {
+    expect(dayBlocks(OPENING_HOURS, MON)).toEqual([
+      { start: 600, end: 840 },
+      { start: 960, end: 1200 },
+    ]);
+  });
+
+  test('a single-block day returns exactly that block', () => {
+    expect(dayBlocks(OPENING_HOURS, FRI)).toEqual([{ start: 600, end: 840 }]);
+  });
+
+  test('a day absent from opening_hours is empty (closed)', () => {
+    expect(dayBlocks(OPENING_HOURS, SAT)).toEqual([]);
+  });
+
+  test('skips a malformed block instead of throwing', () => {
+    expect(dayBlocks({ 0: [['not-a-time', '14:00']] }, MON)).toEqual([]);
+  });
+});
+
+describe('dayBookings', () => {
+  test('a day with no bookings is neither whole-day nor has any ranges', () => {
+    expect(dayBookings([], '2024-01-01')).toEqual({ wholeDay: false, ranges: [] });
+  });
+
+  test('an hour-based booking on that day becomes a minutes range', () => {
+    const periods = [
+      { start_date: '2024-01-01', end_date: '2024-01-02', start_time: '10:00', end_time: '12:00' },
+    ];
+    expect(dayBookings(periods, '2024-01-01')).toEqual({
+      wholeDay: false,
+      ranges: [{ start: 600, end: 720 }],
+    });
+  });
+
+  test('a whole-day booking (no start_time) closes the day outright', () => {
+    const periods = [{ start_date: '2024-01-01', end_date: '2024-01-02', start_time: null }];
+    expect(dayBookings(periods, '2024-01-01')).toEqual({ wholeDay: true, ranges: [] });
+  });
+
+  test('a booking on a different day is ignored', () => {
+    const periods = [
+      { start_date: '2024-01-02', end_date: '2024-01-03', start_time: '10:00', end_time: '12:00' },
+    ];
+    expect(dayBookings(periods, '2024-01-01')).toEqual({ wholeDay: false, ranges: [] });
+  });
+});
+
+describe('durationOptions', () => {
+  test('offers every whole hour up to the cap', () => {
+    const blocks = dayBlocks(OPENING_HOURS, MON);
+    const keys = durationOptions(blocks, 3).map((o) => o.key);
+    expect(keys).toEqual(['1', '2', '3']); // halfDay (4h) and fullDay (10h) exceed the 3h cap
+  });
+
+  test('offers half day and full day once they fit under a generous cap', () => {
+    const blocks = dayBlocks(OPENING_HOURS, MON);
+    const options = durationOptions(blocks, 12);
+    expect(options).toContainEqual({ key: 'halfDay', minutes: 240 }); // the 4h block
+    expect(options).toContainEqual({ key: 'fullDay', minutes: 600 }); // 10:00 to 20:00
+  });
+
+  test('a single-block day has no distinct "half day" — only "full day"', () => {
+    const blocks = dayBlocks(OPENING_HOURS, FRI);
+    const options = durationOptions(blocks, 12);
+    expect(options.some((o) => o.key === 'halfDay')).toBe(false);
+    expect(options).toContainEqual({ key: 'fullDay', minutes: 240 });
+  });
+
+  test('a closed day (no blocks) offers nothing but the whole-hour range', () => {
+    expect(durationOptions([], 3)).toEqual([
+      { key: '1', minutes: 60 },
+      { key: '2', minutes: 120 },
+      { key: '3', minutes: 180 },
+    ]);
+  });
+});
+
+describe('freeStartTimes', () => {
+  // Lazy for the same reason MON/FRI/SAT are: this describe body runs during
+  // collection, before `beforeAll` stubs TZ and sets MON.
+  let blocks;
+  beforeAll(() => {
+    blocks = dayBlocks(OPENING_HOURS, MON); // [10:00-14:00, 16:00-20:00]
+  });
+  const noBookings = { wholeDay: false, ranges: [] };
+
+  test('an empty day offers every hourly slot, stepped hour by hour', () => {
+    expect(freeStartTimes(blocks, 60, noBookings, false)).toEqual([
+      '10:00',
+      '11:00',
+      '12:00',
+      '13:00',
+      '16:00',
+      '17:00',
+      '18:00',
+      '19:00',
+    ]);
+  });
+
+  test('a longer duration still steps hour by hour, and stops fitting near the close', () => {
+    // 10:00-14:00: 10:00 and 11:00 fit a 3h slot (12:00 would end at 15:00, past
+    // close). 16:00-20:00: 16:00 and 17:00 fit (18:00 would end at 21:00).
+    expect(freeStartTimes(blocks, 180, noBookings, false)).toEqual([
+      '10:00',
+      '11:00',
+      '16:00',
+      '17:00',
+    ]);
+  });
+
+  test('an existing booking removes only the starts that would overlap it', () => {
+    const booked = { wholeDay: false, ranges: [{ start: 660, end: 780 }] }; // 11:00-13:00
+    // A 1h slot at 11:00 or 12:00 overlaps the booking; 10:00 and 13:00 (touching
+    // the boundary) do not — same strict-overlap rule as has_overlap.
+    expect(freeStartTimes(blocks, 60, booked, false)).toEqual([
+      '10:00',
+      '13:00',
+      '16:00',
+      '17:00',
+      '18:00',
+      '19:00',
+    ]);
+  });
+
+  test('a whole-day booking leaves no free start at all', () => {
+    expect(freeStartTimes(blocks, 60, { wholeDay: true, ranges: [] }, false)).toEqual([]);
+  });
+
+  test('full day has exactly one candidate start, and only when nothing conflicts', () => {
+    expect(freeStartTimes(blocks, 600, noBookings, true)).toEqual(['10:00']);
+    const booked = { wholeDay: false, ranges: [{ start: 1020, end: 1080 }] }; // 17:00-18:00
+    expect(freeStartTimes(blocks, 600, booked, true)).toEqual([]);
+  });
+
+  test('full day is empty on a day with no blocks', () => {
+    expect(freeStartTimes([], 600, noBookings, true)).toEqual([]);
+  });
+});
+
+describe('isHourlyPickupDisabled', () => {
+  const baseArgs = {
+    openingHours: OPENING_HOURS,
+    closedDates: [],
+    blockedPeriods: [],
+    maxHours: 3,
+  };
+
+  test('an empty day with opening hours is selectable', () => {
+    expect(isHourlyPickupDisabled(MON, baseArgs)).toBe(false);
+  });
+
+  test('a weekday absent from opening_hours is disabled', () => {
+    expect(isHourlyPickupDisabled(SAT, baseArgs)).toBe(true);
+  });
+
+  test('a closed_dates entry disables the day even if it would otherwise be open', () => {
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, closedDates: ['2024-01-01'] })).toBe(true);
+  });
+
+  test('a fully booked day (both blocks entirely taken) is disabled', () => {
+    const blockedPeriods = [
+      { start_date: '2024-01-01', end_date: '2024-01-02', start_time: '10:00', end_time: '14:00' },
+      { start_date: '2024-01-01', end_date: '2024-01-02', start_time: '16:00', end_time: '20:00' },
+    ];
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, blockedPeriods })).toBe(true);
+  });
+
+  test('a day with at least one free hour anywhere stays selectable', () => {
+    const blockedPeriods = [
+      { start_date: '2024-01-01', end_date: '2024-01-02', start_time: '10:00', end_time: '14:00' },
+      // the 16:00-20:00 block is untouched
+    ];
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, blockedPeriods })).toBe(false);
+  });
+
+  test('a whole-day booking (start_time null) disables the day', () => {
+    const blockedPeriods = [{ start_date: '2024-01-01', end_date: '2024-01-02', start_time: null }];
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, blockedPeriods })).toBe(true);
   });
 });

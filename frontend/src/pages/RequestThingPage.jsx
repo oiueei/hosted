@@ -13,12 +13,21 @@ import {
   displayToIso,
   formatDate,
   DISPLAY_DATE_FORMAT,
+  parseLocalDate,
+  parseHM,
+  formatHM,
+  dayBlocks,
+  dayBookings,
+  durationOptions,
+  freeStartTimes,
+  isHourlyPickupDisabled,
 } from '../utils/rental';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
+import RadioOptionGroup from '../components/RadioOptionGroup';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
@@ -59,6 +68,11 @@ export default function RequestThingPage() {
   const [startDate, setStartDate] = useState(isoToDisplay(location.state?.prefillDate) || '');
   const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState('');
+  // HOUR-unit reservations only: a duration-option key ('1'..'12', 'halfDay',
+  // 'fullDay') and a chosen "HH:MM" start — kept apart from `duration` above
+  // (a day-count) since the two are never both meaningful for the same thing.
+  const [hourlyDuration, setHourlyDuration] = useState('');
+  const [hourlyStartTime, setHourlyStartTime] = useState('');
   const [projectNote, setProjectNote] = useState('');
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -113,6 +127,46 @@ export default function RequestThingPage() {
     reservationMaxDate.getDate() + (thing?.reservation_horizon_days || 90)
   );
 
+  // HOUR-unit RESERVE: day → duration → start time, in that order (unlike the
+  // DAY-unit flow above, which picks the length first). Each step's options
+  // depend on the previous one, computed fresh from the thing's opening_hours
+  // and the fetched calendar — the same pure helpers the backend's own
+  // Collection.day_opening_blocks / reservation_hour_violation mirror.
+  const isHourlyReservation = isReservation && thing?.reservation_unit === 'HOUR';
+  const openingHours = thing?.opening_hours || {};
+  const reservationMaxHours = thing?.reservation_max_hours || 3;
+  const hourlyPickupDisabled = (date) =>
+    isHourlyPickupDisabled(date, {
+      openingHours,
+      closedDates,
+      blockedPeriods,
+      maxHours: reservationMaxHours,
+    });
+  const selectedIso = displayToIso(startDate);
+  const blocksForSelectedDay =
+    isHourlyReservation && selectedIso ? dayBlocks(openingHours, parseLocalDate(selectedIso)) : [];
+  const bookingsForSelectedDay =
+    isHourlyReservation && selectedIso
+      ? dayBookings(blockedPeriods, selectedIso)
+      : { wholeDay: false, ranges: [] };
+  const hourlyDurationChoices = isHourlyReservation
+    ? durationOptions(blocksForSelectedDay, reservationMaxHours)
+    : [];
+  const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
+  const hourlyStartTimeChoices = chosenDurationOption
+    ? freeStartTimes(
+        blocksForSelectedDay,
+        chosenDurationOption.minutes,
+        bookingsForSelectedDay,
+        chosenDurationOption.key === 'fullDay'
+      )
+    : [];
+  const durationOptionLabel = (opt) => {
+    if (opt.key === 'halfDay') return t('reservation.durationHalfDay');
+    if (opt.key === 'fullDay') return t('reservation.durationFullDay');
+    return t('reservation.hours', { count: opt.minutes / 60 });
+  };
+
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
   // (#4). Derived rather than written into state once the thing loads: that
@@ -153,7 +207,19 @@ export default function RequestThingPage() {
     const isDateBased = thing && DATE_TYPES.includes(thing.type);
 
     let body = {};
-    if (isReservation) {
+    if (isReservation && isHourlyReservation) {
+      // Pickup date + a chosen slot; the backend derives end_date = start + 1
+      // and auto-confirms.
+      const startIso = displayToIso(startDate);
+      if (!startIso || !chosenDurationOption || !hourlyStartTime) return;
+      const endTime = formatHM(parseHM(hourlyStartTime) + chosenDurationOption.minutes);
+      body = {
+        start_date: startIso,
+        start_time: hourlyStartTime,
+        end_time: endTime,
+        project_note: projectNote.trim(),
+      };
+    } else if (isReservation) {
       // Pickup date + a length of 1..reservation_max_days; the backend derives
       // the end date and auto-confirms.
       const startIso = displayToIso(startDate);
@@ -335,7 +401,7 @@ export default function RequestThingPage() {
               )}
             </div>
           )}
-          {isReservation && (
+          {isReservation && !isHourlyReservation && (
             <div className="summary-grid section-mt">
               {reservationMax > 1 && (
                 <>
@@ -411,6 +477,87 @@ export default function RequestThingPage() {
               <div className="spacer-xxxs" />
               <TextArea
                 id="reservation-project-note"
+                label={t('reservation.projectNoteLabel')}
+                helperText={t('reservation.projectNoteHelper', {
+                  remaining: 512 - projectNote.length,
+                })}
+                maxLength={512}
+                value={projectNote}
+                onChange={(e) => setProjectNote(e.target.value)}
+              />
+            </div>
+          )}
+          {isReservation && isHourlyReservation && (
+            <div className="summary-grid section-mt">
+              <DateInput
+                id="reservation-pickup-date-hourly"
+                label={t('reservation.pickupLabel')}
+                helperText={t('reservation.pickupHelperHourly')}
+                value={startDate}
+                onChange={(value) => {
+                  setStartDate(value);
+                  setHourlyDuration('');
+                  setHourlyStartTime('');
+                }}
+                dateFormat={DISPLAY_DATE_FORMAT}
+                language="en"
+                openButtonAriaLabel={t('datePicker.open')}
+                selectButtonLabel={t('datePicker.select')}
+                closeButtonLabel={t('datePicker.close')}
+                required
+                invalid={attempted && !startDate}
+                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
+                minDate={TODAY}
+                maxDate={reservationMaxDate}
+                dateOutsideRangeErrorText={t('reservation.dateRange', {
+                  days: thing.reservation_horizon_days || 90,
+                })}
+                isDateDisabledBy={hourlyPickupDisabled}
+                malformedDateErrorText={t('request.dateOverlap')}
+              />
+              {selectedIso && (
+                <>
+                  <div className="spacer-xxxs" />
+                  <RadioOptionGroup
+                    idPrefix="reservation-duration"
+                    name="reservation-duration"
+                    label={t('reservation.durationLabelHourly')}
+                    options={hourlyDurationChoices.map((opt) => ({
+                      value: opt.key,
+                      label: durationOptionLabel(opt),
+                    }))}
+                    value={hourlyDuration}
+                    onChange={(key) => {
+                      setHourlyDuration(key);
+                      setHourlyStartTime('');
+                    }}
+                  />
+                </>
+              )}
+              {hourlyDuration &&
+                (hourlyStartTimeChoices.length > 0 ? (
+                  <>
+                    <div className="spacer-xxxs" />
+                    <RadioOptionGroup
+                      idPrefix="reservation-start-time"
+                      name="reservation-start-time"
+                      label={t('reservation.startTimeLabel')}
+                      options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
+                      value={hourlyStartTime}
+                      onChange={setHourlyStartTime}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="spacer-xxxs" />
+                    <Notification type="info" size="small">
+                      {t('reservation.noStartTimesForDuration')}
+                    </Notification>
+                  </>
+                ))}
+              <div className="spacer-xxxs" />
+              <TextArea
+                id="reservation-project-note-hourly"
                 label={t('reservation.projectNoteLabel')}
                 helperText={t('reservation.projectNoteHelper', {
                   remaining: 512 - projectNote.length,

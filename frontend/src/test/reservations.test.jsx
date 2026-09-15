@@ -170,6 +170,200 @@ describe('RequestThingPage — RESERVE_THING', () => {
   });
 });
 
+const HOURLY_RESERVE_THING = {
+  code: 'RSV01',
+  type: 'RESERVE_THING',
+  headline: 'Sala amb hores',
+  location: 'Planta 1',
+  collection_code: 'COL001',
+  reservation_unit: 'HOUR',
+  reservation_horizon_days: 90,
+  reservation_max_hours: 3,
+  // CA's own schedule: Mon-Thu 10-14 & 16-20, Fri 10-14, weekend closed.
+  opening_hours: {
+    0: [
+      ['10:00', '14:00'],
+      ['16:00', '20:00'],
+    ],
+    1: [
+      ['10:00', '14:00'],
+      ['16:00', '20:00'],
+    ],
+    2: [
+      ['10:00', '14:00'],
+      ['16:00', '20:00'],
+    ],
+    3: [
+      ['10:00', '14:00'],
+      ['16:00', '20:00'],
+    ],
+    4: [['10:00', '14:00']],
+  },
+  available_today: true,
+  next_available: null,
+};
+
+function typeHourlyPickup(container, display) {
+  const input = container.querySelector('#reservation-pickup-date-hourly');
+  fireEvent.change(input, { target: { value: display } });
+  fireEvent.blur(input);
+}
+
+describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
+  test('renders the hourly pickup field, not the day-count select', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    expect(screen.queryByRole('combobox', { name: /How many days/ })).toBeNull();
+    expect(document.querySelector('#reservation-pickup-date-hourly')).toBeInTheDocument();
+  });
+
+  test('picking a day reveals the duration radios, capped at reservation_max_hours', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026'); // a Wednesday, both blocks open
+
+    expect(await screen.findByRole('radio', { name: '1 hour' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '2 hours' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '3 hours' })).toBeInTheDocument();
+    // 4h (half day) and 10h (full day) both exceed the 3h cap — not offered.
+    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Full day' })).toBeNull();
+  });
+
+  test('a single-block day (Friday) offers "Full day" once it fits the cap', async () => {
+    setApi({ thing: { ...HOURLY_RESERVE_THING, reservation_max_hours: 4 } });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '05/06/2026'); // Friday, single 10:00-14:00 block
+
+    expect(await screen.findByRole('radio', { name: 'Full day' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull(); // one block only
+  });
+
+  test('picking a duration reveals the start-time radios, stepped hour by hour', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+
+    // 10:00-14:00 fits 10:00,11:00,12:00 for a 2h slot; 16:00-20:00 fits
+    // 16:00,17:00,18:00.
+    for (const hm of ['10:00', '11:00', '12:00', '16:00', '17:00', '18:00']) {
+      expect(await screen.findByRole('radio', { name: hm })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('radio', { name: '13:00' })).toBeNull(); // would end at 15:00
+  });
+
+  test('a fully booked day is disabled in the picker itself', async () => {
+    setApi({
+      thing: HOURLY_RESERVE_THING,
+      calendar: [
+        {
+          start_date: '2026-06-03',
+          end_date: '2026-06-04',
+          start_time: '10:00',
+          end_time: '14:00',
+        },
+        {
+          start_date: '2026-06-03',
+          end_date: '2026-06-04',
+          start_time: '16:00',
+          end_time: '20:00',
+        },
+      ],
+    });
+    renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose date' }));
+    await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
+    const day3 = document.querySelector('[data-date="2026-06-03"]');
+    expect(day3 === null || day3.getAttribute('aria-disabled') === 'true').toBe(true);
+  });
+
+  test('choosing a duration that fits nowhere that day shows the fallback notice', async () => {
+    // Two separate 1h gaps remain (13:00-14:00 and 19:00-20:00): the day still
+    // has a free hour, so the picker allows it, but no 2h+ slot fits either
+    // gap — "2 hours" should fall back to the notice, not an empty radio group.
+    setApi({
+      thing: HOURLY_RESERVE_THING,
+      calendar: [
+        {
+          start_date: '2026-06-03',
+          end_date: '2026-06-04',
+          start_time: '10:00',
+          end_time: '13:00',
+        },
+        {
+          start_date: '2026-06-03',
+          end_date: '2026-06-04',
+          start_time: '16:00',
+          end_time: '19:00',
+        },
+      ],
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '1 hour' }));
+    expect(await screen.findByRole('radio', { name: '13:00' })).toBeInTheDocument();
+    expect(await screen.findByRole('radio', { name: '19:00' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: '2 hours' }));
+    expect(await screen.findByText(/No start times are free/)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '13:00' })).toBeNull();
+  });
+
+  test('submitting posts start_time/end_time (never duration_days) for an hourly reservation', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
+    fireEvent.change(screen.getByLabelText(/Tell us briefly about your project/), {
+      target: { value: 'A repair workshop.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    await screen.findByText(/Your reservation is confirmed/);
+    const postCall = apiFetch.mock.calls.find(
+      ([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST'
+    );
+    const body = JSON.parse(postCall[1].body);
+    expect(body).toEqual({
+      start_date: '2026-06-03',
+      start_time: '11:00',
+      end_time: '13:00',
+      project_note: 'A repair workshop.',
+      collection_code: 'COL001',
+    });
+    expect(body.duration_days).toBeUndefined();
+  });
+
+  test('changing the day resets an already-chosen duration and start time', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
+
+    typeHourlyPickup(container, '04/06/2026'); // Thursday, same schedule
+    await waitFor(() => expect(screen.queryByRole('radio', { name: '11:00' })).toBeNull());
+    expect(screen.queryByRole('radio', { checked: true })).toBeNull();
+  });
+});
+
 describe('InboxNotifications — reservation notices render (not the blank broadcast fallback)', () => {
   function setInbox(rows) {
     apiFetch.mockImplementation((url) => {

@@ -987,7 +987,15 @@
     "unitDay": "Por días",
     "unitHour": "Por horas",
     "maxHoursLabel": "Reserva más larga (horas)",
-    "maxHoursHelper": "De 1 a 12. Un miembro puede reservar el espacio de 1 hasta este número de horas cada vez — salvo una reserva del día completo exacto, que siempre está permitida."
+    "maxHoursHelper": "De 1 a 12. Un miembro puede reservar el espacio de 1 hasta este número de horas cada vez — el día completo cuenta también, así que solo se ofrece cuando cabe dentro de este límite.",
+    "pickupHelperHourly": "Los días cerrados o completamente reservados aparecen en gris.",
+    "durationLabelHourly": "¿Cuánto tiempo?",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "durationHalfDay": "Media jornada",
+    "durationFullDay": "Día completo",
+    "startTimeLabel": "¿A qué hora?",
+    "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta."
   },
   "closedDates": {
     "label": "Festivos y cierres",

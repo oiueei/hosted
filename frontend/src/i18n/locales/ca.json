@@ -987,7 +987,15 @@
     "unitDay": "Per dies",
     "unitHour": "Per hores",
     "maxHoursLabel": "Reserva més llarga (hores)",
-    "maxHoursHelper": "D'1 a 12. Un membre pot reservar l'espai d'1 fins a aquest nombre d'hores cada vegada — excepte una reserva del dia complet exacte, que sempre està permesa."
+    "maxHoursHelper": "D'1 a 12. Un membre pot reservar l'espai d'1 fins a aquest nombre d'hores cada vegada — el dia complet també compta, així que només s'ofereix quan hi cap dins d'aquest límit.",
+    "pickupHelperHourly": "Els dies tancats o completament reservats apareixen en gris.",
+    "durationLabelHourly": "Quanta estona?",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} hores",
+    "durationHalfDay": "Mitja jornada",
+    "durationFullDay": "Dia complet",
+    "startTimeLabel": "A quina hora?",
+    "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
   },
   "closedDates": {
     "label": "Festius i tancaments",
