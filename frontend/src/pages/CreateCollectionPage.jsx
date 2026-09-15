@@ -39,9 +39,12 @@ export default function CreateCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [reservationUnit, setReservationUnit] = useState('DAY');
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
   const [reservationMaxActivePerMember, setReservationMaxActivePerMember] = useState(10);
+  const [reservationMaxHours, setReservationMaxHours] = useState(3);
+  const [openingHours, setOpeningHours] = useState({});
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
@@ -147,9 +150,15 @@ export default function CreateCollectionPage() {
     };
     if (description.trim()) body.description = description.trim();
     if (isReservations) {
-      body.reservation_max_days = reservationMaxDays;
       body.reservation_horizon_days = reservationHorizonDays;
       body.reservation_max_active_per_member = reservationMaxActivePerMember;
+      body.reservation_unit = reservationUnit;
+      if (reservationUnit === 'HOUR') {
+        body.reservation_max_hours = reservationMaxHours;
+        body.opening_hours = openingHours;
+      } else {
+        body.reservation_max_days = reservationMaxDays;
+      }
     } else if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
     try {
       const res = await apiFetch('/api/v1/collections/', {
@@ -243,12 +252,18 @@ export default function CreateCollectionPage() {
           {isReservations ? (
             <ReservationRulesFields
               idPrefix="create-collection"
+              reservationUnit={reservationUnit}
+              setReservationUnit={setReservationUnit}
               reservationMaxDays={reservationMaxDays}
               setReservationMaxDays={setReservationMaxDays}
               reservationHorizonDays={reservationHorizonDays}
               setReservationHorizonDays={setReservationHorizonDays}
               reservationMaxActivePerMember={reservationMaxActivePerMember}
               setReservationMaxActivePerMember={setReservationMaxActivePerMember}
+              reservationMaxHours={reservationMaxHours}
+              setReservationMaxHours={setReservationMaxHours}
+              openingHours={openingHours}
+              setOpeningHours={setOpeningHours}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={theeemeColors.color_01}

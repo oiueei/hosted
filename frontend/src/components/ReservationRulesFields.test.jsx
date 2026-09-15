@@ -10,12 +10,18 @@ import ReservationRulesFields from './ReservationRulesFields';
 function renderFields(over = {}) {
   const props = {
     idPrefix: 'edit-collection',
+    reservationUnit: 'DAY',
+    setReservationUnit: vi.fn(),
     reservationMaxDays: 3,
     setReservationMaxDays: vi.fn(),
     reservationHorizonDays: 90,
     setReservationHorizonDays: vi.fn(),
     reservationMaxActivePerMember: 10,
     setReservationMaxActivePerMember: vi.fn(),
+    reservationMaxHours: 3,
+    setReservationMaxHours: vi.fn(),
+    openingHours: {},
+    setOpeningHours: vi.fn(),
     rentalWeekdays: [],
     setRentalWeekdays: vi.fn(),
     ...over,
@@ -115,5 +121,61 @@ describe('ReservationRulesFields — the weekday row', () => {
     const { props } = renderFields();
     fireEvent.click(screen.getByRole('button', { name: 'Wednesday' }));
     expect(props.setRentalWeekdays).toHaveBeenCalledWith([2]);
+  });
+});
+
+// The trap this whole group exists to catch: HDS SelectionGroup does not
+// flatten a nested array of children, so a naive `.map()` renders a fieldset
+// with a legend and ZERO radios — no error anywhere (frontend/CLAUDE.md). A
+// bare radio-count assertion is what makes that failure loud instead of silent.
+describe('ReservationRulesFields — the DAY/HOUR unit selector', () => {
+  test('renders exactly two radios', () => {
+    renderFields();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+  });
+
+  test('DAY is checked by default', () => {
+    renderFields();
+    expect(screen.getByRole('radio', { name: 'By day' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'By hour' })).not.toBeChecked();
+  });
+
+  test('an explicit HOUR value checks the other radio', () => {
+    renderFields({ reservationUnit: 'HOUR' });
+    expect(screen.getByRole('radio', { name: 'By hour' })).toBeChecked();
+  });
+
+  test('selecting "By hour" notifies the parent', () => {
+    const { props } = renderFields();
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    expect(props.setReservationUnit).toHaveBeenCalledWith('HOUR');
+  });
+});
+
+describe('ReservationRulesFields — DAY vs HOUR field visibility', () => {
+  test('DAY mode shows the day fields, not the hour ones', () => {
+    renderFields();
+    expect(maxField()).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Days open for reservations' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('spinbutton', { name: 'Longest reservation (hours)' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Weekly opening hours')).not.toBeInTheDocument();
+  });
+
+  test('HOUR mode shows the hour fields, not the day ones', () => {
+    renderFields({ reservationUnit: 'HOUR', reservationMaxHours: 3, openingHours: {} });
+    expect(
+      screen.getByRole('spinbutton', { name: 'Longest reservation (hours)' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Weekly opening hours')).toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: 'Longest reservation (days)' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Days open for reservations' })).toBeNull();
+  });
+
+  test('the horizon and active-cap fields show in both modes', () => {
+    renderFields({ reservationUnit: 'HOUR' });
+    expect(horizonField()).toBeInTheDocument();
+    expect(maxActiveField()).toBeInTheDocument();
   });
 });

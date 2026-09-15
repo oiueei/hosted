@@ -982,11 +982,27 @@
     "horizonLabel": "Con cuánta antelación pueden reservar (días)",
     "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses.",
     "maxActiveLabel": "Máximo de reservas activas por miembro",
-    "maxActiveHelper": "De 1 a 50. Por defecto 10 — cuántas reservas propias de un miembro para este espacio pueden estar activas a la vez."
+    "maxActiveHelper": "De 1 a 50. Por defecto 10 — cuántas reservas propias de un miembro para este espacio pueden estar activas a la vez.",
+    "unitLabel": "¿Cómo se reserva este espacio?",
+    "unitDay": "Por días",
+    "unitHour": "Por horas",
+    "maxHoursLabel": "Reserva más larga (horas)",
+    "maxHoursHelper": "De 1 a 12. Un miembro puede reservar el espacio de 1 hasta este número de horas cada vez — salvo una reserva del día completo exacto, que siempre está permitida."
   },
   "closedDates": {
     "label": "Festivos y cierres",
     "helper": "Una línea, DD/MM/AAAA separados por comas. Esos días no hay recogida ni devolución, y una reserva no puede abarcarlos. Las fechas pasadas se descartan."
+  },
+  "openingHours": {
+    "label": "Horario semanal",
+    "helper": "Añade uno o varios tramos horarios por día — deja un día sin ninguno para que quede cerrado. Un miembro también puede reservar el día completo exacto, con cualquier pausa entre tramos incluida.",
+    "closed": "Cerrado",
+    "fromLabel": "Desde",
+    "toLabel": "Hasta",
+    "hoursLabel": "Horas",
+    "minutesLabel": "Minutos",
+    "addBlock": "Añadir un tramo horario",
+    "removeBlock": "Eliminar"
   },
   "homePage": {
     "label": "Página web",

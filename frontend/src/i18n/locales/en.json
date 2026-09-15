@@ -982,11 +982,27 @@
     "horizonLabel": "How far ahead members can book (days)",
     "horizonHelper": "From 1 to 365. Default 90 — three months.",
     "maxActiveLabel": "Maximum active reservations per member",
-    "maxActiveHelper": "From 1 to 50. Default 10 — how many of a member's own reservations for this space may be active at once."
+    "maxActiveHelper": "From 1 to 50. Default 10 — how many of a member's own reservations for this space may be active at once.",
+    "unitLabel": "How is this space booked?",
+    "unitDay": "By day",
+    "unitHour": "By hour",
+    "maxHoursLabel": "Longest reservation (hours)",
+    "maxHoursHelper": "From 1 to 12. A member can book the space for 1 up to this many hours at a time — except a reservation for the exact full day, which is always allowed."
   },
   "closedDates": {
     "label": "Holidays and closures",
     "helper": "One line, DD/MM/YYYY separated by commas. No pickup or return on these days; a reservation can't span one. Past dates are dropped."
+  },
+  "openingHours": {
+    "label": "Weekly opening hours",
+    "helper": "Add one or more time ranges per day — leave a day with none to keep it closed. A member can also book the exact full day, any gap between ranges included.",
+    "closed": "Closed",
+    "fromLabel": "From",
+    "toLabel": "To",
+    "hoursLabel": "Hours",
+    "minutesLabel": "Minutes",
+    "addBlock": "Add a time range",
+    "removeBlock": "Remove"
   },
   "homePage": {
     "label": "Home page",

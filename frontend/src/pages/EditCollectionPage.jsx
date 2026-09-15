@@ -56,9 +56,12 @@ export default function EditCollectionPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
+  const [reservationUnit, setReservationUnit] = useState('DAY');
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
   const [reservationMaxActivePerMember, setReservationMaxActivePerMember] = useState(10);
+  const [reservationMaxHours, setReservationMaxHours] = useState(3);
+  const [openingHours, setOpeningHours] = useState({});
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
@@ -166,9 +169,12 @@ export default function EditCollectionPage() {
           setAllowedThingTypes(data.allowed_thing_types || []);
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
+          setReservationUnit(data.reservation_unit || 'DAY');
           setReservationMaxDays(data.reservation_max_days || 1);
           setReservationHorizonDays(data.reservation_horizon_days || 90);
           setReservationMaxActivePerMember(data.reservation_max_active_per_member || 10);
+          setReservationMaxHours(data.reservation_max_hours || 3);
+          setOpeningHours(data.opening_hours || {});
           setClosedDates(closedDatesToDisplay(data.closed_dates));
           setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
@@ -231,9 +237,15 @@ export default function EditCollectionPage() {
       welcome_doc: welcomeDoc || '',
     };
     if (isReservations) {
-      body.reservation_max_days = reservationMaxDays;
       body.reservation_horizon_days = reservationHorizonDays;
       body.reservation_max_active_per_member = reservationMaxActivePerMember;
+      body.reservation_unit = reservationUnit;
+      if (reservationUnit === 'HOUR') {
+        body.reservation_max_hours = reservationMaxHours;
+        body.opening_hours = openingHours;
+      } else {
+        body.reservation_max_days = reservationMaxDays;
+      }
     }
 
     try {
@@ -427,12 +439,18 @@ export default function EditCollectionPage() {
           {isReservations ? (
             <ReservationRulesFields
               idPrefix="edit-collection"
+              reservationUnit={reservationUnit}
+              setReservationUnit={setReservationUnit}
               reservationMaxDays={reservationMaxDays}
               setReservationMaxDays={setReservationMaxDays}
               reservationHorizonDays={reservationHorizonDays}
               setReservationHorizonDays={setReservationHorizonDays}
               reservationMaxActivePerMember={reservationMaxActivePerMember}
               setReservationMaxActivePerMember={setReservationMaxActivePerMember}
+              reservationMaxHours={reservationMaxHours}
+              setReservationMaxHours={setReservationMaxHours}
+              openingHours={openingHours}
+              setOpeningHours={setOpeningHours}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}

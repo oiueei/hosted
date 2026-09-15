@@ -982,11 +982,27 @@
     "horizonLabel": "Amb quanta antelació poden reservar (dies)",
     "horizonHelper": "D'1 a 365. Per defecte 90 — tres mesos.",
     "maxActiveLabel": "Màxim de reserves actives per membre",
-    "maxActiveHelper": "D'1 a 50. Per defecte 10 — quantes reserves pròpies d'un membre per a aquest espai poden estar actives alhora."
+    "maxActiveHelper": "D'1 a 50. Per defecte 10 — quantes reserves pròpies d'un membre per a aquest espai poden estar actives alhora.",
+    "unitLabel": "Com es reserva aquest espai?",
+    "unitDay": "Per dies",
+    "unitHour": "Per hores",
+    "maxHoursLabel": "Reserva més llarga (hores)",
+    "maxHoursHelper": "D'1 a 12. Un membre pot reservar l'espai d'1 fins a aquest nombre d'hores cada vegada — excepte una reserva del dia complet exacte, que sempre està permesa."
   },
   "closedDates": {
     "label": "Festius i tancaments",
     "helper": "Una línia, DD/MM/AAAA separats per comes. Aquests dies no hi ha recollida ni devolució, i una reserva no els pot abastar. Les dates passades es descarten."
+  },
+  "openingHours": {
+    "label": "Horari setmanal",
+    "helper": "Afegeix un o més trams horaris per dia — deixa un dia sense cap per mantenir-lo tancat. Un membre també pot reservar el dia complet exacte, amb qualsevol pausa entre trams inclosa.",
+    "closed": "Tancat",
+    "fromLabel": "Des de",
+    "toLabel": "Fins a",
+    "hoursLabel": "Hores",
+    "minutesLabel": "Minuts",
+    "addBlock": "Afegir un tram horari",
+    "removeBlock": "Eliminar"
   },
   "homePage": {
     "label": "Pàgina web",
