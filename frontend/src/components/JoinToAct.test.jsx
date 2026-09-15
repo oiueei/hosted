@@ -24,7 +24,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     vi.restoreAllMocks();
   });
 
-  test('joining sends the email, the collection code and the page language', async () => {
+  test('joining sends the email and the collection code — never a language field', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -39,10 +39,14 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     await screen.findByText(/We've sent you a magic link to join/);
     const [url, options] = globalThis.fetch.mock.calls[0];
     expect(url).toBe('/api/v1/auth/join/');
+    // No `language` — sending the page's current UI language used to get it
+    // stamped permanently onto the new member, outranking the collection's
+    // own language for every email to them from then on (CA's report,
+    // 2026-09-15). The backend now resolves their very first magic link from
+    // the collection instead.
     expect(JSON.parse(options.body)).toEqual({
       email: 'visitor@example.com',
       collection_code: 'PUB001',
-      language: 'en',
     });
   });
 

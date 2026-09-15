@@ -112,18 +112,31 @@ class TestSendersSpeakTheRightLanguage:
 
 @pytest.mark.django_db
 class TestLanguagePreferences:
-    def test_pop_in_stores_the_language_of_a_new_user(self, api_client, public_collection):
+    def test_pop_in_never_stores_a_language_on_a_new_user(self, api_client, public_collection):
         # Joins a real PUBLIC collection: the endpoint only creates an account
         # once it has somewhere to put it, so a bare email would now leave
         # nothing to assert on and pass for the wrong reason.
+        #
+        # A `language` in the body used to be stamped onto the new user
+        # permanently — an accidental browser language, never a deliberate
+        # choice — and it then outranked the collection's own language for
+        # every future email to that member, with no way back short of a
+        # profile edit (CA's report, 2026-09-15). The field is no longer read
+        # at all: a new member's `language` stays blank regardless of what a
+        # request sends, so the collection's own language keeps governing
+        # every email to them until they set a preference themselves.
+        public_collection.language = Language.CA
+        public_collection.save(update_fields=["language"])
+
         api_client.post(
             "/api/v1/auth/join/",
-            {"email": "nou@test.com", "language": "ca", "collection_code": public_collection.code},
+            {"email": "nou@test.com", "language": "es", "collection_code": public_collection.code},
             format="json",
         )
 
-        assert User.objects.get(email="nou@test.com").language == "ca"
-        # The very first magic link already speaks it.
+        assert User.objects.get(email="nou@test.com").language == ""
+        # The very first magic link speaks the *collection's* language — not
+        # the "es" the request tried to set.
         assert "benvinguda" in mail.outbox[0].subject
 
     def test_pop_in_never_overwrites_an_existing_users_preference(self, api_client, user):
@@ -138,19 +151,6 @@ class TestLanguagePreferences:
 
         user.refresh_from_db()
         assert user.language == Language.ES
-
-    def test_an_unknown_language_is_ignored(self, api_client, public_collection):
-        api_client.post(
-            "/api/v1/auth/join/",
-            {
-                "email": "raro@test.com",
-                "language": "klingon",
-                "collection_code": public_collection.code,
-            },
-            format="json",
-        )
-
-        assert User.objects.get(email="raro@test.com").language == ""
 
     def test_a_user_can_save_their_language(self, authenticated_client, user):
         # The profile endpoint is PUT-only (partial=True server-side).
