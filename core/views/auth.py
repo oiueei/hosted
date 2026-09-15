@@ -21,7 +21,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, Collection, InvitationProposal, Language, Thing, User
+from core.models import RSVP, Collection, InvitationProposal, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.event import Event
 from core.models.notification import InAppNotification
@@ -797,11 +797,18 @@ class JoinView(APIView):
     response as everything else here. Off by default; see
     `core/services/join_quota.py`.
 
-    Accepts optional `language` (`es`/`ca`/`en` — the UI language the visitor is
-    reading the joining page in). It is stored on a **newly created** user only, so
-    their very first magic link already speaks their language; anything else is
-    ignored, and an existing user's saved preference is never overwritten by the
-    browser they happened to arrive from.
+    **Language is never taken from the request.** This used to accept the
+    visitor's current UI language and stamp it onto a newly-created user, so
+    their very first magic link would speak it. That stamp was permanent: an
+    accidental browser language, never a deliberate choice, then outranked
+    the collection's own language for every future email to that member
+    (`User.language` always wins over `Collection.language` in
+    `resolve_email_language`), with no way back short of them visiting their
+    profile — CA's report, 2026-09-15. A brand-new user's `language` now
+    stays blank, so `_send_magic_link` (already passed `collection=
+    join_collection`) resolves this very first email the same way every later
+    one is: the collection's own language when the member has none of their
+    own set.
     """
 
     permission_classes = [AllowAny]
@@ -817,10 +824,6 @@ class JoinView(APIView):
         collection_code = (request.data.get("collection_code") or "").strip() or None
         thing_code = (request.data.get("thing_code") or "").strip() or None
         ip = get_client_ip(request)
-
-        language = (request.data.get("language") or "").strip().lower()
-        if language not in Language.values:
-            language = ""
 
         # Resolve where this address would be joining BEFORE creating anything.
         #
@@ -860,9 +863,6 @@ class JoinView(APIView):
 
         user, created = User.objects.get_or_create(email=email)
         if created:
-            if language:
-                user.language = language
-                user.save(update_fields=["language"])
             Event.log(Event.Kind.USER_JOINED, actor=user)
 
         _join_collection(join_collection, user, source=join_source)
