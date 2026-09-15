@@ -299,6 +299,10 @@ export default function CreateCollectionPage() {
               label={t('requestInfo.label')}
               value={requestInfo}
               onChange={(e) => setRequestInfo(e.target.value)}
+              invalid={localizedCounter(requestInfo, 512).over}
+              errorText={
+                localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
+              }
               helperText={localizedCounter(requestInfo, 512).text}
             />
             <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />

@@ -1015,6 +1015,7 @@
   },
   "requestInfo": {
     "label": "Aviso para la página de solicitud (opcional)",
-    "helper": "Se muestra arriba de la página de solicitud de cualquier cosa de este grupo — cualquier tipo, no solo reservas (p. ej. «trae el DNI», «la recogida es solo los martes»). Admite Markdown."
+    "helper": "Se muestra arriba de la página de solicitud — la ve quien pide un préstamo, un alquiler o una reserva; un regalo o una venta nunca llegan a esa página, se completan directamente desde la tarjeta. P. ej. «trae el DNI», «la recogida es solo los martes». Admite Markdown.",
+    "maxLength": "Máximo 512 caracteres por idioma."
   }
 }

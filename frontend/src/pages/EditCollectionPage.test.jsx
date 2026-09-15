@@ -350,6 +350,21 @@ describe('EditCollectionPage — the request-page note', () => {
 
     expect(screen.getByText('9/512')).toBeInTheDocument();
   });
+
+  test('typing past 512 shows the limit error right away, with no submit needed', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const field = screen.getByLabelText(/note for the request page/i);
+    fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
+
+    expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
+    // The field references the error via aria-describedby, so a screen
+    // reader announces it without waiting for a submit attempt.
+    expect(field.getAttribute('aria-describedby')).toContain('edit-collection-request-info-error');
+  });
 });
 
 describe('EditCollectionPage — the collection export', () => {

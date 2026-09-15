@@ -461,10 +461,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         return bool(first.is_onboarding) if first else False
 
     def get_collection_request_info(self, obj):
-        """The collection's note for anyone about to request anything from it —
-        every verb, not just RESERVE_THING. Raw (possibly an O6 `{lang: text}`
-        map, like `headline`/`description`) — `RequestThingPage` resolves it
-        client-side the same way. `""` when there is no viewable collection."""
+        """The collection's note for anyone reaching the request page for this
+        thing — served here regardless of type, but only ever rendered for
+        LEND/RENT/RESERVE (not RESERVE_THING only): a GIFT/SELL claim submits
+        straight from the card and never visits that page, so the note is
+        invisible to it however this field answers. Raw (possibly an O6
+        `{lang: text}` map, like `headline`/`description`) — `RequestThingPage`
+        resolves it client-side the same way. `""` when there is no viewable
+        collection."""
         first = self._viewable_collection(obj)
         return first.request_info if first else ""
 

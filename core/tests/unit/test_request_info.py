@@ -1,7 +1,11 @@
 """
 `Collection.request_info` — a short owner note shown at the top of the
-request page for anyone about to request anything from the collection, every
-verb (GIFT/SELL/RENT/LEND/RESERVE) alike, not RESERVE_THING only.
+request page: LEND/RENT/RESERVE alike, not RESERVE_THING only, but never
+GIFT/SELL — those complete straight from the card and never visit that page,
+so a note written here is invisible to them. The serializer field itself is
+populated for every type regardless (see the test below), which is what keeps
+`ThingSerializer` from branching by type; the frontend is what decides whether
+to render it.
 
 Owner prose like every other (D5): localized (O6), 512 visible per language,
 2048 stored (CA's call, 2026-09: 256 was too short for this one) — the same
@@ -68,7 +72,10 @@ def test_three_full_languages_still_fit_the_column(collection):
     assert serializer.is_valid(), serializer.errors
 
 
-def test_reaches_the_request_page_for_every_verb_not_only_reserve(user, collection):
+def test_the_serializer_field_is_populated_for_every_type_not_only_reserve(user, collection):
+    """The field itself doesn't branch by type — whether the frontend ever
+    renders it (only for LEND/RENT/RESERVE, never GIFT/SELL) is a separate
+    decision made on `RequestThingPage`, not here."""
     collection.request_info = "Please arrive on time."
     collection.save(update_fields=["request_info"])
 

@@ -1015,6 +1015,7 @@
   },
   "requestInfo": {
     "label": "Avís per a la pàgina de sol·licitud (opcional)",
-    "helper": "Es mostra a dalt de la pàgina de sol·licitud de qualsevol cosa d'aquest grup — qualsevol tipus, no només reserves (p. ex. «porta el DNI», «la recollida és només els dimarts»). Admet Markdown."
+    "helper": "Es mostra a dalt de la pàgina de sol·licitud — la veu qui demana un préstec, un lloguer o una reserva; un regal o una venda mai hi arriben, es completen directament des de la targeta. P. ex. «porta el DNI», «la recollida és només els dimarts». Admet Markdown.",
+    "maxLength": "Màxim 512 caràcters per idioma."
   }
 }

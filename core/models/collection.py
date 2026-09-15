@@ -172,10 +172,11 @@ class Collection(models.Model):
     # 256/1024 like `description`, for the same reason: the visible limit is per
     # language and the column has to hold all three plus the JSON scaffolding.
     deposit_policy = models.CharField(max_length=1024, blank=True, default="")
-    # A short note the owner writes for anyone about to REQUEST anything from
-    # this collection — GIFT/SELL/RENT/LEND/RESERVE alike, not RESERVE_THING
-    # only ("bring ID", "reservations must be confirmed 24h ahead"...). Shown
-    # at the top of the request page, rendered as Markdown like `description`.
+    # A short note the owner writes for anyone reaching the request page —
+    # LEND/RENT/RESERVE alike, not RESERVE_THING only, but never GIFT/SELL:
+    # those complete straight from the card and never visit that page, so a
+    # note written here is invisible to them ("bring ID", "reservations must
+    # be confirmed 24h ahead"...). Rendered as Markdown like `description`.
     # 512/2048 (CA's call, 2026-09: 256 was too short for this one) — same
     # `deposit_policy` shape, wider: the visible limit is per language and the
     # column has to hold all three plus the JSON scaffolding.

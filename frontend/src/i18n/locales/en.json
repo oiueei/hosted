@@ -1015,6 +1015,7 @@
   },
   "requestInfo": {
     "label": "Note for the request page (optional)",
-    "helper": "Shown at the top of the request page for anything in this group — any type, not only reservations (e.g. \"bring ID\", \"pickup is Tuesdays only\"). Markdown supported."
+    "helper": "Shown at the top of the request page — seen by anyone requesting a loan, a rental or a reservation; a gift or sale never reaches that page, since those complete straight from the card. E.g. \"bring ID\", \"pickup is Tuesdays only\". Markdown supported.",
+    "maxLength": "Maximum 512 characters per language."
   }
 }
