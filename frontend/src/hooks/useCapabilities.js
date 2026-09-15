@@ -29,7 +29,22 @@ function loadMe() {
   if (cached.promise && cached.userCode === userCode) return cached.promise;
 
   const promise = apiFetch('/api/v1/auth/me/', { optionalAuth: true })
-    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`me ${res.status}`))))
+    .then((res) => {
+      if (res.ok) return res.json();
+      // `optionalAuth` means `apiFetch` already tried refreshing and it still
+      // came back 401 — the same definitive "session is dead" signal that,
+      // without `optionalAuth`, would itself have cleared `userCode` and
+      // redirected. Clearing it here too means `RequireAuth`'s own fast path
+      // (a plain `localStorage.getItem('userCode')` check, evaluated once at
+      // mount) catches it honestly on whichever protected page is opened
+      // next, rather than every later collection/thing page failing open
+      // silently forever and repeating the failed refresh attempt on each
+      // one — a real cost against `/auth/refresh/`'s 10/minute-per-IP limit
+      // (found in review, 2026-09-15). A non-401 failure (offline, 500)
+      // leaves `userCode` alone: nothing there says the session is dead.
+      if (res.status === 401) localStorage.removeItem('userCode');
+      return Promise.reject(new Error(`me ${res.status}`));
+    })
     .catch(() => {
       // A request that never got an answer is **not** cached. Failing open is
       // deliberate (the server is the gate), but *remembering* the failure is
@@ -75,10 +90,22 @@ export function loadCapabilities() {
  * `apiFetch` and still redirected, on a page nothing else on it could ever
  * 401 (both rounds found in review, 2026-09-15). `optionalAuth: true` closes
  * that for good: a failed request comes back as a response to inspect, never
- * a redirect. `loadCapabilities` is unaffected in practice — a failure there
- * was always read as "no restriction", and every page that consumes it makes
- * its own separate, non-optional `apiFetch` call for its primary data, which
- * still redirects a genuinely dead session.
+ * a redirect — and `loadMe()` now clears `userCode` itself on a definitive
+ * 401, so the next protected page's `RequireAuth` still catches a dead
+ * session honestly instead of silently repeating the failed refresh forever.
+ * `loadCapabilities` is unaffected in the common case — a failure there was
+ * always read as "no restriction", and most pages that consume it also make
+ * their own separate, non-optional `apiFetch` call for their primary data,
+ * which independently redirects a genuinely dead session just as fast as
+ * before. **`CreateCollectionPage` is the one exception**: its only
+ * authenticated call before submit is this shared one, so a &gt;7-day-stale
+ * session there now renders the form instead of redirecting on load, and
+ * only fails (losing whatever was typed) at the POST — a real, if narrow and
+ * low-frequency, regression from the redirect this call used to trigger by
+ * accident (found in review, 2026-09-15; not fixed, since `RequireAuth`'s own
+ * check only runs once at mount and does not react to `userCode` clearing
+ * later — closing it properly means that page probing its own session before
+ * rendering the form, a separate change).
  */
 export function loadUserLanguage() {
   if (!localStorage.getItem('userCode')) return Promise.resolve('');

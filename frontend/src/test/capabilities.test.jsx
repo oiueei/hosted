@@ -183,10 +183,10 @@ describe('loadUserLanguage', () => {
     // what `optionalAuth` suppresses). Nothing on a public collection/thing/
     // share page could ever 401 before this feature (found in review,
     // 2026-09-15). Without `optionalAuth: true` on the shared fetch, `apiFetch`
-    // would clear `userCode` and hard-navigate to `/login` right here — so
-    // `userCode` surviving is the one proxy this test can check for that
-    // (jsdom does not implement real navigation, so `window.location` itself
-    // cannot be asserted on).
+    // itself would have hard-navigated to `/login` right here (jsdom does not
+    // implement real navigation, so `window.location` cannot be asserted on
+    // directly — resolving at all, rather than hanging on a real redirect, is
+    // this test's proxy for that).
     globalThis.fetch = vi.fn(() =>
       Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
     );
@@ -194,6 +194,35 @@ describe('loadUserLanguage', () => {
 
     await expect(loadUserLanguage()).resolves.toBe('');
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('a definitive 401 clears userCode, so the next page redirects honestly instead of repeating this forever', async () => {
+    // Not redirecting immediately (the test above) must not mean silently
+    // pretending the session is fine forever after: without this, every
+    // later collection/thing page this visitor opens repeats the same failed
+    // `/auth/me/` + `/auth/refresh/` pair — a real cost against
+    // `/auth/refresh/`'s 10/minute-per-IP rate limit, and a visitor who never
+    // gets sent to `/login` to fix it (found in review, 2026-09-15). Clearing
+    // `userCode` here is what lets `RequireAuth`'s own once-at-mount check
+    // catch it on whichever protected page comes next.
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
+    );
+    const { loadUserLanguage } = await import('../hooks/useCapabilities');
+
+    await loadUserLanguage();
+
+    expect(localStorage.getItem('userCode')).toBeNull();
+  });
+
+  test('a non-401 failure (offline, 500) leaves userCode alone — nothing there says the session is dead', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    );
+    const { loadUserLanguage } = await import('../hooks/useCapabilities');
+
+    await loadUserLanguage();
+
     expect(localStorage.getItem('userCode')).toBe('AAA111');
   });
 

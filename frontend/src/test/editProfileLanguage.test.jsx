@@ -108,4 +108,22 @@ describe('EditProfilePage language Select (S7)', () => {
     await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
     spy.mockRestore();
   });
+
+  test('a failed save does not invalidate the cache — there is nothing new to serve yet', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/v1/auth/me/') return Promise.resolve(mockResponse(PROFILE));
+      if (url === '/api/v1/theeemes/') return Promise.resolve(mockResponse([]));
+      // The save itself.
+      return Promise.resolve(mockResponse({ detail: 'boom' }, false));
+    });
+    const spy = vi.spyOn(capabilities, 'invalidateMe');
+    renderPage();
+    await screen.findByDisplayValue('Original name');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByText('Error saving.');
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });
