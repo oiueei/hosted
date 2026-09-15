@@ -150,7 +150,8 @@ class CollectionSerializer(serializers.ModelSerializer):
             "reservation_max_active_per_member",
             "reservation_unit",
             "opening_hours",
-            "reservation_max_hours",
+            "reservation_min_minutes",
+            "reservation_max_minutes",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -382,9 +383,14 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # HOUR-unit collections only: per-weekday opening blocks. See
     # `_validate_opening_hours` for the wire shape.
     opening_hours = serializers.JSONField(required=False)
-    # HOUR-unit collections only: the longest a single reservation may run, in
-    # hours. Inert under DAY (`reservation_max_days` governs there).
-    reservation_max_hours = serializers.IntegerField(min_value=1, max_value=12, required=False)
+    # HOUR-unit collections only, in minutes (replaced hour-granular
+    # `reservation_max_hours` in 0150 — an early adopter wanted reservations
+    # shorter than an hour). `reservation_min_minutes` is also the step every
+    # duration/start-time choice on the request page is offered in. Cross-
+    # checked against each other in `validate()` below. Inert under DAY
+    # (`reservation_max_days` governs there).
+    reservation_min_minutes = serializers.IntegerField(min_value=1, max_value=720, required=False)
+    reservation_max_minutes = serializers.IntegerField(min_value=1, max_value=720, required=False)
     # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
     # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
     # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
@@ -424,7 +430,8 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "reservation_max_active_per_member",
             "reservation_unit",
             "opening_hours",
-            "reservation_max_hours",
+            "reservation_min_minutes",
+            "reservation_max_minutes",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -461,7 +468,23 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
                 else Collection.Visibility.PRIVATE
             )
         _validate_allowed_thing_types(attrs.get("allowed_thing_types", []), mode)
+        _validate_reservation_minutes(
+            attrs.get("reservation_min_minutes", 60), attrs.get("reservation_max_minutes", 180)
+        )
         return attrs
+
+
+def _validate_reservation_minutes(min_minutes, max_minutes):
+    """HOUR-unit collections only, but cheap to run unconditionally: a
+    minimum longer than the maximum would make every reservation impossible,
+    silently — `reservation_hour_violation` would refuse everything and never
+    say why. Shared by the create and update `validate()`, which resolve
+    "the value in this request, or whatever's already on the instance" first.
+    """
+    if min_minutes > max_minutes:
+        raise serializers.ValidationError(
+            "The minimum reservation length can't be longer than the maximum."
+        )
 
 
 _CLOSED_DATES_MAX = 60
@@ -670,7 +693,8 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         choices=Collection.ReservationUnit.choices, required=False
     )
     opening_hours = serializers.JSONField(required=False)
-    reservation_max_hours = serializers.IntegerField(min_value=1, max_value=12, required=False)
+    reservation_min_minutes = serializers.IntegerField(min_value=1, max_value=720, required=False)
+    reservation_max_minutes = serializers.IntegerField(min_value=1, max_value=720, required=False)
     # Holidays / one-off closures. The form sends a comma-separated DD/MM/YYYY
     # line; `validate_closed_dates` parses it to sorted ISO strings, drops past
     # dates, caps the count. No pickup/return on one for LEND/RENT, no RESERVE
@@ -711,7 +735,8 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "reservation_max_active_per_member",
             "reservation_unit",
             "opening_hours",
-            "reservation_max_hours",
+            "reservation_min_minutes",
+            "reservation_max_minutes",
             "closed_dates",
             "home_page",
             "deposit_policy",
@@ -742,6 +767,14 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         )
         mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
         _validate_allowed_thing_types(allowed_thing_types, mode)
+        _validate_reservation_minutes(
+            attrs.get(
+                "reservation_min_minutes", instance.reservation_min_minutes if instance else 60
+            ),
+            attrs.get(
+                "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
+            ),
+        )
         # A reservations collection can never be switched to COMMUNITY, even if
         # the allowlist isn't being touched in this request.
         if (

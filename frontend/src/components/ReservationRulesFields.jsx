@@ -47,9 +47,9 @@ function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onC
  * The rules a reservations collection's owner sets. Two units, never both
  * (`Collection.reservation_unit`): **DAY** books whole days (how many in one
  * go, which weekdays are open); **HOUR** books a slot within a weekly opening
- * schedule (how many hours in one go, the schedule itself). How far ahead a
- * member may book and the active-reservations cap apply to either unit, so
- * they sit above the split.
+ * schedule (the shortest/longest slot in minutes, the schedule itself). How
+ * far ahead a member may book and the active-reservations cap apply to either
+ * unit, so they sit above the split.
  *
  * Shown (in the "More options" accordion) *instead of* `RentalRulesFields`
  * when the collection is a reservations collection — `allowed_thing_types` is
@@ -78,8 +78,10 @@ export default function ReservationRulesFields({
   setReservationHorizonDays = () => {},
   reservationMaxActivePerMember = 10,
   setReservationMaxActivePerMember = () => {},
-  reservationMaxHours = 3,
-  setReservationMaxHours = () => {},
+  reservationMinMinutes = 60,
+  setReservationMinMinutes = () => {},
+  reservationMaxMinutes = 180,
+  setReservationMaxMinutes = () => {},
   openingHours = {},
   setOpeningHours = () => {},
   rentalWeekdays = [],
@@ -134,14 +136,24 @@ export default function ReservationRulesFields({
       {reservationUnit === 'HOUR' ? (
         <>
           <BoundedDayInput
-            id={`${idPrefix}-reservation-max-hours`}
-            label={t('reservation.maxHoursLabel')}
-            helperText={t('reservation.maxHoursHelper')}
+            id={`${idPrefix}-reservation-min-minutes`}
+            label={t('reservation.minMinutesLabel')}
+            helperText={t('reservation.minMinutesHelper')}
             min={1}
-            max={12}
-            fallback={3}
-            value={reservationMaxHours}
-            onChange={setReservationMaxHours}
+            max={720}
+            fallback={60}
+            value={reservationMinMinutes}
+            onChange={setReservationMinMinutes}
+          />
+          <BoundedDayInput
+            id={`${idPrefix}-reservation-max-minutes`}
+            label={t('reservation.maxMinutesLabel')}
+            helperText={t('reservation.maxMinutesHelper')}
+            min={1}
+            max={720}
+            fallback={180}
+            value={reservationMaxMinutes}
+            onChange={setReservationMaxMinutes}
           />
           <OpeningHoursField
             id={`${idPrefix}-opening-hours`}

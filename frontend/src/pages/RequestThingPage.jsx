@@ -149,13 +149,15 @@ export default function RequestThingPage() {
   // Collection.day_opening_blocks / reservation_hour_violation mirror.
   const isHourlyReservation = isReservation && thing?.reservation_unit === 'HOUR';
   const openingHours = thing?.opening_hours || {};
-  const reservationMaxHours = thing?.reservation_max_hours || 3;
+  const reservationMinMinutes = thing?.reservation_min_minutes || 60;
+  const reservationMaxMinutes = thing?.reservation_max_minutes || 180;
   const hourlyPickupDisabled = (date) =>
     isHourlyPickupDisabled(date, {
       openingHours,
       closedDates,
       blockedPeriods,
-      maxHours: reservationMaxHours,
+      minMinutes: reservationMinMinutes,
+      maxMinutes: reservationMaxMinutes,
     });
   const selectedIso = displayToIso(startDate);
   const blocksForSelectedDay =
@@ -165,7 +167,7 @@ export default function RequestThingPage() {
       ? dayBookings(blockedPeriods, selectedIso)
       : { wholeDay: false, ranges: [] };
   const hourlyDurationChoices = isHourlyReservation
-    ? durationOptions(blocksForSelectedDay, reservationMaxHours)
+    ? durationOptions(blocksForSelectedDay, reservationMinMinutes, reservationMaxMinutes)
     : [];
   const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
   const hourlyStartTimeChoices = chosenDurationOption
@@ -173,13 +175,18 @@ export default function RequestThingPage() {
         blocksForSelectedDay,
         chosenDurationOption.minutes,
         bookingsForSelectedDay,
-        chosenDurationOption.key === 'fullDay'
+        chosenDurationOption.key === 'fullDay',
+        reservationMinMinutes
       )
     : [];
   const durationOptionLabel = (opt) => {
     if (opt.key === 'halfDay') return t('reservation.durationHalfDay');
     if (opt.key === 'fullDay') return t('reservation.durationFullDay');
-    return t('reservation.hours', { count: opt.minutes / 60 });
+    const hours = Math.floor(opt.minutes / 60);
+    const minutes = opt.minutes % 60;
+    if (hours === 0) return t('reservation.minutes', { count: minutes });
+    if (minutes === 0) return t('reservation.hours', { count: hours });
+    return t('reservation.hoursAndMinutes', { hours, minutes });
   };
 
   // With a single fixed length there is nothing to choose, so it *is* the answer

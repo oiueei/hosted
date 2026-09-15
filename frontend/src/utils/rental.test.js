@@ -389,32 +389,50 @@ describe('dayBookings', () => {
 });
 
 describe('durationOptions', () => {
-  test('offers every whole hour up to the cap', () => {
+  test('offers every multiple of the minimum up to the max, keyed by minutes', () => {
     const blocks = dayBlocks(OPENING_HOURS, MON);
-    const keys = durationOptions(blocks, 3).map((o) => o.key);
-    expect(keys).toEqual(['1', '2', '3']); // halfDay (4h) and fullDay (10h) exceed the 3h cap
+    const keys = durationOptions(blocks, 60, 180).map((o) => o.key);
+    // halfDay (240min) and fullDay (600min) exceed the 180min cap
+    expect(keys).toEqual(['60', '120', '180']);
   });
 
   test('offers half day and full day once they fit under a generous cap', () => {
     const blocks = dayBlocks(OPENING_HOURS, MON);
-    const options = durationOptions(blocks, 12);
+    const options = durationOptions(blocks, 60, 720);
     expect(options).toContainEqual({ key: 'halfDay', minutes: 240 }); // the 4h block
     expect(options).toContainEqual({ key: 'fullDay', minutes: 600 }); // 10:00 to 20:00
   });
 
   test('a single-block day has no distinct "half day" — only "full day"', () => {
     const blocks = dayBlocks(OPENING_HOURS, FRI);
-    const options = durationOptions(blocks, 12);
+    const options = durationOptions(blocks, 60, 720);
     expect(options.some((o) => o.key === 'halfDay')).toBe(false);
     expect(options).toContainEqual({ key: 'fullDay', minutes: 240 });
   });
 
-  test('a closed day (no blocks) offers nothing but the whole-hour range', () => {
-    expect(durationOptions([], 3)).toEqual([
-      { key: '1', minutes: 60 },
-      { key: '2', minutes: 120 },
-      { key: '3', minutes: 180 },
+  test('a closed day (no blocks) offers nothing but the plain duration range', () => {
+    expect(durationOptions([], 60, 180)).toEqual([
+      { key: '60', minutes: 60 },
+      { key: '120', minutes: 120 },
+      { key: '180', minutes: 180 },
     ]);
+  });
+
+  test('a minimum shorter than an hour steps in that same short unit — the whole point of the feature', () => {
+    // A minimum of 15 with a max of 45 offers three quarter-hour slots — not
+    // whole hours, and not the old fixed 60-minute floor a HOUR-unit
+    // collection used to be stuck with.
+    expect(durationOptions([], 15, 45)).toEqual([
+      { key: '15', minutes: 15 },
+      { key: '30', minutes: 30 },
+      { key: '45', minutes: 45 },
+    ]);
+  });
+
+  test('a max not aligned to the minimum simply stops at the last multiple that fits', () => {
+    // min 20, max 100: 20/40/60/80/100 all fit exactly (100 is itself a
+    // multiple of 20); a max of 90 would stop at 80.
+    expect(durationOptions([], 20, 90).map((o) => o.key)).toEqual(['20', '40', '60', '80']);
   });
 });
 
@@ -428,7 +446,7 @@ describe('freeStartTimes', () => {
   const noBookings = { wholeDay: false, ranges: [] };
 
   test('an empty day offers every hourly slot, stepped hour by hour', () => {
-    expect(freeStartTimes(blocks, 60, noBookings, false)).toEqual([
+    expect(freeStartTimes(blocks, 60, noBookings, false, 60)).toEqual([
       '10:00',
       '11:00',
       '12:00',
@@ -443,7 +461,7 @@ describe('freeStartTimes', () => {
   test('a longer duration still steps hour by hour, and stops fitting near the close', () => {
     // 10:00-14:00: 10:00 and 11:00 fit a 3h slot (12:00 would end at 15:00, past
     // close). 16:00-20:00: 16:00 and 17:00 fit (18:00 would end at 21:00).
-    expect(freeStartTimes(blocks, 180, noBookings, false)).toEqual([
+    expect(freeStartTimes(blocks, 180, noBookings, false, 60)).toEqual([
       '10:00',
       '11:00',
       '16:00',
@@ -451,11 +469,33 @@ describe('freeStartTimes', () => {
     ]);
   });
 
+  test('a shorter step offers more starts than the hour — the point of a lower minimum', () => {
+    // Same 10:00-14:00 block, a 30-minute duration stepped every 15 minutes:
+    // 10:00, 10:15, ..., 13:30 all fit (13:45 would end at 14:15, past close).
+    expect(freeStartTimes(blocks.slice(0, 1), 30, noBookings, false, 15)).toEqual([
+      '10:00',
+      '10:15',
+      '10:30',
+      '10:45',
+      '11:00',
+      '11:15',
+      '11:30',
+      '11:45',
+      '12:00',
+      '12:15',
+      '12:30',
+      '12:45',
+      '13:00',
+      '13:15',
+      '13:30',
+    ]);
+  });
+
   test('an existing booking removes only the starts that would overlap it', () => {
     const booked = { wholeDay: false, ranges: [{ start: 660, end: 780 }] }; // 11:00-13:00
     // A 1h slot at 11:00 or 12:00 overlaps the booking; 10:00 and 13:00 (touching
     // the boundary) do not — same strict-overlap rule as has_overlap.
-    expect(freeStartTimes(blocks, 60, booked, false)).toEqual([
+    expect(freeStartTimes(blocks, 60, booked, false, 60)).toEqual([
       '10:00',
       '13:00',
       '16:00',
@@ -466,17 +506,17 @@ describe('freeStartTimes', () => {
   });
 
   test('a whole-day booking leaves no free start at all', () => {
-    expect(freeStartTimes(blocks, 60, { wholeDay: true, ranges: [] }, false)).toEqual([]);
+    expect(freeStartTimes(blocks, 60, { wholeDay: true, ranges: [] }, false, 60)).toEqual([]);
   });
 
   test('full day has exactly one candidate start, and only when nothing conflicts', () => {
-    expect(freeStartTimes(blocks, 600, noBookings, true)).toEqual(['10:00']);
+    expect(freeStartTimes(blocks, 600, noBookings, true, 60)).toEqual(['10:00']);
     const booked = { wholeDay: false, ranges: [{ start: 1020, end: 1080 }] }; // 17:00-18:00
-    expect(freeStartTimes(blocks, 600, booked, true)).toEqual([]);
+    expect(freeStartTimes(blocks, 600, booked, true, 60)).toEqual([]);
   });
 
   test('full day is empty on a day with no blocks', () => {
-    expect(freeStartTimes([], 600, noBookings, true)).toEqual([]);
+    expect(freeStartTimes([], 600, noBookings, true, 60)).toEqual([]);
   });
 });
 
@@ -485,7 +525,8 @@ describe('isHourlyPickupDisabled', () => {
     openingHours: OPENING_HOURS,
     closedDates: [],
     blockedPeriods: [],
-    maxHours: 3,
+    minMinutes: 60,
+    maxMinutes: 180,
   };
 
   test('an empty day with opening hours is selectable', () => {
