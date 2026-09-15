@@ -8,6 +8,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 /**
  * Login-to-act landing page for a PUBLIC collection. An anonymous visitor who
@@ -38,6 +39,8 @@ export default function JoinPage() {
   // an anonymous GET resolves; a private or missing one simply 403/404s and we
   // keep the generic copy rather than inventing a name.
   const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
+  const [collectionLanguage, setCollectionLanguage] = useState('');
+  useCollectionLanguage(collectionLanguage);
 
   useEffect(() => {
     document.title = `${t('joinToAct.heading')} — OIUEEI`;
@@ -50,6 +53,7 @@ export default function JoinPage() {
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         if (data?.headline) setHeadline(L(data.headline));
+        setCollectionLanguage(data?.language || '');
       })
       .catch(() => {});
     return () => controller.abort();

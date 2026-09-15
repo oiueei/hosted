@@ -10,6 +10,7 @@ import TheeemeSelector from '../components/TheeemeSelector';
 import KoroSelector from '../components/KoroSelector';
 import ImageUpload from '../components/ImageUpload';
 import useTheeeme from '../hooks/useTheeeme';
+import { invalidateMe } from '../hooks/useCapabilities';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import hdsLang from '../utils/hdsLang';
 
@@ -126,6 +127,10 @@ export default function EditProfilePage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        // The shared /auth/me/ cache (useCapabilities.loadUserLanguage) would
+        // otherwise keep answering with the pre-edit language for the rest of
+        // this session — it caches per account, not per save.
+        invalidateMe();
         navigate('/');
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });

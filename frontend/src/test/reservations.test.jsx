@@ -421,7 +421,8 @@ const HOURLY_RESERVE_THING = {
   collection_code: 'COL001',
   reservation_unit: 'HOUR',
   reservation_horizon_days: 90,
-  reservation_max_hours: 3,
+  reservation_min_minutes: 60,
+  reservation_max_minutes: 180,
   // CA's own schedule: Mon-Thu 10-14 & 16-20, Fri 10-14, weekend closed.
   opening_hours: {
     0: [
@@ -461,7 +462,7 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(document.querySelector('#reservation-pickup-date-hourly')).toBeInTheDocument();
   });
 
-  test('picking a day reveals the duration radios, capped at reservation_max_hours', async () => {
+  test('picking a day reveals the duration radios, capped at reservation_max_minutes', async () => {
     setApi({ thing: HOURLY_RESERVE_THING });
     const { container } = renderPage();
     await screen.findByText(/Reserve Sala amb hores/);
@@ -471,20 +472,45 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(await screen.findByRole('radio', { name: '1 hour' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '2 hours' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '3 hours' })).toBeInTheDocument();
-    // 4h (half day) and 10h (full day) both exceed the 3h cap — not offered.
-    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull();
-    expect(screen.queryByRole('radio', { name: 'Full day' })).toBeNull();
+    // 4 hours exceeds the 3h cap — not offered. ("Half day"/"Full day" are
+    // gone entirely, 2026-09 — plain multiples only.)
+    expect(screen.queryByRole('radio', { name: '4 hours' })).toBeNull();
   });
 
-  test('a single-block day (Friday) offers "Full day" once it fits the cap', async () => {
-    setApi({ thing: { ...HOURLY_RESERVE_THING, reservation_max_hours: 4 } });
+  test('a single-block day (Friday) offers plain durations up to the cap, no named presets', async () => {
+    // The single 10:00-14:00 block's whole span shows up as the plain "4
+    // hours" multiple — what "Full day" used to name before its removal.
+    setApi({ thing: { ...HOURLY_RESERVE_THING, reservation_max_minutes: 240 } });
     const { container } = renderPage();
     await screen.findByText(/Reserve Sala amb hores/);
 
     typeHourlyPickup(container, '05/06/2026'); // Friday, single 10:00-14:00 block
 
-    expect(await screen.findByRole('radio', { name: 'Full day' })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull(); // one block only
+    expect(await screen.findByRole('radio', { name: '4 hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Full day' })).toBeNull();
+  });
+
+  test('a minimum/maximum not aligned to whole hours offers minute-stepped durations with mixed labels', async () => {
+    // The feature's whole point: 20/40/60/80/100-minute options, and a
+    // 20-minute step for start times too — not the old fixed hourly grid.
+    setApi({
+      thing: { ...HOURLY_RESERVE_THING, reservation_min_minutes: 20, reservation_max_minutes: 100 },
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026'); // Wednesday, both blocks open
+
+    expect(await screen.findByRole('radio', { name: '20 minutes' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '1 hour' })).toBeInTheDocument(); // 60min, reuses the plain hour key
+    expect(screen.getByRole('radio', { name: '1h 40min' })).toBeInTheDocument(); // 100min, the mixed label
+
+    fireEvent.click(screen.getByRole('radio', { name: '20 minutes' }));
+    // 10:00-14:00 stepped every 20 minutes: 10:00, 10:20, 10:40, ... 13:40.
+    expect(await screen.findByRole('radio', { name: '10:20' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '13:40' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '10:15' })).toBeNull(); // not a 20-minute step
   });
 
   test('picking a duration reveals the start-time radios, stepped hour by hour', async () => {

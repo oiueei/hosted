@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function DeleteThingPage() {
   const { t } = useTranslation();
@@ -29,6 +30,7 @@ export default function DeleteThingPage() {
   // body. Tying the failure to its code needs no reset at all.
   const [failedCode, setFailedCode] = useState(null);
   const error = failedCode === thingCode;
+  useCollectionLanguage(thing?.collection_language);
 
   useEffect(() => {
     document.title = thing

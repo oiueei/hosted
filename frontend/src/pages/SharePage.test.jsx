@@ -6,8 +6,10 @@ vi.mock('../services/api', () => ({
   apiFetch: vi.fn(),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
+vi.mock('../hooks/useCollectionLanguage', () => ({ default: vi.fn() }));
 
 import { apiFetch } from '../services/api';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import SharePage from './SharePage';
 
 // A stand-in for the 22-char URL-safe share token; kept low-entropy so a
@@ -102,5 +104,30 @@ describe('SharePage — naming the collection a /share link opens (S10)', () => 
       await screen.findByRole('heading', { name: 'Join us on OIUEEI', level: 1 })
     ).toBeInTheDocument();
     expect(screen.queryByText('orphan description')).toBeNull();
+  });
+
+  test("the preview's own language reaches useCollectionLanguage", async () => {
+    // This is the one join door reached before a stranger is a member of
+    // anything, so the collection's own language (from SharePreviewView) is
+    // the only signal there is yet — without this wire, a WhatsApp link to a
+    // Catalan group showed English chrome right up until the join succeeded
+    // (found in review, 2026-09-15).
+    apiFetch.mockReturnValue(
+      preview({ headline: 'The Tool Library', description: '', language: 'ca' })
+    );
+    renderShare();
+
+    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca'));
+  });
+
+  test('a preview missing a headline never reaches useCollectionLanguage with its language', async () => {
+    // `preview` state is only set when `data.headline` is present
+    // (SharePage.jsx) — a preview object that failed that check must not
+    // leak a stray `language` through some other path.
+    apiFetch.mockReturnValue(preview({ description: 'orphan', language: 'ca' }));
+    renderShare();
+
+    await screen.findByRole('heading', { name: 'Join us on OIUEEI', level: 1 });
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith(undefined);
   });
 });

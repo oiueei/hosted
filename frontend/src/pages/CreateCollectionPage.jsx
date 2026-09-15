@@ -43,7 +43,8 @@ export default function CreateCollectionPage() {
   const [reservationMaxDays, setReservationMaxDays] = useState(1);
   const [reservationHorizonDays, setReservationHorizonDays] = useState(90);
   const [reservationMaxActivePerMember, setReservationMaxActivePerMember] = useState(10);
-  const [reservationMaxHours, setReservationMaxHours] = useState(3);
+  const [reservationMinMinutes, setReservationMinMinutes] = useState(60);
+  const [reservationMaxMinutes, setReservationMaxMinutes] = useState(180);
   const [openingHours, setOpeningHours] = useState({});
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
@@ -159,7 +160,8 @@ export default function CreateCollectionPage() {
       body.reservation_max_active_per_member = reservationMaxActivePerMember;
       body.reservation_unit = reservationUnit;
       if (reservationUnit === 'HOUR') {
-        body.reservation_max_hours = reservationMaxHours;
+        body.reservation_min_minutes = reservationMinMinutes;
+        body.reservation_max_minutes = reservationMaxMinutes;
         body.opening_hours = openingHours;
       } else {
         body.reservation_max_days = reservationMaxDays;
@@ -265,8 +267,10 @@ export default function CreateCollectionPage() {
               setReservationHorizonDays={setReservationHorizonDays}
               reservationMaxActivePerMember={reservationMaxActivePerMember}
               setReservationMaxActivePerMember={setReservationMaxActivePerMember}
-              reservationMaxHours={reservationMaxHours}
-              setReservationMaxHours={setReservationMaxHours}
+              reservationMinMinutes={reservationMinMinutes}
+              setReservationMinMinutes={setReservationMinMinutes}
+              reservationMaxMinutes={reservationMaxMinutes}
+              setReservationMaxMinutes={setReservationMaxMinutes}
               openingHours={openingHours}
               setOpeningHours={setOpeningHours}
               rentalWeekdays={rentalWeekdays}

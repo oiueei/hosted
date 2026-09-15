@@ -46,8 +46,9 @@ class Collection(models.Model):
 
     class ReservationUnit(models.TextChoices):
         """RESERVE_THING collections only. A collection is booked by whole DAYs
-        (the original shape) or by HOUR-long slots within a day's opening
-        hours — never both; see `opening_hours` and `reservation_max_hours`."""
+        (the original shape) or by slots within a day's opening hours — never
+        both; see `opening_hours` and `reservation_min_minutes`/
+        `reservation_max_minutes`."""
 
         DAY = "DAY", "Day"
         HOUR = "HOUR", "Hour"
@@ -137,10 +138,10 @@ class Collection(models.Model):
     reservation_max_active_per_member = models.PositiveSmallIntegerField(default=10)
     # RESERVE_THING collections only. DAY (default) is the original shape above:
     # a reservation occupies one or more whole days. HOUR books a single day in
-    # slots of 1+ hours within that day's opening_hours. Never both at once — a
+    # slots within that day's opening_hours. Never both at once — a
     # collection picks one unit, and the fields below are inert under the other
     # (reservation_max_days/rental_weekdays-as-open-days for DAY; opening_hours/
-    # reservation_max_hours for HOUR).
+    # reservation_min_minutes/reservation_max_minutes for HOUR).
     reservation_unit = models.CharField(
         max_length=4, choices=ReservationUnit.choices, default=ReservationUnit.DAY
     )
@@ -153,11 +154,31 @@ class Collection(models.Model):
     # keeping both risked the two disagreeing. Default {} = every day closed
     # (an owner switching to HOUR mode must set hours before anyone can book).
     opening_hours = models.JSONField(default=dict, blank=True)
-    # HOUR unit only. The longest a single reservation may run, in hours — the
-    # one cap radio-button durations (1h/2h/3h/half day/full day) are offered
-    # against; "half day" or "full day" only appear when they fit under it.
-    # 1-12, default 3. Inert under DAY (reservation_max_days governs there).
+    # HOUR unit only. **Dormant since 0150** — replaced by
+    # `reservation_min_minutes`/`reservation_max_minutes` below (an early
+    # adopter wanted reservations shorter than an hour, which needs both a
+    # configurable floor and a finer unit to state it in). Kept as a column,
+    # unread and unwritten by anything past the migration that copied its
+    # value forward, the same caution a feature removal gets — dropped in a
+    # later migration.
     reservation_max_hours = models.PositiveSmallIntegerField(default=3)
+    # HOUR unit only. The shortest a single reservation may run, in minutes —
+    # also the step every duration/start-time choice is offered in (15 here
+    # means 15/30/45/... up to the max, and start times fall every 15 minutes
+    # too): a short minimum that the picker still only offered on the hour
+    # would be a minimum in name only. 1-720 (serializer-enforced), default
+    # 60 — the fixed floor every HOUR-unit collection already lived under
+    # before this field existed, so nothing changes until an owner lowers it.
+    # Inert under DAY.
+    reservation_min_minutes = models.PositiveSmallIntegerField(default=60)
+    # HOUR unit only. The longest a single reservation may run, in minutes —
+    # the twin of `reservation_min_minutes` above, and `reservation_max_hours`'s
+    # replacement: same 1-720 range and the same no-exception-for-the-full-day
+    # rule (see `reservation_hour_violation`), just counted in minutes so a
+    # cap under an hour is expressible too. Default 180 (matches the old
+    # field's default of 3 hours). Inert under DAY (reservation_max_days
+    # governs there).
+    reservation_max_minutes = models.PositiveSmallIntegerField(default=180)
     # How deposits work in this group, in the owner's own words — "50 €, back
     # when the drill comes home in one piece". A bare number is the beginning of
     # an argument: the condition for getting it back is the actual rule, and that
@@ -504,25 +525,26 @@ class Collection(models.Model):
         full-day case — is refused rather than silently clipped, the same
         stance ``reservation_violation`` takes on days.
 
-        ``reservation_max_hours`` is a hard cap with **no exception for the
+        ``reservation_max_minutes`` is a hard cap with **no exception for the
         full-day form** — CA's own call (the alternative, exempting it, was
-        offered and turned down): a venue whose day adds up to more hours than
-        the cap simply never offers "the whole day" as a choice; the owner
-        raises the cap if they want it offered. The duration/horizon/closure
-        checks mirror ``reservation_violation`` exactly, just in hours instead
-        of days.
+        offered and turned down): a venue whose day adds up to more minutes
+        than the cap simply never offers "the whole day" as a choice; the
+        owner raises the cap if they want it offered. ``reservation_min_
+        minutes`` is the twin floor, configurable since 0150 (it used to be a
+        fixed 60). The duration/horizon/closure checks mirror
+        ``reservation_violation`` exactly, just in minutes instead of days.
         """
         if end_time <= start_time:
             return "A reservation must end after it starts."
         duration_minutes = (
             end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute)
         )
-        if duration_minutes < 60:
-            return "A reservation is at least one hour."
-        if duration_minutes > self.reservation_max_hours * 60:
+        if duration_minutes < self.reservation_min_minutes:
+            return f"A reservation is at least {self.reservation_min_minutes} minutes."
+        if duration_minutes > self.reservation_max_minutes:
             return (
                 f"This space can be reserved for at most "
-                f"{self.reservation_max_hours} hour(s) at a time."
+                f"{self.reservation_max_minutes} minutes at a time."
             )
         today = today or timezone.localdate()
         if start_date > today + timedelta(days=self.reservation_horizon_days):

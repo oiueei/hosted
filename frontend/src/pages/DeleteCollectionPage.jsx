@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function DeleteCollectionPage() {
   const { t } = useTranslation();
@@ -32,6 +33,7 @@ export default function DeleteCollectionPage() {
   // code you are no longer on simply stops being true.
   const [failedCode, setFailedCode] = useState(null);
   const error = failedCode === code;
+  useCollectionLanguage(collection?.language);
 
   useEffect(() => {
     document.title = collection

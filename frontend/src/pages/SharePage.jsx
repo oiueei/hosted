@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
 import MagicLinkJoinPage from '../components/MagicLinkJoinPage';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 /**
  * `/share/{token}` landing. Renders the shared `MagicLinkJoinPage`, but first
@@ -37,6 +38,7 @@ export default function SharePage() {
 
   const name = preview ? L(preview.headline) : null;
   const description = preview ? L(preview.description) : null;
+  useCollectionLanguage(preview?.language);
 
   return (
     <MagicLinkJoinPage

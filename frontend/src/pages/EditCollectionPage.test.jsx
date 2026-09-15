@@ -18,7 +18,10 @@ vi.mock('../services/api', async (importOriginal) => ({
   getCsrfToken: () => 'tok',
 }));
 
+vi.mock('../hooks/useCollectionLanguage', () => ({ default: vi.fn() }));
+
 import { apiFetch } from '../services/api';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import EditCollectionPage from './EditCollectionPage';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
@@ -535,5 +538,43 @@ describe('EditCollectionPage — a deployment that has narrowed since', () => {
     expect(community()).not.toBeNull();
     fireEvent.click(community());
     expect(community()).toBeChecked();
+  });
+});
+
+describe('EditCollectionPage — useCollectionLanguage gets the saved value, never the draft', () => {
+  // The page holds two things called "language": `savedLanguage` (the stored
+  // value, as loaded) and `language` (the form's live-edited draft, which
+  // defaults to the browser's own language the moment the field is blank).
+  // Feeding the draft into `useCollectionLanguage` would flip this whole
+  // settings form's own UI language the instant the owner merely tries an
+  // option in the dropdown, before saving anything — the exact regression
+  // this test exists to catch (found in review, 2026-09-15).
+  test('trying a different language in the dropdown does not change what the hook is called with', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/v1/collections/COL001/') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ ...COLLECTION, language: 'ca' }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const languageCombobox = await screen.findByRole('combobox', {
+      name: /Language of the group messages/,
+    });
+    fireEvent.click(languageCombobox);
+    fireEvent.click(await screen.findByRole('option', { name: 'Español' }));
+
+    // The dropdown itself did change — this isn't a no-op click...
+    await waitFor(() => expect(languageCombobox).toHaveTextContent('Español'));
+    // ...but the hook must still see the collection's actual saved language.
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca');
   });
 });

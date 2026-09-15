@@ -102,6 +102,57 @@ describe('navigating to another page', () => {
   });
 });
 
+describe('the account own saved language', () => {
+  test('is applied once at boot, ahead of any page', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ language: 'ca' }) })
+    );
+    const { default: App } = await import('../App');
+    const { default: i18n } = await import('../i18n');
+    render(<App />);
+
+    await waitFor(() => expect(i18n.language).toBe('ca'));
+  });
+
+  test('an unsupported code is ignored, not applied', async () => {
+    // Asserting on `i18n.language` alone is not enough here: 'fr' is not in
+    // `supportedLngs`, so `changeLanguage('fr')` would itself fall through
+    // `fallbackLng.default` back to 'en' — indistinguishable from the guard
+    // never firing at all if the baseline is already 'en' (found in review,
+    // 2026-09-15). Spying on the call itself is what actually pins the guard.
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ language: 'fr' }) })
+    );
+    const { default: App } = await import('../App');
+    const { default: i18n } = await import('../i18n');
+    const spy = vi.spyOn(i18n, 'changeLanguage');
+    render(<App />);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('a signed-out visitor (401) leaves the language untouched', async () => {
+    // A plain fetch, not apiFetch: a 401 here must never trigger apiFetch's
+    // refresh-then-redirect-to-/login dance (services/api.js) — this call
+    // warms the CSRF cookie for a visitor who may not have an account at all.
+    // `globalThis.fetch` is spied on directly, so a stray `apiFetch` call
+    // (which itself calls `fetch`) would still show up as extra calls here.
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
+    );
+    const { default: App } = await import('../App');
+    const { default: i18n } = await import('../i18n');
+    const before = i18n.language;
+    render(<App />);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(i18n.language).toBe(before);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('html[lang]', () => {
   test('follows the interface language, on load and on every change', async () => {
     const { default: App } = await import('../App');

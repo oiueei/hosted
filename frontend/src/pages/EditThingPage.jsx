@@ -16,6 +16,7 @@ import ThingForm from '../components/ThingForm';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 
 export default function EditThingPage() {
@@ -56,6 +57,8 @@ export default function EditThingPage() {
   const [toast, setToast] = useState(null);
   const [thingCollectionCode, setThingCollectionCode] = useState(code || '');
   const [thingCollectionHeadline, setThingCollectionHeadline] = useState('');
+  const [thingCollectionLanguage, setThingCollectionLanguage] = useState('');
+  useCollectionLanguage(thingCollectionLanguage);
 
   useEffect(() => {
     const fetchThing = async () => {
@@ -83,6 +86,7 @@ export default function EditThingPage() {
           if (data.is_endless) setIsEndless(true);
           if (!code && data.collection_code) setThingCollectionCode(data.collection_code);
           if (data.collection_headline) setThingCollectionHeadline(data.collection_headline);
+          setThingCollectionLanguage(data.collection_language || '');
         } else {
           setToast({ type: 'error', message: t('editThing.errorLoading') });
         }
