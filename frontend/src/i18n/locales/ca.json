@@ -1000,8 +1000,6 @@
     "hours_one": "{{count}} hora",
     "hours_other": "{{count}} hores",
     "hoursAndMinutes": "{{hours}} h {{minutes}} min",
-    "durationHalfDay": "Mitja jornada",
-    "durationFullDay": "Dia complet",
     "startTimeLabel": "A quina hora?",
     "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
   },

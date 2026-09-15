@@ -1000,8 +1000,6 @@
     "hours_one": "{{count}} hour",
     "hours_other": "{{count}} hours",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
-    "durationHalfDay": "Half day",
-    "durationFullDay": "Full day",
     "startTimeLabel": "What time?",
     "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
   },

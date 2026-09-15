@@ -71,8 +71,8 @@ export default function RequestThingPage() {
   const [startDate, setStartDate] = useState(isoToDisplay(location.state?.prefillDate) || '');
   const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState('');
-  // HOUR-unit reservations only: a duration-option key ('1'..'12', 'halfDay',
-  // 'fullDay') and a chosen "HH:MM" start — kept apart from `duration` above
+  // HOUR-unit reservations only: a duration-option key (its minutes, e.g.
+  // '30') and a chosen "HH:MM" start — kept apart from `duration` above
   // (a day-count) since the two are never both meaningful for the same thing.
   const [hourlyDuration, setHourlyDuration] = useState('');
   const [hourlyStartTime, setHourlyStartTime] = useState('');
@@ -167,7 +167,7 @@ export default function RequestThingPage() {
       ? dayBookings(blockedPeriods, selectedIso)
       : { wholeDay: false, ranges: [] };
   const hourlyDurationChoices = isHourlyReservation
-    ? durationOptions(blocksForSelectedDay, reservationMinMinutes, reservationMaxMinutes)
+    ? durationOptions(reservationMinMinutes, reservationMaxMinutes)
     : [];
   const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
   const hourlyStartTimeChoices = chosenDurationOption
@@ -175,13 +175,10 @@ export default function RequestThingPage() {
         blocksForSelectedDay,
         chosenDurationOption.minutes,
         bookingsForSelectedDay,
-        chosenDurationOption.key === 'fullDay',
         reservationMinMinutes
       )
     : [];
   const durationOptionLabel = (opt) => {
-    if (opt.key === 'halfDay') return t('reservation.durationHalfDay');
-    if (opt.key === 'fullDay') return t('reservation.durationFullDay');
     const hours = Math.floor(opt.minutes / 60);
     const minutes = opt.minutes % 60;
     if (hours === 0) return t('reservation.minutes', { count: minutes });

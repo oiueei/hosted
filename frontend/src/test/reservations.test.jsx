@@ -472,20 +472,23 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(await screen.findByRole('radio', { name: '1 hour' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '2 hours' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '3 hours' })).toBeInTheDocument();
-    // 4h (half day) and 10h (full day) both exceed the 3h cap — not offered.
-    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull();
-    expect(screen.queryByRole('radio', { name: 'Full day' })).toBeNull();
+    // 4 hours exceeds the 3h cap — not offered. ("Half day"/"Full day" are
+    // gone entirely, 2026-09 — plain multiples only.)
+    expect(screen.queryByRole('radio', { name: '4 hours' })).toBeNull();
   });
 
-  test('a single-block day (Friday) offers "Full day" once it fits the cap', async () => {
+  test('a single-block day (Friday) offers plain durations up to the cap, no named presets', async () => {
+    // The single 10:00-14:00 block's whole span shows up as the plain "4
+    // hours" multiple — what "Full day" used to name before its removal.
     setApi({ thing: { ...HOURLY_RESERVE_THING, reservation_max_minutes: 240 } });
     const { container } = renderPage();
     await screen.findByText(/Reserve Sala amb hores/);
 
     typeHourlyPickup(container, '05/06/2026'); // Friday, single 10:00-14:00 block
 
-    expect(await screen.findByRole('radio', { name: 'Full day' })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull(); // one block only
+    expect(await screen.findByRole('radio', { name: '4 hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Half day' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Full day' })).toBeNull();
   });
 
   test('a minimum/maximum not aligned to whole hours offers minute-stepped durations with mixed labels', async () => {

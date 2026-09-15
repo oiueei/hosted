@@ -279,32 +279,24 @@ export const dayBookings = (blockedPeriods, isoDate) => {
 const minutesRangeOverlaps = (start, end, ranges) =>
   ranges.some((r) => start < r.end && r.start < end);
 
-// The duration choices to offer for a day's opening blocks: every multiple of
-// `minMinutes` from itself up to `maxMinutes` (the collection's `reservation_
-// min_minutes`/`reservation_max_minutes`), plus "half day" (the longest single
-// block — only distinct from "full day" with 2+ blocks) and "full day" (the
-// whole day's span, any gap included) — each offered only if it fits the
-// maximum. **The maximum applies to the full-day form too, with no
-// exception** (CA's call, mirroring `Collection.reservation_hour_violation`):
-// a day whose total span exceeds it just doesn't offer "the whole day".
+// The duration choices to offer: every multiple of `minMinutes` from itself
+// up to `maxMinutes` (the collection's `reservation_min_minutes`/
+// `reservation_max_minutes`). The named presets this list once grew — "half
+// day" and "full day" — were removed 2026-09, CA's call: with minute-granular
+// steps the plain multiples already say the same thing in numbers. The cost
+// is honest: a span crossing a gap between two blocks (the old "full day")
+// is no longer offered here, though the backend still accepts one sent by
+// start/end time.
 //
-// The `key` for a plain duration is the minutes themselves (`'15'`, `'90'`),
+// The `key` for a duration is the minutes themselves (`'15'`, `'90'`),
 // not an hour count — the two used to coincide when every duration was a
 // whole hour, but this is the value `RequestThingPage`'s label builder now
 // reads directly, so recovering it via `key * 60` would be wrong the moment
 // a collection's minimum isn't a whole hour.
-export const durationOptions = (blocks, minMinutes, maxMinutes) => {
+export const durationOptions = (minMinutes, maxMinutes) => {
   const options = [];
   for (let m = minMinutes; m <= maxMinutes; m += minMinutes) {
     options.push({ key: String(m), minutes: m });
-  }
-  if (blocks.length >= 2) {
-    const longestBlock = Math.max(...blocks.map((b) => b.end - b.start));
-    if (longestBlock <= maxMinutes) options.push({ key: 'halfDay', minutes: longestBlock });
-  }
-  if (blocks.length >= 1) {
-    const fullDayMinutes = blocks[blocks.length - 1].end - blocks[0].start;
-    if (fullDayMinutes <= maxMinutes) options.push({ key: 'fullDay', minutes: fullDayMinutes });
   }
   return options;
 };
@@ -313,24 +305,13 @@ export const durationOptions = (blocks, minMinutes, maxMinutes) => {
 // `stepMinutes` within each opening block — the collection's `reservation_
 // min_minutes`, so a short minimum genuinely offers more than one start per
 // hour; a minimum lowered to 15 with a start stepped every 60 would still
-// only ever offer :00 starts, making the shorter minimum useless. "Full day"
-// has exactly one candidate start — the first block's own opening time —
-// accepted only if nothing already booked overlaps the whole span. Empty
-// whenever the day is `wholeDay`-booked.
-export const freeStartTimes = (
-  blocks,
-  durationMinutes,
-  dayBookingsResult,
-  isFullDay,
-  stepMinutes
-) => {
+// only ever offer :00 starts, making the shorter minimum useless. Every
+// candidate must fit inside a single block — a span crossing one of the gaps
+// between blocks is not offered (the "full day" special case that once
+// allowed exactly that went with its option, 2026-09). Empty whenever the
+// day is `wholeDay`-booked.
+export const freeStartTimes = (blocks, durationMinutes, dayBookingsResult, stepMinutes) => {
   if (dayBookingsResult.wholeDay) return [];
-  if (isFullDay) {
-    if (!blocks.length) return [];
-    const start = blocks[0].start;
-    const end = blocks[blocks.length - 1].end;
-    return minutesRangeOverlaps(start, end, dayBookingsResult.ranges) ? [] : [formatHM(start)];
-  }
   const starts = [];
   for (const block of blocks) {
     for (let cursor = block.start; cursor + durationMinutes <= block.end; cursor += stepMinutes) {
@@ -355,8 +336,7 @@ export const isHourlyPickupDisabled = (
   const blocks = dayBlocks(openingHours, date);
   if (!blocks.length) return true;
   const bookings = dayBookings(blockedPeriods, toISODate(parseLocalDate(date)));
-  return !durationOptions(blocks, minMinutes, maxMinutes).some(
-    (opt) =>
-      freeStartTimes(blocks, opt.minutes, bookings, opt.key === 'fullDay', minMinutes).length > 0
+  return !durationOptions(minMinutes, maxMinutes).some(
+    (opt) => freeStartTimes(blocks, opt.minutes, bookings, minMinutes).length > 0
   );
 };
