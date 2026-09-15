@@ -18,16 +18,23 @@ const TAGS_EXAMPLE = '{"es": "Juguetes", "ca": "Joguines"}';
  * established `.info-popover-row` pattern (help line left, icon flush right, so
  * the `right: 0`-anchored panel stays inside the viewport).
  *
- * Props: `id` (the popover panel's id), `variant` (`text` | `tags` | `policy`).
- * `policy` (D5, 2026-08) is the deposit policy in RentalRulesFields — its own
- * variant rather than reusing `text`, since that hint specifically names
- * "the title or the description" and a deposit policy is neither.
+ * Props: `id` (the popover panel's id), `variant` (`text` | `tags` | `policy` |
+ * `requestInfo`). `policy` (D5, 2026-08) is the deposit policy in
+ * RentalRulesFields — its own variant rather than reusing `text`, since that
+ * hint specifically names "the title or the description" and a deposit
+ * policy is neither. `requestInfo` (Collection.request_info, shown on
+ * RequestThingPage for every verb) is the same shape again.
  */
 
 const VARIANT_KEYS = {
   text: { hint: 'localized.hint', infoBody: 'localized.infoBody', example: EXAMPLE },
   tags: { hint: 'localized.tagsHint', infoBody: 'localized.tagsInfoBody', example: TAGS_EXAMPLE },
   policy: { hint: 'localized.policyHint', infoBody: 'localized.policyInfoBody', example: EXAMPLE },
+  requestInfo: {
+    hint: 'localized.requestInfoHint',
+    infoBody: 'localized.requestInfoInfoBody',
+    example: EXAMPLE,
+  },
 };
 
 export default function LocalizedInfo({ id, variant = 'text' }) {

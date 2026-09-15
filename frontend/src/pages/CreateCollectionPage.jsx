@@ -48,6 +48,10 @@ export default function CreateCollectionPage() {
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
+  // Shown on the request page for every verb (GIFT/SELL/RENT/LEND/RESERVE),
+  // not only reservations — general to the collection, so it lives outside
+  // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
+  const [requestInfo, setRequestInfo] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   // The group's email language. Defaults to whatever the owner is reading the app
@@ -142,6 +146,7 @@ export default function CreateCollectionPage() {
       rental_weekdays: rentalWeekdays,
       closed_dates: closedDates,
       home_page: homePage.trim(),
+      request_info: requestInfo.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -287,6 +292,16 @@ export default function CreateCollectionPage() {
             value={closedDates}
             onChange={setClosedDates}
           />
+          <div>
+            <TextArea
+              id="create-collection-request-info"
+              label={t('requestInfo.label')}
+              helperText={t('requestInfo.helper')}
+              value={requestInfo}
+              onChange={(e) => setRequestInfo(e.target.value)}
+            />
+            <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
+          </div>
           <TextInput
             id="create-collection-home-page"
             type="url"

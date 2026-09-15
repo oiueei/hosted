@@ -172,6 +172,13 @@ class Collection(models.Model):
     # 256/1024 like `description`, for the same reason: the visible limit is per
     # language and the column has to hold all three plus the JSON scaffolding.
     deposit_policy = models.CharField(max_length=1024, blank=True, default="")
+    # A short note the owner writes for anyone about to REQUEST anything from
+    # this collection — GIFT/SELL/RENT/LEND/RESERVE alike, not RESERVE_THING
+    # only ("bring ID", "reservations must be confirmed 24h ahead"...). Shown
+    # at the top of the request page, rendered as Markdown like `description`.
+    # 256/1024 like `deposit_policy`, same reasoning: the visible limit is per
+    # language and the column has to hold all three plus the JSON scaffolding.
+    request_info = models.CharField(max_length=1024, blank=True, default="")
     allowed_thing_types = models.JSONField(default=list, blank=True)
     tags = models.JSONField(
         default=list,

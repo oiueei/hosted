@@ -65,6 +65,10 @@ export default function EditCollectionPage() {
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
+  // Shown on the request page for every verb (GIFT/SELL/RENT/LEND/RESERVE),
+  // not only reservations — general to the collection, so it lives outside
+  // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
+  const [requestInfo, setRequestInfo] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -178,6 +182,7 @@ export default function EditCollectionPage() {
           setClosedDates(closedDatesToDisplay(data.closed_dates));
           setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
+          setRequestInfo(data.request_info || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
           setThumbnailUrl(data.thumbnail_url || '');
@@ -231,6 +236,7 @@ export default function EditCollectionPage() {
       closed_dates: closedDates,
       home_page: homePage.trim(),
       deposit_policy: isReservations ? '' : depositPolicy.trim(),
+      request_info: requestInfo.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -474,6 +480,16 @@ export default function EditCollectionPage() {
             value={closedDates}
             onChange={setClosedDates}
           />
+          <div>
+            <TextArea
+              id="edit-collection-request-info"
+              label={t('requestInfo.label')}
+              helperText={t('requestInfo.helper')}
+              value={requestInfo}
+              onChange={(e) => setRequestInfo(e.target.value)}
+            />
+            <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
+          </div>
           <TextInput
             id="edit-collection-home-page"
             type="url"

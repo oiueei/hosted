@@ -873,6 +873,8 @@
     "tagsInfoBody": "Una etiqueta funciona igual: escríbela como un mapa y cada miembro verá la suya.",
     "policyHint": "La política de fianzas también admite un texto por idioma.",
     "policyInfoBody": "Funciona igual: escríbela como un pequeño mapa y cada miembro leerá la suya.",
+    "requestInfoHint": "El aviso de la página de solicitud también admite un texto por idioma.",
+    "requestInfoInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo.",
     "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
   },
   "deleteAccount": {
@@ -1009,5 +1011,9 @@
   "homePage": {
     "label": "Página web",
     "helper": "Una dirección web opcional para este grupo (máx. 128 caracteres)."
+  },
+  "requestInfo": {
+    "label": "Aviso para la página de solicitud (opcional)",
+    "helper": "Se muestra arriba de la página de solicitud de cualquier cosa de este grupo — cualquier tipo, no solo reservas (p. ej. «trae el DNI», «la recogida es solo los martes»). Admite Markdown."
   }
 }

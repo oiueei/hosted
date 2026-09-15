@@ -26,6 +26,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
+import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
 import RadioOptionGroup from '../components/RadioOptionGroup';
 import useTheeeme from '../hooks/useTheeeme';
@@ -297,6 +298,11 @@ export default function RequestThingPage() {
         isReservation
           ? t('reservation.pageTitle', { headline })
           : t('request.pageTitle', { headline })
+      }
+      description={
+        thing.collection_request_info ? (
+          <MarkdownText text={L(thing.collection_request_info)} />
+        ) : undefined
       }
       backTo={backPath}
       backLabel={backLabel}

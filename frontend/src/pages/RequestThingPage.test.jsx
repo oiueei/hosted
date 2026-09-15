@@ -242,3 +242,23 @@ describe('the demo notice on a seed collection', () => {
     expect(screen.queryByText('This is a demo')).not.toBeInTheDocument();
   });
 });
+
+describe("the collection's request-page note — every date-based verb, not only RESERVE_THING", () => {
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'TEST01');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  test('shows on a RENT_THING request page too', async () => {
+    mockRoutes({
+      thing: { ...RENTAL_THING, collection_request_info: 'Pickup is Tuesdays only.' },
+    });
+    renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    expect(screen.getByText('Pickup is Tuesdays only.')).toBeInTheDocument();
+  });
+});

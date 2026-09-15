@@ -299,6 +299,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
+    collection_request_info = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
@@ -344,6 +345,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_headline",
             "collection_owner",
             "collection_is_onboarding",
+            "collection_request_info",
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
@@ -457,6 +459,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         into both a demo and a real group is judged by the row this reader has."""
         first = self._viewable_collection(obj)
         return bool(first.is_onboarding) if first else False
+
+    def get_collection_request_info(self, obj):
+        """The collection's note for anyone about to request anything from it —
+        every verb, not just RESERVE_THING. Raw (possibly an O6 `{lang: text}`
+        map, like `headline`/`description`) — `RequestThingPage` resolves it
+        client-side the same way. `""` when there is no viewable collection."""
+        first = self._viewable_collection(obj)
+        return first.request_info if first else ""
 
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).

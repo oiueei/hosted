@@ -170,6 +170,32 @@ describe('RequestThingPage — RESERVE_THING', () => {
   });
 });
 
+describe("RequestThingPage — the collection's request-page note", () => {
+  test('renders as Markdown under the title when the collection set one', async () => {
+    setApi({
+      thing: {
+        ...RESERVE_THING,
+        reservation_max_days: 1,
+        collection_request_info: 'Bring **photo ID** to the front desk.',
+      },
+    });
+    renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    const strong = screen.getByText('photo ID');
+    expect(strong.tagName).toBe('STRONG');
+    expect(strong.closest('.form-hero-text')).toBeInTheDocument();
+  });
+
+  test('is absent when the collection has no note', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    expect(document.querySelector('.form-hero-text')).toBeNull();
+  });
+});
+
 const HOURLY_RESERVE_THING = {
   code: 'RSV01',
   type: 'RESERVE_THING',

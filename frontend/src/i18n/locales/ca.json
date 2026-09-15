@@ -873,6 +873,8 @@
     "tagsInfoBody": "Una etiqueta funciona igual: escriu-la com un mapa i cada membre veurà la seva.",
     "policyHint": "La política de fiances també admet un text per idioma.",
     "policyInfoBody": "Funciona igual: escriu-la com un petit mapa i cada membre llegirà la seva.",
+    "requestInfoHint": "L'avís de la pàgina de sol·licitud també admet un text per idioma.",
+    "requestInfoInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu.",
     "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
   },
   "deleteAccount": {
@@ -1009,5 +1011,9 @@
   "homePage": {
     "label": "Pàgina web",
     "helper": "Una adreça web opcional per a aquest grup (màx. 128 caràcters)."
+  },
+  "requestInfo": {
+    "label": "Avís per a la pàgina de sol·licitud (opcional)",
+    "helper": "Es mostra a dalt de la pàgina de sol·licitud de qualsevol cosa d'aquest grup — qualsevol tipus, no només reserves (p. ex. «porta el DNI», «la recollida és només els dimarts»). Admet Markdown."
   }
 }

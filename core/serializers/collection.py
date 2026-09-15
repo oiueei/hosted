@@ -154,6 +154,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "closed_dates",
             "home_page",
             "deposit_policy",
+            "request_info",
             "tags",
             "thumbnail",
             "thumbnail_url",
@@ -396,6 +397,9 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # that a bilingual group cannot say twice. 256 visible per language, 1024
     # stored — the same arithmetic as `description`.
     deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    # A note for anyone about to request anything from this collection — every
+    # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy.
+    request_info = LocalizedTextField(max_length=256, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -419,6 +423,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "closed_dates",
             "home_page",
             "deposit_policy",
+            "request_info",
             "tags",
             "thumbnail",
             "welcome_doc",
@@ -673,6 +678,9 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     # that a bilingual group cannot say twice. 256 visible per language, 1024
     # stored — the same arithmetic as `description`.
     deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    # A note for anyone about to request anything from this collection — every
+    # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy.
+    request_info = LocalizedTextField(max_length=256, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -697,6 +705,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "closed_dates",
             "home_page",
             "deposit_policy",
+            "request_info",
             "tags",
             "thumbnail",
             "welcome_doc",
