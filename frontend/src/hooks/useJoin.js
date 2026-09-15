@@ -9,9 +9,9 @@ import { getCsrfToken } from '../services/api';
  * Its two callers render it very differently, which is why they stay separate
  * components: `MagicLinkJoinPage` is a boxed `PageLayout` page
  * (`/share/:token`), `JoinToAct` renders unboxed inside `JoinPage`'s hero and
- * reports errors inline. But the request itself — the CSRF header, the
- * `language` field, the 429 branch — was identical in both, kept as two copies
- * that had already drifted apart in one place.
+ * reports errors inline. But the request itself — the CSRF header, the 429
+ * branch — was identical in both, kept as two copies that had already drifted
+ * apart in one place.
  *
  * That drift was a re-entry guard only `JoinToAct` carried, and as written it
  * was decorative: it read the `loading` *state*, which a second submit in the
@@ -40,7 +40,7 @@ export default function useJoin({
   extraBody,
   endpoint = '/api/v1/auth/join/',
 } = {}) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'error'
@@ -62,11 +62,16 @@ export default function useJoin({
           'Content-Type': 'application/json',
           'X-CSRFToken': getCsrfToken(),
         },
-        // `language` is stored on a brand-new user, so their very first magic
-        // link already speaks the language they're reading this page in.
+        // No `language` field, deliberately — that used to stamp the visitor's
+        // current UI language onto a brand-new user, permanently, and it was
+        // never a deliberate choice. It outranked the collection's own
+        // language for every future email to that member forever, with no
+        // way back short of a profile edit (CA's report, 2026-09-15). The
+        // backend resolves this join's own magic link from the collection
+        // instead, same as every later email once the member has nothing of
+        // their own set.
         body: JSON.stringify({
           email,
-          language: i18n.resolvedLanguage || i18n.language,
           ...extraBody,
         }),
       });

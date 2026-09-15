@@ -31,7 +31,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     vi.restoreAllMocks();
   });
 
-  test('joining sends the email, the page language, and the share token', async () => {
+  test('joining sends the email and the share token — never a language field', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -45,11 +45,13 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     const [url, options] = globalThis.fetch.mock.calls[0];
     expect(url).toBe('/api/v1/auth/join/');
     expect(options.method).toBe('POST');
-    // `language` makes the newcomer's FIRST magic link speak the language they
-    // were reading this page in; `share_token` targets the shared collection.
+    // No `language` — sending the page's current UI language used to get it
+    // stamped permanently onto the new member, outranking the collection's
+    // own language for every email to them from then on (CA's report,
+    // 2026-09-15). `share_token` targets the shared collection; the backend
+    // now resolves the newcomer's very first magic link from it instead.
     expect(JSON.parse(options.body)).toEqual({
       email: 'newcomer@example.com',
-      language: 'en',
       share_token: 'TOKEN123',
     });
   });
