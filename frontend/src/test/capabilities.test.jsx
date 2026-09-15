@@ -21,8 +21,9 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
  *    ending in a 403 the user could not have predicted.
  *
  * The module caches at module scope, which is why every test re-imports it
- * after `vi.resetModules()`: there is deliberately no reset export, because
- * nothing in production would ever call it.
+ * after `vi.resetModules()` rather than relying on `invalidateMe()` (below) to
+ * reset between tests — that export exists for one specific production
+ * caller (`EditProfilePage`, after a language save), not as a test seam.
  */
 
 const CAPABILITIES = {
@@ -170,6 +171,30 @@ describe('loadUserLanguage', () => {
 
     expect(await loadUserLanguage()).toBe('');
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  test('a stale userCode with a dead session answers the empty string, never redirects', async () => {
+    // `userCode` never expires on its own; the cookies behind it do
+    // (access_token 1h, refresh_token 7d — core/views/auth.py). A visitor who
+    // signed in over a week ago and comes back still has `userCode`, so the
+    // guard in the previous test alone does not catch them — every fetch here
+    // 401s (the second call is `apiFetch`'s own refresh attempt, which still
+    // runs even with `optionalAuth`; only the *redirect on its failure* is
+    // what `optionalAuth` suppresses). Nothing on a public collection/thing/
+    // share page could ever 401 before this feature (found in review,
+    // 2026-09-15). Without `optionalAuth: true` on the shared fetch, `apiFetch`
+    // would clear `userCode` and hard-navigate to `/login` right here — so
+    // `userCode` surviving is the one proxy this test can check for that
+    // (jsdom does not implement real navigation, so `window.location` itself
+    // cannot be asserted on).
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
+    );
+    const { loadUserLanguage } = await import('../hooks/useCapabilities');
+
+    await expect(loadUserLanguage()).resolves.toBe('');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(localStorage.getItem('userCode')).toBe('AAA111');
   });
 
   test('shares the cached request with loadCapabilities — one call answers both', async () => {

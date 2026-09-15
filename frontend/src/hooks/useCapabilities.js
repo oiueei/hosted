@@ -28,7 +28,7 @@ function loadMe() {
   const userCode = localStorage.getItem('userCode');
   if (cached.promise && cached.userCode === userCode) return cached.promise;
 
-  const promise = apiFetch('/api/v1/auth/me/')
+  const promise = apiFetch('/api/v1/auth/me/', { optionalAuth: true })
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`me ${res.status}`))))
     .catch(() => {
       // A request that never got an answer is **not** cached. Failing open is
@@ -61,17 +61,24 @@ export function loadCapabilities() {
  * collection's own language, which in turn only ever wins over the plain
  * browser default.
  *
- * **Checks for `userCode` before ever calling `loadMe()`.** Every existing
- * caller of `loadMe()` (`loadCapabilities`) only ever ran from a page already
- * behind `RequireAuth`, so `apiFetch`'s 401-then-refresh-then-redirect-to-login
- * dance (`services/api.js`) never fired for a signed-out visitor in practice.
+ * **Checks for `userCode` before ever calling `loadMe()`, which itself now
+ * passes `optionalAuth: true`.** Every existing caller of `loadMe()`
+ * (`loadCapabilities`) only ever ran from a page already behind `RequireAuth`,
+ * so `apiFetch`'s 401-then-refresh-then-redirect-to-login dance
+ * (`services/api.js`) never fired for a signed-out visitor in practice.
  * `useCollectionLanguage` is the first caller reached from genuinely public
- * pages — `CollectionPage`, `JoinPage`, an anonymous `ThingPage` — so without
- * this guard, opening any of them for a collection with a `language` set would
- * silently hard-navigate every anonymous visitor to `/login` (found in review,
- * 2026-09-15). `loadCapabilities` is deliberately left untouched: it is a
- * separately-hardened, widely-tested cache (`test/capabilities.test.jsx`) and
- * none of its callers are reachable while signed out.
+ * pages — `CollectionPage`, `JoinPage`, `SharePage`, an anonymous `ThingPage`.
+ * The `userCode` check alone caught a never-signed-in visitor, but not one
+ * whose `access_token`/`refresh_token` cookies (1h/7d, `core/views/auth.py`)
+ * had simply expired while `userCode` — which never expires on its own —
+ * stayed in `localStorage`: for them `loadMe()` still 401'd through
+ * `apiFetch` and still redirected, on a page nothing else on it could ever
+ * 401 (both rounds found in review, 2026-09-15). `optionalAuth: true` closes
+ * that for good: a failed request comes back as a response to inspect, never
+ * a redirect. `loadCapabilities` is unaffected in practice — a failure there
+ * was always read as "no restriction", and every page that consumes it makes
+ * its own separate, non-optional `apiFetch` call for its primary data, which
+ * still redirects a genuinely dead session.
  */
 export function loadUserLanguage() {
   if (!localStorage.getItem('userCode')) return Promise.resolve('');
