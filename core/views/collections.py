@@ -1347,13 +1347,18 @@ class SharePreviewView(APIView):
 
     Public and unauthenticated: the 22-char token **is** the credential, and
     whoever holds it already knows a real collection sits behind it. It returns
-    **only** ``headline`` and ``description`` — never the owner, the roster or a
-    member count — and a generic **404** for an unknown, revoked or inactive
-    token, so it reveals nothing the link itself does not.
+    **only** ``headline``, ``description`` and ``language`` — never the owner,
+    the roster or a member count — and a generic **404** for an unknown,
+    revoked or inactive token, so it reveals nothing the link itself does not.
+    ``language`` is no more sensitive than the other two: it is exactly what
+    `CollectionSerializer` already serves any signed-in member.
 
-    Both fields are returned raw: either may be a ``{lang: text}`` map the SPA
-    resolves against the reader's language (O6), exactly like every other
-    collection read.
+    ``headline``/``description`` are returned raw: either may be a
+    ``{lang: text}`` map the SPA resolves against the reader's language (O6),
+    exactly like every other collection read. ``language`` powers the SPA's
+    `useCollectionLanguage` — this is the one join door (`/share/{token}`)
+    reached before a stranger is a member of anything, so the collection's own
+    language is the only signal available yet.
     """
 
     permission_classes = [AllowAny]
@@ -1370,6 +1375,7 @@ class SharePreviewView(APIView):
             {
                 "headline": collection.headline,
                 "description": collection.description,
+                "language": collection.language,
             }
         )
 

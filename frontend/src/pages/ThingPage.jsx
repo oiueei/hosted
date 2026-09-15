@@ -21,6 +21,7 @@ import { useLocalized } from '../utils/localized';
 import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ButtonLink from '../components/ButtonLink';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function ThingPage() {
   const { code, thingCode } = useParams();
@@ -36,6 +37,7 @@ export default function ThingPage() {
   // The owner may have written this thing's text once per language.
   const L = useLocalized();
   const headline = L(thing?.headline);
+  useCollectionLanguage(thing?.collection_language);
   useEffect(() => {
     document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
   }, [thing, headline, t]);

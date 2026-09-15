@@ -18,6 +18,7 @@ import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -56,6 +57,7 @@ export default function CollectionPage() {
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
   const headline = L(collection?.headline);
+  useCollectionLanguage(collection?.language);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })

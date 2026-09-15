@@ -68,7 +68,7 @@ def hourly_reservations(db, user, user2, api_client):
         mode=Collection.Mode.PROPRIETARY,
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
-        reservation_max_hours=3,
+        reservation_max_minutes=180,
         opening_hours={
             "0": [["10:00", "14:00"], ["16:00", "20:00"]],
             "1": [["10:00", "14:00"], ["16:00", "20:00"]],
@@ -394,16 +394,17 @@ def test_an_hourly_clash_is_a_409_and_leaves_the_rest_of_the_day_free(
 def test_a_full_day_hourly_reservation_is_refused_when_it_exceeds_the_hour_cap(
     hourly_reservations, authenticated_client2
 ):
-    """CA's call, made explicitly when this feature was scoped: the hour cap
+    """CA's call, made explicitly when this feature was scoped: the cap
     applies to a full-day reservation too, no exception. Monday's full day is
-    10h (10:00-20:00 across the lunch gap); this collection's cap is 3h."""
+    600 minutes (10:00-20:00 across the lunch gap); this collection's cap is
+    180."""
     resp = authenticated_client2.post(
         REQUEST_URL.format(hourly_reservations["thing"].code),
         {"start_date": str(_next_weekday(0)), "start_time": "10:00", "end_time": "20:00"},
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert "3" in str(resp.data)
+    assert "180" in str(resp.data)
 
 
 def test_a_full_day_hourly_reservation_is_accepted_when_it_fits_under_a_generous_cap(
@@ -417,7 +418,7 @@ def test_a_full_day_hourly_reservation_is_accepted_when_it_fits_under_a_generous
         mode=Collection.Mode.PROPRIETARY,
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
-        reservation_max_hours=12,
+        reservation_max_minutes=720,
         opening_hours={"0": [["10:00", "14:00"], ["16:00", "20:00"]]},
     )
     coll.invites.add(user2)
@@ -674,7 +675,7 @@ def test_creating_an_hourly_reservations_collection_stores_opening_hours(authent
             "headline": "Ateneu (hourly)",
             "allowed_thing_types": ["RESERVE_THING"],
             "reservation_unit": "HOUR",
-            "reservation_max_hours": 3,
+            "reservation_max_minutes": 180,
             "opening_hours": {"0": [["16:00", "20:00"], ["10:00", "14:00"]]},
         },
         format="json",
@@ -683,7 +684,7 @@ def test_creating_an_hourly_reservations_collection_stores_opening_hours(authent
     assert resp.data["reservation_unit"] == "HOUR"
     # Sorted by the validator, regardless of the order the owner sent them in.
     assert resp.data["opening_hours"] == {"0": [["10:00", "14:00"], ["16:00", "20:00"]]}
-    assert resp.data["reservation_max_hours"] == 3
+    assert resp.data["reservation_max_minutes"] == 180
 
 
 def test_creating_a_collection_with_overlapping_opening_hours_is_a_400(authenticated_client):
@@ -701,6 +702,45 @@ def test_creating_a_collection_with_overlapping_opening_hours_is_a_400(authentic
     assert not Collection.objects.filter(headline="Bad hours").exists()
 
 
+def test_creating_a_collection_with_a_minimum_above_the_maximum_is_a_400(authenticated_client):
+    resp = authenticated_client.post(
+        "/api/v1/collections/",
+        {
+            "headline": "Backwards",
+            "allowed_thing_types": ["RESERVE_THING"],
+            "reservation_unit": "HOUR",
+            "reservation_min_minutes": 120,
+            "reservation_max_minutes": 60,
+            "opening_hours": {"0": [["10:00", "14:00"]]},
+        },
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert not Collection.objects.filter(headline="Backwards").exists()
+
+
+def test_updating_only_the_minimum_above_an_untouched_maximum_is_a_400(authenticated_client):
+    """The minimum is being changed but the maximum isn't part of this
+    request at all — the check must fall back to the stored maximum, not skip
+    itself because only one side of the pair was sent."""
+    coll = Collection.objects.create(
+        code="RSVC08",
+        owner=User.objects.get(code="TEST01"),
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_min_minutes=15,
+        reservation_max_minutes=60,
+        opening_hours={"0": [["10:00", "14:00"]]},
+    )
+    resp = authenticated_client.patch(
+        f"/api/v1/collections/{coll.code}/", {"reservation_min_minutes": 90}, format="json"
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    coll.refresh_from_db()
+    assert coll.reservation_min_minutes == 15  # the update did not go through
+
+
 def test_updating_a_reservations_collection_switches_it_to_hourly(authenticated_client):
     coll = Collection.objects.create(
         code="RSVC06",
@@ -714,7 +754,7 @@ def test_updating_a_reservations_collection_switches_it_to_hourly(authenticated_
         {
             "reservation_unit": "HOUR",
             "opening_hours": {"0": [["10:00", "14:00"]]},
-            "reservation_max_hours": 2,
+            "reservation_max_minutes": 120,
         },
         format="json",
     )
@@ -722,7 +762,7 @@ def test_updating_a_reservations_collection_switches_it_to_hourly(authenticated_
     coll.refresh_from_db()
     assert coll.reservation_unit == Collection.ReservationUnit.HOUR
     assert coll.opening_hours == {"0": [["10:00", "14:00"]]}
-    assert coll.reservation_max_hours == 2
+    assert coll.reservation_max_minutes == 120
 
 
 # --- cancellation (both sides) -----------------------------------------
@@ -851,7 +891,8 @@ def test_the_thing_serializer_exposes_the_hourly_rules(hourly_reservations, auth
     resp = authenticated_client2.get(f"/api/v1/things/{hourly_reservations['thing'].code}/")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.data["reservation_unit"] == "HOUR"
-    assert resp.data["reservation_max_hours"] == 3
+    assert resp.data["reservation_min_minutes"] == 60
+    assert resp.data["reservation_max_minutes"] == 180
     assert resp.data["opening_hours"]["0"] == [["10:00", "14:00"], ["16:00", "20:00"]]
 
 
@@ -869,7 +910,8 @@ def test_the_thing_serializer_hides_reservation_unit_for_non_reserve_types(authe
     resp = authenticated_client.get(f"/api/v1/things/{thing.code}/")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.data["reservation_unit"] is None
-    assert resp.data["reservation_max_hours"] is None
+    assert resp.data["reservation_min_minutes"] is None
+    assert resp.data["reservation_max_minutes"] is None
     assert resp.data["opening_hours"] == {}
 
 

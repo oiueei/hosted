@@ -32,6 +32,7 @@ import RadioOptionGroup from '../components/RadioOptionGroup';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
+import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function RequestThingPage() {
   const { code, thingCode } = useParams();
@@ -54,6 +55,7 @@ export default function RequestThingPage() {
   const L = useLocalized();
   const headline = L(thing?.headline);
   const isReservation = thing?.type === 'RESERVE_THING';
+  useCollectionLanguage(thing?.collection_language);
   useEffect(() => {
     if (!thing) {
       document.title = t('titles.holdDefault');
@@ -69,8 +71,8 @@ export default function RequestThingPage() {
   const [startDate, setStartDate] = useState(isoToDisplay(location.state?.prefillDate) || '');
   const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState('');
-  // HOUR-unit reservations only: a duration-option key ('1'..'12', 'halfDay',
-  // 'fullDay') and a chosen "HH:MM" start — kept apart from `duration` above
+  // HOUR-unit reservations only: a duration-option key (its minutes, e.g.
+  // '30') and a chosen "HH:MM" start — kept apart from `duration` above
   // (a day-count) since the two are never both meaningful for the same thing.
   const [hourlyDuration, setHourlyDuration] = useState('');
   const [hourlyStartTime, setHourlyStartTime] = useState('');
@@ -147,13 +149,15 @@ export default function RequestThingPage() {
   // Collection.day_opening_blocks / reservation_hour_violation mirror.
   const isHourlyReservation = isReservation && thing?.reservation_unit === 'HOUR';
   const openingHours = thing?.opening_hours || {};
-  const reservationMaxHours = thing?.reservation_max_hours || 3;
+  const reservationMinMinutes = thing?.reservation_min_minutes || 60;
+  const reservationMaxMinutes = thing?.reservation_max_minutes || 180;
   const hourlyPickupDisabled = (date) =>
     isHourlyPickupDisabled(date, {
       openingHours,
       closedDates,
       blockedPeriods,
-      maxHours: reservationMaxHours,
+      minMinutes: reservationMinMinutes,
+      maxMinutes: reservationMaxMinutes,
     });
   const selectedIso = displayToIso(startDate);
   const blocksForSelectedDay =
@@ -163,7 +167,7 @@ export default function RequestThingPage() {
       ? dayBookings(blockedPeriods, selectedIso)
       : { wholeDay: false, ranges: [] };
   const hourlyDurationChoices = isHourlyReservation
-    ? durationOptions(blocksForSelectedDay, reservationMaxHours)
+    ? durationOptions(reservationMinMinutes, reservationMaxMinutes)
     : [];
   const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
   const hourlyStartTimeChoices = chosenDurationOption
@@ -171,13 +175,15 @@ export default function RequestThingPage() {
         blocksForSelectedDay,
         chosenDurationOption.minutes,
         bookingsForSelectedDay,
-        chosenDurationOption.key === 'fullDay'
+        reservationMinMinutes
       )
     : [];
   const durationOptionLabel = (opt) => {
-    if (opt.key === 'halfDay') return t('reservation.durationHalfDay');
-    if (opt.key === 'fullDay') return t('reservation.durationFullDay');
-    return t('reservation.hours', { count: opt.minutes / 60 });
+    const hours = Math.floor(opt.minutes / 60);
+    const minutes = opt.minutes % 60;
+    if (hours === 0) return t('reservation.minutes', { count: minutes });
+    if (minutes === 0) return t('reservation.hours', { count: hours });
+    return t('reservation.hoursAndMinutes', { hours, minutes });
   };
 
   // With a single fixed length there is nothing to choose, so it *is* the answer

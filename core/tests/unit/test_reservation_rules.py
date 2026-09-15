@@ -63,7 +63,7 @@ def hourly_reservations_collection(db):
         mode=Collection.Mode.PROPRIETARY,
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
-        reservation_max_hours=3,
+        reservation_max_minutes=180,
         opening_hours={
             "0": [["10:00", "14:00"], ["16:00", "20:00"]],
             "1": [["10:00", "14:00"], ["16:00", "20:00"]],
@@ -90,7 +90,7 @@ def generous_hourly_reservations_collection(db):
         mode=Collection.Mode.PROPRIETARY,
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
-        reservation_max_hours=12,
+        reservation_max_minutes=720,
         opening_hours={
             "0": [["10:00", "14:00"], ["16:00", "20:00"]],
             "4": [["10:00", "14:00"]],
@@ -639,7 +639,8 @@ def test_reservation_unit_defaults_to_day(db):
     )
     assert coll.reservation_unit == Collection.ReservationUnit.DAY
     assert coll.opening_hours == {}
-    assert coll.reservation_max_hours == 3
+    assert coll.reservation_min_minutes == 60
+    assert coll.reservation_max_minutes == 180
 
 
 def test_booking_start_time_and_end_time_default_to_none(db):
@@ -710,18 +711,48 @@ def test_reservation_hour_violation_rejects_end_before_or_equal_start(
     )
 
 
-def test_reservation_hour_violation_rejects_under_an_hour(hourly_reservations_collection):
+def test_reservation_hour_violation_rejects_under_the_minimum(hourly_reservations_collection):
+    # Fixture's minimum is the model default, 60 minutes — unchanged from the
+    # fixed floor every HOUR-unit collection lived under before this field
+    # existed.
     mon = _next_weekday(0)
     msg = hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(10, 30))
-    assert msg is not None
+    assert msg is not None and "60" in msg
 
 
-def test_reservation_hour_violation_rejects_over_the_max_hours(hourly_reservations_collection):
+def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_too_short(db):
+    """A minimum lower than the old fixed 60-minute floor is exactly the
+    feature this field exists for — an early adopter wanted shorter slots."""
+    owner = User.objects.create(code="HRMNOW", email="hrmnow@test.com")
+    coll = Collection.objects.create(
+        code="HRMNCO",
+        owner=owner,
+        headline="Quick machine slots",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_min_minutes=15,
+        reservation_max_minutes=100,
+        opening_hours={"0": [["10:00", "14:00"]]},
+    )
+    mon = _next_weekday(0)
+    # A 15-minute reservation is now accepted — impossible under the old
+    # fixed 60-minute floor.
+    assert coll.reservation_hour_violation(mon, time(10, 0), time(10, 15)) is None
+    # Still refused just under the new, lower floor.
+    msg = coll.reservation_hour_violation(mon, time(10, 0), time(10, 10))
+    assert msg is not None and "15" in msg
+    # The max is not aligned to a whole hour either (100 minutes = 1h40).
+    assert coll.reservation_hour_violation(mon, time(10, 0), time(11, 40)) is None
+    msg = coll.reservation_hour_violation(mon, time(10, 0), time(11, 41))
+    assert msg is not None and "100" in msg
+
+
+def test_reservation_hour_violation_rejects_over_the_max_minutes(hourly_reservations_collection):
     mon = _next_weekday(0)
     msg = hourly_reservations_collection.reservation_hour_violation(
         mon, time(10, 0), time(14, 0)
-    )  # 4h, max is 3
-    assert msg is not None and "3" in msg
+    )  # 4h = 240min, max is 180
+    assert msg is not None and "180" in msg
 
 
 def test_reservation_hour_violation_accepts_exactly_the_max(hourly_reservations_collection):
@@ -744,7 +775,7 @@ def test_reservation_hour_violation_rejects_past_the_horizon(db):
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_horizon_days=14,
-        reservation_max_hours=3,
+        reservation_max_minutes=180,
         opening_hours={str(d): [["10:00", "14:00"]] for d in range(7)},
     )
     today = date(2026, 6, 1)  # a Monday
@@ -882,18 +913,18 @@ def test_reservation_hour_violation_the_hour_cap_has_no_full_day_exception(
     hourly_reservations_collection,
 ):
     """CA's call, made explicitly when this feature was scoped: a single
-    ``reservation_max_hours`` governs every reservation, full-day included —
+    ``reservation_max_minutes`` governs every reservation, full-day included —
     exempting the full day was offered as an alternative and turned down. A
-    venue whose day (or its only block) adds up to more hours than the cap
+    venue whose day (or its only block) adds up to more minutes than the cap
     simply can't be booked for "the whole day"; the owner raises the cap
     instead of the product carving out a silent exception."""
-    mon = _next_weekday(0)  # full day 10:00-20:00 = 10h, this fixture's cap is 3h
+    mon = _next_weekday(0)  # full day 10:00-20:00 = 600min, this fixture's cap is 180
     msg = hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 0))
-    assert msg is not None and "3" in msg
+    assert msg is not None and "180" in msg
 
-    fri = _next_weekday(4)  # Friday's only block is 10:00-14:00 = 4h, cap is 3h
+    fri = _next_weekday(4)  # Friday's only block is 10:00-14:00 = 240min, cap is 180
     msg = hourly_reservations_collection.reservation_hour_violation(fri, time(10, 0), time(14, 0))
-    assert msg is not None and "3" in msg
+    assert msg is not None and "180" in msg
 
 
 # --- has_overlap with hours -----------------------------------------------

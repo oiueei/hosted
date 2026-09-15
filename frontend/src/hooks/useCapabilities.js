@@ -18,20 +18,33 @@ import { apiFetch } from '../services/api';
  */
 
 // One request per signed-in account, shared by every page that asks. The four
-// forms that consume this are otherwise four extra calls to an endpoint the app
-// already hits on load. Keyed by user so it cannot outlive a logout and answer
-// for whoever signs in next.
+// forms that consume `loadCapabilities` are otherwise four extra calls to an
+// endpoint the app already hits on load; `loadUserLanguage` (below) shares the
+// same cached fetch rather than opening a fifth. Keyed by user so it cannot
+// outlive a logout and answer for whoever signs in next.
 let cached = { userCode: null, promise: null };
 
-export function loadCapabilities() {
+function loadMe() {
   const userCode = localStorage.getItem('userCode');
   if (cached.promise && cached.userCode === userCode) return cached.promise;
 
-  const promise = apiFetch('/api/v1/auth/me/')
-    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`me ${res.status}`))))
-    // An answer without the field is still an answer — an older or narrower
-    // backend saying "no restrictions" — so it caches like any other.
-    .then((data) => data?.capabilities ?? null)
+  const promise = apiFetch('/api/v1/auth/me/', { optionalAuth: true })
+    .then((res) => {
+      if (res.ok) return res.json();
+      // `optionalAuth` means `apiFetch` already tried refreshing and it still
+      // came back 401 — the same definitive "session is dead" signal that,
+      // without `optionalAuth`, would itself have cleared `userCode` and
+      // redirected. Clearing it here too means `RequireAuth`'s own fast path
+      // (a plain `localStorage.getItem('userCode')` check, evaluated once at
+      // mount) catches it honestly on whichever protected page is opened
+      // next, rather than every later collection/thing page failing open
+      // silently forever and repeating the failed refresh attempt on each
+      // one — a real cost against `/auth/refresh/`'s 10/minute-per-IP limit
+      // (found in review, 2026-09-15). A non-401 failure (offline, 500)
+      // leaves `userCode` alone: nothing there says the session is dead.
+      if (res.status === 401) localStorage.removeItem('userCode');
+      return Promise.reject(new Error(`me ${res.status}`));
+    })
     .catch(() => {
       // A request that never got an answer is **not** cached. Failing open is
       // deliberate (the server is the gate), but *remembering* the failure is
@@ -46,6 +59,73 @@ export function loadCapabilities() {
 
   cached = { userCode, promise };
   return promise;
+}
+
+export function loadCapabilities() {
+  // An answer without the field is still an answer — an older or narrower
+  // backend saying "no restrictions" — so it caches like any other.
+  return loadMe().then((data) => data?.capabilities ?? null);
+}
+
+/**
+ * The signed-in account's own, deliberately-saved UI language (`EditProfilePage`),
+ * or `''` for a signed-out visitor, one with no preference of their own, or a
+ * failed request — every one of those means "no preference", the same fail-open
+ * shape as `loadCapabilities`. This is the top tier of the hierarchy
+ * `useCollectionLanguage` applies: a real preference here always wins over a
+ * collection's own language, which in turn only ever wins over the plain
+ * browser default.
+ *
+ * **Checks for `userCode` before ever calling `loadMe()`, which itself now
+ * passes `optionalAuth: true`.** Every existing caller of `loadMe()`
+ * (`loadCapabilities`) only ever ran from a page already behind `RequireAuth`,
+ * so `apiFetch`'s 401-then-refresh-then-redirect-to-login dance
+ * (`services/api.js`) never fired for a signed-out visitor in practice.
+ * `useCollectionLanguage` is the first caller reached from genuinely public
+ * pages — `CollectionPage`, `JoinPage`, `SharePage`, an anonymous `ThingPage`.
+ * The `userCode` check alone caught a never-signed-in visitor, but not one
+ * whose `access_token`/`refresh_token` cookies (1h/7d, `core/views/auth.py`)
+ * had simply expired while `userCode` — which never expires on its own —
+ * stayed in `localStorage`: for them `loadMe()` still 401'd through
+ * `apiFetch` and still redirected, on a page nothing else on it could ever
+ * 401 (both rounds found in review, 2026-09-15). `optionalAuth: true` closes
+ * that for good: a failed request comes back as a response to inspect, never
+ * a redirect — and `loadMe()` now clears `userCode` itself on a definitive
+ * 401, so the next protected page's `RequireAuth` still catches a dead
+ * session honestly instead of silently repeating the failed refresh forever.
+ * `loadCapabilities` is unaffected in the common case — a failure there was
+ * always read as "no restriction", and most pages that consume it also make
+ * their own separate, non-optional `apiFetch` call for their primary data,
+ * which independently redirects a genuinely dead session just as fast as
+ * before. **`CreateCollectionPage` is the one exception**: its only
+ * authenticated call before submit is this shared one, so a &gt;7-day-stale
+ * session there now renders the form instead of redirecting on load, and
+ * only fails (losing whatever was typed) at the POST — a real, if narrow and
+ * low-frequency, regression from the redirect this call used to trigger by
+ * accident (found in review, 2026-09-15; not fixed, since `RequireAuth`'s own
+ * check only runs once at mount and does not react to `userCode` clearing
+ * later — closing it properly means that page probing its own session before
+ * rendering the form, a separate change).
+ */
+export function loadUserLanguage() {
+  if (!localStorage.getItem('userCode')) return Promise.resolve('');
+  return loadMe().then((data) => data?.language ?? '');
+}
+
+/**
+ * Drops the shared `/auth/me/` cache so the next `loadCapabilities()` /
+ * `loadUserLanguage()` call re-fetches instead of serving a stale answer.
+ *
+ * `capabilities` never changes from inside the SPA, but `language` does — one
+ * click away in `EditProfilePage` — and that page neither reads nor updates
+ * this module's cache when it saves. Without this, a member who opens a
+ * Catalan collection (caching `language: ''`), switches their profile to
+ * Spanish, and clicks straight back into the group would see it flip back to
+ * Catalan: the cached empty answer overriding a preference saved seconds
+ * earlier, self-healing only on a full reload (found in review, 2026-09-15).
+ */
+export function invalidateMe() {
+  cached = { userCode: null, promise: null };
 }
 
 export default function useCapabilities() {

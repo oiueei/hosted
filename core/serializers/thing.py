@@ -300,13 +300,15 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
     collection_request_info = serializers.SerializerMethodField()
+    collection_language = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
     reservation_horizon_days = serializers.SerializerMethodField()
     reservation_unit = serializers.SerializerMethodField()
     opening_hours = serializers.SerializerMethodField()
-    reservation_max_hours = serializers.SerializerMethodField()
+    reservation_min_minutes = serializers.SerializerMethodField()
+    reservation_max_minutes = serializers.SerializerMethodField()
     closed_dates = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
@@ -346,13 +348,15 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_owner",
             "collection_is_onboarding",
             "collection_request_info",
+            "collection_language",
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
             "reservation_unit",
             "opening_hours",
-            "reservation_max_hours",
+            "reservation_min_minutes",
+            "reservation_max_minutes",
             "closed_dates",
             "transfer_count",
             "is_endless",
@@ -472,6 +476,19 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         first = self._viewable_collection(obj)
         return first.request_info if first else ""
 
+    def get_collection_language(self, obj):
+        """The collection's own language, resolved the same way as the four
+        fields above — for the frontend's `useCollectionLanguage` hook, which a
+        thing-only page (`ThingPage`, `RequestThingPage`, `EditThingPage`,
+        `DeleteThingPage`) has no other way to learn: those pages fetch
+        `/things/{code}/` and never see the collection object itself. `""`
+        (never the collection's actual blank default) when there is no
+        viewable collection, so the hook's own falsy check needs no special
+        case for "collection unknown" vs. "collection has no language set" —
+        both mean "don't override"."""
+        first = self._viewable_collection(obj)
+        return (first.language if first else "") or ""
+
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).
         Used by RequestThingPage to offer the fixed-duration picker for LEND/RENT."""
@@ -526,13 +543,22 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         first = self._viewable_collection(obj)
         return dict(first.opening_hours) if first else {}
 
-    def get_reservation_max_hours(self, obj):
-        """HOUR-unit only: the longest a single reservation may run, in hours.
-        ``None`` for every non-RESERVE thing."""
+    def get_reservation_min_minutes(self, obj):
+        """HOUR-unit only: the shortest a single reservation may run, in
+        minutes — also the step the request page's duration/start-time
+        choices are offered in. ``None`` for every non-RESERVE thing."""
         if obj.type != Thing.Type.RESERVE_THING:
             return None
         first = self._viewable_collection(obj)
-        return first.reservation_max_hours if first else 3
+        return first.reservation_min_minutes if first else 60
+
+    def get_reservation_max_minutes(self, obj):
+        """HOUR-unit only: the longest a single reservation may run, in
+        minutes. ``None`` for every non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_max_minutes if first else 180
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available

@@ -18,8 +18,10 @@ function renderFields(over = {}) {
     setReservationHorizonDays: vi.fn(),
     reservationMaxActivePerMember: 10,
     setReservationMaxActivePerMember: vi.fn(),
-    reservationMaxHours: 3,
-    setReservationMaxHours: vi.fn(),
+    reservationMinMinutes: 60,
+    setReservationMinMinutes: vi.fn(),
+    reservationMaxMinutes: 180,
+    setReservationMaxMinutes: vi.fn(),
     openingHours: {},
     setOpeningHours: vi.fn(),
     rentalWeekdays: [],
@@ -158,19 +160,45 @@ describe('ReservationRulesFields — DAY vs HOUR field visibility', () => {
     expect(maxField()).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Days open for reservations' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('spinbutton', { name: 'Longest reservation (hours)' })
+      screen.queryByRole('spinbutton', { name: 'Shortest reservation (minutes)' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('spinbutton', { name: 'Longest reservation (minutes)' })
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Weekly opening hours')).not.toBeInTheDocument();
   });
 
-  test('HOUR mode shows the hour fields, not the day ones', () => {
-    renderFields({ reservationUnit: 'HOUR', reservationMaxHours: 3, openingHours: {} });
+  test('HOUR mode shows the minute fields, not the day ones', () => {
+    renderFields({
+      reservationUnit: 'HOUR',
+      reservationMinMinutes: 60,
+      reservationMaxMinutes: 180,
+      openingHours: {},
+    });
     expect(
-      screen.getByRole('spinbutton', { name: 'Longest reservation (hours)' })
+      screen.getByRole('spinbutton', { name: 'Shortest reservation (minutes)' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('spinbutton', { name: 'Longest reservation (minutes)' })
     ).toBeInTheDocument();
     expect(screen.getByText('Weekly opening hours')).toBeInTheDocument();
     expect(screen.queryByRole('spinbutton', { name: 'Longest reservation (days)' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Days open for reservations' })).toBeNull();
+  });
+
+  test('the minimum and maximum show their own stored values', () => {
+    renderFields({
+      reservationUnit: 'HOUR',
+      reservationMinMinutes: 15,
+      reservationMaxMinutes: 100,
+      openingHours: {},
+    });
+    expect(screen.getByRole('spinbutton', { name: 'Shortest reservation (minutes)' })).toHaveValue(
+      15
+    );
+    expect(screen.getByRole('spinbutton', { name: 'Longest reservation (minutes)' })).toHaveValue(
+      100
+    );
   });
 
   test('the horizon and active-cap fields show in both modes', () => {
