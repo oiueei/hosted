@@ -299,10 +299,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
+    collection_request_info = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
     reservation_horizon_days = serializers.SerializerMethodField()
+    reservation_unit = serializers.SerializerMethodField()
+    opening_hours = serializers.SerializerMethodField()
+    reservation_max_hours = serializers.SerializerMethodField()
     closed_dates = serializers.SerializerMethodField()
     collection_tags = serializers.SerializerMethodField()
 
@@ -341,10 +345,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_headline",
             "collection_owner",
             "collection_is_onboarding",
+            "collection_request_info",
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
             "reservation_horizon_days",
+            "reservation_unit",
+            "opening_hours",
+            "reservation_max_hours",
             "closed_dates",
             "transfer_count",
             "is_endless",
@@ -452,6 +460,18 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         first = self._viewable_collection(obj)
         return bool(first.is_onboarding) if first else False
 
+    def get_collection_request_info(self, obj):
+        """The collection's note for anyone reaching the request page for this
+        thing — served here regardless of type, but only ever rendered for
+        LEND/RENT/RESERVE (not RESERVE_THING only): a GIFT/SELL claim submits
+        straight from the card and never visits that page, so the note is
+        invisible to it however this field answers. Raw (possibly an O6
+        `{lang: text}` map, like `headline`/`description`) — `RequestThingPage`
+        resolves it client-side the same way. `""` when there is no viewable
+        collection."""
+        first = self._viewable_collection(obj)
+        return first.request_info if first else ""
+
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).
         Used by RequestThingPage to offer the fixed-duration picker for LEND/RENT."""
@@ -489,6 +509,30 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         reservation span that touches one. ``[]`` when there is no collection."""
         first = self._viewable_collection(obj)
         return list(first.closed_dates) if first else []
+
+    def get_reservation_unit(self, obj):
+        """DAY or HOUR — which reservation flow ``RequestThingPage`` renders for
+        this RESERVE_THING. ``None`` for every non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_unit if first else "DAY"
+
+    def get_opening_hours(self, obj):
+        """HOUR-unit only: the collection's per-weekday opening blocks, so the
+        picker knows what to offer. ``{}`` for a DAY-unit or non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return {}
+        first = self._viewable_collection(obj)
+        return dict(first.opening_hours) if first else {}
+
+    def get_reservation_max_hours(self, obj):
+        """HOUR-unit only: the longest a single reservation may run, in hours.
+        ``None`` for every non-RESERVE thing."""
+        if obj.type != Thing.Type.RESERVE_THING:
+            return None
+        first = self._viewable_collection(obj)
+        return first.reservation_max_hours if first else 3
 
     def get_faqs(self, obj):
         # Use prefetched faq_set cache if available

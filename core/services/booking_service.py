@@ -26,12 +26,22 @@ class BookingRequestError(Exception):
     live in this service layer without importing DRF. The view translates it to
     ``Response({"error": message}, status=status_code)`` — preserving the exact
     response shape the API had when these handlers lived on ``ThingRequestView``.
+
+    ``code`` is an optional machine-readable marker, added on top of that shape
+    rather than replacing it — most callers still get a bare ``{"error": ...}``.
+    It exists so a client can act on *which* rule failed without pattern-matching
+    English prose (or worse, any 403 at all): ``RequestThingPage``'s auto-join
+    checks for ``code == "not_a_member"`` specifically, so a *different* 403 on
+    this endpoint — e.g. the thing going INACTIVE out from under an open form —
+    can't be mistaken for a membership gap and silently join the reader to a
+    group over an unrelated error.
     """
 
-    def __init__(self, message, status_code=400):
+    def __init__(self, message, status_code=400, code=None):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+        self.code = code
 
 
 def _pickup_blocked(day, ranges):
@@ -136,6 +146,71 @@ def compute_availability(
     cursor = today
     while cursor <= horizon:
         if _pickup_available(cursor, ranges, weekdays, lengths, closed):
+            return (cursor == today, cursor)
+        cursor += timedelta(days=1)
+    return (False, None)
+
+
+def _day_has_a_free_hour(day, collection, blocked_periods):
+    """Does ``day`` have at least one free 60-minute slot within an
+    HOUR-unit collection's opening blocks, given the thing's booked periods?
+
+    A booking counts as occupying ``day`` when ``start_date <= day < end_date``
+    — the same half-open day range every other date-based check uses. A
+    whole-day booking (``start_time`` NULL — a LEND/RENT or a DAY-unit RESERVE
+    sharing the thing) closes the whole day outright. Existing HOUR-unit
+    bookings on the day are swept, in order, against each opening block to find
+    any gap of at least an hour; overlapping sub-ranges can't occur between two
+    ACCEPTED/PENDING bookings (``has_overlap`` already refuses that).
+    """
+    if day in collection.closed_date_set():
+        return False
+    blocks = collection.day_opening_blocks(day)
+    if not blocks:
+        return False
+
+    occupied = []
+    for b in blocked_periods:
+        if not (b.start_date and b.end_date and b.start_date <= day < b.end_date):
+            continue
+        if b.start_time is None:
+            return False  # a whole-day booking blocks everything
+        occupied.append((b.start_time, b.end_time))
+    occupied.sort()
+
+    for block_start, block_end in blocks:
+        cursor = block_start
+        for occ_start, occ_end in occupied:
+            if occ_end <= cursor or occ_start >= block_end:
+                continue  # outside this block
+            gap_minutes = (occ_start.hour * 60 + occ_start.minute) - (
+                cursor.hour * 60 + cursor.minute
+            )
+            if gap_minutes >= 60:
+                return True
+            if occ_end > cursor:
+                cursor = occ_end
+        tail_minutes = (block_end.hour * 60 + block_end.minute) - (cursor.hour * 60 + cursor.minute)
+        if tail_minutes >= 60:
+            return True
+    return False
+
+
+def compute_hourly_availability(blocked_periods, collection, today=None):
+    """The HOUR-unit twin of ``compute_availability``: same
+    ``(available_today, next_available)`` shape, so ``Thing.availability_window``
+    treats both units alike, but "available" means *some* opening block that
+    day still has a free hour-long gap — never mind whether a specific
+    duration/start-time combination is offered; ``RequestThingPage`` works
+    that out from ``opening_hours`` + the calendar once a day is picked.
+    Walks ``collection.reservation_horizon_days`` ahead, at most, like the
+    day-based walk above does with its own horizon.
+    """
+    today = today or timezone.localdate()
+    horizon = today + timedelta(days=collection.reservation_horizon_days)
+    cursor = today
+    while cursor <= horizon:
+        if _day_has_a_free_hour(cursor, collection, blocked_periods):
             return (cursor == today, cursor)
         cursor += timedelta(days=1)
     return (False, None)
@@ -510,16 +585,27 @@ def request_reservation(
     requester,
     owner_email,
     start_date,
-    duration_days,
+    duration_days=None,
     project_note="",
     collection_code=None,
+    *,
+    start_time=None,
+    end_time=None,
 ):
     """RESERVE_THING — create an auto-confirmed on-site reservation.
 
+    Two shapes, chosen by ``rc.is_hourly_reservations()`` — never both at once:
+    a **DAY**-unit collection takes ``duration_days`` (the original shape,
+    unchanged); an **HOUR**-unit one takes ``start_time``/``end_time`` instead,
+    and the stored booking still gets ``end_date = start_date + 1`` — never a
+    date range — so every date-only consumer downstream (reminders,
+    ``close_transfers``, the calendar export's date filter) keeps working
+    without change; only ``has_overlap`` is told about the hours.
+
     Raises ``BookingRequestError`` on any rule failure (403 not a member, 400 a
-    reservation-rule violation, 409 a date clash). On success the booking is
-    already ``ACCEPTED``; both the requester and the owner are emailed and the
-    owner gets an in-app notice.
+    reservation-rule violation, 409 a clash). On success the booking is already
+    ``ACCEPTED``; both the requester and the owner are emailed and the owner
+    gets an in-app notice.
     """
     rc = resolve_reservations_collection(thing, collection_code)
     if rc is None:
@@ -527,21 +613,45 @@ def request_reservation(
 
     if not rc.is_invited(requester.code):
         raise BookingRequestError(
-            "You need to be a member of this group to reserve.", status_code=403
+            "You need to be a member of this group to reserve.",
+            status_code=403,
+            code="not_a_member",
         )
 
-    # reservation_violation covers duration, the every-day-open-weekday rule AND
-    # the collection's "how far ahead" horizon — one backstop.
-    violation = rc.reservation_violation(start_date, duration_days)
-    if violation:
-        raise BookingRequestError(violation)
-
-    end_date = start_date + timedelta(days=duration_days)
+    if rc.is_hourly_reservations():
+        if start_time is None or end_time is None:
+            raise BookingRequestError(
+                "This space is booked by the hour — pick a start and end time."
+            )
+        violation = rc.reservation_hour_violation(start_date, start_time, end_time)
+        if violation:
+            raise BookingRequestError(violation)
+        end_date = start_date + timedelta(days=1)
+    else:
+        if duration_days is None:
+            raise BookingRequestError("This space is booked by the day — pick a length in days.")
+        # reservation_violation covers duration, the every-day-open-weekday rule
+        # AND the collection's "how far ahead" horizon — one backstop.
+        violation = rc.reservation_violation(start_date, duration_days)
+        if violation:
+            raise BookingRequestError(violation)
+        end_date = start_date + timedelta(days=duration_days)
+        start_time = None
+        end_time = None
 
     with transaction.atomic():
         Thing.objects.select_for_update().get(code=thing.code)
-        if BookingPeriod.has_overlap(thing.code, start_date, end_date):
-            raise BookingRequestError("Those dates are already taken.", status_code=409)
+        if rc.active_reservation_count(requester.code) >= rc.reservation_max_active_per_member:
+            raise BookingRequestError(
+                "You've reached the maximum number of active reservations for this space."
+            )
+        if BookingPeriod.has_overlap(
+            thing.code, start_date, end_date, start_time=start_time, end_time=end_time
+        ):
+            clash_message = (
+                "That time is already taken." if start_time else "Those dates are already taken."
+            )
+            raise BookingRequestError(clash_message, status_code=409)
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type=thing.type,
@@ -550,6 +660,8 @@ def request_reservation(
             owner_code=thing.owner,
             start_date=start_date,
             end_date=end_date,
+            start_time=start_time,
+            end_time=end_time,
             project_note=project_note or "",
             status=BookingPeriod.Status.ACCEPTED,
         )
@@ -580,6 +692,8 @@ def _send_reservation_notifications(requester, thing, booking, owner_email, coll
         "requester_name": requester.display_name,
         "start_date": str(booking.start_date),
         "end_date": str(booking.end_date),
+        "start_time": booking.start_time.strftime("%H:%M") if booking.start_time else None,
+        "end_time": booking.end_time.strftime("%H:%M") if booking.end_time else None,
         "booking_code": booking.code,
         "thing_code": thing.code,
         "collection_code": collection.code if collection else "",
@@ -656,6 +770,8 @@ def _notify_reservation_cancelled(booking, thing, by_user):
                 "other_name": by_user.name,
                 "start_date": str(booking.start_date),
                 "end_date": str(booking.end_date),
+                "start_time": booking.start_time.strftime("%H:%M") if booking.start_time else None,
+                "end_time": booking.end_time.strftime("%H:%M") if booking.end_time else None,
                 "thing_code": thing.code,
                 "cancelled_by_owner": to_the_member,
             },

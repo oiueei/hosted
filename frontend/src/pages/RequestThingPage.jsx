@@ -13,12 +13,22 @@ import {
   displayToIso,
   formatDate,
   DISPLAY_DATE_FORMAT,
+  parseLocalDate,
+  parseHM,
+  formatHM,
+  dayBlocks,
+  dayBookings,
+  durationOptions,
+  freeStartTimes,
+  isHourlyPickupDisabled,
 } from '../utils/rental';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
+import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
+import RadioOptionGroup from '../components/RadioOptionGroup';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
@@ -59,12 +69,29 @@ export default function RequestThingPage() {
   const [startDate, setStartDate] = useState(isoToDisplay(location.state?.prefillDate) || '');
   const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState('');
+  // HOUR-unit reservations only: a duration-option key ('1'..'12', 'halfDay',
+  // 'fullDay') and a chosen "HH:MM" start — kept apart from `duration` above
+  // (a day-count) since the two are never both meaningful for the same thing.
+  const [hourlyDuration, setHourlyDuration] = useState('');
+  const [hourlyStartTime, setHourlyStartTime] = useState('');
   const [projectNote, setProjectNote] = useState('');
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
+  // RESERVE_THING's "you need to be a member of this group to reserve" (403)
+  // can only happen on a PUBLIC collection (can_view already gated everything
+  // else, and a non-member reaches it only there), so joining is always
+  // genuinely possible — CA's call: don't hand the reader a second button for
+  // a step that was never really a choice, just join them (the signed-in half
+  // of login-to-act, CollectionPage's own handleJoin) and retry the exact
+  // same reservation, transparently, from inside handleSubmit. `notMemberError`
+  // (+ the manual "Join this group" fallback button) only ever shows if that
+  // auto-join itself fails — a real problem the reader does need to act on.
+  const [notMemberError, setNotMemberError] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(false);
   // Which thing the load failed for — same reason as the delete pages: a boolean
   // needs clearing at the top of the effect, which is a render spent undoing the
   // previous one.
@@ -113,6 +140,46 @@ export default function RequestThingPage() {
     reservationMaxDate.getDate() + (thing?.reservation_horizon_days || 90)
   );
 
+  // HOUR-unit RESERVE: day → duration → start time, in that order (unlike the
+  // DAY-unit flow above, which picks the length first). Each step's options
+  // depend on the previous one, computed fresh from the thing's opening_hours
+  // and the fetched calendar — the same pure helpers the backend's own
+  // Collection.day_opening_blocks / reservation_hour_violation mirror.
+  const isHourlyReservation = isReservation && thing?.reservation_unit === 'HOUR';
+  const openingHours = thing?.opening_hours || {};
+  const reservationMaxHours = thing?.reservation_max_hours || 3;
+  const hourlyPickupDisabled = (date) =>
+    isHourlyPickupDisabled(date, {
+      openingHours,
+      closedDates,
+      blockedPeriods,
+      maxHours: reservationMaxHours,
+    });
+  const selectedIso = displayToIso(startDate);
+  const blocksForSelectedDay =
+    isHourlyReservation && selectedIso ? dayBlocks(openingHours, parseLocalDate(selectedIso)) : [];
+  const bookingsForSelectedDay =
+    isHourlyReservation && selectedIso
+      ? dayBookings(blockedPeriods, selectedIso)
+      : { wholeDay: false, ranges: [] };
+  const hourlyDurationChoices = isHourlyReservation
+    ? durationOptions(blocksForSelectedDay, reservationMaxHours)
+    : [];
+  const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
+  const hourlyStartTimeChoices = chosenDurationOption
+    ? freeStartTimes(
+        blocksForSelectedDay,
+        chosenDurationOption.minutes,
+        bookingsForSelectedDay,
+        chosenDurationOption.key === 'fullDay'
+      )
+    : [];
+  const durationOptionLabel = (opt) => {
+    if (opt.key === 'halfDay') return t('reservation.durationHalfDay');
+    if (opt.key === 'fullDay') return t('reservation.durationFullDay');
+    return t('reservation.hours', { count: opt.minutes / 60 });
+  };
+
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
   // (#4). Derived rather than written into state once the thing loads: that
@@ -147,17 +214,32 @@ export default function RequestThingPage() {
         });
   const dateBlocked = (date) => isDateBlocked(date, blockedPeriods, closedDates);
 
-  const handleSubmit = async () => {
-    setAttempted(true);
-
+  // The request body, built fresh from current form state — `null` when a
+  // required field is still empty. A function, not a one-off inline block, so
+  // both the normal submit and the manual "Join this group" fallback (a
+  // *separate* click, its own later render) build it the same way — the
+  // fallback used to replay whatever body the earlier failed attempt had
+  // captured, which could book a date the reader had since changed on screen.
+  const buildReservationBody = () => {
     const isDateBased = thing && DATE_TYPES.includes(thing.type);
-
-    let body = {};
-    if (isReservation) {
+    let body = null;
+    if (isReservation && isHourlyReservation) {
+      // Pickup date + a chosen slot; the backend derives end_date = start + 1
+      // and auto-confirms.
+      const startIso = displayToIso(startDate);
+      if (!startIso || !chosenDurationOption || !hourlyStartTime) return null;
+      const endTime = formatHM(parseHM(hourlyStartTime) + chosenDurationOption.minutes);
+      body = {
+        start_date: startIso,
+        start_time: hourlyStartTime,
+        end_time: endTime,
+        project_note: projectNote.trim(),
+      };
+    } else if (isReservation) {
       // Pickup date + a length of 1..reservation_max_days; the backend derives
       // the end date and auto-confirms.
       const startIso = displayToIso(startDate);
-      if (!chosenDuration || !startIso) return;
+      if (!chosenDuration || !startIso) return null;
       body = {
         start_date: startIso,
         duration_days: Number(chosenDuration),
@@ -168,22 +250,107 @@ export default function RequestThingPage() {
         // Renter picks a fixed length + a pickup date; the return date is derived
         // as pickup + length (a week rental comes back on the same weekday).
         const startIso = displayToIso(startDate);
-        if (!chosenDuration || !startIso) return;
+        if (!chosenDuration || !startIso) return null;
         const end = derivedReturnDate(startIso, chosenDuration);
         body = { start_date: startIso, end_date: end };
       } else {
         const startIso = displayToIso(startDate);
         const endIso = displayToIso(endDate);
-        if (!startIso || !endIso) return;
+        if (!startIso || !endIso) return null;
         body = { start_date: startIso, end_date: endIso };
       }
     }
-    // Pass the collection context so the backend applies that collection's rental
-    // rules (harmless for other flows / collections without rules).
-    if (code) body.collection_code = code;
+    // Pass the collection context so the backend applies that collection's
+    // rental rules (harmless for other flows / collections without rules).
+    if (body && code) body.collection_code = code;
+    return body;
+  };
+
+  // Shared by the first attempt's non-403 branches and the retry after an
+  // auto-join below — a business-rule failure reads the same either way.
+  const showRequestError = async (res) => {
+    if (res.status === 429) {
+      setToast({ type: 'error', message: t('common.tooManyAttempts') });
+    } else if (res.status === 400) {
+      const data = await res.json();
+      let message = data.detail;
+      if (!message) {
+        const errors = Object.values(data).flat();
+        message = errors.join(' ') || t('thingPage.invalidRequest');
+      }
+      setToast({ type: 'error', message });
+    } else if (res.status === 403) {
+      const data = await res.json();
+      setToast({ type: 'error', message: data.error || t('request.errorSending') });
+    } else if (res.status === 409) {
+      setToast({ type: 'error', message: t('request.dateOverlap') });
+    } else {
+      setToast({ type: 'error', message: t('request.errorSending') });
+    }
+  };
+
+  // The signed-in half of login-to-act (CollectionPage's own handleJoin,
+  // reused): a PUBLIC collection's own member roster is one POST away for
+  // someone who already has an account. `code` covers the collection-context
+  // route; the standalone `/things/:code/request` route carries none, so it
+  // falls back to the collection the thing itself resolved to server-side.
+  //
+  // Only ever called for the backend's `code: "not_a_member"` marker (see
+  // handleSubmit), which can only fire on a PUBLIC collection — can_view
+  // already gated everything else, and a non-member reaches it only there —
+  // so joining is always genuinely possible. Membership was never really a
+  // choice being offered, so it isn't asked for: join, then retry the
+  // reservation, transparently (CA's call). `notMemberError` + the manual
+  // fallback button only ever show if this auto-join itself fails.
+  const joinThenRetry = async (body, fallbackMessage) => {
+    const collectionCode = code || thing?.collection_code;
+    if (!collectionCode) {
+      setNotMemberError(fallbackMessage || t('request.errorSending'));
+      return;
+    }
+    setJoining(true);
+    setJoinError(false);
+    try {
+      let joinRes;
+      try {
+        joinRes = await apiFetch(`/api/v1/collections/${collectionCode}/join/`, {
+          method: 'POST',
+        });
+      } catch {
+        joinRes = null;
+      }
+      if (!joinRes?.ok) {
+        setJoinError(true);
+        setNotMemberError(fallbackMessage || t('request.errorSending'));
+        return;
+      }
+      setNotMemberError('');
+      try {
+        const retryRes = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        if (retryRes.ok) {
+          setSuccess(true);
+        } else {
+          await showRequestError(retryRes);
+        }
+      } catch {
+        setToast({ type: 'error', message: t('common.connectionError') });
+      }
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setAttempted(true);
+    const body = buildReservationBody();
+    if (!body) return;
 
     setSubmitting(true);
     setToast(null);
+    setNotMemberError('');
     try {
       const res = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
         method: 'POST',
@@ -191,26 +358,38 @@ export default function RequestThingPage() {
       });
       if (res.ok) {
         setSuccess(true);
-      } else if (res.status === 429) {
-        setToast({ type: 'error', message: t('common.tooManyAttempts') });
-      } else if (res.status === 400) {
+      } else if (res.status === 403) {
+        // Only this specific marker means "not a member" — any *other* 403
+        // (e.g. the thing going INACTIVE while this form was open) must not
+        // be mistaken for it and silently join the reader to a group over an
+        // unrelated error.
         const data = await res.json();
-        let message = data.detail;
-        if (!message) {
-          const errors = Object.values(data).flat();
-          message = errors.join(' ') || t('thingPage.invalidRequest');
+        if (isReservation && data.code === 'not_a_member') {
+          await joinThenRetry(body, data.error);
+        } else {
+          setToast({ type: 'error', message: data.error || t('request.errorSending') });
         }
-        setToast({ type: 'error', message });
-      } else if (res.status === 409) {
-        setToast({ type: 'error', message: t('request.dateOverlap') });
       } else {
-        setToast({ type: 'error', message: t('request.errorSending') });
+        await showRequestError(res);
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // The manual fallback — shown only when the automatic join above itself
+  // failed. Rebuilds the body fresh rather than replaying the failed
+  // attempt's — the reader may well have changed the date while this was
+  // showing, and a fixed old body would confirm the wrong one.
+  const handleJoinGroup = () => {
+    const body = buildReservationBody();
+    if (!body) {
+      setAttempted(true);
+      return;
+    }
+    return joinThenRetry(body, notMemberError);
   };
 
   if (error) {
@@ -232,10 +411,30 @@ export default function RequestThingPage() {
           ? t('reservation.pageTitle', { headline })
           : t('request.pageTitle', { headline })
       }
+      description={
+        thing.collection_request_info ? (
+          <MarkdownText text={L(thing.collection_request_info)} />
+        ) : undefined
+      }
       backTo={backPath}
       backLabel={backLabel}
     >
       {thing.collection_is_onboarding && <DemoNotice />}
+      {notMemberError && (
+        <div className="invite-nudge" role="alert">
+          <p style={{ margin: 0 }}>{notMemberError}</p>
+          <div style={{ marginTop: 'var(--spacing-xs)' }}>
+            <Button style={btnStyle} disabled={joining} onClick={handleJoinGroup}>
+              {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
+            </Button>
+          </div>
+          {joinError && (
+            <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
+              {t('collectionPage.visitorJoinError')}
+            </p>
+          )}
+        </div>
+      )}
       {success ? (
         <>
           <Notification
@@ -335,7 +534,7 @@ export default function RequestThingPage() {
               )}
             </div>
           )}
-          {isReservation && (
+          {isReservation && !isHourlyReservation && (
             <div className="summary-grid section-mt">
               {reservationMax > 1 && (
                 <>
@@ -411,6 +610,87 @@ export default function RequestThingPage() {
               <div className="spacer-xxxs" />
               <TextArea
                 id="reservation-project-note"
+                label={t('reservation.projectNoteLabel')}
+                helperText={t('reservation.projectNoteHelper', {
+                  remaining: 512 - projectNote.length,
+                })}
+                maxLength={512}
+                value={projectNote}
+                onChange={(e) => setProjectNote(e.target.value)}
+              />
+            </div>
+          )}
+          {isReservation && isHourlyReservation && (
+            <div className="summary-grid section-mt">
+              <DateInput
+                id="reservation-pickup-date-hourly"
+                label={t('reservation.pickupLabelHourly')}
+                helperText={t('reservation.pickupHelperHourly')}
+                value={startDate}
+                onChange={(value) => {
+                  setStartDate(value);
+                  setHourlyDuration('');
+                  setHourlyStartTime('');
+                }}
+                dateFormat={DISPLAY_DATE_FORMAT}
+                language="en"
+                openButtonAriaLabel={t('datePicker.open')}
+                selectButtonLabel={t('datePicker.select')}
+                closeButtonLabel={t('datePicker.close')}
+                required
+                invalid={attempted && !startDate}
+                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
+                minDate={TODAY}
+                maxDate={reservationMaxDate}
+                dateOutsideRangeErrorText={t('reservation.dateRange', {
+                  days: thing.reservation_horizon_days || 90,
+                })}
+                isDateDisabledBy={hourlyPickupDisabled}
+                malformedDateErrorText={t('request.dateOverlap')}
+              />
+              {selectedIso && (
+                <>
+                  <div className="spacer-xxxs" />
+                  <RadioOptionGroup
+                    idPrefix="reservation-duration"
+                    name="reservation-duration"
+                    label={t('reservation.durationLabelHourly')}
+                    options={hourlyDurationChoices.map((opt) => ({
+                      value: opt.key,
+                      label: durationOptionLabel(opt),
+                    }))}
+                    value={hourlyDuration}
+                    onChange={(key) => {
+                      setHourlyDuration(key);
+                      setHourlyStartTime('');
+                    }}
+                  />
+                </>
+              )}
+              {hourlyDuration &&
+                (hourlyStartTimeChoices.length > 0 ? (
+                  <>
+                    <div className="spacer-xxxs" />
+                    <RadioOptionGroup
+                      idPrefix="reservation-start-time"
+                      name="reservation-start-time"
+                      label={t('reservation.startTimeLabel')}
+                      options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
+                      value={hourlyStartTime}
+                      onChange={setHourlyStartTime}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="spacer-xxxs" />
+                    <Notification type="info" size="small">
+                      {t('reservation.noStartTimesForDuration')}
+                    </Notification>
+                  </>
+                ))}
+              <div className="spacer-xxxs" />
+              <TextArea
+                id="reservation-project-note-hourly"
                 label={t('reservation.projectNoteLabel')}
                 helperText={t('reservation.projectNoteHelper', {
                   remaining: 512 - projectNote.length,

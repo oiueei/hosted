@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { NumberInput } from 'hds-react';
+import { NumberInput, RadioButton, SelectionGroup } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import WeekdayChips from './WeekdayChips';
+import OpeningHoursField from './OpeningHoursField';
 
 /**
  * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
@@ -43,26 +44,44 @@ function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onC
 }
 
 /**
- * The rules a reservations collection's owner sets: how many days a member may
- * book the space for in one go, how far ahead they may book, and which weekdays
- * it is open for reservations.
+ * The rules a reservations collection's owner sets. Two units, never both
+ * (`Collection.reservation_unit`): **DAY** books whole days (how many in one
+ * go, which weekdays are open); **HOUR** books a slot within a weekly opening
+ * schedule (how many hours in one go, the schedule itself). How far ahead a
+ * member may book and the active-reservations cap apply to either unit, so
+ * they sit above the split.
  *
- * Shown (in the "More options" accordion) *instead of* `RentalRulesFields` when
- * the collection is a reservations collection — `allowed_thing_types` is exactly
- * `["RESERVE_THING"]`. It reuses the same `rental_weekdays` state the rental
- * rules use (the backend reuses the column), and the same `WeekdayChips` row.
+ * Shown (in the "More options" accordion) *instead of* `RentalRulesFields`
+ * when the collection is a reservations collection — `allowed_thing_types` is
+ * exactly `["RESERVE_THING"]`. DAY mode reuses the same `rental_weekdays`
+ * state the rental rules use (the backend reuses the column) and the same
+ * `WeekdayChips` row.
  *
  * Controlled: value + setter owned by the page. `idPrefix` is
  * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
  * are the theeeme token names for a selected weekday chip (fill + text — see
  * `WeekdayChips`).
+ *
+ * **The unit radios are two static options, not a `.map()` over caller-owned
+ * data** — unlike `CollectionModeField`'s two HDS `SelectionGroup` quirks
+ * (frontend/CLAUDE.md), which exist for a *dynamic* option list. Kept the
+ * same shape anyway (a flat array of `id`-carrying wrapper `div`s) since it's
+ * the one proven not to trip either quirk in this codebase.
  */
 export default function ReservationRulesFields({
   idPrefix,
+  reservationUnit = 'DAY',
+  setReservationUnit = () => {},
   reservationMaxDays = 1,
   setReservationMaxDays = () => {},
   reservationHorizonDays = 90,
   setReservationHorizonDays = () => {},
+  reservationMaxActivePerMember = 10,
+  setReservationMaxActivePerMember = () => {},
+  reservationMaxHours = 3,
+  setReservationMaxHours = () => {},
+  openingHours = {},
+  setOpeningHours = () => {},
   rentalWeekdays = [],
   setRentalWeekdays = () => {},
   theeemeColor01,
@@ -70,18 +89,28 @@ export default function ReservationRulesFields({
 }) {
   const { t } = useTranslation();
 
+  const unitOptions = [
+    { value: 'DAY', label: t('reservation.unitDay') },
+    { value: 'HOUR', label: t('reservation.unitHour') },
+  ].map((opt) => {
+    const id = `${idPrefix}-reservation-unit-${opt.value.toLowerCase()}`;
+    return (
+      <div key={id} id={`${id}-option`}>
+        <RadioButton
+          id={id}
+          name={`${idPrefix}-reservation-unit`}
+          value={opt.value}
+          label={opt.label}
+          checked={reservationUnit === opt.value}
+          onChange={() => setReservationUnit(opt.value)}
+        />
+      </div>
+    );
+  });
+
   return (
     <>
-      <BoundedDayInput
-        id={`${idPrefix}-reservation-max-days`}
-        label={t('reservation.maxDaysLabel')}
-        helperText={t('reservation.maxDaysHelper')}
-        min={1}
-        max={7}
-        fallback={1}
-        value={reservationMaxDays}
-        onChange={setReservationMaxDays}
-      />
+      <SelectionGroup label={t('reservation.unitLabel')}>{unitOptions}</SelectionGroup>
       <BoundedDayInput
         id={`${idPrefix}-reservation-horizon-days`}
         label={t('reservation.horizonLabel')}
@@ -92,15 +121,57 @@ export default function ReservationRulesFields({
         value={reservationHorizonDays}
         onChange={setReservationHorizonDays}
       />
-      <WeekdayChips
-        labelId={`${idPrefix}-reservation-weekdays-label`}
-        labelKey="reservation.weekdaysLabel"
-        helperKey="reservation.weekdaysHelper"
-        weekdays={rentalWeekdays}
-        setWeekdays={setRentalWeekdays}
-        color01={theeemeColor01}
-        color06={theeemeColor06}
+      <BoundedDayInput
+        id={`${idPrefix}-reservation-max-active`}
+        label={t('reservation.maxActiveLabel')}
+        helperText={t('reservation.maxActiveHelper')}
+        min={1}
+        max={50}
+        fallback={10}
+        value={reservationMaxActivePerMember}
+        onChange={setReservationMaxActivePerMember}
       />
+      {reservationUnit === 'HOUR' ? (
+        <>
+          <BoundedDayInput
+            id={`${idPrefix}-reservation-max-hours`}
+            label={t('reservation.maxHoursLabel')}
+            helperText={t('reservation.maxHoursHelper')}
+            min={1}
+            max={12}
+            fallback={3}
+            value={reservationMaxHours}
+            onChange={setReservationMaxHours}
+          />
+          <OpeningHoursField
+            id={`${idPrefix}-opening-hours`}
+            value={openingHours}
+            onChange={setOpeningHours}
+          />
+        </>
+      ) : (
+        <>
+          <BoundedDayInput
+            id={`${idPrefix}-reservation-max-days`}
+            label={t('reservation.maxDaysLabel')}
+            helperText={t('reservation.maxDaysHelper')}
+            min={1}
+            max={7}
+            fallback={1}
+            value={reservationMaxDays}
+            onChange={setReservationMaxDays}
+          />
+          <WeekdayChips
+            labelId={`${idPrefix}-reservation-weekdays-label`}
+            labelKey="reservation.weekdaysLabel"
+            helperKey="reservation.weekdaysHelper"
+            weekdays={rentalWeekdays}
+            setWeekdays={setRentalWeekdays}
+            color01={theeemeColor01}
+            color06={theeemeColor06}
+          />
+        </>
+      )}
     </>
   );
 }

@@ -638,6 +638,27 @@ def _fmt_date(value):
     return str(value)
 
 
+def _fmt_when(booking):
+    """``(start, end)`` strings for the four RESERVE_THING emails' ``{start}``/
+    ``{end}`` and ``dates_label`` field — every template already reads
+    "{start} to {end}" / "del {start} al {end}", so this is the one place an
+    HOUR-unit reservation differs from a whole-day one, with no catalogue
+    changes needed in any of the three languages.
+
+    Whole-day (``start_time`` NULL — every DAY-unit RESERVE, and this is never
+    called for LEND/RENT) renders exactly as `_fmt_date` always has: two full
+    dates. An HOUR-unit reservation renders the date once, on the start, then
+    both HH:MM times — "05/10/2026 10:00" to "13:00" — since same-day start and
+    end make a second date redundant.
+    """
+    if booking.start_time is None:
+        return _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    return (
+        f"{_fmt_date(booking.start_date)} {booking.start_time.strftime('%H:%M')}",
+        booking.end_time.strftime("%H:%M"),
+    )
+
+
 def _booking_detail_blocks(booking, lang=None):
     """Date/quantity detail blocks shared by the three booking emails."""
     if booking.start_date and booking.end_date:
@@ -1402,7 +1423,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     headline = L(thing.headline)
     header = L(collection.headline) if collection else _thing_header(thing, L)
 
-    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    start, end = _fmt_when(booking)
     subject = T("reservation_confirmed_subject").format(thing=headline)
     plain = T("reservation_confirmed_plain").format(
         thing=headline, start=start, end=end, url=thing_url
@@ -1442,7 +1463,7 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     headline = L(thing.headline)
     header = L(collection.headline) if collection else _thing_header(thing, L)
 
-    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    start, end = _fmt_when(booking)
     subject = T("reservation_notice_subject").format(requester=requester_name, thing=headline)
     plain = T("reservation_notice_plain").format(
         requester=requester_name, thing=headline, start=start, end=end
@@ -1474,7 +1495,7 @@ def send_reservation_cancelled_email(
     header = _thing_header(thing, L)
     side = "to_guest" if cancelled_by_owner else "to_owner"
 
-    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    start, end = _fmt_when(booking)
     subject = T("reservation_cancelled_subject").format(thing=headline)
     plain = T(f"reservation_cancelled_{side}_plain").format(
         other=other, thing=headline, start=start, end=end
@@ -1515,7 +1536,7 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
     header = _thing_header(thing, L)
-    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    start, end = _fmt_when(booking)
     subject = T("reservation_reminder_subject").format(thing=headline)
     plain = T("reservation_reminder_plain").format(
         thing=headline, start=start, end=end, url=thing_url

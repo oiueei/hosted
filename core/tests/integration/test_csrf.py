@@ -57,6 +57,25 @@ class TestCsrfEnforcement:
         assert res.status_code == 200
         assert "csrftoken" in res.cookies
 
+    def test_me_get_sets_csrftoken_cookie_even_when_it_401s(self):
+        """The bug this pins: `App.jsx` fires this GET on every app load
+        specifically to warm the csrftoken cookie, before it knows whether the
+        visitor is authenticated yet — a brand-new visitor's very first hit
+        here 401s (`IsAuthenticated`). `ensure_csrf_cookie` only forces the
+        cookie by calling `get_token()` *inside* the view it wraps, so
+        decorating `MeView.get` directly meant that call — and the cookie —
+        never happened when `check_permissions()` raised before `get()` ran.
+        The cookie must come from decorating `dispatch`, which always runs.
+
+        Every unsafe request from that visitor's first page then failed CSRF
+        with no cookie to send — worst for a magic link that drops someone
+        straight onto one thing (S13) with no earlier authenticated page (like
+        Home) ever having made a *successful* call here to set it late."""
+        client = APIClient(enforce_csrf_checks=True)
+        res = client.get("/api/v1/auth/me/")
+        assert res.status_code == 401
+        assert "csrftoken" in res.cookies
+
 
 @pytest.mark.django_db
 class TestLogoutIsNeverBlocked:

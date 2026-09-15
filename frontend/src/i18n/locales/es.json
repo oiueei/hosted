@@ -873,6 +873,8 @@
     "tagsInfoBody": "Una etiqueta funciona igual: escríbela como un mapa y cada miembro verá la suya.",
     "policyHint": "La política de fianzas también admite un texto por idioma.",
     "policyInfoBody": "Funciona igual: escríbela como un pequeño mapa y cada miembro leerá la suya.",
+    "requestInfoHint": "El aviso de la página de solicitud también admite un texto por idioma.",
+    "requestInfoInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo.",
     "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
   },
   "deleteAccount": {
@@ -980,14 +982,40 @@
     "weekdaysLabel": "Días abiertos a reservas",
     "weekdaysHelper": "Déjalos todos sin marcar para permitir cualquier día. Una reserva no puede abarcar un día en que el espacio esté cerrado.",
     "horizonLabel": "Con cuánta antelación pueden reservar (días)",
-    "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses."
+    "horizonHelper": "De 1 a 365. Por defecto 90 — tres meses.",
+    "maxActiveLabel": "Máximo de reservas activas por miembro",
+    "maxActiveHelper": "De 1 a 50. Por defecto 10 — cuántas reservas propias de un miembro para este espacio pueden estar activas a la vez.",
+    "unitLabel": "¿Cómo se reserva este espacio?",
+    "unitDay": "Por días",
+    "unitHour": "Por horas",
+    "maxHoursLabel": "Reserva más larga (horas)",
+    "maxHoursHelper": "De 1 a 12. Un miembro puede reservar el espacio de 1 hasta este número de horas cada vez — el día completo cuenta también, así que solo se ofrece cuando cabe dentro de este límite.",
+    "pickupLabelHourly": "Elegir fecha reserva",
+    "pickupHelperHourly": "Los días cerrados o completamente reservados aparecen en gris.",
+    "durationLabelHourly": "¿Cuánto tiempo?",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "durationHalfDay": "Media jornada",
+    "durationFullDay": "Día completo",
+    "startTimeLabel": "¿A qué hora?",
+    "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta."
   },
   "closedDates": {
     "label": "Festivos y cierres",
     "helper": "Una línea, DD/MM/AAAA separados por comas. Esos días no hay recogida ni devolución, y una reserva no puede abarcarlos. Las fechas pasadas se descartan."
   },
+  "openingHours": {
+    "label": "Horario semanal",
+    "helper": "En JSON: una clave por día de la semana (\"0\" lunes … \"6\" domingo), cada una con una lista de tramos [\"HH:MM\",\"HH:MM\"] — p. ej. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deja un día fuera, o ponle una lista vacía, para que quede cerrado.",
+    "invalidJson": "Eso no es JSON válido — revisa las llaves y las comillas."
+  },
   "homePage": {
     "label": "Página web",
     "helper": "Una dirección web opcional para este grupo (máx. 128 caracteres)."
+  },
+  "requestInfo": {
+    "label": "Aviso para la página de solicitud (opcional)",
+    "helper": "Se muestra arriba de la página de solicitud — la ve quien pide un préstamo, un alquiler o una reserva; un regalo o una venta nunca llegan a esa página, se completan directamente desde la tarjeta. P. ej. «trae el DNI», «la recogida es solo los martes». Admite Markdown.",
+    "maxLength": "Máximo 512 caracteres por idioma."
   }
 }

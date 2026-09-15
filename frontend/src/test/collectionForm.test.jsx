@@ -550,5 +550,6 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
     expect(body.mode).toBe('PROPRIETARY');
     expect(body.visibility).toBe('PRIVATE');
     expect(body.reservation_max_days).toBe(1);
+    expect(body.reservation_max_active_per_member).toBe(10);
   });
 });
