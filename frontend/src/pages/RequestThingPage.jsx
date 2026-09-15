@@ -503,7 +503,7 @@ export default function RequestThingPage() {
             <div className="summary-grid section-mt">
               <DateInput
                 id="reservation-pickup-date-hourly"
-                label={t('reservation.pickupLabel')}
+                label={t('reservation.pickupLabelHourly')}
                 helperText={t('reservation.pickupHelperHourly')}
                 value={startDate}
                 onChange={(value) => {

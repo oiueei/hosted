@@ -990,6 +990,7 @@
     "unitHour": "By hour",
     "maxHoursLabel": "Longest reservation (hours)",
     "maxHoursHelper": "From 1 to 12. A member can book the space for 1 up to this many hours at a time — the full day counts too, so it's only offered when it fits under this limit.",
+    "pickupLabelHourly": "Choose reservation date",
     "pickupHelperHourly": "Closed days and fully booked days are greyed out.",
     "durationLabelHourly": "How long?",
     "hours_one": "{{count}} hour",
