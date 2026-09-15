@@ -398,8 +398,13 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # stored — the same arithmetic as `description`.
     deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     # A note for anyone about to request anything from this collection — every
-    # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy.
-    request_info = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy,
+    # wider (CA's call, 2026-09): 512 visible per language, 2048 stored — the
+    # storage cap has to be given explicitly since it no longer matches
+    # LOCALIZED_TEXT_STORAGE's default (1024, sized for deposit_policy's 256).
+    request_info = LocalizedTextField(
+        max_length=512, storage_max_length=2048, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Collection
@@ -679,8 +684,13 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     # stored — the same arithmetic as `description`.
     deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     # A note for anyone about to request anything from this collection — every
-    # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy.
-    request_info = LocalizedTextField(max_length=256, required=False, allow_blank=True)
+    # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy,
+    # wider (CA's call, 2026-09): 512 visible per language, 2048 stored — the
+    # storage cap has to be given explicitly since it no longer matches
+    # LOCALIZED_TEXT_STORAGE's default (1024, sized for deposit_policy's 256).
+    request_info = LocalizedTextField(
+        max_length=512, storage_max_length=2048, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Collection

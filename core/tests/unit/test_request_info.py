@@ -3,9 +3,10 @@
 request page for anyone about to request anything from the collection, every
 verb (GIFT/SELL/RENT/LEND/RESERVE) alike, not RESERVE_THING only.
 
-Owner prose like every other (D5): localized (O6), 256 visible per language,
-1024 stored — the same shape and the same trap as `deposit_policy`
-(core/tests/unit/test_deposits.py), pinned again here rather than assumed.
+Owner prose like every other (D5): localized (O6), 512 visible per language,
+2048 stored (CA's call, 2026-09: 256 was too short for this one) — the same
+shape and the same trap as `deposit_policy` (core/tests/unit/test_deposits.py),
+pinned again here rather than assumed.
 """
 
 import json
@@ -51,7 +52,7 @@ def test_a_bilingual_group_writes_it_twice_and_both_survive(collection):
 
 
 def test_the_visible_limit_is_per_language(collection):
-    too_long = json.dumps({"es": "x" * 257})
+    too_long = json.dumps({"es": "x" * 513})
     serializer = CollectionUpdateSerializer(
         collection, data={"request_info": too_long}, partial=True
     )
@@ -60,8 +61,8 @@ def test_the_visible_limit_is_per_language(collection):
 
 
 def test_three_full_languages_still_fit_the_column(collection):
-    full = json.dumps({lang: "x" * 256 for lang in ("es", "ca", "en")})
-    assert len(full) > Collection._meta.get_field("request_info").max_length - 256
+    full = json.dumps({lang: "x" * 512 for lang in ("es", "ca", "en")})
+    assert len(full) > Collection._meta.get_field("request_info").max_length - 512
 
     serializer = CollectionUpdateSerializer(collection, data={"request_info": full}, partial=True)
     assert serializer.is_valid(), serializer.errors

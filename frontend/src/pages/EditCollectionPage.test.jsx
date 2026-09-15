@@ -337,6 +337,19 @@ describe('EditCollectionPage — the request-page note', () => {
       expect(JSON.parse(call[1].body).request_info).toBe('Pickup is Tuesdays only.');
     });
   });
+
+  test('the counter reflects the 512-per-language limit, not the old 256', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+      target: { value: 'Bring ID.' },
+    });
+
+    expect(screen.getByText('9/512')).toBeInTheDocument();
+  });
 });
 
 describe('EditCollectionPage — the collection export', () => {

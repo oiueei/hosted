@@ -293,12 +293,13 @@ export default function CreateCollectionPage() {
             onChange={setClosedDates}
           />
           <div>
+            <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
             <TextArea
               id="create-collection-request-info"
               label={t('requestInfo.label')}
-              helperText={t('requestInfo.helper')}
               value={requestInfo}
               onChange={(e) => setRequestInfo(e.target.value)}
+              helperText={localizedCounter(requestInfo, 512).text}
             />
             <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
           </div>
