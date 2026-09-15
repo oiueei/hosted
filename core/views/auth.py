@@ -957,6 +957,7 @@ class JoinView(APIView):
         )
 
 
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class MeView(APIView):
     """
     GET /api/v1/auth/me/
@@ -969,7 +970,19 @@ class MeView(APIView):
     # SPA has a token to send as X-CSRFToken on subsequent unsafe requests (which
     # CookieJWTAuthentication now enforces). GET is safe, so this is not itself
     # CSRF-checked.
-    @method_decorator(ensure_csrf_cookie)
+    #
+    # Decorating `dispatch`, not `get`, is load-bearing. DRF's `APIView.dispatch()`
+    # runs `check_permissions()` — which raises before `get()` is ever called — for
+    # an unauthenticated request. `ensure_csrf_cookie` only forces the cookie by
+    # calling `get_token()` from inside the view it wraps, so decorating `get()`
+    # meant that call, and the cookie, never happened for exactly the visitor who
+    # needs it most: someone freshly arrived with no session yet, whose first-ever
+    # hit here 401s (`App.jsx`'s app-load warm-up fires before the magic-link GET
+    # that authenticates them completes). That silently broke every unsafe request
+    # from a brand-new visitor's first page — reserving a slot, asking a question —
+    # until some *later*, already-authenticated call to this endpoint (e.g. one
+    # HomePage happens to make) finally set it. A visitor whose magic link drops
+    # them straight onto one thing (S13) may never make that later call at all.
     def get(self, request):
         user = request.user
         user.update_last_activity()
