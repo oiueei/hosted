@@ -444,3 +444,205 @@ def test_an_hourly_reservation_confirmation_reads_correctly_in_all_three_languag
             email_service.send_reservation_confirmed_email(user2, thing, booking)
         body = mail.outbox[0].body
         assert phrase in body, f"{lang}: {phrase!r} not in {body!r}"
+
+
+# --- The owner's email note (Collection.email_note) ------------------------------
+
+
+def test_note_blocks_renders_bold_links_lists_and_emojis():
+    """The subset a 512-char note actually needs, rendered to one md block."""
+    plain, blocks = email_service._note_blocks(
+        "Hola! **Léenos** 🛠️\n"
+        "\n"
+        "- Trae tu [carnet](https://example.com/reglas)\n"
+        "- Planta 2\n"
+        "\n"
+        "1. Confirma\n"
+        "2. Llega pronto"
+    )
+    # The plain half is the raw Markdown — the standard text/plain alternative.
+    assert plain.startswith("Hola! **Léenos**")
+    assert len(blocks) == 1 and blocks[0]["type"] == "md"
+    html = str(blocks[0]["html"])
+    assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
+    expected_list = (
+        '<ul><li>Trae tu <a href="https://example.com/reglas">carnet</a></li><li>Planta 2</li></ul>'
+    )
+    assert expected_list in html
+    assert "<ol><li>Confirma</li><li>Llega pronto</li></ol>" in html
+
+
+def test_note_blocks_leaves_an_unsafe_url_as_literal_text():
+    """A javascript: 'link' is not a link in the email — a dead href="#"
+    would be worse than the raw text (the deliberate divergence from the
+    frontend's sanitizeUrl)."""
+    _, blocks = email_service._note_blocks("mira [esto](javascript:alert(1))")
+    html = str(blocks[0]["html"])
+    assert "<a " not in html
+    assert "[esto](javascript:alert(1))" in html
+
+
+def test_note_blocks_escapes_html_before_transforming(collection):
+    """Raw HTML reaching the renderer (only possible bypassing the serializer,
+    e.g. the admin) must render inert — and a typed NUL must not be able to
+    forge an anchor placeholder."""
+    collection.email_note = "<script>alert(1)</script> ok\x00"
+    collection.save(update_fields=["email_note"])
+    _, blocks = email_service._note_blocks(collection.email_note)
+    html = str(blocks[0]["html"])
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
+    assert "\x00" not in html
+
+
+def test_note_blocks_is_empty_for_blank_text():
+    assert email_service._note_blocks("") == ("", [])
+    assert email_service._note_blocks(None) == ("", [])
+    assert email_service._note_blocks("   \n  ") == ("", [])
+
+
+@pytest.mark.django_db
+def test_the_reservation_confirmation_embeds_the_note_after_the_listing_link(
+    user, user2, thing, collection
+):
+    """With no note nothing is added; setting one inserts the rendered block
+    after the listing link and the raw Markdown after the body — both before
+    the appended viral line / footers, by construction of _send."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 10, 5),
+        end_date=date(2026, 10, 6),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    mail.outbox.clear()
+    email_service.send_reservation_confirmed_email(user2, thing, booking, collection)
+    plain_before = mail.outbox[0].body
+    html_before = mail.outbox[0].alternatives[0][0]
+    # No note: nothing appended to either half.
+    assert "Trae el" not in plain_before
+    assert "Trae el" not in html_before
+
+    collection.email_note = "Trae el **carnet** 🛠️"
+    collection.save(update_fields=["email_note"])
+    mail.outbox.clear()
+    email_service.send_reservation_confirmed_email(user2, thing, booking, collection)
+    plain_after = mail.outbox[0].body
+    html_after = mail.outbox[0].alternatives[0][0]
+
+    assert "Trae el **carnet** 🛠️" in plain_after  # raw Markdown in text/plain
+    note_html = "<p>Trae el <strong>carnet</strong> 🛠️</p>"
+    assert note_html in html_after
+    # Position, both halves: after the listing link, before the footers.
+    thing_url = email_service._thing_url(thing)
+    assert (
+        plain_after.index(thing_url)
+        < plain_after.index("Trae el **carnet** 🛠️")
+        < plain_after.index("/me/notifications/")
+    )
+    assert html_after.index(thing_url) < html_after.index(note_html) < html_after.index("/legal")
+
+
+@pytest.mark.django_db
+def test_the_booking_confirmation_embeds_the_note_too(user, user2, thing, collection):
+    """The LEND/RENT 'we've let the owner know' email carries the note of the
+    collection the request was made through — the new `collection` param —
+    while its language stays recipient-only (pinned in test_email_hierarchy)."""
+    from core.models import BookingPeriod
+
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+    collection.email_note = "Confirmamos en **48h**"
+    collection.save(update_fields=["email_note"])
+    mail.outbox.clear()
+    email_service.send_booking_confirmation_email(user2, thing, booking, collection)
+
+    html = mail.outbox[0].alternatives[0][0]
+    note_html = "<p>Confirmamos en <strong>48h</strong></p>"
+    assert note_html in html
+    assert "Confirmamos en **48h**" in mail.outbox[0].body
+    # The param is optional and defaults to no note — the pre-feature callers
+    # (and any direct call without a collection) must keep working.
+    mail.outbox.clear()
+    email_service.send_booking_confirmation_email(user2, thing, booking)
+    assert note_html not in mail.outbox[0].alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_the_note_is_resolved_per_recipient_language(user, user2, thing, collection):
+    """A bilingual note reaches each member in their own language — the same
+    `L` every other owner content goes through."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    collection.email_note = '{"es": "Trae el carnet", "ca": "Porta el carnet"}'
+    collection.save(update_fields=["email_note"])
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 10, 5),
+        end_date=date(2026, 10, 6),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    user2.language = "ca"
+    user2.save(update_fields=["language"])
+    mail.outbox.clear()
+    email_service.send_reservation_confirmed_email(user2, thing, booking, collection)
+    html = mail.outbox[0].alternatives[0][0]
+    assert "Porta el carnet" in html
+    assert "Trae el carnet" not in html
+
+
+@pytest.mark.django_db
+def test_the_acceptance_decision_carries_the_note_but_a_refusal_does_not(
+    user, user2, thing, collection
+):
+    """An acceptance is the requester-facing confirmation for GIFT/SELL/LEND/
+    RENT — the sibling of RESERVE's auto-confirm — so the note rides it. A
+    refusal has no next steps for the note's prose to describe."""
+    from core.models import BookingPeriod
+
+    collection.email_note = "Recogida en **planta 2**"
+    collection.save(update_fields=["email_note"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    assert "Recogida en <strong>planta 2</strong>" in mail.outbox[0].alternatives[0][0]
+    assert "Recogida en **planta 2**" in mail.outbox[0].body
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=False)
+    assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
+    assert "Recogida en" not in mail.outbox[0].body

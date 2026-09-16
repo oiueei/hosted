@@ -527,8 +527,12 @@ def send_booking_request_notifications(
     send_booking_request_email(
         requester, thing, booking, owner_email, rsvp_accept.action_link(), rsvp_reject.action_link()
     )
-    send_booking_confirmation_email(requester, thing, booking)
+    # Resolved before the requester's confirmation so that email can carry the
+    # owner's email_note for the group the request was actually made through —
+    # with several collections on one thing, the one the member was browsing is
+    # the one whose note the request page showed them.
     collection = resolve_request_collection(thing, collection_code)
+    send_booking_confirmation_email(requester, thing, booking, collection)
     InAppNotification.objects.create(
         user=thing.owner,
         type=InAppNotification.Type.BOOKING_REQUESTED,

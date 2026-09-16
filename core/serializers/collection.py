@@ -156,6 +156,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "home_page",
             "deposit_policy",
             "request_info",
+            "email_note",
             "tags",
             "thumbnail",
             "thumbnail_url",
@@ -411,6 +412,13 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     request_info = LocalizedTextField(
         max_length=512, storage_max_length=2048, required=False, allow_blank=True
     )
+    # The owner's note in the emails a requester receives about their request
+    # — "received" and "accepted" for every verb, plus RESERVE's auto-confirm
+    # — same shape and same arithmetic as request_info above, for the same
+    # reason.
+    email_note = LocalizedTextField(
+        max_length=512, storage_max_length=2048, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Collection
@@ -436,6 +444,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             "home_page",
             "deposit_policy",
             "request_info",
+            "email_note",
             "tags",
             "thumbnail",
             "welcome_doc",
@@ -715,6 +724,13 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     request_info = LocalizedTextField(
         max_length=512, storage_max_length=2048, required=False, allow_blank=True
     )
+    # The owner's note in the emails a requester receives about their request
+    # — "received" and "accepted" for every verb, plus RESERVE's auto-confirm
+    # — same shape and same arithmetic as request_info above, for the same
+    # reason.
+    email_note = LocalizedTextField(
+        max_length=512, storage_max_length=2048, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Collection
@@ -741,6 +757,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "home_page",
             "deposit_policy",
             "request_info",
+            "email_note",
             "tags",
             "thumbnail",
             "welcome_doc",

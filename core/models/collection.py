@@ -202,6 +202,20 @@ class Collection(models.Model):
     # `deposit_policy` shape, wider: the visible limit is per language and the
     # column has to hold all three plus the JSON scaffolding.
     request_info = models.CharField(max_length=2048, blank=True, default="")
+    # A note the owner writes into the emails a *requester* receives about
+    # their request — "we've let the owner know" and its acceptance for every
+    # verb, plus RESERVE's auto-confirmation — right after the link to the
+    # listing, before the legal footer. Never a refusal (no next steps for the
+    # note's prose to describe) nor the emails the owner themselves gets
+    # (their own note read back would be noise).
+    # Like `request_info` it reaches only people who asked for something, so
+    # the same examples fit ("we confirm requests within 48h", "the space is
+    # on floor 2"). A small Markdown subset (bold, italics, lists, links) is
+    # rendered into the HTML part by `email_service._note_blocks`; the
+    # plain-text part carries the raw Markdown, as text/plain alternatives do.
+    # 512/2048 like `request_info`: the visible limit is per language and the
+    # column has to hold all three plus the JSON scaffolding.
+    email_note = models.CharField(max_length=2048, blank=True, default="")
     allowed_thing_types = models.JSONField(default=list, blank=True)
     tags = models.JSONField(
         default=list,
