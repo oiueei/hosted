@@ -1000,7 +1000,7 @@
     "hours_one": "{{count}} hour",
     "hours_other": "{{count}} hours",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
-    "startTimeLabel": "What time?",
+    "startTimeLabel": "Starting at:",
     "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
   },
   "closedDates": {

@@ -1000,7 +1000,7 @@
     "hours_one": "{{count}} hora",
     "hours_other": "{{count}} hores",
     "hoursAndMinutes": "{{hours}} h {{minutes}} min",
-    "startTimeLabel": "A quina hora?",
+    "startTimeLabel": "A partir de:",
     "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
   },
   "closedDates": {
