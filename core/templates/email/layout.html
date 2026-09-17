@@ -1,7 +1,10 @@
 {% comment %}Shared HTML email layout. Django autoescaping is on by default, so
 every value rendered here is HTML-escaped automatically — email bodies no longer
-rely on manual escape() calls in Python (R16). This is a comment block rather than
-a one-line hash comment, so the multi-line note is stripped from the render.{% endcomment %}
+rely on manual escape() calls in Python (R16). The ONE deliberate exception is
+the "md" block (the owner's email note): its html arrives pre-built, escaped
+once and mark_safe()d, by email_service._note_blocks. This is a comment block
+rather than a one-line hash comment, so the multi-line note is stripped from
+the render.{% endcomment %}
 <html lang="{{ lang }}">
 {% if header %}<p style="font-size:18px;font-weight:700;margin:0 0 16px;">{{ header }}</p>{% elif has_logo %}<p><img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106"></p>{% endif %}
 {% for b in blocks %}{% if b.type == "para" %}
@@ -18,6 +21,8 @@ a one-line hash comment, so the multi-line note is stripped from the render.{% e
 <ul>{% for l in b.links %}<li><a href="{{ l.url }}">{{ l.label }}</a></li>{% endfor %}</ul>
 {% elif b.type == "links" %}
 <p>{% for l in b.links %}<a href="{{ l.url }}">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
+{% elif b.type == "md" %}
+{{ b.html }}
 {% endif %}{% endfor %}
 <p style="color:#666;font-size:12px;margin-top:24px;"><a href="{{ legal_url }}">{{ legal_label }}</a></p>
 {% if header and has_logo %}<p style="margin-top:16px;"><img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53"></p>{% endif %}

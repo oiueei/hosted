@@ -875,6 +875,8 @@
     "policyInfoBody": "Funciona igual: escriu-la com un petit mapa i cada membre llegirà la seva.",
     "requestInfoHint": "L'avís de la pàgina de sol·licitud també admet un text per idioma.",
     "requestInfoInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu.",
+    "emailNoteHint": "L'avís del correu també admet un text per idioma.",
+    "emailNoteInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu al correu.",
     "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
   },
   "deleteAccount": {
@@ -1000,7 +1002,7 @@
     "hours_one": "{{count}} hora",
     "hours_other": "{{count}} hores",
     "hoursAndMinutes": "{{hours}} h {{minutes}} min",
-    "startTimeLabel": "A quina hora?",
+    "startTimeLabel": "A partir de:",
     "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
   },
   "closedDates": {
@@ -1019,6 +1021,11 @@
   "requestInfo": {
     "label": "Avís per a la pàgina de sol·licitud (opcional)",
     "helper": "Es mostra a dalt de la pàgina de sol·licitud — la veu qui demana un préstec, un lloguer o una reserva; un regal o una venda mai hi arriben, es completen directament des de la targeta. P. ex. «porta el DNI», «la recollida és només els dimarts». Admet Markdown.",
+    "maxLength": "Màxim 512 caràcters per idioma."
+  },
+  "emailNote": {
+    "label": "Avís en els correus de sol·licitud (opcional)",
+    "helper": "S'afegeix als correus que rep un membre sobre la seva sol·licitud — quan l'envia i un altre cop quan l'hi accepten (una reserva es confirma a l'instant, així que va en el seu únic correu) — després de l'enllaç a la publicació, en el seu propi idioma. Admet Markdown (negretes, cursives, llistes, enllaços) i emojis. P. ex. «confirmem les sol·licituds en 48h», «l'espai és a la planta 2».",
     "maxLength": "Màxim 512 caràcters per idioma."
   }
 }

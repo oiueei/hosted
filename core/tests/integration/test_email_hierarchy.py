@@ -88,6 +88,34 @@ class TestSendersSpeakTheRightLanguage:
         # Spanish (the owner's own preference), not Catalan (the group's).
         assert mail.outbox[0].subject == "Hay una pregunta por responder"
 
+    def test_a_booking_confirmation_with_a_collection_note_still_follows_only_the_recipient(
+        self, user, user2, collection, thing
+    ):
+        # The `collection` param added for the owner's email_note must never
+        # reach _recipient: a thing-scoped email keeps speaking only the
+        # recipient's language, and the bilingual note resolves within it.
+        collection.language = Language.CA
+        collection.email_note = '{"es": "Confirmamos en 48h", "ca": "Confirmem en 48h"}'
+        collection.save(update_fields=["language", "email_note"])
+        user2.language = Language.ES
+        user2.save()
+
+        booking = BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type=thing.type,
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+            status=BookingPeriod.Status.PENDING,
+        )
+        send_booking_confirmation_email(user2, thing, booking, collection)
+
+        # Spanish (the requester's preference), not Catalan (the group's) —
+        # and the note's Spanish half, not its Catalan one.
+        assert "Solicitud" in mail.outbox[0].subject
+        assert "Confirmamos en 48h" in mail.outbox[0].body
+        assert "Confirmem en 48h" not in mail.outbox[0].body
+
     def test_a_bilingual_group_gets_one_broadcast_per_language(self, user, collection):
         collection.language = Language.ES
         collection.save()

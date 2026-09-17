@@ -53,6 +53,11 @@ export default function CreateCollectionPage() {
   // not only reservations — general to the collection, so it lives outside
   // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
   const [requestInfo, setRequestInfo] = useState('');
+  // The owner's note in the emails a requester receives about their request
+  // — "received" + "accepted" for every verb, plus RESERVE's auto-confirm —
+  // same shape and same placement in the form as requestInfo, one field
+  // below it.
+  const [emailNote, setEmailNote] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   // The group's email language. Defaults to whatever the owner is reading the app
@@ -148,6 +153,7 @@ export default function CreateCollectionPage() {
       closed_dates: closedDates,
       home_page: homePage.trim(),
       request_info: requestInfo.trim(),
+      email_note: emailNote.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -310,6 +316,21 @@ export default function CreateCollectionPage() {
               helperText={localizedCounter(requestInfo, 512).text}
             />
             <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
+          </div>
+          <div>
+            <p className="weekday-field-helper">{t('emailNote.helper')}</p>
+            <TextArea
+              id="create-collection-email-note"
+              label={t('emailNote.label')}
+              value={emailNote}
+              onChange={(e) => setEmailNote(e.target.value)}
+              invalid={localizedCounter(emailNote, 512).over}
+              errorText={
+                localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined
+              }
+              helperText={localizedCounter(emailNote, 512).text}
+            />
+            <LocalizedInfo id="create-collection-email-note-info" variant="emailNote" />
           </div>
           <TextInput
             id="create-collection-home-page"
