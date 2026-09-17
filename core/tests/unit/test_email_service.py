@@ -485,14 +485,22 @@ def test_note_blocks_leaves_an_unsafe_url_as_literal_text():
 def test_note_blocks_escapes_html_before_transforming(collection):
     """Raw HTML reaching the renderer (only possible bypassing the serializer,
     e.g. the admin) must render inert — and a typed NUL must not be able to
-    forge an anchor placeholder."""
-    collection.email_note = "<script>alert(1)</script> ok\x00"
+    forge an anchor placeholder. The NUL half never goes through the DB:
+    PostgreSQL text columns cannot hold a NUL byte (CI runs Postgres; local
+    SQLite would swallow it and the test would only ever prove the happy
+    path), so it exercises the renderer directly instead."""
+    collection.email_note = "<script>alert(1)</script> ok"
     collection.save(update_fields=["email_note"])
     _, blocks = email_service._note_blocks(collection.email_note)
     html = str(blocks[0]["html"])
     assert "<script>" not in html
     assert "&lt;script&gt;" in html
+
+    # The NUL case needs no stored value — the stripping is the renderer's.
+    _, blocks = email_service._note_blocks("<b>bold?</b> ok\x00")
+    html = str(blocks[0]["html"])
     assert "\x00" not in html
+    assert "&lt;b&gt;" in html
 
 
 def test_note_blocks_is_empty_for_blank_text():
