@@ -1025,7 +1025,7 @@
   },
   "emailNote": {
     "label": "Note in the request emails (optional)",
-    "helper": "Added to the emails a member receives about their request — when they send it and again when it's accepted — after the link to the listing, in their own language. Markdown (bold, italics, lists, links) and emojis work. E.g. \"we confirm requests within 48h\", \"the space is on floor 2\".",
+    "helper": "Added to the emails a member receives about their request — when they send it and again when it's accepted (a reservation is confirmed on the spot, so its single email carries it) — after the link to the listing, in their own language. Markdown (bold, italics, lists, links) and emojis work. E.g. \"we confirm requests within 48h\", \"the space is on floor 2\".",
     "maxLength": "Maximum 512 characters per language."
   }
 }

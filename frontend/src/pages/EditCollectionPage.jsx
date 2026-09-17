@@ -71,9 +71,10 @@ export default function EditCollectionPage() {
   // not only reservations — general to the collection, so it lives outside
   // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
   const [requestInfo, setRequestInfo] = useState('');
-  // The owner's note in the two emails a requester receives (RESERVE
-  // confirmation + LEND/RENT "we've let the owner know") — same shape and
-  // same placement in the form as requestInfo, one field below it.
+  // The owner's note in the emails a requester receives about their request
+  // — "received" + "accepted" for every verb, plus RESERVE's auto-confirm —
+  // same shape and same placement in the form as requestInfo, one field
+  // below it.
   const [emailNote, setEmailNote] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');

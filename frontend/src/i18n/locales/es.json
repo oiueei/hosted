@@ -1025,7 +1025,7 @@
   },
   "emailNote": {
     "label": "Aviso en los correos de solicitud (opcional)",
-    "helper": "Se añade a los correos que recibe un miembro sobre su solicitud — al enviarla y de nuevo al aceptársela — después del enlace a la publicación, en su propio idioma. Admite Markdown (negritas, cursivas, listas, enlaces) y emojis. P. ej. «confirmamos las solicitudes en 48h», «el espacio está en la planta 2».",
+    "helper": "Se añade a los correos que recibe un miembro sobre su solicitud — al enviarla y de nuevo al aceptársela (una reserva se confirma al momento, así que va en su único correo) — después del enlace a la publicación, en su propio idioma. Admite Markdown (negritas, cursivas, listas, enlaces) y emojis. P. ej. «confirmamos las solicitudes en 48h», «el espacio está en la planta 2».",
     "maxLength": "Máximo 512 caracteres por idioma."
   }
 }

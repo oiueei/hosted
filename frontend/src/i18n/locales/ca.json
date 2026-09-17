@@ -1025,7 +1025,7 @@
   },
   "emailNote": {
     "label": "Avís en els correus de sol·licitud (opcional)",
-    "helper": "S'afegeix als correus que rep un membre sobre la seva sol·licitud — quan l'envia i un altre cop quan l'hi accepten — després de l'enllaç a la publicació, en el seu propi idioma. Admet Markdown (negretes, cursives, llistes, enllaços) i emojis. P. ex. «confirmem les sol·licituds en 48h», «l'espai és a la planta 2».",
+    "helper": "S'afegeix als correus que rep un membre sobre la seva sol·licitud — quan l'envia i un altre cop quan l'hi accepten (una reserva es confirma a l'instant, així que va en el seu únic correu) — després de l'enllaç a la publicació, en el seu propi idioma. Admet Markdown (negretes, cursives, llistes, enllaços) i emojis. P. ex. «confirmem les sol·licituds en 48h», «l'espai és a la planta 2».",
     "maxLength": "Màxim 512 caràcters per idioma."
   }
 }
