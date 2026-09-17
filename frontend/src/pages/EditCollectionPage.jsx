@@ -71,6 +71,11 @@ export default function EditCollectionPage() {
   // not only reservations — general to the collection, so it lives outside
   // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
   const [requestInfo, setRequestInfo] = useState('');
+  // The owner's note in the emails a requester receives about their request
+  // — "received" + "accepted" for every verb, plus RESERVE's auto-confirm —
+  // same shape and same placement in the form as requestInfo, one field
+  // below it.
+  const [emailNote, setEmailNote] = useState('');
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -193,6 +198,7 @@ export default function EditCollectionPage() {
           setHomePage(data.home_page || '');
           setDepositPolicy(data.deposit_policy || '');
           setRequestInfo(data.request_info || '');
+          setEmailNote(data.email_note || '');
           setTags(data.tags || []);
           setThumbnail(data.thumbnail || '');
           setThumbnailUrl(data.thumbnail_url || '');
@@ -248,6 +254,7 @@ export default function EditCollectionPage() {
       home_page: homePage.trim(),
       deposit_policy: isReservations ? '' : depositPolicy.trim(),
       request_info: requestInfo.trim(),
+      email_note: emailNote.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
@@ -508,6 +515,21 @@ export default function EditCollectionPage() {
               helperText={localizedCounter(requestInfo, 512).text}
             />
             <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
+          </div>
+          <div>
+            <p className="weekday-field-helper">{t('emailNote.helper')}</p>
+            <TextArea
+              id="edit-collection-email-note"
+              label={t('emailNote.label')}
+              value={emailNote}
+              onChange={(e) => setEmailNote(e.target.value)}
+              invalid={localizedCounter(emailNote, 512).over}
+              errorText={
+                localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined
+              }
+              helperText={localizedCounter(emailNote, 512).text}
+            />
+            <LocalizedInfo id="edit-collection-email-note-info" variant="emailNote" />
           </div>
           <TextInput
             id="edit-collection-home-page"

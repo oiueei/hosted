@@ -23,6 +23,7 @@ stay as plain strings.
 import functools
 import logging
 import random
+import re
 import smtplib
 from datetime import date, datetime
 from email.mime.image import MIMEImage
@@ -32,6 +33,7 @@ from django.core.mail import BadHeaderError, EmailMultiAlternatives
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.template.loader import render_to_string
 from django.utils.html import escape
+from django.utils.safestring import mark_safe
 
 from core.services.email_texts import T, viral_lines
 from core.utils import redact_email, resolve_localized
@@ -553,6 +555,109 @@ def _list(items):
 def _links(*links):
     """A row of links, each ``(url, label)``, joined by ``|``."""
     return {"type": "links", "links": [{"url": url, "label": label} for url, label in links]}
+
+
+# The owner's email note (Collection.email_note) renders a small Markdown subset
+# into an ``md`` block — the ONE block type whose html arrives pre-built and
+# mark_safe()d rather than autoescaped. See _note_blocks for the invariant.
+_MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+_MD_BOLD = re.compile(r"\*\*(.+?)\*\*")
+_MD_EM = re.compile(r"(?<!\w)\*(.+?)\*(?!\w)")
+_MD_BULLET = re.compile(r"^- ")
+_MD_ORDERED = re.compile(r"^\d+\. ")
+_MD_URL = re.compile(r"^https?://", re.IGNORECASE)
+
+
+def _md_inline(escaped_text):
+    """Inline Markdown spans over ALREADY-escaped text — never escapes again.
+
+    Links are parked behind NUL-delimited placeholders while the bold/italic
+    passes run (an ``*`` or ``_`` inside an href must not become <em>), the
+    same fix MarkdownText.jsx carries on the frontend. A URL that is not
+    http(s) stays as literal (escaped) text: a dead ``href="#"`` in an email
+    client confuses more than the raw link does.
+    """
+    text = escaped_text.replace("\x00", "")  # typed NUL can't forge a placeholder
+    anchors = []
+
+    def park(match):
+        label, url = match.group(1), match.group(2)
+        if _MD_URL.match(url):
+            anchors.append(f'<a href="{url}">{label}</a>')
+            return f"\x00{len(anchors) - 1}\x00"
+        return match.group(0)
+
+    text = _MD_LINK.sub(park, text)
+    text = _MD_BOLD.sub(r"<strong>\1</strong>", text)
+    text = _MD_EM.sub(r"<em>\1</em>", text)
+    for index, anchor in enumerate(anchors):
+        text = text.replace(f"\x00{index}\x00", anchor)
+    return text
+
+
+def _note_blocks(resolved_text):
+    """The owner's email note as ``(plain addition, html blocks)``.
+
+    ``("", [])`` when the note is empty. The plain half is the **raw
+    Markdown** — the standard shape for a text/plain alternative — and the
+    html half is exactly ONE ``md`` block holding the whole note, rendered
+    verbatim by ``email/layout.html`` after the senders' last link block (so
+    it lands after "view the listing", before the legal footer, with no
+    positional logic anywhere).
+
+    Subset: paragraphs (a lone newline inside one is a <br />), ``-`` and
+    ``1.`` lists, ``**bold**``, ``*italic*``, ``[text](url)`` http(s) only.
+    No headings, no tables: a ≤512-character note doesn't carry a document's
+    hierarchy, and in these emails that is the layout's voice, not the
+    owner's — ``#`` and ``|`` lines render as literal text. Emojis are plain
+    UTF-8 and pass through untouched.
+
+    **ESCAPE-ONCE invariant** (the backend twin of MarkdownText.jsx's): every
+    line is escape()d BEFORE any transform, and ``_md_inline`` never escapes
+    again — a ``&`` in a link's URL would come out as ``&amp;amp;`` and send
+    readers to a different address. NUL is stripped here and again inside
+    ``_md_inline``.
+    """
+    raw = (resolved_text or "").replace("\x00", "").strip()
+    if not raw:
+        return "", []
+    html = []
+    open_list = None
+    paragraph = []
+
+    def close_list():
+        nonlocal open_list
+        if open_list:
+            html.append(f"</{open_list}>")
+            open_list = None
+
+    def flush_paragraph():
+        if paragraph:
+            joined = "<br />".join(_md_inline(escape(line.strip())) for line in paragraph)
+            html.append(f"<p>{joined}</p>")
+            paragraph.clear()
+
+    for line in raw.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            flush_paragraph()
+            close_list()
+            continue
+        if _MD_BULLET.match(stripped) or _MD_ORDERED.match(stripped):
+            flush_paragraph()
+            wanted = "ul" if _MD_BULLET.match(stripped) else "ol"
+            if open_list != wanted:
+                close_list()
+                html.append(f"<{wanted}>")
+                open_list = wanted
+            item = _MD_BULLET.sub("", _MD_ORDERED.sub("", stripped))
+            html.append(f"<li>{_md_inline(escape(item))}</li>")
+        else:
+            close_list()
+            paragraph.append(stripped)
+    flush_paragraph()
+    close_list()
+    return raw, [{"type": "md", "html": mark_safe("".join(html))}]
 
 
 def _thing_collection(thing):
@@ -1120,16 +1225,27 @@ def send_booking_decision_email(booking, thing, accepted=True):
     # than as news (DESIGN §2 direct, §6 no curiosity gaps).
     subject = T("decision_subject_confirmed") if accepted else T("decision_subject_cancelled")
     header = _thing_header(thing, L)
-    html = _render_email(
-        [
-            _para(T("decision_intro").format(action=action, decision=decision_word)),
-            _strong(headline),
-            *_booking_detail_blocks(booking, lang),
-            _links((thing_url, T("view_thing_cta"))),
-        ],
-        lang=lang,
-        header=header,
-    )
+    html_blocks = [
+        _para(T("decision_intro").format(action=action, decision=decision_word)),
+        _strong(headline),
+        *_booking_detail_blocks(booking, lang),
+        _links((thing_url, T("view_thing_cta"))),
+    ]
+    # The owner's note rides an ACCEPTED decision only — that is the moment
+    # the hold becomes real and the note's "how to collect / where we are"
+    # prose is finally actionable; a refusal has no next steps for it to
+    # describe. Same first-collection source the header line uses (the
+    # decision path knows the booking, not the collection the request was
+    # made through).
+    if accepted:
+        note_collection = _thing_collection(thing)
+        note_plain, note_blocks = _note_blocks(
+            L(note_collection.email_note) if note_collection else ""
+        )
+        if note_plain:
+            plain += "\n\n" + note_plain
+            html_blocks.extend(note_blocks)
+    html = _render_email(html_blocks, lang=lang, header=header)
     _send(
         booking.requester_email,
         subject,
@@ -1157,14 +1273,22 @@ def send_invite_rejected_email(invitee_name, collection_headline, owner_email, c
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
 
 
-def send_booking_confirmation_email(requester, thing, booking):
-    """Send booking confirmation email to the requester."""
+def send_booking_confirmation_email(requester, thing, booking, collection=None):
+    """Send booking confirmation email to the requester.
+
+    ``collection`` is the collection the request was made through
+    (``booking_service.resolve_request_collection``) and feeds exactly one
+    thing: the owner's ``email_note``, appended after the listing link. It
+    deliberately never reaches ``_recipient`` — a thing-scoped email follows
+    only the recipient's language — and the header keeps naming the thing's
+    *first* collection, the same one ``_thing_url`` links to.
+    """
     user, lang = _recipient(requester.email)
     T, L = _texts(lang), _local(lang)
     owner_name = _member_name(thing.owner.name, lang)
     thing_url = _thing_url(thing)
-    collection = thing.collections.first()
-    header = L(collection.headline) if collection else ""
+    header_collection = thing.collections.first()
+    header = L(header_collection.headline) if header_collection else ""
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
 
@@ -1182,6 +1306,10 @@ def send_booking_confirmation_email(requester, thing, booking):
             action=action, thing=headline, owner=owner_name, url=thing_url
         )
 
+    note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
+    if note_plain:
+        plain += "\n\n" + note_plain
+
     subject = T("confirmation_subject").format(action=action)
     # "Part of: {collection}" is the layout header now — no longer a body field.
     html = _render_email(
@@ -1191,6 +1319,7 @@ def send_booking_confirmation_email(requester, thing, booking):
             *_booking_detail_blocks(booking, lang),
             _para(T("confirmation_outro").format(owner=owner_name)),
             _links((thing_url, headline)),
+            *note_blocks,
         ],
         lang=lang,
         header=header,
@@ -1438,6 +1567,15 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
     blocks.append(_links((thing_url, T("view_thing_cta"))))
+    # The owner's note for whoever books here — after the listing link, before
+    # the legal footer (which _render_email appends itself). Same collection
+    # fallback the header line above uses, so the note always belongs to the
+    # group this email names at its top.
+    note_collection = collection or _thing_collection(thing)
+    note_plain, note_blocks = _note_blocks(L(note_collection.email_note) if note_collection else "")
+    if note_plain:
+        plain += "\n\n" + note_plain
+        blocks.extend(note_blocks)
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester.email,

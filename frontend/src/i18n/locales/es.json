@@ -875,6 +875,8 @@
     "policyInfoBody": "Funciona igual: escríbela como un pequeño mapa y cada miembro leerá la suya.",
     "requestInfoHint": "El aviso de la página de solicitud también admite un texto por idioma.",
     "requestInfoInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo.",
+    "emailNoteHint": "El aviso del correo también admite un texto por idioma.",
+    "emailNoteInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo en el correo.",
     "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
   },
   "deleteAccount": {
@@ -1000,7 +1002,7 @@
     "hours_one": "{{count}} hora",
     "hours_other": "{{count}} horas",
     "hoursAndMinutes": "{{hours}} h {{minutes}} min",
-    "startTimeLabel": "¿A qué hora?",
+    "startTimeLabel": "A partir de:",
     "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta."
   },
   "closedDates": {
@@ -1019,6 +1021,11 @@
   "requestInfo": {
     "label": "Aviso para la página de solicitud (opcional)",
     "helper": "Se muestra arriba de la página de solicitud — la ve quien pide un préstamo, un alquiler o una reserva; un regalo o una venta nunca llegan a esa página, se completan directamente desde la tarjeta. P. ej. «trae el DNI», «la recogida es solo los martes». Admite Markdown.",
+    "maxLength": "Máximo 512 caracteres por idioma."
+  },
+  "emailNote": {
+    "label": "Aviso en los correos de solicitud (opcional)",
+    "helper": "Se añade a los correos que recibe un miembro sobre su solicitud — al enviarla y de nuevo al aceptársela (una reserva se confirma al momento, así que va en su único correo) — después del enlace a la publicación, en su propio idioma. Admite Markdown (negritas, cursivas, listas, enlaces) y emojis. P. ej. «confirmamos las solicitudes en 48h», «el espacio está en la planta 2».",
     "maxLength": "Máximo 512 caracteres por idioma."
   }
 }

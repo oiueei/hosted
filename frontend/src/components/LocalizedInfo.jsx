@@ -19,11 +19,12 @@ const TAGS_EXAMPLE = '{"es": "Juguetes", "ca": "Joguines"}';
  * the `right: 0`-anchored panel stays inside the viewport).
  *
  * Props: `id` (the popover panel's id), `variant` (`text` | `tags` | `policy` |
- * `requestInfo`). `policy` (D5, 2026-08) is the deposit policy in
+ * `requestInfo` | `emailNote`). `policy` (D5, 2026-08) is the deposit policy in
  * RentalRulesFields — its own variant rather than reusing `text`, since that
  * hint specifically names "the title or the description" and a deposit
  * policy is neither. `requestInfo` (Collection.request_info, shown on
- * RequestThingPage for every verb) is the same shape again.
+ * RequestThingPage for every verb) and `emailNote` (Collection.email_note,
+ * the owner's note in the two requester emails) are the same shape again.
  */
 
 const VARIANT_KEYS = {
@@ -33,6 +34,11 @@ const VARIANT_KEYS = {
   requestInfo: {
     hint: 'localized.requestInfoHint',
     infoBody: 'localized.requestInfoInfoBody',
+    example: EXAMPLE,
+  },
+  emailNote: {
+    hint: 'localized.emailNoteHint',
+    infoBody: 'localized.emailNoteInfoBody',
     example: EXAMPLE,
   },
 };
