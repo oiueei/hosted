@@ -494,6 +494,14 @@ export default function CollectionPage() {
 
         <h2>{t('collectionPage.things')}</h2>
         <div className="spacer-m" />
+        {/* A recorded DESIGN §1 exception, not an oversight: these are plain
+            `<button aria-pressed>`s, not HDS `Tag`. HDS `Tag` (`variant="action"`)
+            has no pressed/selected state to bind `aria-pressed` to, and a filter
+            chip has to announce which one is active. The `.tag-chip` styling is
+            ours; it sits on the same page as real HDS `Tag`s (`ThingTags`, on
+            every card below), so the two are free to drift apart visually —
+            worth knowing if either one's look changes (found in review,
+            2026-09-18). */}
         {visibleThings.length > 0 && collectionTags.length > 0 && (
           <div className="tag-filter-bar">
             <button
