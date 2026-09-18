@@ -154,14 +154,6 @@ class Collection(models.Model):
     # keeping both risked the two disagreeing. Default {} = every day closed
     # (an owner switching to HOUR mode must set hours before anyone can book).
     opening_hours = models.JSONField(default=dict, blank=True)
-    # HOUR unit only. **Dormant since 0150** — replaced by
-    # `reservation_min_minutes`/`reservation_max_minutes` below (an early
-    # adopter wanted reservations shorter than an hour, which needs both a
-    # configurable floor and a finer unit to state it in). Kept as a column,
-    # unread and unwritten by anything past the migration that copied its
-    # value forward, the same caution a feature removal gets — dropped in a
-    # later migration.
-    reservation_max_hours = models.PositiveSmallIntegerField(default=3)
     # HOUR unit only. The shortest a single reservation may run, in minutes —
     # also the step every duration/start-time choice is offered in (15 here
     # means 15/30/45/... up to the max, and start times fall every 15 minutes
@@ -172,8 +164,10 @@ class Collection(models.Model):
     # Inert under DAY.
     reservation_min_minutes = models.PositiveSmallIntegerField(default=60)
     # HOUR unit only. The longest a single reservation may run, in minutes —
-    # the twin of `reservation_min_minutes` above, and `reservation_max_hours`'s
-    # replacement: same 1-720 range and the same no-exception-for-the-full-day
+    # the twin of `reservation_min_minutes` above, and the replacement for the
+    # hour-granular `reservation_max_hours` (0147; out of the model since 0152,
+    # its column still in the database until a later release drops it — see
+    # that migration): same 1-720 range and the same no-exception-for-the-full-day
     # rule (see `reservation_hour_violation`), just counted in minutes so a
     # cap under an hour is expressible too. Default 180 (matches the old
     # field's default of 3 hours). Inert under DAY (reservation_max_days
