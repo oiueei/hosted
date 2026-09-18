@@ -120,6 +120,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     co_owners = serializers.SerializerMethodField()
     is_digest_muted = serializers.SerializerMethodField()
     pending_proposals = serializers.SerializerMethodField()
+    email_note = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
     # Seed/onboarding collection — `seed_demo` sets it, no API path writes it.
     # The SPA shows a demo notice on it when this deployment supplies the copy
@@ -188,6 +189,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "co_owners",
             "is_digest_muted",
             "pending_proposals",
+            "email_note",
         ]
 
     def get_owner_name(self, obj):
@@ -286,6 +288,20 @@ class CollectionSerializer(serializers.ModelSerializer):
             }
             for p in pending
         ]
+
+    def get_email_note(self, obj):
+        """The owner's note for requesters' emails — **curator only**, ``""``
+        for everyone else.
+
+        The form tells the owner it goes into the emails a member receives
+        about their own request, so that is the audience they write for: how
+        to collect, where the key is, a phone to call on arrival. Served
+        alongside the rest of the collection it reached every reader instead —
+        anonymous visitors of a PUBLIC collection included — while the only
+        page that reads it is the curators' edit form. Fails closed without a
+        request, like ``pending_invites``.
+        """
+        return obj.email_note if self._requester_is_curator(obj) else ""
 
     def get_is_digest_muted(self, obj):
         # Whether *this* viewer has silenced this collection's digest. Only

@@ -29,7 +29,6 @@ pytestmark = pytest.mark.django_db
 
 def test_defaults_to_empty(collection):
     assert collection.email_note == ""
-    assert CollectionSerializer(collection).data["email_note"] == ""
 
 
 def test_a_group_can_write_one(user):
@@ -38,7 +37,17 @@ def test_a_group_can_write_one(user):
     )
     assert serializer.is_valid(), serializer.errors
     created = serializer.save(owner=user)
-    assert CollectionSerializer(created).data["email_note"] == "We confirm within 48h."
+    created.refresh_from_db()
+    assert created.email_note == "We confirm within 48h."
+
+
+def test_the_read_serializer_withholds_it_without_a_request(collection):
+    """Who may read it back is pinned against the API in
+    core/tests/integration/test_curator_only_collection_fields.py; this is the
+    request-less half — internal use fails closed, like `pending_invites`."""
+    collection.email_note = "Door code 4417."
+    collection.save(update_fields=["email_note"])
+    assert CollectionSerializer(collection).data["email_note"] == ""
 
 
 def test_a_bilingual_group_writes_it_twice_and_both_survive(collection):
