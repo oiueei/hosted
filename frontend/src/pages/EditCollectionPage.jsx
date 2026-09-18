@@ -446,7 +446,7 @@ export default function EditCollectionPage() {
           (title, status, mode, who can add) reads at a glance (DESIGN §3, O1). */}
       <Accordion
         heading={t('createCollection.advancedTitle')}
-        language="en"
+        language={hdsLang(i18n.language)}
         headingLevel={2}
         theme={tc.color_04 ? { '--header-color': `var(--color-${tc.color_04})` } : undefined}
       >

@@ -519,7 +519,7 @@ export default function RequestThingPage() {
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -585,7 +585,7 @@ export default function RequestThingPage() {
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -641,7 +641,7 @@ export default function RequestThingPage() {
                   setHourlyStartTime('');
                 }}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -739,7 +739,7 @@ export default function RequestThingPage() {
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -759,7 +759,7 @@ export default function RequestThingPage() {
                 value={endDate}
                 onChange={(value) => setEndDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}

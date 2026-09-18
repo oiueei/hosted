@@ -243,7 +243,7 @@ export default function CreateCollectionPage() {
             (title, mode, who can add) reads at a glance (DESIGN §3, O1). */}
       <Accordion
         heading={t('createCollection.advancedTitle')}
-        language="en"
+        language={hdsLang(i18n.language)}
         headingLevel={2}
         theme={
           theeemeColors.color_04
