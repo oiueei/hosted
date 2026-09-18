@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
  * `useCapabilities` / `loadCapabilities` — what this deployment lets the
@@ -263,6 +263,73 @@ describe('loadUserLanguage', () => {
 
     expect(await loadUserLanguage()).toBe('');
     expect(await loadUserLanguage()).toBe('ca');
+  });
+});
+
+describe('a dead session: who redirects and who does not', () => {
+  // `loadUserLanguage` runs on public pages and must never send a visitor to
+  // /login; `loadCapabilities` runs behind RequireAuth, and on
+  // CreateCollectionPage it is the only authenticated call before submit — so
+  // when it too swallowed the 401, a >7-day-stale session got the form and
+  // lost what was typed at the POST (found in review, 2026-09-15). jsdom can't
+  // navigate, so `window.location` is swapped for a plain object that records
+  // `href`, the same way api.test.jsx observes apiFetch's redirect.
+  let originalLocation;
+  beforeEach(() => {
+    originalLocation = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { href: '' } });
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
+    );
+  });
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+  });
+
+  test('loadCapabilities sends a dead session to /login', async () => {
+    const { loadCapabilities } = await import('../hooks/useCapabilities');
+
+    await expect(loadCapabilities()).resolves.toBeNull();
+
+    expect(window.location.href).toBe('/login');
+  });
+
+  test('loadUserLanguage answers "" and stays on the page', async () => {
+    const { loadUserLanguage } = await import('../hooks/useCapabilities');
+
+    await expect(loadUserLanguage()).resolves.toBe('');
+
+    expect(window.location.href).toBe('');
+  });
+
+  test('a strict caller sharing an optional request in flight still redirects when it fails', async () => {
+    // A protected page that renders useCollectionLanguage and useCapabilities
+    // together can start the optional request first; the strict caller joins
+    // it, and must ask again strictly rather than inherit its silence.
+    const { loadCapabilities, loadUserLanguage } = await import('../hooks/useCapabilities');
+
+    await Promise.all([loadUserLanguage(), loadCapabilities()]);
+
+    expect(window.location.href).toBe('/login');
+  });
+});
+
+describe('an optional request that succeeds serves a strict caller as it is', () => {
+  test('one call, whichever caller asked first', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ capabilities: CAPABILITIES, language: 'ca' }),
+      })
+    );
+    const { loadCapabilities, loadUserLanguage } = await import('../hooks/useCapabilities');
+
+    const [language, capabilities] = await Promise.all([loadUserLanguage(), loadCapabilities()]);
+
+    expect(language).toBe('ca');
+    expect(capabilities).toEqual(CAPABILITIES);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 });
 
