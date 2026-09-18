@@ -64,6 +64,9 @@ export default function EditCollectionPage() {
   const [reservationMinMinutes, setReservationMinMinutes] = useState(60);
   const [reservationMaxMinutes, setReservationMaxMinutes] = useState(180);
   const [openingHours, setOpeningHours] = useState({});
+  // False while the opening-hours JSON on screen doesn't parse — Save refuses
+  // then, rather than sending the last good value and navigating away.
+  const [openingHoursValid, setOpeningHoursValid] = useState(true);
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
@@ -236,6 +239,13 @@ export default function EditCollectionPage() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    // A toast, not an inline error: the field sits inside the "More options"
+    // accordion, which may be collapsed by now, and a refusal whose reason is
+    // out of sight would be the silent failure this guards against.
+    if (isReservations && reservationUnit === 'HOUR' && !openingHoursValid) {
+      setToast({ type: 'error', message: t('openingHours.invalidOnSave') });
+      return;
+    }
     setSubmitting(true);
     setToast(null);
 
@@ -478,6 +488,7 @@ export default function EditCollectionPage() {
               setReservationMaxMinutes={setReservationMaxMinutes}
               openingHours={openingHours}
               setOpeningHours={setOpeningHours}
+              setOpeningHoursValid={setOpeningHoursValid}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}

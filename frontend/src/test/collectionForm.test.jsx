@@ -552,4 +552,30 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
     expect(body.reservation_max_days).toBe(1);
     expect(body.reservation_max_active_per_member).toBe(10);
   });
+
+  test('an unparseable opening-hours draft stops Create instead of creating without it', async () => {
+    // The Create twin of EditCollectionPage's guard: the field keeps the last
+    // good value ({} here), so creating anyway would open an HOUR space with
+    // every day closed while the owner believes their schedule went in.
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/new']}>
+        <Routes>
+          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="*" element={<div data-testid="navigated" />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await pickReservation(container);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    const field = screen.getByLabelText('Weekly opening hours');
+    fireEvent.change(field, { target: { value: '{"0": [["10:00","14:00"]],}' } });
+    fireEvent.blur(field);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText(/Nothing was saved: the weekly opening hours/)).toBeVisible();
+    expect(createBody()).toBeUndefined();
+    expect(screen.queryByTestId('navigated')).toBeNull();
+  });
 });

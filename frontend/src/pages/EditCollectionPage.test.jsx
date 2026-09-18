@@ -648,3 +648,100 @@ describe('EditCollectionPage — useCollectionLanguage gets the saved value, nev
     expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca');
   });
 });
+
+describe('EditCollectionPage — an unparseable opening-hours draft blocks Save', () => {
+  // OpeningHoursField keeps the last good value while its draft doesn't parse.
+  // Save used to send that stale value and navigate away, taking the inline
+  // error with it: an owner whose paste had a trailing comma believed a new
+  // schedule was saved when the old one was (found in review, 2026-09-18).
+  const HOURLY = {
+    ...COLLECTION,
+    allowed_thing_types: ['RESERVE_THING'],
+    reservation_unit: 'HOUR',
+    opening_hours: { 0: [['10:00', '14:00']] },
+  };
+
+  function mockHourly() {
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'PATCH')
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => HOURLY });
+    });
+  }
+
+  const patchCalls = () => apiFetch.mock.calls.filter((c) => c[1]?.method === 'PATCH');
+
+  function typeOpeningHours(value) {
+    const field = screen.getByLabelText('Weekly opening hours');
+    fireEvent.change(field, { target: { value } });
+    fireEvent.blur(field);
+  }
+
+  async function openForm() {
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+  }
+
+  test('Save sends nothing, stays put, and says why', async () => {
+    mockHourly();
+    await openForm();
+    typeOpeningHours('{"0": [["10:00","14:00"]],}');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(/Nothing was saved: the weekly opening hours/)).toBeVisible();
+    expect(patchCalls()).toHaveLength(0);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  test('folding "More options" away does not lift the refusal', async () => {
+    // HDS keeps a closed Accordion's content mounted (display: none), so the
+    // field's refusal survives the owner collapsing the section before Save.
+    // If an HDS upgrade ever unmounted it instead, the field's unmount cleanup
+    // would report "valid" and the silent stale save would be back.
+    mockHourly();
+    await openForm();
+    typeOpeningHours('{"0": [["10:00","14:00"]],}');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    expect(screen.getByLabelText('Weekly opening hours')).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(/Nothing was saved: the weekly opening hours/)).toBeVisible();
+    expect(patchCalls()).toHaveLength(0);
+  });
+
+  test('fixing the draft lets the corrected schedule through', async () => {
+    mockHourly();
+    await openForm();
+    typeOpeningHours('{"0": [["10:00","14:00"]],}');
+    typeOpeningHours('{"0": [["09:00","13:00"]]}');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patchCalls()).toHaveLength(1));
+    expect(JSON.parse(patchCalls()[0][1].body).opening_hours).toEqual({
+      0: [['09:00', '13:00']],
+    });
+  });
+
+  test('leaving "By hour" and coming back drops the refusal with the broken draft', async () => {
+    // Switching to DAY unmounts the field, and coming back remounts it showing
+    // the last good schedule with no error. A refusal that outlived the draft
+    // it was about would block a Save with nothing on screen to fix.
+    mockHourly();
+    await openForm();
+    typeOpeningHours('not json');
+    fireEvent.click(screen.getByRole('radio', { name: 'By day' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    expect(screen.getByLabelText('Weekly opening hours')).toHaveValue(
+      JSON.stringify(HOURLY.opening_hours)
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patchCalls()).toHaveLength(1));
+    expect(JSON.parse(patchCalls()[0][1].body).opening_hours).toEqual(HOURLY.opening_hours);
+  });
+});

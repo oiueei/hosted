@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TextArea } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 
@@ -45,9 +45,34 @@ import { useTranslation } from 'react-i18next';
  * later. Doing the comparison during render lets React re-render with the
  * synced draft before anything paints, and it terminates the same way: once
  * `draft`/`syncedJson` reflect `value`, the condition is false on the very
- * next render, so there is no loop.
+ * next render, so there is no loop. A re-sync also clears any error: the draft
+ * it installs is the parent's own value, valid by construction.
+ *
+ * **`onValidityChange(valid)` tells the page whether the draft on screen is
+ * one this field could hand over.** Keeping the last-known-good value is only
+ * half of not losing work: the page's Save used to send that stale value and
+ * navigate away, taking the inline error with it — so an owner whose paste had
+ * a trailing comma believed a schedule was saved that never was (found in
+ * review, 2026-09-18). The page refuses to submit while this reports `false`.
+ * It mirrors `error` from an effect rather than being called from `commit`
+ * alone, since the error also clears on a re-sync (during render, where a
+ * parent's setter can't be called). The cleanup reports `true` on unmount: an
+ * unmounted field has no draft on screen to refuse, and when it mounts again it
+ * shows the last good value, which is what the parent holds. Collapsing the
+ * "More options" accordion is **not** an unmount — HDS hides a closed
+ * Accordion's content with `display: none` and keeps it mounted — so the
+ * refusal outlives the owner folding the section away, which is the point
+ * (`EditCollectionPage.test.jsx` pins that). Pass a stable function (a state
+ * setter): the effect re-runs whenever its identity changes.
  */
-export default function OpeningHoursField({ id, value = {}, onChange = () => {} }) {
+const noop = () => {};
+
+export default function OpeningHoursField({
+  id,
+  value = {},
+  onChange = noop,
+  onValidityChange = noop,
+}) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(() => JSON.stringify(value));
   const [error, setError] = useState('');
@@ -57,7 +82,13 @@ export default function OpeningHoursField({ id, value = {}, onChange = () => {} 
   if (incomingJson !== syncedJson) {
     setSyncedJson(incomingJson);
     setDraft(incomingJson);
+    setError('');
   }
+
+  useEffect(() => {
+    onValidityChange(!error);
+    return () => onValidityChange(true);
+  }, [error, onValidityChange]);
 
   const commit = () => {
     if (draft.trim() === '') {

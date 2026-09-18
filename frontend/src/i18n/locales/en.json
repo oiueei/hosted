@@ -1014,7 +1014,8 @@
   "openingHours": {
     "label": "Weekly opening hours",
     "helper": "As JSON: one key per weekday (\"0\" Monday … \"6\" Sunday), each a list of [\"HH:MM\",\"HH:MM\"] ranges — e.g. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Leave a day out, or give it an empty list, to keep it closed.",
-    "invalidJson": "That's not valid JSON — check the brackets and quotes."
+    "invalidJson": "That's not valid JSON — check the brackets and quotes.",
+    "invalidOnSave": "Nothing was saved: the weekly opening hours (under “More options”) aren't valid JSON. Fix them and save again."
   },
   "homePage": {
     "label": "Home page",

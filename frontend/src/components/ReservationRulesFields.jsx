@@ -57,7 +57,9 @@ function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onC
  * state the rental rules use (the backend reuses the column) and the same
  * `WeekdayChips` row.
  *
- * Controlled: value + setter owned by the page. `idPrefix` is
+ * Controlled: value + setter owned by the page — plus `setOpeningHoursValid`,
+ * which the page reads to refuse a Save while the opening-hours JSON on screen
+ * doesn't parse (see `OpeningHoursField`). `idPrefix` is
  * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
  * are the theeeme token names for a selected weekday chip (fill + text — see
  * `WeekdayChips`).
@@ -84,6 +86,9 @@ export default function ReservationRulesFields({
   setReservationMaxMinutes = () => {},
   openingHours = {},
   setOpeningHours = () => {},
+  // Undefined falls through to OpeningHoursField's own stable no-op default;
+  // an inline `() => {}` here would be a new function every render.
+  setOpeningHoursValid,
   rentalWeekdays = [],
   setRentalWeekdays = () => {},
   theeemeColor01,
@@ -159,6 +164,7 @@ export default function ReservationRulesFields({
             id={`${idPrefix}-opening-hours`}
             value={openingHours}
             onChange={setOpeningHours}
+            onValidityChange={setOpeningHoursValid}
           />
         </>
       ) : (
