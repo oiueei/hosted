@@ -345,20 +345,20 @@ export const freeStartTimes = (
 };
 
 // Disable a day in the HOUR-unit picker when it's a closure day, the
-// collection is closed that weekday, or — walking every duration choice —
-// nothing on the calendar leaves even one free start that day (for today,
-// counting only starts not yet passed at `now`). `minMinutes`/`maxMinutes`
-// are the collection's `reservation_min_minutes`/`reservation_max_minutes`.
+// collection is closed that weekday, or nothing on the calendar leaves even one
+// free start that day (for today, counting only starts not yet passed at
+// `now`). `minMinutes` is the collection's `reservation_min_minutes`.
+//
+// Only the **shortest** duration needs trying, not every choice
+// `durationOptions` offers: any longer duration that fits at some start also
+// leaves the minimum free at that same start (a sub-span, on the same grid),
+// so "some duration fits" and "the minimum fits" are the same question. Asking
+// it once matters because this runs for every visible calendar cell on every
+// render — a 5-to-720-minute collection offers 144 durations, and on a fully
+// booked day each of them used to walk the whole start grid before giving up.
 export const isHourlyPickupDisabled = (
   date,
-  {
-    openingHours = {},
-    closedDates = [],
-    blockedPeriods = [],
-    minMinutes = 60,
-    maxMinutes = 180,
-    now = new Date(),
-  }
+  { openingHours = {}, closedDates = [], blockedPeriods = [], minMinutes = 60, now = new Date() }
 ) => {
   if (isClosedDate(date, closedSet(closedDates))) return true;
   const blocks = dayBlocks(openingHours, date);
@@ -366,7 +366,5 @@ export const isHourlyPickupDisabled = (
   const isoDate = toISODate(parseLocalDate(date));
   const bookings = dayBookings(blockedPeriods, isoDate);
   const earliest = earliestStartMinutes(isoDate, now);
-  return !durationOptions(minMinutes, maxMinutes).some(
-    (opt) => freeStartTimes(blocks, opt.minutes, bookings, minMinutes, earliest).length > 0
-  );
+  return freeStartTimes(blocks, minMinutes, bookings, minMinutes, earliest).length === 0;
 };

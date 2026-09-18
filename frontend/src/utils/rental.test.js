@@ -552,7 +552,6 @@ describe('isHourlyPickupDisabled', () => {
     closedDates: [],
     blockedPeriods: [],
     minMinutes: 60,
-    maxMinutes: 180,
   };
 
   test('an empty day with opening hours is selectable', () => {

@@ -159,7 +159,6 @@ export default function RequestThingPage() {
       closedDates,
       blockedPeriods,
       minMinutes: reservationMinMinutes,
-      maxMinutes: reservationMaxMinutes,
     });
   const selectedIso = displayToIso(startDate);
   const blocksForSelectedDay =
