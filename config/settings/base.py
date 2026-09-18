@@ -109,7 +109,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# The deployment's wall clock: what "today" and "now" mean for every date-based
+# rule (a reservation's horizon, tomorrow's reminders, the day an event counts
+# towards) and the zone a HOUR-unit collection's `opening_hours` are written in
+# — "10:00" there is 10:00 where the space is. Set it to where your groups are
+# (an IANA name, e.g. `Europe/Madrid`); UTC is only the neutral default, and it
+# makes "a slot that already began today" undecidable for a venue anywhere
+# else. Django validates the name at startup, so a typo fails the boot rather
+# than silently shifting every day boundary.
+TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "UTC")
 USE_I18N = True
 USE_TZ = True
 

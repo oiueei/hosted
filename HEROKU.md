@@ -149,6 +149,15 @@ heroku config:set \
 > separately: dumping stock and harvesting a mailing list are different abuses. Pick your own
 > numbers — they are infrastructure defence, so they are meant to be adjusted without notice.
 
+> **Recommended — time zone:** `DJANGO_TIME_ZONE` is the deployment's wall clock (an IANA name,
+> default `UTC`). It decides what "today" and "now" mean for every date rule — reservation
+> horizons, which reminders go out "tomorrow", the day an event counts towards — and it is the
+> zone hourly spaces' opening hours are read in, which is what lets the server refuse a slot that
+> already began. Set it to where your groups are:
+> `heroku config:set DJANGO_TIME_ZONE='Europe/Madrid' -a your-app-name`. Changing it moves every
+> day boundary from midnight UTC to local midnight; nothing stored changes (timestamps are kept in
+> UTC either way).
+
 > **Leave alone on Heroku — proxy trust:** `TRUSTED_PROXY_COUNT` says how many proxies in front of
 > the app are trusted to have appended to `X-Forwarded-For`, and so which entry every per-IP rate
 > limit buckets on (counted from the right — only the tail of that header is written by a proxy).

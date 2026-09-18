@@ -379,6 +379,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `DJANGO_SETTINGS_MODULE` | No | Settings module (defaults to production) |
 | `DJANGO_DEBUG` | No | Enables Django debug mode (default: `False` — fail-closed on a missing/typo'd value) |
 | `DJANGO_ALLOWED_HOSTS` | No | Comma-separated allowed hosts |
+| `DJANGO_TIME_ZONE` | Recommended | The deployment's wall clock, as an IANA name (`Europe/Madrid`); default `UTC`. It decides what "today" and "now" are for every date rule, and it is the zone an hourly space's opening hours are read in — so it is what lets the server refuse a slot that has already begun today. Leave it at `UTC` and "10:00" in an opening schedule means 10:00 UTC. A misspelt name fails the boot instead of quietly shifting every day boundary |
 | `DATABASE_URL` | Prod | PostgreSQL connection string. Also read by `development.py` — that is how CI runs the suite on Postgres (see Testing) |
 | `DEV_DB_NAME` | No | Dev only: points the SQLite file elsewhere, so a migration can be rehearsed on a throwaway DB (`DEV_DB_NAME=/tmp/rehearsal.sqlite3 python manage.py migrate core 0121`). Ignored when `DATABASE_URL` is set |
 | `MAGIC_LINK_BASE_URL` | Prod | Base URL for magic link emails (default in dev: `http://localhost:3000/verify`) |
