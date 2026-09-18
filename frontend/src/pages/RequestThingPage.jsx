@@ -318,11 +318,25 @@ export default function RequestThingPage() {
     }
   };
 
+  // The one collection an automatic join may ever target: the one the server
+  // resolved this thing to (`thing.collection_code`, read through
+  // `?collection=` on the collection-context route) — never the route's `code`
+  // on its own. The route is whatever link the reader followed, and nothing
+  // checks it names a collection this thing lives in: joining it as written
+  // let a link like `/collections/<someone's PUBLIC group>/things/<a real
+  // space>/request` join the reader to that group on one Reserve click, and
+  // hand its curator their email address in the roster (found in the
+  // 2026-09-18 security round). When the route names a collection the server
+  // didn't resolve to, there is no join at all — the reason is shown instead.
+  const joinableCollection = () => {
+    const resolved = thing?.collection_code;
+    if (!resolved || (code && code !== resolved)) return null;
+    return resolved;
+  };
+
   // The signed-in half of login-to-act (CollectionPage's own handleJoin,
   // reused): a PUBLIC collection's own member roster is one POST away for
-  // someone who already has an account. `code` covers the collection-context
-  // route; the standalone `/things/:code/request` route carries none, so it
-  // falls back to the collection the thing itself resolved to server-side.
+  // someone who already has an account.
   //
   // Only ever called for the backend's `code: "not_a_member"` marker (see
   // handleSubmit), which can only fire on a PUBLIC collection — can_view
@@ -332,7 +346,7 @@ export default function RequestThingPage() {
   // reservation, transparently (CA's call). `notMemberError` + the manual
   // fallback button only ever show if this auto-join itself fails.
   const joinThenRetry = async (body, fallbackMessage) => {
-    const collectionCode = code || thing?.collection_code;
+    const collectionCode = joinableCollection();
     if (!collectionCode) {
       setNotMemberError(fallbackMessage || t('request.errorSending'));
       return;
@@ -409,9 +423,10 @@ export default function RequestThingPage() {
         // Only this specific marker means "not a member" — any *other* 403
         // (e.g. the thing going INACTIVE while this form was open) must not
         // be mistaken for it and silently join the reader to a group over an
-        // unrelated error.
+        // unrelated error. And only when there is a collection it is safe to
+        // join (`joinableCollection`, above).
         const data = await res.json();
-        if (isReservation && data.code === 'not_a_member') {
+        if (isReservation && data.code === 'not_a_member' && joinableCollection()) {
           await joinThenRetry(body, data.error);
         } else {
           setToast({ type: 'error', message: data.error || t('request.errorSending') });

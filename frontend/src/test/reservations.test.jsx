@@ -46,13 +46,12 @@ function setApi({ thing = RESERVE_THING, calendar = [], postOk = true } = {}) {
   });
 }
 
-function renderPage() {
+function renderPage(pathname = '/collections/COL001/things/RSV01/request') {
   return render(
-    <MemoryRouter
-      initialEntries={[{ pathname: '/collections/COL001/things/RSV01/request', state: {} }]}
-    >
+    <MemoryRouter initialEntries={[{ pathname, state: {} }]}>
       <Routes>
         <Route path="/collections/:code/things/:thingCode/request" element={<RequestThingPage />} />
+        <Route path="/things/:thingCode/request" element={<RequestThingPage />} />
         <Route path="*" element={<div data-testid="navigated" />} />
       </Routes>
     </MemoryRouter>
@@ -334,6 +333,67 @@ describe('RequestThingPage — RESERVE_THING', () => {
     expect(await screen.findByText('Not authorized to request this thing')).toBeInTheDocument();
     expect(joinCalled).toBe(false);
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  // A 403 `not_a_member` on every request, and a record of every join the page
+  // attempts — for the two tests below about *which* collection gets joined.
+  function notAMemberApi(joins) {
+    apiFetch.mockImplementation((url, opts = {}) => {
+      const join = /\/collections\/([^/]+)\/join\//.exec(url);
+      if (join && opts.method === 'POST') {
+        joins.push(join[1]);
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      }
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          status: 403,
+          json: () =>
+            Promise.resolve({
+              error: 'You need to be a member of this group to reserve.',
+              code: 'not_a_member',
+            }),
+        });
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      // The server resolves the thing to its own collection (COL001) whatever
+      // the route named: `?collection=` is ignored when it names a collection
+      // the thing doesn't live in.
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
+        return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
+      return Promise.resolve(mockResponse({}));
+    });
+  }
+
+  test('a route naming another collection never joins it — the reader is only told why', async () => {
+    // The link someone could send: their own PUBLIC group in the path, a real
+    // space's thing after it. Joining the path's collection handed that
+    // group's curator the reader's email address on a single Reserve click.
+    const joins = [];
+    notAMemberApi(joins);
+    const { container } = renderPage('/collections/EVIL01/things/RSV01/request');
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(
+      await screen.findByText('You need to be a member of this group to reserve.')
+    ).toBeInTheDocument();
+    expect(joins).toEqual([]);
+    expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  test('the standalone route joins the collection the server resolved the thing to', async () => {
+    const joins = [];
+    notAMemberApi(joins);
+    const { container } = renderPage('/things/RSV01/request');
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    await waitFor(() => expect(joins).toEqual(['COL001']));
   });
 
   test('the manual fallback books the date on screen now, not the one from the failed attempt', async () => {
