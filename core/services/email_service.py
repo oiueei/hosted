@@ -1512,7 +1512,7 @@ def send_broadcast_email(
                 [
                     _para(T("broadcast_intro").format(owner=owner)),
                     _para(message),
-                    _links((collection_url, T("broadcast_help_cta"))),
+                    _links((collection_url, T("broadcast_open_cta"))),
                 ],
                 lang=lang,
                 header=headline,

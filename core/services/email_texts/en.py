@@ -209,9 +209,9 @@ TEXTS = {
     "reported_review_cta": "Review the listing",
     # Broadcast (owner → invitees)
     "broadcast_subject": "Hey! {collection}",
-    "broadcast_plain": "Message from {owner}:\n\n{message}\n\nI can help! {url}",
+    "broadcast_plain": "Message from {owner}:\n\n{message}\n\nOpen the group: {url}",
     "broadcast_intro": "{owner} sent a message to the group:",
-    "broadcast_help_cta": "I can help!",
+    "broadcast_open_cta": "Open the group",
     # Return reminder (to owner)
     "reminder_subject": "Reminder: a hold ends tomorrow",
     "reminder_plain": "Reminder: {requester}'s hold on '{thing}' ends {end}.",

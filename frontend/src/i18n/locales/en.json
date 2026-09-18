@@ -230,7 +230,6 @@
     "faqHiddenBody": "{{owner_name}} hid your question about {{thing_headline}}.",
     "inviteRejectedLabel": "Invitation declined",
     "inviteRejectedBody": "{{invitee_name}} declined the invitation to {{collection_headline}}.",
-    "viewCollection": "I can help!",
     "reportedLabel": "A listing was reported",
     "reportedBody": "Someone reported “{{thing_headline}}”. Please take a look.",
     "viewThing": "View listing",

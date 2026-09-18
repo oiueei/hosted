@@ -224,7 +224,6 @@
     "faqHiddenBody": "{{owner_name}} ha ocultado tu pregunta sobre {{thing_headline}}.",
     "inviteRejectedLabel": "Invitación rechazada",
     "inviteRejectedBody": "{{invitee_name}} ha rechazado la invitación a {{collection_headline}}.",
-    "viewCollection": "¡Puedo ayudar!",
     "reportedLabel": "Han denunciado una publicación",
     "reportedBody": "Alguien ha denunciado «{{thing_headline}}». Échale un vistazo.",
     "viewThing": "Ver publicación",

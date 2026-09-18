@@ -224,7 +224,6 @@
     "faqHiddenBody": "{{owner_name}} ha amagat la teva pregunta sobre {{thing_headline}}.",
     "inviteRejectedLabel": "Invitació rebutjada",
     "inviteRejectedBody": "{{invitee_name}} ha rebutjat la invitació a {{collection_headline}}.",
-    "viewCollection": "Puc ajudar!",
     "reportedLabel": "Han denunciat una publicació",
     "reportedBody": "Algú ha denunciat «{{thing_headline}}». Fes-hi un cop d'ull.",
     "viewThing": "Mostra la publicació",

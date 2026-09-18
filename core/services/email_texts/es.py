@@ -207,9 +207,9 @@ TEXTS = {
     "reported_review_cta": "Revisar el anuncio",
     # Broadcast (owner → invitees)
     "broadcast_subject": "¡Hey! {collection}",
-    "broadcast_plain": "Mensaje de {owner}:\n\n{message}\n\n¡Puedo ayudar! {url}",
+    "broadcast_plain": "Mensaje de {owner}:\n\n{message}\n\nAbrir el grupo: {url}",
     "broadcast_intro": "{owner} ha enviado un mensaje al grupo:",
-    "broadcast_help_cta": "¡Puedo ayudar!",
+    "broadcast_open_cta": "Abrir el grupo",
     # Return reminder (to owner)
     "reminder_subject": "Recordatorio: una reserva termina mañana",
     "reminder_plain": "Recordatorio: la reserva de {requester} sobre '{thing}' termina el {end}.",

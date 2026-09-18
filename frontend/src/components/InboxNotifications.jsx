@@ -253,17 +253,18 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   // thing, so the owner should land there in one click. Returns {to, label} or null.
   const notificationLink = (n) => {
     const p = n.payload || {};
-    if (n.type === 'BROADCAST' && p.collection_code) {
-      return { to: `/collections/${p.collection_code}`, label: t('home.viewCollection') };
-    }
     // A pending recommendation is a question, and the guest list is where the
     // owner answers it — landing them on the collection would leave them hunting
     // for the button. The two resolved states just point at the group.
     if (n.type === 'INVITE_PROPOSED' && !isProposalApproved(n) && p.collection_code) {
       return { to: `/collections/${p.collection_code}/invites`, label: t('home.viewProposal') };
     }
+    // A broadcast says whatever its curator wrote, so its link only says where
+    // it goes. It was labelled "I can help!" — the call-for-help CTA of the
+    // retired WISH_THING flow — under every group message, whatever it said.
     if (
-      (n.type === 'MEMBER_LEFT' ||
+      (n.type === 'BROADCAST' ||
+        n.type === 'MEMBER_LEFT' ||
         n.type === 'INVITE_PROPOSAL_APPROVED' ||
         n.type === 'INVITE_PROPOSAL_DECLINED' ||
         n.type === 'INVITE_PROPOSED' ||
