@@ -385,6 +385,42 @@ def test_day_has_a_free_hour_true_when_one_block_is_packed_but_another_is_free(
     assert _day_has_a_free_hour(mon, hourly_reservations_collection, [packed_morning]) is True
 
 
+def test_day_has_a_free_hour_uses_the_collections_own_minimum_not_a_fixed_hour(db):
+    """The name predates 0150 (`reservation_min_minutes` replacing hour-
+    granular `reservation_max_hours`) and was never updated: this used to
+    compare every gap against a hardcoded 60, so a collection with a
+    sub-hour minimum — the feature 0150 exists for — reported a day as
+    unavailable even when it plainly had room for the shortest reservation
+    that collection actually offers. Friday's only block (10:00-14:00) with
+    a 10:00-13:30 booking leaves a 30-minute tail: too short for the old
+    fixed hour, exactly enough for a 15-minute minimum."""
+    owner = User.objects.create(code="DHFMIN", email="dhfmin@test.com")
+    collection = Collection.objects.create(
+        code="DHFCOL",
+        owner=owner,
+        headline="Quick machine slots",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_min_minutes=15,
+        reservation_max_minutes=180,
+        opening_hours={"4": [["10:00", "14:00"]]},  # Friday only
+    )
+    fri = _next_weekday(4)
+    booking = BookingPeriod(
+        start_date=fri,
+        end_date=fri + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(13, 30),
+    )
+    assert _day_has_a_free_hour(fri, collection, [booking]) is True
+    # The default 60-minute floor still refuses the same 30-minute tail on an
+    # otherwise identical collection — pins that the fix is the threshold,
+    # not the gap arithmetic.
+    collection.reservation_min_minutes = 60
+    collection.save(update_fields=["reservation_min_minutes"])
+    assert _day_has_a_free_hour(fri, collection, [booking]) is False
+
+
 def test_compute_hourly_availability_available_today(hourly_reservations_collection):
     mon = _next_weekday(0)
     available_today, next_available = compute_hourly_availability(
