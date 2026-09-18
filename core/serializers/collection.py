@@ -111,6 +111,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     owner = serializers.CharField(source="owner_id")
     owner_name = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
+    welcome_doc = serializers.SerializerMethodField()
     welcome_doc_url = serializers.SerializerMethodField()
     things = serializers.SerializerMethodField()
     invites = serializers.SerializerMethodField()
@@ -190,6 +191,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "is_digest_muted",
             "pending_proposals",
             "email_note",
+            "welcome_doc",
         ]
 
     def get_owner_name(self, obj):
@@ -200,8 +202,29 @@ class CollectionSerializer(serializers.ModelSerializer):
     def get_thumbnail_url(self, obj):
         return asset_url(obj.thumbnail) if obj.thumbnail else None
 
+    def _may_read_welcome_doc(self, obj):
+        """The welcome PDF is for the group — its curators and its members —
+        not for whoever can read a PUBLIC collection's page.
+
+        It is the group's rules, mailed to each member on joining (Cat. 1) and
+        read back only by the curators' edit form, yet it was served to every
+        reader of the collection, anonymous visitors included. Members keep it:
+        the document is addressed to them. Fails closed without a request.
+        """
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated):
+            return False
+        return self._requester_is_curator(obj) or any(
+            u.code == request.user.code for u in obj.invites.all()
+        )
+
+    def get_welcome_doc(self, obj):
+        return obj.welcome_doc if self._may_read_welcome_doc(obj) else ""
+
     def get_welcome_doc_url(self, obj):
-        return doc_asset_url(obj.welcome_doc) if obj.welcome_doc else None
+        if not (obj.welcome_doc and self._may_read_welcome_doc(obj)):
+            return None
+        return doc_asset_url(obj.welcome_doc)
 
     def get_things(self, obj):
         request = self.context.get("request")

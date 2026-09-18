@@ -1,11 +1,12 @@
-"""Collection fields only its curators may read.
+"""Collection fields not every reader of the collection may have.
 
 `CollectionSerializer` answers every reader of a collection — its members and,
 on a PUBLIC one, anybody at all. Some of what it holds is written for a
-narrower audience than that, and the only page that reads it back is the
-curators' own edit form. These tests ask the API as each kind of reader, so a
-field that starts travelling to the wrong one fails here rather than in a
-screenshot somebody shares.
+narrower audience than that: the email note for the curators alone (it goes
+out by email; only their edit form reads it back), the welcome document for
+the group. These tests ask the API as each kind of reader, so a field that
+starts travelling to the wrong one fails here rather than in a screenshot
+somebody shares.
 """
 
 import pytest
@@ -87,3 +88,48 @@ class TestTheEmailNote:
         for client in (_client(), _client(member)):
             response = client.get(f"/api/v1/collections/{space.code}/")
             assert "4417" not in response.content.decode()
+
+
+DOC = "oiueei/documents/rules"
+
+
+class TestTheWelcomeDocument:
+    """The group's rules, mailed to each member on joining — for the group,
+    not for whoever can read a PUBLIC collection's page. Unlike the email
+    note, members keep it: the document is addressed to them."""
+
+    @pytest.fixture
+    def with_doc(self, space):
+        space.welcome_doc = DOC
+        space.save(update_fields=["welcome_doc"])
+        return space
+
+    @pytest.fixture
+    def outsider(self, db):
+        return User.objects.create(code="OUTS01", email="outsider@example.com", name="Out")
+
+    def test_an_anonymous_reader_gets_neither_key_nor_link(self, with_doc):
+        data = _read(_client(), with_doc)
+        assert data["welcome_doc"] == ""
+        assert data["welcome_doc_url"] is None
+
+    def test_a_signed_in_reader_outside_the_group_gets_nothing_either(self, with_doc, outsider):
+        data = _read(_client(outsider), with_doc)
+        assert data["welcome_doc"] == ""
+        assert data["welcome_doc_url"] is None
+
+    def test_a_member_reads_the_rules_they_were_sent(self, with_doc, member):
+        data = _read(_client(member), with_doc)
+        assert data["welcome_doc"] == DOC
+        assert data["welcome_doc_url"].endswith(f"/{DOC}")
+
+    @pytest.mark.parametrize("who", ["user", "co_owner"])
+    def test_the_curators_read_it_back_to_edit_it(self, with_doc, who, request):
+        data = _read(_client(request.getfixturevalue(who)), with_doc)
+        assert data["welcome_doc"] == DOC
+        assert data["welcome_doc_url"].endswith(f"/{DOC}")
+
+    def test_the_document_url_is_nowhere_in_an_outsiders_response(self, with_doc, outsider):
+        for client in (_client(), _client(outsider)):
+            response = client.get(f"/api/v1/collections/{with_doc.code}/")
+            assert DOC not in response.content.decode()
