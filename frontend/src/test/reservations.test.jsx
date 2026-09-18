@@ -156,6 +156,8 @@ describe('RequestThingPage — RESERVE_THING', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
 
     await screen.findByText(/Your reservation is confirmed/);
+    // A member who reserved joined nothing, so nothing says they did.
+    expect(screen.queryByText(/you've joined/)).not.toBeInTheDocument();
     const postCall = apiFetch.mock.calls.find(
       ([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST'
     );
@@ -382,6 +384,85 @@ describe('RequestThingPage — RESERVE_THING', () => {
     ).toBeInTheDocument();
     expect(joins).toEqual([]);
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  test('after an auto-join the confirmation says which group the reader joined', async () => {
+    const thing = {
+      ...RESERVE_THING,
+      reservation_max_days: 1,
+      collection_headline: '{"es": "Taller del barrio", "en": "Neighbourhood workshop"}',
+    };
+    let requestCalls = 0;
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST')
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        requestCalls += 1;
+        if (requestCalls === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 403,
+            json: () => Promise.resolve({ error: 'Not a member.', code: 'not_a_member' }),
+          });
+        }
+        return Promise.resolve(mockResponse({ message: 'Reservation confirmed' }));
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url)) return Promise.resolve(mockResponse(thing));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    await screen.findByText(/Your reservation is confirmed/);
+    // In the reader's own language, like every other owner text.
+    expect(
+      screen.getByText(
+        "To reserve here you've joined Neighbourhood workshop. You can leave it from your profile."
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('the join is still announced when the retried reservation fails', async () => {
+    // The slot was taken while the join ran: the reservation fails, the
+    // membership doesn't — and there is no success message left to carry it.
+    const thing = { ...RESERVE_THING, reservation_max_days: 1, collection_headline: 'Taller' };
+    let requestCalls = 0;
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/collections\/COL001\/join\//.test(url) && opts.method === 'POST')
+        return Promise.resolve(mockResponse({ message: 'Joined' }));
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST') {
+        requestCalls += 1;
+        return Promise.resolve({
+          ok: false,
+          status: requestCalls === 1 ? 403 : 409,
+          json: () =>
+            Promise.resolve(
+              requestCalls === 1
+                ? { error: 'Not a member.', code: 'not_a_member' }
+                : { error: 'Those dates are already taken.' }
+            ),
+        });
+      }
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url)) return Promise.resolve(mockResponse(thing));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    const notice = await screen.findByText(
+      "To reserve here you've joined Taller. You can leave it from your profile."
+    );
+    // Inside the live region, so a screen reader hears it too.
+    expect(notice.closest('[role="status"]')).not.toBeNull();
+    expect(screen.queryByText(/Your reservation is confirmed/)).not.toBeInTheDocument();
   });
 
   test('the standalone route joins the collection the server resolved the thing to', async () => {
@@ -667,14 +748,17 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     // that: a Notification that only gets created once the fallback fires
     // would pass a text-only assertion while announcing nothing. Queried by
     // class, not `getByRole('status')`: HDS's own LoadingSpinner leaves a
-    // second, unrelated `role="status"` announcer behind in the document.
-    const statusRegion = container.querySelector('.status-region');
-    expect(statusRegion).toBeInTheDocument();
+    // second, unrelated `role="status"` announcer behind in the document. All of
+    // them, not the first: the page has more than one region (the joined-group
+    // notice has its own), and what matters is that one that was already there
+    // holds the notice.
+    const statusRegions = [...container.querySelectorAll('.status-region')];
+    expect(statusRegions.length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('radio', { name: '2 hours' }));
     const notice = await screen.findByText(/No start times are free/);
     expect(screen.getByText('No times available')).toBeInTheDocument();
-    expect(statusRegion).toContainElement(notice);
+    expect(statusRegions.some((region) => region.contains(notice))).toBe(true);
     expect(screen.queryByRole('radio', { name: '13:00' })).toBeNull();
   });
 

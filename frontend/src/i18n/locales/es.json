@@ -977,6 +977,8 @@
     "projectNoteHelper": "Quedan {{remaining}} caracteres",
     "successLabel": "Reservado",
     "successMessage": "Tu reserva está confirmada; hemos avisado al propietario.",
+    "joinedLabel": "Te has unido al grupo",
+    "joinedGroup": "Para reservar aquí te has unido a {{group}}. Puedes salir desde tu perfil.",
     "dateSummary": "Reservado del {{start}} al {{end}}.",
     "dateRange": "Elige una fecha entre hoy y dentro de {{days}} días.",
     "noteFrom": "Su mensaje: {{note}}",

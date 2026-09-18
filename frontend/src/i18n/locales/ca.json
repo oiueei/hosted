@@ -977,6 +977,8 @@
     "projectNoteHelper": "Queden {{remaining}} caràcters",
     "successLabel": "Reservat",
     "successMessage": "La teva reserva està confirmada; n'hem avisat el propietari.",
+    "joinedLabel": "T'has unit al grup",
+    "joinedGroup": "Per reservar aquí t'has unit a {{group}}. Pots sortir-ne des del teu perfil.",
     "dateSummary": "Reservat del {{start}} al {{end}}.",
     "dateRange": "Tria una data entre avui i d'aquí a {{days}} dies.",
     "noteFrom": "El seu missatge: {{note}}",

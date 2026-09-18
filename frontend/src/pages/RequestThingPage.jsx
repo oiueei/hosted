@@ -96,6 +96,11 @@ export default function RequestThingPage() {
   const [notMemberError, setNotMemberError] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
+  // The group an automatic (or fallback) join just made the reader a member
+  // of — said out loud afterwards. Not asking first is CA's call; not telling
+  // them at all left someone in a group, its digest and its curator's roster
+  // without knowing, above all when the retried reservation then failed.
+  const [joinedGroup, setJoinedGroup] = useState('');
   // Which thing the load failed for — same reason as the delete pages: a boolean
   // needs clearing at the top of the effect, which is a render spent undoing the
   // previous one.
@@ -368,6 +373,9 @@ export default function RequestThingPage() {
         return;
       }
       setNotMemberError('');
+      // `joinableCollection` is `thing.collection_code`, so this headline is
+      // the group that was just joined.
+      setJoinedGroup(L(thing?.collection_headline) || '');
       try {
         const retryRes = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
           method: 'POST',
@@ -510,6 +518,17 @@ export default function RequestThingPage() {
           )}
         </div>
       )}
+      {/* The join stands even when the retried reservation fails (the slot
+          was taken meanwhile, say), and then there is no success message to
+          carry it — so it has a notice of its own. Rendered unconditionally,
+          the condition inside: see StatusRegion.jsx. */}
+      <StatusRegion>
+        {joinedGroup && !success && (
+          <Notification type="info" label={t('reservation.joinedLabel')}>
+            {t('reservation.joinedGroup', { group: joinedGroup })}
+          </Notification>
+        )}
+      </StatusRegion>
       {success ? (
         <>
           <Notification
@@ -518,6 +537,11 @@ export default function RequestThingPage() {
             type="success"
           >
             {isReservation ? t('reservation.successMessage') : t('request.successMessage')}
+            {joinedGroup && (
+              <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
+                {t('reservation.joinedGroup', { group: joinedGroup })}
+              </p>
+            )}
           </Notification>
           <div className="spacer-m" />
           <Button
