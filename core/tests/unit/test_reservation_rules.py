@@ -819,8 +819,14 @@ def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_to
     # Still refused just under the new, lower floor.
     msg = coll.reservation_hour_violation(mon, time(10, 0), time(10, 10))
     assert msg is not None and "15" in msg
-    # The max is not aligned to a whole hour either (100 minutes = 1h40).
-    assert coll.reservation_hour_violation(mon, time(10, 0), time(11, 40)) is None
+    # Durations aren't whole hours either: 90 minutes (1h30) on the 15-minute
+    # step is fine.
+    assert coll.reservation_hour_violation(mon, time(10, 0), time(11, 30)) is None
+    # But the 100-minute max itself is off that step, so the longest bookable
+    # span is 90 — the same place RequestThingPage's duration list stops
+    # (durationOptions(15, 100) ends at 90). Refused by the step rule, not the cap.
+    msg = coll.reservation_hour_violation(mon, time(10, 0), time(11, 40))
+    assert msg == "A reservation here lasts a multiple of 15 minutes."
     msg = coll.reservation_hour_violation(mon, time(10, 0), time(11, 41))
     assert msg is not None and "100" in msg
 
@@ -1235,3 +1241,79 @@ def test_project_note_defaults_blank_and_holds_512(db):
     )
     b2.refresh_from_db()
     assert len(b2.project_note) == 512
+
+
+# --- the step grid (2026-09-18) -------------------------------------------
+# `reservation_min_minutes` is also the step RequestThingPage offers starts and
+# durations on. The backend used to accept any time; these pin that it now
+# holds the same grid, and that the availability walk reasons on it too.
+
+
+def _grid_collection(code, opening_hours, min_minutes, max_minutes=720):
+    owner = User.objects.create(code=f"{code}O", email=f"{code.lower()}@test.com")
+    return Collection.objects.create(
+        code=code,
+        owner=owner,
+        headline="Grid",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_min_minutes=min_minutes,
+        reservation_max_minutes=max_minutes,
+        opening_hours=opening_hours,
+    )
+
+
+def test_hour_violation_refuses_seconds_and_microseconds(db):
+    coll = _grid_collection("GRID1", {"0": [["10:00", "14:00"]]}, 60)
+    mon = _next_weekday(0)
+    whole = "Reservation times are whole minutes (HH:MM)."
+    assert coll.reservation_hour_violation(mon, time(10, 0, 30), time(11, 0, 30)) == whole
+    assert coll.reservation_hour_violation(mon, time(10, 0), time(11, 0, 0, 5)) == whole
+
+
+def test_hour_violation_grid_runs_from_each_blocks_opening_not_from_midnight(db):
+    """A block opening at 10:20 on a 60-minute step starts at 10:20, 11:20...
+    — not on the hour. The same grid RequestThingPage's freeStartTimes walks."""
+    coll = _grid_collection("GRID2", {"0": [["10:20", "14:20"], ["16:00", "20:00"]]}, 60)
+    mon = _next_weekday(0)
+    assert coll.reservation_hour_violation(mon, time(11, 20), time(12, 20)) is None
+    assert coll.reservation_hour_violation(mon, time(11, 0), time(12, 0)) == (
+        "Reservations here start every 60 minutes from opening time."
+    )
+    # The second block has its own grid, from 16:00.
+    assert coll.reservation_hour_violation(mon, time(17, 0), time(18, 0)) is None
+
+
+def test_hour_violation_accepts_an_off_hour_step_on_its_own_grid(db):
+    coll = _grid_collection("GRID3", {"0": [["10:00", "14:00"]]}, 45)
+    mon = _next_weekday(0)
+    assert coll.reservation_hour_violation(mon, time(10, 45), time(12, 15)) is None  # 90 min
+    assert coll.reservation_hour_violation(mon, time(10, 45), time(12, 0)) == (
+        "A reservation here lasts a multiple of 45 minutes."
+    )
+
+
+def test_hour_violation_full_day_form_is_exempt_from_the_grid(db):
+    """10:00-20:00 with a lunch gap is 600 minutes — not a multiple of 45 —
+    yet still the full-day form, which the blocks define, not the step."""
+    coll = _grid_collection("GRID4", {"0": [["10:00", "14:00"], ["16:00", "20:00"]]}, 45)
+    mon = _next_weekday(0)
+    assert coll.reservation_hour_violation(mon, time(10, 0), time(20, 0)) is None
+
+
+def test_free_slot_check_ignores_a_long_enough_gap_that_is_off_the_grid(db):
+    """10:30-11:30 is 60 free minutes, but no reservation may start at 10:30 on
+    a 60-minute grid from 10:00 — so the day has no bookable slot, and the card
+    must not say otherwise while the picker greys the day out."""
+    coll = _grid_collection("GRID5", {"4": [["10:00", "14:00"]]}, 60)
+    fri = _next_weekday(4)
+    end = fri + timedelta(days=1)
+    booked = [
+        BookingPeriod(thing_code_id="X", start_date=fri, end_date=end, start_time=s, end_time=e)
+        for s, e in [(time(10, 0), time(10, 30)), (time(11, 30), time(14, 0))]
+    ]
+    assert _day_has_a_free_hour(fri, coll, booked) is False
+
+    # Shift the second booking to 12:00 and the 11:00 grid start fits.
+    booked[1].start_time = time(12, 0)
+    assert _day_has_a_free_hour(fri, coll, booked) is True

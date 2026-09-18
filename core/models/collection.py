@@ -547,12 +547,24 @@ class Collection(models.Model):
         minutes`` is the twin floor, configurable since 0150 (it used to be a
         fixed 60). The duration/horizon/closure checks mirror
         ``reservation_violation`` exactly, just in minutes instead of days.
+
+        **The minimum is also the step** (2026-09-18), exactly as
+        ``RequestThingPage`` offers it: times are whole minutes, and inside a
+        block a reservation starts on the grid that runs every
+        ``reservation_min_minutes`` from that block's opening and lasts a
+        multiple of it. The picker never produces anything else; without this
+        a request made straight to the API could book 10:07:30-11:07:30 and
+        leave slivers no member can book, and ``_day_has_a_free_hour`` (which
+        also reasons on the grid) would disagree with the calendar about
+        whether a day has room. The full-day form is exempt from the grid — it
+        is defined by the blocks, not the step.
         """
         if end_time <= start_time:
             return "A reservation must end after it starts."
-        duration_minutes = (
-            end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute)
-        )
+        if start_time.second or start_time.microsecond or end_time.second or end_time.microsecond:
+            return "Reservation times are whole minutes (HH:MM)."
+        start_minutes = start_time.hour * 60 + start_time.minute
+        duration_minutes = end_time.hour * 60 + end_time.minute - start_minutes
         if duration_minutes < self.reservation_min_minutes:
             return f"A reservation is at least {self.reservation_min_minutes} minutes."
         if duration_minutes > self.reservation_max_minutes:
@@ -572,8 +584,13 @@ class Collection(models.Model):
             return "This space isn't open that day."
         if (start_time, end_time) == (blocks[0][0], blocks[-1][1]):
             return None
+        step = self.reservation_min_minutes
         for block_start, block_end in blocks:
             if block_start <= start_time and end_time <= block_end:
+                if (start_minutes - (block_start.hour * 60 + block_start.minute)) % step:
+                    return f"Reservations here start every {step} minutes from opening time."
+                if duration_minutes % step:
+                    return f"A reservation here lasts a multiple of {step} minutes."
                 return None
         return "That time falls outside this space's opening hours."
 

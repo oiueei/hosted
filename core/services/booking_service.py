@@ -161,8 +161,13 @@ def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
     whole-day booking (``start_time`` NULL — a LEND/RENT or a DAY-unit RESERVE
     sharing the thing) closes the whole day outright. Existing HOUR-unit
     bookings on the day are swept, in order, against each opening block to find
-    any gap of at least the minimum; overlapping sub-ranges can't occur between
-    two ACCEPTED/PENDING bookings (``has_overlap`` already refuses that).
+    a gap with room for the minimum **at a start on the step grid** — every
+    ``reservation_min_minutes`` from the block's opening, the same starts
+    ``RequestThingPage`` offers and ``Collection.reservation_hour_violation``
+    accepts (2026-09-18). A 60-minute gap from 10:30 to 11:30 on a 60-minute
+    grid is not a free slot: no reservation may start at 10:30. Overlapping
+    sub-ranges can't occur between two ACCEPTED/PENDING bookings
+    (``has_overlap`` already refuses that).
 
     Named for the hour-only shape 0150 replaced — kept rather than renamed so
     this diff stays legible next to the tests it already had; what changed is
@@ -181,7 +186,10 @@ def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
     blocks = collection.day_opening_blocks(day)
     if not blocks:
         return False
-    min_minutes = collection.reservation_min_minutes
+    step = collection.reservation_min_minutes
+
+    def minutes(t):
+        return t.hour * 60 + t.minute
 
     occupied = []
     for b in blocked_periods:
@@ -189,23 +197,26 @@ def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
             continue
         if b.start_time is None:
             return False  # a whole-day booking blocks everything
-        occupied.append((b.start_time, b.end_time))
+        occupied.append((minutes(b.start_time), minutes(b.end_time)))
     occupied.sort()
 
-    for block_start, block_end in blocks:
+    for block_start_time, block_end_time in blocks:
+        block_start, block_end = minutes(block_start_time), minutes(block_end_time)
+
+        def fits(gap_start, gap_end):
+            # The first grid start at or after the gap opens — the grid runs
+            # every `step` minutes from the block's opening, as the picker's does.
+            first = block_start + -(-(gap_start - block_start) // step) * step
+            return first + step <= gap_end
+
         cursor = block_start
         for occ_start, occ_end in occupied:
             if occ_end <= cursor or occ_start >= block_end:
                 continue  # outside this block
-            gap_minutes = (occ_start.hour * 60 + occ_start.minute) - (
-                cursor.hour * 60 + cursor.minute
-            )
-            if gap_minutes >= min_minutes:
+            if fits(cursor, occ_start):
                 return True
-            if occ_end > cursor:
-                cursor = occ_end
-        tail_minutes = (block_end.hour * 60 + block_end.minute) - (cursor.hour * 60 + cursor.minute)
-        if tail_minutes >= min_minutes:
+            cursor = max(cursor, occ_end)
+        if fits(cursor, block_end):
             return True
     return False
 

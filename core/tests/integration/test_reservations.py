@@ -362,6 +362,31 @@ def test_an_hourly_request_outside_opening_hours_is_refused(
     assert not BookingPeriod.objects.exists()
 
 
+@pytest.mark.parametrize(
+    ("start", "end", "error"),
+    [
+        ("10:30", "11:30", "Reservations here start every 60 minutes from opening time."),
+        ("10:00", "11:30", "A reservation here lasts a multiple of 60 minutes."),
+        ("10:00:30", "11:00:30", "Reservation times are whole minutes (HH:MM)."),
+    ],
+)
+def test_an_hourly_request_off_the_pickers_grid_is_refused_with_the_rule(
+    hourly_reservations, authenticated_client2, start, end, error
+):
+    """The request page only ever sends starts on the minimum-minute grid and
+    durations that are multiples of it; a request made straight to the API
+    gets the same rules, named, instead of a booking that leaves slivers no
+    member can book (found in review, 2026-09-18)."""
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": start, "end_time": end},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.data == {"error": error}
+    assert not BookingPeriod.objects.exists()
+
+
 def test_an_hourly_clash_is_a_409_and_leaves_the_rest_of_the_day_free(
     hourly_reservations, authenticated_client2, api_client
 ):
