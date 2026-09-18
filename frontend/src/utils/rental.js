@@ -303,12 +303,12 @@ export const durationOptions = (minMinutes, maxMinutes) => {
 
 // The earliest a slot on `isoDate` may start, in minutes since midnight: the
 // current minute when `isoDate` is today by the browser's clock, else 0. A slot
-// that has already begun is not something to offer — and the picker is the only
-// place that knows: the backend has no time-of-day check of its own, since its
-// clock is UTC (`TIME_ZONE`) while `opening_hours` is the venue's wall clock.
-// The member's browser is assumed to share the venue's time zone, which for an
-// on-site reservation it almost always does. A start in the current minute
-// still counts as not yet begun.
+// that has already begun is not something to offer. The server refuses one too
+// (`Collection.reservation_hour_violation`), by the deployment's own clock
+// (`DJANGO_TIME_ZONE`, the zone `opening_hours` is written in); this uses the
+// browser's, assumed to share the venue's time zone — which for an on-site
+// reservation it almost always does. Both count a start in the current minute
+// as not yet begun.
 export const earliestStartMinutes = (isoDate, now = new Date()) =>
   isoDate === toISODate(now) ? now.getHours() * 60 + now.getMinutes() : 0;
 

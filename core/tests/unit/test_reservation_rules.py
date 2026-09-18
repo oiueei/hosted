@@ -1317,3 +1317,97 @@ def test_free_slot_check_ignores_a_long_enough_gap_that_is_off_the_grid(db):
     # Shift the second booking to 12:00 and the 11:00 grid start fits.
     booked[1].start_time = time(12, 0)
     assert _day_has_a_free_hour(fri, coll, booked) is True
+
+
+# --- a slot that already began today (2026-09-18) --------------------------
+# "Now" is the deployment's wall clock (TIME_ZONE, from DJANGO_TIME_ZONE) — the
+# clock opening_hours is written in. The suite runs on UTC unless a test says
+# otherwise. 2026-06-01 is a Monday: blocks 10-14 and 16-20 in the fixture.
+
+
+def _utc(*args):
+    from datetime import datetime
+    from datetime import timezone as dt_timezone
+
+    return datetime(*args, tzinfo=dt_timezone.utc)
+
+
+def test_hour_violation_refuses_a_slot_that_already_began_today(hourly_reservations_collection):
+    coll = hourly_reservations_collection
+    now = _utc(2026, 6, 1, 12, 0, 30)
+    assert coll.reservation_hour_violation(date(2026, 6, 1), time(11, 0), time(12, 0), now=now) == (
+        "That time has already begun."
+    )
+    # The current minute has not begun — the same rule the request page uses.
+    assert (
+        coll.reservation_hour_violation(date(2026, 6, 1), time(12, 0), time(13, 0), now=now) is None
+    )
+
+
+def test_hour_violation_the_clock_only_matters_today(hourly_reservations_collection):
+    coll = hourly_reservations_collection
+    late = _utc(2026, 6, 1, 19, 30)
+    tuesday = date(2026, 6, 2)
+    assert coll.reservation_hour_violation(tuesday, time(10, 0), time(11, 0), now=late) is None
+
+
+def test_hour_violation_reads_the_clock_in_the_deployments_own_zone(
+    hourly_reservations_collection, settings
+):
+    """09:30 UTC is 11:30 in Madrid (CEST): an 11:00 slot has begun there,
+    though not in UTC. With DJANGO_TIME_ZONE set, the venue's clock decides."""
+    coll = hourly_reservations_collection
+    with time_machine.travel(_utc(2026, 6, 1, 9, 30), tick=False):
+        assert coll.reservation_hour_violation(date(2026, 6, 1), time(11, 0), time(12, 0)) is None
+        settings.TIME_ZONE = "Europe/Madrid"
+        assert coll.reservation_hour_violation(date(2026, 6, 1), time(11, 0), time(12, 0)) == (
+            "That time has already begun."
+        )
+
+
+def test_hourly_availability_does_not_count_a_gap_that_already_passed_today(
+    hourly_reservations_collection,
+):
+    """At 19:30 on a Monday the last 1h start (19:00) has gone: nothing is left
+    to book today, so the card must point at Tuesday, not say "today"."""
+    coll = hourly_reservations_collection
+    late = _utc(2026, 6, 1, 19, 30)
+    assert compute_hourly_availability([], coll, now=late) == (False, date(2026, 6, 2))
+
+    still_time = _utc(2026, 6, 1, 18, 59)
+    assert compute_hourly_availability([], coll, now=still_time) == (True, date(2026, 6, 1))
+
+
+def test_cancel_refuses_an_hourly_slot_that_already_began_today(hourly_reservations_collection):
+    """Cancelling this morning's slot this afternoon would free, and announce,
+    something that already happened. A later slot the same day still cancels."""
+    coll = hourly_reservations_collection
+    member = User.objects.create(code="CNLMEM", email="cnlmem@test.com")
+    coll.invites.add(member)
+    space = Thing.objects.create(
+        code="CNLSPC", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Sala"
+    )
+    coll.things.add(space)
+
+    def booking(code, start, end):
+        return BookingPeriod.objects.create(
+            code=code,
+            thing_code=space,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=coll.owner,
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 2),
+            start_time=start,
+            end_time=end,
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+
+    morning = booking("CNLB01", time(10, 0), time(11, 0))
+    evening = booking("CNLB02", time(17, 0), time(18, 0))
+
+    with time_machine.travel(_utc(2026, 6, 1, 12, 0), tick=False):
+        with pytest.raises(BookingRequestError, match="already started"):
+            cancel_reservation(morning, member)
+        assert cancel_reservation(evening, member).status == BookingPeriod.Status.CANCELLED

@@ -646,10 +646,10 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(body.duration_days).toBeUndefined();
   });
 
-  // The backend has no time-of-day check (its clock is UTC, the venue's is
-  // not), so the picker is the only thing standing between a member and a
-  // slot that already began today (found in review, 2026-09-18). The clock is
-  // faked at Monday 01/06/2026 12:00 in beforeEach.
+  // The picker stops offering a slot that already began today — the server
+  // refuses one as well, by the deployment's clock, but the form shouldn't
+  // offer what the server will refuse (found in review, 2026-09-18). The
+  // clock is faked at Monday 01/06/2026 12:00 in beforeEach.
   test('today only offers starts that have not begun yet', async () => {
     setApi({ thing: HOURLY_RESERVE_THING });
     const { container } = renderPage();

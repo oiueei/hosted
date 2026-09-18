@@ -151,7 +151,7 @@ def compute_availability(
     return (False, None)
 
 
-def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
+def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None, earliest=0):
     """Does ``day`` have at least one free slot — of the collection's own
     ``reservation_min_minutes``, not a fixed hour — within an HOUR-unit
     collection's opening blocks, given the thing's booked periods?
@@ -180,6 +180,10 @@ def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
     ``closed`` is ``collection.closed_date_set()`` precomputed by a caller that
     asks about many days in a row (``compute_hourly_availability``) — the set
     is rebuilt from the stored ISO strings on every call otherwise.
+
+    ``earliest`` (minutes since midnight) skips grid starts before it — for
+    today, the current minute, so a gap that has already slipped into the past
+    doesn't make a day "available" nobody can book any more.
     """
     if day in (collection.closed_date_set() if closed is None else closed):
         return False
@@ -204,9 +208,11 @@ def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
         block_start, block_end = minutes(block_start_time), minutes(block_end_time)
 
         def fits(gap_start, gap_end):
-            # The first grid start at or after the gap opens — the grid runs
-            # every `step` minutes from the block's opening, as the picker's does.
-            first = block_start + -(-(gap_start - block_start) // step) * step
+            # The first grid start at or after the gap opens (and not before
+            # `earliest`) — the grid runs every `step` minutes from the block's
+            # opening, as the picker's does.
+            opens = max(gap_start, earliest)
+            first = block_start + -(-(opens - block_start) // step) * step
             return first + step <= gap_end
 
         cursor = block_start
@@ -221,7 +227,7 @@ def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
     return False
 
 
-def compute_hourly_availability(blocked_periods, collection, today=None):
+def compute_hourly_availability(blocked_periods, collection, today=None, now=None):
     """The HOUR-unit twin of ``compute_availability``: same
     ``(available_today, next_available)`` shape, so ``Thing.availability_window``
     treats both units alike, but "available" means *some* opening block that
@@ -231,8 +237,13 @@ def compute_hourly_availability(blocked_periods, collection, today=None):
     once a day is picked. Walks ``collection.reservation_horizon_days`` ahead,
     at most, like the day-based walk above does with its own horizon.
     """
-    today = today or timezone.localdate()
+    now = now or timezone.localtime()
+    today = today or now.date()
     horizon = today + timedelta(days=collection.reservation_horizon_days)
+    # Today's starts count only from the current minute — the same floor
+    # `reservation_hour_violation` refuses below. Only for the real today: a
+    # caller passing another `today` is asking about that day, not the clock.
+    now_minutes = now.hour * 60 + now.minute if today == now.date() else 0
     # Parsed once for the whole walk, not once per day: this runs per thing on
     # every listing that shows availability, and a collection just switched to
     # HOUR (opening_hours still {}, every day closed) walks the full horizon —
@@ -240,7 +251,10 @@ def compute_hourly_availability(blocked_periods, collection, today=None):
     closed = collection.closed_date_set()
     cursor = today
     while cursor <= horizon:
-        if _day_has_a_free_hour(cursor, collection, blocked_periods, closed=closed):
+        earliest = now_minutes if cursor == today else 0
+        if _day_has_a_free_hour(
+            cursor, collection, blocked_periods, closed=closed, earliest=earliest
+        ):
             return (cursor == today, cursor)
         cursor += timedelta(days=1)
     return (False, None)
@@ -762,7 +776,18 @@ def cancel_reservation(booking, by_user):
         raise BookingRequestError("Not a reservation.")
     if by_user.code != booking.requester_code_id and not thing.can_manage(by_user.code):
         raise BookingRequestError("You can't cancel this reservation.", status_code=403)
-    if booking.start_date and booking.start_date < timezone.localdate():
+    now = timezone.localtime()
+    if booking.start_date and booking.start_date < now.date():
+        raise BookingRequestError("This reservation has already started.")
+    # An HOUR-unit reservation starts at its time, not at midnight: cancelling
+    # this morning's slot this afternoon would free, and announce, something
+    # that already happened. Same "current minute has not begun" rule as a
+    # request (`reservation_hour_violation`).
+    if (
+        booking.start_time is not None
+        and booking.start_date == now.date()
+        and booking.start_time.hour * 60 + booking.start_time.minute < now.hour * 60 + now.minute
+    ):
         raise BookingRequestError("This reservation has already started.")
 
     with transaction.atomic():

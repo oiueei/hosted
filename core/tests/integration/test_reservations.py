@@ -452,6 +452,33 @@ def test_an_hourly_request_outside_opening_hours_is_refused(
     assert not BookingPeriod.objects.exists()
 
 
+def test_a_request_for_a_slot_that_already_began_today_is_refused(hourly_reservations, api_client):
+    """The request page no longer offers a start that has passed; the API
+    refuses one sent any other way (found in review, 2026-09-18). 2026-06-01
+    is a Monday, open 10-14 and 16-20; the clock stands at 12:00 (UTC here)."""
+    import time_machine
+
+    thing = hourly_reservations["thing"]
+    with time_machine.travel("2026-06-01 12:00:00+00:00", tick=False):
+        # Signed in inside the travel: a token minted at the real "now" would
+        # not be valid yet in June.
+        client = _member_client(api_client, hourly_reservations["member"])
+        past = client.post(
+            REQUEST_URL.format(thing.code),
+            {"start_date": "2026-06-01", "start_time": "10:00", "end_time": "11:00"},
+            format="json",
+        )
+        later = client.post(
+            REQUEST_URL.format(thing.code),
+            {"start_date": "2026-06-01", "start_time": "13:00", "end_time": "14:00"},
+            format="json",
+        )
+
+    assert past.status_code == status.HTTP_400_BAD_REQUEST
+    assert past.data == {"error": "That time has already begun."}
+    assert later.status_code == status.HTTP_201_CREATED
+
+
 @pytest.mark.parametrize(
     ("start", "end", "error"),
     [

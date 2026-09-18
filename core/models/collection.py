@@ -519,7 +519,7 @@ class Collection(models.Model):
                 continue
         return sorted(blocks)
 
-    def reservation_hour_violation(self, start_date, start_time, end_time, today=None):
+    def reservation_hour_violation(self, start_date, start_time, end_time, today=None, now=None):
         """The HOUR-unit twin of ``reservation_violation``: an error string if an
         ``[start_time, end_time)`` reservation on ``start_date`` breaks this
         collection's hourly rules, else ``None``.
@@ -552,6 +552,15 @@ class Collection(models.Model):
         also reasons on the grid) would disagree with the calendar about
         whether a day has room. The full-day form is exempt from the grid — it
         is defined by the blocks, not the step.
+
+        **A slot that has already begun today is refused** (2026-09-18) — the
+        request page stopped offering one, and this is the backstop for a
+        request made any other way. "Today" and "now" are the deployment's
+        wall clock (`TIME_ZONE`, from `DJANGO_TIME_ZONE`), the same one
+        `opening_hours` is written in. A start in the current minute has not
+        begun yet, as on the request page. The check only runs when ``today``
+        is the real one: a caller that passes a different ``today`` (a test
+        pinning the horizon) is asking about that day, not about the clock.
         """
         if end_time <= start_time:
             return "A reservation must end after it starts."
@@ -566,11 +575,14 @@ class Collection(models.Model):
                 f"This space can be reserved for at most "
                 f"{self.reservation_max_minutes} minutes at a time."
             )
-        today = today or timezone.localdate()
+        now = now or timezone.localtime()
+        today = today or now.date()
         if start_date > today + timedelta(days=self.reservation_horizon_days):
             return (
                 f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
             )
+        if start_date == today == now.date() and start_minutes < now.hour * 60 + now.minute:
+            return "That time has already begun."
         if start_date in self.closed_date_set():
             return "This space is closed that day."
         blocks = self.day_opening_blocks(start_date)
