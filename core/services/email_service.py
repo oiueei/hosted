@@ -27,6 +27,8 @@ import re
 import smtplib
 from datetime import date, datetime
 from email.mime.image import MIMEImage
+from html import unescape as html_unescape
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.mail import BadHeaderError, EmailMultiAlternatives
@@ -568,22 +570,48 @@ _MD_ORDERED = re.compile(r"^\d+\. ")
 _MD_URL = re.compile(r"^https?://", re.IGNORECASE)
 
 
+def _link_host(escaped_url):
+    """The host an (escaped) http(s) link really goes to, in ASCII — or
+    ``None`` when there isn't a usable one.
+
+    ASCII means IDNA (punycode): a lookalike host written with a Cyrillic
+    ``е`` reads ``xn--…`` rather than passing for the real name.
+    """
+    try:
+        host = urlsplit(html_unescape(escaped_url)).hostname
+        return host.encode("idna").decode("ascii") if host else None
+    except (ValueError, UnicodeError):
+        return None
+
+
 def _md_inline(escaped_text):
     """Inline Markdown spans over ALREADY-escaped text — never escapes again.
 
     Links are parked behind NUL-delimited placeholders while the bold/italic
     passes run (an ``*`` or ``_`` inside an href must not become <em>), the
     same fix MarkdownText.jsx carries on the frontend. A URL that is not
-    http(s) stays as literal (escaped) text: a dead ``href="#"`` in an email
-    client confuses more than the raw link does.
+    http(s), or has no host, stays as literal (escaped) text: a dead
+    ``href="#"`` in an email client confuses more than the raw link does.
+
+    **A link whose text is not its own URL names its host after it** —
+    ``carnet (example.com)``. These emails leave from the operator's own
+    domain, and the owner chooses both halves of the link: without the host,
+    ``[https://www.oiueei.com/verify/…](https://elsewhere.example)`` reads as
+    the operator's own sign-in link (2026-09-18 security round). The host is
+    the one value here derived from unescaped text, so it is escaped once,
+    itself.
     """
     text = escaped_text.replace("\x00", "")  # typed NUL can't forge a placeholder
     anchors = []
 
     def park(match):
         label, url = match.group(1), match.group(2)
-        if _MD_URL.match(url):
-            anchors.append(f'<a href="{url}">{label}</a>')
+        host = _link_host(url) if _MD_URL.match(url) else None
+        if host:
+            anchor = f'<a href="{url}">{label}</a>'
+            if html_unescape(label).strip() != html_unescape(url):
+                anchor += f" ({escape(host)})"
+            anchors.append(anchor)
             return f"\x00{len(anchors) - 1}\x00"
         return match.group(0)
 
@@ -606,7 +634,8 @@ def _note_blocks(resolved_text):
     positional logic anywhere).
 
     Subset: paragraphs (a lone newline inside one is a <br />), ``-`` and
-    ``1.`` lists, ``**bold**``, ``*italic*``, ``[text](url)`` http(s) only.
+    ``1.`` lists, ``**bold**``, ``*italic*``, ``[text](url)`` http(s) only, its
+    real host after it unless the text is the URL (``_md_inline``).
     No headings, no tables: a ≤512-character note doesn't carry a document's
     hierarchy, and in these emails that is the layout's voice, not the
     owner's — ``#`` and ``|`` lines render as literal text. Emojis are plain

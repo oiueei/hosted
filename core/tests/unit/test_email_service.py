@@ -466,7 +466,8 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     html = str(blocks[0]["html"])
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
-        '<ul><li>Trae tu <a href="https://example.com/reglas">carnet</a></li><li>Planta 2</li></ul>'
+        '<ul><li>Trae tu <a href="https://example.com/reglas">carnet</a> (example.com)</li>'
+        "<li>Planta 2</li></ul>"
     )
     assert expected_list in html
     assert "<ol><li>Confirma</li><li>Llega pronto</li></ol>" in html
@@ -480,6 +481,48 @@ def test_note_blocks_leaves_an_unsafe_url_as_literal_text():
     html = str(blocks[0]["html"])
     assert "<a " not in html
     assert "[esto](javascript:alert(1))" in html
+
+
+def test_a_link_dressed_as_another_address_names_where_it_really_goes():
+    """The owner picks both the text and the target, and the email leaves from
+    the operator's own domain — so text that looks like the operator's sign-in
+    link must not be all the reader sees."""
+    _, blocks = email_service._note_blocks(
+        "[https://www.oiueei.com/verify/abc](https://elsewhere.example/verify)"
+    )
+    html = str(blocks[0]["html"])
+    assert html == (
+        '<p><a href="https://elsewhere.example/verify">https://www.oiueei.com/verify/abc</a>'
+        " (elsewhere.example)</p>"
+    )
+
+
+def test_a_link_whose_text_is_its_own_url_needs_no_host():
+    _, blocks = email_service._note_blocks(
+        "[https://example.com/a?b=1&c=2](https://example.com/a?b=1&c=2)"
+    )
+    html = str(blocks[0]["html"])
+    # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
+    # "(example.com)" repeating what the text already says.
+    assert html == (
+        '<p><a href="https://example.com/a?b=1&amp;c=2">https://example.com/a?b=1&amp;c=2</a></p>'
+    )
+
+
+def test_a_lookalike_host_is_named_in_punycode():
+    # "еxample.com" with a Cyrillic е: shown as itself it would pass for the
+    # real name; in ASCII it cannot.
+    _, blocks = email_service._note_blocks("[rules](https://\u0435xample.com/rules)")
+    html = str(blocks[0]["html"])
+    assert "(xn--xample-2of.com)" in html
+    assert "(\u0435xample.com)" not in html
+
+
+def test_a_link_with_no_host_stays_literal_text():
+    _, blocks = email_service._note_blocks("mira [esto](https://)")
+    html = str(blocks[0]["html"])
+    assert "<a " not in html
+    assert "[esto](https://)" in html
 
 
 def test_note_blocks_escapes_html_before_transforming(collection):
