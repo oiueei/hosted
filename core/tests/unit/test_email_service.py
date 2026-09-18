@@ -646,11 +646,38 @@ def test_the_acceptance_decision_carries_the_note_but_a_refusal_does_not(
     )
 
     mail.outbox.clear()
-    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    email_service.send_booking_decision_email(booking, thing, accepted=True, collection=collection)
     assert "Recogida en <strong>planta 2</strong>" in mail.outbox[0].alternatives[0][0]
     assert "Recogida en **planta 2**" in mail.outbox[0].body
 
     mail.outbox.clear()
-    email_service.send_booking_decision_email(booking, thing, accepted=False)
+    email_service.send_booking_decision_email(booking, thing, accepted=False, collection=collection)
+    assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
+    assert "Recogida en" not in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_the_decision_takes_no_note_from_a_collection_it_was_not_given(
+    user, user2, thing, collection
+):
+    """The note's collection is the caller's to resolve for this requester
+    (`finalize_booking_decision`, among collections they may read). Given
+    none, the email carries none — it no longer falls back to the thing's
+    first collection, which can be a private group the requester isn't in."""
+    from core.models import BookingPeriod
+
+    collection.email_note = "Recogida en **planta 2**"
+    collection.save(update_fields=["email_note"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
     assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
     assert "Recogida en" not in mail.outbox[0].body

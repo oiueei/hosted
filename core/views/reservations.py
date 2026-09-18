@@ -173,7 +173,7 @@ class ThingRequestView(APIView):
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
         collection_code = body_dict(request).get("collection_code")
-        rental_collection = resolve_rental_collection(thing, collection_code)
+        rental_collection = resolve_rental_collection(thing, collection_code, request.user)
 
         booking = request_date_based_booking(
             thing,

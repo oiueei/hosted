@@ -403,7 +403,9 @@ def finalize_booking_decision(booking, accepted):
     # The booking doesn't record which collection it was made through, so the
     # requester-side notification deep-links through the same approximation the
     # request-side one used.
-    collection = resolve_request_collection(thing)
+    # Only collections the requester may read: this one also picks the email
+    # note the accepted decision carries to them.
+    collection = resolve_request_collection(thing, requester=booking.requester_code)
     InAppNotification.objects.create(
         user=booking.requester_code,
         type=(
@@ -418,7 +420,7 @@ def finalize_booking_decision(booking, accepted):
             "collection_code": collection.code if collection else "",
         },
     )
-    send_booking_decision_email(booking, thing, accepted=accepted)
+    send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)
     if accepted:
         # Anchored to the requester (like HOLD_REQUESTED) so a guest's request→accept
@@ -443,11 +445,25 @@ def finalize_booking_decision(booking, accepted):
 # {"error": ...} response + status they used to return inline.
 
 
-def resolve_rental_collection(thing, collection_code=None):
+def _readable_by(collection, requester):
+    """Whether ``requester`` may read ``collection`` — ``True`` when there is no
+    requester to ask about (internal callers, the availability indicator).
+
+    A request's ``collection_code`` is whatever the client sent, and a thing can
+    sit in a PRIVATE group and a PUBLIC one at once. Nothing a requester is told
+    about their request — a group's email note, a notification filed under it —
+    may come from a collection they could not have opened themselves.
+    """
+    return requester is None or collection.can_view(requester.code)
+
+
+def resolve_rental_collection(thing, collection_code=None, requester=None):
     """Resolve which collection's rental rules (#7) apply to a LEND/RENT request.
 
     Prefers the collection the request was made through (``collection_code`` —
-    the SPA passes the collection context); otherwise the thing's first
+    the SPA passes the collection context) **when the requester may read it**;
+    a code naming any other collection is ignored, so it can't be used to pick
+    the rules of a group the requester was never in. Otherwise the thing's first
     collection that actually defines rental rules. Returns ``None`` when no
     collection constrains the dates (legacy free-range behaviour).
     """
@@ -455,7 +471,7 @@ def resolve_rental_collection(thing, collection_code=None):
     code = (collection_code or "").strip()
     if code:
         for collection in collections:
-            if collection.code == code:
+            if collection.code == code and _readable_by(collection, requester):
                 return collection
     for collection in collections:
         if collection.has_rental_rules():
@@ -463,26 +479,36 @@ def resolve_rental_collection(thing, collection_code=None):
     return None
 
 
-def resolve_request_collection(thing, collection_code=None):
+def resolve_request_collection(thing, collection_code=None, requester=None):
     """Resolve which collection a booking request was made through.
 
-    Feeds the notification payload: it deep-links there and the collection's own
-    inbox filters by it. A thing can live in several collections, so the request's
-    own context wins — ``collection_code`` is the collection the requester was
-    actually looking at when they asked. Without it (a request from the standalone
-    /things/<code> page) this is an approximation: the collection whose rental rules
-    govern the thing, else its first ACTIVE one. Returns None for a thing that sits
-    in no active collection — the notification then simply carries no collection.
+    Feeds the notification payload (it deep-links there and the collection's own
+    inbox filters by it) and the requester's emails, which carry that
+    collection's ``email_note``. A thing can live in several collections, so the
+    request's own context wins — ``collection_code`` is the collection the
+    requester was actually looking at when they asked. Without it (a request from
+    the standalone /things/<code> page) this is an approximation: the collection
+    whose rental rules govern the thing, else its first ACTIVE one.
+
+    With a ``requester``, only collections **they may read** are candidates, for
+    the named one and both fallbacks alike: the code is the client's to send, and
+    the first collection with rules may be a PRIVATE group they are not in — whose
+    note would then reach them by email (found in the 2026-09-18 security round).
+    Returns None when no candidate is left — the notification then carries no
+    collection and the emails no note.
     """
+    collections = [c for c in thing.collections.all() if _readable_by(c, requester)]
     code = (collection_code or "").strip()
     if code:
-        for collection in thing.collections.all():
+        for collection in collections:
             if collection.code == code:
                 return collection
-    return (
-        resolve_rental_collection(thing)
-        or thing.collections.filter(status=Collection.Status.ACTIVE).first()
-    )
+    with_rules = next((c for c in collections if c.has_rental_rules()), None)
+    if with_rules:
+        return with_rules
+    # Lowest code first, which is what `.first()` on the unordered M2M returned.
+    active = [c for c in collections if c.status == Collection.Status.ACTIVE]
+    return min(active, key=lambda c: c.code, default=None)
 
 
 def request_date_based_booking(
@@ -575,7 +601,7 @@ def send_booking_request_notifications(
     # owner's email_note for the group the request was actually made through —
     # with several collections on one thing, the one the member was browsing is
     # the one whose note the request page showed them.
-    collection = resolve_request_collection(thing, collection_code)
+    collection = resolve_request_collection(thing, collection_code, requester)
     send_booking_confirmation_email(requester, thing, booking, collection)
     InAppNotification.objects.create(
         user=thing.owner,

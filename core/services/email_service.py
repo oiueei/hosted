@@ -1192,8 +1192,16 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
-def send_booking_decision_email(booking, thing, accepted=True):
-    """Send booking accept/reject notification email to requester."""
+def send_booking_decision_email(booking, thing, accepted=True, collection=None):
+    """Send booking accept/reject notification email to requester.
+
+    ``collection`` feeds the owner's ``email_note`` on an accepted decision and
+    nothing else — ``finalize_booking_decision`` passes the one
+    ``resolve_request_collection`` picks **among the collections the requester
+    may read**. Without it there is no note: the thing's first collection may be
+    a PRIVATE group the requester was never in, and its note is written for
+    that group's members.
+    """
     user, lang = _recipient(booking.requester_email)
     T, L = _texts(lang), _local(lang)
     decision_word = T("decision_confirmed") if accepted else T("decision_cancelled")
@@ -1234,14 +1242,10 @@ def send_booking_decision_email(booking, thing, accepted=True):
     # The owner's note rides an ACCEPTED decision only — that is the moment
     # the hold becomes real and the note's "how to collect / where we are"
     # prose is finally actionable; a refusal has no next steps for it to
-    # describe. Same first-collection source the header line uses (the
-    # decision path knows the booking, not the collection the request was
-    # made through).
+    # describe. From the collection the caller resolved for this requester,
+    # never the thing's first one (see the docstring).
     if accepted:
-        note_collection = _thing_collection(thing)
-        note_plain, note_blocks = _note_blocks(
-            L(note_collection.email_note) if note_collection else ""
-        )
+        note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
         if note_plain:
             plain += "\n\n" + note_plain
             html_blocks.extend(note_blocks)
