@@ -463,6 +463,7 @@
     "theeemeLabel": "Theeeme",
     "koroLabel": "Koro",
     "languageLabel": "Idioma",
+    "languageAutomatic": "Automàtic",
     "maxName": "Màxim 32 caràcters.",
     "maxBio": "Màxim 64 caràcters.",
     "errorLoading": "Error en carregar el perfil.",
@@ -473,7 +474,7 @@
     "photoLabel": "Foto de perfil",
     "photoHelper": "Es mostra al teu perfil, opcional",
     "maxAbout": "Màxim 2000 caràcters.",
-    "languageHelper": "OIUEEI també t'escriu en aquesta llengua (correus inclosos).",
+    "languageHelper": "Amb Automàtic, cada grup es mostra en el seu propi idioma (i el del teu navegador a la resta); en triar-ne un, el fixes per a la interfície i per als correus que t'enviem.",
     "downloadData": "Descarregar una còpia de les teves dades",
     "deleteAccount": "Esborrar el compte",
     "nameHelper": "El teu nom, un àlies, el que vulguis. Apareix al costat de les preguntes que fas, al recorregut de les coses que has tingut i a la llista de membres dels teus grups — en públic, si el grup comparteix en públic."

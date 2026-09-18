@@ -469,6 +469,7 @@
     "theeemeLabel": "Theeeme",
     "koroLabel": "Koro",
     "languageLabel": "Language",
+    "languageAutomatic": "Automatic",
     "maxName": "Maximum 32 characters.",
     "maxBio": "Maximum 64 characters.",
     "errorLoading": "Error loading profile.",
@@ -479,7 +480,7 @@
     "photoLabel": "Profile photo",
     "photoHelper": "Shown on your profile, optional",
     "maxAbout": "Maximum 2000 characters.",
-    "languageHelper": "OIUEEI also writes to you in this language (emails included).",
+    "languageHelper": "Automatic follows each group's own language (and your browser's everywhere else); picking one pins it for the interface and for the emails OIUEEI sends you.",
     "downloadData": "Download a copy of your data",
     "deleteAccount": "Delete account",
     "nameHelper": "Your name, a nickname, anything you like. It appears beside the questions you ask, in the journey of anything you have held, and in your groups’ member lists — publicly, if the group shares publicly."

@@ -65,8 +65,13 @@ export default function EditProfilePage() {
           setTheeeme(data.theeeme || '');
           setNotifyActivity(data.notify_activity ?? true);
           setNotifyNews(data.notify_news ?? false);
-          // Saved preference, else whatever the browser is showing right now.
-          setLanguage(data.language || i18n.resolvedLanguage || i18n.language);
+          // The SAVED preference, blank included — never the language the
+          // browser happens to be showing. Pre-filling with the effective one
+          // stamped it on save for anyone who merely edited their name: a
+          // blank preference (the Automatic option) is what lets each
+          // group's own language reach this member, and it has to survive
+          // an unrelated profile edit.
+          setLanguage(data.language || '');
           setAgeRange(data.age_range || '');
           setPostalCode(data.postal_code || '');
         } else {
@@ -214,14 +219,21 @@ export default function EditProfilePage() {
           id="edit-profile-language"
           texts={{ label: t('editProfile.languageLabel'), language: hdsLang(i18n.language) }}
           helper={t('editProfile.languageHelper')}
-          options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
-          value={language || i18n.resolvedLanguage || i18n.language}
+          options={[
+            { label: t('editProfile.languageAutomatic'), value: '' },
+            ...SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code })),
+          ]}
+          value={language}
           onChange={(selectedOptions) => {
             if (selectedOptions.length > 0) {
-              // The interface switches at once (as it always did); Save then
-              // persists it, so the emails follow the interface.
               setLanguage(selectedOptions[0].value);
-              i18n.changeLanguage(selectedOptions[0].value);
+              // A concrete pick switches the interface at once (as it always
+              // did); Save then persists it, so the emails follow the
+              // interface. Automatic saves a blank preference — the
+              // hierarchy (each group's own language, else the browser's)
+              // takes over again from the next visit, so there is nothing
+              // to switch to here mid-session.
+              if (selectedOptions[0].value) i18n.changeLanguage(selectedOptions[0].value);
             }
           }}
         />
