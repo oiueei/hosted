@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { TextArea } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,17 +21,43 @@ import { useTranslation } from 'react-i18next';
  * ever forwarding one — the deeper *shape* checks (day keys, HH:MM format,
  * overlap) still stay the backend's job, same as everywhere else in these
  * forms (`_validate_opening_hours`, surfaced as its own 400 via Toast).
+ *
+ * **The re-sync compares content, not the `value` reference, and does it
+ * during render — not in an effect.** `BoundedDayInput` can key its resync
+ * effect on the bare reference because its `value` is a number — equal
+ * content IS equal reference there. This field's `value` is an object, so a
+ * parent that ever passes `openingHours={form.opening_hours || {}}` (a fresh
+ * `{}` literal on every render whenever the field is unset) would fire an
+ * effect keyed on `[value]` on every unrelated keystroke elsewhere in the
+ * form and wipe whatever JSON the owner was mid-typing back to `{}` — real
+ * data loss in a field people paste a whole week's schedule into. Both
+ * current call sites happen to pass a referentially-stable `useState` object,
+ * so this was never reachable in production, but the component's own
+ * contract shouldn't have silently depended on that.
+ *
+ * `syncedJson` holds the content we last synced FROM `value` (starting at the
+ * initial one, before any typing). This is React's own documented pattern for
+ * "adjusting state when a prop changes" — https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+ * — a plain `if` in the render body, not a `useEffect`: calling `setState`
+ * conditionally inside an effect (which an earlier version of this fix did)
+ * is itself the anti-pattern `react-hooks/set-state-in-effect` flags, since it
+ * commits the stale draft to the screen first and only corrects it a tick
+ * later. Doing the comparison during render lets React re-render with the
+ * synced draft before anything paints, and it terminates the same way: once
+ * `draft`/`syncedJson` reflect `value`, the condition is false on the very
+ * next render, so there is no loop.
  */
 export default function OpeningHoursField({ id, value = {}, onChange = () => {} }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(() => JSON.stringify(value));
   const [error, setError] = useState('');
+  const [syncedJson, setSyncedJson] = useState(() => JSON.stringify(value));
 
-  // Re-sync when the value arrives from outside — the Edit form finishing its
-  // load, or our own commit below re-serialising what we just parsed.
-  useEffect(() => {
-    setDraft(JSON.stringify(value));
-  }, [value]);
+  const incomingJson = JSON.stringify(value);
+  if (incomingJson !== syncedJson) {
+    setSyncedJson(incomingJson);
+    setDraft(incomingJson);
+  }
 
   const commit = () => {
     if (draft.trim() === '') {

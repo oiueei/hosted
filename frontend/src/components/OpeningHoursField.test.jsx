@@ -88,4 +88,42 @@ describe('OpeningHoursField', () => {
     );
     expect(field()).toHaveValue(JSON.stringify({ 1: [['09:00', '13:00']] }));
   });
+
+  test('a same-content but new-reference value does NOT clobber an in-progress draft', () => {
+    // The exact shape of `openingHours={form.opening_hours || {}}`: a parent
+    // re-render (an unrelated field changing) hands down a fresh `{}` object
+    // literal, identical in content to the one already synced but a different
+    // reference. Keying the resync on the object reference instead of its
+    // content would wipe whatever the owner is mid-typing (found in review,
+    // 2026-09-18 — real data loss in a field people paste a whole schedule
+    // into, though unreachable today since both call sites pass a stable
+    // `useState` object).
+    const { rerender, onChange } = renderField({ value: {} });
+    fireEvent.change(field(), { target: { value: '{"0": [["09:00","17:0' } });
+    expect(field()).toHaveValue('{"0": [["09:00","17:0');
+
+    rerender(
+      <OpeningHoursField id="edit-collection-opening-hours" value={{}} onChange={onChange} />
+    );
+
+    expect(field()).toHaveValue('{"0": [["09:00","17:0');
+  });
+
+  test('a same-content but new-reference value still lets a later real external change through', () => {
+    // The fix above must not become "never resync again" — a genuine content
+    // change from outside (the Edit form finishing its load) still has to land.
+    const { rerender, onChange } = renderField({ value: {} });
+    rerender(
+      <OpeningHoursField id="edit-collection-opening-hours" value={{}} onChange={onChange} />
+    );
+    rerender(
+      <OpeningHoursField
+        id="edit-collection-opening-hours"
+        value={{ 2: [['09:00', '17:00']] }}
+        onChange={onChange}
+      />
+    );
+
+    expect(field()).toHaveValue(JSON.stringify({ 2: [['09:00', '17:00']] }));
+  });
 });
