@@ -6,9 +6,10 @@ Acting (reserving, asking) still requires login, and the collection *list* stays
 private. INACTIVE things never leak to an anonymous reader.
 """
 
-from datetime import date
+from datetime import timedelta
 
 import pytest
+from django.utils import timezone
 
 from core.models import FAQ, Collection, Thing
 from core.models.booking import BookingPeriod
@@ -231,14 +232,19 @@ def test_the_anonymous_calendar_says_when_not_who(api_client, user, user2):
     """
     coll = _collection(user, Collection.Visibility.PUBLIC)
     thing = _thing(user, coll)
+    # Ahead of today: the calendar only carries what is still to come
+    # (`BookingPeriod.blocking_filter`), so a fixed date turns this into a test
+    # of an empty list the day it passes.
+    start = timezone.localdate() + timedelta(days=10)
+    end = start + timedelta(days=7)
     BookingPeriod.objects.create(
         thing_code=thing,
         thing_type=thing.type,
         requester_code=user2,
         requester_email="borrower@example.com",
         owner_code=user,
-        start_date=date(2026, 3, 2),
-        end_date=date(2026, 3, 9),
+        start_date=start,
+        end_date=end,
         status=BookingPeriod.Status.ACCEPTED,
     )
 
@@ -248,8 +254,8 @@ def test_the_anonymous_calendar_says_when_not_who(api_client, user, user2):
     assert res.status_code == 200
     assert body == [
         {
-            "start_date": "2026-03-02",
-            "end_date": "2026-03-09",
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
             "start_time": None,
             "end_time": None,
             "status": "ACCEPTED",

@@ -863,7 +863,7 @@ Lists all available theeemes. Returns `code` and `name` for each theeeme via `Th
 | **Endpoint** | `GET /api/v1/things/{thing_code}/calendar/` |
 | **Permission** | `AllowAny` + `get_viewable_thing()` (public read on a viewable thing) |
 
-Returns blocked periods for a thing's calendar. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees full details (`BookingPeriodOwnerCalendarSerializer`); guests see only dates and status (`BookingPeriodCalendarSerializer`).
+Returns blocked periods for a thing's calendar — PENDING/ACCEPTED bookings not already over (`BookingPeriod.blocking_filter`: undated, or ending yesterday or later); a thing's past is not served, to anyone. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees full details (`BookingPeriodOwnerCalendarSerializer`); guests see only dates and status (`BookingPeriodCalendarSerializer`).
 
 ### MyBookingsView
 

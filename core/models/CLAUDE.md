@@ -347,7 +347,8 @@ notified.
 ### Class Methods
 
 - `has_overlap(thing_code, start_date, end_date, exclude_booking_code, *, start_time=None, end_time=None)` - Check for date conflicts using **strict overlap** (`start < e AND s < end`): touching at a boundary (a return day equal to the next pickup day) is allowed; only a shared interior day is a conflict. **`start_time`/`end_time` (keyword-only)** narrow a same-day clash to a time check, for an `HOUR`-unit RESERVE_THING: once the date filter finds bookings sharing that day, the request conflicts only with a row that is itself whole-day (`start_time` `NULL`) or whose own time range strictly overlaps by the identical boundary-touching-is-fine rule. Passing neither keyword is the exact whole-day check every other caller (LEND/RENT, `DAY`-unit RESERVE) still uses.
-- `get_blocked_periods(thing_code)` - Get all PENDING/ACCEPTED bookings
+- `blocking_filter()` - The `Q` every calendar reader uses: PENDING/ACCEPTED, and undated (a GIFT/SELL hold) or `end_date` no earlier than yesterday. Every reader only ever used what is still ahead (the SPA already dropped the rest), so loading the whole history made each read of a thing — anonymous reads of a PUBLIC one included — carry it, and the hourly availability walk scan it once per horizon day (2026-09-18 security round). One day of grace for a browser whose today is the server's yesterday
+- `get_blocked_periods(thing_code)` - The PENDING/ACCEPTED bookings still shaping the calendar (`blocking_filter`)
 - `expire_old_pending()` - Batch expire stale PENDING bookings (used by `manage.py expire_bookings`). For single-use types (GIFT/SELL), also restores the Thing to `ACTIVE` within the same transaction — prevents things getting permanently stuck in `TAKEN` after booking expiry.
 
 ---

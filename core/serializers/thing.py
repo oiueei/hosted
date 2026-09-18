@@ -74,12 +74,8 @@ def optimise_thing_queryset(queryset, *, with_collections=False):
             ),
             Prefetch(
                 "bookings",
-                queryset=BookingPeriod.objects.filter(
-                    status__in=[
-                        BookingPeriod.Status.PENDING,
-                        BookingPeriod.Status.ACCEPTED,
-                    ]
-                )
+                # Only what still shapes the calendar — see `blocking_filter`.
+                queryset=BookingPeriod.objects.filter(BookingPeriod.blocking_filter())
                 # The requester is joined here because this prefetch now also
                 # feeds the owner-only `bookings` field, which prints their name.
                 # Without it the field would trade one query per card for one per
