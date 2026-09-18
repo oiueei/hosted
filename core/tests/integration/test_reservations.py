@@ -361,6 +361,26 @@ def test_availability_follows_the_named_collection_too(
     assert by_day["next_available"] is not None
 
 
+def test_the_grid_serializer_shares_the_mixin_without_the_resolver(space_in_two_collections, user2):
+    """`CollectionThingSummarySerializer` shares `ThingComputedFieldsMixin` but
+    has no `_viewable_collection`; its one call site always passes
+    `parent_collection`. Reached without one and with `?collection=` in the
+    request, the availability walk must fall back quietly, not raise."""
+    from rest_framework.request import Request
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
+    from core.serializers.collection import CollectionThingSummarySerializer
+
+    raw = APIRequestFactory().get("/", {"collection": "HRVC01"})
+    force_authenticate(raw, user=user2)
+
+    data = CollectionThingSummarySerializer(
+        space_in_two_collections, context={"request": Request(raw)}
+    ).data
+
+    assert data["available_today"] in (True, False)
+
+
 def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
     space_in_two_collections, user, authenticated_client2
 ):

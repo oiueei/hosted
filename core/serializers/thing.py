@@ -115,6 +115,16 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     next_available = serializers.SerializerMethodField()
     can_manage = serializers.SerializerMethodField()
 
+    def _requested_collection_code(self):
+        """The ``?collection=<code>`` the SPA sends when it reads a thing from
+        inside one of its collections, or ``""``. Only ever a *preference*
+        among the collections the viewer may already read — never a way into
+        one they can't. On the mixin, not `ThingSerializer`, because
+        `_availability_window` below asks for it."""
+        request = self.context.get("request")
+        params = getattr(request, "query_params", None) if request is not None else None
+        return ((params.get("collection") if params is not None else "") or "").strip()
+
     def _reading_collection(self, obj):
         """The collection this thing is being read *through*, or ``None``.
 
@@ -281,7 +291,9 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         # the same ones the request form shows and the request applies.
         collection = self.context.get("parent_collection")
         if collection is None and self._requested_collection_code():
-            collection = self._viewable_collection(obj)
+            # `_reading_collection`, not `_viewable_collection` directly: the
+            # summary serializer shares this mixin and has no resolver.
+            collection = self._reading_collection(obj)
         return obj.availability_window(collection=collection)
 
     def get_available_today(self, obj):
@@ -440,15 +452,6 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
                 and (collection.is_public() or collection.code in member_codes)
             )
         ]
-
-    def _requested_collection_code(self):
-        """The ``?collection=<code>`` the SPA sends when it reads a thing from
-        inside one of its collections, or ``""``. Only ever a *preference*
-        among the collections the viewer may already read — never a way into
-        one they can't."""
-        request = self.context.get("request")
-        params = getattr(request, "query_params", None) if request is not None else None
-        return ((params.get("collection") if params is not None else "") or "").strip()
 
     def _viewable_collection(self, obj):
         """The collection this viewer reads the thing through, or ``None``.
