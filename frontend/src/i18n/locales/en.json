@@ -1004,6 +1004,7 @@
     "hours_other": "{{count}} hours",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
     "startTimeLabel": "Starting at:",
+    "noStartTimesLabel": "No times available",
     "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
   },
   "closedDates": {

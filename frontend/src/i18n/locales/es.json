@@ -1004,6 +1004,7 @@
     "hours_other": "{{count}} horas",
     "hoursAndMinutes": "{{hours}} h {{minutes}} min",
     "startTimeLabel": "A partir de:",
+    "noStartTimesLabel": "Sin horas disponibles",
     "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta."
   },
   "closedDates": {

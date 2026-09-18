@@ -29,6 +29,7 @@ import DemoNotice from '../components/DemoNotice';
 import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
 import RadioOptionGroup from '../components/RadioOptionGroup';
+import StatusRegion from '../components/StatusRegion';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
@@ -475,6 +476,7 @@ export default function RequestThingPage() {
                 type={thing.available_today ? 'success' : 'info'}
                 size="small"
                 label={t('thingPage.availabilityLabel')}
+                notificationAriaLabel={t('thingPage.availabilityLabel')}
               >
                 {thing.available_today
                   ? t('availability.IMMEDIATE')
@@ -673,27 +675,49 @@ export default function RequestThingPage() {
                   />
                 </>
               )}
-              {hourlyDuration &&
-                (hourlyStartTimeChoices.length > 0 ? (
+              {hourlyDuration && hourlyStartTimeChoices.length > 0 && (
+                <>
+                  <div className="spacer-xxxs" />
+                  <RadioOptionGroup
+                    idPrefix="reservation-start-time"
+                    name="reservation-start-time"
+                    label={t('reservation.startTimeLabel')}
+                    options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
+                    value={hourlyStartTime}
+                    onChange={setHourlyStartTime}
+                  />
+                </>
+              )}
+              {/* Rendered unconditionally (StatusRegion), the conditional stays
+                  inside it — see StatusRegion.jsx's own note. A live region
+                  only announces a change made *inside a region that already
+                  existed*: gating the Notification itself behind `hourlyDuration`
+                  (as this used to) meant the reader picking a duration with no
+                  free start left that day heard nothing at all — the
+                  Notification was never inside a live region, since it didn't
+                  exist yet either (WCAG 4.1.3, found in review 2026-09-18). */}
+              <StatusRegion>
+                {hourlyDuration && hourlyStartTimeChoices.length === 0 && (
                   <>
                     <div className="spacer-xxxs" />
-                    <RadioOptionGroup
-                      idPrefix="reservation-start-time"
-                      name="reservation-start-time"
-                      label={t('reservation.startTimeLabel')}
-                      options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
-                      value={hourlyStartTime}
-                      onChange={setHourlyStartTime}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="spacer-xxxs" />
-                    <Notification type="info" size="small">
+                    {/* `notificationAriaLabel` distinguishes this landmark from
+                        the availability Notification above, which is always
+                        mounted alongside it here — two HDS Notifications share
+                        the same default aria-label ("Notification"), which
+                        axe's landmark-unique rule (correctly) flags once both
+                        are on screen at once (found by the new axe coverage
+                        for this page, 2026-09-18). */}
+                    <Notification
+                      type="info"
+                      size="small"
+                      label={t('reservation.noStartTimesLabel')}
+                      notificationAriaLabel={t('reservation.noStartTimesLabel')}
+                    >
                       {t('reservation.noStartTimesForDuration')}
                     </Notification>
                   </>
-                ))}
+                )}
+              </StatusRegion>
               <div className="spacer-xxxs" />
               <TextArea
                 id="reservation-project-note-hourly"

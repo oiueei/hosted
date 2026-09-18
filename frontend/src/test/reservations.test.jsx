@@ -585,8 +585,21 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(await screen.findByRole('radio', { name: '13:00' })).toBeInTheDocument();
     expect(await screen.findByRole('radio', { name: '19:00' })).toBeInTheDocument();
 
+    // The live region must already be mounted BEFORE the dead-end duration is
+    // picked — a screen reader only announces a change made inside a region
+    // that already existed (WCAG 4.1.3). Capturing the reference now, then
+    // asserting the notice lands inside this same node, is what actually pins
+    // that: a Notification that only gets created once the fallback fires
+    // would pass a text-only assertion while announcing nothing. Queried by
+    // class, not `getByRole('status')`: HDS's own LoadingSpinner leaves a
+    // second, unrelated `role="status"` announcer behind in the document.
+    const statusRegion = container.querySelector('.status-region');
+    expect(statusRegion).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('radio', { name: '2 hours' }));
-    expect(await screen.findByText(/No start times are free/)).toBeInTheDocument();
+    const notice = await screen.findByText(/No start times are free/);
+    expect(screen.getByText('No times available')).toBeInTheDocument();
+    expect(statusRegion).toContainElement(notice);
     expect(screen.queryByRole('radio', { name: '13:00' })).toBeNull();
   });
 
