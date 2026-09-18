@@ -151,7 +151,7 @@ def compute_availability(
     return (False, None)
 
 
-def _day_has_a_free_hour(day, collection, blocked_periods):
+def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None):
     """Does ``day`` have at least one free slot — of the collection's own
     ``reservation_min_minutes``, not a fixed hour — within an HOUR-unit
     collection's opening blocks, given the thing's booked periods?
@@ -171,8 +171,12 @@ def _day_has_a_free_hour(day, collection, blocked_periods):
     exactly how a collection with a sub-hour minimum (the feature's whole
     point) ended up reported as having no free slot on a day that plainly had
     one — this function was never told the minimum had become configurable.
+
+    ``closed`` is ``collection.closed_date_set()`` precomputed by a caller that
+    asks about many days in a row (``compute_hourly_availability``) — the set
+    is rebuilt from the stored ISO strings on every call otherwise.
     """
-    if day in collection.closed_date_set():
+    if day in (collection.closed_date_set() if closed is None else closed):
         return False
     blocks = collection.day_opening_blocks(day)
     if not blocks:
@@ -218,9 +222,14 @@ def compute_hourly_availability(blocked_periods, collection, today=None):
     """
     today = today or timezone.localdate()
     horizon = today + timedelta(days=collection.reservation_horizon_days)
+    # Parsed once for the whole walk, not once per day: this runs per thing on
+    # every listing that shows availability, and a collection just switched to
+    # HOUR (opening_hours still {}, every day closed) walks the full horizon —
+    # up to 366 days, each re-parsing up to 60 closure dates.
+    closed = collection.closed_date_set()
     cursor = today
     while cursor <= horizon:
-        if _day_has_a_free_hour(cursor, collection, blocked_periods):
+        if _day_has_a_free_hour(cursor, collection, blocked_periods, closed=closed):
             return (cursor == today, cursor)
         cursor += timedelta(days=1)
     return (False, None)

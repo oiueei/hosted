@@ -449,6 +449,48 @@ def test_compute_hourly_availability_skips_a_fully_booked_day(hourly_reservation
     assert next_available == mon + timedelta(days=1)  # Tuesday, still Mon-Thu hours
 
 
+def test_compute_hourly_availability_skips_closed_dates_across_the_walk(
+    hourly_reservations_collection,
+):
+    """The walk hands each day the closure set it parsed once up front — the
+    closures must still land on the right days (Mon and Tue shut → Wed)."""
+    coll = hourly_reservations_collection
+    mon = _next_weekday(0)
+    coll.closed_dates = [mon.isoformat(), (mon + timedelta(days=1)).isoformat()]
+    coll.save(update_fields=["closed_dates"])
+
+    available_today, next_available = compute_hourly_availability([], coll, today=mon)
+
+    assert available_today is False
+    assert next_available == mon + timedelta(days=2)
+
+
+def test_compute_hourly_availability_parses_the_closures_once_per_walk(db, monkeypatch):
+    """A performance contract, pinned because it is invisible otherwise: this
+    walk runs per thing on every listing that shows availability, and a
+    collection just switched to HOUR (opening_hours still {} — every day
+    closed) walks its whole horizon. Re-parsing `closed_dates` for each of
+    those days cost O(horizon × closures) per thing."""
+    owner = User.objects.create(code="HAVOW2", email="havow2@test.com")
+    coll = Collection.objects.create(
+        code="HAVCO2",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_horizon_days=365,
+        closed_dates=[(date(2026, 6, 1) + timedelta(days=n)).isoformat() for n in range(60)],
+    )
+    calls = []
+    original = Collection.closed_date_set
+    monkeypatch.setattr(
+        Collection, "closed_date_set", lambda self: calls.append(1) or original(self)
+    )
+
+    assert compute_hourly_availability([], coll, today=date(2026, 6, 1)) == (False, None)
+    assert len(calls) == 1
+
+
 def test_compute_hourly_availability_respects_the_horizon(db):
     owner = User.objects.create(code="HAVOW1", email="havow1@test.com")
     coll = Collection.objects.create(
