@@ -12,7 +12,7 @@
   "calendarExport": {
     "downloadButton": "Download reservations for your calendar (CSV)",
     "downloading": "Preparing the file…",
-    "notice": "Loans, rentals and space reservations as all-day calendar events. Only the ones added since your last download, so importing the file twice never doubles up.",
+    "notice": "Loans, rentals and space reservations as calendar events — all-day, or with their start and end time for a space booked by the hour. Only the ones added since your last download, so importing the file twice never doubles up.",
     "done": "{{count}} new event(s) — check your downloads.",
     "nothingNew": "Nothing new since your last download.",
     "error": "Couldn't build the calendar file. Please try again in a moment."
@@ -994,7 +994,7 @@
     "minMinutesLabel": "Shortest reservation (minutes)",
     "minMinutesHelper": "From 1 to 720. Also sets the step for the duration and start-time choices members see — 15 here offers 15, 30, 45 minutes and so on.",
     "maxMinutesLabel": "Longest reservation (minutes)",
-    "maxMinutesHelper": "From 1 to 720. A member can book the space for the minimum up to this many minutes at a time — the full day counts too, so it's only offered when it fits under this limit.",
+    "maxMinutesHelper": "From 1 to 720. A member can book the space for the minimum up to this many minutes at a time, always within one of the day's opening ranges.",
     "pickupLabelHourly": "Choose reservation date",
     "pickupHelperHourly": "Closed days and fully booked days are greyed out.",
     "durationLabelHourly": "How long?",

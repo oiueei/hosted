@@ -12,7 +12,7 @@
   "calendarExport": {
     "downloadButton": "Descargar reservas para el calendario (CSV)",
     "downloading": "Preparando el fichero…",
-    "notice": "Los préstamos, alquileres y reservas de espacio como eventos de todo el día. Solo los aparecidos desde la última descarga, así que importar el fichero dos veces no duplica nada.",
+    "notice": "Los préstamos, alquileres y reservas de espacio como eventos de calendario — de todo el día, o con su hora de inicio y fin en un espacio que se reserva por horas. Solo los aparecidos desde la última descarga, así que importar el fichero dos veces no duplica nada.",
     "done": "{{count}} evento(s) nuevo(s) — mira tus descargas.",
     "nothingNew": "Nada nuevo desde la última descarga.",
     "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
@@ -994,7 +994,7 @@
     "minMinutesLabel": "Reserva más corta (minutos)",
     "minMinutesHelper": "De 1 a 720. También fija el paso de las duraciones y horas de inicio que ven los miembros — 15 aquí ofrece 15, 30, 45 minutos, etc.",
     "maxMinutesLabel": "Reserva más larga (minutos)",
-    "maxMinutesHelper": "De 1 a 720. Un miembro puede reservar el espacio desde el mínimo hasta este número de minutos cada vez — el día completo cuenta también, así que solo se ofrece cuando cabe dentro de este límite.",
+    "maxMinutesHelper": "De 1 a 720. Un miembro puede reservar el espacio desde el mínimo hasta este número de minutos cada vez, siempre dentro de uno de los tramos de horario del día.",
     "pickupLabelHourly": "Elegir fecha reserva",
     "pickupHelperHourly": "Los días cerrados o completamente reservados aparecen en gris.",
     "durationLabelHourly": "¿Cuánto tiempo?",

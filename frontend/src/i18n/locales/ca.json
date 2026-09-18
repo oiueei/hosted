@@ -12,7 +12,7 @@
   "calendarExport": {
     "downloadButton": "Descarregar reserves per al calendari (CSV)",
     "downloading": "Preparant el fitxer…",
-    "notice": "Els préstecs, lloguers i reserves d'espai com a esdeveniments de tot el dia. Només els apareguts des de l'última baixada, així que importar el fitxer dues vegades no duplica res.",
+    "notice": "Els préstecs, lloguers i reserves d'espai com a esdeveniments de calendari — de tot el dia, o amb l'hora d'inici i de fi en un espai que es reserva per hores. Només els apareguts des de l'última baixada, així que importar el fitxer dues vegades no duplica res.",
     "done": "{{count}} esdeveniment(s) nou(s) — mira les teves baixades.",
     "nothingNew": "Res de nou des de l'última baixada.",
     "error": "No hem pogut preparar el fitxer de calendari. Torna-ho a provar d'aquí un moment."
@@ -994,7 +994,7 @@
     "minMinutesLabel": "Reserva més curta (minuts)",
     "minMinutesHelper": "D'1 a 720. També fixa el pas de les durades i hores d'inici que veuen els membres — 15 aquí ofereix 15, 30, 45 minuts, etc.",
     "maxMinutesLabel": "Reserva més llarga (minuts)",
-    "maxMinutesHelper": "D'1 a 720. Un membre pot reservar l'espai des del mínim fins a aquest nombre de minuts cada vegada — el dia complet també compta, així que només s'ofereix quan hi cap dins d'aquest límit.",
+    "maxMinutesHelper": "D'1 a 720. Un membre pot reservar l'espai des del mínim fins a aquest nombre de minuts cada vegada, sempre dins d'un dels trams d'horari del dia.",
     "pickupLabelHourly": "Escollir data de reserva",
     "pickupHelperHourly": "Els dies tancats o completament reservats apareixen en gris.",
     "durationLabelHourly": "Quanta estona?",
