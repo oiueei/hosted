@@ -411,6 +411,19 @@ export default function RequestThingPage() {
     return joinThenRetry(body, notMemberError);
   };
 
+  // The optional project note — the same field in the DAY and HOUR flows, one
+  // or the other on screen, never both (their ids stay distinct anyway).
+  const projectNoteField = (id) => (
+    <TextArea
+      id={id}
+      label={t('reservation.projectNoteLabel')}
+      helperText={t('reservation.projectNoteHelper', { remaining: 512 - projectNote.length })}
+      maxLength={512}
+      value={projectNote}
+      onChange={(e) => setProjectNote(e.target.value)}
+    />
+  );
+
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo={backPath} backLabel={backLabel}>
@@ -628,16 +641,7 @@ export default function RequestThingPage() {
                 </p>
               )}
               <div className="spacer-xxxs" />
-              <TextArea
-                id="reservation-project-note"
-                label={t('reservation.projectNoteLabel')}
-                helperText={t('reservation.projectNoteHelper', {
-                  remaining: 512 - projectNote.length,
-                })}
-                maxLength={512}
-                value={projectNote}
-                onChange={(e) => setProjectNote(e.target.value)}
-              />
+              {projectNoteField('reservation-project-note')}
             </div>
           )}
           {isReservation && isHourlyReservation && (
@@ -731,16 +735,7 @@ export default function RequestThingPage() {
                 )}
               </StatusRegion>
               <div className="spacer-xxxs" />
-              <TextArea
-                id="reservation-project-note-hourly"
-                label={t('reservation.projectNoteLabel')}
-                helperText={t('reservation.projectNoteHelper', {
-                  remaining: 512 - projectNote.length,
-                })}
-                maxLength={512}
-                value={projectNote}
-                onChange={(e) => setProjectNote(e.target.value)}
-              />
+              {projectNoteField('reservation-project-note-hourly')}
             </div>
           )}
           {isDateBased && !isConstrainedRental && !isReservation && (

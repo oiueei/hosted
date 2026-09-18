@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { NumberInput, RadioButton, SelectionGroup } from 'hds-react';
+import { NumberInput } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import WeekdayChips from './WeekdayChips';
 import OpeningHoursField from './OpeningHoursField';
+import RadioOptionGroup from './RadioOptionGroup';
 
 /**
  * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
@@ -62,13 +63,8 @@ function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onC
  * doesn't parse (see `OpeningHoursField`). `idPrefix` is
  * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
  * are the theeeme token names for a selected weekday chip (fill + text — see
- * `WeekdayChips`).
- *
- * **The unit radios are two static options, not a `.map()` over caller-owned
- * data** — unlike `CollectionModeField`'s two HDS `SelectionGroup` quirks
- * (frontend/CLAUDE.md), which exist for a *dynamic* option list. Kept the
- * same shape anyway (a flat array of `id`-carrying wrapper `div`s) since it's
- * the one proven not to trip either quirk in this codebase.
+ * `WeekdayChips`). The unit radios are a `RadioOptionGroup`, which owns the
+ * HDS `SelectionGroup` quirks (frontend/CLAUDE.md) this used to re-implement.
  */
 export default function ReservationRulesFields({
   idPrefix,
@@ -96,28 +92,19 @@ export default function ReservationRulesFields({
 }) {
   const { t } = useTranslation();
 
-  const unitOptions = [
-    { value: 'DAY', label: t('reservation.unitDay') },
-    { value: 'HOUR', label: t('reservation.unitHour') },
-  ].map((opt) => {
-    const id = `${idPrefix}-reservation-unit-${opt.value.toLowerCase()}`;
-    return (
-      <div key={id} id={`${id}-option`}>
-        <RadioButton
-          id={id}
-          name={`${idPrefix}-reservation-unit`}
-          value={opt.value}
-          label={opt.label}
-          checked={reservationUnit === opt.value}
-          onChange={() => setReservationUnit(opt.value)}
-        />
-      </div>
-    );
-  });
-
   return (
     <>
-      <SelectionGroup label={t('reservation.unitLabel')}>{unitOptions}</SelectionGroup>
+      <RadioOptionGroup
+        idPrefix={`${idPrefix}-reservation-unit`}
+        name={`${idPrefix}-reservation-unit`}
+        label={t('reservation.unitLabel')}
+        options={[
+          { value: 'DAY', label: t('reservation.unitDay') },
+          { value: 'HOUR', label: t('reservation.unitHour') },
+        ]}
+        value={reservationUnit}
+        onChange={setReservationUnit}
+      />
       <BoundedDayInput
         id={`${idPrefix}-reservation-horizon-days`}
         label={t('reservation.horizonLabel')}
