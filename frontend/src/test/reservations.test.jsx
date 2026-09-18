@@ -631,6 +631,62 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(body.duration_days).toBeUndefined();
   });
 
+  // The backend has no time-of-day check (its clock is UTC, the venue's is
+  // not), so the picker is the only thing standing between a member and a
+  // slot that already began today (found in review, 2026-09-18). The clock is
+  // faked at Monday 01/06/2026 12:00 in beforeEach.
+  test('today only offers starts that have not begun yet', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '01/06/2026'); // today, a Monday
+    fireEvent.click(await screen.findByRole('radio', { name: '1 hour' }));
+
+    expect(await screen.findByRole('radio', { name: '12:00' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '16:00' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '10:00' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: '11:00' })).toBeNull();
+  });
+
+  test('a start picked before it passed is not sent once it has', async () => {
+    vi.setSystemTime(new Date(2026, 5, 1, 11, 59));
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    typeHourlyPickup(container, '01/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '1 hour' }));
+    fireEvent.click(await screen.findByRole('radio', { name: '12:00' }));
+    expect(screen.getByRole('radio', { name: '12:00' })).toBeChecked();
+
+    // Two minutes later 12:00 has begun, and the page re-renders (any
+    // keystroke will do).
+    vi.setSystemTime(new Date(2026, 5, 1, 12, 1));
+    fireEvent.change(screen.getByLabelText(/Tell us briefly about your project/), {
+      target: { value: 'Late.' },
+    });
+    await waitFor(() => expect(screen.queryByRole('radio', { name: '12:00' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const postCall = apiFetch.mock.calls.find(
+      ([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST'
+    );
+    expect(postCall).toBeUndefined();
+  });
+
+  test('today is disabled in the picker once its last start has passed', async () => {
+    vi.setSystemTime(new Date(2026, 5, 5, 13, 30)); // Friday: only 10:00-14:00, last 1h start 13:00
+    setApi({ thing: HOURLY_RESERVE_THING });
+    renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose date' }));
+    await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
+    const today = document.querySelector('[data-date="2026-06-05"]');
+    expect(today === null || today.getAttribute('aria-disabled') === 'true').toBe(true);
+  });
+
   test('changing the day resets an already-chosen duration and start time', async () => {
     setApi({ thing: HOURLY_RESERVE_THING });
     const { container } = renderPage();

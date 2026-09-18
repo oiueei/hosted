@@ -20,6 +20,7 @@ import {
   dayBookings,
   durationOptions,
   freeStartTimes,
+  earliestStartMinutes,
   isHourlyPickupDisabled,
 } from '../utils/rental';
 import { apiFetch } from '../services/api';
@@ -171,14 +172,21 @@ export default function RequestThingPage() {
     ? durationOptions(reservationMinMinutes, reservationMaxMinutes)
     : [];
   const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
+  // For today, only starts not yet passed (by the browser's clock) — see
+  // `earliestStartMinutes`. Recomputed every render, so a start that passes
+  // while the page sits open drops out of the list...
   const hourlyStartTimeChoices = chosenDurationOption
     ? freeStartTimes(
         blocksForSelectedDay,
         chosenDurationOption.minutes,
         bookingsForSelectedDay,
-        reservationMinMinutes
+        reservationMinMinutes,
+        earliestStartMinutes(selectedIso)
       )
     : [];
+  // ...and out of the selection too: a start the reader picked before it
+  // passed is no longer one this page will send.
+  const chosenStartTime = hourlyStartTimeChoices.includes(hourlyStartTime) ? hourlyStartTime : '';
   const durationOptionLabel = (opt) => {
     const hours = Math.floor(opt.minutes / 60);
     const minutes = opt.minutes % 60;
@@ -234,11 +242,11 @@ export default function RequestThingPage() {
       // Pickup date + a chosen slot; the backend derives end_date = start + 1
       // and auto-confirms.
       const startIso = displayToIso(startDate);
-      if (!startIso || !chosenDurationOption || !hourlyStartTime) return null;
-      const endTime = formatHM(parseHM(hourlyStartTime) + chosenDurationOption.minutes);
+      if (!startIso || !chosenDurationOption || !chosenStartTime) return null;
+      const endTime = formatHM(parseHM(chosenStartTime) + chosenDurationOption.minutes);
       body = {
         start_date: startIso,
-        start_time: hourlyStartTime,
+        start_time: chosenStartTime,
         end_time: endTime,
         project_note: projectNote.trim(),
       };
@@ -683,7 +691,7 @@ export default function RequestThingPage() {
                     name="reservation-start-time"
                     label={t('reservation.startTimeLabel')}
                     options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
-                    value={hourlyStartTime}
+                    value={chosenStartTime}
                     onChange={setHourlyStartTime}
                   />
                 </>

@@ -301,6 +301,17 @@ export const durationOptions = (minMinutes, maxMinutes) => {
   return options;
 };
 
+// The earliest a slot on `isoDate` may start, in minutes since midnight: the
+// current minute when `isoDate` is today by the browser's clock, else 0. A slot
+// that has already begun is not something to offer — and the picker is the only
+// place that knows: the backend has no time-of-day check of its own, since its
+// clock is UTC (`TIME_ZONE`) while `opening_hours` is the venue's wall clock.
+// The member's browser is assumed to share the venue's time zone, which for an
+// on-site reservation it almost always does. A start in the current minute
+// still counts as not yet begun.
+export const earliestStartMinutes = (isoDate, now = new Date()) =>
+  isoDate === toISODate(now) ? now.getHours() * 60 + now.getMinutes() : 0;
+
 // The valid start times ("HH:MM") for a chosen duration, stepped every
 // `stepMinutes` within each opening block — the collection's `reservation_
 // min_minutes`, so a short minimum genuinely offers more than one start per
@@ -308,13 +319,23 @@ export const durationOptions = (minMinutes, maxMinutes) => {
 // only ever offer :00 starts, making the shorter minimum useless. Every
 // candidate must fit inside a single block — a span crossing one of the gaps
 // between blocks is not offered (the "full day" special case that once
-// allowed exactly that went with its option, 2026-09). Empty whenever the
-// day is `wholeDay`-booked.
-export const freeStartTimes = (blocks, durationMinutes, dayBookingsResult, stepMinutes) => {
+// allowed exactly that went with its option, 2026-09). Starts before
+// `earliestStart` (`earliestStartMinutes`, above) are skipped; the step grid
+// itself still runs from each block's opening, so the starts that remain
+// later in the day are the same ones offered on any other day. Empty whenever
+// the day is `wholeDay`-booked.
+export const freeStartTimes = (
+  blocks,
+  durationMinutes,
+  dayBookingsResult,
+  stepMinutes,
+  earliestStart = 0
+) => {
   if (dayBookingsResult.wholeDay) return [];
   const starts = [];
   for (const block of blocks) {
     for (let cursor = block.start; cursor + durationMinutes <= block.end; cursor += stepMinutes) {
+      if (cursor < earliestStart) continue;
       if (!minutesRangeOverlaps(cursor, cursor + durationMinutes, dayBookingsResult.ranges)) {
         starts.push(formatHM(cursor));
       }
@@ -325,18 +346,27 @@ export const freeStartTimes = (blocks, durationMinutes, dayBookingsResult, stepM
 
 // Disable a day in the HOUR-unit picker when it's a closure day, the
 // collection is closed that weekday, or — walking every duration choice —
-// nothing on the calendar leaves even one free start that day. `minMinutes`/
-// `maxMinutes` are the collection's `reservation_min_minutes`/
-// `reservation_max_minutes`.
+// nothing on the calendar leaves even one free start that day (for today,
+// counting only starts not yet passed at `now`). `minMinutes`/`maxMinutes`
+// are the collection's `reservation_min_minutes`/`reservation_max_minutes`.
 export const isHourlyPickupDisabled = (
   date,
-  { openingHours = {}, closedDates = [], blockedPeriods = [], minMinutes = 60, maxMinutes = 180 }
+  {
+    openingHours = {},
+    closedDates = [],
+    blockedPeriods = [],
+    minMinutes = 60,
+    maxMinutes = 180,
+    now = new Date(),
+  }
 ) => {
   if (isClosedDate(date, closedSet(closedDates))) return true;
   const blocks = dayBlocks(openingHours, date);
   if (!blocks.length) return true;
-  const bookings = dayBookings(blockedPeriods, toISODate(parseLocalDate(date)));
+  const isoDate = toISODate(parseLocalDate(date));
+  const bookings = dayBookings(blockedPeriods, isoDate);
+  const earliest = earliestStartMinutes(isoDate, now);
   return !durationOptions(minMinutes, maxMinutes).some(
-    (opt) => freeStartTimes(blocks, opt.minutes, bookings, minMinutes).length > 0
+    (opt) => freeStartTimes(blocks, opt.minutes, bookings, minMinutes, earliest).length > 0
   );
 };
