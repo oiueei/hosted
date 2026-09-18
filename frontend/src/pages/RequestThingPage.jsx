@@ -191,6 +191,16 @@ export default function RequestThingPage() {
   // ...and out of the selection too: a start the reader picked before it
   // passed is no longer one this page will send.
   const chosenStartTime = hourlyStartTimeChoices.includes(hourlyStartTime) ? hourlyStartTime : '';
+  // What a Reserve click on the HOUR flow is still missing, once a day is
+  // picked (a missing day is the DateInput's own error). No start time is only
+  // "missing" when there were some to choose from — with none, the "no start
+  // times" notice already says to pick a shorter duration.
+  const hourlyDurationMissing = isHourlyReservation && !!selectedIso && !chosenDurationOption;
+  const hourlyStartTimeMissing =
+    isHourlyReservation &&
+    !!chosenDurationOption &&
+    hourlyStartTimeChoices.length > 0 &&
+    !chosenStartTime;
   const durationOptionLabel = (opt) => {
     const hours = Math.floor(opt.minutes / 60);
     const minutes = opt.minutes % 60;
@@ -362,10 +372,28 @@ export default function RequestThingPage() {
     }
   };
 
+  // A Reserve click that can't be sent used to do nothing visible on the HOUR
+  // flow: the radio groups had no error state, unlike the DAY flow's Select
+  // (found in review, 2026-09-18 — and more reachable once a start that passes
+  // while the page sits open drops out of the selection on its own). The group
+  // now shows HDS's error text, and focus moves to its first option, which
+  // reads the question out — HDS links that error text to nothing.
+  const focusMissingHourlyChoice = () => {
+    const first = hourlyDurationMissing
+      ? `reservation-duration-${hourlyDurationChoices[0]?.key}`
+      : hourlyStartTimeMissing
+        ? `reservation-start-time-${hourlyStartTimeChoices[0]}`
+        : null;
+    if (first) document.getElementById(first)?.focus();
+  };
+
   const handleSubmit = async () => {
     setAttempted(true);
     const body = buildReservationBody();
-    if (!body) return;
+    if (!body) {
+      focusMissingHourlyChoice();
+      return;
+    }
 
     setSubmitting(true);
     setToast(null);
@@ -688,6 +716,9 @@ export default function RequestThingPage() {
                       setHourlyDuration(key);
                       setHourlyStartTime('');
                     }}
+                    errorText={
+                      attempted && hourlyDurationMissing ? t('rental.durationRequired') : undefined
+                    }
                   />
                 </>
               )}
@@ -701,6 +732,11 @@ export default function RequestThingPage() {
                     options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
                     value={chosenStartTime}
                     onChange={setHourlyStartTime}
+                    errorText={
+                      attempted && hourlyStartTimeMissing
+                        ? t('reservation.startTimeRequired')
+                        : undefined
+                    }
                   />
                 </>
               )}

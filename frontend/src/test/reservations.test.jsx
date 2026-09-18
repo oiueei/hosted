@@ -683,7 +683,8 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     await waitFor(() => expect(screen.queryByRole('radio', { name: '12:00' })).toBeNull());
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Not sent — and not silently: the start-time group asks again.
+    expect(await screen.findByText('Please choose a start time')).toBeVisible();
     const postCall = apiFetch.mock.calls.find(
       ([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST'
     );
@@ -700,6 +701,43 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
     const today = document.querySelector('[data-date="2026-06-05"]');
     expect(today === null || today.getAttribute('aria-disabled') === 'true').toBe(true);
+  });
+
+  // A Reserve click the page can't send used to do nothing visible here —
+  // the radio groups had no error state (found in review, 2026-09-18). HDS
+  // links a SelectionGroup's error text to nothing, so focus moving onto the
+  // group is what a screen reader hears.
+  const posts = () =>
+    apiFetch.mock.calls.filter(([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST');
+
+  test('Reserve with a day but no duration says so and takes focus to the durations', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    typeHourlyPickup(container, '03/06/2026');
+    await screen.findByRole('radio', { name: '1 hour' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(await screen.findByText('Please choose a length')).toBeVisible();
+    expect(screen.getByRole('radio', { name: '1 hour' })).toHaveFocus();
+    expect(posts()).toHaveLength(0);
+  });
+
+  test('Reserve with a duration but no start time says so and takes focus to the times', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    await screen.findByRole('radio', { name: '10:00' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(await screen.findByText('Please choose a start time')).toBeVisible();
+    expect(screen.getByRole('radio', { name: '10:00' })).toHaveFocus();
+    expect(screen.queryByText('Please choose a length')).toBeNull();
+    expect(posts()).toHaveLength(0);
   });
 
   test('changing the day resets an already-chosen duration and start time', async () => {
