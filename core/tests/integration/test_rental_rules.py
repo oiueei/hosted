@@ -250,6 +250,72 @@ def test_validate_opening_hours_accepts_empty_and_closed_days(db):
     assert _validate_opening_hours({"5": [], "6": []}) == {"5": [], "6": []}
 
 
+# The rejections below each name the rule that fired (`match=`), not just "a
+# ValidationError happened": the validator raises the same exception type for
+# every shape problem, so a bare `pytest.raises` would stay green if one rule
+# silently stopped firing and a different one caught the input by accident.
+
+
+def test_validate_opening_hours_caps_each_day_at_four_blocks(db):
+    """The only bound on how much JSON an owner can store per day. Four is
+    allowed; the fifth is refused by the cap itself, not by some other rule."""
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    four = [["08:00", "09:00"], ["10:00", "11:00"], ["12:00", "13:00"], ["14:00", "15:00"]]
+    assert _validate_opening_hours({"0": four}) == {"0": four}
+
+    with pytest.raises(serializers.ValidationError, match="at most 4 opening blocks"):
+        _validate_opening_hours({"0": [*four, ["16:00", "17:00"]]})
+
+
+@pytest.mark.parametrize("value", [[["10:00", "14:00"]], "10:00-14:00", None, 7])
+def test_validate_opening_hours_rejects_a_body_that_is_not_a_day_keyed_object(db, value):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError, match="day-keyed object"):
+        _validate_opening_hours(value)
+
+
+def test_validate_opening_hours_rejects_a_day_that_is_not_a_list(db):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError, match="Day 0: expected a list"):
+        _validate_opening_hours({"0": "10:00-14:00"})
+
+
+@pytest.mark.parametrize(
+    "block",
+    [["10:00"], ["10:00", "12:00", "14:00"], "10:00", {"start": "10:00", "end": "14:00"}],
+)
+def test_validate_opening_hours_rejects_a_block_that_is_not_a_start_end_pair(db, block):
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError, match=r"each block is \[start, end\]"):
+        _validate_opening_hours({"0": [block]})
+
+
+@pytest.mark.parametrize(
+    "block", [[10, 14], ["25:00", "26:00"], ["10:60", "11:00"], [None, "14:00"]]
+)
+def test_validate_opening_hours_rejects_a_time_that_is_not_a_real_hh_mm(db, block):
+    """Non-strings and out-of-range clock values fail the same HH:MM rule —
+    `_parse_hhmm` refuses a non-string outright, and `time()` refuses 25:00."""
+    from rest_framework import serializers
+
+    from core.serializers.collection import _validate_opening_hours
+
+    with pytest.raises(serializers.ValidationError, match="times must be HH:MM"):
+        _validate_opening_hours({"0": [block]})
+
+
 # --- booking enforcement (API) --------------------------------------------
 
 
