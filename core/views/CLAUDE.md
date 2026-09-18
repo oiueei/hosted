@@ -1149,7 +1149,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 | **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
 | **Rate limit** | 20 requests per hour per user |
 
-The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as a **Google Calendar CSV** — one all-day event per reservation, spanning its block. The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv); this view is who may ask and what the browser may keep.
+The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as a **Google Calendar CSV** — one all-day event per reservation, spanning its block, or one timed event for an `HOUR`-unit reservation (its real start and end, on its one day). The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv); this view is who may ask and what the browser may keep.
 
 **Incremental.** Each call returns only the reservations not exported *for this collection* before and records that it has (`CalendarExportMark`), so importing the file twice never doubles the calendar. The response header **`X-Calendar-Events`** carries the count; `0` means header-only CSV and the SPA shows "nothing new" instead of triggering a download. There is no "download everything" variant.
 

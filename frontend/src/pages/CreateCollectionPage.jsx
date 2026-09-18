@@ -52,8 +52,9 @@ export default function CreateCollectionPage() {
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
-  // Shown on the request page for every verb (GIFT/SELL/RENT/LEND/RESERVE),
-  // not only reservations — general to the collection, so it lives outside
+  // Shown on the request page for every verb that reaches it (LEND/RENT/
+  // RESERVE — GIFT/SELL complete from the card and never do), not only
+  // reservations — general to the collection, so it lives outside
   // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
   const [requestInfo, setRequestInfo] = useState('');
   // The owner's note in the emails a requester receives about their request
