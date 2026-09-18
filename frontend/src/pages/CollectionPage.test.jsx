@@ -384,6 +384,58 @@ describe('A signed-in visitor on a public group', () => {
     expect(await screen.findByText('Add thing')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
+
+  // The same dead end, one screen lower: an EMPTY community group's "no things
+  // yet" line kept offering "Add one" and the CSV import to every reader of a
+  // COMMUNITY collection, member or not — the hero button above was fixed and
+  // this one wasn't, because nothing here had ever rendered an empty group.
+  test('an empty group does not invite a non-member to fill it', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/No things in this collection yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
+  });
+
+  test('a signed-out reader of an empty group is not sent to a form either', async () => {
+    localStorage.clear();
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/No things in this collection yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
+    // What they are offered instead is the way in.
+    expect(screen.getByRole('link', { name: /join to take part/i })).toBeInTheDocument();
+  });
+
+  test('a member of an empty group is invited to start it', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ...PUBLIC_COMMUNITY, is_member: true }),
+      })
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('link', { name: 'Add one' })).toHaveAttribute(
+      'href',
+      '/collections/COL001/add'
+    );
+    expect(screen.getByRole('link', { name: /Add several at once/ })).toHaveAttribute(
+      'href',
+      '/collections/COL001/add#bulk-add'
+    );
+  });
 });
 
 /**

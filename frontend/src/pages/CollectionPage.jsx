@@ -230,6 +230,11 @@ export default function CollectionPage() {
   );
   const shownThings = sortedThings.slice(0, shownCount);
   const remainingThings = sortedThings.length - shownThings.length;
+  // Who may put a thing here: a curator, or a member of a COMMUNITY group —
+  // the same rule `Collection.can_add_thing` enforces. Mode alone is not enough:
+  // a reader who is not a member (signed in or not) would be sent through the
+  // whole form, photos uploaded and all, to collect a 403 at the end.
+  const canAddThing = isCurator || (collection.mode === 'COMMUNITY' && !!collection.is_member);
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -538,7 +543,7 @@ export default function CollectionPage() {
           <>
             <p>
               {t('collectionPage.noThings')}
-              {(isCurator || collection.mode === 'COMMUNITY') && (
+              {canAddThing && (
                 <>
                   {' '}
                   <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.
@@ -546,7 +551,7 @@ export default function CollectionPage() {
               )}
             </p>
             <div className="spacer-xxs" />
-            {(isCurator || collection.mode === 'COMMUNITY') && (
+            {canAddThing && (
               <p>
                 <Link to={`/collections/${code}/add#bulk-add`}>
                   {t('collectionPage.addManyCsv')}
