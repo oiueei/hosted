@@ -242,7 +242,7 @@ Detail page for a thing with full information and FAQs section.
 
 ### RequestThingPage (`src/pages/RequestThingPage.jsx`)
 
-- **APIs:** `GET /api/v1/things/{thingCode}/` (detail), `GET /api/v1/things/{thingCode}/calendar/` (blocked periods for date-based types), `POST /api/v1/things/{thingCode}/request/` (submit request)
+- **APIs:** `GET /api/v1/things/{thingCode}/` (detail — **with `?collection={code}` on the collection-context route**, so the rules the form is built from are that collection's, the same one the POST names in `collection_code`; see `ThingSerializer` in `core/serializers/CLAUDE.md`), `GET /api/v1/things/{thingCode}/calendar/` (blocked periods for date-based types), `POST /api/v1/things/{thingCode}/request/` (submit request)
 - Accessible from `/collections/:code/things/:thingCode/request` (collection context) or `/things/:thingCode/request` (standalone).
 - Redirects to `/login` if no `userCode` in `localStorage`.
 - **Back link**: uses `location.state.backPath` and `location.state.backLabel` passed from ThingLinkbox or ThingPage.

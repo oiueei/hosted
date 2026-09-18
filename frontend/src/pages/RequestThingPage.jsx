@@ -104,7 +104,12 @@ export default function RequestThingPage() {
 
   useEffect(() => {
     if (!userCode) return;
-    apiFetch(`/api/v1/things/${thingCode}/`)
+    // In a collection's context, read the thing *through* that collection: its
+    // rules (unit, hours, lengths, horizon) and note come back from the same
+    // collection the POST below names in `collection_code`, so the form can't
+    // show one group's rules while the server applies another's.
+    const query = code ? `?collection=${encodeURIComponent(code)}` : '';
+    apiFetch(`/api/v1/things/${thingCode}/${query}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {

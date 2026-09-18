@@ -315,6 +315,76 @@ def test_the_active_reservation_cap_is_per_member_per_collection(
     assert BookingPeriod.objects.filter(status=BookingPeriod.Status.ACCEPTED).count() == 1
 
 
+# --- a thing in two reservations collections ------------------------------
+# The request form is built from the thing's serialized rules and the POST
+# names the collection it came from (`collection_code`); `?collection=` on the
+# read is what makes the two agree when the collections disagree on the unit.
+
+
+@pytest.fixture
+def space_in_two_collections(reservations, hourly_reservations):
+    thing = reservations["thing"]  # lives in the DAY collection already
+    hourly_reservations["collection"].things.add(thing)
+    return thing
+
+
+def test_a_thing_read_through_a_collection_serves_that_collections_rules(
+    space_in_two_collections, authenticated_client2
+):
+    url = f"/api/v1/things/{space_in_two_collections.code}/"
+
+    by_hour = authenticated_client2.get(url, {"collection": "HRVC01"}).data
+    assert by_hour["collection_code"] == "HRVC01"
+    assert by_hour["reservation_unit"] == "HOUR"
+    assert by_hour["opening_hours"]["4"] == [["10:00", "14:00"]]
+
+    by_day = authenticated_client2.get(url, {"collection": "RSVC01"}).data
+    assert by_day["collection_code"] == "RSVC01"
+    assert by_day["reservation_unit"] == "DAY"
+
+
+def test_availability_follows_the_named_collection_too(
+    space_in_two_collections, hourly_reservations, authenticated_client2
+):
+    """The hourly collection has no opening hours yet (every day closed); the
+    daily one is open Mon-Fri. Each read reports its own collection's answer —
+    the indicator above the form has to agree with the form below it."""
+    hourly_reservations["collection"].opening_hours = {}
+    hourly_reservations["collection"].save(update_fields=["opening_hours"])
+    url = f"/api/v1/things/{space_in_two_collections.code}/"
+
+    by_hour = authenticated_client2.get(url, {"collection": "HRVC01"}).data
+    assert by_hour["available_today"] is False
+    assert by_hour["next_available"] is None
+
+    by_day = authenticated_client2.get(url, {"collection": "RSVC01"}).data
+    assert by_day["next_available"] is not None
+
+
+def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
+    space_in_two_collections, user, authenticated_client2
+):
+    """`?collection=` is a preference among collections the reader may already
+    read, never a door: a private group they aren't in is ignored, and its
+    code, headline and rules stay out of the response."""
+    hidden = Collection.objects.create(
+        code="HIDC01",
+        owner=user,
+        headline="Staff only",
+        status="ACTIVE",
+        mode=Collection.Mode.PROPRIETARY,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+    )
+    hidden.things.add(space_in_two_collections)
+    url = f"/api/v1/things/{space_in_two_collections.code}/"
+
+    data = authenticated_client2.get(url, {"collection": "HIDC01"}).data
+
+    assert data["collection_code"] in {"RSVC01", "HRVC01"}
+    assert data["collection_headline"] != "Staff only"
+
+
 # --- HOUR-unit reservations (API) -----------------------------------------
 
 

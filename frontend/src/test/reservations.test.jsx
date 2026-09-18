@@ -41,7 +41,7 @@ function setApi({ thing = RESERVE_THING, calendar = [], postOk = true } = {}) {
         mockResponse({ message: 'Reservation confirmed', booking_code: 'B1' }, postOk)
       );
     }
-    if (/\/things\/[^/]+\/$/.test(url)) return Promise.resolve(mockResponse(thing));
+    if (/\/things\/[^/]+\/(\?.*)?$/.test(url)) return Promise.resolve(mockResponse(thing));
     return Promise.resolve(mockResponse({}));
   });
 }
@@ -196,7 +196,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
         );
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
-      if (/\/things\/[^/]+\/$/.test(url))
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
         return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
       return Promise.resolve(mockResponse({}));
     });
@@ -235,7 +235,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
         });
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
-      if (/\/things\/[^/]+\/$/.test(url))
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
         return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
       return Promise.resolve(mockResponse({}));
     });
@@ -285,7 +285,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
         );
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
-      if (/\/things\/[^/]+\/$/.test(url))
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
         return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
       return Promise.resolve(mockResponse({}));
     });
@@ -321,7 +321,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
         });
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
-      if (/\/things\/[^/]+\/$/.test(url))
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
         return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
       return Promise.resolve(mockResponse({}));
     });
@@ -367,7 +367,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
         );
       }
       if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
-      if (/\/things\/[^/]+\/$/.test(url))
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
         return Promise.resolve(mockResponse({ ...RESERVE_THING, reservation_max_days: 1 }));
       return Promise.resolve(mockResponse({}));
     });
@@ -384,6 +384,21 @@ describe('RequestThingPage — RESERVE_THING', () => {
 
     expect(await screen.findByText(/Your reservation is confirmed/)).toBeInTheDocument();
     expect(requestDates).toEqual(['2026-06-03', '2026-06-05']);
+  });
+});
+
+describe('RequestThingPage — reads the thing through the collection it was opened from', () => {
+  test('the detail fetch names the route collection, the same one the POST will name', async () => {
+    // A thing can live in two reservations collections, one by the day and
+    // one by the hour; the form must show the rules of the collection the
+    // request is made through, or the server refuses what the form offered.
+    renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    const reads = apiFetch.mock.calls
+      .map(([url, opts]) => (!opts?.method ? url : null))
+      .filter((url) => url && /\/things\/RSV01\/(\?|$)/.test(url));
+    expect(reads).toEqual(['/api/v1/things/RSV01/?collection=COL001']);
   });
 });
 
