@@ -682,10 +682,62 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     expect(screen.getByRole('radio', { name: '1h 40min' })).toBeInTheDocument(); // 100min, the mixed label
 
     fireEvent.click(screen.getByRole('radio', { name: '20 minutes' }));
-    // 10:00-14:00 stepped every 20 minutes: 10:00, 10:20, 10:40, ... 13:40.
-    expect(await screen.findByRole('radio', { name: '10:20' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: '13:40' })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: '10:15' })).toBeNull(); // not a 20-minute step
+    // 10:00-14:00 and 16:00-20:00 stepped every 20 minutes: 24 starts, so a
+    // dropdown rather than radios (OptionPicker's RADIO_MAX).
+    fireEvent.click(await screen.findByRole('combobox', { name: /Starting at/ }));
+    expect(await screen.findByRole('option', { name: '10:20' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '13:40' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: '10:15' })).toBeNull(); // not a 20-minute step
+  });
+
+  // A short minimum makes both lists long: 15 minutes over this 8-hour day is
+  // 29 start times, and 15 up to 180 minutes is 12 durations. As radios, one
+  // question ran longer than a phone screen (DESIGN §4).
+  test('a long list of durations or start times is a dropdown, not a column of radios', async () => {
+    setApi({
+      thing: { ...HOURLY_RESERVE_THING, reservation_min_minutes: 15, reservation_max_minutes: 180 },
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    typeHourlyPickup(container, '03/06/2026');
+
+    const durations = await screen.findByRole('combobox', { name: /How long/ });
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    fireEvent.click(durations);
+    fireEvent.click(await screen.findByRole('option', { name: '1h 30min' }));
+
+    fireEvent.click(await screen.findByRole('combobox', { name: /Starting at/ }));
+    fireEvent.click(await screen.findByRole('option', { name: '10:15' }));
+
+    // Picked through the dropdowns, the slot reads back the same way.
+    expect(
+      await screen.findByText('Reserved on 03/06/2026, from 10:15 to 11:45.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+    await screen.findByText(/Your reservation is confirmed/);
+    const postCall = apiFetch.mock.calls.find(
+      ([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST'
+    );
+    expect(JSON.parse(postCall[1].body)).toMatchObject({
+      start_time: '10:15',
+      end_time: '11:45',
+    });
+  });
+
+  test('a missing choice in a dropdown still says so and takes focus to it', async () => {
+    setApi({
+      thing: { ...HOURLY_RESERVE_THING, reservation_min_minutes: 15, reservation_max_minutes: 180 },
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    typeHourlyPickup(container, '03/06/2026');
+    const durations = await screen.findByRole('combobox', { name: /How long/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    // HDS Select prints its error twice (on screen, and for its live region).
+    expect((await screen.findAllByText('Please choose a length'))[0]).toBeVisible();
+    expect(durations).toHaveFocus();
   });
 
   test('picking a duration reveals the start-time radios, stepped hour by hour', async () => {

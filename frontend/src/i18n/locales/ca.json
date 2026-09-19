@@ -1014,7 +1014,8 @@
     "noStartTimesLabel": "Sense hores disponibles",
     "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta.",
     "cancelConfirmTitle": "Vols cancel·lar aquesta reserva?",
-    "slotSummary": "Reservat el {{date}}, de {{start}} a {{end}}."
+    "slotSummary": "Reservat el {{date}}, de {{start}} a {{end}}.",
+    "startTimePlaceholder": "Tria una hora"
   },
   "closedDates": {
     "label": "Festius i tancaments",

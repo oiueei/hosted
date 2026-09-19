@@ -30,7 +30,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
 import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
-import RadioOptionGroup from '../components/RadioOptionGroup';
+import OptionPicker from '../components/OptionPicker';
+import { optionPickerFocusId } from '../utils/optionPicker';
 import StatusRegion from '../components/StatusRegion';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
@@ -217,6 +218,13 @@ export default function RequestThingPage() {
     if (minutes === 0) return t('reservation.hours', { count: hours });
     return t('reservation.hoursAndMinutes', { hours, minutes });
   };
+  // Radios for a handful, a dropdown past OptionPicker's RADIO_MAX — a short
+  // minimum turns both lists long (48 start times at 15 minutes over 12 hours).
+  const durationPickerOptions = hourlyDurationChoices.map((opt) => ({
+    value: opt.key,
+    label: durationOptionLabel(opt),
+  }));
+  const startTimePickerOptions = hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }));
 
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
@@ -407,9 +415,9 @@ export default function RequestThingPage() {
   // reads the question out — HDS links that error text to nothing.
   const focusMissingHourlyChoice = () => {
     const first = hourlyDurationMissing
-      ? `reservation-duration-${hourlyDurationChoices[0]?.key}`
+      ? optionPickerFocusId('reservation-duration', durationPickerOptions)
       : hourlyStartTimeMissing
-        ? `reservation-start-time-${hourlyStartTimeChoices[0]}`
+        ? optionPickerFocusId('reservation-start-time', startTimePickerOptions)
         : null;
     if (first) document.getElementById(first)?.focus();
   };
@@ -757,14 +765,12 @@ export default function RequestThingPage() {
               {selectedIso && (
                 <>
                   <div className="spacer-xxxs" />
-                  <RadioOptionGroup
+                  <OptionPicker
                     idPrefix="reservation-duration"
                     name="reservation-duration"
                     label={t('reservation.durationLabelHourly')}
-                    options={hourlyDurationChoices.map((opt) => ({
-                      value: opt.key,
-                      label: durationOptionLabel(opt),
-                    }))}
+                    placeholder={t('rental.chooseDurationPlaceholder')}
+                    options={durationPickerOptions}
                     value={hourlyDuration}
                     onChange={(key) => {
                       setHourlyDuration(key);
@@ -779,11 +785,12 @@ export default function RequestThingPage() {
               {hourlyDuration && hourlyStartTimeChoices.length > 0 && (
                 <>
                   <div className="spacer-xxxs" />
-                  <RadioOptionGroup
+                  <OptionPicker
                     idPrefix="reservation-start-time"
                     name="reservation-start-time"
                     label={t('reservation.startTimeLabel')}
-                    options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
+                    placeholder={t('reservation.startTimePlaceholder')}
+                    options={startTimePickerOptions}
                     value={chosenStartTime}
                     onChange={setHourlyStartTime}
                     errorText={
