@@ -633,7 +633,15 @@ describe('EditCollectionPage — useCollectionLanguage gets the saved value, nev
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca'));
+    const SAVED_TEXTS = ['Kitchen Collection', 'Things from the kitchen'];
+    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS));
+
+    // The owner's texts as saved, not as being typed: rewriting the headline
+    // (into another language, say) must not move the form's own language.
+    fireEvent.change(screen.getByDisplayValue('Kitchen Collection'), {
+      target: { value: '{"es": "Cocina", "en": "Kitchen"}' },
+    });
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS);
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     const languageCombobox = await screen.findByRole('combobox', {
@@ -645,7 +653,7 @@ describe('EditCollectionPage — useCollectionLanguage gets the saved value, nev
     // The dropdown itself did change — this isn't a no-op click...
     await waitFor(() => expect(languageCombobox).toHaveTextContent('Español'));
     // ...but the hook must still see the collection's actual saved language.
-    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca');
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS);
   });
 });
 

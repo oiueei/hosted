@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 expect.extend(toHaveNoViolations);
 
@@ -1119,5 +1119,62 @@ describe('CollectionPage back link honours home_page', () => {
 
     const back = await screen.findByRole('link', { name: /Home/ });
     expect(back).toHaveAttribute('href', '/');
+  });
+});
+
+/**
+ * A collection's own language used to override the owner's own translations
+ * for every reader without a saved preference — every anonymous visitor
+ * among them — because owner text resolves by the reader's current language
+ * and the override changed it. Pinned end to end on the headline a stranger
+ * sees first (the hook's own rule is in useCollectionLanguage.test.jsx).
+ */
+describe('CollectionPage — the owner wrote in the visitor’s language', () => {
+  const renderAnon = (collection) => {
+    localStorage.clear();
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(collection) })
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  afterEach(async () => {
+    const { default: i18n } = await import('../i18n');
+    await i18n.changeLanguage('en');
+    localStorage.removeItem('i18nextLng');
+  });
+
+  test('a visitor reads the translation the owner wrote for them', async () => {
+    renderAnon({
+      ...PUBLIC_COMMUNITY,
+      language: 'ca',
+      headline: '{"ca": "Eines del barri", "en": "Neighbourhood tools"}',
+    });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /Neighbourhood tools/ })
+    ).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByText(/Eines del barri/)).not.toBeInTheDocument();
+  });
+
+  test('with no translation for them, the collection’s language still applies', async () => {
+    // The same page with the override free to act — what makes the test above
+    // a claim about the veto and not about a harness that never switches.
+    renderAnon({
+      ...PUBLIC_COMMUNITY,
+      language: 'ca',
+      headline: '{"ca": "Eines del barri", "es": "Herramientas del barrio"}',
+    });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /Eines del barri/ })
+    ).toBeInTheDocument();
   });
 });

@@ -90,7 +90,9 @@ export default function EditCollectionPage() {
   // form's own UI language as the owner merely tries options in the dropdown,
   // before saving anything.
   const [savedLanguage, setSavedLanguage] = useState('');
-  useCollectionLanguage(savedLanguage);
+  // Likewise the owner's texts as saved, not as being typed.
+  const [savedTexts, setSavedTexts] = useState([]);
+  useCollectionLanguage(savedLanguage, savedTexts);
   const [welcomeDoc, setWelcomeDoc] = useState('');
   const [welcomeDocUrl, setWelcomeDocUrl] = useState('');
   const [pauseMessage, setPauseMessage] = useState('');
@@ -210,6 +212,7 @@ export default function EditCollectionPage() {
           // still wins over whatever the owner picks here.
           setLanguage(data.language || i18n.resolvedLanguage || i18n.language);
           setSavedLanguage(data.language || '');
+          setSavedTexts([data.headline, data.description]);
           setWelcomeDoc(data.welcome_doc || '');
           setWelcomeDocUrl(data.welcome_doc_url || '');
           setPauseMessage(data.pause_message || '');

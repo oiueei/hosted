@@ -57,7 +57,7 @@ export default function CollectionPage() {
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
   const headline = L(collection?.headline);
-  useCollectionLanguage(collection?.language);
+  useCollectionLanguage(collection?.language, [collection?.headline, collection?.description]);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })

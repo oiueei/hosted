@@ -37,7 +37,7 @@ export default function ThingPage() {
   // The owner may have written this thing's text once per language.
   const L = useLocalized();
   const headline = L(thing?.headline);
-  useCollectionLanguage(thing?.collection_language);
+  useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
   useEffect(() => {
     document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
   }, [thing, headline, t]);

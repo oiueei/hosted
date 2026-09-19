@@ -40,7 +40,7 @@ export default function ManageInvitesPage() {
   const [answering, setAnswering] = useState(null);
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const [collectionLanguage, setCollectionLanguage] = useState('');
-  useCollectionLanguage(collectionLanguage);
+  useCollectionLanguage(collectionLanguage, [collectionHeadline]);
   const headline = L(collectionHeadline);
   useEffect(() => {
     document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault');
