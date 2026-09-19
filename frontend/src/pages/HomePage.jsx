@@ -186,6 +186,103 @@ export default function HomePage() {
   // the hook order stays stable across the `!user` early return below.
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
 
+  // Most accounts are members, not curators: they arrive through somebody
+  // else's group and may never start one. Leading with "My collections" gave
+  // them an empty state and a "Create your first collection" call before the
+  // one thing they actually have — below the fold on a phone, under the hero's
+  // buttons. Once we know they own nothing and belong somewhere, their groups
+  // come first and the invitation to create sits under them.
+  const groupsFirst = myCollections?.length === 0 && invitedCollections?.length > 0;
+
+  const myCollectionsSection = (
+    <>
+      <h2>{t('userPage.myCollections')}</h2>
+      <div className="spacer-m" />
+      {myCollectionsError ? (
+        sectionError
+      ) : myCollections === null ? (
+        <p className="text-muted">{t('userPage.loadingCollections')}</p>
+      ) : myCollections.filter((c) => c.status === 'ACTIVE').length === 0 ? (
+        <div>
+          <p>{t('userPage.noCollections')}</p>
+          <p className="text-muted">{t('userPage.collectionExplainer')}</p>
+          <div className="spacer-m" />
+          <div className="button-row-wide">
+            <ButtonLink to="/collections/new" style={btnStyle}>
+              {t('userPage.createFirst')}
+            </ButtonLink>
+            {/* Only where this deployment has a page saying what it is.
+                Upstream there is none — /welcome left with the demo — and this
+                sits on the first screen a brand-new account sees, so a second
+                button that 404s is worse here than anywhere else in the app.
+                Same rule as the footer's about link and the collection's
+                welcome box: no page, no link. */}
+            {aboutPath && (
+              <ButtonLink to={aboutPath} style={btnSecondaryStyle}>
+                {t('userPage.learnHow')}
+              </ButtonLink>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="collections-grid">
+          {myCollections
+            .filter((c) => c.status === 'ACTIVE')
+            .map((c) => (
+              <CollectionLinkbox key={c.code} collection={c} showInfo />
+            ))}
+        </div>
+      )}
+
+      {myCollections !== null &&
+        myCollections.filter((c) => c.status === 'INACTIVE').length > 0 && (
+          <>
+            <div className="spacer-xl" />
+            <h2>{t('userPage.inactiveCollections')}</h2>
+            <div className="spacer-m" />
+            <div className="collections-grid">
+              {myCollections
+                .filter((c) => c.status === 'INACTIVE')
+                .map((c) => (
+                  <CollectionLinkbox key={c.code} collection={c} showInfo />
+                ))}
+            </div>
+          </>
+        )}
+    </>
+  );
+
+  const sharedSection = (
+    <>
+      <h2>{t('userPage.sharedWithMe')}</h2>
+      <div className="spacer-m" />
+      {invitedError ? (
+        sectionError
+      ) : invitedCollections === null ? (
+        <p className="text-muted">{t('userPage.loadingCollections')}</p>
+      ) : invitedCollections.length === 0 ? (
+        <p>{t('userPage.noShared')}</p>
+      ) : (
+        <>
+          <div className="collections-grid">
+            {invitedCollections.map((c) => (
+              <CollectionLinkbox key={c.code} collection={c} showInfo />
+            ))}
+          </div>
+          {/* The cross-group view. A quiet line rather than a fifth hero
+              button: it belongs beside the groups it summarises, and the
+              question it answers ("what's in all of these?") only exists once
+              you're in more than one. */}
+          <p className="invite-nudge">
+            <Link to="/shared" className="owner-link">
+              {t('sharedThings.homeLink')}
+            </Link>
+          </p>
+        </>
+      )}
+    </>
+  );
+
   if (!user) {
     return offline ? <div className="page-container">{offlineBanner}</div> : <LoadingSpinner />;
   }
@@ -275,87 +372,9 @@ export default function HomePage() {
           </>
         )}
 
-        <h2>{t('userPage.myCollections')}</h2>
-        <div className="spacer-m" />
-        {myCollectionsError ? (
-          sectionError
-        ) : myCollections === null ? (
-          <p className="text-muted">{t('userPage.loadingCollections')}</p>
-        ) : myCollections.filter((c) => c.status === 'ACTIVE').length === 0 ? (
-          <div>
-            <p>{t('userPage.noCollections')}</p>
-            <p className="text-muted">{t('userPage.collectionExplainer')}</p>
-            <div className="spacer-m" />
-            <div className="button-row-wide">
-              <ButtonLink to="/collections/new" style={btnStyle}>
-                {t('userPage.createFirst')}
-              </ButtonLink>
-              {/* Only where this deployment has a page saying what it is.
-                  Upstream there is none — /welcome left with the demo — and this
-                  sits on the first screen a brand-new account sees, so a second
-                  button that 404s is worse here than anywhere else in the app.
-                  Same rule as the footer's about link and the collection's
-                  welcome box: no page, no link. */}
-              {aboutPath && (
-                <ButtonLink to={aboutPath} style={btnSecondaryStyle}>
-                  {t('userPage.learnHow')}
-                </ButtonLink>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="collections-grid">
-            {myCollections
-              .filter((c) => c.status === 'ACTIVE')
-              .map((c) => (
-                <CollectionLinkbox key={c.code} collection={c} showInfo />
-              ))}
-          </div>
-        )}
-
-        {myCollections !== null &&
-          myCollections.filter((c) => c.status === 'INACTIVE').length > 0 && (
-            <>
-              <div className="spacer-xl" />
-              <h2>{t('userPage.inactiveCollections')}</h2>
-              <div className="spacer-m" />
-              <div className="collections-grid">
-                {myCollections
-                  .filter((c) => c.status === 'INACTIVE')
-                  .map((c) => (
-                    <CollectionLinkbox key={c.code} collection={c} showInfo />
-                  ))}
-              </div>
-            </>
-          )}
-
+        {groupsFirst ? sharedSection : myCollectionsSection}
         <div className="spacer-xl" />
-        <h2>{t('userPage.sharedWithMe')}</h2>
-        <div className="spacer-m" />
-        {invitedError ? (
-          sectionError
-        ) : invitedCollections === null ? (
-          <p className="text-muted">{t('userPage.loadingCollections')}</p>
-        ) : invitedCollections.length === 0 ? (
-          <p>{t('userPage.noShared')}</p>
-        ) : (
-          <>
-            <div className="collections-grid">
-              {invitedCollections.map((c) => (
-                <CollectionLinkbox key={c.code} collection={c} showInfo />
-              ))}
-            </div>
-            {/* The cross-group view. A quiet line rather than a fifth hero
-                button: it belongs beside the groups it summarises, and the
-                question it answers ("what's in all of these?") only exists once
-                you're in more than one. */}
-            <p className="invite-nudge">
-              <Link to="/shared" className="owner-link">
-                {t('sharedThings.homeLink')}
-              </Link>
-            </p>
-          </>
-        )}
+        {groupsFirst ? myCollectionsSection : sharedSection}
 
         <FeedbackLink />
       </div>
