@@ -175,6 +175,44 @@ describe('EditCollectionPage — saving', () => {
 
     expect(await screen.findByText(/[Tt]oo many/)).toBeInTheDocument();
   });
+
+  test('a space booked by the day saves its day rules, and none of the hourly ones', async () => {
+    // Since the DAY/HOUR switch, the day branch of the save body — the one
+    // every reservations collection that predates HOUR is on — was never sent
+    // by any test: an owner's new day cap could stop reaching the server and
+    // the form would still say it was saved.
+    const byTheDay = {
+      ...COLLECTION,
+      allowed_thing_types: ['RESERVE_THING'],
+      reservation_unit: 'DAY',
+      reservation_max_days: 3,
+    };
+    apiFetch.mockImplementation((url, opts) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => (opts?.method === 'PATCH' ? {} : byTheDay),
+      })
+    );
+    const { container } = renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const maxDays = container.querySelector('#edit-collection-reservation-max-days');
+    expect(maxDays).toHaveValue(3);
+    fireEvent.change(maxDays, { target: { value: '5' } });
+    fireEvent.blur(maxDays);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/collections/COL001'));
+    const [, patch] = apiFetch.mock.calls.find(([, o]) => o?.method === 'PATCH');
+    const body = JSON.parse(patch.body);
+    expect(body.reservation_unit).toBe('DAY');
+    expect(body.reservation_max_days).toBe(5);
+    for (const hourly of ['opening_hours', 'reservation_min_minutes', 'reservation_max_minutes']) {
+      expect(body).not.toHaveProperty(hourly);
+    }
+  });
 });
 
 describe('EditCollectionPage — the delete button', () => {

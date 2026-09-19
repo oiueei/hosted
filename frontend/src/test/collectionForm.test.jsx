@@ -578,4 +578,53 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
     expect(createBody()).toBeUndefined();
     expect(screen.queryByTestId('navigated')).toBeNull();
   });
+
+  test('a space booked by the hour is created with its schedule and its limits in minutes', async () => {
+    // Nothing on the Create path sent an HOUR-unit collection before: the
+    // owner's hours could have gone missing and the space opened with every
+    // day closed, found only when a member saw nothing to book.
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/new']}>
+        <Routes>
+          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="*" element={<div data-testid="navigated" />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await pickReservation(container);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    const hours = screen.getByLabelText('Weekly opening hours');
+    fireEvent.change(hours, {
+      target: {
+        value: '{"0": [["10:00", "14:00"], ["16:00", "20:00"]], "4": [["10:00", "14:00"]]}',
+      },
+    });
+    fireEvent.blur(hours);
+    for (const [id, minutes] of [
+      ['#create-collection-reservation-min-minutes', '30'],
+      ['#create-collection-reservation-max-minutes', '120'],
+    ]) {
+      const input = container.querySelector(id);
+      fireEvent.change(input, { target: { value: minutes } });
+      fireEvent.blur(input);
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()).toBeTruthy());
+    const body = createBody();
+    expect(body.reservation_unit).toBe('HOUR');
+    expect(body.opening_hours).toEqual({
+      0: [
+        ['10:00', '14:00'],
+        ['16:00', '20:00'],
+      ],
+      4: [['10:00', '14:00']],
+    });
+    expect(body.reservation_min_minutes).toBe(30);
+    expect(body.reservation_max_minutes).toBe(120);
+    // The day-unit cap is the other unit's: not sent, so it can't disagree.
+    expect(body).not.toHaveProperty('reservation_max_days');
+  });
 });
