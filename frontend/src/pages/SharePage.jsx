@@ -38,7 +38,7 @@ export default function SharePage() {
 
   const name = preview ? L(preview.headline) : null;
   const description = preview ? L(preview.description) : null;
-  useCollectionLanguage(preview?.language);
+  useCollectionLanguage(preview?.language, [preview?.headline, preview?.description]);
 
   return (
     <MagicLinkJoinPage

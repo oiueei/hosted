@@ -40,4 +40,19 @@ describe('OwnerBookingsList', () => {
     expect(screen.getByText(/05\/10\/2026, 11:00–13:00/)).toBeInTheDocument();
     expect(screen.queryByText(/06\/10\/2026/)).toBeNull();
   });
+
+  test('on a reservation card a one-day booking is that one day — the card supplies the type', () => {
+    // Calendar rows carry no thing_type; without the card's own type the day
+    // the space frees up (the 6th) listed as a second reserved day.
+    render(
+      <OwnerBookingsList
+        bookings={[wholeDayBooking]}
+        activePendingCode={null}
+        isOwner={true}
+        thingType="RESERVE_THING"
+      />
+    );
+    expect(screen.getByText(/05\/10\/2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/06\/10\/2026/)).toBeNull();
+  });
 });

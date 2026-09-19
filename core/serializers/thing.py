@@ -74,12 +74,8 @@ def optimise_thing_queryset(queryset, *, with_collections=False):
             ),
             Prefetch(
                 "bookings",
-                queryset=BookingPeriod.objects.filter(
-                    status__in=[
-                        BookingPeriod.Status.PENDING,
-                        BookingPeriod.Status.ACCEPTED,
-                    ]
-                )
+                # Only what still shapes the calendar — see `blocking_filter`.
+                queryset=BookingPeriod.objects.filter(BookingPeriod.blocking_filter())
                 # The requester is joined here because this prefetch now also
                 # feeds the owner-only `bookings` field, which prints their name.
                 # Without it the field would trade one query per card for one per
@@ -114,6 +110,16 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     available_today = serializers.SerializerMethodField()
     next_available = serializers.SerializerMethodField()
     can_manage = serializers.SerializerMethodField()
+
+    def _requested_collection_code(self):
+        """The ``?collection=<code>`` the SPA sends when it reads a thing from
+        inside one of its collections, or ``""``. Only ever a *preference*
+        among the collections the viewer may already read — never a way into
+        one they can't. On the mixin, not `ThingSerializer`, because
+        `_availability_window` below asks for it."""
+        request = self.context.get("request")
+        params = getattr(request, "query_params", None) if request is not None else None
+        return ((params.get("collection") if params is not None else "") or "").strip()
 
     def _reading_collection(self, obj):
         """The collection this thing is being read *through*, or ``None``.
@@ -276,8 +282,15 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         # the rule-setting collection itself would be an N+1 there. It is exactly
         # the collection being rendered, so pass it (``parent_collection`` is only
         # set on that path; standalone thing endpoints prefetch ``collections`` and
-        # resolve it for free).
-        return obj.availability_window(collection=self.context.get("parent_collection"))
+        # resolve it for free). A standalone read that names its collection
+        # (``?collection=``, see ``_viewable_collection``) walks that one's rules,
+        # the same ones the request form shows and the request applies.
+        collection = self.context.get("parent_collection")
+        if collection is None and self._requested_collection_code():
+            # `_reading_collection`, not `_viewable_collection` directly: the
+            # summary serializer shares this mixin and has no resolver.
+            collection = self._reading_collection(obj)
+        return obj.availability_window(collection=collection)
 
     def get_available_today(self, obj):
         window = self._availability_window(obj)
@@ -437,11 +450,22 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         ]
 
     def _viewable_collection(self, obj):
-        """The first collection this viewer may read, or ``None``. Memoised —
-        five fields ask for it per thing."""
+        """The collection this viewer reads the thing through, or ``None``.
+        Memoised — a dozen fields ask for it per thing.
+
+        The one named by ``?collection=`` when the viewer may read it (the
+        collection the SPA is browsing — ``RequestThingPage`` sends it, and
+        the request it then POSTs carries the same ``collection_code``), else
+        the first readable one. Without that preference a thing in two
+        reservations collections, one booked by the DAY and one by the HOUR,
+        showed the first collection's rules while ``request_reservation``
+        applied the other's — a request form the server then refused (found in
+        review, 2026-09-18)."""
         if not hasattr(obj, "_viewable_collection_cache"):
             viewable = self._viewable_collections(obj)
-            obj._viewable_collection_cache = viewable[0] if viewable else None
+            wanted = self._requested_collection_code()
+            preferred = next((c for c in viewable if c.code == wanted), None) if wanted else None
+            obj._viewable_collection_cache = preferred or (viewable[0] if viewable else None)
         return obj._viewable_collection_cache
 
     def get_collection_code(self, obj):

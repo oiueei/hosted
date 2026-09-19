@@ -57,7 +57,7 @@ export default function CollectionPage() {
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
   const headline = L(collection?.headline);
-  useCollectionLanguage(collection?.language);
+  useCollectionLanguage(collection?.language, [collection?.headline, collection?.description]);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })
@@ -230,6 +230,11 @@ export default function CollectionPage() {
   );
   const shownThings = sortedThings.slice(0, shownCount);
   const remainingThings = sortedThings.length - shownThings.length;
+  // Who may put a thing here: a curator, or a member of a COMMUNITY group —
+  // the same rule `Collection.can_add_thing` enforces. Mode alone is not enough:
+  // a reader who is not a member (signed in or not) would be sent through the
+  // whole form, photos uploaded and all, to collect a 403 at the end.
+  const canAddThing = isCurator || (collection.mode === 'COMMUNITY' && !!collection.is_member);
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -320,6 +325,22 @@ export default function CollectionPage() {
                     </Link>
                   </p>
                 )}
+            {/* The group's welcome PDF used to exist only in the one email a
+                member gets on joining: delete that, and it was gone. The API
+                serves its URL to curators and members only, so its presence is
+                the whole condition. */}
+            {collection.welcome_doc_url && (
+              <p className="invite-nudge">
+                <a
+                  href={collection.welcome_doc_url}
+                  className="owner-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('collectionPage.welcomeDoc')}
+                </a>
+              </p>
+            )}
             {!isAuthenticated && (
               <p className="invite-nudge">
                 {t('collectionPage.anonIntro')}{' '}
@@ -494,6 +515,14 @@ export default function CollectionPage() {
 
         <h2>{t('collectionPage.things')}</h2>
         <div className="spacer-m" />
+        {/* A recorded DESIGN §1 exception, not an oversight: these are plain
+            `<button aria-pressed>`s, not HDS `Tag`. HDS `Tag` (`variant="action"`)
+            has no pressed/selected state to bind `aria-pressed` to, and a filter
+            chip has to announce which one is active. The `.tag-chip` styling is
+            ours; it sits on the same page as real HDS `Tag`s (`ThingTags`, on
+            every card below), so the two are free to drift apart visually —
+            worth knowing if either one's look changes (found in review,
+            2026-09-18). */}
         {visibleThings.length > 0 && collectionTags.length > 0 && (
           <div className="tag-filter-bar">
             <button
@@ -530,7 +559,7 @@ export default function CollectionPage() {
           <>
             <p>
               {t('collectionPage.noThings')}
-              {(isCurator || collection.mode === 'COMMUNITY') && (
+              {canAddThing && (
                 <>
                   {' '}
                   <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.
@@ -538,7 +567,7 @@ export default function CollectionPage() {
               )}
             </p>
             <div className="spacer-xxs" />
-            {(isCurator || collection.mode === 'COMMUNITY') && (
+            {canAddThing && (
               <p>
                 <Link to={`/collections/${code}/add#bulk-add`}>
                   {t('collectionPage.addManyCsv')}

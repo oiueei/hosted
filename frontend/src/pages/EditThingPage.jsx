@@ -58,7 +58,10 @@ export default function EditThingPage() {
   const [thingCollectionCode, setThingCollectionCode] = useState(code || '');
   const [thingCollectionHeadline, setThingCollectionHeadline] = useState('');
   const [thingCollectionLanguage, setThingCollectionLanguage] = useState('');
-  useCollectionLanguage(thingCollectionLanguage);
+  // The texts as loaded, not the live draft: typing must not flip the page's
+  // language under the editor's hands.
+  const [loadedTexts, setLoadedTexts] = useState([]);
+  useCollectionLanguage(thingCollectionLanguage, loadedTexts);
 
   useEffect(() => {
     const fetchThing = async () => {
@@ -87,6 +90,7 @@ export default function EditThingPage() {
           if (!code && data.collection_code) setThingCollectionCode(data.collection_code);
           if (data.collection_headline) setThingCollectionHeadline(data.collection_headline);
           setThingCollectionLanguage(data.collection_language || '');
+          setLoadedTexts([data.headline, data.description]);
         } else {
           setToast({ type: 'error', message: t('editThing.errorLoading') });
         }

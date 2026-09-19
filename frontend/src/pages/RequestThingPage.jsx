@@ -12,6 +12,7 @@ import {
   isoToDisplay,
   displayToIso,
   formatDate,
+  formatRequestedWhen,
   DISPLAY_DATE_FORMAT,
   parseLocalDate,
   parseHM,
@@ -20,15 +21,18 @@ import {
   dayBookings,
   durationOptions,
   freeStartTimes,
+  earliestStartMinutes,
   isHourlyPickupDisabled,
 } from '../utils/rental';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiErrorMessage, codedErrorMessage } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
 import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
-import RadioOptionGroup from '../components/RadioOptionGroup';
+import OptionPicker from '../components/OptionPicker';
+import { optionPickerFocusId } from '../utils/optionPicker';
+import StatusRegion from '../components/StatusRegion';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
@@ -55,7 +59,7 @@ export default function RequestThingPage() {
   const L = useLocalized();
   const headline = L(thing?.headline);
   const isReservation = thing?.type === 'RESERVE_THING';
-  useCollectionLanguage(thing?.collection_language);
+  useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
   useEffect(() => {
     if (!thing) {
       document.title = t('titles.holdDefault');
@@ -82,6 +86,9 @@ export default function RequestThingPage() {
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
+  // What was actually booked, restated in the success notice — read off the
+  // body that went out, so it is the request's own dates, not the form's.
+  const [bookedWhen, setBookedWhen] = useState('');
   // RESERVE_THING's "you need to be a member of this group to reserve" (403)
   // can only happen on a PUBLIC collection (can_view already gated everything
   // else, and a non-member reaches it only there), so joining is always
@@ -94,6 +101,11 @@ export default function RequestThingPage() {
   const [notMemberError, setNotMemberError] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
+  // The group an automatic (or fallback) join just made the reader a member
+  // of — said out loud afterwards. Not asking first is CA's call; not telling
+  // them at all left someone in a group, its digest and its curator's roster
+  // without knowing, above all when the retried reservation then failed.
+  const [joinedGroup, setJoinedGroup] = useState('');
   // Which thing the load failed for — same reason as the delete pages: a boolean
   // needs clearing at the top of the effect, which is a render spent undoing the
   // previous one.
@@ -102,7 +114,12 @@ export default function RequestThingPage() {
 
   useEffect(() => {
     if (!userCode) return;
-    apiFetch(`/api/v1/things/${thingCode}/`)
+    // In a collection's context, read the thing *through* that collection: its
+    // rules (unit, hours, lengths, horizon) and note come back from the same
+    // collection the POST below names in `collection_code`, so the form can't
+    // show one group's rules while the server applies another's.
+    const query = code ? `?collection=${encodeURIComponent(code)}` : '';
+    apiFetch(`/api/v1/things/${thingCode}/${query}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -157,7 +174,6 @@ export default function RequestThingPage() {
       closedDates,
       blockedPeriods,
       minMinutes: reservationMinMinutes,
-      maxMinutes: reservationMaxMinutes,
     });
   const selectedIso = displayToIso(startDate);
   const blocksForSelectedDay =
@@ -170,14 +186,31 @@ export default function RequestThingPage() {
     ? durationOptions(reservationMinMinutes, reservationMaxMinutes)
     : [];
   const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
+  // For today, only starts not yet passed (by the browser's clock) — see
+  // `earliestStartMinutes`. Recomputed every render, so a start that passes
+  // while the page sits open drops out of the list...
   const hourlyStartTimeChoices = chosenDurationOption
     ? freeStartTimes(
         blocksForSelectedDay,
         chosenDurationOption.minutes,
         bookingsForSelectedDay,
-        reservationMinMinutes
+        reservationMinMinutes,
+        earliestStartMinutes(selectedIso)
       )
     : [];
+  // ...and out of the selection too: a start the reader picked before it
+  // passed is no longer one this page will send.
+  const chosenStartTime = hourlyStartTimeChoices.includes(hourlyStartTime) ? hourlyStartTime : '';
+  // What a Reserve click on the HOUR flow is still missing, once a day is
+  // picked (a missing day is the DateInput's own error). No start time is only
+  // "missing" when there were some to choose from — with none, the "no start
+  // times" notice already says to pick a shorter duration.
+  const hourlyDurationMissing = isHourlyReservation && !!selectedIso && !chosenDurationOption;
+  const hourlyStartTimeMissing =
+    isHourlyReservation &&
+    !!chosenDurationOption &&
+    hourlyStartTimeChoices.length > 0 &&
+    !chosenStartTime;
   const durationOptionLabel = (opt) => {
     const hours = Math.floor(opt.minutes / 60);
     const minutes = opt.minutes % 60;
@@ -185,6 +218,13 @@ export default function RequestThingPage() {
     if (minutes === 0) return t('reservation.hours', { count: hours });
     return t('reservation.hoursAndMinutes', { hours, minutes });
   };
+  // Radios for a handful, a dropdown past OptionPicker's RADIO_MAX — a short
+  // minimum turns both lists long (48 start times at 15 minutes over 12 hours).
+  const durationPickerOptions = hourlyDurationChoices.map((opt) => ({
+    value: opt.key,
+    label: durationOptionLabel(opt),
+  }));
+  const startTimePickerOptions = hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }));
 
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
@@ -233,11 +273,11 @@ export default function RequestThingPage() {
       // Pickup date + a chosen slot; the backend derives end_date = start + 1
       // and auto-confirms.
       const startIso = displayToIso(startDate);
-      if (!startIso || !chosenDurationOption || !hourlyStartTime) return null;
-      const endTime = formatHM(parseHM(hourlyStartTime) + chosenDurationOption.minutes);
+      if (!startIso || !chosenDurationOption || !chosenStartTime) return null;
+      const endTime = formatHM(parseHM(chosenStartTime) + chosenDurationOption.minutes);
       body = {
         start_date: startIso,
-        start_time: hourlyStartTime,
+        start_time: chosenStartTime,
         end_time: endTime,
         project_note: projectNote.trim(),
       };
@@ -278,28 +318,42 @@ export default function RequestThingPage() {
     if (res.status === 429) {
       setToast({ type: 'error', message: t('common.tooManyAttempts') });
     } else if (res.status === 400) {
+      // A rule refusal comes coded and is said in the reader's language
+      // (apiErrorMessage); anything else is the server's own text.
       const data = await res.json();
-      let message = data.detail;
-      if (!message) {
-        const errors = Object.values(data).flat();
-        message = errors.join(' ') || t('thingPage.invalidRequest');
-      }
-      setToast({ type: 'error', message });
+      setToast({ type: 'error', message: apiErrorMessage(data) || t('thingPage.invalidRequest') });
     } else if (res.status === 403) {
       const data = await res.json();
-      setToast({ type: 'error', message: data.error || t('request.errorSending') });
+      setToast({ type: 'error', message: apiErrorMessage(data) || t('request.errorSending') });
     } else if (res.status === 409) {
-      setToast({ type: 'error', message: t('request.dateOverlap') });
+      // "That time is already taken" for an hourly slot, "those dates"
+      // otherwise — and this page's own copy for anything uncoded.
+      const data = await res.json().catch(() => null);
+      setToast({ type: 'error', message: codedErrorMessage(data) || t('request.dateOverlap') });
     } else {
       setToast({ type: 'error', message: t('request.errorSending') });
     }
   };
 
+  // The one collection an automatic join may ever target: the one the server
+  // resolved this thing to (`thing.collection_code`, read through
+  // `?collection=` on the collection-context route) — never the route's `code`
+  // on its own. The route is whatever link the reader followed, and nothing
+  // checks it names a collection this thing lives in: joining it as written
+  // let a link like `/collections/<someone's PUBLIC group>/things/<a real
+  // space>/request` join the reader to that group on one Reserve click, and
+  // hand its curator their email address in the roster (found in the
+  // 2026-09-18 security round). When the route names a collection the server
+  // didn't resolve to, there is no join at all — the reason is shown instead.
+  const joinableCollection = () => {
+    const resolved = thing?.collection_code;
+    if (!resolved || (code && code !== resolved)) return null;
+    return resolved;
+  };
+
   // The signed-in half of login-to-act (CollectionPage's own handleJoin,
   // reused): a PUBLIC collection's own member roster is one POST away for
-  // someone who already has an account. `code` covers the collection-context
-  // route; the standalone `/things/:code/request` route carries none, so it
-  // falls back to the collection the thing itself resolved to server-side.
+  // someone who already has an account.
   //
   // Only ever called for the backend's `code: "not_a_member"` marker (see
   // handleSubmit), which can only fire on a PUBLIC collection — can_view
@@ -309,7 +363,7 @@ export default function RequestThingPage() {
   // reservation, transparently (CA's call). `notMemberError` + the manual
   // fallback button only ever show if this auto-join itself fails.
   const joinThenRetry = async (body, fallbackMessage) => {
-    const collectionCode = code || thing?.collection_code;
+    const collectionCode = joinableCollection();
     if (!collectionCode) {
       setNotMemberError(fallbackMessage || t('request.errorSending'));
       return;
@@ -331,12 +385,16 @@ export default function RequestThingPage() {
         return;
       }
       setNotMemberError('');
+      // `joinableCollection` is `thing.collection_code`, so this headline is
+      // the group that was just joined.
+      setJoinedGroup(L(thing?.collection_headline) || '');
       try {
         const retryRes = await apiFetch(`/api/v1/things/${thingCode}/request/`, {
           method: 'POST',
           body: JSON.stringify(body),
         });
         if (retryRes.ok) {
+          setBookedWhen(formatRequestedWhen(body));
           setSuccess(true);
         } else {
           await showRequestError(retryRes);
@@ -349,10 +407,28 @@ export default function RequestThingPage() {
     }
   };
 
+  // A Reserve click that can't be sent used to do nothing visible on the HOUR
+  // flow: the radio groups had no error state, unlike the DAY flow's Select
+  // (found in review, 2026-09-18 — and more reachable once a start that passes
+  // while the page sits open drops out of the selection on its own). The group
+  // now shows HDS's error text, and focus moves to its first option, which
+  // reads the question out — HDS links that error text to nothing.
+  const focusMissingHourlyChoice = () => {
+    const first = hourlyDurationMissing
+      ? optionPickerFocusId('reservation-duration', durationPickerOptions)
+      : hourlyStartTimeMissing
+        ? optionPickerFocusId('reservation-start-time', startTimePickerOptions)
+        : null;
+    if (first) document.getElementById(first)?.focus();
+  };
+
   const handleSubmit = async () => {
     setAttempted(true);
     const body = buildReservationBody();
-    if (!body) return;
+    if (!body) {
+      focusMissingHourlyChoice();
+      return;
+    }
 
     setSubmitting(true);
     setToast(null);
@@ -363,17 +439,19 @@ export default function RequestThingPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        setBookedWhen(formatRequestedWhen(body));
         setSuccess(true);
       } else if (res.status === 403) {
         // Only this specific marker means "not a member" — any *other* 403
         // (e.g. the thing going INACTIVE while this form was open) must not
         // be mistaken for it and silently join the reader to a group over an
-        // unrelated error.
+        // unrelated error. And only when there is a collection it is safe to
+        // join (`joinableCollection`, above).
         const data = await res.json();
-        if (isReservation && data.code === 'not_a_member') {
-          await joinThenRetry(body, data.error);
+        if (isReservation && data.code === 'not_a_member' && joinableCollection()) {
+          await joinThenRetry(body, apiErrorMessage(data));
         } else {
-          setToast({ type: 'error', message: data.error || t('request.errorSending') });
+          setToast({ type: 'error', message: apiErrorMessage(data) || t('request.errorSending') });
         }
       } else {
         await showRequestError(res);
@@ -397,6 +475,19 @@ export default function RequestThingPage() {
     }
     return joinThenRetry(body, notMemberError);
   };
+
+  // The optional project note — the same field in the DAY and HOUR flows, one
+  // or the other on screen, never both (their ids stay distinct anyway).
+  const projectNoteField = (id) => (
+    <TextArea
+      id={id}
+      label={t('reservation.projectNoteLabel')}
+      helperText={t('reservation.projectNoteHelper', { remaining: 512 - projectNote.length })}
+      maxLength={512}
+      value={projectNote}
+      onChange={(e) => setProjectNote(e.target.value)}
+    />
+  );
 
   if (error) {
     return (
@@ -441,6 +532,17 @@ export default function RequestThingPage() {
           )}
         </div>
       )}
+      {/* The join stands even when the retried reservation fails (the slot
+          was taken meanwhile, say), and then there is no success message to
+          carry it — so it has a notice of its own. Rendered unconditionally,
+          the condition inside: see StatusRegion.jsx. */}
+      <StatusRegion>
+        {joinedGroup && !success && (
+          <Notification type="info" label={t('reservation.joinedLabel')}>
+            {t('reservation.joinedGroup', { group: joinedGroup })}
+          </Notification>
+        )}
+      </StatusRegion>
       {success ? (
         <>
           <Notification
@@ -449,6 +551,20 @@ export default function RequestThingPage() {
             type="success"
           >
             {isReservation ? t('reservation.successMessage') : t('request.successMessage')}
+            {/* What and when, said back: a reservation confirms on the spot,
+                with no owner step to catch a wrong day or hour. */}
+            {bookedWhen && (
+              <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
+                <strong>{headline}</strong>
+                <br />
+                {bookedWhen}
+              </p>
+            )}
+            {joinedGroup && (
+              <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
+                {t('reservation.joinedGroup', { group: joinedGroup })}
+              </p>
+            )}
           </Notification>
           <div className="spacer-m" />
           <Button
@@ -475,6 +591,7 @@ export default function RequestThingPage() {
                 type={thing.available_today ? 'success' : 'info'}
                 size="small"
                 label={t('thingPage.availabilityLabel')}
+                notificationAriaLabel={t('thingPage.availabilityLabel')}
               >
                 {thing.available_today
                   ? t('availability.IMMEDIATE')
@@ -517,7 +634,7 @@ export default function RequestThingPage() {
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -583,7 +700,7 @@ export default function RequestThingPage() {
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -614,16 +731,7 @@ export default function RequestThingPage() {
                 </p>
               )}
               <div className="spacer-xxxs" />
-              <TextArea
-                id="reservation-project-note"
-                label={t('reservation.projectNoteLabel')}
-                helperText={t('reservation.projectNoteHelper', {
-                  remaining: 512 - projectNote.length,
-                })}
-                maxLength={512}
-                value={projectNote}
-                onChange={(e) => setProjectNote(e.target.value)}
-              />
+              {projectNoteField('reservation-project-note')}
             </div>
           )}
           {isReservation && isHourlyReservation && (
@@ -639,7 +747,7 @@ export default function RequestThingPage() {
                   setHourlyStartTime('');
                 }}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -657,54 +765,87 @@ export default function RequestThingPage() {
               {selectedIso && (
                 <>
                   <div className="spacer-xxxs" />
-                  <RadioOptionGroup
+                  <OptionPicker
                     idPrefix="reservation-duration"
                     name="reservation-duration"
                     label={t('reservation.durationLabelHourly')}
-                    options={hourlyDurationChoices.map((opt) => ({
-                      value: opt.key,
-                      label: durationOptionLabel(opt),
-                    }))}
+                    placeholder={t('rental.chooseDurationPlaceholder')}
+                    options={durationPickerOptions}
                     value={hourlyDuration}
                     onChange={(key) => {
                       setHourlyDuration(key);
                       setHourlyStartTime('');
                     }}
+                    errorText={
+                      attempted && hourlyDurationMissing ? t('rental.durationRequired') : undefined
+                    }
                   />
                 </>
               )}
-              {hourlyDuration &&
-                (hourlyStartTimeChoices.length > 0 ? (
+              {hourlyDuration && hourlyStartTimeChoices.length > 0 && (
+                <>
+                  <div className="spacer-xxxs" />
+                  <OptionPicker
+                    idPrefix="reservation-start-time"
+                    name="reservation-start-time"
+                    label={t('reservation.startTimeLabel')}
+                    placeholder={t('reservation.startTimePlaceholder')}
+                    options={startTimePickerOptions}
+                    value={chosenStartTime}
+                    onChange={setHourlyStartTime}
+                    errorText={
+                      attempted && hourlyStartTimeMissing
+                        ? t('reservation.startTimeRequired')
+                        : undefined
+                    }
+                  />
+                </>
+              )}
+              {/* Rendered unconditionally (StatusRegion), the conditional stays
+                  inside it — see StatusRegion.jsx's own note. A live region
+                  only announces a change made *inside a region that already
+                  existed*: gating the Notification itself behind `hourlyDuration`
+                  (as this used to) meant the reader picking a duration with no
+                  free start left that day heard nothing at all — the
+                  Notification was never inside a live region, since it didn't
+                  exist yet either (WCAG 4.1.3, found in review 2026-09-18). */}
+              <StatusRegion>
+                {/* The slot this Reserve will book, once all three parts are
+                    picked — the end time is never shown anywhere else, and the
+                    reservation auto-confirms. In the live region, so choosing a
+                    start time reads the whole slot back. */}
+                {selectedIso && chosenDurationOption && chosenStartTime && (
+                  <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+                    {t('reservation.slotSummary', {
+                      date: isoToDisplay(selectedIso),
+                      start: chosenStartTime,
+                      end: formatHM(parseHM(chosenStartTime) + chosenDurationOption.minutes),
+                    })}
+                  </p>
+                )}
+                {hourlyDuration && hourlyStartTimeChoices.length === 0 && (
                   <>
                     <div className="spacer-xxxs" />
-                    <RadioOptionGroup
-                      idPrefix="reservation-start-time"
-                      name="reservation-start-time"
-                      label={t('reservation.startTimeLabel')}
-                      options={hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }))}
-                      value={hourlyStartTime}
-                      onChange={setHourlyStartTime}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="spacer-xxxs" />
-                    <Notification type="info" size="small">
+                    {/* `notificationAriaLabel` distinguishes this landmark from
+                        the availability Notification above, which is always
+                        mounted alongside it here — two HDS Notifications share
+                        the same default aria-label ("Notification"), which
+                        axe's landmark-unique rule (correctly) flags once both
+                        are on screen at once (found by the new axe coverage
+                        for this page, 2026-09-18). */}
+                    <Notification
+                      type="info"
+                      size="small"
+                      label={t('reservation.noStartTimesLabel')}
+                      notificationAriaLabel={t('reservation.noStartTimesLabel')}
+                    >
                       {t('reservation.noStartTimesForDuration')}
                     </Notification>
                   </>
-                ))}
+                )}
+              </StatusRegion>
               <div className="spacer-xxxs" />
-              <TextArea
-                id="reservation-project-note-hourly"
-                label={t('reservation.projectNoteLabel')}
-                helperText={t('reservation.projectNoteHelper', {
-                  remaining: 512 - projectNote.length,
-                })}
-                maxLength={512}
-                value={projectNote}
-                onChange={(e) => setProjectNote(e.target.value)}
-              />
+              {projectNoteField('reservation-project-note-hourly')}
             </div>
           )}
           {isDateBased && !isConstrainedRental && !isReservation && (
@@ -715,7 +856,7 @@ export default function RequestThingPage() {
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}
@@ -735,7 +876,7 @@ export default function RequestThingPage() {
                 value={endDate}
                 onChange={(value) => setEndDate(value)}
                 dateFormat={DISPLAY_DATE_FORMAT}
-                language="en"
+                language={hdsLang(i18n.language)}
                 openButtonAriaLabel={t('datePicker.open')}
                 selectButtonLabel={t('datePicker.select')}
                 closeButtonLabel={t('datePicker.close')}

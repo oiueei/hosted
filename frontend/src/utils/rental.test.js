@@ -14,6 +14,7 @@ import {
   displayToIso,
   formatDate,
   formatBookingWhen,
+  formatRequestedWhen,
   closedDatesToDisplay,
   parseHM,
   formatHM,
@@ -21,6 +22,7 @@ import {
   dayBookings,
   durationOptions,
   freeStartTimes,
+  earliestStartMinutes,
   isHourlyPickupDisabled,
 } from './rental';
 
@@ -286,10 +288,67 @@ describe('formatBookingWhen', () => {
     ).toBe('05/10/2026, 10:00–13:00');
   });
 
+  test('a one-day reservation lists as that one day, not the day the space frees up', () => {
+    // A DAY-unit reservation stores end_date = start + duration.
+    expect(
+      formatBookingWhen({
+        thing_type: 'RESERVE_THING',
+        start_date: '2026-10-05',
+        end_date: '2026-10-06',
+      })
+    ).toBe('05/10/2026');
+  });
+
+  test('a multi-day reservation lists to its last day, inclusive', () => {
+    expect(
+      formatBookingWhen({ start_date: '2026-10-05', end_date: '2026-10-08' }, 'RESERVE_THING')
+    ).toBe('05/10/2026 — 07/10/2026');
+  });
+
+  test('a loan still lists pickup to return — its end date is a real day', () => {
+    expect(
+      formatBookingWhen({
+        thing_type: 'LEND_THING',
+        start_date: '2026-10-05',
+        end_date: '2026-10-06',
+      })
+    ).toBe('05/10/2026 — 06/10/2026');
+  });
+
   test('is blank when there are no dates at all (GIFT/SELL)', () => {
     expect(formatBookingWhen({})).toBe('');
     expect(formatBookingWhen(null)).toBe('');
     expect(formatBookingWhen(undefined)).toBe('');
+  });
+});
+
+describe('formatRequestedWhen', () => {
+  test('an HOUR-unit reservation: the date once, then its start and end', () => {
+    expect(
+      formatRequestedWhen({ start_date: '2026-10-05', start_time: '10:00', end_time: '11:30' })
+    ).toBe('05/10/2026, 10:00–11:30');
+  });
+
+  test('a one-day reservation is that one day, not the day the space is free again', () => {
+    expect(formatRequestedWhen({ start_date: '2026-10-05', duration_days: 1 })).toBe('05/10/2026');
+  });
+
+  test('a multi-day reservation ends on its last day, inclusive', () => {
+    // 3 days from Monday 5th: the 5th, 6th and 7th — the server stores the 8th.
+    expect(formatRequestedWhen({ start_date: '2026-10-05', duration_days: 3 })).toBe(
+      '05/10/2026 — 07/10/2026'
+    );
+  });
+
+  test('a loan or rental reads pickup to return, as sent', () => {
+    expect(formatRequestedWhen({ start_date: '2026-10-05', end_date: '2026-10-12' })).toBe(
+      '05/10/2026 — 12/10/2026'
+    );
+  });
+
+  test('is blank with no dates at all', () => {
+    expect(formatRequestedWhen({})).toBe('');
+    expect(formatRequestedWhen(null)).toBe('');
   });
 });
 
@@ -432,6 +491,19 @@ describe('durationOptions', () => {
   });
 });
 
+describe('earliestStartMinutes', () => {
+  test('today: the current minute, so nothing that already began is offered', () => {
+    const now = new Date(2024, 0, 1, 12, 34, 59);
+    expect(earliestStartMinutes('2024-01-01', now)).toBe(12 * 60 + 34);
+  });
+
+  test('any other day: no floor at all', () => {
+    const now = new Date(2024, 0, 1, 12, 34);
+    expect(earliestStartMinutes('2024-01-02', now)).toBe(0);
+    expect(earliestStartMinutes('', now)).toBe(0);
+  });
+});
+
 describe('freeStartTimes', () => {
   // Lazy for the same reason MON/FRI/SAT are: this describe body runs during
   // collection, before `beforeAll` stubs TZ and sets MON.
@@ -505,6 +577,24 @@ describe('freeStartTimes', () => {
     expect(freeStartTimes(blocks, 60, { wholeDay: true, ranges: [] }, 60)).toEqual([]);
   });
 
+  test('an earliest start drops the slots before it, and keeps one starting exactly then', () => {
+    // 12:00 today: 10:00 and 11:00 have begun; 12:00 has not (same minute).
+    expect(freeStartTimes(blocks, 60, noBookings, 60, 12 * 60)).toEqual([
+      '12:00',
+      '13:00',
+      '16:00',
+      '17:00',
+      '18:00',
+      '19:00',
+    ]);
+  });
+
+  test('an earliest start between grid steps does not shift the grid', () => {
+    // At 12:10 the next start is 13:00 — not 12:10, and not 12:15: the step
+    // grid still runs from the block's opening, as on any other day.
+    expect(freeStartTimes(blocks.slice(0, 1), 60, noBookings, 60, 12 * 60 + 10)).toEqual(['13:00']);
+  });
+
   test('a duration that fits no single block offers no start — spans do not cross a gap', () => {
     // 600 minutes is the whole 10:00-20:00 day, gap included. The "full day"
     // special case (removed 2026-09) used to return the first block's opening
@@ -520,7 +610,6 @@ describe('isHourlyPickupDisabled', () => {
     closedDates: [],
     blockedPeriods: [],
     minMinutes: 60,
-    maxMinutes: 180,
   };
 
   test('an empty day with opening hours is selectable', () => {
@@ -549,6 +638,20 @@ describe('isHourlyPickupDisabled', () => {
       // the 16:00-20:00 block is untouched
     ];
     expect(isHourlyPickupDisabled(MON, { ...baseArgs, blockedPeriods })).toBe(false);
+  });
+
+  test('today, once the last start has passed, the day is disabled', () => {
+    // MON's last 1h start is 19:00 (16:00-20:00 block). At 19:01 nothing is
+    // left to book today; at 18:59 the 19:00 start still is.
+    const late = new Date(2024, 0, 1, 19, 1);
+    const stillTime = new Date(2024, 0, 1, 18, 59);
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, now: late })).toBe(true);
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, now: stillTime })).toBe(false);
+  });
+
+  test('the time of day only matters for today — the same clock leaves another day open', () => {
+    const lateOnSunday = new Date(2023, 11, 31, 23, 30);
+    expect(isHourlyPickupDisabled(MON, { ...baseArgs, now: lateOnSunday })).toBe(false);
   });
 
   test('a whole-day booking (start_time null) disables the day', () => {

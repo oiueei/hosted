@@ -24,6 +24,7 @@ import { useLocalized, localizedCounter } from '../utils/localized';
 import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import StatusRegion from '../components/StatusRegion';
+import EmailNoteTest from '../components/EmailNoteTest';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -64,11 +65,15 @@ export default function EditCollectionPage() {
   const [reservationMinMinutes, setReservationMinMinutes] = useState(60);
   const [reservationMaxMinutes, setReservationMaxMinutes] = useState(180);
   const [openingHours, setOpeningHours] = useState({});
+  // False while the opening-hours JSON on screen doesn't parse — Save refuses
+  // then, rather than sending the last good value and navigating away.
+  const [openingHoursValid, setOpeningHoursValid] = useState(true);
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
-  // Shown on the request page for every verb (GIFT/SELL/RENT/LEND/RESERVE),
-  // not only reservations — general to the collection, so it lives outside
+  // Shown on the request page for every verb that reaches it (LEND/RENT/
+  // RESERVE — GIFT/SELL complete from the card and never do), not only
+  // reservations — general to the collection, so it lives outside
   // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
   const [requestInfo, setRequestInfo] = useState('');
   // The owner's note in the emails a requester receives about their request
@@ -86,7 +91,9 @@ export default function EditCollectionPage() {
   // form's own UI language as the owner merely tries options in the dropdown,
   // before saving anything.
   const [savedLanguage, setSavedLanguage] = useState('');
-  useCollectionLanguage(savedLanguage);
+  // Likewise the owner's texts as saved, not as being typed.
+  const [savedTexts, setSavedTexts] = useState([]);
+  useCollectionLanguage(savedLanguage, savedTexts);
   const [welcomeDoc, setWelcomeDoc] = useState('');
   const [welcomeDocUrl, setWelcomeDocUrl] = useState('');
   const [pauseMessage, setPauseMessage] = useState('');
@@ -206,6 +213,7 @@ export default function EditCollectionPage() {
           // still wins over whatever the owner picks here.
           setLanguage(data.language || i18n.resolvedLanguage || i18n.language);
           setSavedLanguage(data.language || '');
+          setSavedTexts([data.headline, data.description]);
           setWelcomeDoc(data.welcome_doc || '');
           setWelcomeDocUrl(data.welcome_doc_url || '');
           setPauseMessage(data.pause_message || '');
@@ -236,6 +244,13 @@ export default function EditCollectionPage() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    // A toast, not an inline error: the field sits inside the "More options"
+    // accordion, which may be collapsed by now, and a refusal whose reason is
+    // out of sight would be the silent failure this guards against.
+    if (isReservations && reservationUnit === 'HOUR' && !openingHoursValid) {
+      setToast({ type: 'error', message: t('openingHours.invalidOnSave') });
+      return;
+    }
     setSubmitting(true);
     setToast(null);
 
@@ -446,7 +461,7 @@ export default function EditCollectionPage() {
           (title, status, mode, who can add) reads at a glance (DESIGN §3, O1). */}
       <Accordion
         heading={t('createCollection.advancedTitle')}
-        language="en"
+        language={hdsLang(i18n.language)}
         headingLevel={2}
         theme={tc.color_04 ? { '--header-color': `var(--color-${tc.color_04})` } : undefined}
       >
@@ -478,6 +493,7 @@ export default function EditCollectionPage() {
               setReservationMaxMinutes={setReservationMaxMinutes}
               openingHours={openingHours}
               setOpeningHours={setOpeningHours}
+              setOpeningHoursValid={setOpeningHoursValid}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={tc.color_01}
@@ -530,6 +546,7 @@ export default function EditCollectionPage() {
               helperText={localizedCounter(emailNote, 512).text}
             />
             <LocalizedInfo id="edit-collection-email-note-info" variant="emailNote" />
+            <EmailNoteTest collectionCode={code} note={emailNote} buttonStyle={btnSecondaryStyle} />
           </div>
           <TextInput
             id="edit-collection-home-page"

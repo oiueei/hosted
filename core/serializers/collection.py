@@ -111,6 +111,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     owner = serializers.CharField(source="owner_id")
     owner_name = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
+    welcome_doc = serializers.SerializerMethodField()
     welcome_doc_url = serializers.SerializerMethodField()
     things = serializers.SerializerMethodField()
     invites = serializers.SerializerMethodField()
@@ -120,6 +121,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     co_owners = serializers.SerializerMethodField()
     is_digest_muted = serializers.SerializerMethodField()
     pending_proposals = serializers.SerializerMethodField()
+    email_note = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
     # Seed/onboarding collection — `seed_demo` sets it, no API path writes it.
     # The SPA shows a demo notice on it when this deployment supplies the copy
@@ -188,6 +190,8 @@ class CollectionSerializer(serializers.ModelSerializer):
             "co_owners",
             "is_digest_muted",
             "pending_proposals",
+            "email_note",
+            "welcome_doc",
         ]
 
     def get_owner_name(self, obj):
@@ -198,8 +202,29 @@ class CollectionSerializer(serializers.ModelSerializer):
     def get_thumbnail_url(self, obj):
         return asset_url(obj.thumbnail) if obj.thumbnail else None
 
+    def _may_read_welcome_doc(self, obj):
+        """The welcome PDF is for the group — its curators and its members —
+        not for whoever can read a PUBLIC collection's page.
+
+        It is the group's rules, mailed to each member on joining (Cat. 1) and
+        read back only by the curators' edit form, yet it was served to every
+        reader of the collection, anonymous visitors included. Members keep it:
+        the document is addressed to them. Fails closed without a request.
+        """
+        request = self.context.get("request")
+        if not (request and request.user.is_authenticated):
+            return False
+        return self._requester_is_curator(obj) or any(
+            u.code == request.user.code for u in obj.invites.all()
+        )
+
+    def get_welcome_doc(self, obj):
+        return obj.welcome_doc if self._may_read_welcome_doc(obj) else ""
+
     def get_welcome_doc_url(self, obj):
-        return doc_asset_url(obj.welcome_doc) if obj.welcome_doc else None
+        if not (obj.welcome_doc and self._may_read_welcome_doc(obj)):
+            return None
+        return doc_asset_url(obj.welcome_doc)
 
     def get_things(self, obj):
         request = self.context.get("request")
@@ -286,6 +311,20 @@ class CollectionSerializer(serializers.ModelSerializer):
             }
             for p in pending
         ]
+
+    def get_email_note(self, obj):
+        """The owner's note for requesters' emails — **curator only**, ``""``
+        for everyone else.
+
+        The form tells the owner it goes into the emails a member receives
+        about their own request, so that is the audience they write for: how
+        to collect, where the key is, a phone to call on arrival. Served
+        alongside the rest of the collection it reached every reader instead —
+        anonymous visitors of a PUBLIC collection included — while the only
+        page that reads it is the curators' edit form. Fails closed without a
+        request, like ``pending_invites``.
+        """
+        return obj.email_note if self._requester_is_curator(obj) else ""
 
     def get_is_digest_muted(self, obj):
         # Whether *this* viewer has silenced this collection's digest. Only
@@ -878,6 +917,13 @@ class CollectionRemoveInviteSerializer(serializers.Serializer):
     """Serializer for removing a user from a collection's invite list."""
 
     user_code = serializers.CharField(max_length=6)
+
+
+class EmailNoteTestSerializer(serializers.Serializer):
+    """The ``email_note`` draft a curator asks to see as members will — the same
+    field, and so the same per-language limits, as the collection's own."""
+
+    email_note = LocalizedTextField(max_length=512, storage_max_length=2048)
 
 
 class CollectionBroadcastSerializer(serializers.Serializer):

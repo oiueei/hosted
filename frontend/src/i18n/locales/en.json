@@ -12,7 +12,7 @@
   "calendarExport": {
     "downloadButton": "Download reservations for your calendar (CSV)",
     "downloading": "Preparing the file…",
-    "notice": "Loans, rentals and space reservations as all-day calendar events. Only the ones added since your last download, so importing the file twice never doubles up.",
+    "notice": "Loans, rentals and reservations as calendar events — all-day, or with their start and end time when booked by the hour. Only the ones added since your last download, so importing the file twice never doubles up.",
     "done": "{{count}} new event(s) — check your downloads.",
     "nothingNew": "Nothing new since your last download.",
     "error": "Couldn't build the calendar file. Please try again in a moment."
@@ -112,7 +112,8 @@
     "formerMember": "Former member",
     "aMember": "A member",
     "closeThisTab": "You can close this tab now — the link is on its way to your inbox.",
-    "alphaNotice": "OIUEEI is in alpha: nothing is finished and you will find rough edges."
+    "alphaNotice": "OIUEEI is in alpha: nothing is finished and you will find rough edges.",
+    "colActions": "Actions"
   },
   "titles": {
     "home": "Home — OIUEEI",
@@ -230,7 +231,6 @@
     "faqHiddenBody": "{{owner_name}} hid your question about {{thing_headline}}.",
     "inviteRejectedLabel": "Invitation declined",
     "inviteRejectedBody": "{{invitee_name}} declined the invitation to {{collection_headline}}.",
-    "viewCollection": "I can help!",
     "reportedLabel": "A listing was reported",
     "reportedBody": "Someone reported “{{thing_headline}}”. Please take a look.",
     "viewThing": "View listing",
@@ -286,7 +286,8 @@
     "showMoreThings_other": "Show {{count}} more things",
     "visitorIntro": "You're browsing this group as a visitor.",
     "visitorJoin": "Join this group",
-    "visitorJoinError": "We couldn't add you to the group. Please try again."
+    "visitorJoinError": "We couldn't add you to the group. Please try again.",
+    "welcomeDoc": "The group's welcome document (PDF)"
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",
@@ -469,6 +470,7 @@
     "theeemeLabel": "Theeeme",
     "koroLabel": "Koro",
     "languageLabel": "Language",
+    "languageAutomatic": "Automatic",
     "maxName": "Maximum 32 characters.",
     "maxBio": "Maximum 64 characters.",
     "errorLoading": "Error loading profile.",
@@ -479,7 +481,7 @@
     "photoLabel": "Profile photo",
     "photoHelper": "Shown on your profile, optional",
     "maxAbout": "Maximum 2000 characters.",
-    "languageHelper": "OIUEEI also writes to you in this language (emails included).",
+    "languageHelper": "Automatic follows each group's own language (and your browser's everywhere else); picking one pins it for the interface and for the emails OIUEEI sends you.",
     "downloadData": "Download a copy of your data",
     "deleteAccount": "Delete account",
     "nameHelper": "Your name, a nickname, anything you like. It appears beside the questions you ask, in the journey of anything you have held, and in your groups’ member lists — publicly, if the group shares publicly."
@@ -552,7 +554,9 @@
     "captionPending": "Requests waiting for an answer",
     "captionPast": "Requests already closed",
     "cancelReservation": "Cancel reservation",
-    "currentHeading": "Current"
+    "currentHeading": "Current",
+    "cancelReservationConfirmBody": "We'll tell whoever runs the group, and the slot opens up for someone else to book. This can't be undone.",
+    "reservationCancelled": "Reservation cancelled."
   },
   "ownerBookings": {
     "pageTitle": "Requests to me",
@@ -571,7 +575,8 @@
     "captionPending": "Requests waiting for your answer",
     "captionPast": "Requests you have already answered",
     "cancelReservation": "Cancel reservation",
-    "reservationCancelled": "Reservation cancelled — the member has been told."
+    "reservationCancelled": "Reservation cancelled — the member has been told.",
+    "cancelReservationConfirmBody": "We'll tell them it's been cancelled, and the slot opens up for someone else to book. This can't be undone."
   },
   "manageInvites": {
     "pageTitle": "Manage guests",
@@ -649,7 +654,7 @@
     "loadingCollections": "Loading collections...",
     "noCollections": "You have no active collections yet.",
     "createFirst": "Create your first collection",
-    "collectionExplainer": "A collection is a shareable list — gifts, loans, rentals, sales, or a space to book — that only the people you invite can see.",
+    "collectionExplainer": "A collection is a shareable list — gifts, loans, rentals, sales, or something to book — that only the people you invite can see.",
     "learnHow": "See how it works",
     "noShared": "No one has shared a collection with you yet.",
     "noPermission": "You do not have permission to view this profile.",
@@ -682,7 +687,7 @@
     "SELL_THING": "For sale at the price you set.",
     "RENT_THING": "Rented out for a fee, by dates.",
     "LEND_THING": "Borrowed for a few days, then returned.",
-    "RESERVE_THING": "Booked to use on the owner's premises, by dates — nothing is taken away."
+    "RESERVE_THING": "Booked by the day or the hour, to use where it is — nothing is taken away."
   },
   "availability": {
     "IMMEDIATE": "Immediate",
@@ -972,28 +977,30 @@
     "days_other": "{{count}} days",
     "pickupLabel": "From",
     "pickupHelper": "Closed days and days already booked are greyed out. A reservation can't run across a closed day.",
-    "projectNoteLabel": "Tell us briefly about your project (optional)",
+    "projectNoteLabel": "What do you need it for? (optional)",
     "projectNoteHelper": "{{remaining}} characters left",
     "successLabel": "Reserved",
     "successMessage": "Your reservation is confirmed — the owner has been told.",
+    "joinedLabel": "You've joined the group",
+    "joinedGroup": "To reserve here you've joined {{group}}. You can leave it from your profile.",
     "dateSummary": "Reserved from {{start}} to {{end}}.",
     "dateRange": "Pick a date between today and {{days}} days from now.",
     "noteFrom": "Their note: {{note}}",
     "maxDaysLabel": "Longest reservation (days)",
-    "maxDaysHelper": "A member can book the space for 1 up to this many days at a time.",
+    "maxDaysHelper": "A member can book it for 1 up to this many days at a time.",
     "weekdaysLabel": "Days open for reservations",
-    "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a day the space is closed.",
+    "weekdaysHelper": "Leave all off to allow any day. A reservation can't span a closed day.",
     "horizonLabel": "How far ahead members can book (days)",
     "horizonHelper": "From 1 to 365. Default 90 — three months.",
     "maxActiveLabel": "Maximum active reservations per member",
-    "maxActiveHelper": "From 1 to 50. Default 10 — how many of a member's own reservations for this space may be active at once.",
-    "unitLabel": "How is this space booked?",
+    "maxActiveHelper": "From 1 to 50. Default 10 — how many of a member's own reservations in this collection may be active at once.",
+    "unitLabel": "How is it booked?",
     "unitDay": "By day",
     "unitHour": "By hour",
     "minMinutesLabel": "Shortest reservation (minutes)",
     "minMinutesHelper": "From 1 to 720. Also sets the step for the duration and start-time choices members see — 15 here offers 15, 30, 45 minutes and so on.",
     "maxMinutesLabel": "Longest reservation (minutes)",
-    "maxMinutesHelper": "From 1 to 720. A member can book the space for the minimum up to this many minutes at a time — the full day counts too, so it's only offered when it fits under this limit.",
+    "maxMinutesHelper": "From 1 to 720. A member can book from the minimum up to this many minutes at a time, always within one of the day's opening ranges.",
     "pickupLabelHourly": "Choose reservation date",
     "pickupHelperHourly": "Closed days and fully booked days are greyed out.",
     "durationLabelHourly": "How long?",
@@ -1003,7 +1010,12 @@
     "hours_other": "{{count}} hours",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
     "startTimeLabel": "Starting at:",
-    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
+    "startTimeRequired": "Please choose a start time",
+    "noStartTimesLabel": "No times available",
+    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one.",
+    "cancelConfirmTitle": "Cancel this reservation?",
+    "slotSummary": "Reserved on {{date}}, from {{start}} to {{end}}.",
+    "startTimePlaceholder": "Choose a time"
   },
   "closedDates": {
     "label": "Holidays and closures",
@@ -1012,20 +1024,64 @@
   "openingHours": {
     "label": "Weekly opening hours",
     "helper": "As JSON: one key per weekday (\"0\" Monday … \"6\" Sunday), each a list of [\"HH:MM\",\"HH:MM\"] ranges — e.g. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Leave a day out, or give it an empty list, to keep it closed.",
-    "invalidJson": "That's not valid JSON — check the brackets and quotes."
+    "invalidJson": "That's not valid JSON — check the brackets and quotes.",
+    "invalidOnSave": "Nothing was saved: the weekly opening hours (under “More options”) aren't valid JSON. Fix them and save again."
   },
   "homePage": {
     "label": "Home page",
     "helper": "An optional web address for this group (max 128 characters)."
   },
   "requestInfo": {
-    "label": "Note for the request page (optional)",
+    "label": "Note shown before someone asks (optional)",
     "helper": "Shown at the top of the request page — seen by anyone requesting a loan, a rental or a reservation; a gift or sale never reaches that page, since those complete straight from the card. E.g. \"bring ID\", \"pickup is Tuesdays only\". Markdown supported.",
     "maxLength": "Maximum 512 characters per language."
   },
   "emailNote": {
-    "label": "Note in the request emails (optional)",
-    "helper": "Added to the emails a member receives about their request — when they send it and again when it's accepted (a reservation is confirmed on the spot, so its single email carries it) — after the link to the listing, in their own language. Markdown (bold, italics, lists, links) and emojis work. E.g. \"we confirm requests within 48h\", \"the space is on floor 2\".",
-    "maxLength": "Maximum 512 characters per language."
+    "label": "Note in the emails after someone asks (optional)",
+    "helper": "Added to the emails a member receives about their request — when they send it and again when it's accepted (a reservation is confirmed on the spot, so its single email carries it) — after the link to the listing, in their own language. Markdown (bold, italics, lists, links) and emojis work. E.g. \"we confirm requests within 48h\", \"we're on floor 2\".",
+    "maxLength": "Maximum 512 characters per language.",
+    "testButton": "Send me a test email",
+    "testSent": "Sent to your inbox — this is exactly how members will get it.",
+    "testError": "Couldn't send the test email. Please try again."
+  },
+  "requestErrors": {
+    "already_requested": "You've already asked for this — wait for the owner's answer.",
+    "cancel_forbidden": "You can't cancel this reservation.",
+    "dates_taken": "Those dates are already taken.",
+    "not_a_member": "You need to be a member of this group to reserve.",
+    "not_available": "This isn't available right now.",
+    "rental_length_not_allowed": "This group only allows periods of {{allowed}} days.",
+    "rental_pickup_weekday": "Pickup isn't possible on that day of the week.",
+    "rental_return_weekday": "Return isn't possible on that day of the week.",
+    "rental_pickup_closed": "The pickup day is a holiday or closure day.",
+    "rental_return_closed": "The return day is a holiday or closure day.",
+    "reservation_already_begun": "That time has already begun — pick a later one.",
+    "reservation_beyond_horizon_one": "You can only book up to 1 day ahead.",
+    "reservation_beyond_horizon_other": "You can only book up to {{count}} days ahead.",
+    "reservation_closed_date": "Those dates include a day it's closed.",
+    "reservation_closed_that_day": "It's closed that day.",
+    "reservation_end_before_start": "The end has to come after the start.",
+    "reservation_inactive": "This reservation is no longer active.",
+    "reservation_max_active_one": "You already have 1 active reservation here — the most this group allows.",
+    "reservation_max_active_other": "You already have {{count}} active reservations here — the most this group allows.",
+    "reservation_needs_days": "This is booked by the day — pick how many days.",
+    "reservation_needs_times": "This is booked by the hour — pick a start time.",
+    "reservation_not_open_that_day": "It isn't open that day.",
+    "reservation_off_grid_length_one": "Reservations here last a whole number of minutes.",
+    "reservation_off_grid_length_other": "Reservations here last a multiple of {{count}} minutes.",
+    "reservation_off_grid_start_one": "Reservations here start on any minute from opening time.",
+    "reservation_off_grid_start_other": "Reservations here start every {{count}} minutes from opening time.",
+    "reservation_outside_hours": "That time falls outside the opening hours.",
+    "reservation_started": "This reservation has already started.",
+    "reservation_too_long_days_one": "You can reserve for 1 day at a time.",
+    "reservation_too_long_days_other": "You can reserve for at most {{count}} days at a time.",
+    "reservation_too_long_minutes_one": "A reservation lasts at most 1 minute.",
+    "reservation_too_long_minutes_other": "A reservation lasts at most {{count}} minutes.",
+    "reservation_too_short_days": "A reservation lasts at least one day.",
+    "reservation_too_short_minutes_one": "A reservation lasts at least 1 minute.",
+    "reservation_too_short_minutes_other": "A reservation lasts at least {{count}} minutes.",
+    "reservation_weekday_closed": "Those dates include a day that isn't open for reservations.",
+    "reservation_whole_minutes": "Times are whole minutes (HH:MM).",
+    "time_taken": "That time is already taken."
   }
 }

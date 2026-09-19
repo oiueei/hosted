@@ -92,6 +92,39 @@ class TestListEndpointQueryBudgets:
             f"got {len(small)} — an .exclude() on obj.things would discard it"
         )
 
+    def test_an_hourly_collection_costs_no_query_per_space(self, authenticated_client, user):
+        """Every card on an HOUR-unit collection's page walks that day-by-day
+        availability search (`compute_hourly_availability`, up to the whole
+        horizon). It has to run off the prefetched bookings and the collection
+        already in hand: a query per space — or per day — would turn one page
+        of a space-booking venue into hundreds, on the page its curators and
+        members open most."""
+        coll = CollectionFactory(
+            owner=user,
+            allowed_thing_types=["RESERVE_THING"],
+            reservation_unit=Collection.ReservationUnit.HOUR,
+            reservation_horizon_days=365,
+            opening_hours={"0": [["10:00", "14:00"]]},  # Mondays only: a long walk
+        )
+        url = f"/api/v1/collections/{coll.code}/"
+        _warm_activity(authenticated_client)
+        coll.things.add(*ThingFactory.create_batch(2, owner=user, type="RESERVE_THING"))
+        with CaptureQueriesContext(connection) as small:
+            r1 = authenticated_client.get(url)
+        assert r1.status_code == 200
+
+        coll.things.add(*ThingFactory.create_batch(4, owner=user, type="RESERVE_THING"))
+        with CaptureQueriesContext(connection) as big:
+            r2 = authenticated_client.get(url)
+        assert r2.status_code == 200
+        assert len(r2.data["things"]) == 6
+        # The walk really ran: a Monday within the horizon is the answer.
+        assert r2.data["things"][0]["next_available"] is not None
+
+        assert len(big) == len(small), (
+            f"N+1 on an hourly collection: {len(small)} queries for 2 spaces, {len(big)} for 6"
+        )
+
     def test_things_list_has_no_per_thing_queries(self, authenticated_client, user, collection):
         url = "/api/v1/things/"
         _warm_activity(authenticated_client)

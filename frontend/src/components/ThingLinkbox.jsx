@@ -196,6 +196,7 @@ function ThingLinkbox({
           bookings={bookings}
           activePendingCode={activePendingCode}
           isOwner={canManage}
+          thingType={thing.type}
         />
         <div className="thing-card-buttons">
           {canManage && thing.status === 'ACTIVE' && (

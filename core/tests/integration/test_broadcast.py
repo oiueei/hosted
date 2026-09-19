@@ -148,6 +148,25 @@ class TestCollectionBroadcast:
         assert "New items added" in html
         assert collection_path in html
 
+    def test_broadcast_link_opens_the_group_without_presuming_a_plea(self, broadcast_setup):
+        """The link under a group message says where it goes — "Open the group" —
+        in both halves of the email. It used to read "I can help!", a leftover of
+        the WISH_THING call-for-help flow that shipped under every broadcast
+        whatever it said ("the workshop is shut on Monday" → "I can help!")."""
+        broadcast_setup["owner_client"].post(
+            URL.format(broadcast_setup["collection"].code),
+            {"message": "The workshop is shut on Monday"},
+            format="json",
+        )
+        email = mail.outbox[0]
+        html = email.alternatives[0][0]
+        collection_path = f"/collections/{broadcast_setup['collection'].code}"
+        labelled_url = email.body.split("Open the group: ", 1)[1].split()[0]
+        assert labelled_url.endswith(collection_path)
+        assert "Open the group</a>" in html
+        for part in (email.body, html):
+            assert "I can help" not in part
+
     def test_broadcast_nonexistent_collection(self, broadcast_setup):
         """Broadcast to non-existent collection returns 404."""
         resp = broadcast_setup["owner_client"].post(

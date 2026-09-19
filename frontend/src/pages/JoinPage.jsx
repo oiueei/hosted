@@ -40,7 +40,9 @@ export default function JoinPage() {
   // keep the generic copy rather than inventing a name.
   const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
   const [collectionLanguage, setCollectionLanguage] = useState('');
-  useCollectionLanguage(collectionLanguage);
+  // The raw headline, per-language map and all, for the hook to read.
+  const [ownerHeadline, setOwnerHeadline] = useState('');
+  useCollectionLanguage(collectionLanguage, [ownerHeadline]);
 
   useEffect(() => {
     document.title = `${t('joinToAct.heading')} — OIUEEI`;
@@ -54,6 +56,7 @@ export default function JoinPage() {
       .then((data) => {
         if (data?.headline) setHeadline(L(data.headline));
         setCollectionLanguage(data?.language || '');
+        setOwnerHeadline(data?.headline || '');
       })
       .catch(() => {});
     return () => controller.abort();

@@ -30,7 +30,7 @@ export default function DeleteThingPage() {
   // body. Tying the failure to its code needs no reset at all.
   const [failedCode, setFailedCode] = useState(null);
   const error = failedCode === thingCode;
-  useCollectionLanguage(thing?.collection_language);
+  useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
 
   useEffect(() => {
     document.title = thing

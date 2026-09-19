@@ -35,13 +35,29 @@ class BookingRequestError(Exception):
     this endpoint — e.g. the thing going INACTIVE out from under an open form —
     can't be mistaken for a membership gap and silently join the reader to a
     group over an unrelated error.
+
+    A rule refusal from the model (``core.utils.Refusal``) brings its own
+    ``code`` and ``params`` along, so ``raise BookingRequestError(violation)``
+    carries them without restating them. ``as_body()`` is the response body:
+    ``{"error": ...}`` plus ``code``/``params`` when there are any — what lets
+    the request page say the refusal in the reader's language rather than the
+    English sentence (design round, 2026-09-18).
     """
 
-    def __init__(self, message, status_code=400, code=None):
+    def __init__(self, message, status_code=400, code=None, params=None):
         super().__init__(message)
-        self.message = message
+        self.message = str(message)
         self.status_code = status_code
-        self.code = code
+        self.code = code if code is not None else getattr(message, "code", None)
+        self.params = params if params is not None else getattr(message, "params", None) or {}
+
+    def as_body(self):
+        body = {"error": self.message}
+        if self.code:
+            body["code"] = self.code
+        if self.params:
+            body["params"] = self.params
+        return body
 
 
 def _pickup_blocked(day, ranges):
@@ -151,23 +167,49 @@ def compute_availability(
     return (False, None)
 
 
-def _day_has_a_free_hour(day, collection, blocked_periods):
-    """Does ``day`` have at least one free 60-minute slot within an
-    HOUR-unit collection's opening blocks, given the thing's booked periods?
+def _day_has_a_free_hour(day, collection, blocked_periods, *, closed=None, earliest=0):
+    """Does ``day`` have at least one free slot — of the collection's own
+    ``reservation_min_minutes``, not a fixed hour — within an HOUR-unit
+    collection's opening blocks, given the thing's booked periods?
 
     A booking counts as occupying ``day`` when ``start_date <= day < end_date``
     — the same half-open day range every other date-based check uses. A
     whole-day booking (``start_time`` NULL — a LEND/RENT or a DAY-unit RESERVE
     sharing the thing) closes the whole day outright. Existing HOUR-unit
     bookings on the day are swept, in order, against each opening block to find
-    any gap of at least an hour; overlapping sub-ranges can't occur between two
-    ACCEPTED/PENDING bookings (``has_overlap`` already refuses that).
+    a gap with room for the minimum **at a start on the step grid** — every
+    ``reservation_min_minutes`` from the block's opening, the same starts
+    ``RequestThingPage`` offers and ``Collection.reservation_hour_violation``
+    accepts (2026-09-18). A 60-minute gap from 10:30 to 11:30 on a 60-minute
+    grid is not a free slot: no reservation may start at 10:30. Overlapping
+    sub-ranges can't occur between two ACCEPTED/PENDING bookings
+    (``has_overlap`` already refuses that).
+
+    Named for the hour-only shape 0150 replaced — kept rather than renamed so
+    this diff stays legible next to the tests it already had; what changed is
+    only the threshold, from a hardcoded 60 to ``collection.reservation_min_
+    minutes``. Before 0150 the two were always the same number, which is
+    exactly how a collection with a sub-hour minimum (the feature's whole
+    point) ended up reported as having no free slot on a day that plainly had
+    one — this function was never told the minimum had become configurable.
+
+    ``closed`` is ``collection.closed_date_set()`` precomputed by a caller that
+    asks about many days in a row (``compute_hourly_availability``) — the set
+    is rebuilt from the stored ISO strings on every call otherwise.
+
+    ``earliest`` (minutes since midnight) skips grid starts before it — for
+    today, the current minute, so a gap that has already slipped into the past
+    doesn't make a day "available" nobody can book any more.
     """
-    if day in collection.closed_date_set():
+    if day in (collection.closed_date_set() if closed is None else closed):
         return False
     blocks = collection.day_opening_blocks(day)
     if not blocks:
         return False
+    step = collection.reservation_min_minutes
+
+    def minutes(t):
+        return t.hour * 60 + t.minute
 
     occupied = []
     for b in blocked_periods:
@@ -175,42 +217,60 @@ def _day_has_a_free_hour(day, collection, blocked_periods):
             continue
         if b.start_time is None:
             return False  # a whole-day booking blocks everything
-        occupied.append((b.start_time, b.end_time))
+        occupied.append((minutes(b.start_time), minutes(b.end_time)))
     occupied.sort()
 
-    for block_start, block_end in blocks:
+    for block_start_time, block_end_time in blocks:
+        block_start, block_end = minutes(block_start_time), minutes(block_end_time)
+
+        def fits(gap_start, gap_end):
+            # The first grid start at or after the gap opens (and not before
+            # `earliest`) — the grid runs every `step` minutes from the block's
+            # opening, as the picker's does.
+            opens = max(gap_start, earliest)
+            first = block_start + -(-(opens - block_start) // step) * step
+            return first + step <= gap_end
+
         cursor = block_start
         for occ_start, occ_end in occupied:
             if occ_end <= cursor or occ_start >= block_end:
                 continue  # outside this block
-            gap_minutes = (occ_start.hour * 60 + occ_start.minute) - (
-                cursor.hour * 60 + cursor.minute
-            )
-            if gap_minutes >= 60:
+            if fits(cursor, occ_start):
                 return True
-            if occ_end > cursor:
-                cursor = occ_end
-        tail_minutes = (block_end.hour * 60 + block_end.minute) - (cursor.hour * 60 + cursor.minute)
-        if tail_minutes >= 60:
+            cursor = max(cursor, occ_end)
+        if fits(cursor, block_end):
             return True
     return False
 
 
-def compute_hourly_availability(blocked_periods, collection, today=None):
+def compute_hourly_availability(blocked_periods, collection, today=None, now=None):
     """The HOUR-unit twin of ``compute_availability``: same
     ``(available_today, next_available)`` shape, so ``Thing.availability_window``
     treats both units alike, but "available" means *some* opening block that
-    day still has a free hour-long gap — never mind whether a specific
-    duration/start-time combination is offered; ``RequestThingPage`` works
-    that out from ``opening_hours`` + the calendar once a day is picked.
-    Walks ``collection.reservation_horizon_days`` ahead, at most, like the
-    day-based walk above does with its own horizon.
+    day still has a gap of at least ``collection.reservation_min_minutes`` —
+    never mind whether a specific duration/start-time combination is offered;
+    ``RequestThingPage`` works that out from ``opening_hours`` + the calendar
+    once a day is picked. Walks ``collection.reservation_horizon_days`` ahead,
+    at most, like the day-based walk above does with its own horizon.
     """
-    today = today or timezone.localdate()
+    now = now or timezone.localtime()
+    today = today or now.date()
     horizon = today + timedelta(days=collection.reservation_horizon_days)
+    # Today's starts count only from the current minute — the same floor
+    # `reservation_hour_violation` refuses below. Only for the real today: a
+    # caller passing another `today` is asking about that day, not the clock.
+    now_minutes = now.hour * 60 + now.minute if today == now.date() else 0
+    # Parsed once for the whole walk, not once per day: this runs per thing on
+    # every listing that shows availability, and a collection just switched to
+    # HOUR (opening_hours still {}, every day closed) walks the full horizon —
+    # up to 366 days, each re-parsing up to 60 closure dates.
+    closed = collection.closed_date_set()
     cursor = today
     while cursor <= horizon:
-        if _day_has_a_free_hour(cursor, collection, blocked_periods):
+        earliest = now_minutes if cursor == today else 0
+        if _day_has_a_free_hour(
+            cursor, collection, blocked_periods, closed=closed, earliest=earliest
+        ):
             return (cursor == today, cursor)
         cursor += timedelta(days=1)
     return (False, None)
@@ -359,7 +419,9 @@ def finalize_booking_decision(booking, accepted):
     # The booking doesn't record which collection it was made through, so the
     # requester-side notification deep-links through the same approximation the
     # request-side one used.
-    collection = resolve_request_collection(thing)
+    # Only collections the requester may read: this one also picks the email
+    # note the accepted decision carries to them.
+    collection = resolve_request_collection(thing, requester=booking.requester_code)
     InAppNotification.objects.create(
         user=booking.requester_code,
         type=(
@@ -374,7 +436,7 @@ def finalize_booking_decision(booking, accepted):
             "collection_code": collection.code if collection else "",
         },
     )
-    send_booking_decision_email(booking, thing, accepted=accepted)
+    send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)
     if accepted:
         # Anchored to the requester (like HOLD_REQUESTED) so a guest's request→accept
@@ -399,11 +461,25 @@ def finalize_booking_decision(booking, accepted):
 # {"error": ...} response + status they used to return inline.
 
 
-def resolve_rental_collection(thing, collection_code=None):
+def _readable_by(collection, requester):
+    """Whether ``requester`` may read ``collection`` — ``True`` when there is no
+    requester to ask about (internal callers, the availability indicator).
+
+    A request's ``collection_code`` is whatever the client sent, and a thing can
+    sit in a PRIVATE group and a PUBLIC one at once. Nothing a requester is told
+    about their request — a group's email note, a notification filed under it —
+    may come from a collection they could not have opened themselves.
+    """
+    return requester is None or collection.can_view(requester.code)
+
+
+def resolve_rental_collection(thing, collection_code=None, requester=None):
     """Resolve which collection's rental rules (#7) apply to a LEND/RENT request.
 
     Prefers the collection the request was made through (``collection_code`` —
-    the SPA passes the collection context); otherwise the thing's first
+    the SPA passes the collection context) **when the requester may read it**;
+    a code naming any other collection is ignored, so it can't be used to pick
+    the rules of a group the requester was never in. Otherwise the thing's first
     collection that actually defines rental rules. Returns ``None`` when no
     collection constrains the dates (legacy free-range behaviour).
     """
@@ -411,7 +487,7 @@ def resolve_rental_collection(thing, collection_code=None):
     code = (collection_code or "").strip()
     if code:
         for collection in collections:
-            if collection.code == code:
+            if collection.code == code and _readable_by(collection, requester):
                 return collection
     for collection in collections:
         if collection.has_rental_rules():
@@ -419,26 +495,36 @@ def resolve_rental_collection(thing, collection_code=None):
     return None
 
 
-def resolve_request_collection(thing, collection_code=None):
+def resolve_request_collection(thing, collection_code=None, requester=None):
     """Resolve which collection a booking request was made through.
 
-    Feeds the notification payload: it deep-links there and the collection's own
-    inbox filters by it. A thing can live in several collections, so the request's
-    own context wins — ``collection_code`` is the collection the requester was
-    actually looking at when they asked. Without it (a request from the standalone
-    /things/<code> page) this is an approximation: the collection whose rental rules
-    govern the thing, else its first ACTIVE one. Returns None for a thing that sits
-    in no active collection — the notification then simply carries no collection.
+    Feeds the notification payload (it deep-links there and the collection's own
+    inbox filters by it) and the requester's emails, which carry that
+    collection's ``email_note``. A thing can live in several collections, so the
+    request's own context wins — ``collection_code`` is the collection the
+    requester was actually looking at when they asked. Without it (a request from
+    the standalone /things/<code> page) this is an approximation: the collection
+    whose rental rules govern the thing, else its first ACTIVE one.
+
+    With a ``requester``, only collections **they may read** are candidates, for
+    the named one and both fallbacks alike: the code is the client's to send, and
+    the first collection with rules may be a PRIVATE group they are not in — whose
+    note would then reach them by email (found in the 2026-09-18 security round).
+    Returns None when no candidate is left — the notification then carries no
+    collection and the emails no note.
     """
+    collections = [c for c in thing.collections.all() if _readable_by(c, requester)]
     code = (collection_code or "").strip()
     if code:
-        for collection in thing.collections.all():
+        for collection in collections:
             if collection.code == code:
                 return collection
-    return (
-        resolve_rental_collection(thing)
-        or thing.collections.filter(status=Collection.Status.ACTIVE).first()
-    )
+    with_rules = next((c for c in collections if c.has_rental_rules()), None)
+    if with_rules:
+        return with_rules
+    # Lowest code first, which is what `.first()` on the unordered M2M returned.
+    active = [c for c in collections if c.status == Collection.Status.ACTIVE]
+    return min(active, key=lambda c: c.code, default=None)
 
 
 def request_date_based_booking(
@@ -463,7 +549,9 @@ def request_date_based_booking(
 
         if BookingPeriod.has_overlap(thing.code, start_date, end_date):
             raise BookingRequestError(
-                "Selected dates overlap with existing booking", status_code=409
+                "Selected dates overlap with existing booking",
+                status_code=409,
+                code="dates_taken",
             )
 
         booking = BookingPeriod.objects.create(
@@ -487,14 +575,18 @@ def request_standard_booking(thing, requester, owner_email, collection_code=None
         thing = Thing.objects.select_for_update().get(code=thing.code)
 
         if not thing.is_endless and thing.status != Thing.Status.ACTIVE:
-            raise BookingRequestError("Thing is not available for reservation")
+            raise BookingRequestError(
+                "Thing is not available for reservation", code="not_available"
+            )
 
         if BookingPeriod.objects.filter(
             thing_code=thing,
             requester_code=requester,
             status=BookingPeriod.Status.PENDING,
         ).exists():
-            raise BookingRequestError("You already have a pending request for this thing")
+            raise BookingRequestError(
+                "You already have a pending request for this thing", code="already_requested"
+            )
 
         booking = BookingPeriod.objects.create(
             thing_code=thing,
@@ -531,7 +623,7 @@ def send_booking_request_notifications(
     # owner's email_note for the group the request was actually made through —
     # with several collections on one thing, the one the member was browsing is
     # the one whose note the request page showed them.
-    collection = resolve_request_collection(thing, collection_code)
+    collection = resolve_request_collection(thing, collection_code, requester)
     send_booking_confirmation_email(requester, thing, booking, collection)
     InAppNotification.objects.create(
         user=thing.owner,
@@ -625,7 +717,8 @@ def request_reservation(
     if rc.is_hourly_reservations():
         if start_time is None or end_time is None:
             raise BookingRequestError(
-                "This space is booked by the hour — pick a start and end time."
+                "This space is booked by the hour — pick a start and end time.",
+                code="reservation_needs_times",
             )
         violation = rc.reservation_hour_violation(start_date, start_time, end_time)
         if violation:
@@ -633,7 +726,10 @@ def request_reservation(
         end_date = start_date + timedelta(days=1)
     else:
         if duration_days is None:
-            raise BookingRequestError("This space is booked by the day — pick a length in days.")
+            raise BookingRequestError(
+                "This space is booked by the day — pick a length in days.",
+                code="reservation_needs_days",
+            )
         # reservation_violation covers duration, the every-day-open-weekday rule
         # AND the collection's "how far ahead" horizon — one backstop.
         violation = rc.reservation_violation(start_date, duration_days)
@@ -647,7 +743,9 @@ def request_reservation(
         Thing.objects.select_for_update().get(code=thing.code)
         if rc.active_reservation_count(requester.code) >= rc.reservation_max_active_per_member:
             raise BookingRequestError(
-                "You've reached the maximum number of active reservations for this space."
+                "You've reached the maximum number of active reservations for this space.",
+                code="reservation_max_active",
+                params={"max": rc.reservation_max_active_per_member},
             )
         if BookingPeriod.has_overlap(
             thing.code, start_date, end_date, start_time=start_time, end_time=end_time
@@ -655,7 +753,11 @@ def request_reservation(
             clash_message = (
                 "That time is already taken." if start_time else "Those dates are already taken."
             )
-            raise BookingRequestError(clash_message, status_code=409)
+            raise BookingRequestError(
+                clash_message,
+                status_code=409,
+                code="time_taken" if start_time else "dates_taken",
+            )
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type=thing.type,
@@ -731,14 +833,33 @@ def cancel_reservation(booking, by_user):
     if booking.thing_type != Thing.Type.RESERVE_THING:
         raise BookingRequestError("Not a reservation.")
     if by_user.code != booking.requester_code_id and not thing.can_manage(by_user.code):
-        raise BookingRequestError("You can't cancel this reservation.", status_code=403)
-    if booking.start_date and booking.start_date < timezone.localdate():
-        raise BookingRequestError("This reservation has already started.")
+        raise BookingRequestError(
+            "You can't cancel this reservation.", status_code=403, code="cancel_forbidden"
+        )
+    now = timezone.localtime()
+    if booking.start_date and booking.start_date < now.date():
+        raise BookingRequestError(
+            "This reservation has already started.", code="reservation_started"
+        )
+    # An HOUR-unit reservation starts at its time, not at midnight: cancelling
+    # this morning's slot this afternoon would free, and announce, something
+    # that already happened. Same "current minute has not begun" rule as a
+    # request (`reservation_hour_violation`).
+    if (
+        booking.start_time is not None
+        and booking.start_date == now.date()
+        and booking.start_time.hour * 60 + booking.start_time.minute < now.hour * 60 + now.minute
+    ):
+        raise BookingRequestError(
+            "This reservation has already started.", code="reservation_started"
+        )
 
     with transaction.atomic():
         locked = BookingPeriod.objects.select_for_update().get(code=booking.code)
         if locked.status != BookingPeriod.Status.ACCEPTED:
-            raise BookingRequestError("This reservation is no longer active.")
+            raise BookingRequestError(
+                "This reservation is no longer active.", code="reservation_inactive"
+            )
         locked.status = BookingPeriod.Status.CANCELLED
         locked.save(update_fields=["status"])
 

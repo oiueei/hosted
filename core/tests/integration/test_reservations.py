@@ -312,7 +312,168 @@ def test_the_active_reservation_cap_is_per_member_per_collection(
         format="json",
     )
     assert over_cap.status_code == status.HTTP_400_BAD_REQUEST
+    # Coded, with the cap itself, so the request page can say it in the
+    # member's language and name the number.
+    assert over_cap.data["code"] == "reservation_max_active"
+    assert over_cap.data["params"] == {"max": 1}
     assert BookingPeriod.objects.filter(status=BookingPeriod.Status.ACCEPTED).count() == 1
+
+
+# --- a thing in two reservations collections ------------------------------
+# The request form is built from the thing's serialized rules and the POST
+# names the collection it came from (`collection_code`); `?collection=` on the
+# read is what makes the two agree when the collections disagree on the unit.
+
+
+@pytest.fixture
+def space_in_two_collections(reservations, hourly_reservations):
+    thing = reservations["thing"]  # lives in the DAY collection already
+    hourly_reservations["collection"].things.add(thing)
+    return thing
+
+
+def test_a_thing_read_through_a_collection_serves_that_collections_rules(
+    space_in_two_collections, authenticated_client2
+):
+    url = f"/api/v1/things/{space_in_two_collections.code}/"
+
+    by_hour = authenticated_client2.get(url, {"collection": "HRVC01"}).data
+    assert by_hour["collection_code"] == "HRVC01"
+    assert by_hour["reservation_unit"] == "HOUR"
+    assert by_hour["opening_hours"]["4"] == [["10:00", "14:00"]]
+
+    by_day = authenticated_client2.get(url, {"collection": "RSVC01"}).data
+    assert by_day["collection_code"] == "RSVC01"
+    assert by_day["reservation_unit"] == "DAY"
+
+
+def test_availability_follows_the_named_collection_too(
+    space_in_two_collections, hourly_reservations, authenticated_client2
+):
+    """The hourly collection has no opening hours yet (every day closed); the
+    daily one is open Mon-Fri. Each read reports its own collection's answer —
+    the indicator above the form has to agree with the form below it."""
+    hourly_reservations["collection"].opening_hours = {}
+    hourly_reservations["collection"].save(update_fields=["opening_hours"])
+    url = f"/api/v1/things/{space_in_two_collections.code}/"
+
+    by_hour = authenticated_client2.get(url, {"collection": "HRVC01"}).data
+    assert by_hour["available_today"] is False
+    assert by_hour["next_available"] is None
+
+    by_day = authenticated_client2.get(url, {"collection": "RSVC01"}).data
+    assert by_day["next_available"] is not None
+
+
+@pytest.mark.parametrize("named", ["HRVC01", "CLSD01"])
+def test_the_grid_serializer_shares_the_mixin_without_the_resolver(
+    space_in_two_collections, user, user2, named
+):
+    """`CollectionThingSummarySerializer` shares `ThingComputedFieldsMixin` but
+    has no `_viewable_collection`; its one call site always passes
+    `parent_collection`. Reached without one and with `?collection=` in the
+    request, the availability walk must fall back quietly, not raise — to the
+    same answer the thing gives when no collection is named at all. `CLSD01`
+    is an hourly group with no opening hours that the thing isn't even in: its
+    rules reaching the grid would say "nothing free", which the fallback never
+    does here."""
+    from rest_framework.request import Request
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
+    from core.serializers.collection import CollectionThingSummarySerializer
+
+    Collection.objects.create(
+        code="CLSD01",
+        owner=user,
+        headline="Closed",
+        status="ACTIVE",
+        visibility=Collection.Visibility.PUBLIC,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+    )
+    raw = APIRequestFactory().get("/", {"collection": named})
+    force_authenticate(raw, user=user2)
+
+    data = CollectionThingSummarySerializer(
+        space_in_two_collections, context={"request": Request(raw)}
+    ).data
+
+    # A fresh instance: availability_window memoises on the one it ran on.
+    unnamed = Thing.objects.get(code=space_in_two_collections.code).availability_window()
+    assert unnamed["next_available"] is not None  # both real groups are open on weekdays
+    assert data["available_today"] is unnamed["available_today"]
+    assert data["next_available"] == unnamed["next_available"]
+
+
+def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
+    space_in_two_collections, user, authenticated_client2
+):
+    """`?collection=` is a preference among collections the reader may already
+    read, never a door: a private group they aren't in is ignored, and its
+    code, headline and rules stay out of the response."""
+    hidden = Collection.objects.create(
+        code="HIDC01",
+        owner=user,
+        headline="Staff only",
+        status="ACTIVE",
+        mode=Collection.Mode.PROPRIETARY,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+    )
+    hidden.things.add(space_in_two_collections)
+    url = f"/api/v1/things/{space_in_two_collections.code}/"
+
+    data = authenticated_client2.get(url, {"collection": "HIDC01"}).data
+
+    assert data["collection_code"] in {"RSVC01", "HRVC01"}
+    assert data["collection_headline"] != "Staff only"
+
+
+@pytest.mark.parametrize(
+    ("booked_through", "body", "own_note", "other_note"),
+    [
+        (
+            "HRVC01",
+            {"start_time": "11:00", "end_time": "13:00"},
+            "Ring the hall bell.",
+            "Keys at the bar.",
+        ),
+        ("RSVC01", {"duration_days": 1}, "Keys at the bar.", "Ring the hall bell."),
+    ],
+)
+def test_the_confirmation_carries_the_note_of_the_group_it_was_booked_in(
+    space_in_two_collections,
+    reservations,
+    hourly_reservations,
+    user2,
+    authenticated_client2,
+    booked_through,
+    body,
+    own_note,
+    other_note,
+):
+    """A space in two groups is booked through one of them, and the member's
+    confirmation carries that group's note — the one written for its own
+    members — never the other's. `send_reservation_confirmed_email` still
+    falls back to the thing's first collection when handed none, so this is
+    what notices if the reservation path ever stops passing its own."""
+    reservations["collection"].email_note = "Keys at the bar."
+    reservations["collection"].save(update_fields=["email_note"])
+    hourly_reservations["collection"].email_note = "Ring the hall bell."
+    hourly_reservations["collection"].save(update_fields=["email_note"])
+    mail.outbox.clear()
+
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(space_in_two_collections.code),
+        {"start_date": str(_next_weekday(0)), "collection_code": booked_through, **body},
+        format="json",
+    )
+
+    assert resp.status_code == status.HTTP_201_CREATED
+    [confirmation] = [m for m in mail.outbox if m.to == [user2.email]]
+    for part in (confirmation.body, confirmation.alternatives[0][0]):
+        assert own_note in part
+        assert other_note not in part
 
 
 # --- HOUR-unit reservations (API) -----------------------------------------
@@ -350,15 +511,110 @@ def test_an_hourly_reservation_is_confirmed_on_the_spot(hourly_reservations, aut
     assert note.payload["end_time"] == "13:00"
 
 
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        ("14:00", "15:00"),  # wholly inside the lunch closure
+        ("13:00", "16:00"),  # from the morning block across the closure
+        ("09:00", "11:00"),  # starting before the doors open
+    ],
+)
 def test_an_hourly_request_outside_opening_hours_is_refused(
-    hourly_reservations, authenticated_client2
+    hourly_reservations, authenticated_client2, start, end
 ):
+    """Every span here fits the 180-minute cap and starts on the hour, so it
+    is the opening hours, and nothing else, that refuse it — 13:00-17:00 used
+    to stand in for all of them, and at 240 minutes the cap got there first."""
     resp = authenticated_client2.post(
         REQUEST_URL.format(hourly_reservations["thing"].code),
-        {"start_date": str(_next_weekday(0)), "start_time": "13:00", "end_time": "17:00"},
+        {"start_date": str(_next_weekday(0)), "start_time": start, "end_time": end},
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.data == {
+        "error": "That time falls outside this space's opening hours.",
+        "code": "reservation_outside_hours",
+    }
+    assert not BookingPeriod.objects.exists()
+
+
+def test_a_request_for_a_slot_that_already_began_today_is_refused(hourly_reservations, api_client):
+    """The request page no longer offers a start that has passed; the API
+    refuses one sent any other way (found in review, 2026-09-18). 2026-06-01
+    is a Monday, open 10-14 and 16-20; the clock stands at 12:00 (UTC here)."""
+    import time_machine
+
+    thing = hourly_reservations["thing"]
+    with time_machine.travel("2026-06-01 12:00:00+00:00", tick=False):
+        # Signed in inside the travel: a token minted at the real "now" would
+        # not be valid yet in June.
+        client = _member_client(api_client, hourly_reservations["member"])
+        past = client.post(
+            REQUEST_URL.format(thing.code),
+            {"start_date": "2026-06-01", "start_time": "10:00", "end_time": "11:00"},
+            format="json",
+        )
+        later = client.post(
+            REQUEST_URL.format(thing.code),
+            {"start_date": "2026-06-01", "start_time": "13:00", "end_time": "14:00"},
+            format="json",
+        )
+
+    assert past.status_code == status.HTTP_400_BAD_REQUEST
+    # The English sentence stays; the code is what lets the request page say it
+    # in the member's own language (core has no gettext catalogue).
+    assert past.data == {
+        "error": "That time has already begun.",
+        "code": "reservation_already_begun",
+    }
+    assert later.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "body"),
+    [
+        (
+            "10:30",
+            "11:30",
+            {
+                "error": "Reservations here start every 60 minutes from opening time.",
+                "code": "reservation_off_grid_start",
+                "params": {"step": 60},
+            },
+        ),
+        (
+            "10:00",
+            "11:30",
+            {
+                "error": "A reservation here lasts a multiple of 60 minutes.",
+                "code": "reservation_off_grid_length",
+                "params": {"step": 60},
+            },
+        ),
+        (
+            "10:00:30",
+            "11:00:30",
+            {
+                "error": "Reservation times are whole minutes (HH:MM).",
+                "code": "reservation_whole_minutes",
+            },
+        ),
+    ],
+)
+def test_an_hourly_request_off_the_pickers_grid_is_refused_with_the_rule(
+    hourly_reservations, authenticated_client2, start, end, body
+):
+    """The request page only ever sends starts on the minimum-minute grid and
+    durations that are multiples of it; a request made straight to the API
+    gets the same rules, named, instead of a booking that leaves slivers no
+    member can book (found in review, 2026-09-18)."""
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(hourly_reservations["thing"].code),
+        {"start_date": str(_next_weekday(0)), "start_time": start, "end_time": end},
+        format="json",
+    )
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.data == body
     assert not BookingPeriod.objects.exists()
 
 
@@ -927,7 +1183,11 @@ def test_a_reservation_past_the_horizon_is_refused(reservations, authenticated_c
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert "10" in str(resp.data)
+    assert resp.data == {
+        "error": "This space can only be booked up to 10 days ahead.",
+        "code": "reservation_beyond_horizon",
+        "params": {"days": 10},
+    }
 
 
 def test_send_reminders_skips_reservations(reservations):

@@ -615,6 +615,16 @@ The **name, description and language** of the collection a `/share/{token}` link
 
 Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked or INACTIVE token — the same `share_token=… , status=ACTIVE` filter `JoinView._resolve_target` uses — so the preview goes dark the instant the link does and reveals nothing the link itself doesn't already. The bearer link is the credential and whoever holds it already knows a real collection is behind it, so naming that collection to them is not a leak; naming anything *else* would be.
 
+### CollectionEmailNoteTestView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/email-note/test/` |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
+| **Rate limit** | 10 requests/hour per user |
+
+Mails the acting curator — and nobody else — their `email_note` **draft** (`{"email_note": "…"}`, unsaved, validated by `EmailNoteTestSerializer` with the collection field's own per-language limits: 512 visible / 2048 stored), rendered by `send_email_note_test_email` through the email's own `_note_blocks` and layout. A note written per language comes back with every version under its endonym. Design round, 2026-09-18: the note only ever reaches requesters, and a curator can't request their own things, so it was written blind; a page preview would lie (the email's Markdown subset has no headings or tables and prints a link's host after it). **Mandatory category** — the curator asked for it that moment, so an activity opt-out must not swallow it. 403 for a non-curator, 400 for an empty or over-long note, `{"status": "sent"}` otherwise.
+
 ### CollectionBroadcastView
 
 | | |
@@ -623,7 +633,7 @@ Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked 
 | **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 | **Rate limit** | 5 requests/day per user |
 
-Sends a broadcast email from the acting curator — the owner or a co-owner — to all invitees; the `Reply-To` and the name shown are whoever actually sent it, not necessarily the founding owner. Validates `message` (SafeTextField, max 256) via `CollectionBroadcastSerializer`; the subject is auto-generated as `Hey! {collection_headline}` (the owner does not provide one). Returns 400 if the collection has no invitees. Emails carry a `Reply-To` header (the owner) and a link to the collection (labelled "I can help!"); the in-app `BROADCAST` notification carries `collection_code` so it can deep-link there too. The email send is dispatched off the request thread in production (`_send_broadcast` → daemon thread when `EMAIL_SEND_ASYNC`, mirroring `_send_bulk_invites`) so a large group's sequential SMTP can't exhaust the Heroku 30s window (H12); the in-app notifications are still written synchronously.
+Sends a broadcast email from the acting curator — the owner or a co-owner — to all invitees; the `Reply-To` and the name shown are whoever actually sent it, not necessarily the founding owner. Validates `message` (SafeTextField, max 256) via `CollectionBroadcastSerializer`; the subject is auto-generated as `Hey! {collection_headline}` (the owner does not provide one). Returns 400 if the collection has no invitees. Emails carry a `Reply-To` header (the owner) and a link to the collection (labelled "Open the group" — it read "I can help!", a leftover of the retired WISH_THING call-for-help flow, until 2026-09); the in-app `BROADCAST` notification carries `collection_code` so it can deep-link there too. The email send is dispatched off the request thread in production (`_send_broadcast` → daemon thread when `EMAIL_SEND_ASYNC`, mirroring `_send_bulk_invites`) so a large group's sequential SMTP can't exhaust the Heroku 30s window (H12); the in-app notifications are still written synchronously.
 
 **Request body:**
 ```json
@@ -863,7 +873,7 @@ Lists all available theeemes. Returns `code` and `name` for each theeeme via `Th
 | **Endpoint** | `GET /api/v1/things/{thing_code}/calendar/` |
 | **Permission** | `AllowAny` + `get_viewable_thing()` (public read on a viewable thing) |
 
-Returns blocked periods for a thing's calendar. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees full details (`BookingPeriodOwnerCalendarSerializer`); guests see only dates and status (`BookingPeriodCalendarSerializer`).
+Returns blocked periods for a thing's calendar — PENDING/ACCEPTED bookings not already over (`BookingPeriod.blocking_filter`: undated, or ending yesterday or later); a thing's past is not served, to anyone. A **manager** — the owner, or a curator of a PROPRIETARY collection it sits in (`Thing.can_manage`, 2026-09) — sees full details (`BookingPeriodOwnerCalendarSerializer`); guests see only dates and status (`BookingPeriodCalendarSerializer`).
 
 ### MyBookingsView
 
@@ -940,16 +950,16 @@ Rejects a pending booking. Same permission and validation as accept.
 | **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner. For **RESERVE** the requester must also be a collection **member** (checked in `request_reservation`) — a login-to-act visitor joins first. |
 | **Rate limit** | 10 requests/hour per user |
 
-Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`, `request_reservation`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code, code=None)`, which the view maps back to `{"error": message}` with the same status — plus a top-level `"code"` key when `exc.code` is set. Only one raise sets it today: `request_reservation`'s membership check (`code="not_a_member"`), so the frontend's auto-join can tell that 403 apart from this same endpoint's *other* one (`get_viewable_thing`'s "not authorized", carrying no code) without pattern-matching English prose or treating every 403 alike. Routes based on thing type (RESERVE checked first, since it is also in `DATE_BASED_TYPES`):
+Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`, `request_reservation`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code, code=None, params=None)`, which the view maps back with `exc.as_body()`: `{"error": message}` with the same status, plus top-level `"code"` and `"params"` keys when set. **Every rule refusal is coded now** (design round, 2026-09-18) — the model's violations return a `core.utils.Refusal` (a `str` carrying `code` + `params`) that `BookingRequestError` picks up on its own, and the service's direct raises name theirs (`not_a_member`, `reservation_max_active` with `{max}`, `time_taken`/`dates_taken` on the 409, …). `core` has no gettext catalogue, so the English `error` sentence is what an unaware client shows; the SPA says the code in the reader's language (`requestErrors.<code>`, `apiErrorMessage` in `frontend/src/services/api.js`). `core/tests/unit/test_refusal_codes.py` reads the codes out of the source and fails if one has no string in any of the three locales. The membership code stays special beyond that: the frontend's auto-join tells that 403 apart from this same endpoint's *other* one (`get_viewable_thing`'s "not authorized", carrying no code) without pattern-matching English prose or treating every 403 alike. Routes based on thing type (RESERVE checked first, since it is also in `DATE_BASED_TYPES`):
 
 **RESERVE_THING (`_request_reservation`):**
 - Body `{ "start_date", "duration_days"? (1–7), "start_time"?, "end_time"?, "project_note"? (≤512) }` via `ReservationRequestSerializer` — **either `duration_days` or `start_time`+`end_time`, never both, never neither**, matching whichever unit (`DAY`/`HOUR`) the resolved collection is in.
-- `request_reservation` enforces membership (403 unless the requester is a collection member — login-to-act makes an anonymous visitor one first), `Collection.reservation_violation` or `reservation_hour_violation` (400, by unit), the horizon, the active-reservations cap, and `has_overlap` (409).
+- `request_reservation` enforces membership (403 unless the requester is a collection member — login-to-act makes an anonymous visitor one first), `Collection.reservation_violation` or `reservation_hour_violation` (400, by unit — for `HOUR`, times in whole minutes, starting on the `reservation_min_minutes` grid from the block's opening and lasting a multiple of it, the same choices the request page offers, and not a slot that already began today by the deployment's `TIME_ZONE`), the horizon, the active-reservations cap, and `has_overlap` (409).
 - **Auto-confirmed:** the booking is created `ACCEPTED`, both parties are emailed, the owner gets a `RESERVATION_MADE` in-app notice. No RSVP pair, no `ThingTransfer`. Response `201 {"message": "Reservation confirmed", "booking_code", "start_date", "end_date", "start_time", "end_time"}` — the last two `null` for a `DAY`-unit booking.
 
 **Date-based (LEND/RENT):**
 - Requires `start_date` and `end_date`.
-- **Rental rules (#7):** resolves the applicable collection (the `collection_code` in the body — the SPA passes the collection context — else the thing's first collection with rules) and calls `collection.rental_violation(start, end)`. Returns 400 if the span isn't an allowed fixed duration, the pickup/return day isn't an allowed weekday, **or the pickup/return day is a `closed_dates` holiday** (only the handoff days — an interior closure doesn't matter for a loan). Collections without rules impose no constraint (legacy free range). This is the server-side backstop; the frontend already limits the picker.
+- **Rental rules (#7):** resolves the applicable collection (the `collection_code` in the body — the SPA passes the collection context — **when the requester may read that collection**, else the thing's first collection with rules) and calls `collection.rental_violation(start, end)`. Returns 400 if the span isn't an allowed fixed duration, the pickup/return day isn't an allowed weekday, **or the pickup/return day is a `closed_dates` holiday** (only the handoff days — an interior closure doesn't matter for a loan). Collections without rules impose no constraint (legacy free range). This is the server-side backstop; the frontend already limits the picker.
 - Checks for conflict via `BookingPeriod.has_overlap()` (**strict** overlap — a booking's return day may be the next's pickup day; only a shared interior day conflicts). Returns 409 if conflict.
 - Thing stays `ACTIVE` (multiple bookings for different date ranges allowed).
 
@@ -1149,7 +1159,7 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 | **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
 | **Rate limit** | 20 requests per hour per user |
 
-The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as a **Google Calendar CSV** — one all-day event per reservation, spanning its block. The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv); this view is who may ask and what the browser may keep.
+The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as a **Google Calendar CSV** — one all-day event per reservation, spanning its block, or one timed event for an `HOUR`-unit reservation (its real start and end, on its one day). The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv); this view is who may ask and what the browser may keep.
 
 **Incremental.** Each call returns only the reservations not exported *for this collection* before and records that it has (`CalendarExportMark`), so importing the file twice never doubles the calendar. The response header **`X-Calendar-Events`** carries the count; `0` means header-only CSV and the SPA shows "nothing new" instead of triggering a download. There is no "download everything" variant.
 
@@ -1222,6 +1232,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - Invitation **emails** (single + bulk combined) — **unlimited unless the operator sets `INVITE_EMAILS_PER_DAY`** (counts emails, not requests, so the bulk fan-out can't multiply past it; 0/unset = off)
 - `/things/{code}/request/` POST — 10 requests per hour per user
 - `/things/{code}/faq/` POST — 20 requests per hour per user
+- `/collections/{code}/email-note/test/` POST — 10 requests per hour per user
 - `/collections/{code}/broadcast/` POST — 5 requests per day per user
 - `/collections/{code}/share-link/` POST — 30 requests per hour per user
 - `/things/{code}/report/` POST — 10 requests per hour per user

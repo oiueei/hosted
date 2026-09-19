@@ -95,18 +95,45 @@ export const formatDate = (value) => {
 // A booking's date/time range for a listing row — MyBookingsPage,
 // OwnerBookingsPage, OwnerBookingsList — read straight off the API's own
 // field names (`start_date`/`end_date` ISO dates, `start_time`/`end_time`
-// 'HH:MM:SS' or absent). A whole-day booking (every LEND/RENT, every
-// DAY-unit RESERVE — `start_time` unset) renders exactly as before this
-// helper existed: 'DD/MM/YYYY — DD/MM/YYYY'. An HOUR-unit RESERVE_THING slot
-// renders the date once plus both clock times: 'DD/MM/YYYY, HH:MM–HH:MM'.
-// '' when there are no dates at all (GIFT/SELL).
-export const formatBookingWhen = (booking) => {
+// 'HH:MM:SS' or absent). A loan or rental renders 'DD/MM/YYYY — DD/MM/YYYY',
+// pickup to return. An HOUR-unit RESERVE_THING slot renders the date once
+// plus both clock times: 'DD/MM/YYYY, HH:MM–HH:MM'. A DAY-unit reservation
+// ends on its LAST day, inclusive — the date alone for one day — because its
+// `end_date` is `start + duration`, the day the space is free again: a
+// one-day reservation used to list as two days. `thingType` defaults to the
+// booking's own `thing_type`; OwnerBookingsList's calendar rows don't carry
+// one, so their card passes it. '' when there are no dates at all (GIFT/SELL).
+export const formatBookingWhen = (booking, thingType = booking?.thing_type) => {
   if (!booking?.start_date || !booking?.end_date) return '';
   const date = formatDate(booking.start_date);
   if (booking.start_time && booking.end_time) {
     return `${date}, ${booking.start_time.slice(0, 5)}–${booking.end_time.slice(0, 5)}`;
   }
+  if (thingType === 'RESERVE_THING') {
+    const lastDay = formatDate(addDays(booking.end_date.slice(0, 10), -1));
+    return lastDay === date ? date : `${date} — ${lastDay}`;
+  }
   return `${date} — ${formatDate(booking.end_date)}`;
+};
+
+// What a request page is about to book (or just booked), read off the POST
+// body it sends — the one thing both the pre-submit summary and the success
+// notice can agree on. An HOUR-unit reservation: 'DD/MM/YYYY, HH:MM–HH:MM'. A
+// DAY-unit one (`duration_days`): its LAST day, inclusive — 'DD/MM/YYYY' alone
+// for a single day, else 'DD/MM/YYYY — DD/MM/YYYY' — never the `start +
+// duration` the server stores as `end_date`, which is the day the space is
+// free again. A loan or rental: pickup — return, as sent. '' for no dates.
+export const formatRequestedWhen = (body) => {
+  if (!body?.start_date) return '';
+  const start = isoToDisplay(body.start_date);
+  if (body.start_time && body.end_time) return `${start}, ${body.start_time}–${body.end_time}`;
+  if (body.duration_days) {
+    const days = Number(body.duration_days);
+    if (days <= 1) return start;
+    return `${start} — ${isoToDisplay(derivedReturnDate(body.start_date, days - 1))}`;
+  }
+  if (body.end_date) return `${start} — ${isoToDisplay(body.end_date)}`;
+  return start;
 };
 
 // 'DD/MM/YYYY' (loose D/M/YYYY accepted) → 'YYYY-MM-DD' ('' for malformed or
@@ -301,6 +328,17 @@ export const durationOptions = (minMinutes, maxMinutes) => {
   return options;
 };
 
+// The earliest a slot on `isoDate` may start, in minutes since midnight: the
+// current minute when `isoDate` is today by the browser's clock, else 0. A slot
+// that has already begun is not something to offer. The server refuses one too
+// (`Collection.reservation_hour_violation`), by the deployment's own clock
+// (`DJANGO_TIME_ZONE`, the zone `opening_hours` is written in); this uses the
+// browser's, assumed to share the venue's time zone — which for an on-site
+// reservation it almost always does. Both count a start in the current minute
+// as not yet begun.
+export const earliestStartMinutes = (isoDate, now = new Date()) =>
+  isoDate === toISODate(now) ? now.getHours() * 60 + now.getMinutes() : 0;
+
 // The valid start times ("HH:MM") for a chosen duration, stepped every
 // `stepMinutes` within each opening block — the collection's `reservation_
 // min_minutes`, so a short minimum genuinely offers more than one start per
@@ -308,13 +346,23 @@ export const durationOptions = (minMinutes, maxMinutes) => {
 // only ever offer :00 starts, making the shorter minimum useless. Every
 // candidate must fit inside a single block — a span crossing one of the gaps
 // between blocks is not offered (the "full day" special case that once
-// allowed exactly that went with its option, 2026-09). Empty whenever the
-// day is `wholeDay`-booked.
-export const freeStartTimes = (blocks, durationMinutes, dayBookingsResult, stepMinutes) => {
+// allowed exactly that went with its option, 2026-09). Starts before
+// `earliestStart` (`earliestStartMinutes`, above) are skipped; the step grid
+// itself still runs from each block's opening, so the starts that remain
+// later in the day are the same ones offered on any other day. Empty whenever
+// the day is `wholeDay`-booked.
+export const freeStartTimes = (
+  blocks,
+  durationMinutes,
+  dayBookingsResult,
+  stepMinutes,
+  earliestStart = 0
+) => {
   if (dayBookingsResult.wholeDay) return [];
   const starts = [];
   for (const block of blocks) {
     for (let cursor = block.start; cursor + durationMinutes <= block.end; cursor += stepMinutes) {
+      if (cursor < earliestStart) continue;
       if (!minutesRangeOverlaps(cursor, cursor + durationMinutes, dayBookingsResult.ranges)) {
         starts.push(formatHM(cursor));
       }
@@ -324,19 +372,26 @@ export const freeStartTimes = (blocks, durationMinutes, dayBookingsResult, stepM
 };
 
 // Disable a day in the HOUR-unit picker when it's a closure day, the
-// collection is closed that weekday, or — walking every duration choice —
-// nothing on the calendar leaves even one free start that day. `minMinutes`/
-// `maxMinutes` are the collection's `reservation_min_minutes`/
-// `reservation_max_minutes`.
+// collection is closed that weekday, or nothing on the calendar leaves even one
+// free start that day (for today, counting only starts not yet passed at
+// `now`). `minMinutes` is the collection's `reservation_min_minutes`.
+//
+// Only the **shortest** duration needs trying, not every choice
+// `durationOptions` offers: any longer duration that fits at some start also
+// leaves the minimum free at that same start (a sub-span, on the same grid),
+// so "some duration fits" and "the minimum fits" are the same question. Asking
+// it once matters because this runs for every visible calendar cell on every
+// render — a 5-to-720-minute collection offers 144 durations, and on a fully
+// booked day each of them used to walk the whole start grid before giving up.
 export const isHourlyPickupDisabled = (
   date,
-  { openingHours = {}, closedDates = [], blockedPeriods = [], minMinutes = 60, maxMinutes = 180 }
+  { openingHours = {}, closedDates = [], blockedPeriods = [], minMinutes = 60, now = new Date() }
 ) => {
   if (isClosedDate(date, closedSet(closedDates))) return true;
   const blocks = dayBlocks(openingHours, date);
   if (!blocks.length) return true;
-  const bookings = dayBookings(blockedPeriods, toISODate(parseLocalDate(date)));
-  return !durationOptions(minMinutes, maxMinutes).some(
-    (opt) => freeStartTimes(blocks, opt.minutes, bookings, minMinutes).length > 0
-  );
+  const isoDate = toISODate(parseLocalDate(date));
+  const bookings = dayBookings(blockedPeriods, isoDate);
+  const earliest = earliestStartMinutes(isoDate, now);
+  return freeStartTimes(blocks, minMinutes, bookings, minMinutes, earliest).length === 0;
 };

@@ -383,16 +383,29 @@ def test_the_header_speaks_the_readers_language(user):
 # 13:00" reads correctly with no catalogue edits.
 
 
-def test_fmt_when_a_whole_day_booking_is_unchanged():
-    """start_time NULL (every LEND/RENT, every DAY-unit RESERVE) still renders
-    two full dates, byte-identical to before this feature existed."""
+def test_fmt_when_a_one_day_reservation_ends_on_that_day():
+    """A DAY-unit reservation stores ``end_date = start + duration`` — the day the
+    space is free again. The emails used to print it as the end, so a one-day
+    reservation on the 5th was "confirmed for 05/10 to 06/10": a day the member
+    never booked, and possibly somebody else's."""
     from datetime import date
 
     from core.models import BookingPeriod
 
     booking = BookingPeriod(start_date=date(2026, 10, 5), end_date=date(2026, 10, 6))
 
-    assert email_service._fmt_when(booking) == ("05/10/2026", "06/10/2026")
+    assert email_service._fmt_when(booking) == ("05/10/2026", "05/10/2026")
+
+
+def test_fmt_when_a_multi_day_reservation_ends_on_its_last_day():
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    # Three days from Monday the 5th: the 5th, 6th and 7th.
+    booking = BookingPeriod(start_date=date(2026, 10, 5), end_date=date(2026, 10, 8))
+
+    assert email_service._fmt_when(booking) == ("05/10/2026", "07/10/2026")
 
 
 def test_fmt_when_an_hourly_booking_names_the_date_once_and_two_times():
@@ -446,6 +459,33 @@ def test_an_hourly_reservation_confirmation_reads_correctly_in_all_three_languag
         assert phrase in body, f"{lang}: {phrase!r} not in {body!r}"
 
 
+@pytest.mark.django_db
+def test_a_day_reservation_confirmation_names_the_days_booked_and_no_other(user, user2, thing):
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 10, 5),
+        end_date=date(2026, 10, 7),  # two days: the 5th and the 6th
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    email_service.send_reservation_confirmed_email(user2, thing, booking)
+
+    sent = mail.outbox[0]
+    for part in (sent.body, sent.alternatives[0][0]):
+        assert "06/10/2026" in part
+        assert "07/10/2026" not in part
+
+
 # --- The owner's email note (Collection.email_note) ------------------------------
 
 
@@ -466,7 +506,8 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     html = str(blocks[0]["html"])
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
-        '<ul><li>Trae tu <a href="https://example.com/reglas">carnet</a></li><li>Planta 2</li></ul>'
+        '<ul><li>Trae tu <a href="https://example.com/reglas">carnet</a> (example.com)</li>'
+        "<li>Planta 2</li></ul>"
     )
     assert expected_list in html
     assert "<ol><li>Confirma</li><li>Llega pronto</li></ol>" in html
@@ -480,6 +521,65 @@ def test_note_blocks_leaves_an_unsafe_url_as_literal_text():
     html = str(blocks[0]["html"])
     assert "<a " not in html
     assert "[esto](javascript:alert(1))" in html
+
+
+def test_a_link_dressed_as_another_address_names_where_it_really_goes():
+    """The owner picks both the text and the target, and the email leaves from
+    the operator's own domain — so text that looks like the operator's sign-in
+    link must not be all the reader sees."""
+    _, blocks = email_service._note_blocks(
+        "[https://www.oiueei.com/verify/abc](https://elsewhere.example/verify)"
+    )
+    html = str(blocks[0]["html"])
+    assert html == (
+        '<p><a href="https://elsewhere.example/verify">https://www.oiueei.com/verify/abc</a>'
+        " (elsewhere.example)</p>"
+    )
+
+
+def test_a_link_whose_text_is_its_own_url_needs_no_host():
+    _, blocks = email_service._note_blocks(
+        "[https://example.com/a?b=1&c=2](https://example.com/a?b=1&c=2)"
+    )
+    html = str(blocks[0]["html"])
+    # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
+    # "(example.com)" repeating what the text already says.
+    assert html == (
+        '<p><a href="https://example.com/a?b=1&amp;c=2">https://example.com/a?b=1&amp;c=2</a></p>'
+    )
+
+
+def test_a_lookalike_host_is_named_in_punycode():
+    # "еxample.com" with a Cyrillic е: shown as itself it would pass for the
+    # real name; in ASCII it cannot.
+    _, blocks = email_service._note_blocks("[rules](https://\u0435xample.com/rules)")
+    html = str(blocks[0]["html"])
+    assert "(xn--xample-2of.com)" in html
+    assert "(\u0435xample.com)" not in html
+
+
+def test_a_link_with_no_host_stays_literal_text():
+    _, blocks = email_service._note_blocks("mira [esto](https://)")
+    html = str(blocks[0]["html"])
+    assert "<a " not in html
+    assert "[esto](https://)" in html
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://[oops/normas",  # an unclosed IPv6 bracket: urlsplit raises ValueError
+        "https://" + "a" * 64 + ".example/normas",  # a 64-char label: IDNA raises UnicodeError
+    ],
+)
+def test_a_link_whose_host_cannot_be_read_stays_literal_text(url):
+    """An owner can type either of these by accident. Both make the host
+    lookup raise; the note must still render — as the literal text the owner
+    wrote — or every email carrying it would fail to send."""
+    _, blocks = email_service._note_blocks(f"Normas: [aquí]({url})")
+    html = str(blocks[0]["html"])
+    assert "<a " not in html
+    assert f"[aquí]({url})" in html
 
 
 def test_note_blocks_escapes_html_before_transforming(collection):
@@ -646,11 +746,38 @@ def test_the_acceptance_decision_carries_the_note_but_a_refusal_does_not(
     )
 
     mail.outbox.clear()
-    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    email_service.send_booking_decision_email(booking, thing, accepted=True, collection=collection)
     assert "Recogida en <strong>planta 2</strong>" in mail.outbox[0].alternatives[0][0]
     assert "Recogida en **planta 2**" in mail.outbox[0].body
 
     mail.outbox.clear()
-    email_service.send_booking_decision_email(booking, thing, accepted=False)
+    email_service.send_booking_decision_email(booking, thing, accepted=False, collection=collection)
+    assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
+    assert "Recogida en" not in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_the_decision_takes_no_note_from_a_collection_it_was_not_given(
+    user, user2, thing, collection
+):
+    """The note's collection is the caller's to resolve for this requester
+    (`finalize_booking_decision`, among collections they may read). Given
+    none, the email carries none — it no longer falls back to the thing's
+    first collection, which can be a private group the requester isn't in."""
+    from core.models import BookingPeriod
+
+    collection.email_note = "Recogida en **planta 2**"
+    collection.save(update_fields=["email_note"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
     assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
     assert "Recogida en" not in mail.outbox[0].body
