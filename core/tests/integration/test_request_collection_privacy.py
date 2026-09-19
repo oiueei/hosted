@@ -22,6 +22,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection, Thing
 from core.models.booking import BookingPeriod
+from core.models.notification import InAppNotification
 
 pytestmark = pytest.mark.django_db
 
@@ -163,3 +164,30 @@ class TestRentalRulesComeFromAGroupTheRequesterCanRead:
 
         assert response.status_code == 400
         assert not BookingPeriod.objects.filter(thing_code=thing).exists()
+
+
+class TestWithNoGroupNamedTheRulesGroupSpeaks:
+    def test_the_group_whose_rules_apply_is_the_one_the_request_goes_to(self, user, user2, groups):
+        # Both groups are readable to this member now. With no collection named,
+        # the one whose rental rules govern the dates is also the one the
+        # request is filed under and whose note the requester gets — not merely
+        # the lowest code, which is the private group here.
+        groups["private"].invites.add(user2)
+        groups["public"].rental_weekdays = list(range(7))
+        groups["public"].save(update_fields=["rental_weekdays"])
+        thing = _thing(user, groups, Thing.Type.LEND_THING, "LEND03")
+        start = timezone.localdate() + timedelta(days=3)
+        mail.outbox.clear()
+
+        response = _client(user2).post(
+            f"/api/v1/things/{thing.code}/request/",
+            {"start_date": str(start), "end_date": str(start + timedelta(days=2))},
+            format="json",
+        )
+
+        assert response.status_code == 201
+        [confirmation] = _requester_mail(user2)
+        assert PUBLIC_NOTE in confirmation.body
+        assert PRIVATE_NOTE not in confirmation.body
+        notice = InAppNotification.objects.get(user=user, type="BOOKING_REQUESTED")
+        assert notice.payload["collection_code"] == "ZZPUBL"
