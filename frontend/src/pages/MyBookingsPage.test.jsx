@@ -1,7 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import MyBookingsPage from './MyBookingsPage';
+
+expect.extend(toHaveNoViolations);
 
 // The JSON shape `/api/v1/my-bookings/` returns (the subset the page reads).
 const booking = (over = {}) => ({
@@ -222,6 +225,77 @@ describe('MyBookingsPage cancelling', () => {
     expect(screen.queryByText('No pending requests.')).not.toBeInTheDocument();
     // Still cancellable — the user has to be able to try again.
     expect(screen.getByRole('button', { name: 'Cancel this booking request' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * A reservation auto-confirms, so cancelling one tells the group, frees the slot
+ * for anybody else, and cannot be undone. It used to go on one press of an icon
+ * in a table row; now the press asks first, naming what would go. (Withdrawing a
+ * *pending* request stays one press — pinned by the block above, whose POST is
+ * the very next call after the click.)
+ */
+describe('MyBookingsPage cancelling a confirmed reservation', () => {
+  const reservation = booking({
+    thing_type: 'RESERVE_THING',
+    thing_headline: 'Laser cutter',
+    status: 'ACCEPTED',
+    start_date: '2099-01-10',
+    end_date: '2099-01-11',
+    start_time: '10:00:00',
+    end_time: '11:30:00',
+  });
+  const posts = () => globalThis.fetch.mock.calls.filter(([, o]) => o?.method === 'POST');
+
+  beforeEach(() => {
+    globalThis.fetch = vi.fn((url, opts) =>
+      Promise.resolve(
+        opts?.method === 'POST'
+          ? { ok: true, status: 200, json: async () => ({}) }
+          : { ok: true, status: 200, json: async () => ({ results: [reservation] }) }
+      )
+    );
+  });
+
+  test('one press asks first, names what would go, and sends nothing', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cancel this reservation?' });
+    expect(dialog).toHaveTextContent('Laser cutter — 10/01/2099, 10:00–11:30');
+    expect(dialog).toHaveTextContent(/can't be undone/);
+    expect(posts()).toHaveLength(0);
+    // Scoped to the dialog, which is what this adds. `region` is off: the render
+    // has no app landmarks to hold it (as in a11yInteractive.test.jsx).
+    expect(await axe(dialog, { rules: { region: { enabled: false } } })).toHaveNoViolations();
+  });
+
+  test('confirming cancels it, once, and says it was the reservation', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+    const dialog = await screen.findByRole('dialog');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel reservation' }));
+
+    expect(await screen.findByText('Reservation cancelled.')).toBeInTheDocument();
+    expect(posts().map(([u]) => u)).toEqual(['/api/v1/bookings/BKG001/cancel/']);
+    expect(screen.getByText('Cancelled')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('backing out leaves the reservation standing', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+    const dialog = await screen.findByRole('dialog');
+
+    // Its way out is "Back": a "Cancel" beside "Cancel reservation" would read
+    // as the same action.
+    expect(within(dialog).queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Back' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(posts()).toHaveLength(0);
+    expect(screen.getByText('Confirmed')).toBeInTheDocument();
   });
 });
 

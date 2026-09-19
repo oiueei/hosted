@@ -552,7 +552,9 @@
     "captionPending": "Requests waiting for an answer",
     "captionPast": "Requests already closed",
     "cancelReservation": "Cancel reservation",
-    "currentHeading": "Current"
+    "currentHeading": "Current",
+    "cancelReservationConfirmBody": "We'll tell whoever runs the group, and the slot opens up for someone else to book. This can't be undone.",
+    "reservationCancelled": "Reservation cancelled."
   },
   "ownerBookings": {
     "pageTitle": "Requests to me",
@@ -571,7 +573,8 @@
     "captionPending": "Requests waiting for your answer",
     "captionPast": "Requests you have already answered",
     "cancelReservation": "Cancel reservation",
-    "reservationCancelled": "Reservation cancelled — the member has been told."
+    "reservationCancelled": "Reservation cancelled — the member has been told.",
+    "cancelReservationConfirmBody": "We'll tell them it's been cancelled, and the slot opens up for someone else to book. This can't be undone."
   },
   "manageInvites": {
     "pageTitle": "Manage guests",
@@ -1007,7 +1010,8 @@
     "startTimeLabel": "Starting at:",
     "startTimeRequired": "Please choose a start time",
     "noStartTimesLabel": "No times available",
-    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one."
+    "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one.",
+    "cancelConfirmTitle": "Cancel this reservation?"
   },
   "closedDates": {
     "label": "Holidays and closures",

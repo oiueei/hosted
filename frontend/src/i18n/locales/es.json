@@ -546,7 +546,9 @@
     "captionPending": "Solicitudes a la espera de respuesta",
     "captionPast": "Solicitudes ya cerradas",
     "cancelReservation": "Cancelar la reserva",
-    "currentHeading": "Actuales"
+    "currentHeading": "Actuales",
+    "cancelReservationConfirmBody": "Avisaremos a quien lleva el grupo, y quedará libre para que otra persona lo reserve. No se puede deshacer.",
+    "reservationCancelled": "Reserva cancelada."
   },
   "ownerBookings": {
     "pageTitle": "Solicitudes para mí",
@@ -565,7 +567,8 @@
     "captionPending": "Solicitudes esperando tu respuesta",
     "captionPast": "Solicitudes que ya has respondido",
     "cancelReservation": "Cancelar la reserva",
-    "reservationCancelled": "Reserva cancelada; hemos avisado al miembro."
+    "reservationCancelled": "Reserva cancelada; hemos avisado al miembro.",
+    "cancelReservationConfirmBody": "Le avisaremos de que se ha cancelado, y quedará libre para que otra persona lo reserve. No se puede deshacer."
   },
   "manageInvites": {
     "pageTitle": "Gestionar invitados",
@@ -1007,7 +1010,8 @@
     "startTimeLabel": "A partir de:",
     "startTimeRequired": "Elige una hora de inicio",
     "noStartTimesLabel": "Sin horas disponibles",
-    "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta."
+    "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta.",
+    "cancelConfirmTitle": "¿Cancelar esta reserva?"
   },
   "closedDates": {
     "label": "Festivos y cierres",

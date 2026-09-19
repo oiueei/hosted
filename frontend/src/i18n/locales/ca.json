@@ -546,7 +546,9 @@
     "captionPending": "Sol·licituds a l'espera de resposta",
     "captionPast": "Sol·licituds ja tancades",
     "cancelReservation": "Cancel·lar la reserva",
-    "currentHeading": "Actuals"
+    "currentHeading": "Actuals",
+    "cancelReservationConfirmBody": "N'avisarem qui porta el grup, i quedarà lliure perquè una altra persona el reservi. No es pot desfer.",
+    "reservationCancelled": "Reserva cancel·lada."
   },
   "ownerBookings": {
     "pageTitle": "Sol·licituds per a mi",
@@ -565,7 +567,8 @@
     "captionPending": "Sol·licituds esperant la teva resposta",
     "captionPast": "Sol·licituds que ja has respost",
     "cancelReservation": "Cancel·lar la reserva",
-    "reservationCancelled": "Reserva cancel·lada; n'hem avisat el membre."
+    "reservationCancelled": "Reserva cancel·lada; n'hem avisat el membre.",
+    "cancelReservationConfirmBody": "L'avisarem que s'ha cancel·lat, i quedarà lliure perquè una altra persona el reservi. No es pot desfer."
   },
   "manageInvites": {
     "pageTitle": "Gestionar convidats",
@@ -1007,7 +1010,8 @@
     "startTimeLabel": "A partir de:",
     "startTimeRequired": "Tria una hora d'inici",
     "noStartTimesLabel": "Sense hores disponibles",
-    "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta."
+    "noStartTimesForDuration": "No queda cap hora lliure per a aquesta durada aquell dia — prova'n una de més curta.",
+    "cancelConfirmTitle": "Vols cancel·lar aquesta reserva?"
   },
   "closedDates": {
     "label": "Festius i tancaments",
