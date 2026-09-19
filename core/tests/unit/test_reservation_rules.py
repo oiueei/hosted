@@ -530,6 +530,30 @@ def test_compute_hourly_availability_respects_the_horizon(db):
     assert next_available is None
 
 
+def test_compute_hourly_availability_offers_the_horizon_day_itself(db):
+    """The walk runs to `today + horizon` inclusive — the same last day
+    `reservation_hour_violation` accepts and the picker offers. Stopping one
+    day short would grey out a day the server would have taken (a surviving
+    mutant, mutation sweep 2026-09-19)."""
+    owner = User.objects.create(code="HAVOW3", email="havow3@test.com")
+    coll = Collection.objects.create(
+        code="HAVCO3",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_horizon_days=6,
+        # Open on Mondays only, so the one day with any room is the very last
+        # the walk is allowed to reach.
+        opening_hours={"0": [["10:00", "14:00"]]},
+    )
+    tuesday = date(2026, 6, 2)
+    horizon_day = tuesday + timedelta(days=6)  # Monday 2026-06-08
+    assert horizon_day.weekday() == 0
+
+    assert compute_hourly_availability([], coll, today=tuesday) == (False, horizon_day)
+
+
 def test_availability_window_for_hourly_reserve_uses_compute_hourly_availability(
     hourly_reservations_collection,
 ):
@@ -942,6 +966,20 @@ def test_reservation_hour_violation_rejects_past_the_horizon(db):
     )
     assert _refused(msg) == "reservation_beyond_horizon"
     assert msg.params == {"days": 14}
+    # The horizon day itself is the picker's own last selectable day — the
+    # exact boundary the DAY-unit rule had a test for and this one did not
+    # (a surviving mutant, mutation sweep 2026-09-19); the day after is out.
+    assert (
+        coll.reservation_hour_violation(
+            today + timedelta(days=14), time(10, 0), time(11, 0), today=today
+        )
+        is None
+    )
+    assert _refused(
+        coll.reservation_hour_violation(
+            today + timedelta(days=15), time(10, 0), time(11, 0), today=today
+        )
+    ) == ("reservation_beyond_horizon")
 
 
 def test_reservation_hour_violation_rejects_a_closed_date(hourly_reservations_collection):
