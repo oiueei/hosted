@@ -286,7 +286,8 @@
     "showMoreThings_other": "Show {{count}} more things",
     "visitorIntro": "You're browsing this group as a visitor.",
     "visitorJoin": "Join this group",
-    "visitorJoinError": "We couldn't add you to the group. Please try again."
+    "visitorJoinError": "We couldn't add you to the group. Please try again.",
+    "welcomeDoc": "The group's welcome document (PDF)"
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",

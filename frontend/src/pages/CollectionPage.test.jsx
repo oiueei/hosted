@@ -1178,3 +1178,44 @@ describe('CollectionPage — the owner wrote in the visitor’s language', () =>
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * A group's welcome PDF reached a member once, in the email sent when they
+ * joined, and nowhere else: a member who had deleted it could not find it
+ * again. The API serves `welcome_doc_url` to curators and members only (the
+ * 2026-09-18 security round), so the page shows whatever it is given.
+ */
+describe('CollectionPage — the welcome document', () => {
+  const renderWith = (collection) => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(collection) })
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  test('a member can open it from the group page, in a new tab', async () => {
+    renderWith({
+      ...PUBLIC_COMMUNITY,
+      is_member: true,
+      welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
+    });
+
+    const link = await screen.findByRole('link', { name: /welcome document \(PDF\)/ });
+    expect(link).toHaveAttribute('href', 'https://bucket.example.com/oiueei/documents/welcome.pdf');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  test('no document, or none served to this reader, means no link', async () => {
+    renderWith({ ...PUBLIC_COMMUNITY, welcome_doc_url: '' });
+
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('link', { name: /welcome document/ })).not.toBeInTheDocument();
+  });
+});

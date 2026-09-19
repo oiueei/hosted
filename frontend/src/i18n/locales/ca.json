@@ -280,7 +280,8 @@
     "showMoreThings_other": "Veure {{count}} coses més",
     "visitorIntro": "Estàs veient aquest grup com a visitant.",
     "visitorJoin": "Unir-me al grup",
-    "visitorJoinError": "No hem pogut afegir-te al grup. Torna-ho a provar."
+    "visitorJoinError": "No hem pogut afegir-te al grup. Torna-ho a provar.",
+    "welcomeDoc": "Document de benvinguda del grup (PDF)"
   },
   "digestMute": {
     "pageTitle": "Resums per correu — OIUEEI",

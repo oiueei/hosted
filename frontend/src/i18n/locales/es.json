@@ -280,7 +280,8 @@
     "showMoreThings_other": "Ver {{count}} cosas más",
     "visitorIntro": "Estás viendo este grupo como visitante.",
     "visitorJoin": "Unirme al grupo",
-    "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo."
+    "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo.",
+    "welcomeDoc": "Documento de bienvenida del grupo (PDF)"
   },
   "digestMute": {
     "pageTitle": "Resúmenes por correo — OIUEEI",

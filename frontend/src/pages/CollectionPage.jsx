@@ -325,6 +325,22 @@ export default function CollectionPage() {
                     </Link>
                   </p>
                 )}
+            {/* The group's welcome PDF used to exist only in the one email a
+                member gets on joining: delete that, and it was gone. The API
+                serves its URL to curators and members only, so its presence is
+                the whole condition. */}
+            {collection.welcome_doc_url && (
+              <p className="invite-nudge">
+                <a
+                  href={collection.welcome_doc_url}
+                  className="owner-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('collectionPage.welcomeDoc')}
+                </a>
+              </p>
+            )}
             {!isAuthenticated && (
               <p className="invite-nudge">
                 {t('collectionPage.anonIntro')}{' '}
