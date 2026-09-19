@@ -339,7 +339,9 @@ export default function ManageInvitesPage() {
               ? [
                   {
                     key: '_actions',
-                    headerName: '',
+                    // Named for a screen reader only: the buttons below say what they do,
+                    // and an empty <th> leaves the column nameless (axe empty-table-header).
+                    headerName: <span className="sr-only">{t('common.colActions')}</span>,
                     transform: (row) => (
                       <div
                         style={{

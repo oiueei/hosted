@@ -74,6 +74,17 @@ describe('MyBookingsPage listing', () => {
     expect(screen.getByRole('table', { name: 'Requests already closed' })).toBeInTheDocument();
   });
 
+  test('the column holding the cancel control has a name a screen reader can say', async () => {
+    // It was an empty <th> (axe empty-table-header): moving through the row, a
+    // reader reached the cancel control under a column with no name at all.
+    mockList([booking()]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    expect(screen.getAllByRole('columnheader', { name: 'Actions' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('columnheader', { name: '' })).not.toBeInTheDocument();
+  });
+
   test('with nothing pending, the section says so instead of vanishing', async () => {
     // An empty pending table would read as "the page is broken", not "you have
     // no open requests".

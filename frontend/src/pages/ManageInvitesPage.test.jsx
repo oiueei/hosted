@@ -66,6 +66,16 @@ describe('ManageInvitesPage (the guest list)', () => {
     localStorage.clear();
   });
 
+  test('the column holding each guest’s controls has a name a screen reader can say', async () => {
+    // It was an empty <th> (axe empty-table-header) above Resend / Remove.
+    mockRoutes();
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(screen.getAllByRole('columnheader', { name: 'Actions' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('columnheader', { name: '' })).not.toBeInTheDocument();
+  });
+
   test('the owner invites by email: POST contract, optimistic pending row, cleared input', async () => {
     mockRoutes();
     renderPage();

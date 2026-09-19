@@ -217,7 +217,9 @@ export default function MyBookingsPage() {
     },
     {
       key: '_actions',
-      headerName: '',
+      // Named for a screen reader only: the buttons below say what they do,
+      // and an empty <th> leaves the column nameless (axe empty-table-header).
+      headerName: <span className="sr-only">{t('common.colActions')}</span>,
       transform: (row) =>
         row._status === 'PENDING' || isFutureReservation(row) ? (
           <TooltipButton

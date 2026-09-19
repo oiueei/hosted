@@ -124,6 +124,17 @@ describe('OwnerBookingsPage listing', () => {
     ).toBeInTheDocument();
   });
 
+  test('the column holding the decisions has a name a screen reader can say', async () => {
+    // It was an empty <th> (axe empty-table-header), above the confirm/decline
+    // controls of every row.
+    mockApi([{ results: [booking()], next: null }]);
+    renderPage();
+
+    await screen.findByRole('link', { name: 'Cordless drill' });
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: '' })).not.toBeInTheDocument();
+  });
+
   test('with nothing pending, the section says so rather than vanishing', async () => {
     mockApi([{ results: [booking({ status: 'REJECTED' })], next: null }]);
     renderPage();
