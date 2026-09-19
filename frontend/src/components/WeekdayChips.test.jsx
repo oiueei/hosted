@@ -73,9 +73,7 @@ describe('WeekdayChips — the weekday toggle', () => {
   test('the label and helper come from the keys the caller passes', () => {
     renderChips({ labelKey: 'reservation.weekdaysLabel', helperKey: 'reservation.weekdaysHelper' });
     expect(screen.getByRole('group', { name: 'Days open for reservations' })).toBeInTheDocument();
-    expect(
-      screen.getByText(/A reservation can't span a day the space is closed\./)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/A reservation can't span a closed day\./)).toBeInTheDocument();
   });
 });
 

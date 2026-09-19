@@ -117,7 +117,11 @@ describe('SharePage — naming the collection a /share link opens (S10)', () => 
     );
     renderShare();
 
-    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca'));
+    // With the texts the stranger is about to read, so a translation the owner
+    // wrote in the visitor's own language can keep them in it.
+    await waitFor(() =>
+      expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', ['The Tool Library', ''])
+    );
   });
 
   test('a preview missing a headline never reaches useCollectionLanguage with its language', async () => {
@@ -128,6 +132,6 @@ describe('SharePage — naming the collection a /share link opens (S10)', () => 
     renderShare();
 
     await screen.findByRole('heading', { name: 'Join us on OIUEEI', level: 1 });
-    expect(useCollectionLanguage).toHaveBeenLastCalledWith(undefined);
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith(undefined, [undefined, undefined]);
   });
 });

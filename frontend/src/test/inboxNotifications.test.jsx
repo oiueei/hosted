@@ -245,9 +245,28 @@ describe('InboxNotifications — every type says something', () => {
       says: [/no longer a co-curator/i, /regular member/i, /Toy library/],
       links: '/collections/COL001',
     },
+    {
+      // Its link read "I can help!" — the retired WISH_THING call-for-help CTA —
+      // under every group message, whatever the curator had written.
+      what: 'a group message carries its text and a link that says where it goes',
+      notification: {
+        code: 'NOTA08',
+        type: 'BROADCAST',
+        payload: {
+          collection_headline: 'Toy library',
+          collection_code: 'COL001',
+          owner_name: 'Lili',
+          message: 'The workshop is shut on Monday',
+        },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/Lili/, /The workshop is shut on Monday/],
+      links: '/collections/COL001',
+      rejects: /I can help/i,
+    },
   ];
 
-  test.each(CASES)('$what', async ({ notification, says, links }) => {
+  test.each(CASES)('$what', async ({ notification, says, links, rejects }) => {
     apiFetch.mockImplementation((url) => {
       if (url.startsWith('/api/v1/inbox/')) return ok([notification]);
       if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
@@ -271,6 +290,7 @@ describe('InboxNotifications — every type says something', () => {
       'href',
       links
     );
+    if (rejects) expect(container.textContent).not.toMatch(rejects);
   });
 
   test('a recommendation approved before the dedicated type existed still reads right', async () => {

@@ -67,16 +67,36 @@ exclude_lines = [
 [tool.mutmut]
 source_paths = ["core/"]
 pytest_add_cli_args_test_selection = ["core/tests/"]
-# Pointed at what the 2026-08 pre-release **testing** round audited: the two
-# serializers whose field lists guard a privacy boundary (a co-member's profile,
-# the anonymous booking calendar), the booking service's locked transitions, and
-# the delete-time asset cleanup. The previous round's scope — invitation_service,
-# utils, views/_helpers — came back clean under a 70-mutant sweep and is not
-# where the surviving mutants were.
+# Pointed at what the 2026-09 pre-release **testing** round audited: the hourly
+# reservation engine and the collection a request resolves to, which is where
+# that release's work was. The 2026-08 scope — `serializers/booking.py`,
+# `serializers/user.py`, `services/asset_cleanup.py`, whose field lists guard a
+# privacy boundary and whose cleanup runs at delete time — came back clean and
+# is kept here, commented out, rather than lost.
+#
+# **A survivor is a lead, not a verdict.** mutmut 3 runs only the tests its
+# stats pass mapped to the mutated function, and that mapping misses tests
+# which reach the code through the API: in the 2026-09 sweep, inverting
+# `_readable_by` and making `resolve_request_collection` pick the collection it
+# was NOT given both "survived", and both die against
+# test_request_collection_privacy.py when applied by hand. Re-check a survivor
+# that looks real before writing a test for it — and read one that is genuinely
+# alive as "the tests that ran didn't kill it".
 only_mutate = [
-    "core/serializers/booking.py",
-    "core/serializers/user.py",
+    "core/models/collection.py",
     "core/services/booking_service.py",
-    "core/services/asset_cleanup.py",
+    # "core/serializers/booking.py",
+    # "core/serializers/user.py",
+    # "core/services/asset_cleanup.py",
 ]
-also_copy = ["pytest.ini", "manage.py", "config/", "conftest.py", "frontend/public"]
+# The locales are read by core/tests/unit/test_refusal_codes.py (every refusal
+# code must have a string in all three); without them in ./mutants the stats
+# run fails before a single mutant is tried.
+also_copy = [
+    "pytest.ini",
+    "manage.py",
+    "config/",
+    "conftest.py",
+    "frontend/public",
+    "frontend/src/i18n/locales",
+]

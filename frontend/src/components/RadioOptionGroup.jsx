@@ -18,8 +18,18 @@ import { RadioButton, SelectionGroup } from 'hds-react';
  *    to the empty wrapper, leaving every radio's accessible name blank. A
  *    bare radio-count assertion doesn't catch this; only a name-scoped query
  *    (`getByRole('radio', { name: … })`) does.
+ *
+ * `errorText` (optional) is passed to the `SelectionGroup`.
  */
-export default function RadioOptionGroup({ idPrefix, name, label, options, value, onChange }) {
+export default function RadioOptionGroup({
+  idPrefix,
+  name,
+  label,
+  options,
+  value,
+  onChange,
+  errorText,
+}) {
   const fields = options.map((opt) => {
     const id = `${idPrefix}-${opt.value}`;
     return (
@@ -36,5 +46,13 @@ export default function RadioOptionGroup({ idPrefix, name, label, options, value
     );
   });
 
-  return <SelectionGroup label={label}>{fields}</SelectionGroup>;
+  // `errorText` is HDS's own, shown under the group — a plain `div` HDS links
+  // to nothing, so a screen reader won't hear it on its own. A caller that
+  // sets it on submit should also move focus into the group (as
+  // RequestThingPage does), which reads the question out.
+  return (
+    <SelectionGroup label={label} errorText={errorText}>
+      {fields}
+    </SelectionGroup>
+  );
 }

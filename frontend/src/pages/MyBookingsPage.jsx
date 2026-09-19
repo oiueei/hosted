@@ -11,6 +11,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import { formatDate, formatBookingWhen } from '../utils/rental';
 import ButtonLink from '../components/ButtonLink';
+import CancelReservationDialog from '../components/CancelReservationDialog';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
 // green/red hex). The thing *type* stays a plain Tag (it's a category, not a state).
@@ -34,6 +35,10 @@ export default function MyBookingsPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [cancelling, setCancelling] = useState(null);
+  // A confirmed reservation waiting on the member's confirm before it is
+  // cancelled — see CancelReservationDialog. A pending request of their own
+  // still withdraws on one press.
+  const [cancelRow, setCancelRow] = useState(null);
   useEffect(() => {
     document.title = t('titles.myBookings');
   }, [t]);
@@ -64,7 +69,7 @@ export default function MyBookingsPage() {
     fetchBookings();
   }, [navigate, t]);
 
-  const handleCancel = async (bookingCode) => {
+  const handleCancel = async (bookingCode, { reservation = false } = {}) => {
     setCancelling(bookingCode);
     try {
       const res = await apiFetch(`/api/v1/bookings/${bookingCode}/cancel/`, {
@@ -74,7 +79,12 @@ export default function MyBookingsPage() {
         setBookings((prev) =>
           prev.map((b) => (b.code === bookingCode ? { ...b, status: 'CANCELLED' } : b))
         );
-        setToast({ type: 'success', message: t('myBookings.requestCancelled') });
+        setToast({
+          type: 'success',
+          message: reservation
+            ? t('myBookings.reservationCancelled')
+            : t('myBookings.requestCancelled'),
+        });
       } else {
         setToast({ type: 'error', message: t('myBookings.errorCancelling') });
       }
@@ -207,7 +217,9 @@ export default function MyBookingsPage() {
     },
     {
       key: '_actions',
-      headerName: '',
+      // Named for a screen reader only: the buttons below say what they do,
+      // and an empty <th> leaves the column nameless (axe empty-table-header).
+      headerName: <span className="sr-only">{t('common.colActions')}</span>,
       transform: (row) =>
         row._status === 'PENDING' || isFutureReservation(row) ? (
           <TooltipButton
@@ -216,7 +228,7 @@ export default function MyBookingsPage() {
                 ? t('myBookings.cancelReservation')
                 : t('myBookings.cancelTooltip')
             }
-            onClick={() => handleCancel(row._code)}
+            onClick={() => (isFutureReservation(row) ? setCancelRow(row) : handleCancel(row._code))}
             disabled={cancelling === row._code}
           >
             <IconCrossCircle aria-hidden />
@@ -310,6 +322,23 @@ export default function MyBookingsPage() {
             {t('common.loadMore')}
           </Button>
         </>
+      )}
+
+      {cancelRow && (
+        <CancelReservationDialog
+          row={cancelRow}
+          body={t('myBookings.cancelReservationConfirmBody')}
+          confirmLabel={t('myBookings.cancelReservation')}
+          busy={cancelling === cancelRow._code}
+          onConfirm={() => {
+            const row = cancelRow;
+            setCancelRow(null);
+            handleCancel(row._code, { reservation: true });
+          }}
+          onClose={() => setCancelRow(null)}
+          btnStyle={btnStyle}
+          btnSecondaryStyle={btnSecondaryStyle}
+        />
       )}
 
       <Toast toast={toast} onClose={() => setToast(null)} />

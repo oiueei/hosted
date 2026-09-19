@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -124,6 +124,17 @@ describe('OwnerBookingsPage listing', () => {
     ).toBeInTheDocument();
   });
 
+  test('the column holding the decisions has a name a screen reader can say', async () => {
+    // It was an empty <th> (axe empty-table-header), above the confirm/decline
+    // controls of every row.
+    mockApi([{ results: [booking()], next: null }]);
+    renderPage();
+
+    await screen.findByRole('link', { name: 'Cordless drill' });
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: '' })).not.toBeInTheDocument();
+  });
+
   test('with nothing pending, the section says so rather than vanishing', async () => {
     mockApi([{ results: [booking({ status: 'REJECTED' })], next: null }]);
     renderPage();
@@ -216,6 +227,64 @@ describe('OwnerBookingsPage deciding', () => {
 
     expect(screen.queryByRole('button', { name: 'Confirm this request' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Decline this request' })).toBeNull();
+  });
+});
+
+/**
+ * Cancelling a member's confirmed reservation tells them, frees the slot for
+ * anybody else and cannot be undone — unlike declining a pending request above,
+ * which stays one click. It used to go on a single press of a small button in a
+ * table row; now that press asks first and says whose reservation it is.
+ */
+describe('OwnerBookingsPage cancelling a member’s reservation', () => {
+  const reservation = booking({
+    thing_type: 'RESERVE_THING',
+    thing_headline: 'Laser cutter',
+    status: 'ACCEPTED',
+    requester_name: 'Lulu',
+    start_date: '2099-01-10',
+    end_date: '2099-01-11',
+    start_time: '10:00:00',
+    end_time: '11:30:00',
+  });
+
+  test('one press asks first, naming the reservation and whose it is', async () => {
+    mockApi([{ results: [reservation], next: null }]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cancel this reservation?' });
+    expect(dialog).toHaveTextContent('Laser cutter — 10/01/2099, 10:00–11:30');
+    expect(dialog).toHaveTextContent('Asked by Lulu');
+    expect(postUrls()).toEqual([]);
+  });
+
+  test('confirming cancels it once and tells the curator the member was told', async () => {
+    mockApi([{ results: [reservation], next: null }]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+    const dialog = await screen.findByRole('dialog');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel reservation' }));
+
+    await waitFor(() => expect(postUrls()).toEqual(['/api/v1/bookings/BKG001/cancel/']));
+    expect(await screen.findByText(/the member has been told/)).toBeInTheDocument();
+    expect(screen.getByText('Cancelled')).toBeInTheDocument();
+    // Settled: nothing left to cancel on the row.
+    expect(screen.queryByRole('button', { name: 'Cancel reservation' })).toBeNull();
+  });
+
+  test('backing out cancels nothing', async () => {
+    mockApi([{ results: [reservation], next: null }]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+    const dialog = await screen.findByRole('dialog');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Back' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(postUrls()).toEqual([]);
+    expect(screen.getByText('Confirmed')).toBeInTheDocument();
   });
 });
 

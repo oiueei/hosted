@@ -36,7 +36,7 @@ const RENTAL_THING = {
 function setApi({ thing = RENTAL_THING, calendar = [] } = {}) {
   apiFetch.mockImplementation((url) => {
     if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse(calendar));
-    if (/\/things\/[^/]+\/$/.test(url)) return Promise.resolve(mockResponse(thing));
+    if (/\/things\/[^/]+\/(\?.*)?$/.test(url)) return Promise.resolve(mockResponse(thing));
     if (url === '/api/v1/things/') return Promise.resolve(mockResponse({ results: [] }));
     return Promise.resolve(mockResponse({}));
   });

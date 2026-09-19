@@ -21,17 +21,74 @@ import { useTranslation } from 'react-i18next';
  * ever forwarding one — the deeper *shape* checks (day keys, HH:MM format,
  * overlap) still stay the backend's job, same as everywhere else in these
  * forms (`_validate_opening_hours`, surfaced as its own 400 via Toast).
+ *
+ * **The re-sync compares content, not the `value` reference, and does it
+ * during render — not in an effect.** `BoundedDayInput` can key its resync
+ * effect on the bare reference because its `value` is a number — equal
+ * content IS equal reference there. This field's `value` is an object, so a
+ * parent that ever passes `openingHours={form.opening_hours || {}}` (a fresh
+ * `{}` literal on every render whenever the field is unset) would fire an
+ * effect keyed on `[value]` on every unrelated keystroke elsewhere in the
+ * form and wipe whatever JSON the owner was mid-typing back to `{}` — real
+ * data loss in a field people paste a whole week's schedule into. Both
+ * current call sites happen to pass a referentially-stable `useState` object,
+ * so this was never reachable in production, but the component's own
+ * contract shouldn't have silently depended on that.
+ *
+ * `syncedJson` holds the content we last synced FROM `value` (starting at the
+ * initial one, before any typing). This is React's own documented pattern for
+ * "adjusting state when a prop changes" — https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+ * — a plain `if` in the render body, not a `useEffect`: calling `setState`
+ * conditionally inside an effect (which an earlier version of this fix did)
+ * is itself the anti-pattern `react-hooks/set-state-in-effect` flags, since it
+ * commits the stale draft to the screen first and only corrects it a tick
+ * later. Doing the comparison during render lets React re-render with the
+ * synced draft before anything paints, and it terminates the same way: once
+ * `draft`/`syncedJson` reflect `value`, the condition is false on the very
+ * next render, so there is no loop. A re-sync also clears any error: the draft
+ * it installs is the parent's own value, valid by construction.
+ *
+ * **`onValidityChange(valid)` tells the page whether the draft on screen is
+ * one this field could hand over.** Keeping the last-known-good value is only
+ * half of not losing work: the page's Save used to send that stale value and
+ * navigate away, taking the inline error with it — so an owner whose paste had
+ * a trailing comma believed a schedule was saved that never was (found in
+ * review, 2026-09-18). The page refuses to submit while this reports `false`.
+ * It mirrors `error` from an effect rather than being called from `commit`
+ * alone, since the error also clears on a re-sync (during render, where a
+ * parent's setter can't be called). The cleanup reports `true` on unmount: an
+ * unmounted field has no draft on screen to refuse, and when it mounts again it
+ * shows the last good value, which is what the parent holds. Collapsing the
+ * "More options" accordion is **not** an unmount — HDS hides a closed
+ * Accordion's content with `display: none` and keeps it mounted — so the
+ * refusal outlives the owner folding the section away, which is the point
+ * (`EditCollectionPage.test.jsx` pins that). Pass a stable function (a state
+ * setter): the effect re-runs whenever its identity changes.
  */
-export default function OpeningHoursField({ id, value = {}, onChange = () => {} }) {
+const noop = () => {};
+
+export default function OpeningHoursField({
+  id,
+  value = {},
+  onChange = noop,
+  onValidityChange = noop,
+}) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(() => JSON.stringify(value));
   const [error, setError] = useState('');
+  const [syncedJson, setSyncedJson] = useState(() => JSON.stringify(value));
 
-  // Re-sync when the value arrives from outside — the Edit form finishing its
-  // load, or our own commit below re-serialising what we just parsed.
+  const incomingJson = JSON.stringify(value);
+  if (incomingJson !== syncedJson) {
+    setSyncedJson(incomingJson);
+    setDraft(incomingJson);
+    setError('');
+  }
+
   useEffect(() => {
-    setDraft(JSON.stringify(value));
-  }, [value]);
+    onValidityChange(!error);
+    return () => onValidityChange(true);
+  }, [error, onValidityChange]);
 
   const commit = () => {
     if (draft.trim() === '') {

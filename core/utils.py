@@ -12,6 +12,28 @@ import string
 from django.conf import settings
 
 
+class Refusal(str):
+    """A business rule's refusal: the English sentence it has always been, plus
+    a machine ``code`` and the ``params`` that sentence interpolates.
+
+    ``core`` carries no gettext catalogue, so every refusal the API sends is
+    English — and the request page used to show it as-is to a Catalan or Spanish
+    member ("That time has already begun."). The SPA does have the catalogue: a
+    refusal that carries a code can be said in the reader's language there
+    (``requestErrors.<code>`` in ``frontend/src/i18n/locales``), with the English
+    sentence as the fallback for a client that doesn't know the code yet.
+
+    It *is* a ``str``, so everything that already compares, logs or serialises
+    these messages keeps working unchanged.
+    """
+
+    def __new__(cls, message, code, **params):
+        obj = super().__new__(cls, message)
+        obj.code = code
+        obj.params = params
+        return obj
+
+
 def redact_email(email):
     """Return a keyed, non-reversible tag for an email, safe to write to logs.
 

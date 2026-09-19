@@ -21,6 +21,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import { formatDate, formatBookingWhen } from '../utils/rental';
 import ButtonLink from '../components/ButtonLink';
+import CancelReservationDialog from '../components/CancelReservationDialog';
 
 /**
  * The owner's side of MyBookingsPage: every request made on their things, in one
@@ -61,6 +62,10 @@ export default function OwnerBookingsPage() {
   // longer has it, and there is no undo. A loan, a rental and an endless
   // gift all come back or never run out, so those accept straight away.
   const [transferRow, setTransferRow] = useState(null);
+  // A member's confirmed reservation waiting on the curator's confirm before it
+  // is cancelled: it tells them, frees the slot and cannot be undone
+  // (CancelReservationDialog). Declining a *pending* request stays one click.
+  const [cancelRow, setCancelRow] = useState(null);
   useEffect(() => {
     document.title = t('titles.ownerBookings');
   }, [t]);
@@ -281,7 +286,9 @@ export default function OwnerBookingsPage() {
     },
     {
       key: '_actions',
-      headerName: '',
+      // Named for a screen reader only: the buttons below say what they do,
+      // and an empty <th> leaves the column nameless (axe empty-table-header).
+      headerName: <span className="sr-only">{t('common.colActions')}</span>,
       transform: (row) =>
         row._status === 'PENDING' ? (
           <div style={{ display: 'flex', gap: 'var(--spacing-xs)', justifyContent: 'flex-end' }}>
@@ -308,7 +315,7 @@ export default function OwnerBookingsPage() {
               variant="supplementary"
               size="small"
               iconStart={<IconCrossCircle aria-hidden />}
-              onClick={() => handleCancelReservation(row._code)}
+              onClick={() => setCancelRow(row)}
               disabled={acting === row._code}
               style={btnSecondaryStyle}
             >
@@ -431,6 +438,26 @@ export default function OwnerBookingsPage() {
             </Button>
           </Dialog.ActionButtons>
         </Dialog>
+      )}
+
+      {cancelRow && (
+        <CancelReservationDialog
+          row={cancelRow}
+          who={t('ownerBookings.requestedBy', {
+            name: cancelRow._requesterName || t('common.aMember'),
+          })}
+          body={t('ownerBookings.cancelReservationConfirmBody')}
+          confirmLabel={t('ownerBookings.cancelReservation')}
+          busy={acting === cancelRow._code}
+          onConfirm={() => {
+            const row = cancelRow;
+            setCancelRow(null);
+            handleCancelReservation(row._code);
+          }}
+          onClose={() => setCancelRow(null)}
+          btnStyle={btnStyle}
+          btnSecondaryStyle={btnSecondaryStyle}
+        />
       )}
 
       <Toast toast={toast} onClose={() => setToast(null)} />

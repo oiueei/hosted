@@ -46,11 +46,15 @@ export default function CreateCollectionPage() {
   const [reservationMinMinutes, setReservationMinMinutes] = useState(60);
   const [reservationMaxMinutes, setReservationMaxMinutes] = useState(180);
   const [openingHours, setOpeningHours] = useState({});
+  // False while the opening-hours JSON on screen doesn't parse — Create refuses
+  // then, rather than sending the last good value and navigating away.
+  const [openingHoursValid, setOpeningHoursValid] = useState(true);
   const [closedDates, setClosedDates] = useState('');
   const [homePage, setHomePage] = useState('');
   const [depositPolicy, setDepositPolicy] = useState('');
-  // Shown on the request page for every verb (GIFT/SELL/RENT/LEND/RESERVE),
-  // not only reservations — general to the collection, so it lives outside
+  // Shown on the request page for every verb that reaches it (LEND/RENT/
+  // RESERVE — GIFT/SELL complete from the card and never do), not only
+  // reservations — general to the collection, so it lives outside
   // RentalRulesFields / ReservationRulesFields, alongside closed_dates/home_page.
   const [requestInfo, setRequestInfo] = useState('');
   // The owner's note in the emails a requester receives about their request
@@ -139,6 +143,13 @@ export default function CreateCollectionPage() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    // A toast, not an inline error: the field sits inside the "More options"
+    // accordion, which may be collapsed by now, and a refusal whose reason is
+    // out of sight would be the silent failure this guards against.
+    if (isReservations && reservationUnit === 'HOUR' && !openingHoursValid) {
+      setToast({ type: 'error', message: t('openingHours.invalidOnSave') });
+      return;
+    }
     setSubmitting(true);
     setToast(null);
 
@@ -243,7 +254,7 @@ export default function CreateCollectionPage() {
             (title, mode, who can add) reads at a glance (DESIGN §3, O1). */}
       <Accordion
         heading={t('createCollection.advancedTitle')}
-        language="en"
+        language={hdsLang(i18n.language)}
         headingLevel={2}
         theme={
           theeemeColors.color_04
@@ -279,6 +290,7 @@ export default function CreateCollectionPage() {
               setReservationMaxMinutes={setReservationMaxMinutes}
               openingHours={openingHours}
               setOpeningHours={setOpeningHours}
+              setOpeningHoursValid={setOpeningHoursValid}
               rentalWeekdays={rentalWeekdays}
               setRentalWeekdays={setRentalWeekdays}
               theeemeColor01={theeemeColors.color_01}

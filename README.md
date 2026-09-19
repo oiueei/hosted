@@ -89,7 +89,7 @@ core/
   checks.py           # System checks (CREATOR_POLICY importable + instantiable, etc.)
   permissions.py      # Custom DRF permissions (IsThingOwner, IsThingManager, IsCollectionOwner, IsCollectionCurator)
   validators.py       # Input validation (image IDs, headlines, localized-text caps)
-  utils.py            # ID generation, client IP, asset URLs, localized-text parsing
+  utils.py            # ID generation, client IP, asset URLs, localized-text parsing, coded refusals (Refusal)
   pagination.py       # StandardResultsPagination (max 100)
   management/
     commands/
@@ -199,6 +199,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner or co-owner) |
 | GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner or co-owner, rate limited: 10/day). A plain member gets 403, never a partial file |
 | POST | `/api/v1/collections/{code}/calendar-export/` | Download the collection's upcoming LEND/RENT/RESERVE reservations as a Google Calendar CSV (owner or co-owner, rate limited: 20/h). Incremental — each download carries only what hasn't gone out before; `X-Calendar-Events` gives the count. POST because it marks them delivered |
+| POST | `/api/v1/collections/{code}/email-note/test/` | Email the acting curator their `email_note` draft (`{email_note}`, unsaved), rendered exactly as a member will get it — every language version under its own name (owner or co-owner, rate limited: 10/h). Goes to the requester's own address only |
 | POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner or co-owner) |
 | POST | `/api/v1/collections/{code}/things/bulk/` | Bulk-create things from a CSV (rate limited: 10/h) |
 
@@ -344,7 +345,7 @@ python manage.py backfill_events
 Backend `pytest` + `pytest-django`, frontend `vitest` + Testing Library + `jest-axe`.
 Coverage floors are **ratchets, not targets** — they sit a couple of points under
 the suite's real coverage so a regression is visible, and CI enforces both:
-backend 96%, frontend 87/79/79/89 (statements/branches/functions/lines).
+backend 96%, frontend 88/82/81/90 (statements/branches/functions/lines).
 
 **CI runs the backend suite against PostgreSQL, not SQLite.** That is not parity
 for its own sake. On SQLite, Django reports `has_select_for_update = False` and
@@ -379,6 +380,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `DJANGO_SETTINGS_MODULE` | No | Settings module (defaults to production) |
 | `DJANGO_DEBUG` | No | Enables Django debug mode (default: `False` — fail-closed on a missing/typo'd value) |
 | `DJANGO_ALLOWED_HOSTS` | No | Comma-separated allowed hosts |
+| `DJANGO_TIME_ZONE` | Recommended | The deployment's wall clock, as an IANA name (`Europe/Madrid`); default `UTC`. It decides what "today" and "now" are for every date rule, and it is the zone an hourly space's opening hours are read in — so it is what lets the server refuse a slot that has already begun today. Leave it at `UTC` and "10:00" in an opening schedule means 10:00 UTC. A misspelt name fails the boot instead of quietly shifting every day boundary |
 | `DATABASE_URL` | Prod | PostgreSQL connection string. Also read by `development.py` — that is how CI runs the suite on Postgres (see Testing) |
 | `DEV_DB_NAME` | No | Dev only: points the SQLite file elsewhere, so a migration can be rehearsed on a throwaway DB (`DEV_DB_NAME=/tmp/rehearsal.sqlite3 python manage.py migrate core 0121`). Ignored when `DATABASE_URL` is set |
 | `MAGIC_LINK_BASE_URL` | Prod | Base URL for magic link emails (default in dev: `http://localhost:3000/verify`) |
@@ -457,6 +459,7 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Rate Limiting | Thing report | 10 req/hour per user |
 | Rate Limiting | Upload signature | 30 req/hour per user |
 | Rate Limiting | Broadcast | 5 req/day per user |
+| Rate Limiting | Email-note test | 10 req/hour per user (to the curator's own address only) |
 | Rate Limiting | FAQ question | 20 req/hour per user |
 | Rate Limiting | Notifications token | GET 20/min, PATCH 10/min per IP |
 | Rate Limiting | Health check | 60/min per IP (GET + HEAD) — the one anonymous endpoint that reaches the database on every hit |

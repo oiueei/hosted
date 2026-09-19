@@ -212,15 +212,34 @@ class BookingPeriod(models.Model):
         ).exists()
 
     @classmethod
+    def blocking_filter(cls):
+        """The bookings that still shape a thing's calendar: PENDING or ACCEPTED,
+        and either undated (a GIFT/SELL hold) or not over before yesterday.
+
+        Every calendar reader — availability, the owner's list, the public
+        ``/calendar/`` — only ever used what is still ahead, and the SPA already
+        dropped the rest (``useThingBooking``'s ``futureOnly``: no ``end_date``,
+        or ``end_date >= today``). Loading it all anyway made every read of a
+        thing — anonymous reads of a PUBLIC one included — carry the whole
+        booking history, and the hourly availability walk scan it once per day
+        of the horizon: a cost that grew with how much a space had been used
+        (2026-09-18 security round). One day of grace, because the browser's
+        "today" can be the server's yesterday.
+        """
+        cutoff = timezone.localdate() - timedelta(days=1)
+        return models.Q(status__in=[cls.Status.PENDING, cls.Status.ACCEPTED]) & (
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=cutoff)
+        )
+
+    @classmethod
     def get_blocked_periods(cls, thing_code):
         """
-        Get all blocked periods for a thing (PENDING and ACCEPTED bookings).
-        Returns queryset of BookingPeriod objects.
+        The blocked periods of a thing (``blocking_filter``: PENDING and
+        ACCEPTED bookings not already over). Returns a queryset.
         """
-        return cls.objects.filter(
-            thing_code=thing_code,
-            status__in=[cls.Status.PENDING, cls.Status.ACCEPTED],
-        ).order_by("start_date")
+        return cls.objects.filter(cls.blocking_filter(), thing_code=thing_code).order_by(
+            "start_date"
+        )
 
     @classmethod
     def expire_old_pending(cls):

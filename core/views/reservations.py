@@ -121,17 +121,17 @@ class ThingRequestView(APIView):
                     status=status.HTTP_201_CREATED,
                 )
         except BookingRequestError as exc:
-            body = {"error": exc.message}
-            if exc.code:
-                body["code"] = exc.code
-            return Response(body, status=exc.status_code)
+            return Response(exc.as_body(), status=exc.status_code)
 
     def _request_reservation(self, request, thing, owner_email):
-        """RESERVE_THING — validate the pickup date + duration, then delegate.
+        """RESERVE_THING — validate the request's shape, then delegate.
 
-        The service creates the booking already ACCEPTED (auto-confirmed) and
-        emails both parties. Membership, the weekday/duration rules and the
-        date clash are all checked there and come back as BookingRequestError.
+        The shape is a pickup date plus either a length in days or a start/end
+        time (``ReservationRequestSerializer``); which one the collection wants
+        is the service's call. It creates the booking already ACCEPTED
+        (auto-confirmed) and emails both parties. Membership, the day or hour
+        rules, the active-reservations cap and the clash are all checked there
+        and come back as BookingRequestError.
         """
         serializer = ReservationRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -170,7 +170,7 @@ class ThingRequestView(APIView):
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
         collection_code = body_dict(request).get("collection_code")
-        rental_collection = resolve_rental_collection(thing, collection_code)
+        rental_collection = resolve_rental_collection(thing, collection_code, request.user)
 
         booking = request_date_based_booking(
             thing,

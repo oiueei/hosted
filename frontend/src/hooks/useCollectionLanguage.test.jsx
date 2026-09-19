@@ -27,8 +27,8 @@ import i18n from '../i18n';
 import { loadUserLanguage } from './useCapabilities';
 import useCollectionLanguage from './useCollectionLanguage';
 
-function Probe({ collectionLanguage }) {
-  useCollectionLanguage(collectionLanguage);
+function Probe({ collectionLanguage, ownerTexts }) {
+  useCollectionLanguage(collectionLanguage, ownerTexts);
   const [lang, setLang] = useState(i18n.language);
   useEffect(() => {
     const handler = (lng) => setLang(lng);
@@ -38,8 +38,8 @@ function Probe({ collectionLanguage }) {
   return <p>{lang}</p>;
 }
 
-function Wrapper({ mounted, collectionLanguage }) {
-  return mounted ? <Probe collectionLanguage={collectionLanguage} /> : null;
+function Wrapper({ mounted, collectionLanguage, ownerTexts }) {
+  return mounted ? <Probe collectionLanguage={collectionLanguage} ownerTexts={ownerTexts} /> : null;
 }
 
 const STORAGE_KEY = 'i18nextLng';
@@ -192,6 +192,69 @@ describe('already matching', () => {
     loadUserLanguage.mockResolvedValue('');
 
     render(<Wrapper mounted collectionLanguage="ca" />);
+
+    await waitFor(() => expect(loadUserLanguage).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+/**
+ * Owner text resolves per *reader*, so overriding the interface language also
+ * overrode the owner's own translations: on a Catalan-language group whose
+ * owner had written each headline in English too, an English browser with no
+ * saved preference was shown the Catalan — and had no way back without an
+ * account. An owner who wrote in the reader's language has already answered
+ * which language that reader gets (design round, 2026-09-18).
+ */
+describe("the owner's own text", () => {
+  test('written in the reader’s language too, it keeps the reader in it', async () => {
+    const spy = vi.spyOn(i18n, 'changeLanguage');
+    render(
+      <Wrapper
+        mounted
+        collectionLanguage="ca"
+        ownerTexts={['{"ca": "Eines del barri", "en": "Neighbourhood tools"}']}
+      />
+    );
+
+    await waitFor(() => expect(loadUserLanguage).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(spy).not.toHaveBeenCalled();
+    expect(i18n.language).toBe('en');
+    spy.mockRestore();
+  });
+
+  test('written once, in the collection’s language, still brings the chrome with it', async () => {
+    // The case the hook was written for: Catalan text framed by English chrome.
+    render(<Wrapper mounted collectionLanguage="ca" ownerTexts={['Eines del barri']} />);
+
+    await waitFor(() => expect(i18n.language).toBe('ca'));
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  test('translated, but not into the reader’s language, vetoes nothing', async () => {
+    render(
+      <Wrapper
+        mounted
+        collectionLanguage="ca"
+        ownerTexts={['{"ca": "Eines del barri", "es": "Herramientas del barrio"}']}
+      />
+    );
+
+    await waitFor(() => expect(i18n.language).toBe('ca'));
+  });
+
+  test('any one of the page’s texts is enough — a translated description counts', async () => {
+    const spy = vi.spyOn(i18n, 'changeLanguage');
+    render(
+      <Wrapper
+        mounted
+        collectionLanguage="ca"
+        ownerTexts={['Eines', '{"ca": "Per al barri", "en": "For the neighbourhood"}']}
+      />
+    );
 
     await waitFor(() => expect(loadUserLanguage).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 10));

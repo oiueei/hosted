@@ -22,16 +22,24 @@ import { apiFetch } from '../services/api';
 // endpoint the app already hits on load; `loadUserLanguage` (below) shares the
 // same cached fetch rather than opening a fifth. Keyed by user so it cannot
 // outlive a logout and answer for whoever signs in next.
-let cached = { userCode: null, promise: null };
+//
+// **Two callers, two answers to a dead session.** `loadUserLanguage` runs on
+// public pages and must never redirect an anonymous-looking visitor, so it
+// asks with `optionalAuth`. `loadCapabilities` only runs behind `RequireAuth`,
+// where a dead session *should* land on `/login` — and on `CreateCollectionPage`
+// this is the only authenticated call before submit, so when it too asked with
+// `optionalAuth` a >7-day-stale session rendered the form and lost whatever was
+// typed at the POST instead (found in review, 2026-09-15; fixed 2026-09-18).
+// So each caller states its mode: a strict caller shares a strict or a
+// successful request freely, and after an optional one's failure it asks again
+// strictly, which is what lets `apiFetch` redirect.
+let cached = { userCode: null, promise: null, optionalAuth: false };
 
-function loadMe() {
-  const userCode = localStorage.getItem('userCode');
-  if (cached.promise && cached.userCode === userCode) return cached.promise;
-
-  const promise = apiFetch('/api/v1/auth/me/', { optionalAuth: true })
+function fetchMe(userCode, optionalAuth) {
+  const promise = apiFetch('/api/v1/auth/me/', optionalAuth ? { optionalAuth: true } : {})
     .then((res) => {
       if (res.ok) return res.json();
-      // `optionalAuth` means `apiFetch` already tried refreshing and it still
+      // With `optionalAuth`, `apiFetch` already tried refreshing and it still
       // came back 401 — the same definitive "session is dead" signal that,
       // without `optionalAuth`, would itself have cleared `userCode` and
       // redirected. Clearing it here too means `RequireAuth`'s own fast path
@@ -53,18 +61,32 @@ function loadMe() {
       // rest of that session, and send the user to a 403 at the end of a form
       // they had no reason to distrust. Guarded on identity so a retry already
       // in flight for the same account is never discarded.
-      if (cached.promise === promise) cached = { userCode: null, promise: null };
+      if (cached.promise === promise)
+        cached = { userCode: null, promise: null, optionalAuth: false };
       return null;
     });
 
-  cached = { userCode, promise };
+  cached = { userCode, promise, optionalAuth };
   return promise;
+}
+
+function loadMe({ optionalAuth }) {
+  const userCode = localStorage.getItem('userCode');
+  if (cached.promise && cached.userCode === userCode) {
+    if (!optionalAuth && cached.optionalAuth) {
+      // An optional request's failure never redirected; a strict caller
+      // doesn't settle for it. A success is shared as it is.
+      return cached.promise.then((data) => data ?? fetchMe(userCode, false));
+    }
+    return cached.promise;
+  }
+  return fetchMe(userCode, optionalAuth);
 }
 
 export function loadCapabilities() {
   // An answer without the field is still an answer — an older or narrower
   // backend saying "no restrictions" — so it caches like any other.
-  return loadMe().then((data) => data?.capabilities ?? null);
+  return loadMe({ optionalAuth: false }).then((data) => data?.capabilities ?? null);
 }
 
 /**
@@ -76,40 +98,24 @@ export function loadCapabilities() {
  * collection's own language, which in turn only ever wins over the plain
  * browser default.
  *
- * **Checks for `userCode` before ever calling `loadMe()`, which itself now
- * passes `optionalAuth: true`.** Every existing caller of `loadMe()`
- * (`loadCapabilities`) only ever ran from a page already behind `RequireAuth`,
- * so `apiFetch`'s 401-then-refresh-then-redirect-to-login dance
- * (`services/api.js`) never fired for a signed-out visitor in practice.
- * `useCollectionLanguage` is the first caller reached from genuinely public
- * pages — `CollectionPage`, `JoinPage`, `SharePage`, an anonymous `ThingPage`.
- * The `userCode` check alone caught a never-signed-in visitor, but not one
- * whose `access_token`/`refresh_token` cookies (1h/7d, `core/views/auth.py`)
- * had simply expired while `userCode` — which never expires on its own —
- * stayed in `localStorage`: for them `loadMe()` still 401'd through
- * `apiFetch` and still redirected, on a page nothing else on it could ever
- * 401 (both rounds found in review, 2026-09-15). `optionalAuth: true` closes
- * that for good: a failed request comes back as a response to inspect, never
- * a redirect — and `loadMe()` now clears `userCode` itself on a definitive
- * 401, so the next protected page's `RequireAuth` still catches a dead
- * session honestly instead of silently repeating the failed refresh forever.
- * `loadCapabilities` is unaffected in the common case — a failure there was
- * always read as "no restriction", and most pages that consume it also make
- * their own separate, non-optional `apiFetch` call for their primary data,
- * which independently redirects a genuinely dead session just as fast as
- * before. **`CreateCollectionPage` is the one exception**: its only
- * authenticated call before submit is this shared one, so a &gt;7-day-stale
- * session there now renders the form instead of redirecting on load, and
- * only fails (losing whatever was typed) at the POST — a real, if narrow and
- * low-frequency, regression from the redirect this call used to trigger by
- * accident (found in review, 2026-09-15; not fixed, since `RequireAuth`'s own
- * check only runs once at mount and does not react to `userCode` clearing
- * later — closing it properly means that page probing its own session before
- * rendering the form, a separate change).
+ * **Checks for `userCode` before ever calling `loadMe()`, and asks it with
+ * `optionalAuth`.** `useCollectionLanguage` is this module's one caller reached
+ * from genuinely public pages — `CollectionPage`, `JoinPage`, `SharePage`, an
+ * anonymous `ThingPage` — where `apiFetch`'s 401-then-refresh-then-redirect-to-
+ * login dance (`services/api.js`) must never fire. The `userCode` check alone
+ * caught a never-signed-in visitor, but not one whose `access_token`/
+ * `refresh_token` cookies (1h/7d, `core/views/auth.py`) had simply expired
+ * while `userCode` — which never expires on its own — stayed in `localStorage`
+ * (both found in review, 2026-09-15). With `optionalAuth` a failed request
+ * comes back as a response to inspect, never a redirect, and `loadMe()` clears
+ * `userCode` itself on a definitive 401, so the next protected page's
+ * `RequireAuth` still catches a dead session honestly. `loadCapabilities` asks
+ * strictly instead (see the cache note above), so the pages behind
+ * `RequireAuth` that rely on it still redirect a dead session.
  */
 export function loadUserLanguage() {
   if (!localStorage.getItem('userCode')) return Promise.resolve('');
-  return loadMe().then((data) => data?.language ?? '');
+  return loadMe({ optionalAuth: true }).then((data) => data?.language ?? '');
 }
 
 /**
@@ -125,7 +131,7 @@ export function loadUserLanguage() {
  * earlier, self-healing only on a full reload (found in review, 2026-09-15).
  */
 export function invalidateMe() {
-  cached = { userCode: null, promise: null };
+  cached = { userCode: null, promise: null, optionalAuth: false };
 }
 
 export default function useCapabilities() {

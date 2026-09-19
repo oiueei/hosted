@@ -88,4 +88,93 @@ describe('OpeningHoursField', () => {
     );
     expect(field()).toHaveValue(JSON.stringify({ 1: [['09:00', '13:00']] }));
   });
+
+  test('a same-content but new-reference value does NOT clobber an in-progress draft', () => {
+    // The exact shape of `openingHours={form.opening_hours || {}}`: a parent
+    // re-render (an unrelated field changing) hands down a fresh `{}` object
+    // literal, identical in content to the one already synced but a different
+    // reference. Keying the resync on the object reference instead of its
+    // content would wipe whatever the owner is mid-typing (found in review,
+    // 2026-09-18 — real data loss in a field people paste a whole schedule
+    // into, though unreachable today since both call sites pass a stable
+    // `useState` object).
+    const { rerender, onChange } = renderField({ value: {} });
+    fireEvent.change(field(), { target: { value: '{"0": [["09:00","17:0' } });
+    expect(field()).toHaveValue('{"0": [["09:00","17:0');
+
+    rerender(
+      <OpeningHoursField id="edit-collection-opening-hours" value={{}} onChange={onChange} />
+    );
+
+    expect(field()).toHaveValue('{"0": [["09:00","17:0');
+  });
+
+  describe('onValidityChange — what lets the page refuse a Save', () => {
+    const lastReport = (spy) => spy.mock.calls.at(-1)[0];
+
+    test('an unparseable draft reports invalid; fixing it reports valid again', () => {
+      const onValidityChange = vi.fn();
+      renderField({ onValidityChange });
+      expect(lastReport(onValidityChange)).toBe(true);
+
+      fireEvent.change(field(), { target: { value: '{"0": [' } });
+      fireEvent.blur(field());
+      expect(lastReport(onValidityChange)).toBe(false);
+
+      fireEvent.change(field(), { target: { value: '{"0": [["10:00","14:00"]]}' } });
+      fireEvent.blur(field());
+      expect(lastReport(onValidityChange)).toBe(true);
+    });
+
+    test('unmounting with a broken draft reports valid — the field is gone, so is its refusal', () => {
+      const onValidityChange = vi.fn();
+      const { unmount } = renderField({ onValidityChange });
+      fireEvent.change(field(), { target: { value: 'nope' } });
+      fireEvent.blur(field());
+      expect(lastReport(onValidityChange)).toBe(false);
+
+      unmount();
+
+      expect(lastReport(onValidityChange)).toBe(true);
+    });
+
+    test('a value arriving from outside replaces a broken draft and clears its error', () => {
+      const onValidityChange = vi.fn();
+      const { rerender, onChange } = renderField({ onValidityChange });
+      fireEvent.change(field(), { target: { value: 'nope' } });
+      fireEvent.blur(field());
+      expect(screen.getByText(/not valid JSON/)).toBeInTheDocument();
+
+      rerender(
+        <OpeningHoursField
+          id="edit-collection-opening-hours"
+          value={{ 3: [['08:00', '12:00']] }}
+          onChange={onChange}
+          onValidityChange={onValidityChange}
+        />
+      );
+
+      expect(field()).toHaveValue(JSON.stringify({ 3: [['08:00', '12:00']] }));
+      expect(screen.queryByText(/not valid JSON/)).toBeNull();
+      expect(lastReport(onValidityChange)).toBe(true);
+    });
+  });
+
+  test('a same-content but new-reference value still lets a later real external change through', () => {
+    // The fix above must not become "never resync again" — a genuine content
+    // change from outside (the Edit form finishing its load) still has to land.
+    const { rerender, onChange } = renderField({ value: {} });
+    rerender(
+      <OpeningHoursField id="edit-collection-opening-hours" value={{}} onChange={onChange} />
+    );
+    rerender(
+      <OpeningHoursField
+        id="edit-collection-opening-hours"
+        value={{ 2: [['09:00', '17:00']] }}
+        onChange={onChange}
+      />
+    );
+
+    expect(field()).toHaveValue(JSON.stringify({ 2: [['09:00', '17:00']] }));
+  });
 });

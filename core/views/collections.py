@@ -38,6 +38,7 @@ from core.serializers import (
     CollectionRemoveThingSerializer,
     CollectionSerializer,
     CollectionUpdateSerializer,
+    EmailNoteTestSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
 from core.services.creator_policy import co_owners_denial, collection_mode_denial
@@ -48,6 +49,7 @@ from core.services.email_service import (
     # the one-at-a-time `deliver_invitation` path below.
     send_collection_invite_email,
     send_collection_revoke_email,
+    send_email_note_test_email,
 )
 from core.services.export_service import collection_stats_rows
 from core.services.invitation_service import (
@@ -1378,6 +1380,33 @@ class SharePreviewView(APIView):
                 "language": collection.language,
             }
         )
+
+
+class CollectionEmailNoteTestView(APIView):
+    """
+    POST /api/v1/collections/{collection_code}/email-note/test/
+    Email the acting curator their ``email_note`` draft, rendered exactly as it
+    will reach a member (``send_email_note_test_email``). Curators only; the
+    draft needn't be saved. It goes to the requester's own address and nobody
+    else's, so the only thing to limit is how often.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ratelimit(key="user", rate="10/h", method="POST", block=True))
+    def post(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+        denied = require_collection_curator(
+            collection, request.user.code, "Only the owner or a co-owner can test the email note"
+        )
+        if denied:
+            return denied
+        serializer = EmailNoteTestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        send_email_note_test_email(
+            request.user, collection, serializer.validated_data["email_note"]
+        )
+        return Response({"status": "sent"}, status=status.HTTP_200_OK)
 
 
 class CollectionBroadcastView(APIView):

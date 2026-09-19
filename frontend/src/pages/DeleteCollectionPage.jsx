@@ -33,7 +33,7 @@ export default function DeleteCollectionPage() {
   // code you are no longer on simply stops being true.
   const [failedCode, setFailedCode] = useState(null);
   const error = failedCode === code;
-  useCollectionLanguage(collection?.language);
+  useCollectionLanguage(collection?.language, [collection?.headline]);
 
   useEffect(() => {
     document.title = collection

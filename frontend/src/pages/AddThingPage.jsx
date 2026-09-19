@@ -67,7 +67,7 @@ export default function AddThingPage() {
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [tags, setTags] = useState([]);
   const [collectionLanguage, setCollectionLanguage] = useState('');
-  useCollectionLanguage(collectionLanguage);
+  useCollectionLanguage(collectionLanguage, [collectionHeadline]);
 
   useEffect(() => {
     if (!userCode) return;

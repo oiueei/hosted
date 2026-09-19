@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { nestedTabStops } from './nestedInteractive';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import InfoPopover from '../components/InfoPopover';
 import InlineConfirm from '../components/InlineConfirm';
 
@@ -99,6 +99,8 @@ vi.mock('../services/api', () => ({
 }));
 
 import CollectionPage from '../pages/CollectionPage';
+import RequestThingPage from '../pages/RequestThingPage';
+import { apiFetch } from '../services/api';
 
 function renderCollection() {
   return render(
@@ -231,5 +233,157 @@ describe('shared disclosure widgets — opened-state a11y', () => {
     await screen.findByText('The owner is told, and a moderator reads it.');
 
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
+  });
+});
+
+/**
+ * RequestThingPage — the densest form in the app (DateInput + Select + two
+ * RadioOptionGroups + TextArea), and never axe-scanned before this: the smoke
+ * sweep never opens a real thing's request form, and no other suite touches
+ * it. Two entirely new flows (DAY and HOUR reservations) shipped into this
+ * release with no axe coverage at all (found in review, 2026-09-18). Covers
+ * the plain LEND/RENT range picker, both RESERVE_THING shapes, and the
+ * HOUR-unit dead-end fallback — the exact state the StatusRegion fix above
+ * (RequestThingPage.jsx) targets, so a missing label or a stray live-region
+ * violation on that specific Notification would be caught here too.
+ */
+describe('RequestThingPage — interactive a11y', () => {
+  const LEND_THING = {
+    code: 'LND01',
+    type: 'LEND_THING',
+    headline: 'Lent Bike',
+    location: 'Planta 1',
+    collection_code: 'COL001',
+    rental_weekdays: [],
+    available_today: true,
+    next_available: null,
+  };
+
+  const DAY_RESERVE_THING = {
+    code: 'RSV01',
+    type: 'RESERVE_THING',
+    headline: 'Sala polivalent',
+    fee: '5.00',
+    location: 'Planta 1',
+    collection_code: 'COL001',
+    rental_weekdays: [],
+    reservation_max_days: 3,
+    reservation_horizon_days: 90,
+    available_today: true,
+    next_available: null,
+  };
+
+  const HOUR_RESERVE_THING = {
+    code: 'RSV02',
+    type: 'RESERVE_THING',
+    headline: 'Sala amb hores',
+    location: 'Planta 1',
+    collection_code: 'COL001',
+    reservation_unit: 'HOUR',
+    reservation_horizon_days: 90,
+    reservation_min_minutes: 60,
+    reservation_max_minutes: 180,
+    // Wed 2026-06-03 (the fixed system date below + 2 days): both blocks open.
+    opening_hours: {
+      2: [
+        ['10:00', '14:00'],
+        ['16:00', '20:00'],
+      ],
+    },
+    available_today: true,
+    next_available: null,
+  };
+
+  function setRequestApi(thing, calendar = []) {
+    apiFetch.mockImplementation((url) => {
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse(calendar));
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url)) return Promise.resolve(mockResponse(thing));
+      return Promise.resolve(mockResponse({}));
+    });
+  }
+
+  function renderRequest(thingCode) {
+    return render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: `/collections/COL001/things/${thingCode}/request`, state: {} },
+        ]}
+      >
+        <Routes>
+          <Route
+            path="/collections/:code/things/:thingCode/request"
+            element={<RequestThingPage />}
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  beforeEach(() => {
+    // A fixed Monday so the HOUR-unit fixture's Wednesday opening block is
+    // reachable and inside every horizon (mirrors reservations.test.jsx).
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 5, 1, 12, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('the plain LEND/RENT date-range form has no axe violations', async () => {
+    setRequestApi(LEND_THING);
+    const { container } = renderRequest('LND01');
+    await screen.findByText('Request: Lent Bike');
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('the DAY-unit RESERVE_THING form (duration select + pickup) has no axe violations', async () => {
+    setRequestApi(DAY_RESERVE_THING);
+    const { container } = renderRequest('RSV01');
+    await screen.findByText('Reserve Sala polivalent');
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('the HOUR-unit form, fully opened to the start-time radios, has no axe violations', async () => {
+    setRequestApi(HOUR_RESERVE_THING);
+    const { container } = renderRequest('RSV02');
+    await screen.findByText('Reserve Sala amb hores');
+
+    const pickup = container.querySelector('#reservation-pickup-date-hourly');
+    fireEvent.change(pickup, { target: { value: '03/06/2026' } }); // Wednesday
+    fireEvent.blur(pickup);
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    await screen.findByRole('radio', { name: '10:00' });
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('the HOUR-unit dead-end fallback ("no start times") has no axe violations', async () => {
+    setRequestApi(HOUR_RESERVE_THING, [
+      {
+        start_date: '2026-06-03',
+        end_date: '2026-06-04',
+        start_time: '10:00',
+        end_time: '13:00',
+      },
+      {
+        start_date: '2026-06-03',
+        end_date: '2026-06-04',
+        start_time: '16:00',
+        end_time: '19:00',
+      },
+    ]);
+    const { container } = renderRequest('RSV02');
+    await screen.findByText('Reserve Sala amb hores');
+
+    const pickup = container.querySelector('#reservation-pickup-date-hourly');
+    fireEvent.change(pickup, { target: { value: '03/06/2026' } });
+    fireEvent.blur(pickup);
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    await screen.findByText('No times available');
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

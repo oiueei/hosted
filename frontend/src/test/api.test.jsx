@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
-import { apiFetch, extractApiError } from '../services/api';
+import { apiFetch, extractApiError, codedErrorMessage } from '../services/api';
 
 // apiFetch is the security-load-bearing auth core: it injects the CSRF header on
 // mutating requests, funnels concurrent 401s through one refresh, retries once on
@@ -214,5 +214,52 @@ describe('extractApiError — message precedence', () => {
   test('returns null on an empty body or unparseable JSON', async () => {
     expect(await extractApiError(body({}))).toBeNull();
     expect(await extractApiError({ json: () => Promise.reject(new Error('x')) })).toBeNull();
+  });
+});
+
+/**
+ * `core` has no gettext catalogue, so a business-rule refusal arrives as an
+ * English sentence. A coded one (`core.utils.Refusal` → `{error, code,
+ * params}`) is said from `requestErrors.<code>` instead — in the reader's
+ * language, with its number as the plural count. These strings differ from the
+ * server's on purpose, so a test can tell which one was shown.
+ */
+describe('extractApiError — a coded refusal is said in the reader’s language', () => {
+  const body = (data) => ({ json: () => Promise.resolve(data) });
+
+  test('the code wins over the server’s English sentence', async () => {
+    expect(
+      await extractApiError(
+        body({ error: 'That time has already begun.', code: 'reservation_already_begun' })
+      )
+    ).toBe('That time has already begun — pick a later one.');
+  });
+
+  test('its params are interpolated, and a number picks the plural', async () => {
+    const refusal = (max) => ({
+      error: "You've reached the maximum number of active reservations for this space.",
+      code: 'reservation_max_active',
+      params: { max },
+    });
+    expect(await extractApiError(body(refusal(1)))).toBe(
+      'You already have 1 active reservation here — the most this group allows.'
+    );
+    expect(await extractApiError(body(refusal(3)))).toBe(
+      'You already have 3 active reservations here — the most this group allows.'
+    );
+  });
+
+  test('a code this client does not know yet still shows the server’s sentence', async () => {
+    expect(await extractApiError(body({ error: 'Something new.', code: 'brand_new_rule' }))).toBe(
+      'Something new.'
+    );
+  });
+
+  test('codedErrorMessage answers only for a known code — a caller keeps its own copy', () => {
+    expect(codedErrorMessage({ error: 'overlap' })).toBeNull();
+    expect(codedErrorMessage({ error: 'x', code: 'brand_new_rule' })).toBeNull();
+    expect(codedErrorMessage({ error: 'x', code: 'time_taken' })).toBe(
+      'That time is already taken.'
+    );
   });
 });

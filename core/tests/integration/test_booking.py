@@ -1557,3 +1557,98 @@ class TestBookingCancelView:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         booking.refresh_from_db()
         assert booking.status == "PENDING"
+
+
+@pytest.mark.django_db
+class TestACalendarCarriesOnlyWhatIsStillAhead:
+    """`BookingPeriod.blocking_filter`: every calendar reader only ever used
+    what is still to come, so a thing's reads no longer carry — and the hourly
+    availability walk no longer scans — its whole booking history. One day of
+    grace, because the browser's "today" can be the server's yesterday."""
+
+    def _booking(self, thing, requester, owner, ends_days_from_today, **extra):
+        end = timezone.localdate() + timedelta(days=ends_days_from_today)
+        return BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type=thing.type,
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=end - timedelta(days=3),
+            end_date=end,
+            status=BookingPeriod.Status.ACCEPTED,
+            **extra,
+        )
+
+    def test_the_calendar_leaves_out_what_ended_before_yesterday(
+        self, authenticated_client, lend_thing, user, user2
+    ):
+        long_gone = self._booking(lend_thing, user2, user, -30)
+        ended_the_day_before = self._booking(lend_thing, user2, user, -2)
+        ended_yesterday = self._booking(lend_thing, user2, user, -1)
+        ends_today = self._booking(lend_thing, user2, user, 0)
+        ahead = self._booking(lend_thing, user2, user, 10)
+
+        response = authenticated_client.get(f"/api/v1/things/{lend_thing.code}/calendar/")
+
+        codes = {row["code"] for row in response.json()}
+        assert codes == {ended_yesterday.code, ends_today.code, ahead.code}
+        assert long_gone.code not in codes and ended_the_day_before.code not in codes
+
+    def test_an_undated_hold_is_always_still_current(self, authenticated_client, user, user2):
+        gift = ThingFactory(owner=user, type=Thing.Type.GIFT_THING, status=Thing.Status.TAKEN)
+        pending = BookingPeriod.objects.create(
+            thing_code=gift,
+            thing_type=gift.type,
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+        )
+
+        response = authenticated_client.get(f"/api/v1/things/{gift.code}/calendar/")
+
+        assert [row["code"] for row in response.json()] == [pending.code]
+
+    def test_the_owners_list_follows_the_same_rule_on_both_paths(
+        self, authenticated_client, lend_thing, collection, user, user2
+    ):
+        self._booking(lend_thing, user2, user, -30)
+        ahead = self._booking(lend_thing, user2, user, 10)
+
+        # The collection page reads the prefetched rows (`optimise_thing_queryset`)
+        # — the page an owner opens most; the thing's own page falls back to
+        # `get_blocked_periods`. Both must say the same.
+        page = authenticated_client.get(f"/api/v1/collections/{collection.code}/").json()
+        [card] = [t for t in page["things"] if t["code"] == lend_thing.code]
+        detail = authenticated_client.get(f"/api/v1/things/{lend_thing.code}/").json()
+
+        assert [row["code"] for row in card["bookings"]] == [ahead.code]
+        assert [row["code"] for row in detail["bookings"]] == [ahead.code]
+
+
+@pytest.mark.django_db
+def test_a_broken_link_in_the_email_note_never_costs_the_requester_their_email(
+    authenticated_client2, user2, collection, thing
+):
+    """The owner's note is rendered into the requester's confirmation after
+    the request has committed. A link whose host can't be read (an unclosed
+    IPv6 bracket, a label too long for IDNA) makes the host lookup raise; if
+    that escaped, the member would get a 500 for a request that went through —
+    a gift already marked taken — and no confirmation. It renders as literal
+    text instead, and the request answers as usual."""
+    from django.core import mail
+
+    collection.add_invite(user2.code)
+    collection.email_note = "Normas: [aquí](https://[oops/normas)"
+    collection.save(update_fields=["email_note"])
+    mail.outbox.clear()
+
+    response = authenticated_client2.post(
+        f"/api/v1/things/{thing.code}/request/",
+        {"collection_code": collection.code},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    [confirmation] = [m for m in mail.outbox if m.to == [user2.email]]
+    assert "[aquí](https://[oops/normas)" in confirmation.alternatives[0][0]

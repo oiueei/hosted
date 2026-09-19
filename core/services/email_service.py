@@ -25,8 +25,10 @@ import logging
 import random
 import re
 import smtplib
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from email.mime.image import MIMEImage
+from html import unescape as html_unescape
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.mail import BadHeaderError, EmailMultiAlternatives
@@ -36,7 +38,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from core.services.email_texts import T, viral_lines
-from core.utils import redact_email, resolve_localized
+from core.utils import parse_localized, redact_email, resolve_localized
 
 logger = logging.getLogger(__name__)
 
@@ -568,22 +570,48 @@ _MD_ORDERED = re.compile(r"^\d+\. ")
 _MD_URL = re.compile(r"^https?://", re.IGNORECASE)
 
 
+def _link_host(escaped_url):
+    """The host an (escaped) http(s) link really goes to, in ASCII — or
+    ``None`` when there isn't a usable one.
+
+    ASCII means IDNA (punycode): a lookalike host written with a Cyrillic
+    ``е`` reads ``xn--…`` rather than passing for the real name.
+    """
+    try:
+        host = urlsplit(html_unescape(escaped_url)).hostname
+        return host.encode("idna").decode("ascii") if host else None
+    except (ValueError, UnicodeError):
+        return None
+
+
 def _md_inline(escaped_text):
     """Inline Markdown spans over ALREADY-escaped text — never escapes again.
 
     Links are parked behind NUL-delimited placeholders while the bold/italic
     passes run (an ``*`` or ``_`` inside an href must not become <em>), the
     same fix MarkdownText.jsx carries on the frontend. A URL that is not
-    http(s) stays as literal (escaped) text: a dead ``href="#"`` in an email
-    client confuses more than the raw link does.
+    http(s), or has no host, stays as literal (escaped) text: a dead
+    ``href="#"`` in an email client confuses more than the raw link does.
+
+    **A link whose text is not its own URL names its host after it** —
+    ``carnet (example.com)``. These emails leave from the operator's own
+    domain, and the owner chooses both halves of the link: without the host,
+    ``[https://www.oiueei.com/verify/…](https://elsewhere.example)`` reads as
+    the operator's own sign-in link (2026-09-18 security round). The host is
+    the one value here derived from unescaped text, so it is escaped once,
+    itself.
     """
     text = escaped_text.replace("\x00", "")  # typed NUL can't forge a placeholder
     anchors = []
 
     def park(match):
         label, url = match.group(1), match.group(2)
-        if _MD_URL.match(url):
-            anchors.append(f'<a href="{url}">{label}</a>')
+        host = _link_host(url) if _MD_URL.match(url) else None
+        if host:
+            anchor = f'<a href="{url}">{label}</a>'
+            if html_unescape(label).strip() != html_unescape(url):
+                anchor += f" ({escape(host)})"
+            anchors.append(anchor)
             return f"\x00{len(anchors) - 1}\x00"
         return match.group(0)
 
@@ -606,7 +634,8 @@ def _note_blocks(resolved_text):
     positional logic anywhere).
 
     Subset: paragraphs (a lone newline inside one is a <br />), ``-`` and
-    ``1.`` lists, ``**bold**``, ``*italic*``, ``[text](url)`` http(s) only.
+    ``1.`` lists, ``**bold**``, ``*italic*``, ``[text](url)`` http(s) only, its
+    real host after it unless the text is the URL (``_md_inline``).
     No headings, no tables: a ≤512-character note doesn't carry a document's
     hierarchy, and in these emails that is the layout's voice, not the
     owner's — ``#`` and ``|`` lines render as literal text. Emojis are plain
@@ -750,14 +779,19 @@ def _fmt_when(booking):
     HOUR-unit reservation differs from a whole-day one, with no catalogue
     changes needed in any of the three languages.
 
-    Whole-day (``start_time`` NULL — every DAY-unit RESERVE, and this is never
-    called for LEND/RENT) renders exactly as `_fmt_date` always has: two full
-    dates. An HOUR-unit reservation renders the date once, on the start, then
-    both HH:MM times — "05/10/2026 10:00" to "13:00" — since same-day start and
-    end make a second date redundant.
+    Whole-day (``start_time`` NULL — every DAY-unit RESERVE; this is never
+    called for LEND/RENT) renders two full dates, the second being the
+    reservation's **last day, inclusive**. ``end_date`` is ``start + duration``,
+    the day the space is free again — right for overlap checks and for the
+    calendar export (Google's all-day End Date is exclusive too), wrong to hand
+    a member as the end of their booking: a one-day reservation on the 5th read
+    "from the 5th to the 6th". An HOUR-unit reservation renders the date once,
+    on the start, then both HH:MM times — "05/10/2026 10:00" to "13:00" — since
+    same-day start and end make a second date redundant.
     """
     if booking.start_time is None:
-        return _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+        last_day = booking.end_date - timedelta(days=1)
+        return _fmt_date(booking.start_date), _fmt_date(last_day)
     return (
         f"{_fmt_date(booking.start_date)} {booking.start_time.strftime('%H:%M')}",
         booking.end_time.strftime("%H:%M"),
@@ -1192,8 +1226,16 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
-def send_booking_decision_email(booking, thing, accepted=True):
-    """Send booking accept/reject notification email to requester."""
+def send_booking_decision_email(booking, thing, accepted=True, collection=None):
+    """Send booking accept/reject notification email to requester.
+
+    ``collection`` feeds the owner's ``email_note`` on an accepted decision and
+    nothing else — ``finalize_booking_decision`` passes the one
+    ``resolve_request_collection`` picks **among the collections the requester
+    may read**. Without it there is no note: the thing's first collection may be
+    a PRIVATE group the requester was never in, and its note is written for
+    that group's members.
+    """
     user, lang = _recipient(booking.requester_email)
     T, L = _texts(lang), _local(lang)
     decision_word = T("decision_confirmed") if accepted else T("decision_cancelled")
@@ -1234,14 +1276,10 @@ def send_booking_decision_email(booking, thing, accepted=True):
     # The owner's note rides an ACCEPTED decision only — that is the moment
     # the hold becomes real and the note's "how to collect / where we are"
     # prose is finally actionable; a refusal has no next steps for it to
-    # describe. Same first-collection source the header line uses (the
-    # decision path knows the booking, not the collection the request was
-    # made through).
+    # describe. From the collection the caller resolved for this requester,
+    # never the thing's first one (see the docstring).
     if accepted:
-        note_collection = _thing_collection(thing)
-        note_plain, note_blocks = _note_blocks(
-            L(note_collection.email_note) if note_collection else ""
-        )
+        note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
         if note_plain:
             plain += "\n\n" + note_plain
             html_blocks.extend(note_blocks)
@@ -1333,6 +1371,55 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
         user=user,
         lang=lang,
         header=header,
+    )
+
+
+# Endonyms, like the SPA's language picker: a language is named in itself.
+_LANGUAGE_NAMES = {"es": "Español", "ca": "Català", "en": "English"}
+
+
+def send_email_note_test_email(curator, collection, note):
+    """Send a curator their own ``email_note`` draft, rendered as members get it.
+
+    The note is written blind otherwise: it only ever appears in the emails a
+    *requester* receives, and a curator can't request their own things. The
+    request page's Markdown preview would lie about it — this subset has no
+    headings or tables and prints a link's host after it — so the test uses the
+    real renderer (``_note_blocks``) inside the real layout, and a note written
+    per language shows every version, each under its language's own name.
+
+    ``note`` is the draft as typed (unsaved). Mandatory category: it goes only
+    to the person who asked for it, the moment they asked, so an activity
+    opt-out must not swallow it.
+    """
+    user, lang = _recipient(curator.email, collection)
+    T, L = _texts(lang), _local(lang)
+    headline = L(collection.headline)
+    versions = parse_localized(note)
+    if versions:
+        parts = [
+            (_LANGUAGE_NAMES.get(code, code), _note_blocks(text)) for code, text in versions.items()
+        ]
+    else:
+        parts = [(None, _note_blocks(note))]
+
+    plain_parts, blocks = [T("email_note_test_intro").format(collection=headline)], []
+    blocks.append(_para(T("email_note_test_intro").format(collection=headline)))
+    for name, (note_plain, note_blocks) in parts:
+        if name:
+            plain_parts.append(f"— {name} —")
+            blocks.append(_strong(name))
+        plain_parts.append(note_plain)
+        blocks.extend(note_blocks)
+    _send(
+        curator.email,
+        T("email_note_test_subject").format(collection=headline),
+        "\n\n".join(plain_parts),
+        _render_email(blocks, lang=lang, header=headline),
+        CATEGORY_MANDATORY,
+        user=user,
+        lang=lang,
+        header=headline,
     )
 
 
@@ -1479,7 +1566,7 @@ def send_broadcast_email(
                 [
                     _para(T("broadcast_intro").format(owner=owner)),
                     _para(message),
-                    _links((collection_url, T("broadcast_help_cta"))),
+                    _links((collection_url, T("broadcast_open_cta"))),
                 ],
                 lang=lang,
                 header=headline,

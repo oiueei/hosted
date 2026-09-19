@@ -175,6 +175,44 @@ describe('EditCollectionPage — saving', () => {
 
     expect(await screen.findByText(/[Tt]oo many/)).toBeInTheDocument();
   });
+
+  test('a space booked by the day saves its day rules, and none of the hourly ones', async () => {
+    // Since the DAY/HOUR switch, the day branch of the save body — the one
+    // every reservations collection that predates HOUR is on — was never sent
+    // by any test: an owner's new day cap could stop reaching the server and
+    // the form would still say it was saved.
+    const byTheDay = {
+      ...COLLECTION,
+      allowed_thing_types: ['RESERVE_THING'],
+      reservation_unit: 'DAY',
+      reservation_max_days: 3,
+    };
+    apiFetch.mockImplementation((url, opts) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => (opts?.method === 'PATCH' ? {} : byTheDay),
+      })
+    );
+    const { container } = renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const maxDays = container.querySelector('#edit-collection-reservation-max-days');
+    expect(maxDays).toHaveValue(3);
+    fireEvent.change(maxDays, { target: { value: '5' } });
+    fireEvent.blur(maxDays);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/collections/COL001'));
+    const [, patch] = apiFetch.mock.calls.find(([, o]) => o?.method === 'PATCH');
+    const body = JSON.parse(patch.body);
+    expect(body.reservation_unit).toBe('DAY');
+    expect(body.reservation_max_days).toBe(5);
+    for (const hourly of ['opening_hours', 'reservation_min_minutes', 'reservation_max_minutes']) {
+      expect(body).not.toHaveProperty(hourly);
+    }
+  });
 });
 
 describe('EditCollectionPage — the delete button', () => {
@@ -320,7 +358,7 @@ describe('EditCollectionPage — the request-page note', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
 
-    expect(screen.getByLabelText(/note for the request page/i).value).toBe('Bring photo ID.');
+    expect(screen.getByLabelText(/note shown before someone asks/i).value).toBe('Bring photo ID.');
   });
 
   test('an edited note reaches the PATCH body', async () => {
@@ -329,7 +367,7 @@ describe('EditCollectionPage — the request-page note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+    fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
       target: { value: 'Pickup is Tuesdays only.' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -347,7 +385,7 @@ describe('EditCollectionPage — the request-page note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+    fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
       target: { value: 'Bring ID.' },
     });
 
@@ -360,7 +398,7 @@ describe('EditCollectionPage — the request-page note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    const field = screen.getByLabelText(/note for the request page/i);
+    const field = screen.getByLabelText(/note shown before someone asks/i);
     fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
 
     expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
@@ -390,9 +428,34 @@ describe('EditCollectionPage — the email note', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
 
-    expect(screen.getByLabelText(/note in the request emails/i).value).toBe(
+    expect(screen.getByLabelText(/note in the emails after someone asks/i).value).toBe(
       'We confirm within 48h.'
     );
+  });
+
+  test('the loaded note can be mailed to the curator as a test, from right under it', async () => {
+    // Written blind otherwise: it only reaches requesters, and a curator can't
+    // request their own things (EmailNoteTest.test.jsx covers the button).
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...COLLECTION, email_note: 'We confirm within 48h.' }),
+      });
+    });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send me a test email' }));
+
+    expect(await screen.findByText(/Sent to your inbox/)).toBeInTheDocument();
+    const post = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
+    expect(post[0]).toBe('/api/v1/collections/COL001/email-note/test/');
+    expect(JSON.parse(post[1].body)).toEqual({ email_note: 'We confirm within 48h.' });
   });
 
   test('an edited note reaches the PATCH body, trimmed', async () => {
@@ -401,7 +464,7 @@ describe('EditCollectionPage — the email note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note in the request emails/i), {
+    fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
       target: { value: '  The space is on floor 2.  ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -419,7 +482,7 @@ describe('EditCollectionPage — the email note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note in the request emails/i), {
+    fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
       target: { value: 'Floor 2.' },
     });
 
@@ -432,7 +495,7 @@ describe('EditCollectionPage — the email note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    const field = screen.getByLabelText(/note in the request emails/i);
+    const field = screen.getByLabelText(/note in the emails after someone asks/i);
     fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
 
     expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
@@ -633,7 +696,15 @@ describe('EditCollectionPage — useCollectionLanguage gets the saved value, nev
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca'));
+    const SAVED_TEXTS = ['Kitchen Collection', 'Things from the kitchen'];
+    await waitFor(() => expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS));
+
+    // The owner's texts as saved, not as being typed: rewriting the headline
+    // (into another language, say) must not move the form's own language.
+    fireEvent.change(screen.getByDisplayValue('Kitchen Collection'), {
+      target: { value: '{"es": "Cocina", "en": "Kitchen"}' },
+    });
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS);
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     const languageCombobox = await screen.findByRole('combobox', {
@@ -645,6 +716,103 @@ describe('EditCollectionPage — useCollectionLanguage gets the saved value, nev
     // The dropdown itself did change — this isn't a no-op click...
     await waitFor(() => expect(languageCombobox).toHaveTextContent('Español'));
     // ...but the hook must still see the collection's actual saved language.
-    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca');
+    expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS);
+  });
+});
+
+describe('EditCollectionPage — an unparseable opening-hours draft blocks Save', () => {
+  // OpeningHoursField keeps the last good value while its draft doesn't parse.
+  // Save used to send that stale value and navigate away, taking the inline
+  // error with it: an owner whose paste had a trailing comma believed a new
+  // schedule was saved when the old one was (found in review, 2026-09-18).
+  const HOURLY = {
+    ...COLLECTION,
+    allowed_thing_types: ['RESERVE_THING'],
+    reservation_unit: 'HOUR',
+    opening_hours: { 0: [['10:00', '14:00']] },
+  };
+
+  function mockHourly() {
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'PATCH')
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => HOURLY });
+    });
+  }
+
+  const patchCalls = () => apiFetch.mock.calls.filter((c) => c[1]?.method === 'PATCH');
+
+  function typeOpeningHours(value) {
+    const field = screen.getByLabelText('Weekly opening hours');
+    fireEvent.change(field, { target: { value } });
+    fireEvent.blur(field);
+  }
+
+  async function openForm() {
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+  }
+
+  test('Save sends nothing, stays put, and says why', async () => {
+    mockHourly();
+    await openForm();
+    typeOpeningHours('{"0": [["10:00","14:00"]],}');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(/Nothing was saved: the weekly opening hours/)).toBeVisible();
+    expect(patchCalls()).toHaveLength(0);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  test('folding "More options" away does not lift the refusal', async () => {
+    // HDS keeps a closed Accordion's content mounted (display: none), so the
+    // field's refusal survives the owner collapsing the section before Save.
+    // If an HDS upgrade ever unmounted it instead, the field's unmount cleanup
+    // would report "valid" and the silent stale save would be back.
+    mockHourly();
+    await openForm();
+    typeOpeningHours('{"0": [["10:00","14:00"]],}');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    expect(screen.getByLabelText('Weekly opening hours')).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(/Nothing was saved: the weekly opening hours/)).toBeVisible();
+    expect(patchCalls()).toHaveLength(0);
+  });
+
+  test('fixing the draft lets the corrected schedule through', async () => {
+    mockHourly();
+    await openForm();
+    typeOpeningHours('{"0": [["10:00","14:00"]],}');
+    typeOpeningHours('{"0": [["09:00","13:00"]]}');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patchCalls()).toHaveLength(1));
+    expect(JSON.parse(patchCalls()[0][1].body).opening_hours).toEqual({
+      0: [['09:00', '13:00']],
+    });
+  });
+
+  test('leaving "By hour" and coming back drops the refusal with the broken draft', async () => {
+    // Switching to DAY unmounts the field, and coming back remounts it showing
+    // the last good schedule with no error. A refusal that outlived the draft
+    // it was about would block a Save with nothing on screen to fix.
+    mockHourly();
+    await openForm();
+    typeOpeningHours('not json');
+    fireEvent.click(screen.getByRole('radio', { name: 'By day' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    expect(screen.getByLabelText('Weekly opening hours')).toHaveValue(
+      JSON.stringify(HOURLY.opening_hours)
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patchCalls()).toHaveLength(1));
+    expect(JSON.parse(patchCalls()[0][1].body).opening_hours).toEqual(HOURLY.opening_hours);
   });
 });

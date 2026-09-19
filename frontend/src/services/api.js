@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+
 /**
  * Centralised fetch wrapper with cookie-based auth and 401 handling.
  */
@@ -30,29 +32,57 @@ function refreshTokens() {
 }
 
 /**
- * Best user-facing message from a failed API response body.
+ * Best user-facing message from a failed API response's parsed body.
  *
  * DRF sends `{detail}`, our views often use `{error}`, and serializer errors come
  * as `{non_field_errors: [...]}` or `{field: [...]}`. Returns the most specific
  * string, or `null` when there is no usable body — callers fall back to their own
  * i18n copy. A 429 has no useful body, so callers should map `res.status === 429`
  * to their own "too many attempts" message before calling this.
+ *
+ * **A coded refusal is said in the reader's language.** `core` has no gettext
+ * catalogue, so every business-rule refusal arrives as an English sentence;
+ * the request page used to show "That time has already begun." to a Catalan
+ * member. A refusal the server coded (`core.utils.Refusal` → `{error, code,
+ * params}`) is looked up in `requestErrors.<code>` first, its number (if any)
+ * doubling as the plural count; a code this client doesn't know yet still
+ * falls back to the server's own sentence.
  */
+export function apiErrorMessage(data) {
+  if (!data) return null;
+  if (typeof data === 'string') return data;
+  const coded = codedErrorMessage(data);
+  if (coded) return coded;
+  if (data.detail) return data.detail;
+  if (data.error) return data.error;
+  if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+    return String(data.non_field_errors[0]);
+  }
+  for (const value of Object.values(data)) {
+    if (Array.isArray(value) && value.length) return String(value[0]);
+    if (typeof value === 'string') return value;
+  }
+  return null;
+}
+
+/**
+ * Only the coded half of `apiErrorMessage`: a refusal's own translation, or
+ * `null` — for a caller whose fallback is already its own localised copy and
+ * that would rather keep it than show an uncoded English sentence.
+ */
+export function codedErrorMessage(data) {
+  if (!data?.code) return null;
+  const params = data.params || {};
+  const count = params.max ?? params.days ?? params.min ?? params.step;
+  const options = count === undefined ? params : { ...params, count };
+  const key = `requestErrors.${data.code}`;
+  return i18n.exists(key, options) ? i18n.t(key, options) : null;
+}
+
+/** `apiErrorMessage` for a response whose body hasn't been read yet. */
 export async function extractApiError(res) {
   try {
-    const data = await res.json();
-    if (!data) return null;
-    if (typeof data === 'string') return data;
-    if (data.detail) return data.detail;
-    if (data.error) return data.error;
-    if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
-      return String(data.non_field_errors[0]);
-    }
-    for (const value of Object.values(data)) {
-      if (Array.isArray(value) && value.length) return String(value[0]);
-      if (typeof value === 'string') return value;
-    }
-    return null;
+    return apiErrorMessage(await res.json());
   } catch {
     return null;
   }
