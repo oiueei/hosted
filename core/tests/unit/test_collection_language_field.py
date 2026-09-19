@@ -9,7 +9,8 @@ already resolves through `_viewable_collection`. Mirrors that field's tests
 
 import pytest
 from django.contrib.auth.models import AnonymousUser
-from rest_framework.test import APIRequestFactory
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from core.models import Collection, Language, Thing
 from core.serializers import ThingSerializer
@@ -36,19 +37,33 @@ def test_empty_when_the_thing_has_no_viewable_collection(user):
     assert ThingSerializer(thing).data["collection_language"] == ""
 
 
-def test_a_thing_in_two_collections_uses_the_first_ones_language(user, collection):
-    """Same rule `collection_headline`/`collection_request_info` already
-    follow — the first collection this viewer may read decides every
-    `collection_*` field."""
+def test_a_thing_in_two_collections_names_one_of_them_and_sticks_to_it(user, collection):
+    """`collections.all()` carries no ORDER BY, so *which* of two readable
+    collections the `collection_*` fields name is the database's to decide —
+    what has to hold is that they all name the same one (chrome in one group's
+    language under another group's name helps nobody), and that `?collection=`
+    settles it. Same shape as `collection_request_info`'s own test."""
     collection.language = Language.CA
     collection.save(update_fields=["language"])
-    other = Collection.objects.create(owner=user, headline="Other", language=Language.ES)
+    other = Collection.objects.create(
+        code="CLOTH1", owner=user, headline="Other", language=Language.ES
+    )
+    languages = {collection.code: "ca", other.code: "es"}
 
     thing = Thing.objects.create(code="CLTWO1", type=Thing.Type.GIFT_THING, owner=user)
     collection.things.add(thing)
     other.things.add(thing)
 
-    assert ThingSerializer(thing).data["collection_language"] == "ca"
+    data = ThingSerializer(thing).data
+    assert data["collection_language"] == languages[data["collection_code"]]
+
+    raw = APIRequestFactory().get("/", {"collection": other.code})
+    force_authenticate(raw, user=user)
+    # A fresh instance: the resolved collection is memoised on the thing.
+    read_again = Thing.objects.get(code=thing.code)
+    through_other = ThingSerializer(read_again, context={"request": Request(raw)}).data
+    assert through_other["collection_code"] == other.code
+    assert through_other["collection_language"] == "es"
 
 
 def test_an_anonymous_reader_never_sees_a_private_collections_language(user, public_collection):
