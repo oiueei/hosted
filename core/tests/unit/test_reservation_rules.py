@@ -34,6 +34,15 @@ def _next_weekday(weekday):
     return d
 
 
+def _refused(refusal):
+    """Which rule a check refused with — its ``Refusal.code`` — or ``None`` when
+    nothing refused. Asserting the code rather than ``is not None`` is the
+    point: these checks run a dozen rules in a row, and "something refused it"
+    stays green when the rule a test is named for stops firing and another one
+    happens to catch the same input."""
+    return getattr(refusal, "code", None)
+
+
 @pytest.fixture
 def reservations_collection(db):
     owner = User.objects.create(code="RSVOWN", email="rsvown@test.com", name="Ateneu")
@@ -127,14 +136,19 @@ def test_is_reservations_collection_false_for_anything_else(db, allowlist):
 
 def test_reservation_violation_rejects_zero_or_negative_days(reservations_collection):
     mon = _next_weekday(0)
-    assert reservations_collection.reservation_violation(mon, 0) is not None
-    assert reservations_collection.reservation_violation(mon, -1) is not None
+    assert _refused(reservations_collection.reservation_violation(mon, 0)) == (
+        "reservation_too_short_days"
+    )
+    assert _refused(reservations_collection.reservation_violation(mon, -1)) == (
+        "reservation_too_short_days"
+    )
 
 
 def test_reservation_violation_rejects_over_the_max(reservations_collection):
     mon = _next_weekday(0)
     msg = reservations_collection.reservation_violation(mon, 4)  # max is 3
-    assert msg is not None and "3" in msg
+    assert _refused(msg) == "reservation_too_long_days"
+    assert msg.params == {"max": 3}
 
 
 def test_reservation_violation_accepts_exactly_the_max(reservations_collection):
@@ -159,7 +173,8 @@ def test_reservation_violation_rejects_past_the_horizon(db):
     today = date(2026, 6, 1)
     assert coll.reservation_violation(today + timedelta(days=13), 1, today=today) is None
     msg = coll.reservation_violation(today + timedelta(days=20), 1, today=today)
-    assert msg is not None and "14" in msg
+    assert _refused(msg) == "reservation_beyond_horizon"
+    assert msg.params == {"days": 14}
 
 
 def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
@@ -185,7 +200,8 @@ def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
     assert coll.reservation_violation(today + timedelta(days=7), 3, today=today) is None
     # One day past it: refused, and the message names the limit.
     msg = coll.reservation_violation(today + timedelta(days=8), 1, today=today)
-    assert msg is not None and "7" in msg
+    assert _refused(msg) == "reservation_beyond_horizon"
+    assert msg.params == {"days": 7}
 
 
 def test_reservation_horizon_defaults_to_90(db):
@@ -196,7 +212,9 @@ def test_reservation_horizon_defaults_to_90(db):
     assert coll.reservation_horizon_days == 90
     today = date(2026, 6, 1)
     assert coll.reservation_violation(today + timedelta(days=89), 1, today=today) is None
-    assert coll.reservation_violation(today + timedelta(days=95), 1, today=today) is not None
+    assert _refused(coll.reservation_violation(today + timedelta(days=95), 1, today=today)) == (
+        "reservation_beyond_horizon"
+    )
 
 
 # --- reservation_violation: every day of the span must be an open weekday ----
@@ -205,12 +223,16 @@ def test_reservation_horizon_defaults_to_90(db):
 def test_reservation_violation_rejects_a_span_crossing_a_closed_day(reservations_collection):
     """Fri + 3 days occupies Fri/Sat/Sun — Sat and Sun are not in Mon–Fri."""
     fri = _next_weekday(4)
-    assert reservations_collection.reservation_violation(fri, 3) is not None
+    assert _refused(reservations_collection.reservation_violation(fri, 3)) == (
+        "reservation_weekday_closed"
+    )
 
 
 def test_reservation_violation_rejects_a_start_on_a_closed_day(reservations_collection):
     sat = _next_weekday(5)
-    assert reservations_collection.reservation_violation(sat, 1) is not None
+    assert _refused(reservations_collection.reservation_violation(sat, 1)) == (
+        "reservation_weekday_closed"
+    )
 
 
 def test_reservation_violation_ignores_weekdays_when_unset(db):
@@ -566,8 +588,9 @@ def test_request_reservation_refuses_a_thing_with_no_reservations_collection(db)
     coll.things.add(thing)
 
     assert resolve_reservations_collection(thing) is None
-    with pytest.raises(BookingRequestError):
+    with pytest.raises(BookingRequestError, match="not in a reservations collection"):
         request_reservation(thing, member, owner.email, _next_weekday(0), 1)
+    assert not BookingPeriod.objects.filter(thing_code=thing).exists()
 
 
 def test_cancel_reservation_rejects_a_non_reservation_booking(db):
@@ -586,8 +609,10 @@ def test_cancel_reservation_rejects_a_non_reservation_booking(db):
         end_date=_next_weekday(0) + timedelta(days=2),
         status=BookingPeriod.Status.ACCEPTED,
     )
-    with pytest.raises(BookingRequestError):
+    with pytest.raises(BookingRequestError, match="Not a reservation"):
         cancel_reservation(booking, member)
+    booking.refresh_from_db()
+    assert booking.status == BookingPeriod.Status.ACCEPTED
 
 
 def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
@@ -608,8 +633,9 @@ def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
     booking = request_reservation(thing, member, owner.email, _next_weekday(0), 1)
 
     cancel_reservation(booking, member)
-    with pytest.raises(BookingRequestError):
+    with pytest.raises(BookingRequestError) as refused:
         cancel_reservation(booking, owner)  # already cancelled
+    assert refused.value.code == "reservation_inactive"
 
 
 # --- active_reservation_count / reservation_max_active_per_member -----------
@@ -703,8 +729,12 @@ def test_request_reservation_refuses_past_the_active_cap(db):
 
     request_reservation(things[0], member, owner.email, _next_weekday(0), 1)
     request_reservation(things[1], member, owner.email, _next_weekday(1), 1)
-    with pytest.raises(BookingRequestError):
+    with pytest.raises(BookingRequestError) as refused:
         request_reservation(things[2], member, owner.email, _next_weekday(2), 1)
+    # The courtesy cap, not the date clash: a different thing, a free day.
+    assert refused.value.code == "reservation_max_active"
+    assert refused.value.status_code == 400
+    assert refused.value.params == {"max": 2}
 
 
 # --- hourly-reservation fields: defaults -------------------------------------
@@ -779,14 +809,10 @@ def test_reservation_hour_violation_rejects_end_before_or_equal_start(
     hourly_reservations_collection,
 ):
     mon = _next_weekday(0)
-    assert (
-        hourly_reservations_collection.reservation_hour_violation(mon, time(11, 0), time(10, 0))
-        is not None
-    )
-    assert (
-        hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(10, 0))
-        is not None
-    )
+    for end in (time(10, 0), time(9, 0)):
+        assert _refused(
+            hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), end)
+        ) == ("reservation_end_before_start")
 
 
 def test_reservation_hour_violation_rejects_under_the_minimum(hourly_reservations_collection):
@@ -795,7 +821,8 @@ def test_reservation_hour_violation_rejects_under_the_minimum(hourly_reservation
     # existed.
     mon = _next_weekday(0)
     msg = hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(10, 30))
-    assert msg is not None and "60" in msg
+    assert _refused(msg) == "reservation_too_short_minutes"
+    assert msg.params == {"min": 60}
 
 
 def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_too_short(db):
@@ -818,7 +845,8 @@ def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_to
     assert coll.reservation_hour_violation(mon, time(10, 0), time(10, 15)) is None
     # Still refused just under the new, lower floor.
     msg = coll.reservation_hour_violation(mon, time(10, 0), time(10, 10))
-    assert msg is not None and "15" in msg
+    assert _refused(msg) == "reservation_too_short_minutes"
+    assert msg.params == {"min": 15}
     # Durations aren't whole hours either: 90 minutes (1h30) on the 15-minute
     # step is fine.
     assert coll.reservation_hour_violation(mon, time(10, 0), time(11, 30)) is None
@@ -828,7 +856,8 @@ def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_to
     msg = coll.reservation_hour_violation(mon, time(10, 0), time(11, 40))
     assert msg == "A reservation here lasts a multiple of 15 minutes."
     msg = coll.reservation_hour_violation(mon, time(10, 0), time(11, 41))
-    assert msg is not None and "100" in msg
+    assert _refused(msg) == "reservation_too_long_minutes"
+    assert msg.params == {"max": 100}
 
 
 def test_reservation_hour_violation_rejects_over_the_max_minutes(hourly_reservations_collection):
@@ -836,7 +865,8 @@ def test_reservation_hour_violation_rejects_over_the_max_minutes(hourly_reservat
     msg = hourly_reservations_collection.reservation_hour_violation(
         mon, time(10, 0), time(14, 0)
     )  # 4h = 240min, max is 180
-    assert msg is not None and "180" in msg
+    assert _refused(msg) == "reservation_too_long_minutes"
+    assert msg.params == {"max": 180}
 
 
 def test_reservation_hour_violation_accepts_exactly_the_max(hourly_reservations_collection):
@@ -872,27 +902,26 @@ def test_reservation_hour_violation_rejects_past_the_horizon(db):
     msg = coll.reservation_hour_violation(
         today + timedelta(days=20), time(10, 0), time(11, 0), today=today
     )
-    assert msg is not None and "14" in msg
+    assert _refused(msg) == "reservation_beyond_horizon"
+    assert msg.params == {"days": 14}
 
 
 def test_reservation_hour_violation_rejects_a_closed_date(hourly_reservations_collection):
     mon = _next_weekday(0)
     hourly_reservations_collection.closed_dates = [mon.isoformat()]
     hourly_reservations_collection.save(update_fields=["closed_dates"])
-    assert (
+    assert _refused(
         hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(11, 0))
-        is not None
-    )
+    ) == ("reservation_closed_that_day")
 
 
 def test_reservation_hour_violation_rejects_a_day_with_no_opening_blocks(
     hourly_reservations_collection,
 ):
     sat = _next_weekday(5)  # not in opening_hours at all
-    assert (
+    assert _refused(
         hourly_reservations_collection.reservation_hour_violation(sat, time(10, 0), time(11, 0))
-        is not None
-    )
+    ) == ("reservation_not_open_that_day")
 
 
 # --- reservation_hour_violation: the block / full-day rule --------------------
@@ -916,20 +945,18 @@ def test_reservation_hour_violation_rejects_starting_before_a_block_opens(
     hourly_reservations_collection,
 ):
     mon = _next_weekday(0)
-    assert (
+    assert _refused(
         hourly_reservations_collection.reservation_hour_violation(mon, time(9, 0), time(11, 0))
-        is not None
-    )
+    ) == ("reservation_outside_hours")
 
 
 def test_reservation_hour_violation_rejects_ending_after_a_block_closes(
     hourly_reservations_collection,
 ):
     mon = _next_weekday(0)
-    assert (
+    assert _refused(
         hourly_reservations_collection.reservation_hour_violation(mon, time(13, 0), time(15, 0))
-        is not None
-    )
+    ) == ("reservation_outside_hours")
 
 
 def test_reservation_hour_violation_rejects_a_span_crossing_the_lunch_gap(
@@ -978,18 +1005,10 @@ def test_reservation_hour_violation_full_day_rule_is_exact_not_a_superset(
     """One minute either side of the exact full-day span is refused — it isn't
     "the full day or more", it's specifically that one span."""
     mon = _next_weekday(0)
-    assert (
-        generous_hourly_reservations_collection.reservation_hour_violation(
-            mon, time(9, 59), time(20, 0)
-        )
-        is not None
-    )
-    assert (
-        generous_hourly_reservations_collection.reservation_hour_violation(
-            mon, time(10, 0), time(20, 1)
-        )
-        is not None
-    )
+    for start, end in ((time(9, 59), time(20, 0)), (time(10, 0), time(20, 1))):
+        assert _refused(
+            generous_hourly_reservations_collection.reservation_hour_violation(mon, start, end)
+        ) == ("reservation_outside_hours")
 
 
 def test_reservation_hour_violation_on_a_single_block_day_full_day_equals_that_block(
@@ -1017,11 +1036,11 @@ def test_reservation_hour_violation_the_hour_cap_has_no_full_day_exception(
     instead of the product carving out a silent exception."""
     mon = _next_weekday(0)  # full day 10:00-20:00 = 600min, this fixture's cap is 180
     msg = hourly_reservations_collection.reservation_hour_violation(mon, time(10, 0), time(20, 0))
-    assert msg is not None and "180" in msg
+    assert _refused(msg) == "reservation_too_long_minutes"
 
     fri = _next_weekday(4)  # Friday's only block is 10:00-14:00 = 240min, cap is 180
     msg = hourly_reservations_collection.reservation_hour_violation(fri, time(10, 0), time(14, 0))
-    assert msg is not None and "180" in msg
+    assert _refused(msg) == "reservation_too_long_minutes"
 
 
 # --- has_overlap with hours -----------------------------------------------
@@ -1193,8 +1212,9 @@ def test_request_reservation_hour_mode_requires_both_times(hourly_reservations_c
     coll.things.add(thing)
     mon = _next_weekday(0)
 
-    with pytest.raises(BookingRequestError):
+    with pytest.raises(BookingRequestError) as refused:
         request_reservation(thing, member, coll.owner.email, mon)  # neither days nor times
+    assert refused.value.code == "reservation_needs_times"
 
 
 def test_request_reservation_day_mode_ignores_stray_hour_kwargs(reservations_collection):
@@ -1231,8 +1251,9 @@ def test_request_reservation_day_mode_requires_duration_days(reservations_collec
     )
     coll.things.add(thing)
 
-    with pytest.raises(BookingRequestError):
+    with pytest.raises(BookingRequestError) as refused:
         request_reservation(thing, member, coll.owner.email, _next_weekday(0))
+    assert refused.value.code == "reservation_needs_days"
 
 
 def test_project_note_defaults_blank_and_holds_512(db):
