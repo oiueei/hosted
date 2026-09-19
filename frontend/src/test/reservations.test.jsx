@@ -87,7 +87,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
     renderPage();
     await screen.findByText(/Reserve Sala polivalent/);
     expect(screen.queryByRole('combobox', { name: /How many days/ })).toBeNull();
-    expect(screen.getByLabelText(/Tell us briefly about your project/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/What do you need it for/)).toBeInTheDocument();
   });
 
   test('with a longer cap the duration select is offered', async () => {
@@ -152,7 +152,7 @@ describe('RequestThingPage — RESERVE_THING', () => {
     const { container } = renderPage();
     await screen.findByText(/Reserve Sala polivalent/);
 
-    fireEvent.change(screen.getByLabelText(/Tell us briefly about your project/), {
+    fireEvent.change(screen.getByLabelText(/What do you need it for/), {
       target: { value: 'A screen-printing workshop.' },
     });
     typePickup(container, '03/06/2026');
@@ -844,7 +844,7 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     typeHourlyPickup(container, '03/06/2026');
     fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
     fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
-    fireEvent.change(screen.getByLabelText(/Tell us briefly about your project/), {
+    fireEvent.change(screen.getByLabelText(/What do you need it for/), {
       target: { value: 'A repair workshop.' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
@@ -963,7 +963,7 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     // Two minutes later 12:00 has begun, and the page re-renders (any
     // keystroke will do).
     vi.setSystemTime(new Date(2026, 5, 1, 12, 1));
-    fireEvent.change(screen.getByLabelText(/Tell us briefly about your project/), {
+    fireEvent.change(screen.getByLabelText(/What do you need it for/), {
       target: { value: 'Late.' },
     });
     await waitFor(() => expect(screen.queryByRole('radio', { name: '12:00' })).toBeNull());
