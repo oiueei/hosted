@@ -365,24 +365,44 @@ def test_availability_follows_the_named_collection_too(
     assert by_day["next_available"] is not None
 
 
-def test_the_grid_serializer_shares_the_mixin_without_the_resolver(space_in_two_collections, user2):
+@pytest.mark.parametrize("named", ["HRVC01", "CLSD01"])
+def test_the_grid_serializer_shares_the_mixin_without_the_resolver(
+    space_in_two_collections, user, user2, named
+):
     """`CollectionThingSummarySerializer` shares `ThingComputedFieldsMixin` but
     has no `_viewable_collection`; its one call site always passes
     `parent_collection`. Reached without one and with `?collection=` in the
-    request, the availability walk must fall back quietly, not raise."""
+    request, the availability walk must fall back quietly, not raise — to the
+    same answer the thing gives when no collection is named at all. `CLSD01`
+    is an hourly group with no opening hours that the thing isn't even in: its
+    rules reaching the grid would say "nothing free", which the fallback never
+    does here."""
     from rest_framework.request import Request
     from rest_framework.test import APIRequestFactory, force_authenticate
 
     from core.serializers.collection import CollectionThingSummarySerializer
 
-    raw = APIRequestFactory().get("/", {"collection": "HRVC01"})
+    Collection.objects.create(
+        code="CLSD01",
+        owner=user,
+        headline="Closed",
+        status="ACTIVE",
+        visibility=Collection.Visibility.PUBLIC,
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+    )
+    raw = APIRequestFactory().get("/", {"collection": named})
     force_authenticate(raw, user=user2)
 
     data = CollectionThingSummarySerializer(
         space_in_two_collections, context={"request": Request(raw)}
     ).data
 
-    assert data["available_today"] in (True, False)
+    # A fresh instance: availability_window memoises on the one it ran on.
+    unnamed = Thing.objects.get(code=space_in_two_collections.code).availability_window()
+    assert unnamed["next_available"] is not None  # both real groups are open on weekdays
+    assert data["available_today"] is unnamed["available_today"]
+    assert data["next_available"] == unnamed["next_available"]
 
 
 def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
