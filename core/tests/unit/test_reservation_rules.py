@@ -1378,12 +1378,26 @@ def _grid_collection(code, opening_hours, min_minutes, max_minutes=720):
     )
 
 
-def test_hour_violation_refuses_seconds_and_microseconds(db):
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        (time(10, 0, 30), time(11, 0, 30)),  # both ends carry seconds
+        (time(10, 0, 30), time(11, 0)),  # only the start does
+        (time(10, 0), time(11, 0, 30)),  # only the end does
+        (time(10, 0, 0, 5), time(11, 0)),  # microseconds alone, on the start
+        (time(10, 0), time(11, 0, 0, 5)),  # and on the end
+    ],
+)
+def test_hour_violation_refuses_seconds_and_microseconds(db, start, end):
+    """Whole minutes on **both** ends, each part judged on its own: a span
+    carrying seconds on one side only used to slip through two of the four
+    ways this check can be miswired (surviving mutants, sweep 2026-09-19)."""
     coll = _grid_collection("GRID1", {"0": [["10:00", "14:00"]]}, 60)
     mon = _next_weekday(0)
-    whole = "Reservation times are whole minutes (HH:MM)."
-    assert coll.reservation_hour_violation(mon, time(10, 0, 30), time(11, 0, 30)) == whole
-    assert coll.reservation_hour_violation(mon, time(10, 0), time(11, 0, 0, 5)) == whole
+
+    assert coll.reservation_hour_violation(mon, start, end) == (
+        "Reservation times are whole minutes (HH:MM)."
+    )
 
 
 def test_hour_violation_grid_runs_from_each_blocks_opening_not_from_midnight(db):
