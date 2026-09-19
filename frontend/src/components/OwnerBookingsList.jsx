@@ -8,7 +8,7 @@ import { formatDate, formatBookingWhen } from '../utils/rental';
  * `*` when more than one pending booking exists. Renders nothing unless the viewer
  * is the owner and there is at least one booking.
  */
-export default function OwnerBookingsList({ bookings, activePendingCode, isOwner }) {
+export default function OwnerBookingsList({ bookings, activePendingCode, isOwner, thingType }) {
   const { t } = useTranslation();
   // Hooks run before the early return — an offered thing's headline may be a
   // per-language map like any other owner content.
@@ -21,7 +21,9 @@ export default function OwnerBookingsList({ bookings, activePendingCode, isOwner
       {bookings.map((b) => {
         const isActive = isOwner && b.code === activePendingCode;
         const showStar = isActive && pendingCount > 1;
-        const when = formatBookingWhen(b);
+        // The calendar rows carry no thing type; the card knows it, and a
+        // day-unit reservation's range depends on it (formatBookingWhen).
+        const when = formatBookingWhen(b, b.thing_type || thingType);
         return (
           <li key={b.code} style={{ fontWeight: isActive ? 'bold' : 'normal' }}>
             {isOwner && b.requester_name && <>{b.requester_name}. </>}

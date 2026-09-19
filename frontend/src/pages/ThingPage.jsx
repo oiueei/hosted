@@ -218,6 +218,7 @@ export default function ThingPage() {
           bookings={bookings}
           activePendingCode={activePendingCode}
           isOwner={canManage}
+          thingType={thing.type}
         />
 
         {/* Owner actions */}

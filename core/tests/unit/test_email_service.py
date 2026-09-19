@@ -383,16 +383,29 @@ def test_the_header_speaks_the_readers_language(user):
 # 13:00" reads correctly with no catalogue edits.
 
 
-def test_fmt_when_a_whole_day_booking_is_unchanged():
-    """start_time NULL (every LEND/RENT, every DAY-unit RESERVE) still renders
-    two full dates, byte-identical to before this feature existed."""
+def test_fmt_when_a_one_day_reservation_ends_on_that_day():
+    """A DAY-unit reservation stores ``end_date = start + duration`` — the day the
+    space is free again. The emails used to print it as the end, so a one-day
+    reservation on the 5th was "confirmed for 05/10 to 06/10": a day the member
+    never booked, and possibly somebody else's."""
     from datetime import date
 
     from core.models import BookingPeriod
 
     booking = BookingPeriod(start_date=date(2026, 10, 5), end_date=date(2026, 10, 6))
 
-    assert email_service._fmt_when(booking) == ("05/10/2026", "06/10/2026")
+    assert email_service._fmt_when(booking) == ("05/10/2026", "05/10/2026")
+
+
+def test_fmt_when_a_multi_day_reservation_ends_on_its_last_day():
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    # Three days from Monday the 5th: the 5th, 6th and 7th.
+    booking = BookingPeriod(start_date=date(2026, 10, 5), end_date=date(2026, 10, 8))
+
+    assert email_service._fmt_when(booking) == ("05/10/2026", "07/10/2026")
 
 
 def test_fmt_when_an_hourly_booking_names_the_date_once_and_two_times():
@@ -444,6 +457,33 @@ def test_an_hourly_reservation_confirmation_reads_correctly_in_all_three_languag
             email_service.send_reservation_confirmed_email(user2, thing, booking)
         body = mail.outbox[0].body
         assert phrase in body, f"{lang}: {phrase!r} not in {body!r}"
+
+
+@pytest.mark.django_db
+def test_a_day_reservation_confirmation_names_the_days_booked_and_no_other(user, user2, thing):
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 10, 5),
+        end_date=date(2026, 10, 7),  # two days: the 5th and the 6th
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    email_service.send_reservation_confirmed_email(user2, thing, booking)
+
+    sent = mail.outbox[0]
+    for part in (sent.body, sent.alternatives[0][0]):
+        assert "06/10/2026" in part
+        assert "07/10/2026" not in part
 
 
 # --- The owner's email note (Collection.email_note) ------------------------------

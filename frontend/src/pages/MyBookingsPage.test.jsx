@@ -152,6 +152,22 @@ describe('MyBookingsPage listing', () => {
     expect(screen.queryByText(/02\/09\/2026/)).not.toBeInTheDocument();
   });
 
+  test('a one-day reservation lists as one day, not up to the day the space frees up', async () => {
+    mockList([
+      booking({
+        thing_type: 'RESERVE_THING',
+        status: 'ACCEPTED',
+        start_date: '2026-09-01',
+        end_date: '2026-09-02', // start + 1 day: free again on the 2nd
+      }),
+    ]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    expect(screen.getByText('01/09/2026')).toBeInTheDocument();
+    expect(screen.queryByText(/02\/09\/2026/)).not.toBeInTheDocument();
+  });
+
   test('the thing links to its page and names the owner', async () => {
     mockList([booking()]);
     renderPage();

@@ -288,6 +288,33 @@ describe('formatBookingWhen', () => {
     ).toBe('05/10/2026, 10:00–13:00');
   });
 
+  test('a one-day reservation lists as that one day, not the day the space frees up', () => {
+    // A DAY-unit reservation stores end_date = start + duration.
+    expect(
+      formatBookingWhen({
+        thing_type: 'RESERVE_THING',
+        start_date: '2026-10-05',
+        end_date: '2026-10-06',
+      })
+    ).toBe('05/10/2026');
+  });
+
+  test('a multi-day reservation lists to its last day, inclusive', () => {
+    expect(
+      formatBookingWhen({ start_date: '2026-10-05', end_date: '2026-10-08' }, 'RESERVE_THING')
+    ).toBe('05/10/2026 — 07/10/2026');
+  });
+
+  test('a loan still lists pickup to return — its end date is a real day', () => {
+    expect(
+      formatBookingWhen({
+        thing_type: 'LEND_THING',
+        start_date: '2026-10-05',
+        end_date: '2026-10-06',
+      })
+    ).toBe('05/10/2026 — 06/10/2026');
+  });
+
   test('is blank when there are no dates at all (GIFT/SELL)', () => {
     expect(formatBookingWhen({})).toBe('');
     expect(formatBookingWhen(null)).toBe('');

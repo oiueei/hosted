@@ -95,16 +95,23 @@ export const formatDate = (value) => {
 // A booking's date/time range for a listing row — MyBookingsPage,
 // OwnerBookingsPage, OwnerBookingsList — read straight off the API's own
 // field names (`start_date`/`end_date` ISO dates, `start_time`/`end_time`
-// 'HH:MM:SS' or absent). A whole-day booking (every LEND/RENT, every
-// DAY-unit RESERVE — `start_time` unset) renders exactly as before this
-// helper existed: 'DD/MM/YYYY — DD/MM/YYYY'. An HOUR-unit RESERVE_THING slot
-// renders the date once plus both clock times: 'DD/MM/YYYY, HH:MM–HH:MM'.
-// '' when there are no dates at all (GIFT/SELL).
-export const formatBookingWhen = (booking) => {
+// 'HH:MM:SS' or absent). A loan or rental renders 'DD/MM/YYYY — DD/MM/YYYY',
+// pickup to return. An HOUR-unit RESERVE_THING slot renders the date once
+// plus both clock times: 'DD/MM/YYYY, HH:MM–HH:MM'. A DAY-unit reservation
+// ends on its LAST day, inclusive — the date alone for one day — because its
+// `end_date` is `start + duration`, the day the space is free again: a
+// one-day reservation used to list as two days. `thingType` defaults to the
+// booking's own `thing_type`; OwnerBookingsList's calendar rows don't carry
+// one, so their card passes it. '' when there are no dates at all (GIFT/SELL).
+export const formatBookingWhen = (booking, thingType = booking?.thing_type) => {
   if (!booking?.start_date || !booking?.end_date) return '';
   const date = formatDate(booking.start_date);
   if (booking.start_time && booking.end_time) {
     return `${date}, ${booking.start_time.slice(0, 5)}–${booking.end_time.slice(0, 5)}`;
+  }
+  if (thingType === 'RESERVE_THING') {
+    const lastDay = formatDate(addDays(booking.end_date.slice(0, 10), -1));
+    return lastDay === date ? date : `${date} — ${lastDay}`;
   }
   return `${date} — ${formatDate(booking.end_date)}`;
 };

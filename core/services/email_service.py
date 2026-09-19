@@ -25,7 +25,7 @@ import logging
 import random
 import re
 import smtplib
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from email.mime.image import MIMEImage
 from html import unescape as html_unescape
 from urllib.parse import urlsplit
@@ -779,14 +779,19 @@ def _fmt_when(booking):
     HOUR-unit reservation differs from a whole-day one, with no catalogue
     changes needed in any of the three languages.
 
-    Whole-day (``start_time`` NULL — every DAY-unit RESERVE, and this is never
-    called for LEND/RENT) renders exactly as `_fmt_date` always has: two full
-    dates. An HOUR-unit reservation renders the date once, on the start, then
-    both HH:MM times — "05/10/2026 10:00" to "13:00" — since same-day start and
-    end make a second date redundant.
+    Whole-day (``start_time`` NULL — every DAY-unit RESERVE; this is never
+    called for LEND/RENT) renders two full dates, the second being the
+    reservation's **last day, inclusive**. ``end_date`` is ``start + duration``,
+    the day the space is free again — right for overlap checks and for the
+    calendar export (Google's all-day End Date is exclusive too), wrong to hand
+    a member as the end of their booking: a one-day reservation on the 5th read
+    "from the 5th to the 6th". An HOUR-unit reservation renders the date once,
+    on the start, then both HH:MM times — "05/10/2026 10:00" to "13:00" — since
+    same-day start and end make a second date redundant.
     """
     if booking.start_time is None:
-        return _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+        last_day = booking.end_date - timedelta(days=1)
+        return _fmt_date(booking.start_date), _fmt_date(last_day)
     return (
         f"{_fmt_date(booking.start_date)} {booking.start_time.strftime('%H:%M')}",
         booking.end_time.strftime("%H:%M"),
