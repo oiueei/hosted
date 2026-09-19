@@ -565,6 +565,23 @@ def test_a_link_with_no_host_stays_literal_text():
     assert "[esto](https://)" in html
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://[oops/normas",  # an unclosed IPv6 bracket: urlsplit raises ValueError
+        "https://" + "a" * 64 + ".example/normas",  # a 64-char label: IDNA raises UnicodeError
+    ],
+)
+def test_a_link_whose_host_cannot_be_read_stays_literal_text(url):
+    """An owner can type either of these by accident. Both make the host
+    lookup raise; the note must still render — as the literal text the owner
+    wrote — or every email carrying it would fail to send."""
+    _, blocks = email_service._note_blocks(f"Normas: [aquí]({url})")
+    html = str(blocks[0]["html"])
+    assert "<a " not in html
+    assert f"[aquí]({url})" in html
+
+
 def test_note_blocks_escapes_html_before_transforming(collection):
     """Raw HTML reaching the renderer (only possible bypassing the serializer,
     e.g. the admin) must render inert — and a typed NUL must not be able to

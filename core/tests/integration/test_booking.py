@@ -1624,3 +1624,31 @@ class TestACalendarCarriesOnlyWhatIsStillAhead:
 
         assert [row["code"] for row in card["bookings"]] == [ahead.code]
         assert [row["code"] for row in detail["bookings"]] == [ahead.code]
+
+
+@pytest.mark.django_db
+def test_a_broken_link_in_the_email_note_never_costs_the_requester_their_email(
+    authenticated_client2, user2, collection, thing
+):
+    """The owner's note is rendered into the requester's confirmation after
+    the request has committed. A link whose host can't be read (an unclosed
+    IPv6 bracket, a label too long for IDNA) makes the host lookup raise; if
+    that escaped, the member would get a 500 for a request that went through —
+    a gift already marked taken — and no confirmation. It renders as literal
+    text instead, and the request answers as usual."""
+    from django.core import mail
+
+    collection.add_invite(user2.code)
+    collection.email_note = "Normas: [aquí](https://[oops/normas)"
+    collection.save(update_fields=["email_note"])
+    mail.outbox.clear()
+
+    response = authenticated_client2.post(
+        f"/api/v1/things/{thing.code}/request/",
+        {"collection_code": collection.code},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    [confirmation] = [m for m in mail.outbox if m.to == [user2.email]]
+    assert "[aquí](https://[oops/normas)" in confirmation.alternatives[0][0]
