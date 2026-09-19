@@ -79,4 +79,14 @@ only_mutate = [
     "core/services/booking_service.py",
     "core/services/asset_cleanup.py",
 ]
-also_copy = ["pytest.ini", "manage.py", "config/", "conftest.py", "frontend/public"]
+# The locales are read by core/tests/unit/test_refusal_codes.py (every refusal
+# code must have a string in all three); without them in ./mutants the stats
+# run fails before a single mutant is tried.
+also_copy = [
+    "pytest.ini",
+    "manage.py",
+    "config/",
+    "conftest.py",
+    "frontend/public",
+    "frontend/src/i18n/locales",
+]
