@@ -933,13 +933,26 @@ def test_reservation_hour_violation_rejects_ending_after_a_block_closes(
 
 
 def test_reservation_hour_violation_rejects_a_span_crossing_the_lunch_gap(
-    hourly_reservations_collection,
+    hourly_reservations_collection, generous_hourly_reservations_collection
 ):
-    """13:00-17:00 crosses the 14:00-16:00 gap without being the full day —
-    refused, not silently clipped to whichever block it started in."""
+    """A span that starts in the morning block and ends in the afternoon one,
+    without being the full day, is refused — not silently clipped to whichever
+    block it started in.
+
+    Both spans fit their collection's cap on purpose: 13:00-17:00 against the
+    180-minute fixture used to be the example here, and at 240 minutes it was
+    the cap that refused it, so the gap rule could stop firing and this test
+    would never notice."""
     mon = _next_weekday(0)
-    msg = hourly_reservations_collection.reservation_hour_violation(mon, time(13, 0), time(17, 0))
-    assert msg is not None
+    across = generous_hourly_reservations_collection.reservation_hour_violation(
+        mon, time(13, 0), time(17, 0)
+    )
+    assert across.code == "reservation_outside_hours"
+    # The same shape inside a 180-minute cap: three hours, half of them the gap.
+    across_capped = hourly_reservations_collection.reservation_hour_violation(
+        mon, time(13, 0), time(16, 0)
+    )
+    assert across_capped.code == "reservation_outside_hours"
 
 
 def test_reservation_hour_violation_accepts_the_exact_full_day_including_the_gap(
@@ -1159,10 +1172,15 @@ def test_request_reservation_hour_mode_rejects_a_span_outside_opening_hours(
     coll.things.add(thing)
     mon = _next_weekday(0)
 
-    with pytest.raises(BookingRequestError):
+    # 13:00-15:00 runs an hour into the 14:00-16:00 closure: two hours, under
+    # the 180-minute cap, so the opening hours are the only rule it breaks.
+    with pytest.raises(BookingRequestError) as refused:
         request_reservation(
-            thing, member, coll.owner.email, mon, start_time=time(13, 0), end_time=time(17, 0)
+            thing, member, coll.owner.email, mon, start_time=time(13, 0), end_time=time(15, 0)
         )
+    assert refused.value.code == "reservation_outside_hours"
+    assert refused.value.status_code == 400
+    assert not BookingPeriod.objects.filter(thing_code=thing).exists()
 
 
 def test_request_reservation_hour_mode_requires_both_times(hourly_reservations_collection):

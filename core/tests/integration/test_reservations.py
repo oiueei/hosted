@@ -444,15 +444,30 @@ def test_an_hourly_reservation_is_confirmed_on_the_spot(hourly_reservations, aut
     assert note.payload["end_time"] == "13:00"
 
 
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        ("14:00", "15:00"),  # wholly inside the lunch closure
+        ("13:00", "16:00"),  # from the morning block across the closure
+        ("09:00", "11:00"),  # starting before the doors open
+    ],
+)
 def test_an_hourly_request_outside_opening_hours_is_refused(
-    hourly_reservations, authenticated_client2
+    hourly_reservations, authenticated_client2, start, end
 ):
+    """Every span here fits the 180-minute cap and starts on the hour, so it
+    is the opening hours, and nothing else, that refuse it — 13:00-17:00 used
+    to stand in for all of them, and at 240 minutes the cap got there first."""
     resp = authenticated_client2.post(
         REQUEST_URL.format(hourly_reservations["thing"].code),
-        {"start_date": str(_next_weekday(0)), "start_time": "13:00", "end_time": "17:00"},
+        {"start_date": str(_next_weekday(0)), "start_time": start, "end_time": end},
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.data == {
+        "error": "That time falls outside this space's opening hours.",
+        "code": "reservation_outside_hours",
+    }
     assert not BookingPeriod.objects.exists()
 
 
