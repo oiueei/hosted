@@ -13,7 +13,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import Collection, User
+from core.models import Collection, Thing, User
 
 pytestmark = pytest.mark.django_db
 
@@ -87,6 +87,22 @@ class TestTheEmailNote:
         # text under another name.
         for client in (_client(), _client(member)):
             response = client.get(f"/api/v1/collections/{space.code}/")
+            assert "4417" not in response.content.decode()
+
+    def test_a_things_own_page_carries_it_to_nobody(self, space, member, user):
+        # `ThingSerializer` mirrors several collection fields for the thing-only
+        # pages (`collection_request_info`, `collection_language`…) and is read
+        # anonymously on a PUBLIC group. The note has no page that needs it — it
+        # is consumed by the email senders — so it reaches no reader of a thing,
+        # under any field name, curators included.
+        thing = Thing.objects.create(
+            code="NOTET1", type=Thing.Type.LEND_THING, owner=user, headline="Drill"
+        )
+        space.things.add(thing)
+        for client in (_client(), _client(member), _client(user)):
+            response = client.get(f"/api/v1/things/{thing.code}/")
+            assert response.status_code == 200
+            assert response.json()["collection_code"] == space.code
             assert "4417" not in response.content.decode()
 
 

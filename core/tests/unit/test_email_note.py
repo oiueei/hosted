@@ -4,7 +4,9 @@ receives about their request ("received" + "accepted" for every verb, plus
 RESERVE's auto-confirmation), rendered after the listing link by
 `email_service._note_blocks` and resolved per recipient like every owner
 text. The email-side behaviour lives in core/tests/unit/test_email_service.py;
-this suite pins the field itself.
+this suite pins the field itself; who may read it back, through the
+collection or a thing, is pinned against the API in
+core/tests/integration/test_curator_only_collection_fields.py.
 
 Owner prose like every other (D5): localized (O6), 512 visible per language,
 2048 stored — the same shape and the same trap as `request_info`
@@ -15,12 +17,11 @@ import json
 
 import pytest
 
-from core.models import Collection, Thing
+from core.models import Collection
 from core.serializers import (
     CollectionCreateSerializer,
     CollectionSerializer,
     CollectionUpdateSerializer,
-    ThingSerializer,
 )
 from core.utils import parse_localized
 
@@ -85,16 +86,3 @@ def test_markdown_and_emojis_are_prose_not_html(collection):
     serializer = CollectionUpdateSerializer(collection, data={"email_note": note}, partial=True)
     assert serializer.is_valid(), serializer.errors
     assert serializer.save().email_note == note
-
-
-def test_the_thing_serializer_does_not_carry_it(user, collection):
-    """Unlike `request_info`, email_note has no `collection_email_note` mirror
-    on ThingSerializer — the note is consumed server-side by the two email
-    senders, so no page ever needs it."""
-    collection.email_note = "Note the frontend never sees."
-    collection.save(update_fields=["email_note"])
-    thing = Thing.objects.create(
-        code="ENNOTE", type=Thing.Type.GIFT_THING, owner=user, headline="X"
-    )
-    collection.things.add(thing)
-    assert "collection_email_note" not in ThingSerializer(thing).data
