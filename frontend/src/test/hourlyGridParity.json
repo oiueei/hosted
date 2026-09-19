@@ -1,0 +1,119 @@
+{
+  "_about": "Shared by core/tests/unit/test_hourly_grid_parity.py and frontend/src/utils/hourlyGridParity.test.js. The request page (utils/rental.js: freeStartTimes, isHourlyPickupDisabled) and the server (Collection.reservation_hour_violation, has_overlap, _day_has_a_free_hour) each decide which hourly starts exist; each case's expectations are worked out by hand in its note, and both suites must agree with them. A Monday throughout (weekday key \"0\"). now_minutes is the clock on that same day, or null for a day that is not today.",
+  "cases": [
+    {
+      "name": "two blocks, a two-hour slot, nothing booked",
+      "note": "Hourly grid from each block's opening: 10,11,12 fit 120 min before 14:00; 16,17,18 before 20:00.",
+      "blocks": [
+        ["10:00", "14:00"],
+        ["16:00", "20:00"]
+      ],
+      "min_minutes": 60,
+      "duration": 120,
+      "bookings": [],
+      "now_minutes": null,
+      "starts": ["10:00", "11:00", "12:00", "16:00", "17:00", "18:00"],
+      "day_has_a_free_slot": true
+    },
+    {
+      "name": "a block opening off the hour keeps its own grid",
+      "note": "The grid runs from 10:20, not from midnight: 10:20, 11:20, 12:20, 13:20 each leave an hour before 14:20.",
+      "blocks": [["10:20", "14:20"]],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [],
+      "now_minutes": null,
+      "starts": ["10:20", "11:20", "12:20", "13:20"],
+      "day_has_a_free_slot": true
+    },
+    {
+      "name": "a 45-minute step, a 90-minute slot",
+      "note": "Starts every 45 from 10:00 (10:00, 10:45, 11:30, 12:15, 13:00); 13:00 + 90 = 14:30 overruns the block.",
+      "blocks": [["10:00", "14:00"]],
+      "min_minutes": 45,
+      "duration": 90,
+      "bookings": [],
+      "now_minutes": null,
+      "starts": ["10:00", "10:45", "11:30", "12:15"],
+      "day_has_a_free_slot": true
+    },
+    {
+      "name": "a free hour that sits off the grid is no slot",
+      "note": "Booked 10:00-10:30 and 11:30-14:00 leave 10:30-11:30 free — sixty minutes, but no start at 10:30 exists on a grid from 10:00, and 11:00 would overlap 11:30.",
+      "blocks": [["10:00", "14:00"]],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [
+        ["10:00", "10:30"],
+        ["11:30", "14:00"]
+      ],
+      "now_minutes": null,
+      "starts": [],
+      "day_has_a_free_slot": false
+    },
+    {
+      "name": "the same gap widened to fit the 11:00 start",
+      "note": "With the second booking starting at 12:00, 11:00-12:00 is free and on the grid; ending exactly as a booking starts is no clash.",
+      "blocks": [["10:00", "14:00"]],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [
+        ["10:00", "10:30"],
+        ["12:00", "14:00"]
+      ],
+      "now_minutes": null,
+      "starts": ["11:00"],
+      "day_has_a_free_slot": true
+    },
+    {
+      "name": "today, from the current minute on",
+      "note": "At 12:01, 12:00 has begun; 13:00 and the afternoon block remain. A start in the current minute would still count — 12:01 is simply not on the grid.",
+      "blocks": [
+        ["10:00", "14:00"],
+        ["16:00", "20:00"]
+      ],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [],
+      "now_minutes": 721,
+      "starts": ["13:00", "16:00", "17:00", "18:00", "19:00"],
+      "day_has_a_free_slot": true
+    },
+    {
+      "name": "today, at the very minute a slot starts",
+      "note": "At 13:00 exactly, 13:00 has not begun yet — the same rule on both sides.",
+      "blocks": [["10:00", "14:00"]],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [],
+      "now_minutes": 780,
+      "starts": ["13:00"],
+      "day_has_a_free_slot": true
+    },
+    {
+      "name": "today, once the last start has passed",
+      "note": "One block 10:00-14:00 on the hour: its last start, 13:00, has begun by 13:30.",
+      "blocks": [["10:00", "14:00"]],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [],
+      "now_minutes": 810,
+      "starts": [],
+      "day_has_a_free_slot": false
+    },
+    {
+      "name": "a whole-day booking closes every hour",
+      "note": "A booking with no times (a loan, a day-unit reservation) takes the whole day.",
+      "blocks": [
+        ["10:00", "14:00"],
+        ["16:00", "20:00"]
+      ],
+      "min_minutes": 60,
+      "duration": 60,
+      "bookings": [null],
+      "now_minutes": null,
+      "starts": [],
+      "day_has_a_free_slot": false
+    }
+  ]
+}
