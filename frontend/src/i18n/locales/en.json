@@ -1032,12 +1032,12 @@
     "helper": "An optional web address for this group (max 128 characters)."
   },
   "requestInfo": {
-    "label": "Note for the request page (optional)",
+    "label": "Note shown before someone asks (optional)",
     "helper": "Shown at the top of the request page — seen by anyone requesting a loan, a rental or a reservation; a gift or sale never reaches that page, since those complete straight from the card. E.g. \"bring ID\", \"pickup is Tuesdays only\". Markdown supported.",
     "maxLength": "Maximum 512 characters per language."
   },
   "emailNote": {
-    "label": "Note in the request emails (optional)",
+    "label": "Note in the emails after someone asks (optional)",
     "helper": "Added to the emails a member receives about their request — when they send it and again when it's accepted (a reservation is confirmed on the spot, so its single email carries it) — after the link to the listing, in their own language. Markdown (bold, italics, lists, links) and emojis work. E.g. \"we confirm requests within 48h\", \"the space is on floor 2\".",
     "maxLength": "Maximum 512 characters per language."
   },

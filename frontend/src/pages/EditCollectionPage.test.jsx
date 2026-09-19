@@ -320,7 +320,7 @@ describe('EditCollectionPage — the request-page note', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
 
-    expect(screen.getByLabelText(/note for the request page/i).value).toBe('Bring photo ID.');
+    expect(screen.getByLabelText(/note shown before someone asks/i).value).toBe('Bring photo ID.');
   });
 
   test('an edited note reaches the PATCH body', async () => {
@@ -329,7 +329,7 @@ describe('EditCollectionPage — the request-page note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+    fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
       target: { value: 'Pickup is Tuesdays only.' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -347,7 +347,7 @@ describe('EditCollectionPage — the request-page note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note for the request page/i), {
+    fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
       target: { value: 'Bring ID.' },
     });
 
@@ -360,7 +360,7 @@ describe('EditCollectionPage — the request-page note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    const field = screen.getByLabelText(/note for the request page/i);
+    const field = screen.getByLabelText(/note shown before someone asks/i);
     fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
 
     expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
@@ -390,7 +390,7 @@ describe('EditCollectionPage — the email note', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
 
-    expect(screen.getByLabelText(/note in the request emails/i).value).toBe(
+    expect(screen.getByLabelText(/note in the emails after someone asks/i).value).toBe(
       'We confirm within 48h.'
     );
   });
@@ -401,7 +401,7 @@ describe('EditCollectionPage — the email note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note in the request emails/i), {
+    fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
       target: { value: '  The space is on floor 2.  ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -419,7 +419,7 @@ describe('EditCollectionPage — the email note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    fireEvent.change(screen.getByLabelText(/note in the request emails/i), {
+    fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
       target: { value: 'Floor 2.' },
     });
 
@@ -432,7 +432,7 @@ describe('EditCollectionPage — the email note', () => {
     await screen.findByDisplayValue('Kitchen Collection');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    const field = screen.getByLabelText(/note in the request emails/i);
+    const field = screen.getByLabelText(/note in the emails after someone asks/i);
     fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
 
     expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
