@@ -409,6 +409,53 @@ def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
     assert data["collection_headline"] != "Staff only"
 
 
+@pytest.mark.parametrize(
+    ("booked_through", "body", "own_note", "other_note"),
+    [
+        (
+            "HRVC01",
+            {"start_time": "11:00", "end_time": "13:00"},
+            "Ring the hall bell.",
+            "Keys at the bar.",
+        ),
+        ("RSVC01", {"duration_days": 1}, "Keys at the bar.", "Ring the hall bell."),
+    ],
+)
+def test_the_confirmation_carries_the_note_of_the_group_it_was_booked_in(
+    space_in_two_collections,
+    reservations,
+    hourly_reservations,
+    user2,
+    authenticated_client2,
+    booked_through,
+    body,
+    own_note,
+    other_note,
+):
+    """A space in two groups is booked through one of them, and the member's
+    confirmation carries that group's note — the one written for its own
+    members — never the other's. `send_reservation_confirmed_email` still
+    falls back to the thing's first collection when handed none, so this is
+    what notices if the reservation path ever stops passing its own."""
+    reservations["collection"].email_note = "Keys at the bar."
+    reservations["collection"].save(update_fields=["email_note"])
+    hourly_reservations["collection"].email_note = "Ring the hall bell."
+    hourly_reservations["collection"].save(update_fields=["email_note"])
+    mail.outbox.clear()
+
+    resp = authenticated_client2.post(
+        REQUEST_URL.format(space_in_two_collections.code),
+        {"start_date": str(_next_weekday(0)), "collection_code": booked_through, **body},
+        format="json",
+    )
+
+    assert resp.status_code == status.HTTP_201_CREATED
+    [confirmation] = [m for m in mail.outbox if m.to == [user2.email]]
+    for part in (confirmation.body, confirmation.alternatives[0][0]):
+        assert own_note in part
+        assert other_note not in part
+
+
 # --- HOUR-unit reservations (API) -----------------------------------------
 
 
