@@ -1012,7 +1012,8 @@
     "startTimeRequired": "Elige una hora de inicio",
     "noStartTimesLabel": "Sin horas disponibles",
     "noStartTimesForDuration": "No queda ninguna hora libre para esa duración ese día — prueba con una más corta.",
-    "cancelConfirmTitle": "¿Cancelar esta reserva?"
+    "cancelConfirmTitle": "¿Cancelar esta reserva?",
+    "slotSummary": "Reservado el {{date}}, de {{start}} a {{end}}."
   },
   "closedDates": {
     "label": "Festivos y cierres",

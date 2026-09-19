@@ -12,6 +12,7 @@ import {
   isoToDisplay,
   displayToIso,
   formatDate,
+  formatRequestedWhen,
   DISPLAY_DATE_FORMAT,
   parseLocalDate,
   parseHM,
@@ -84,6 +85,9 @@ export default function RequestThingPage() {
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [toast, setToast] = useState(null);
   const [success, setSuccess] = useState(false);
+  // What was actually booked, restated in the success notice — read off the
+  // body that went out, so it is the request's own dates, not the form's.
+  const [bookedWhen, setBookedWhen] = useState('');
   // RESERVE_THING's "you need to be a member of this group to reserve" (403)
   // can only happen on a PUBLIC collection (can_view already gated everything
   // else, and a non-member reaches it only there), so joining is always
@@ -382,6 +386,7 @@ export default function RequestThingPage() {
           body: JSON.stringify(body),
         });
         if (retryRes.ok) {
+          setBookedWhen(formatRequestedWhen(body));
           setSuccess(true);
         } else {
           await showRequestError(retryRes);
@@ -426,6 +431,7 @@ export default function RequestThingPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        setBookedWhen(formatRequestedWhen(body));
         setSuccess(true);
       } else if (res.status === 403) {
         // Only this specific marker means "not a member" — any *other* 403
@@ -537,6 +543,15 @@ export default function RequestThingPage() {
             type="success"
           >
             {isReservation ? t('reservation.successMessage') : t('request.successMessage')}
+            {/* What and when, said back: a reservation confirms on the spot,
+                with no owner step to catch a wrong day or hour. */}
+            {bookedWhen && (
+              <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
+                <strong>{headline}</strong>
+                <br />
+                {bookedWhen}
+              </p>
+            )}
             {joinedGroup && (
               <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
                 {t('reservation.joinedGroup', { group: joinedGroup })}
@@ -788,6 +803,19 @@ export default function RequestThingPage() {
                   Notification was never inside a live region, since it didn't
                   exist yet either (WCAG 4.1.3, found in review 2026-09-18). */}
               <StatusRegion>
+                {/* The slot this Reserve will book, once all three parts are
+                    picked — the end time is never shown anywhere else, and the
+                    reservation auto-confirms. In the live region, so choosing a
+                    start time reads the whole slot back. */}
+                {selectedIso && chosenDurationOption && chosenStartTime && (
+                  <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+                    {t('reservation.slotSummary', {
+                      date: isoToDisplay(selectedIso),
+                      start: chosenStartTime,
+                      end: formatHM(parseHM(chosenStartTime) + chosenDurationOption.minutes),
+                    })}
+                  </p>
+                )}
                 {hourlyDuration && hourlyStartTimeChoices.length === 0 && (
                   <>
                     <div className="spacer-xxxs" />

@@ -1012,7 +1012,8 @@
     "startTimeRequired": "Please choose a start time",
     "noStartTimesLabel": "No times available",
     "noStartTimesForDuration": "No start times are free for that length that day — try a shorter one.",
-    "cancelConfirmTitle": "Cancel this reservation?"
+    "cancelConfirmTitle": "Cancel this reservation?",
+    "slotSummary": "Reserved on {{date}}, from {{start}} to {{end}}."
   },
   "closedDates": {
     "label": "Holidays and closures",

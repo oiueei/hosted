@@ -170,6 +170,25 @@ describe('RequestThingPage — RESERVE_THING', () => {
     });
   });
 
+  test('the confirmation says back what was reserved and when — one day is one day', async () => {
+    // A reservation confirms on the spot, so this notice is where a wrong day
+    // would be caught. The server stores `end_date` as the day the space is free
+    // again (the 4th here); the member reserved the 3rd, and only the 3rd.
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    const notice = (await screen.findByText(/Your reservation is confirmed/)).closest(
+      '[role="region"], section, div'
+    );
+    expect(notice).toHaveTextContent('Sala polivalent');
+    expect(notice).toHaveTextContent('03/06/2026');
+    expect(notice).not.toHaveTextContent('04/06/2026');
+  });
+
   test('a 403 (not a member) auto-joins the PUBLIC collection and completes the reservation, with no extra click', async () => {
     setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
     let joinCalled = false;
@@ -788,6 +807,37 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
       collection_code: 'COL001',
     });
     expect(body.duration_days).toBeUndefined();
+  });
+
+  test('once day, length and start are picked, the whole slot is shown before booking', async () => {
+    // The end time appears nowhere else on the page, and the slot auto-confirms.
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    expect(screen.queryByText(/Reserved on/)).toBeNull(); // no start yet, nothing to say
+    fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
+
+    const summary = await screen.findByText('Reserved on 03/06/2026, from 11:00 to 13:00.');
+    // Read out when the start time is chosen, not only visible.
+    const regions = screen.getAllByRole('status');
+    expect(regions.some((region) => region.contains(summary))).toBe(true);
+  });
+
+  test('the confirmation restates the booked slot, end time included', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    await screen.findByText(/Your reservation is confirmed/);
+    expect(screen.getByText('03/06/2026, 11:00–13:00')).toBeInTheDocument();
   });
 
   // The picker stops offering a slot that already began today — the server

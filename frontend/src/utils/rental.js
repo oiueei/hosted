@@ -109,6 +109,26 @@ export const formatBookingWhen = (booking) => {
   return `${date} — ${formatDate(booking.end_date)}`;
 };
 
+// What a request page is about to book (or just booked), read off the POST
+// body it sends — the one thing both the pre-submit summary and the success
+// notice can agree on. An HOUR-unit reservation: 'DD/MM/YYYY, HH:MM–HH:MM'. A
+// DAY-unit one (`duration_days`): its LAST day, inclusive — 'DD/MM/YYYY' alone
+// for a single day, else 'DD/MM/YYYY — DD/MM/YYYY' — never the `start +
+// duration` the server stores as `end_date`, which is the day the space is
+// free again. A loan or rental: pickup — return, as sent. '' for no dates.
+export const formatRequestedWhen = (body) => {
+  if (!body?.start_date) return '';
+  const start = isoToDisplay(body.start_date);
+  if (body.start_time && body.end_time) return `${start}, ${body.start_time}–${body.end_time}`;
+  if (body.duration_days) {
+    const days = Number(body.duration_days);
+    if (days <= 1) return start;
+    return `${start} — ${isoToDisplay(derivedReturnDate(body.start_date, days - 1))}`;
+  }
+  if (body.end_date) return `${start} — ${isoToDisplay(body.end_date)}`;
+  return start;
+};
+
 // 'DD/MM/YYYY' (loose D/M/YYYY accepted) → 'YYYY-MM-DD' ('' for malformed or
 // impossible dates like 31/02, which HDS also flags via malformedDateErrorText).
 export const displayToIso = (display) => {

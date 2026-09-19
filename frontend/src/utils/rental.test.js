@@ -14,6 +14,7 @@ import {
   displayToIso,
   formatDate,
   formatBookingWhen,
+  formatRequestedWhen,
   closedDatesToDisplay,
   parseHM,
   formatHM,
@@ -291,6 +292,36 @@ describe('formatBookingWhen', () => {
     expect(formatBookingWhen({})).toBe('');
     expect(formatBookingWhen(null)).toBe('');
     expect(formatBookingWhen(undefined)).toBe('');
+  });
+});
+
+describe('formatRequestedWhen', () => {
+  test('an HOUR-unit reservation: the date once, then its start and end', () => {
+    expect(
+      formatRequestedWhen({ start_date: '2026-10-05', start_time: '10:00', end_time: '11:30' })
+    ).toBe('05/10/2026, 10:00–11:30');
+  });
+
+  test('a one-day reservation is that one day, not the day the space is free again', () => {
+    expect(formatRequestedWhen({ start_date: '2026-10-05', duration_days: 1 })).toBe('05/10/2026');
+  });
+
+  test('a multi-day reservation ends on its last day, inclusive', () => {
+    // 3 days from Monday 5th: the 5th, 6th and 7th — the server stores the 8th.
+    expect(formatRequestedWhen({ start_date: '2026-10-05', duration_days: 3 })).toBe(
+      '05/10/2026 — 07/10/2026'
+    );
+  });
+
+  test('a loan or rental reads pickup to return, as sent', () => {
+    expect(formatRequestedWhen({ start_date: '2026-10-05', end_date: '2026-10-12' })).toBe(
+      '05/10/2026 — 12/10/2026'
+    );
+  });
+
+  test('is blank with no dates at all', () => {
+    expect(formatRequestedWhen({})).toBe('');
+    expect(formatRequestedWhen(null)).toBe('');
   });
 });
 
