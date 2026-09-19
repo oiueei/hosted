@@ -75,6 +75,15 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// One day cell of an open HDS date picker, which must be rendered: HDS draws an
+// offered day as a <button> and a refused one as a <span aria-disabled="true">,
+// so a missing cell proves nothing either way.
+function pickerDay(iso) {
+  const day = document.querySelector(`[data-date="${iso}"]`);
+  expect(day, `the picker should show ${iso}`).not.toBeNull();
+  return day;
+}
+
 function typePickup(container, display) {
   const input = container.querySelector('#reservation-pickup-date');
   fireEvent.change(input, { target: { value: display } });
@@ -110,9 +119,8 @@ describe('RequestThingPage — RESERVE_THING', () => {
     // 2026-06-08 is exactly the horizon — still selectable (the off-by-one the
     // server used to reject on this very day).
     expect(document.querySelector('[data-date="2026-06-08"]')?.tagName).toBe('BUTTON');
-    // 2026-06-09 is past it — rendered disabled (span, not button) or absent
-    const past = document.querySelector('[data-date="2026-06-09"]');
-    expect(past === null || past.getAttribute('aria-disabled') === 'true').toBe(true);
+    // 2026-06-09 is past it — on screen, and refused.
+    expect(pickerDay('2026-06-09')).toHaveAttribute('aria-disabled', 'true');
   });
 
   test('the pickup field explains why some days are greyed out', async () => {
@@ -782,8 +790,11 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Choose date' }));
     await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
-    const day3 = document.querySelector('[data-date="2026-06-03"]');
-    expect(day3 === null || day3.getAttribute('aria-disabled') === 'true').toBe(true);
+    // The day has to be on screen and refused — "absent" used to pass too, so a
+    // picker opening on another month, or disabling everything, went unseen.
+    expect(pickerDay('2026-06-03')).toHaveAttribute('aria-disabled', 'true');
+    // The Thursday after it has the same hours and no bookings: still offered.
+    expect(pickerDay('2026-06-04').tagName).toBe('BUTTON');
   });
 
   test('choosing a duration that fits nowhere that day shows the fallback notice', async () => {
@@ -985,8 +996,9 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Choose date' }));
     await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
-    const today = document.querySelector('[data-date="2026-06-05"]');
-    expect(today === null || today.getAttribute('aria-disabled') === 'true').toBe(true);
+    expect(pickerDay('2026-06-05')).toHaveAttribute('aria-disabled', 'true');
+    // Next Monday (the weekend is closed) is untouched by today's clock.
+    expect(pickerDay('2026-06-08').tagName).toBe('BUTTON');
   });
 
   // A Reserve click the page can't send used to do nothing visible here —
