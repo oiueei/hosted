@@ -110,6 +110,7 @@ Foreign keys are exposed as 6-character alphanumeric codes, not database IDs:
 | `CollectionAddThingSerializer` | thing_code | Input for adding a thing to a collection. |
 | `CollectionRemoveThingSerializer` | thing_code | Input for removing a thing from a collection. |
 | `CollectionRemoveInviteSerializer` | user_code | Input for removing a user from invites. |
+| `EmailNoteTestSerializer` | email_note | Input for `POST /collections/{code}/email-note/test/` — a curator's unsaved `email_note` draft to be mailed to themselves as members will see it. The same `LocalizedTextField` as the collection's own field (512 visible per language / 2048 stored), so a draft the collection would refuse can't be tested either. |
 | `CollectionBroadcastSerializer` | message | Input for broadcasting to invitees. The subject is auto-generated server-side (`Hey! {collection}`) — only `message` is user-provided. Uses `SafeTextField` (max 256). |
 
 ### `booking.py`
