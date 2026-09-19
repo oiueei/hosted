@@ -704,6 +704,44 @@ def test_active_reservation_count_only_counts_this_collections_accepted_future_b
     assert coll.active_reservation_count(member.code, today=today) == 1
 
 
+def test_an_hourly_reservation_counts_towards_the_cap_until_its_day_is_over(db):
+    """The cap counts whole days, not clock time: an HOUR-unit reservation
+    stores ``end_date = start_date + 1``, so a slot that ended at 11:00 this
+    morning still holds one of the member's places until midnight, and stops
+    counting from tomorrow. Pinned as it stands — the cap is a courtesy limit
+    on how much of the calendar one member sits on, and a place held for the
+    rest of the day is a coarser answer than the clock could give."""
+    owner = User.objects.create(code="ACOWN5", email="acown5@test.com")
+    member = User.objects.create(code="ACMEM5", email="acmem5@test.com")
+    coll = Collection.objects.create(
+        code="ACCOL5",
+        owner=owner,
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+    )
+    thing = Thing.objects.create(
+        code="ACTHG5", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
+    )
+    coll.things.add(thing)
+    today = date(2026, 6, 1)
+    BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type="RESERVE_THING",
+        requester_code=member,
+        requester_email=member.email,
+        owner_code=owner,
+        start_date=today,
+        end_date=today + timedelta(days=1),
+        start_time=time(10, 0),
+        end_time=time(11, 0),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    assert coll.active_reservation_count(member.code, today=today) == 1
+    assert coll.active_reservation_count(member.code, today=today + timedelta(days=1)) == 0
+
+
 def test_request_reservation_refuses_past_the_active_cap(db):
     """At the cap a request still succeeds; one more is refused — a courtesy
     limit, not the date-clash 409."""
