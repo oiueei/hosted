@@ -74,3 +74,52 @@ def test_every_code_a_request_can_be_refused_with_is_translated():
             code for code in codes if code not in table and f"{code}_other" not in table
         )
         assert not missing, f"{lang}.json requestErrors has no string for: {missing}"
+
+
+def _refusal_messages():
+    """Every ``Refusal`` / ``BookingRequestError`` built in the two rule
+    sources, as ``(file, line, the message argument's AST node)``."""
+    import ast
+
+    for path in SOURCES:
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+            if name in {"Refusal", "BookingRequestError"} and node.args:
+                yield path.name, node.lineno, node.args[0]
+
+
+def test_every_refusal_is_built_with_a_sentence():
+    """A code tells the SPA which string to show; the message is what an older
+    client — and every log line — gets instead, so a refusal built without one
+    reaches a member as the word "None". Nothing said it had to be there: the
+    mutation sweep of 2026-09-19 blanked message after message and the suite
+    stayed green, because the tests had moved to asserting codes.
+
+    Read from the source rather than by calling each rule: a refusal that is
+    hard to reach is exactly the one whose message nobody would notice. Only
+    literals are judged — a `BookingRequestError(violation)` re-raises a
+    sentence some rule already built, and that one is judged where it is.
+    """
+    import ast
+
+    empty = []
+    for filename, line, arg in _refusal_messages():
+        if not isinstance(arg, ast.Constant):  # an f-string or a variable
+            continue
+        if not isinstance(arg.value, str) or not arg.value.strip():
+            empty.append(f"{filename}:{line}")
+    assert not empty, f"refusals built without a sentence: {empty}"
+
+
+def test_the_refusal_message_scan_is_finding_things():
+    """The guard above proves nothing if the walk comes back empty, or if
+    every refusal it found turned out to be one it skips."""
+    import ast
+
+    found = list(_refusal_messages())
+    assert len(found) > 20
+    literals = [arg for _, _, arg in found if isinstance(arg, ast.Constant)]
+    assert len(literals) > 15
