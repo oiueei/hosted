@@ -22,7 +22,7 @@ Handles state transitions for `BookingPeriod` and `Thing` models as an atomic un
 
 ##### Reservation requests
 
-These own the **create** side (formerly the `ThingRequestView._handle_*` methods). Each performs the locked create + status transition, then fans out the request emails + in-app notification + `HOLD_REQUESTED` event via the shared `send_*_request_notifications()` helpers. Rule violations raise `BookingRequestError(message, status_code)`; `ThingRequestView` catches it and returns `{"error": message}` with that status (default 400; 409 for a date overlap). Serializer validation stays in the view.
+These own the **create** side (formerly the `ThingRequestView._handle_*` methods). Each performs the locked create + status transition, then fans out the request emails + in-app notification + `HOLD_REQUESTED` event via the shared `send_*_request_notifications()` helpers. Rule violations raise `BookingRequestError(message, status_code, code=None, params=None)`; `ThingRequestView` catches it and returns `exc.as_body()` — `{"error": message}` plus `code`/`params` — with that status (default 400; 409 for a date overlap). A `core.utils.Refusal` from the model (`reservation_violation`, `reservation_hour_violation`, `rental_violation`) brings its own code and params, so `raise BookingRequestError(violation)` needs nothing more; every refusal is coded so the SPA can say it in the member's language (design round, 2026-09-18 — `core` has no gettext). Serializer validation stays in the view.
 
 | Function | Input | Behaviour |
 |----------|-------|-----------|

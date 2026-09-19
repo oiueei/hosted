@@ -342,6 +342,10 @@ def test_request_rejects_wrong_duration(rental_setup):
     mon = _next_weekday(0)
     res = _book(rental_setup, mon, mon + timedelta(days=4))  # 4 days
     assert res.status_code == 400
+    # Coded, with the lengths on offer, for the request page to say in the
+    # member's language.
+    assert res.data["code"] == "rental_length_not_allowed"
+    assert res.data["params"] == {"allowed": "3, 7"}
     assert not BookingPeriod.objects.filter(thing_code=rental_setup["thing"]).exists()
 
 
@@ -349,6 +353,7 @@ def test_request_rejects_disallowed_weekday(rental_setup):
     sat = _next_weekday(5)
     res = _book(rental_setup, sat, sat + timedelta(days=3))  # 3 days but pickup Sat
     assert res.status_code == 400
+    assert res.data["code"] == "rental_pickup_weekday"
     assert not BookingPeriod.objects.filter(thing_code=rental_setup["thing"]).exists()
 
 

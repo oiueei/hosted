@@ -121,10 +121,7 @@ class ThingRequestView(APIView):
                     status=status.HTTP_201_CREATED,
                 )
         except BookingRequestError as exc:
-            body = {"error": exc.message}
-            if exc.code:
-                body["code"] = exc.code
-            return Response(body, status=exc.status_code)
+            return Response(exc.as_body(), status=exc.status_code)
 
     def _request_reservation(self, request, thing, owner_email):
         """RESERVE_THING — validate the request's shape, then delegate.

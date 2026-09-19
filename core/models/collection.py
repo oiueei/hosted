@@ -11,7 +11,7 @@ from django.db import models
 from django.utils import timezone
 
 from core.models.language import Language
-from core.utils import generate_id
+from core.utils import Refusal, generate_id
 
 logger = logging.getLogger(__name__)
 
@@ -471,25 +471,34 @@ class Collection(models.Model):
         (horizon 7 ⇒ day 7 selectable, ``end_date`` day 8, refused).
         """
         if duration_days < 1:
-            return "A reservation is at least one day."
+            return Refusal("A reservation is at least one day.", "reservation_too_short_days")
         if duration_days > self.reservation_max_days:
-            return (
+            return Refusal(
                 f"This space can be reserved for at most "
-                f"{self.reservation_max_days} day(s) at a time."
+                f"{self.reservation_max_days} day(s) at a time.",
+                "reservation_too_long_days",
+                max=self.reservation_max_days,
             )
         today = today or timezone.localdate()
         if start_date > today + timedelta(days=self.reservation_horizon_days):
-            return (
-                f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
+            return Refusal(
+                f"This space can only be booked up to {self.reservation_horizon_days} days ahead.",
+                "reservation_beyond_horizon",
+                days=self.reservation_horizon_days,
             )
         weekdays = self.rental_weekdays or []
         closed = self.closed_date_set()
         for offset in range(duration_days):
             day = start_date + timedelta(days=offset)
             if weekdays and day.weekday() not in weekdays:
-                return "Those dates include a day this space isn't open for reservations."
+                return Refusal(
+                    "Those dates include a day this space isn't open for reservations.",
+                    "reservation_weekday_closed",
+                )
             if day in closed:
-                return "Those dates include a day this space is closed."
+                return Refusal(
+                    "Those dates include a day this space is closed.", "reservation_closed_date"
+                )
         return None
 
     def is_hourly_reservations(self):
@@ -563,42 +572,64 @@ class Collection(models.Model):
         pinning the horizon) is asking about that day, not about the clock.
         """
         if end_time <= start_time:
-            return "A reservation must end after it starts."
+            return Refusal(
+                "A reservation must end after it starts.", "reservation_end_before_start"
+            )
         if start_time.second or start_time.microsecond or end_time.second or end_time.microsecond:
-            return "Reservation times are whole minutes (HH:MM)."
+            return Refusal(
+                "Reservation times are whole minutes (HH:MM).", "reservation_whole_minutes"
+            )
         start_minutes = start_time.hour * 60 + start_time.minute
         duration_minutes = end_time.hour * 60 + end_time.minute - start_minutes
         if duration_minutes < self.reservation_min_minutes:
-            return f"A reservation is at least {self.reservation_min_minutes} minutes."
+            return Refusal(
+                f"A reservation is at least {self.reservation_min_minutes} minutes.",
+                "reservation_too_short_minutes",
+                min=self.reservation_min_minutes,
+            )
         if duration_minutes > self.reservation_max_minutes:
-            return (
+            return Refusal(
                 f"This space can be reserved for at most "
-                f"{self.reservation_max_minutes} minutes at a time."
+                f"{self.reservation_max_minutes} minutes at a time.",
+                "reservation_too_long_minutes",
+                max=self.reservation_max_minutes,
             )
         now = now or timezone.localtime()
         today = today or now.date()
         if start_date > today + timedelta(days=self.reservation_horizon_days):
-            return (
-                f"This space can only be booked up to {self.reservation_horizon_days} days ahead."
+            return Refusal(
+                f"This space can only be booked up to {self.reservation_horizon_days} days ahead.",
+                "reservation_beyond_horizon",
+                days=self.reservation_horizon_days,
             )
         if start_date == today == now.date() and start_minutes < now.hour * 60 + now.minute:
-            return "That time has already begun."
+            return Refusal("That time has already begun.", "reservation_already_begun")
         if start_date in self.closed_date_set():
-            return "This space is closed that day."
+            return Refusal("This space is closed that day.", "reservation_closed_that_day")
         blocks = self.day_opening_blocks(start_date)
         if not blocks:
-            return "This space isn't open that day."
+            return Refusal("This space isn't open that day.", "reservation_not_open_that_day")
         if (start_time, end_time) == (blocks[0][0], blocks[-1][1]):
             return None
         step = self.reservation_min_minutes
         for block_start, block_end in blocks:
             if block_start <= start_time and end_time <= block_end:
                 if (start_minutes - (block_start.hour * 60 + block_start.minute)) % step:
-                    return f"Reservations here start every {step} minutes from opening time."
+                    return Refusal(
+                        f"Reservations here start every {step} minutes from opening time.",
+                        "reservation_off_grid_start",
+                        step=step,
+                    )
                 if duration_minutes % step:
-                    return f"A reservation here lasts a multiple of {step} minutes."
+                    return Refusal(
+                        f"A reservation here lasts a multiple of {step} minutes.",
+                        "reservation_off_grid_length",
+                        step=step,
+                    )
                 return None
-        return "That time falls outside this space's opening hours."
+        return Refusal(
+            "That time falls outside this space's opening hours.", "reservation_outside_hours"
+        )
 
     def active_reservation_count(self, requester_code, today=None):
         """How many of ``requester_code``'s RESERVE bookings in THIS collection
@@ -758,21 +789,33 @@ class Collection(models.Model):
             span_days = (end_date - start_date).days
             if span_days not in durations:
                 allowed = ", ".join(str(d) for d in sorted(durations))
-                return f"This collection only allows rentals of {allowed} day(s)."
+                return Refusal(
+                    f"This collection only allows rentals of {allowed} day(s).",
+                    "rental_length_not_allowed",
+                    allowed=allowed,
+                )
         weekdays = self.rental_weekdays or []
         if weekdays:
             if start_date.weekday() not in weekdays:
-                return "The pickup day isn't available for this collection."
+                return Refusal(
+                    "The pickup day isn't available for this collection.", "rental_pickup_weekday"
+                )
             if end_date.weekday() not in weekdays:
-                return "The return day isn't available for this collection."
+                return Refusal(
+                    "The return day isn't available for this collection.", "rental_return_weekday"
+                )
         # Holidays / closures: only the handoff days matter for a loan or a
         # rental — the item is already out in between, so an interior closure
         # stops nothing.
         closed = self.closed_date_set()
         if start_date in closed:
-            return "The pickup day is a closure day for this collection."
+            return Refusal(
+                "The pickup day is a closure day for this collection.", "rental_pickup_closed"
+            )
         if end_date in closed:
-            return "The return day is a closure day for this collection."
+            return Refusal(
+                "The return day is a closure day for this collection.", "rental_return_closed"
+            )
         return None
 
     def can_add_thing(self, user_code):

@@ -24,7 +24,7 @@ import {
   earliestStartMinutes,
   isHourlyPickupDisabled,
 } from '../utils/rental';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiErrorMessage, codedErrorMessage } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
@@ -318,18 +318,18 @@ export default function RequestThingPage() {
     if (res.status === 429) {
       setToast({ type: 'error', message: t('common.tooManyAttempts') });
     } else if (res.status === 400) {
+      // A rule refusal comes coded and is said in the reader's language
+      // (apiErrorMessage); anything else is the server's own text.
       const data = await res.json();
-      let message = data.detail;
-      if (!message) {
-        const errors = Object.values(data).flat();
-        message = errors.join(' ') || t('thingPage.invalidRequest');
-      }
-      setToast({ type: 'error', message });
+      setToast({ type: 'error', message: apiErrorMessage(data) || t('thingPage.invalidRequest') });
     } else if (res.status === 403) {
       const data = await res.json();
-      setToast({ type: 'error', message: data.error || t('request.errorSending') });
+      setToast({ type: 'error', message: apiErrorMessage(data) || t('request.errorSending') });
     } else if (res.status === 409) {
-      setToast({ type: 'error', message: t('request.dateOverlap') });
+      // "That time is already taken" for an hourly slot, "those dates"
+      // otherwise — and this page's own copy for anything uncoded.
+      const data = await res.json().catch(() => null);
+      setToast({ type: 'error', message: codedErrorMessage(data) || t('request.dateOverlap') });
     } else {
       setToast({ type: 'error', message: t('request.errorSending') });
     }
@@ -449,9 +449,9 @@ export default function RequestThingPage() {
         // join (`joinableCollection`, above).
         const data = await res.json();
         if (isReservation && data.code === 'not_a_member' && joinableCollection()) {
-          await joinThenRetry(body, data.error);
+          await joinThenRetry(body, apiErrorMessage(data));
         } else {
-          setToast({ type: 'error', message: data.error || t('request.errorSending') });
+          setToast({ type: 'error', message: apiErrorMessage(data) || t('request.errorSending') });
         }
       } else {
         await showRequestError(res);

@@ -89,7 +89,7 @@ core/
   checks.py           # System checks (CREATOR_POLICY importable + instantiable, etc.)
   permissions.py      # Custom DRF permissions (IsThingOwner, IsThingManager, IsCollectionOwner, IsCollectionCurator)
   validators.py       # Input validation (image IDs, headlines, localized-text caps)
-  utils.py            # ID generation, client IP, asset URLs, localized-text parsing
+  utils.py            # ID generation, client IP, asset URLs, localized-text parsing, coded refusals (Refusal)
   pagination.py       # StandardResultsPagination (max 100)
   management/
     commands/

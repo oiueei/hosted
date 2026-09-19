@@ -312,6 +312,10 @@ def test_the_active_reservation_cap_is_per_member_per_collection(
         format="json",
     )
     assert over_cap.status_code == status.HTTP_400_BAD_REQUEST
+    # Coded, with the cap itself, so the request page can say it in the
+    # member's language and name the number.
+    assert over_cap.data["code"] == "reservation_max_active"
+    assert over_cap.data["params"] == {"max": 1}
     assert BookingPeriod.objects.filter(status=BookingPeriod.Status.ACCEPTED).count() == 1
 
 
@@ -475,20 +479,48 @@ def test_a_request_for_a_slot_that_already_began_today_is_refused(hourly_reserva
         )
 
     assert past.status_code == status.HTTP_400_BAD_REQUEST
-    assert past.data == {"error": "That time has already begun."}
+    # The English sentence stays; the code is what lets the request page say it
+    # in the member's own language (core has no gettext catalogue).
+    assert past.data == {
+        "error": "That time has already begun.",
+        "code": "reservation_already_begun",
+    }
     assert later.status_code == status.HTTP_201_CREATED
 
 
 @pytest.mark.parametrize(
-    ("start", "end", "error"),
+    ("start", "end", "body"),
     [
-        ("10:30", "11:30", "Reservations here start every 60 minutes from opening time."),
-        ("10:00", "11:30", "A reservation here lasts a multiple of 60 minutes."),
-        ("10:00:30", "11:00:30", "Reservation times are whole minutes (HH:MM)."),
+        (
+            "10:30",
+            "11:30",
+            {
+                "error": "Reservations here start every 60 minutes from opening time.",
+                "code": "reservation_off_grid_start",
+                "params": {"step": 60},
+            },
+        ),
+        (
+            "10:00",
+            "11:30",
+            {
+                "error": "A reservation here lasts a multiple of 60 minutes.",
+                "code": "reservation_off_grid_length",
+                "params": {"step": 60},
+            },
+        ),
+        (
+            "10:00:30",
+            "11:00:30",
+            {
+                "error": "Reservation times are whole minutes (HH:MM).",
+                "code": "reservation_whole_minutes",
+            },
+        ),
     ],
 )
 def test_an_hourly_request_off_the_pickers_grid_is_refused_with_the_rule(
-    hourly_reservations, authenticated_client2, start, end, error
+    hourly_reservations, authenticated_client2, start, end, body
 ):
     """The request page only ever sends starts on the minimum-minute grid and
     durations that are multiples of it; a request made straight to the API
@@ -500,7 +532,7 @@ def test_an_hourly_request_off_the_pickers_grid_is_refused_with_the_rule(
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert resp.data == {"error": error}
+    assert resp.data == body
     assert not BookingPeriod.objects.exists()
 
 
@@ -1069,7 +1101,11 @@ def test_a_reservation_past_the_horizon_is_refused(reservations, authenticated_c
         format="json",
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert "10" in str(resp.data)
+    assert resp.data == {
+        "error": "This space can only be booked up to 10 days ahead.",
+        "code": "reservation_beyond_horizon",
+        "params": {"days": 10},
+    }
 
 
 def test_send_reminders_skips_reservations(reservations):

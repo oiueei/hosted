@@ -35,13 +35,29 @@ class BookingRequestError(Exception):
     this endpoint — e.g. the thing going INACTIVE out from under an open form —
     can't be mistaken for a membership gap and silently join the reader to a
     group over an unrelated error.
+
+    A rule refusal from the model (``core.utils.Refusal``) brings its own
+    ``code`` and ``params`` along, so ``raise BookingRequestError(violation)``
+    carries them without restating them. ``as_body()`` is the response body:
+    ``{"error": ...}`` plus ``code``/``params`` when there are any — what lets
+    the request page say the refusal in the reader's language rather than the
+    English sentence (design round, 2026-09-18).
     """
 
-    def __init__(self, message, status_code=400, code=None):
+    def __init__(self, message, status_code=400, code=None, params=None):
         super().__init__(message)
-        self.message = message
+        self.message = str(message)
         self.status_code = status_code
-        self.code = code
+        self.code = code if code is not None else getattr(message, "code", None)
+        self.params = params if params is not None else getattr(message, "params", None) or {}
+
+    def as_body(self):
+        body = {"error": self.message}
+        if self.code:
+            body["code"] = self.code
+        if self.params:
+            body["params"] = self.params
+        return body
 
 
 def _pickup_blocked(day, ranges):
@@ -533,7 +549,9 @@ def request_date_based_booking(
 
         if BookingPeriod.has_overlap(thing.code, start_date, end_date):
             raise BookingRequestError(
-                "Selected dates overlap with existing booking", status_code=409
+                "Selected dates overlap with existing booking",
+                status_code=409,
+                code="dates_taken",
             )
 
         booking = BookingPeriod.objects.create(
@@ -557,14 +575,18 @@ def request_standard_booking(thing, requester, owner_email, collection_code=None
         thing = Thing.objects.select_for_update().get(code=thing.code)
 
         if not thing.is_endless and thing.status != Thing.Status.ACTIVE:
-            raise BookingRequestError("Thing is not available for reservation")
+            raise BookingRequestError(
+                "Thing is not available for reservation", code="not_available"
+            )
 
         if BookingPeriod.objects.filter(
             thing_code=thing,
             requester_code=requester,
             status=BookingPeriod.Status.PENDING,
         ).exists():
-            raise BookingRequestError("You already have a pending request for this thing")
+            raise BookingRequestError(
+                "You already have a pending request for this thing", code="already_requested"
+            )
 
         booking = BookingPeriod.objects.create(
             thing_code=thing,
@@ -695,7 +717,8 @@ def request_reservation(
     if rc.is_hourly_reservations():
         if start_time is None or end_time is None:
             raise BookingRequestError(
-                "This space is booked by the hour — pick a start and end time."
+                "This space is booked by the hour — pick a start and end time.",
+                code="reservation_needs_times",
             )
         violation = rc.reservation_hour_violation(start_date, start_time, end_time)
         if violation:
@@ -703,7 +726,10 @@ def request_reservation(
         end_date = start_date + timedelta(days=1)
     else:
         if duration_days is None:
-            raise BookingRequestError("This space is booked by the day — pick a length in days.")
+            raise BookingRequestError(
+                "This space is booked by the day — pick a length in days.",
+                code="reservation_needs_days",
+            )
         # reservation_violation covers duration, the every-day-open-weekday rule
         # AND the collection's "how far ahead" horizon — one backstop.
         violation = rc.reservation_violation(start_date, duration_days)
@@ -717,7 +743,9 @@ def request_reservation(
         Thing.objects.select_for_update().get(code=thing.code)
         if rc.active_reservation_count(requester.code) >= rc.reservation_max_active_per_member:
             raise BookingRequestError(
-                "You've reached the maximum number of active reservations for this space."
+                "You've reached the maximum number of active reservations for this space.",
+                code="reservation_max_active",
+                params={"max": rc.reservation_max_active_per_member},
             )
         if BookingPeriod.has_overlap(
             thing.code, start_date, end_date, start_time=start_time, end_time=end_time
@@ -725,7 +753,11 @@ def request_reservation(
             clash_message = (
                 "That time is already taken." if start_time else "Those dates are already taken."
             )
-            raise BookingRequestError(clash_message, status_code=409)
+            raise BookingRequestError(
+                clash_message,
+                status_code=409,
+                code="time_taken" if start_time else "dates_taken",
+            )
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type=thing.type,
@@ -801,10 +833,14 @@ def cancel_reservation(booking, by_user):
     if booking.thing_type != Thing.Type.RESERVE_THING:
         raise BookingRequestError("Not a reservation.")
     if by_user.code != booking.requester_code_id and not thing.can_manage(by_user.code):
-        raise BookingRequestError("You can't cancel this reservation.", status_code=403)
+        raise BookingRequestError(
+            "You can't cancel this reservation.", status_code=403, code="cancel_forbidden"
+        )
     now = timezone.localtime()
     if booking.start_date and booking.start_date < now.date():
-        raise BookingRequestError("This reservation has already started.")
+        raise BookingRequestError(
+            "This reservation has already started.", code="reservation_started"
+        )
     # An HOUR-unit reservation starts at its time, not at midnight: cancelling
     # this morning's slot this afternoon would free, and announce, something
     # that already happened. Same "current minute has not begun" rule as a
@@ -814,12 +850,16 @@ def cancel_reservation(booking, by_user):
         and booking.start_date == now.date()
         and booking.start_time.hour * 60 + booking.start_time.minute < now.hour * 60 + now.minute
     ):
-        raise BookingRequestError("This reservation has already started.")
+        raise BookingRequestError(
+            "This reservation has already started.", code="reservation_started"
+        )
 
     with transaction.atomic():
         locked = BookingPeriod.objects.select_for_update().get(code=booking.code)
         if locked.status != BookingPeriod.Status.ACCEPTED:
-            raise BookingRequestError("This reservation is no longer active.")
+            raise BookingRequestError(
+                "This reservation is no longer active.", code="reservation_inactive"
+            )
         locked.status = BookingPeriod.Status.CANCELLED
         locked.save(update_fields=["status"])
 

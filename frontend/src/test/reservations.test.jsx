@@ -4,7 +4,10 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 window.scrollTo = vi.fn();
 
-vi.mock('../services/api', () => ({
+// The real error readers (apiErrorMessage & co.) are kept — they turn a coded
+// refusal into the reader's language, which these tests read back.
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
   apiFetch: vi.fn(() =>
     Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
   ),
@@ -876,6 +879,43 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     // Read out when the start time is chosen, not only visible.
     const regions = screen.getAllByRole('status');
     expect(regions.some((region) => region.contains(summary))).toBe(true);
+  });
+
+  test('a rule the server refuses is explained from the page’s own catalogue', async () => {
+    // core has no gettext: the refusal arrives in English with a code, and the
+    // page says it in the reader's language — here English, but not the
+    // server's sentence, which is how the test tells the two apart.
+    setApi({ thing: HOURLY_RESERVE_THING });
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST')
+        return Promise.resolve({
+          ok: false,
+          status: 400,
+          json: () =>
+            Promise.resolve({
+              error: "You've reached the maximum number of active reservations for this space.",
+              code: 'reservation_max_active',
+              params: { max: 2 },
+            }),
+        });
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url))
+        return Promise.resolve(mockResponse(HOURLY_RESERVE_THING));
+      return Promise.resolve(mockResponse({}));
+    });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
+    fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(
+      await screen.findByText(
+        'You already have 2 active reservations here — the most this group allows.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/maximum number of active reservations/)).toBeNull();
   });
 
   test('the confirmation restates the booked slot, end time included', async () => {
