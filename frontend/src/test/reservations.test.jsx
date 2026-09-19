@@ -1,6 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import i18n from 'i18next';
+import es from '../i18n/locales/es.json';
 
 window.scrollTo = vi.fn();
 
@@ -1050,6 +1052,78 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
     typeHourlyPickup(container, '04/06/2026'); // Thursday, same schedule
     await waitFor(() => expect(screen.queryByRole('radio', { name: '11:00' })).toBeNull());
     expect(screen.queryByRole('radio', { checked: true })).toBeNull();
+  });
+});
+
+/**
+ * A clash is the refusal a member is likeliest to meet: two people after the
+ * same slot, the other one a moment faster. The server answers 409 with a
+ * coded body (`time_taken` for an hourly slot, `dates_taken` for days), and the
+ * page says it from its own catalogue — in the reader's language, since core
+ * has no gettext — falling back to its own clash copy when the body carries no
+ * code it knows (or no body at all).
+ */
+describe('RequestThingPage — a clash (409)', () => {
+  const clash = (body) => ({
+    ok: false,
+    status: 409,
+    json: () =>
+      body === undefined ? Promise.reject(new SyntaxError('empty body')) : Promise.resolve(body),
+  });
+
+  function clashApi(thing, response) {
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (/\/things\/[^/]+\/calendar\//.test(url)) return Promise.resolve(mockResponse([]));
+      if (/\/things\/[^/]+\/request\//.test(url) && opts.method === 'POST')
+        return Promise.resolve(response);
+      if (/\/things\/[^/]+\/(\?.*)?$/.test(url)) return Promise.resolve(mockResponse(thing));
+      return Promise.resolve(mockResponse({}));
+    });
+  }
+
+  afterEach(async () => {
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+  });
+
+  test('an hourly slot taken meanwhile is told as taken, in the reader’s language', async () => {
+    i18n.addResourceBundle('es', 'translation', es, true, true);
+    await act(async () => {
+      await i18n.changeLanguage('es');
+    });
+    clashApi(
+      HOURLY_RESERVE_THING,
+      clash({ error: 'That time is already taken.', code: 'time_taken' })
+    );
+    const { container } = renderPage();
+    await screen.findByText(i18n.t('reservation.pageTitle', { headline: 'Sala amb hores' }));
+
+    typeHourlyPickup(container, '03/06/2026');
+    fireEvent.click(
+      await screen.findByRole('radio', { name: i18n.t('reservation.hours', { count: 2 }) })
+    );
+    fireEvent.click(await screen.findByRole('radio', { name: '11:00' }));
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('thingCard.action.RESERVE_THING') }));
+
+    expect(await screen.findByText(es.requestErrors.time_taken)).toBeInTheDocument();
+    // Neither the server's English nor this page's generic failure.
+    expect(screen.queryByText('That time is already taken.')).toBeNull();
+    expect(screen.queryByText(es.request.errorSending)).toBeNull();
+    expect(screen.queryByText(es.reservation.successMessage)).toBeNull();
+  });
+
+  test('a clash with no body it can read still says the dates clash', async () => {
+    clashApi({ ...RESERVE_THING, reservation_max_days: 1 }, clash(undefined));
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    typePickup(container, '03/06/2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(await screen.findByText('Date overlaps with another booking.')).toBeInTheDocument();
+    expect(screen.queryByText('Error sending request.')).toBeNull();
+    expect(screen.queryByText(/Your reservation is confirmed/)).toBeNull();
   });
 });
 
