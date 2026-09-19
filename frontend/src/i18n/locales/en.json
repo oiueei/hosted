@@ -1039,7 +1039,10 @@
   "emailNote": {
     "label": "Note in the emails after someone asks (optional)",
     "helper": "Added to the emails a member receives about their request — when they send it and again when it's accepted (a reservation is confirmed on the spot, so its single email carries it) — after the link to the listing, in their own language. Markdown (bold, italics, lists, links) and emojis work. E.g. \"we confirm requests within 48h\", \"the space is on floor 2\".",
-    "maxLength": "Maximum 512 characters per language."
+    "maxLength": "Maximum 512 characters per language.",
+    "testButton": "Send me a test email",
+    "testSent": "Sent to your inbox — this is exactly how members will get it.",
+    "testError": "Couldn't send the test email. Please try again."
   },
   "requestErrors": {
     "already_requested": "You've already asked for this — wait for the owner's answer.",

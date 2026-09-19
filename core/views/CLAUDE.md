@@ -615,6 +615,16 @@ The **name, description and language** of the collection a `/share/{token}` link
 
 Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked or INACTIVE token — the same `share_token=… , status=ACTIVE` filter `JoinView._resolve_target` uses — so the preview goes dark the instant the link does and reveals nothing the link itself doesn't already. The bearer link is the credential and whoever holds it already knows a real collection is behind it, so naming that collection to them is not a leak; naming anything *else* would be.
 
+### CollectionEmailNoteTestView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/collections/{collection_code}/email-note/test/` |
+| **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
+| **Rate limit** | 10 requests/hour per user |
+
+Mails the acting curator — and nobody else — their `email_note` **draft** (`{"email_note": "…"}`, unsaved, validated by `EmailNoteTestSerializer` with the collection field's own per-language limits: 512 visible / 2048 stored), rendered by `send_email_note_test_email` through the email's own `_note_blocks` and layout. A note written per language comes back with every version under its endonym. Design round, 2026-09-18: the note only ever reaches requesters, and a curator can't request their own things, so it was written blind; a page preview would lie (the email's Markdown subset has no headings or tables and prints a link's host after it). **Mandatory category** — the curator asked for it that moment, so an activity opt-out must not swallow it. 403 for a non-curator, 400 for an empty or over-long note, `{"status": "sent"}` otherwise.
+
 ### CollectionBroadcastView
 
 | | |
@@ -1222,6 +1232,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - Invitation **emails** (single + bulk combined) — **unlimited unless the operator sets `INVITE_EMAILS_PER_DAY`** (counts emails, not requests, so the bulk fan-out can't multiply past it; 0/unset = off)
 - `/things/{code}/request/` POST — 10 requests per hour per user
 - `/things/{code}/faq/` POST — 20 requests per hour per user
+- `/collections/{code}/email-note/test/` POST — 10 requests per hour per user
 - `/collections/{code}/broadcast/` POST — 5 requests per day per user
 - `/collections/{code}/share-link/` POST — 30 requests per hour per user
 - `/things/{code}/report/` POST — 10 requests per hour per user

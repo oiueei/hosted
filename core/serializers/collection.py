@@ -919,6 +919,13 @@ class CollectionRemoveInviteSerializer(serializers.Serializer):
     user_code = serializers.CharField(max_length=6)
 
 
+class EmailNoteTestSerializer(serializers.Serializer):
+    """The ``email_note`` draft a curator asks to see as members will — the same
+    field, and so the same per-language limits, as the collection's own."""
+
+    email_note = LocalizedTextField(max_length=512, storage_max_length=2048)
+
+
 class CollectionBroadcastSerializer(serializers.Serializer):
     """Serializer for broadcasting a message to collection invitees.
 

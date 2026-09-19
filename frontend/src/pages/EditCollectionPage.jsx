@@ -24,6 +24,7 @@ import { useLocalized, localizedCounter } from '../utils/localized';
 import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import StatusRegion from '../components/StatusRegion';
+import EmailNoteTest from '../components/EmailNoteTest';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -545,6 +546,7 @@ export default function EditCollectionPage() {
               helperText={localizedCounter(emailNote, 512).text}
             />
             <LocalizedInfo id="edit-collection-email-note-info" variant="emailNote" />
+            <EmailNoteTest collectionCode={code} note={emailNote} buttonStyle={btnSecondaryStyle} />
           </div>
           <TextInput
             id="edit-collection-home-page"

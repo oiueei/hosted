@@ -199,6 +199,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner or co-owner) |
 | GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner or co-owner, rate limited: 10/day). A plain member gets 403, never a partial file |
 | POST | `/api/v1/collections/{code}/calendar-export/` | Download the collection's upcoming LEND/RENT/RESERVE reservations as a Google Calendar CSV (owner or co-owner, rate limited: 20/h). Incremental — each download carries only what hasn't gone out before; `X-Calendar-Events` gives the count. POST because it marks them delivered |
+| POST | `/api/v1/collections/{code}/email-note/test/` | Email the acting curator their `email_note` draft (`{email_note}`, unsaved), rendered exactly as a member will get it — every language version under its own name (owner or co-owner, rate limited: 10/h). Goes to the requester's own address only |
 | POST | `/api/v1/collections/{code}/broadcast/` | Send a message to all invitees (owner or co-owner) |
 | POST | `/api/v1/collections/{code}/things/bulk/` | Bulk-create things from a CSV (rate limited: 10/h) |
 
@@ -458,6 +459,7 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Rate Limiting | Thing report | 10 req/hour per user |
 | Rate Limiting | Upload signature | 30 req/hour per user |
 | Rate Limiting | Broadcast | 5 req/day per user |
+| Rate Limiting | Email-note test | 10 req/hour per user (to the curator's own address only) |
 | Rate Limiting | FAQ question | 20 req/hour per user |
 | Rate Limiting | Notifications token | GET 20/min, PATCH 10/min per IP |
 | Rate Limiting | Health check | 60/min per IP (GET + HEAD) — the one anonymous endpoint that reaches the database on every hit |

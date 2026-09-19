@@ -1039,7 +1039,10 @@
   "emailNote": {
     "label": "Nota als correus després de demanar (opcional)",
     "helper": "S'afegeix als correus que rep un membre sobre la seva sol·licitud — quan l'envia i un altre cop quan l'hi accepten (una reserva es confirma a l'instant, així que va en el seu únic correu) — després de l'enllaç a la publicació, en el seu propi idioma. Admet Markdown (negretes, cursives, llistes, enllaços) i emojis. P. ex. «confirmem les sol·licituds en 48h», «l'espai és a la planta 2».",
-    "maxLength": "Màxim 512 caràcters per idioma."
+    "maxLength": "Màxim 512 caràcters per idioma.",
+    "testButton": "Envia'm un correu de prova",
+    "testSent": "Enviat al teu correu: és exactament com el rebran.",
+    "testError": "No s'ha pogut enviar el correu de prova. Torna-ho a provar."
   },
   "requestErrors": {
     "already_requested": "Ja ho has demanat: espera la resposta de qui ho ofereix.",

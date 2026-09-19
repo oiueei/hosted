@@ -32,6 +32,7 @@ from .views.collections import (
     CollectionBulkInviteView,
     CollectionCoOwnerView,
     CollectionDigestPrefView,
+    CollectionEmailNoteTestView,
     CollectionInviteView,
     CollectionJoinView,
     CollectionLeaveView,
@@ -204,6 +205,11 @@ urlpatterns = [
         "collections/<str:collection_code>/calendar-export/",
         CollectionCalendarExportView.as_view(),
         name="collection-calendar-export",
+    ),
+    path(
+        "collections/<str:collection_code>/email-note/test/",
+        CollectionEmailNoteTestView.as_view(),
+        name="collection-email-note-test",
     ),
     path(
         "collections/<str:collection_code>/broadcast/",

@@ -395,6 +395,31 @@ describe('EditCollectionPage — the email note', () => {
     );
   });
 
+  test('the loaded note can be mailed to the curator as a test, from right under it', async () => {
+    // Written blind otherwise: it only reaches requesters, and a curator can't
+    // request their own things (EmailNoteTest.test.jsx covers the button).
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...COLLECTION, email_note: 'We confirm within 48h.' }),
+      });
+    });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send me a test email' }));
+
+    expect(await screen.findByText(/Sent to your inbox/)).toBeInTheDocument();
+    const post = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
+    expect(post[0]).toBe('/api/v1/collections/COL001/email-note/test/');
+    expect(JSON.parse(post[1].body)).toEqual({ email_note: 'We confirm within 48h.' });
+  });
+
   test('an edited note reaches the PATCH body, trimmed', async () => {
     mockApi();
     renderPage();

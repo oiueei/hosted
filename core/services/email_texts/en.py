@@ -208,6 +208,11 @@ TEXTS = {
     ),
     "reported_review_cta": "Review the listing",
     # Broadcast (owner → invitees)
+    "email_note_test_subject": "Your email note, as members will see it — {collection}",
+    "email_note_test_intro": (
+        "This is how your note will look in the emails people get after asking for "
+        "something in {collection}. Only you received this one."
+    ),
     "broadcast_subject": "Hey! {collection}",
     "broadcast_plain": "Message from {owner}:\n\n{message}\n\nOpen the group: {url}",
     "broadcast_intro": "{owner} sent a message to the group:",

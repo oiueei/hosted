@@ -213,6 +213,11 @@ TEXTS = {
     ),
     "reported_review_cta": "Revisar l'anunci",
     # Broadcast (owner → invitees)
+    "email_note_test_subject": "La teva nota del correu, tal com la veuran — {collection}",
+    "email_note_test_intro": (
+        "Així es veurà la teva nota als correus que rep qui demana alguna cosa a "
+        "{collection}. Aquest només t'ha arribat a tu."
+    ),
     "broadcast_subject": "Ei! {collection}",
     "broadcast_plain": "Missatge de {owner}:\n\n{message}\n\nObrir el grup: {url}",
     "broadcast_intro": "{owner} ha enviat un missatge al grup:",

@@ -72,7 +72,7 @@ Every email belongs to one of three categories. Each function routes through the
 
 | Category | Constant | User flag | Scope |
 |----------|----------|-----------|-------|
-| **Cat. 1 — Mandatory** | `CATEGORY_MANDATORY` | (ignored — always sent) | `send_magic_link_email`, `send_collection_invite_email`, `send_collection_welcome_doc_email`, `send_collection_revoke_email`, `send_account_delete_email`, `send_inactivity_warning_email` |
+| **Cat. 1 — Mandatory** | `CATEGORY_MANDATORY` | (ignored — always sent) | `send_magic_link_email`, `send_collection_invite_email`, `send_collection_welcome_doc_email`, `send_collection_revoke_email`, `send_account_delete_email`, `send_inactivity_warning_email`, `send_email_note_test_email` (a curator's own test of their email note — asked for that moment, so an activity opt-out must not swallow it) |
 | **Cat. 2 — Activity** | `CATEGORY_ACTIVITY` | `User.notify_activity` | `send_booking_request_email`, `send_booking_decision_email`, `send_booking_confirmation_email`, `send_reservation_confirmed_email`, `send_reservation_notice_email`, `send_reservation_cancelled_email`, `send_reservation_reminder_email`, `send_invite_rejected_email`, `send_faq_question_email`, `send_faq_answer_email`, `send_faq_hide_email`, `send_thing_reported_email`, `send_return_reminder_email`, `send_return_due_email`, `send_broadcast_email`, `send_invitation_proposal_email`, `send_proposal_declined_email` |
 | **Cat. 3 — News** | `CATEGORY_NEWS` | `User.notify_news` **and** `Collection.digest_muted` | `send_digest_email` |
 

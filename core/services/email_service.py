@@ -38,7 +38,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from core.services.email_texts import T, viral_lines
-from core.utils import redact_email, resolve_localized
+from core.utils import parse_localized, redact_email, resolve_localized
 
 logger = logging.getLogger(__name__)
 
@@ -1371,6 +1371,55 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
         user=user,
         lang=lang,
         header=header,
+    )
+
+
+# Endonyms, like the SPA's language picker: a language is named in itself.
+_LANGUAGE_NAMES = {"es": "Español", "ca": "Català", "en": "English"}
+
+
+def send_email_note_test_email(curator, collection, note):
+    """Send a curator their own ``email_note`` draft, rendered as members get it.
+
+    The note is written blind otherwise: it only ever appears in the emails a
+    *requester* receives, and a curator can't request their own things. The
+    request page's Markdown preview would lie about it — this subset has no
+    headings or tables and prints a link's host after it — so the test uses the
+    real renderer (``_note_blocks``) inside the real layout, and a note written
+    per language shows every version, each under its language's own name.
+
+    ``note`` is the draft as typed (unsaved). Mandatory category: it goes only
+    to the person who asked for it, the moment they asked, so an activity
+    opt-out must not swallow it.
+    """
+    user, lang = _recipient(curator.email, collection)
+    T, L = _texts(lang), _local(lang)
+    headline = L(collection.headline)
+    versions = parse_localized(note)
+    if versions:
+        parts = [
+            (_LANGUAGE_NAMES.get(code, code), _note_blocks(text)) for code, text in versions.items()
+        ]
+    else:
+        parts = [(None, _note_blocks(note))]
+
+    plain_parts, blocks = [T("email_note_test_intro").format(collection=headline)], []
+    blocks.append(_para(T("email_note_test_intro").format(collection=headline)))
+    for name, (note_plain, note_blocks) in parts:
+        if name:
+            plain_parts.append(f"— {name} —")
+            blocks.append(_strong(name))
+        plain_parts.append(note_plain)
+        blocks.extend(note_blocks)
+    _send(
+        curator.email,
+        T("email_note_test_subject").format(collection=headline),
+        "\n\n".join(plain_parts),
+        _render_email(blocks, lang=lang, header=headline),
+        CATEGORY_MANDATORY,
+        user=user,
+        lang=lang,
+        header=headline,
     )
 
 

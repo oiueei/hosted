@@ -17,6 +17,7 @@ from .collection import (
     CollectionRemoveThingSerializer,
     CollectionSerializer,
     CollectionUpdateSerializer,
+    EmailNoteTestSerializer,
 )
 from .contact import ContactSerializer
 from .faq import FAQAnswerSerializer, FAQCreateSerializer, FAQSerializer
@@ -44,6 +45,7 @@ __all__ = [
     "CollectionAddThingSerializer",
     "CollectionRemoveInviteSerializer",
     "CollectionBroadcastSerializer",
+    "EmailNoteTestSerializer",
     "CollectionRemoveThingSerializer",
     "ThingSerializer",
     "ThingCreateSerializer",

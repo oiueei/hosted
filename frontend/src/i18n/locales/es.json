@@ -1039,7 +1039,10 @@
   "emailNote": {
     "label": "Nota en los correos después de pedir (opcional)",
     "helper": "Se añade a los correos que recibe un miembro sobre su solicitud — al enviarla y de nuevo al aceptársela (una reserva se confirma al momento, así que va en su único correo) — después del enlace a la publicación, en su propio idioma. Admite Markdown (negritas, cursivas, listas, enlaces) y emojis. P. ej. «confirmamos las solicitudes en 48h», «el espacio está en la planta 2».",
-    "maxLength": "Máximo 512 caracteres por idioma."
+    "maxLength": "Máximo 512 caracteres por idioma.",
+    "testButton": "Envíame un correo de prueba",
+    "testSent": "Enviado a tu correo: es justo como lo recibirán.",
+    "testError": "No se ha podido enviar el correo de prueba. Inténtalo de nuevo."
   },
   "requestErrors": {
     "already_requested": "Ya lo has pedido: espera la respuesta de quien lo ofrece.",
