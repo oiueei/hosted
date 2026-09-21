@@ -47,6 +47,7 @@ TEXTS = {
     "invite_recommended_by": "{proposer} t'ha proposat per a aquest grup.",
     "invite_accept_cta": "Acceptar la invitació",
     "invite_decline_cta": "Rebutjar la invitació",
+    "invite_fallback": "Si els botons no funcionen, copia i enganxa aquests enllaços al navegador:",
     # Art. 14 RGPD: aquest correu el va donar qui convida, no la persona convidada.
     "invite_source_note": (
         "Si has arribat aquí per una invitació, el teu correu ens el va donar qui "

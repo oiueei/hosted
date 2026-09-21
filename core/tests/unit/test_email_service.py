@@ -230,6 +230,83 @@ def test_the_invitation_source_note_is_translated_too():
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
 
 
+# --- The invitation: accept / decline as buttons (CA, 2026-09-21) -------------
+
+INVITE_ACCEPT = "http://localhost:3000/rsvp/accept"
+INVITE_REJECT = "http://localhost:3000/rsvp/reject"
+
+
+def _invitation_html():
+    email_service.send_collection_invite_email(
+        "Lala", "Tools for the block", "invitee@example.com", INVITE_ACCEPT, INVITE_REJECT
+    )
+    return mail.outbox[0].alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_the_invitation_answers_are_a_primary_and_a_secondary_button():
+    """Accepting is the filled bus-blue button and declining the outlined one —
+    the app's own primary/secondary split, as inline-styled anchors because
+    email clients strip <button> and ignore CSS custom properties. They used
+    to be two text links on one line, "Accept | Decline", equal in weight."""
+    html = _invitation_html()
+
+    primary = (
+        f'<a href="{INVITE_ACCEPT}" '
+        'style="display:inline-block;background-color:#0000bf;color:#ffffff;'
+    )
+    secondary = (
+        f'<a href="{INVITE_REJECT}" '
+        'style="display:inline-block;background-color:#ffffff;color:#000000;'
+        "border:2px solid #0000bf;"
+    )
+    assert primary in html
+    assert secondary in html
+    # Each label sits inside its own button, accept first.
+    assert ">Accept invitation</a>" in html
+    assert ">Decline invitation</a>" in html
+    assert html.index(primary) < html.index(secondary)
+    # The old equal-weight "Accept | Decline" row is gone.
+    assert f'<a href="{INVITE_ACCEPT}">Accept invitation</a>' not in html
+
+
+@pytest.mark.django_db
+def test_the_invitation_spells_both_links_out_under_the_buttons():
+    """A button some clients will not draw is a dead end, and this email's whole
+    job is one of two clicks. Both raw links follow as copy-pastable text —
+    accept first, after a sentence saying why — and still before the art. 14
+    note, which stays the last thing said."""
+    email_service.send_collection_invite_email(
+        "Lala", "Tools for the block", "invitee@example.com", INVITE_ACCEPT, INVITE_REJECT
+    )
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+
+    assert "copy and paste these links into your browser" in html
+    accept_text = f">{INVITE_ACCEPT}</a>"
+    reject_text = f">{INVITE_REJECT}</a>"
+    assert accept_text in html
+    assert reject_text in html
+    assert html.index("Decline invitation</a>") < html.index("copy and paste these links")
+    assert html.index(accept_text) < html.index(reject_text)
+    assert html.index(reject_text) < html.index("someone invited you")
+    # The plain-text half never stopped carrying both.
+    assert INVITE_ACCEPT in msg.body
+    assert INVITE_REJECT in msg.body
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "lang, phrase",
+    [("es", "copia y pega estos enlaces"), ("ca", "copia i enganxa aquests enllaços")],
+)
+def test_the_invitation_link_fallback_is_translated_too(lang, phrase):
+    with override_settings(EMAIL_LANGUAGE=lang):
+        html = _invitation_html()
+
+    assert phrase in html
+
+
 @pytest.mark.django_db
 def test_every_email_declares_its_language_on_the_html_tag():
     """A4: a screen reader picks its pronunciation from `<html lang>`, and

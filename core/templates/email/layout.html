@@ -30,6 +30,17 @@ button cannot be clicked.{% endcomment %}
 <p style="margin:20px 0;"><a href="{{ b.url }}" style="display:inline-block;background-color:#0000bf;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;line-height:1.4;text-decoration:none;padding:14px 24px;">{{ b.label }}</a></p>
 <p style="font-size:13px;color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
 <p style="font-size:13px;margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}">{{ b.url }}</a></p>
+{% elif b.type == "ctas" %}
+{% comment %}Two email actions, a primary and a secondary — see email_service._ctas.
+Same constraints as the "cta" block above (inline styles, literal hex, no
+button). The secondary is the primary's outlined counterpart: white fill, the
+same bus blue as the border, black text — the app's own split. Its padding is
+two pixels short of the primary's on every side so the border brings both
+buttons to the same outer size. Both URLs follow as text, accept first.{% endcomment %}
+<p style="margin:20px 0 8px;"><a href="{{ b.primary.url }}" style="display:inline-block;background-color:#0000bf;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;line-height:1.4;text-decoration:none;padding:14px 24px;margin:0 12px 12px 0;">{{ b.primary.label }}</a><a href="{{ b.secondary.url }}" style="display:inline-block;background-color:#ffffff;color:#000000;border:2px solid #0000bf;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;line-height:1.4;text-decoration:none;padding:12px 22px;margin:0 0 12px 0;">{{ b.secondary.label }}</a></p>
+<p style="font-size:13px;color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
+<p style="font-size:13px;margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}">{{ b.primary.url }}</a></p>
+<p style="font-size:13px;margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}">{{ b.secondary.url }}</a></p>
 {% elif b.type == "md" %}
 {{ b.html }}
 {% endif %}{% endfor %}

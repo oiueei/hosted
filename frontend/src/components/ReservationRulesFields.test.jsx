@@ -49,25 +49,62 @@ describe('ReservationRulesFields — the bounded day fields', () => {
   test('the field can be emptied mid-edit without snapping back to the minimum', () => {
     // The bug: value bound straight to Math.max(1, Number('')) === 1, so the
     // field jumped to 1 the moment you cleared it to retype.
-    renderFields();
+    const { props } = renderFields();
     fireEvent.change(maxField(), { target: { value: '' } });
     expect(maxField()).toHaveValue(null); // genuinely empty, not 1
+    // ...and an empty field is not an answer, so the parent hears nothing.
+    expect(props.setReservationMaxDays).not.toHaveBeenCalled();
   });
 
-  test('an in-range value is committed to the parent on blur', () => {
+  test('a whole number is committed to the parent as soon as it is typed — no blur needed', () => {
+    // The bug (CA, 2026-09-21): the parent only heard a number when the field
+    // lost focus, so a save that came without one (the +/- stepper, a keyboard
+    // Save) sent the loaded value while the screen showed the new one. Note the
+    // absence of any `fireEvent.blur` below: that is the whole point.
     const { props } = renderFields({ reservationMaxDays: 3 });
     fireEvent.change(maxField(), { target: { value: '5' } });
-    expect(props.setReservationMaxDays).not.toHaveBeenCalled(); // not yet — still typing
-    fireEvent.blur(maxField());
     expect(props.setReservationMaxDays).toHaveBeenCalledWith(5);
+    expect(maxField()).toHaveValue(5);
   });
 
-  test('a value above the ceiling is clamped to it on blur, and the field shows the clamp', () => {
+  test.each([
+    ['the horizon', horizonField, 'setReservationHorizonDays', 90, 91],
+    ['the active-reservations cap', maxActiveField, 'setReservationMaxActivePerMember', 10, 11],
+  ])(
+    'the + stepper on %s reaches the parent with no focus change at all',
+    (_n, field, setter, from, to) => {
+      // The buttons beside the number are what the owner actually presses (CA's
+      // screenshot, 2026-09-21). They take focus themselves and never touch the
+      // input, so its blur never fires: whatever they change has to reach the
+      // parent on its own, or a Save afterwards sends the loaded value.
+      const { props } = renderFields();
+      const stepUp = field().closest('[role="group"]').querySelectorAll('button')[1];
+      expect(field()).toHaveValue(from);
+
+      fireEvent.click(stepUp);
+
+      expect(props[setter]).toHaveBeenCalledWith(to);
+      expect(field()).toHaveValue(to);
+    }
+  );
+
+  test('a value above the ceiling is clamped to it at once, and the field shows the clamp', () => {
+    // What the field shows is what the page will save: an out-of-range number
+    // does not sit on screen as something a later save would silently replace.
     const { props } = renderFields();
     fireEvent.change(maxField(), { target: { value: '99' } });
-    fireEvent.blur(maxField());
     expect(props.setReservationMaxDays).toHaveBeenCalledWith(7);
     expect(maxField()).toHaveValue(7);
+  });
+
+  test('a half-typed value is a draft — not committed, and settled by blur', () => {
+    // Not an answer yet: nothing goes to the parent while the field holds a
+    // decimal, and blur rounds it the way it always did.
+    const { props } = renderFields({ reservationMaxDays: 3 });
+    fireEvent.change(maxField(), { target: { value: '4.5' } });
+    expect(props.setReservationMaxDays).not.toHaveBeenCalled();
+    fireEvent.blur(maxField());
+    expect(props.setReservationMaxDays).toHaveBeenCalledWith(5);
   });
 
   test('clearing the field commits the default on blur, not an empty payload', () => {
@@ -78,11 +115,16 @@ describe('ReservationRulesFields — the bounded day fields', () => {
     expect(horizonField()).toHaveValue(90);
   });
 
-  test('the horizon field clamps to 365 on blur', () => {
+  test('the horizon field takes a typed number at once, and clamps to 365', () => {
+    // The field this was reported on ("how far ahead can they book"): a typed
+    // 30 reaches the page without the field ever losing focus.
     const { props } = renderFields();
+    fireEvent.change(horizonField(), { target: { value: '30' } });
+    expect(props.setReservationHorizonDays).toHaveBeenLastCalledWith(30);
+
     fireEvent.change(horizonField(), { target: { value: '400' } });
-    fireEvent.blur(horizonField());
-    expect(props.setReservationHorizonDays).toHaveBeenCalledWith(365);
+    expect(props.setReservationHorizonDays).toHaveBeenLastCalledWith(365);
+    expect(horizonField()).toHaveValue(365);
   });
 
   test('a value equal to what the parent already holds is not re-emitted on blur', () => {

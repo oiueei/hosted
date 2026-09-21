@@ -42,6 +42,7 @@ TEXTS = {
     "invite_recommended_by": "{proposer} te ha propuesto para este grupo.",
     "invite_accept_cta": "Aceptar la invitación",
     "invite_decline_cta": "Rechazar la invitación",
+    "invite_fallback": "Si los botones no funcionan, copia y pega estos enlaces en tu navegador:",
     # Art. 14 RGPD: este correo lo dio quien invita, no la persona invitada.
     "invite_source_note": (
         "Si has llegado aquí por una invitación, tu correo nos lo dio quien te "

@@ -997,6 +997,57 @@ def test_updating_only_the_minimum_above_an_untouched_maximum_is_a_400(authentic
     assert coll.reservation_min_minutes == 15  # the update did not go through
 
 
+def test_editing_the_numeric_rules_of_a_reservations_collection_persists_every_one(
+    authenticated_client,
+):
+    """The edit form's PATCH lands in the database, field by field.
+
+    Written when an owner reported that "how far ahead can they book" would not
+    stay saved (CA, 2026-09-21). The cause was in the frontend — the number
+    field told the page about a value only on blur, so the PATCH carried the
+    loaded number — and this pins the other half of that claim: given the
+    number, the server keeps it. Each field is changed to something that is
+    neither its default nor its previous value, and read back from the row, not
+    from the response.
+    """
+    coll = Collection.objects.create(
+        code="RSVC50",
+        owner=User.objects.get(code="TEST01"),
+        headline="X",
+        allowed_thing_types=["RESERVE_THING"],
+        reservation_unit=Collection.ReservationUnit.HOUR,
+        reservation_horizon_days=120,
+        reservation_max_active_per_member=7,
+        reservation_min_minutes=15,
+        reservation_max_minutes=60,
+        reservation_max_days=2,
+        opening_hours={"0": [["10:00", "14:00"]]},
+    )
+
+    resp = authenticated_client.patch(
+        f"/api/v1/collections/{coll.code}/",
+        {
+            "reservation_horizon_days": 30,
+            "reservation_max_active_per_member": 3,
+            "reservation_min_minutes": 30,
+            "reservation_max_minutes": 120,
+            "reservation_max_days": 5,
+        },
+        format="json",
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    coll.refresh_from_db()
+    assert coll.reservation_horizon_days == 30
+    assert coll.reservation_max_active_per_member == 3
+    assert coll.reservation_min_minutes == 30
+    assert coll.reservation_max_minutes == 120
+    assert coll.reservation_max_days == 5
+    # Untouched by the edit: the unit and the schedule stay as they were.
+    assert coll.reservation_unit == Collection.ReservationUnit.HOUR
+    assert coll.opening_hours == {"0": [["10:00", "14:00"]]}
+
+
 def test_updating_a_reservations_collection_switches_it_to_hourly(authenticated_client):
     coll = Collection.objects.create(
         code="RSVC06",

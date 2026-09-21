@@ -15,7 +15,7 @@ that lets recipients change preferences without logging in.
 
 HTML bodies are rendered from the autoescaping ``email/layout.html`` template via
 small block builders (``_para``/``_strong``/``_field``/``_list``/``_links``/
-``_heading``/``_cta``), so user-supplied values are escaped by the template
+``_heading``/``_cta``/``_ctas``), so user-supplied values are escaped by the template
 engine — no manual ``escape()`` in the body composition. Plain-text bodies (no
 XSS surface) stay as plain strings.
 """
@@ -573,6 +573,27 @@ def _cta(url, label, fallback):
     return {"type": "cta", "url": url, "label": label, "fallback": fallback}
 
 
+def _ctas(primary, secondary, fallback):
+    """Two actions as buttons — a primary and a secondary — with both URLs
+    spelled out under them.
+
+    The two-answer sibling of ``_cta``, for the one email that asks a yes/no
+    question (the collection invitation: accept or decline). Same reasons as
+    there — an inline-styled anchor, literal hex, no ``<button>`` — with the
+    app's own split between the two roles: the primary is the filled bus-blue
+    button, the secondary the white one with a bus-blue border and black text
+    (CA, 2026-09-21). ``primary`` and ``secondary`` are ``(url, label)`` pairs,
+    like ``_links``; the ``fallback`` sentence and both raw URLs cover the
+    clients, and the moments, where a button cannot be clicked.
+    """
+    return {
+        "type": "ctas",
+        "primary": {"url": primary[0], "label": primary[1]},
+        "secondary": {"url": secondary[0], "label": secondary[1]},
+        "fallback": fallback,
+    }
+
+
 # The owner's email note (Collection.email_note) renders a small Markdown subset
 # into an ``md`` block — the ONE block type whose html arrives pre-built and
 # mark_safe()d rather than autoescaped. See _note_blocks for the invariant.
@@ -923,8 +944,14 @@ def send_collection_invite_email(
         recommended = T("invite_recommended_by").format(proposer=proposer_name)
         blocks.append(_para(recommended))
         plain = f"{plain} {recommended}"
+    # Accepting is the primary button, declining the secondary one, and both
+    # links follow as text for the clients that will not draw a button.
     blocks.append(
-        _links((accept_link, T("invite_accept_cta")), (reject_link, T("invite_decline_cta")))
+        _ctas(
+            (accept_link, T("invite_accept_cta")),
+            (reject_link, T("invite_decline_cta")),
+            T("invite_fallback"),
+        )
     )
     # Art. 14 GDPR: this address did not come from its owner, it came from
     # whoever invited them, so the first message they get from us has to say
