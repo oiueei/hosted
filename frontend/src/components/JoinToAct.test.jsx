@@ -63,6 +63,22 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     expect(screen.queryByRole('heading')).toBeNull();
   });
 
+  test('the close-the-tab line is not flush against the notice above it', async () => {
+    // CA, 2026-09-21: the line is the message's quiet coda, not a footnote
+    // stapled to the box. Same gap MagicLinkJoinPage gives it.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderJoin();
+
+    submitEmail();
+
+    const line = await screen.findByText(/You can close this tab now/);
+    expect(line).toHaveStyle({ marginTop: 'var(--spacing-s)' });
+  });
+
   test('a server failure reports inline and keeps the form usable', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
