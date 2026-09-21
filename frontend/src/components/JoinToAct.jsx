@@ -40,12 +40,17 @@ export default function JoinToAct({ collectionCode, collectionHeadline, thingCod
 
   const body = (
     <>
-      <p style={{ marginTop: 0 }}>
+      {/* The door's first line of words, at the front door's pitch size and
+          weight (.login-pitch, Body XL bold). A <p>, not an <h2>: JoinPage's
+          hero <h1> is real words ("Join"), so this is body copy and must not
+          enter the heading outline. No `measure` here — this wrapper already
+          sets the column, and the form below shares its width. */}
+      <p className="login-pitch">
         {collectionHeadline
           ? t('joinToAct.bodyNamed', { collection: collectionHeadline })
           : t('joinToAct.body')}
       </p>
-      <form onSubmit={submit}>
+      <form onSubmit={submit} style={{ marginTop: 'var(--spacing-m)' }}>
         <TextInput
           id="join-to-act-email"
           label={t('joinToAct.emailLabel')}
@@ -73,7 +78,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline, thingCod
       </form>
       {/* Third door that mints an account from a typed email (see
           MagicLinkJoinPage) — the privacy information travels with it. */}
-      <p style={{ marginBottom: 'var(--spacing-2-xs)' }}>
+      <p style={{ marginTop: 'var(--spacing-l)', marginBottom: 'var(--spacing-2-xs)' }}>
         <Link to="/legal" className="legal-link">
           {t('login.legalLink')}
         </Link>
