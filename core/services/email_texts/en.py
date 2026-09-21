@@ -47,6 +47,7 @@ TEXTS = {
     "invite_recommended_by": "{proposer} suggested you for this group.",
     "invite_accept_cta": "Accept invitation",
     "invite_decline_cta": "Decline invitation",
+    "invite_fallback": "If the buttons don't work, copy and paste these links into your browser:",
     # Art. 14 GDPR: this address came from whoever invited you, not from you.
     "invite_source_note": (
         "You got this because someone invited you — that's where we got your "
