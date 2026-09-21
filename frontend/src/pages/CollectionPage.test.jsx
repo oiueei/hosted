@@ -71,6 +71,65 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 
   /**
+   * The "Things" heading is visually hidden but still in the outline (CA,
+   * 2026-09-21). Every card below is an <h3> (ThingLinkbox's default) that counts
+   * on an <h2> above it, so deleting the heading — rather than hiding it — turns
+   * the page into <h1> → <h3>, which axe's heading-order flags. Both halves are
+   * pinned: that it is hidden, and that the outline it protects is intact.
+   */
+  describe('CollectionPage things heading', () => {
+    const WITH_A_THING = {
+      ...COLLECTION_WITH_PHOTO,
+      thumbnail_url: '',
+      things: [
+        {
+          code: 'THG001',
+          headline: 'Blender',
+          type: 'GIFT_THING',
+          status: 'ACTIVE',
+          owner: 'ABC123',
+          owner_name: 'Test User',
+          created: '2026-07-01T10:00:00Z',
+          tags: [],
+          gallery_urls: [],
+        },
+      ],
+    };
+
+    const renderPage = async () => {
+      apiFetch.mockImplementation((url) =>
+        url.startsWith('/api/v1/inbox/')
+          ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+          : Promise.resolve({ ok: true, status: 200, json: async () => WITH_A_THING })
+      );
+      const utils = render(
+        <MemoryRouter initialEntries={['/collections/COL001']}>
+          <Routes>
+            <Route path="/collections/:code" element={<CollectionPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      await screen.findByRole('heading', { level: 3, name: 'Blender' });
+      return utils;
+    };
+
+    test('is a level-2 heading that is visually hidden', async () => {
+      await renderPage();
+
+      const heading = screen.getByRole('heading', { level: 2, name: 'Things' });
+      expect(heading).toHaveClass('sr-only');
+    });
+
+    test('keeps the outline whole: h1, the hidden h2, then the cards at h3', async () => {
+      const { container } = await renderPage();
+
+      const levels = [...container.querySelectorAll('h1, h2, h3')].map((h) => h.tagName);
+      expect(levels).toEqual(['H1', 'H2', 'H3']);
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
+  /**
    * The description keeps out of the photo's third on wide screens (CA,
    * 2026-09-21): the photo is an absolute background across the right of the
    * hero and the full-width description ran over it. jsdom does no layout, so
