@@ -357,6 +357,44 @@ describe('EditCollectionPage — load + pause + submit', () => {
     });
   });
 
+  /**
+   * "Con cuánta antelación pueden reservar (días)" would not stay saved (CA,
+   * 2026-09-21). The number field only told the page about a new value when it
+   * lost focus, so anything that saves without a blur first — Enter in the
+   * field (implicit submission is a click on Save with no focus change), the
+   * +/- stepper, a keyboard Save — sent the number the page had loaded, while
+   * the field on screen showed the new one. A mouse click on Save happens to
+   * blur first, which is why it mostly seemed to work.
+   *
+   * `fireEvent` moves no focus, so change → click here IS that path.
+   */
+  test('a number typed into a day field is saved even if the field never lost focus', async () => {
+    const { container } = renderEdit({
+      headline: 'Ateneu spaces',
+      mode: 'PROPRIETARY',
+      allowed_thing_types: ['RESERVE_THING'],
+      reservation_max_days: 3,
+      reservation_horizon_days: 120,
+      reservation_max_active_per_member: 10,
+    });
+
+    await screen.findByDisplayValue('Ateneu spaces');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const horizon = () => container.querySelector('#edit-collection-reservation-horizon-days');
+    await waitFor(() => expect(horizon()).toHaveValue(120));
+
+    fireEvent.change(horizon(), { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(
+        (c) => c[0] === '/api/v1/collections/COL001/' && c[1]?.method === 'PATCH'
+      );
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body).reservation_horizon_days).toBe(30);
+    });
+  });
+
   // The smoke suite axe-sweeps every route, but its EditCollectionPage fixture
   // is a GIFT collection, so the reservations branch of "More options"
   // (ReservationRulesFields — two NumberInputs wrapped in role="group", the

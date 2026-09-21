@@ -9,9 +9,21 @@ import RadioOptionGroup from './RadioOptionGroup';
  * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
  * bound straight to `Math.min(max, Math.max(min, n))` snaps to the bound on
  * every keystroke — you cannot clear "3" to type "5", and an empty field jumps
- * to 1. This keeps a local draft string so the field can be emptied or briefly
- * hold an out-of-range value while editing, and clamps once, on blur. The parent
- * only ever hears a valid number, and only when it actually changes.
+ * to 1. This keeps a local draft string so the field can be emptied, or briefly
+ * hold a half-typed value, while editing.
+ *
+ * **The parent hears every whole number as it appears, not only on blur**
+ * (CA, 2026-09-21). It used to hear a value only when the field lost focus, so
+ * anything that saves without a blur first — the +/- stepper, which moves focus
+ * to its own button and never touches the input, or a keyboard Save — sent the
+ * number the page had loaded while the field on screen showed the new one: "how
+ * far ahead can they book" would not stay saved. A whole number is a real answer
+ * the moment it exists, so it is committed at once, clamped to the bounds (an
+ * out-of-range one snaps in view rather than sitting on screen as something the
+ * page will not save). What stays a draft is exactly what is not yet an answer:
+ * an empty field, a decimal, a lone minus sign — and blur settles those, with
+ * the fallback for an empty one. The parent still only hears a number that
+ * differs from the one it holds.
  */
 function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onChange }) {
   const [draft, setDraft] = useState(String(value));
@@ -29,6 +41,18 @@ function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onC
     if (fixed !== value) onChange(fixed);
   };
 
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    // Not an answer yet (empty, "3.", "-"): keep typing, blur will settle it.
+    if (!/^-?\d+$/.test(raw.trim())) {
+      setDraft(raw);
+      return;
+    }
+    const fixed = Math.min(max, Math.max(min, Number(raw)));
+    setDraft(String(fixed));
+    if (fixed !== value) onChange(fixed);
+  };
+
   return (
     <NumberInput
       id={id}
@@ -38,34 +62,12 @@ function BoundedDayInput({ id, label, helperText, min, max, fallback, value, onC
       max={max}
       step={1}
       value={draft === '' ? '' : Number(draft)}
-      onChange={(e) => setDraft(e.target.value)}
+      onChange={handleChange}
       onBlur={commit}
     />
   );
 }
 
-/**
- * The rules a reservations collection's owner sets. Two units, never both
- * (`Collection.reservation_unit`): **DAY** books whole days (how many in one
- * go, which weekdays are open); **HOUR** books a slot within a weekly opening
- * schedule (the shortest/longest slot in minutes, the schedule itself). How
- * far ahead a member may book and the active-reservations cap apply to either
- * unit, so they sit above the split.
- *
- * Shown (in the "More options" accordion) *instead of* `RentalRulesFields`
- * when the collection is a reservations collection — `allowed_thing_types` is
- * exactly `["RESERVE_THING"]`. DAY mode reuses the same `rental_weekdays`
- * state the rental rules use (the backend reuses the column) and the same
- * `WeekdayChips` row.
- *
- * Controlled: value + setter owned by the page — plus `setOpeningHoursValid`,
- * which the page reads to refuse a Save while the opening-hours JSON on screen
- * doesn't parse (see `OpeningHoursField`). `idPrefix` is
- * `create-collection` / `edit-collection`; `theeemeColor01` / `theeemeColor06`
- * are the theeeme token names for a selected weekday chip (fill + text — see
- * `WeekdayChips`). The unit radios are a `RadioOptionGroup`, which owns the
- * HDS `SelectionGroup` quirks (frontend/CLAUDE.md) this used to re-implement.
- */
 export default function ReservationRulesFields({
   idPrefix,
   reservationUnit = 'DAY',
