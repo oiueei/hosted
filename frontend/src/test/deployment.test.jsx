@@ -202,6 +202,36 @@ describe('the faq link follows faqPath', () => {
       expect(document.querySelector('a[href="/help"]')).not.toBeNull();
     });
   });
+
+  test('sits at the foot, directly above the sign-in trouble line', async () => {
+    // CA, 2026-09-21: the link used to float between the alpha warning and the
+    // footnotes. Questions about the site belong with the other
+    // deliberate-lookup links at the foot — first "questions about this site",
+    // then "trouble signing in", then the legal link — not in a group of their
+    // own above the reading.
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      faqPath: '/help',
+      deploymentI18n: {},
+    }));
+    const { default: LoginPage } = await import('../pages/LoginPage');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    const faq = await screen.findByRole('link', { name: /questions about this site/i });
+    const help = screen.getByRole('link', { name: /Trouble signing in/i });
+    const footnotes = document.querySelector('.login-footnotes');
+    expect(faq.closest('.login-footnotes')).toBe(footnotes);
+    expect(faq.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const legal = screen.getByRole('link', { name: 'Legal notice & privacy' });
+    expect(help.compareDocumentPosition(legal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe('the about link follows aboutPath', () => {
