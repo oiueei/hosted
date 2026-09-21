@@ -220,8 +220,9 @@ export default function CollectionPage() {
   const singleType = (collection.allowed_thing_types || []).length === 1;
 
   // When the owner has given the group its own web address, the hero's back
-  // link ("← Inici") points there instead of the OIUEEI home. `sanitizeUrl`
-  // returns "#" for anything that isn't http(s), and we ignore that.
+  // link goes there instead of the OIUEEI home — but it still says "Home"
+  // (CA, 2026-09-21). `sanitizeUrl` returns "#" for anything that isn't
+  // http(s), and we ignore that.
   const homePageUrl = collection.home_page ? sanitizeUrl(collection.home_page) : '';
   const backHref = homePageUrl && homePageUrl !== '#' ? homePageUrl : null;
 
@@ -248,11 +249,11 @@ export default function CollectionPage() {
                 isPublic={collection.visibility === 'PUBLIC'}
               />
             )}
-            <BackLink
-              to="/"
-              href={backHref}
-              label={backHref ? t('collectionPage.backToSite') : t('common.home')}
-            />
+            {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
+                `home_page` when it has one, the app's home otherwise. It used to be
+                worded "The group's site" with an external-link icon; the wording
+                and the icon went, the destination stayed. */}
+            <BackLink to="/" href={backHref} label={t('common.home')} />
             <h1 className="form-hero-title">
               {headline}
               {isCurator && collection.mode === 'COMMUNITY' && (
@@ -458,7 +459,12 @@ export default function CollectionPage() {
           </Notification>
         )}
 
-        <h2>{t('collectionPage.things')}</h2>
+        {/* Visually hidden, still in the outline (CA, 2026-09-21). The cards
+            below are <h3>s (ThingLinkbox's default) and rely on an <h2> above
+            them: take this out and the page jumps from <h1> to <h3>, which axe's
+            heading-order flags. It also stays a landmark a screen-reader user can
+            jump to, next to "Messages to the group". */}
+        <h2 className="sr-only">{t('collectionPage.things')}</h2>
         <div className="spacer-m" />
         {/* A recorded DESIGN §1 exception, not an oversight: these are plain
             `<button aria-pressed>`s, not HDS `Tag`. HDS `Tag` (`variant="action"`)

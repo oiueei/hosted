@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
@@ -67,6 +68,128 @@ describe('CollectionPage with a collection thumbnail', () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  /**
+   * The "Things" heading is visually hidden but still in the outline (CA,
+   * 2026-09-21). Every card below is an <h3> (ThingLinkbox's default) that counts
+   * on an <h2> above it, so deleting the heading — rather than hiding it — turns
+   * the page into <h1> → <h3>, which axe's heading-order flags. Both halves are
+   * pinned: that it is hidden, and that the outline it protects is intact.
+   */
+  describe('CollectionPage things heading', () => {
+    const WITH_A_THING = {
+      ...COLLECTION_WITH_PHOTO,
+      thumbnail_url: '',
+      things: [
+        {
+          code: 'THG001',
+          headline: 'Blender',
+          type: 'GIFT_THING',
+          status: 'ACTIVE',
+          owner: 'ABC123',
+          owner_name: 'Test User',
+          created: '2026-07-01T10:00:00Z',
+          tags: [],
+          gallery_urls: [],
+        },
+      ],
+    };
+
+    const renderPage = async () => {
+      apiFetch.mockImplementation((url) =>
+        url.startsWith('/api/v1/inbox/')
+          ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+          : Promise.resolve({ ok: true, status: 200, json: async () => WITH_A_THING })
+      );
+      const utils = render(
+        <MemoryRouter initialEntries={['/collections/COL001']}>
+          <Routes>
+            <Route path="/collections/:code" element={<CollectionPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      await screen.findByRole('heading', { level: 3, name: 'Blender' });
+      return utils;
+    };
+
+    test('is a level-2 heading that is visually hidden', async () => {
+      await renderPage();
+
+      const heading = screen.getByRole('heading', { level: 2, name: 'Things' });
+      expect(heading).toHaveClass('sr-only');
+    });
+
+    test('keeps the outline whole: h1, the hidden h2, then the cards at h3', async () => {
+      const { container } = await renderPage();
+
+      const levels = [...container.querySelectorAll('h1, h2, h3')].map((h) => h.tagName);
+      expect(levels).toEqual(['H1', 'H2', 'H3']);
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
+  /**
+   * The description keeps out of the photo's third on wide screens (CA,
+   * 2026-09-21): the photo is an absolute background across the right of the
+   * hero and the full-width description ran over it. jsdom does no layout, so
+   * what can silently break — and what is pinned here — is the contract around
+   * the rule: it still matches the real DOM, and it still sits behind the
+   * breakpoint below which the photo stacks under the text and there is
+   * nothing to avoid (squeezing a 320px phone by a third would buy nothing).
+   */
+  describe('the description keeps out of the photo', () => {
+    const renderPage = async (collection) => {
+      apiFetch.mockImplementation(() =>
+        Promise.resolve({ ok: true, status: 200, json: async () => collection })
+      );
+      const utils = render(
+        <MemoryRouter initialEntries={['/collections/COL001']}>
+          <Routes>
+            <Route path="/collections/:code" element={<CollectionPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      await screen.findByText('Things from the kitchen');
+      return utils;
+    };
+
+    test('with a photo, the description is the block the rule names, inside the photo hero', async () => {
+      const { container } = await renderPage({
+        ...COLLECTION_WITH_PHOTO,
+        description: 'Things from the kitchen',
+      });
+
+      const description = container.querySelector(
+        '.form-hero--photo .markdown-text.form-hero-text'
+      );
+      expect(description).toHaveTextContent('Things from the kitchen');
+    });
+
+    test('without a photo, nothing is in a photo hero, so the rule cannot apply', async () => {
+      const { container } = await renderPage({
+        ...COLLECTION_WITH_PHOTO,
+        thumbnail_url: '',
+        description: 'Things from the kitchen',
+      });
+
+      expect(container.querySelector('.form-hero--photo')).toBeNull();
+      expect(container.querySelector('.markdown-text.form-hero-text')).not.toBeNull();
+    });
+
+    test('the padding lives only inside the >=768px media query', () => {
+      const css = readFileSync('src/App.css', 'utf8');
+      const selector = '.form-hero--photo .markdown-text.form-hero-text';
+      // Exactly one rule for it, and it is the one inside the breakpoint —
+      // a copy outside would squeeze every phone.
+      expect(css.split(selector).length - 1).toBe(1);
+      const gated = new RegExp(
+        String.raw`@media \(min-width: 768px\)\s*\{\s*` +
+          selector.replaceAll('.', String.raw`\.`) +
+          String.raw`\s*\{[^}]*padding-right:`
+      );
+      expect(css).toMatch(gated);
+    });
   });
 });
 
@@ -1091,14 +1214,18 @@ describe('CollectionPage as a co-owner', () => {
 });
 
 /**
- * `Collection.home_page` — when the owner gives the group its own web address,
- * the hero's back link leaves OIUEEI for that address instead of going to the
- * app home. It's an external URL, so it can't be a react-router <Link>, it
- * carries an external-link icon and names the destination ("The group's site"
- * — not "Home", which it isn't), and anything that isn't http(s) is ignored
- * (the field is a URLField server-side and passes through `sanitizeUrl` here).
+ * The hero's back link always SAYS "← Home" (CA, 2026-09-21), whatever it points
+ * at: the group's own `Collection.home_page` when the owner has set one, the
+ * app's home otherwise. It used to say "The group's site" and carry an
+ * external-link icon; the wording and the icon are gone, the destination stayed.
+ *
+ * The label is asserted through the raw i18n key as well as the visible name —
+ * the string that named the destination was deleted, so a resurrected
+ * `t('collectionPage.backToSite')` would render its own key, which a name query
+ * for "site" would never match. And the link carries exactly one icon (the
+ * arrow): a second one is the external-link icon coming back.
  */
-describe('CollectionPage back link honours home_page', () => {
+describe('CollectionPage back link says Home wherever it goes', () => {
   const renderPage = () =>
     render(
       <MemoryRouter initialEntries={['/collections/COL001']}>
@@ -1119,33 +1246,32 @@ describe('CollectionPage back link honours home_page', () => {
           })
     );
 
-  test('with no home_page, the back link points at the app home', async () => {
-    mockCollection({});
-    renderPage();
-
-    const back = await screen.findByRole('link', { name: /Home/ });
-    expect(back).toHaveAttribute('href', '/');
-  });
-
-  test('with a home_page, the back link points at that external address and names it', async () => {
-    mockCollection({ home_page: 'https://ateneu.example/' });
-    renderPage();
-
-    // Not "Home" any more — it leaves the app, so it says where it goes.
-    const back = await screen.findByRole('link', { name: /group's site/i });
-    expect(back).toHaveAttribute('href', 'https://ateneu.example/');
-    expect(back).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(screen.queryByRole('link', { name: /^Home$/ })).not.toBeInTheDocument();
-  });
-
-  test('a non-http home_page is ignored — the link stays internal', async () => {
+  test.each([
+    ['no home_page', {}, '/', false],
+    [
+      'an https home_page',
+      { home_page: 'https://ateneu.example/' },
+      'https://ateneu.example/',
+      true,
+    ],
     // The backend URLField would let ftp:// through; `sanitizeUrl` here does not.
-    mockCollection({ home_page: 'ftp://ateneu.example/' });
-    renderPage();
+    ['a non-http home_page', { home_page: 'ftp://ateneu.example/' }, '/', false],
+  ])(
+    'with %s, the link says Home and goes where it should',
+    async (_case, extra, href, external) => {
+      mockCollection(extra);
+      const { container } = renderPage();
 
-    const back = await screen.findByRole('link', { name: /Home/ });
-    expect(back).toHaveAttribute('href', '/');
-  });
+      const back = await screen.findByRole('link', { name: /Home/ });
+      expect(back).toHaveAttribute('href', href);
+      expect(back).toHaveClass('back-link');
+      // Only the external variant is a plain anchor that leaves the app.
+      if (external) expect(back).toHaveAttribute('rel', 'noopener noreferrer');
+      else expect(back).not.toHaveAttribute('rel');
+      expect(back.querySelectorAll('svg')).toHaveLength(1);
+      expect(container.textContent).not.toMatch(/collectionPage\.backToSite/);
+    }
+  );
 });
 
 /**
