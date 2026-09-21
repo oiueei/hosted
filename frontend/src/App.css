@@ -874,11 +874,13 @@ body :focus-visible {
   max-width: 400px;
 }
 
-/* The front door's first line of words: Body XL bold (20px), on an <h2>. The
-   look is body text and the element is a heading, deliberately — the size is a
-   design decision, the level an accessibility one, and on this page they
-   disagree: the hero's own <h1> is the logo, so a lower-ranked heading here
-   would skip levels and axe's heading-order does catch that. */
+/* The email-capture doors' first line of words: Body XL bold (20px). On /login
+   it sits on an <h2> — the look is body text and the element is a heading,
+   deliberately, because the hero's own <h1> is the logo, so a lower-ranked
+   heading there would skip levels and axe's heading-order does catch that. The
+   join doors (MagicLinkJoinPage) reuse the style on a plain <p>: their hero
+   title is real words, so their intro is body copy and stays out of the
+   outline. */
 .login-pitch {
   font-size: var(--fontsize-body-xl);
   font-weight: 700;
