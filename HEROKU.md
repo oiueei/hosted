@@ -386,27 +386,28 @@ heroku addons:create heroku-postgresql:essential-0 -a your-app-name
 heroku addons:wait -a your-app-name
 heroku pg:info -a your-app-name
 
-# 3. Restore the latest backup INTO THE THROWAWAY — always name the target, and
-#    deliberately WITHOUT --confirm: the prompt is the last thing standing
-#    between a drill and an overwrite, and it names the database it is about to
-#    erase. Read it. If it says DATABASE_URL, or anything but your throwaway,
-#    answer nothing and start again.
-#    (--confirm skips that prompt. With --confirm and no target, this command
-#    restores over DATABASE_URL without asking: that is disaster recovery, not
-#    a drill, and it is the same keystrokes.)
+# 3. Restore the latest backup INTO THE THROWAWAY — always name the target.
+#    Two things protect you here, and neither is the confirmation prompt:
+#    the name is VALIDATED (a target that doesn't exist errors out and lists
+#    the valid ones — it never falls back to DATABASE), and the target is in
+#    the line you typed, so re-read that line before pressing enter. The
+#    prompt itself says only "This command will affect the app <name>": it is
+#    identical for a drill and for an overwrite, so it cannot be what tells
+#    them apart. Run it without --confirm anyway — the pause is worth having,
+#    and --confirm with no target at all restores over DATABASE without ever
+#    stopping: that is disaster recovery, in the same keystrokes as a drill.
 heroku pg:backups:restore <backup-id> HEROKU_POSTGRESQL_<COLOR>_URL -a your-app-name
 
 # 4. Verify from a one-off dyno (no local psql needed): row counts + the last
-#    migration the restored database knows. Keep the python free of inner
-#    quotes. The NAME, not the count: a count tells you how many migrations ran,
-#    never which — and "did this backup catch the release I just shipped?" is
-#    the question the drill exists to answer.
-heroku run -a your-app-name -- bash -c 'DATABASE_URL=$HEROKU_POSTGRESQL_<COLOR>_URL \
-  python manage.py shell -c "from core.models import User, Collection, Thing
-from core.models.booking import BookingPeriod
-from django.db.migrations.recorder import MigrationRecorder
-print(User.objects.count(), Collection.objects.count(), Thing.objects.count(), BookingPeriod.objects.count())
-print(MigrationRecorder.Migration.objects.last().name)"'
+#    migration the restored database knows. The NAME, not the count: a count
+#    tells you how many migrations ran, never which — and "did this backup
+#    catch the release I just shipped?" is the question the drill exists to
+#    answer.
+#    ONE LINE, semicolons, no inner quotes in the python. Split across lines it
+#    breaks twice over: the shell hands `-c` an empty argument and runs the
+#    rest as commands, and the continuation lines arrive indented, which is a
+#    syntax error even if they didn't. Copy it whole.
+heroku run -a your-app-name -- bash -c 'DATABASE_URL=$HEROKU_POSTGRESQL_<COLOR>_URL python manage.py shell -c "from core.models import User, Collection, Thing; from core.models.booking import BookingPeriod; from django.db.migrations.recorder import MigrationRecorder; print(User.objects.count(), Collection.objects.count(), Thing.objects.count(), BookingPeriod.objects.count()); print(MigrationRecorder.Migration.objects.last().name)"'
 
 # 5. Sanity-check: the counts should match what the app holds, minus whatever
 #    happened after the backup's timestamp, and the migration name should be the
