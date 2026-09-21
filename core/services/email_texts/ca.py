@@ -37,6 +37,8 @@ TEXTS = {
     "magic_plain": "Fes clic a l'enllaç per iniciar sessió: {link}",
     "magic_cta": "Iniciar sessió →",
     "magic_fallback": "Si el botó no funciona, copia i enganxa aquest enllaç al navegador:",
+    # Under every email that ends in two buttons (_ctas): the invitation, the hold request.
+    "ctas_fallback": "Si els botons no funcionen, copia i enganxa aquests enllaços al navegador:",
     # Collection invite
     "invite_subject": "Tens una invitació a '{collection}' - OIUEEI!",
     "invite_plain": (
@@ -47,7 +49,6 @@ TEXTS = {
     "invite_recommended_by": "{proposer} t'ha proposat per a aquest grup.",
     "invite_accept_cta": "Acceptar la invitació",
     "invite_decline_cta": "Rebutjar la invitació",
-    "invite_fallback": "Si els botons no funcionen, copia i enganxa aquests enllaços al navegador:",
     # Art. 14 RGPD: aquest correu el va donar qui convida, no la persona convidada.
     "invite_source_note": (
         "Si has arribat aquí per una invitació, el teu correu ens el va donar qui "

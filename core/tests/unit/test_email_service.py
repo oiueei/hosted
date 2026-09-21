@@ -230,6 +230,12 @@ def test_the_invitation_source_note_is_translated_too():
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
 
 
+# The OIUEEI mark, exactly as the layout draws it, wherever it appears.
+LOGO_IMG = (
+    '<img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" '
+    'style="display:block;width:53px;height:15px;border:0;">'
+)
+
 # --- The invitation: accept / decline as buttons (CA, 2026-09-21) -------------
 
 INVITE_ACCEPT = "http://localhost:3000/rsvp/accept"
@@ -305,6 +311,200 @@ def test_the_invitation_link_fallback_is_translated_too(lang, phrase):
         html = _invitation_html()
 
     assert phrase in html
+
+
+# --- The hold request: confirm / cancel as buttons (CA, 2026-09-21) ----------
+
+HOLD_ACCEPT = "http://localhost:3000/rsvp/confirm"
+HOLD_REJECT = "http://localhost:3000/rsvp/cancel"
+
+
+def _hold_request(user, user2, thing):
+    """Send the owner's "someone asked for your thing" email; return the message."""
+    from core.models import BookingPeriod
+
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        status=BookingPeriod.Status.PENDING,
+    )
+    email_service.send_booking_request_email(
+        user2, thing, booking, user.email, HOLD_ACCEPT, HOLD_REJECT
+    )
+    return mail.outbox[0]
+
+
+@pytest.mark.django_db
+def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, user2, thing):
+    """The owner's whole job in this email is one of two clicks, so it gets the
+    invitation's shape: confirming is the filled bus-blue button and cancelling
+    the outlined one, as inline-styled anchors (email clients strip <button>).
+    They used to be two equal text links, "Confirm hold | Cancel hold"."""
+    html = _hold_request(user, user2, thing).alternatives[0][0]
+
+    primary = (
+        f'<a href="{HOLD_ACCEPT}" '
+        'style="display:inline-block;background-color:#0000bf;color:#ffffff;'
+    )
+    secondary = (
+        f'<a href="{HOLD_REJECT}" '
+        'style="display:inline-block;background-color:#ffffff;color:#000000;'
+        "border:2px solid #0000bf;"
+    )
+    assert primary in html
+    assert secondary in html
+    assert ">Confirm hold</a>" in html
+    assert ">Cancel hold</a>" in html
+    assert html.index(primary) < html.index(secondary)
+    # The old equal-weight row is gone.
+    assert f'<a href="{HOLD_ACCEPT}">Confirm hold</a>' not in html
+
+
+@pytest.mark.django_db
+def test_the_hold_request_spells_both_links_out_under_the_buttons(user, user2, thing):
+    """A button some clients will not draw must not strand the owner: both raw
+    links follow as copy-pastable text, confirm first, after a sentence saying
+    why. The plain-text half never stopped carrying both."""
+    msg = _hold_request(user, user2, thing)
+    html = msg.alternatives[0][0]
+
+    assert "copy and paste these links into your browser" in html
+    accept_text = f">{HOLD_ACCEPT}</a>"
+    reject_text = f">{HOLD_REJECT}</a>"
+    assert accept_text in html
+    assert reject_text in html
+    assert html.index("Cancel hold</a>") < html.index("copy and paste these links")
+    assert html.index(accept_text) < html.index(reject_text)
+    assert HOLD_ACCEPT in msg.body
+    assert HOLD_REJECT in msg.body
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "lang, label, phrase",
+    [
+        ("es", "Confirmar la reserva", "copia y pega estos enlaces"),
+        ("ca", "Cancel·lar la reserva", "copia i enganxa aquests enllaços"),
+    ],
+)
+def test_the_hold_request_buttons_and_fallback_are_translated(
+    user, user2, thing, lang, label, phrase
+):
+    with override_settings(EMAIL_LANGUAGE=lang):
+        html = _hold_request(user, user2, thing).alternatives[0][0]
+
+    assert f">{label}</a>" in html
+    assert phrase in html
+
+
+# --- The house rule for action buttons (CA, 2026-09-21) ------------------------
+#
+# The primary action of an email — sign in, open the group, look at the thing —
+# is a primary button, never a bare text link. Where an email asks a yes/no
+# question, the positive answer is the primary button and the negative the
+# secondary one. `_links` is the bare-text-link row; the rule says almost
+# nothing may use it.
+
+BUTTON_PRIMARY_START = 'style="display:inline-block;background-color:#0000bf;color:#ffffff;'
+
+
+def _first_button(url):
+    """The `<a>` anchor pointing at `url` that carries the primary button style."""
+    return f'<a href="{url}" {BUTTON_PRIMARY_START}'
+
+
+def test_no_email_action_is_a_bare_text_link_except_the_erasure_one():
+    """The rule, enforced on the source so a NEW email cannot quietly break it.
+
+    `_links` draws a row of plain text links. Every email builder that calls it
+    must be in the allow-list below; a builder that is not gets told why. The one
+    entry is the account-erasure confirmation: a destructive step is deliberately
+    not styled as the app's friendliest control, and whether it should be a
+    button at all is CA's call, not something to slip through here."""
+    import ast
+    import inspect
+
+    tree = ast.parse(inspect.getsource(email_service))
+    callers = set()
+    for fn in ast.walk(tree):
+        if isinstance(fn, ast.FunctionDef):
+            for node in ast.walk(fn):
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id == "_links"
+                ):
+                    callers.add(fn.name)
+    assert callers == {"send_account_delete_email"}, (
+        f"{sorted(callers - {'send_account_delete_email'})} draw a bare text link. "
+        "An email's primary action is a primary button (_button); a yes/no pair is "
+        "_ctas (primary + secondary)."
+    )
+
+
+def test_a_single_action_button_is_primary_and_has_no_copy_paste_fallback():
+    """`_button` is the light version of `_cta`: the button and nothing else —
+    no sentence, no raw URL under it (the plain-text half already carries it)."""
+    html = email_service._render_email(
+        [email_service._button("http://x/go", "Go there")], lang="en"
+    )
+
+    assert _first_button("http://x/go") in html
+    assert ">Go there</a>" in html
+    assert "copy and paste" not in html
+    assert ">http://x/go</a>" not in html
+
+
+@pytest.mark.django_db
+def test_signing_back_in_from_the_inactivity_email_is_a_primary_button(user):
+    email_service.send_inactivity_warning_email(user, months=24, days=30, will_delete=True)
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert _first_button("http://localhost:3000/login") in html
+
+
+@pytest.mark.django_db
+def test_opening_the_group_from_a_digest_is_a_primary_button():
+    email_service.send_digest_email("Chalmercadillo", "COL001", ["A chair"], ["a@example.com"])
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert _first_button("http://localhost:3000/collections/COL001") in html
+    assert f">{email_service.T('view_collection_cta', lang='en')}</a>" in html
+
+
+@pytest.mark.django_db
+def test_opening_the_welcome_document_is_a_primary_button():
+    email_service.send_collection_welcome_doc_email(
+        "Chalmercadillo", "http://localhost:3000/doc.pdf", "a@example.com"
+    )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert _first_button("http://localhost:3000/doc.pdf") in html
+
+
+@pytest.mark.django_db
+def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
+    """The owner deciding on a member's suggested guest is the same yes/no as
+    the invitation and the hold request: approving is primary, rejecting the
+    outlined secondary, both links spelled out after a sentence."""
+    approve, reject = "http://localhost:3000/rsvp/yes", "http://localhost:3000/rsvp/no"
+    email_service.send_invitation_proposal_email(
+        "owner@example.com", "Lala", "Chalmercadillo", "guest@example.com", "", approve, reject
+    )
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert _first_button(approve) in html
+    secondary = (
+        f'<a href="{reject}" style="display:inline-block;background-color:#ffffff;'
+        "color:#000000;border:2px solid #0000bf;"
+    )
+    assert secondary in html
+    assert html.index(_first_button(approve)) < html.index(secondary)
+    assert "copy and paste these links into your browser" in html
+    assert f">{approve}</a>" in html and f">{reject}</a>" in html
 
 
 @pytest.mark.django_db
@@ -427,10 +627,9 @@ def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, t
     # The name is the header: bold, before the body, before the legal link.
     assert "Test Collection" in html
     assert html.index("Test Collection") < html.index("Legal")
-    # The wordmark is the half-size mark now, after the legal link, not the
-    # full one at the top.
-    assert 'height="15"' in html and 'height="30"' not in html
-    assert html.index("Legal") < html.index('height="15"')
+    # The wordmark is the small mark, after the legal link, not at the top.
+    assert html.count(LOGO_IMG) == 1
+    assert html.index("Legal") < html.index(LOGO_IMG)
     # Plain-text body opens with the collection name.
     assert msg.body.startswith("Test Collection")
 
@@ -438,8 +637,8 @@ def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, t
 @pytest.mark.django_db
 def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
     """A thing in no collection has no group to name, so the OIUEEI wordmark
-    stays where it was — full size, at the top — and nothing is prepended to
-    the plain body."""
+    stays where it was — at the top, and at the same small size as the footer
+    mark (CA, 2026-09-21) — and nothing is prepended to the plain body."""
     from datetime import date
 
     from core.models import BookingPeriod, Thing
@@ -461,7 +660,9 @@ def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
     )
 
     html = mail.outbox[0].alternatives[0][0]
-    assert 'height="30"' in html and 'height="15"' not in html
+    assert html.count(LOGO_IMG) == 1
+    # It leads the message: the very first paragraph, nothing drawn before it.
+    assert html[: html.index(LOGO_IMG)].count("<p") == 1
     assert not mail.outbox[0].body.startswith("Ladder")
 
 
@@ -472,7 +673,32 @@ def test_a_non_collection_email_is_unchanged(user):
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]
-    assert 'height="30"' in html and 'height="15"' not in html
+    assert html.count(LOGO_IMG) == 1
+    # It leads the message: the very first paragraph, nothing drawn before it.
+    assert html[: html.index(LOGO_IMG)].count("<p") == 1
+
+
+@pytest.mark.django_db
+def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
+    """The OIUEEI mark is 53x15 wherever it appears (CA, 2026-09-21). Apple Mail
+    ignored the width/height attributes and drew the old 212x60 file at its
+    natural size while Gmail honoured them, so the size is also declared as
+    inline CSS, and the attached PNG is small enough that a client which
+    ignores both still cannot draw it giant: at most twice the displayed size,
+    which is what a retina screen wants anyway."""
+    import struct
+
+    email_service.send_account_delete_email(user, "http://x/confirm")
+
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+    assert 'height="15" width="53"' in html
+    assert "width:53px;height:15px" in html
+    assert 'height="30"' not in html
+    logo = next(p for p in msg.attachments if p["Content-ID"] == "<oiueei-logo>")
+    png = logo.get_payload(decode=True)
+    width, height = struct.unpack(">II", png[16:24])
+    assert (width, height) == (106, 30)
 
 
 @pytest.mark.django_db

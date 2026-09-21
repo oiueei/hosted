@@ -98,6 +98,7 @@ core/
       close_transfers.py       # Close overdue loan transfers
       send_reminders.py        # Daily booking/delivery reminders
       send_digests.py          # Weekly/monthly digest emails
+      send_test_emails.py      # One sample of every email, sent to one address you choose
       purge_expired_data.py    # Retention sweep (GDPR art. 5.1.e) — dry-run unless --commit
       cleanup_orphan_images.py # Delete stored images no row references
       set_bucket_cors.py       # Write the object store's CORS rules (uploads fail without them)
@@ -324,6 +325,13 @@ python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # loan return reminders (both sides) + reservation arrival reminders (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
+
+# Look at every email in a real mail client — sample data, every builder, one address.
+# It can mail nobody but --to and it leaves the database untouched (see the module
+# docstring); the links in the samples are decoys. Console backend by default.
+python manage.py send_test_emails --list
+python manage.py send_test_emails --to you@example.com --lang es --only booking
+python manage.py send_test_emails --to you@example.com --lang all --yes   # 3 x every email, for real
 
 # Retention sweep (GDPR art. 5.1.e) — the sixth link in that daily chain, and the
 # one that makes "nothing is kept forever" below true rather than aspirational.

@@ -37,6 +37,8 @@ TEXTS = {
     "magic_plain": "Click the link to sign in: {link}",
     "magic_cta": "Sign in →",
     "magic_fallback": "If the button doesn't work, copy and paste this link into your browser:",
+    # Under every email that ends in two buttons (_ctas): the invitation, the hold request.
+    "ctas_fallback": "If the buttons don't work, copy and paste these links into your browser:",
     # Collection invite
     "invite_subject": "You have an invitation to '{collection}' - OIUEEI!",
     "invite_plain": (
@@ -47,7 +49,6 @@ TEXTS = {
     "invite_recommended_by": "{proposer} suggested you for this group.",
     "invite_accept_cta": "Accept invitation",
     "invite_decline_cta": "Decline invitation",
-    "invite_fallback": "If the buttons don't work, copy and paste these links into your browser:",
     # Art. 14 GDPR: this address came from whoever invited you, not from you.
     "invite_source_note": (
         "You got this because someone invited you — that's where we got your "

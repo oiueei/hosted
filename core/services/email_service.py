@@ -15,7 +15,7 @@ that lets recipients change preferences without logging in.
 
 HTML bodies are rendered from the autoescaping ``email/layout.html`` template via
 small block builders (``_para``/``_strong``/``_field``/``_list``/``_links``/
-``_heading``/``_cta``/``_ctas``), so user-supplied values are escaped by the template
+``_heading``/``_cta``/``_ctas``/``_button``), so user-supplied values are escaped by the template
 engine — no manual ``escape()`` in the body composition. Plain-text bodies (no
 XSS surface) stay as plain strings.
 """
@@ -573,6 +573,38 @@ def _cta(url, label, fallback):
     return {"type": "cta", "url": url, "label": label, "fallback": fallback}
 
 
+# The app's two button roles as inline CSS, literal hex (email clients resolve no
+# `var()`): the PRIMARY is the filled bus-blue button, the SECONDARY its outlined
+# counterpart — white fill, a bus-blue border, black text, like the app's own
+# split. The secondary's padding is two pixels short of the primary's on every
+# side so its border brings both to the same outer size. Defined once and handed
+# to the layout, so the three button blocks cannot drift apart.
+BTN_PRIMARY = (
+    "display:inline-block;background-color:#0000bf;color:#ffffff;"
+    "font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;"
+    "line-height:1.4;text-decoration:none;padding:14px 24px;"
+)
+BTN_SECONDARY = (
+    "display:inline-block;background-color:#ffffff;color:#000000;border:2px solid #0000bf;"
+    "font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;"
+    "line-height:1.4;text-decoration:none;padding:12px 22px;"
+)
+
+
+def _button(url, label):
+    """An email's one action as a primary button — nothing else.
+
+    The house rule (CA, 2026-09-21): the primary action of an email — sign in,
+    open the group, look at the thing — is a primary button, never a bare text
+    link. This is the light version of ``_cta``: no "copy and paste this link"
+    sentence and no raw URL under it. Those are for the emails whose whole job
+    is one click that some client might refuse (the magic link, the yes/no
+    questions); everywhere else the plain-text half already carries the URL and
+    a button a client will not draw is still a link that says what it does.
+    """
+    return {"type": "button", "url": url, "label": label}
+
+
 def _ctas(primary, secondary, fallback):
     """Two actions as buttons — a primary and a secondary — with both URLs
     spelled out under them.
@@ -785,6 +817,8 @@ def _render_email(blocks, lang=None, header=None):
             "lang": resolved_lang,
             "legal_url": f"{_frontend_base_url()}/legal",
             "legal_label": T("footer_legal", lang=lang),
+            "btn_primary": BTN_PRIMARY,
+            "btn_secondary": BTN_SECONDARY,
         },
     )
 
@@ -950,7 +984,7 @@ def send_collection_invite_email(
         _ctas(
             (accept_link, T("invite_accept_cta")),
             (reject_link, T("invite_decline_cta")),
-            T("invite_fallback"),
+            T("ctas_fallback"),
         )
     )
     # Art. 14 GDPR: this address did not come from its owner, it came from
@@ -1013,8 +1047,15 @@ def send_invitation_proposal_email(
     if note:
         blocks.append(_para(T("proposal_note").format(note=note)))
     blocks.append(_para(T("proposal_nobody_told")))
+    # Approving is the primary button, rejecting the secondary one, and both links
+    # follow as text — the same two-answer shape as the invitation and the hold
+    # request (CA, 2026-09-21).
     blocks.append(
-        _links((approve_link, T("proposal_approve_cta")), (reject_link, T("proposal_reject_cta")))
+        _ctas(
+            (approve_link, T("proposal_approve_cta")),
+            (reject_link, T("proposal_reject_cta")),
+            T("ctas_fallback"),
+        )
     )
     _send(
         owner_email,
@@ -1072,7 +1113,7 @@ def send_collection_welcome_doc_email(collection_headline, doc_url, email, colle
     html = _render_email(
         [
             _para(T("welcome_doc_intro")),
-            _links((doc_url, T("welcome_doc_link_label"))),
+            _button(doc_url, T("welcome_doc_link_label")),
             _para(T("welcome_doc_outro")),
         ],
         lang=lang,
@@ -1145,7 +1186,7 @@ def send_inactivity_warning_email(user, months, days, will_delete=True):
             _para(T("inactivity_intro").format(months=months)),
             _para(T("inactivity_deletes").format(days=days)),
             _para(T("inactivity_keep")),
-            _links((login_url, T("inactivity_cta"))),
+            _button(login_url, T("inactivity_cta")),
             _para(T("inactivity_outro")),
         ]
     else:
@@ -1153,7 +1194,7 @@ def send_inactivity_warning_email(user, months, days, will_delete=True):
         blocks = [
             _para(T("inactivity_intro").format(months=months)),
             _para(T("inactivity_kept")),
-            _links((login_url, T("inactivity_cta"))),
+            _button(login_url, T("inactivity_cta")),
             _para(T("inactivity_kept_outro")),
         ]
     _send(
@@ -1263,7 +1304,14 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
             _para(T("booking_request_intro").format(requester=requester_name, action=action)),
             _strong(headline),
             *_booking_detail_blocks(booking, lang),
-            _links((accept_link, T("hold_confirm_cta")), (reject_link, T("hold_cancel_cta"))),
+            # Confirming is the primary button, cancelling the secondary one, and
+            # both links follow as text — the same two-answer shape as the
+            # collection invitation (CA, 2026-09-21).
+            _ctas(
+                (accept_link, T("hold_confirm_cta")),
+                (reject_link, T("hold_cancel_cta")),
+                T("ctas_fallback"),
+            ),
         ],
         lang=lang,
         header=header,
@@ -1316,7 +1364,7 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
         _para(T("decision_intro").format(action=action, decision=decision_word)),
         _strong(headline),
         *_booking_detail_blocks(booking, lang),
-        _links((thing_url, T("view_thing_cta"))),
+        _button(thing_url, T("view_thing_cta")),
     ]
     # The owner's note rides an ACCEPTED decision only — that is the moment
     # the hold becomes real and the note's "how to collect / where we are"
@@ -1401,7 +1449,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
             _strong(headline),
             *_booking_detail_blocks(booking, lang),
             _para(T("confirmation_outro").format(owner=owner_name)),
-            _links((thing_url, headline)),
+            _button(thing_url, T("view_thing_cta")),
             *note_blocks,
         ],
         lang=lang,
@@ -1486,7 +1534,7 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
             _para(T("faq_question_intro").format(questioner=questioner_name)),
             _strong(headline),
             _field(T("question_label"), question),
-            _links((thing_url, T("faq_view_reply_cta"))),
+            _button(thing_url, T("faq_view_reply_cta")),
         ],
         lang=lang,
         header=header,
@@ -1512,7 +1560,7 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
             _strong(headline),
             _field(T("your_question_label"), question),
             _field(T("reply_label"), answer),
-            _links((thing_url, headline)),
+            _button(thing_url, T("view_thing_cta")),
         ],
         lang=lang,
         header=header,
@@ -1577,7 +1625,7 @@ def send_thing_reported_email(thing, owner_email):
             _para(T("reported_intro")),
             _strong(headline),
             _para(T("reported_outro")),
-            _links((thing_url, T("reported_review_cta"))),
+            _button(thing_url, T("reported_review_cta")),
         ],
         lang=lang,
         header=header,
@@ -1611,7 +1659,7 @@ def send_broadcast_email(
                 [
                     _para(T("broadcast_intro").format(owner=owner)),
                     _para(message),
-                    _links((collection_url, T("broadcast_open_cta"))),
+                    _button(collection_url, T("broadcast_open_cta")),
                 ],
                 lang=lang,
                 header=headline,
@@ -1657,7 +1705,7 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     end = _fmt_date(end_date)
     plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end)
     body = T("return_due_body").format(owner=owner_name, thing=headline, end=end)
-    blocks = [_para(body), _links((thing_url, T("view_thing_cta")))]
+    blocks = [_para(body), _button(thing_url, T("view_thing_cta"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester_email,
@@ -1698,7 +1746,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
-    blocks.append(_links((thing_url, T("view_thing_cta"))))
+    blocks.append(_button(thing_url, T("view_thing_cta")))
     # The owner's note for whoever books here — after the listing link, before
     # the legal footer (which _render_email appends itself). Same collection
     # fallback the header line above uses, so the note always belongs to the
@@ -1818,7 +1866,7 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     ]
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
-    blocks.append(_links((thing_url, T("view_thing_cta"))))
+    blocks.append(_button(thing_url, T("view_thing_cta")))
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester_email,
@@ -1856,7 +1904,7 @@ def send_digest_email(
                 [
                     _para(T("digest_intro")),
                     _list(headlines),
-                    _links((collection_url, T("view_collection_cta"))),
+                    _button(collection_url, T("view_collection_cta")),
                 ],
                 lang=lang,
                 header=headline,
