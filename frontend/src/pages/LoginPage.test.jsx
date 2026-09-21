@@ -138,12 +138,68 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
     expect(paragraphs.some((p) => p.textContent.trim() === '')).toBe(false);
   });
 
-  test('the front door says out loud that OIUEEI is in alpha', () => {
+  test('the front door says out loud that OIUEEI is in alpha, right under the door', () => {
     // The same sentence the FAQ and the legal notice carry (common.alphaNotice).
-    // Buried nowhere: a newcomer deciding whether to trust this reads it before
-    // they type an email.
+    // It sits between the sign-in button and the prose (CA, 2026-09-21): the
+    // whole point of the brick is that nobody signs in without having met it,
+    // which a paragraph further down the page cannot promise.
     renderLogin();
-    expect(screen.getByText(/OIUEEI is in alpha: nothing is finished/i)).toBeInTheDocument();
+    const notice = screen.getByText(/OIUEEI is in alpha: nothing is finished/i);
+    const signIn = screen.getByRole('button', { name: 'Sign in' });
+    const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
+    expect(signIn.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notice.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('the way to reach a human sits at the foot, next to the legal link', () => {
+    // CA, 2026-09-21. Both are looked for deliberately; neither belongs
+    // between a returning member and the field they came for.
+    renderLogin();
+    const help = screen.getByRole('link', { name: /Trouble signing in/i });
+    const legal = screen.getByRole('link', { name: 'Legal notice & privacy' });
+    expect(help.compareDocumentPosition(legal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
+    expect(licence.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('LoginPage layout: the door first, the reading after', () => {
+  // CA's ordering (2026-09-21): title, then the form, then the way in for
+  // someone with no account — and every explanatory paragraph below those.
+  // Someone who already has an account should not have to scroll past the
+  // manifesto to reach the one field they came for.
+  test('the pitch is a heading in the page outline, not a bold paragraph', () => {
+    renderLogin();
+    const pitch = screen.getByRole('heading', {
+      name: /Share what you have with the people around you/i,
+    });
+    // h2, not h4: the hero's <h1> is the logo, and skipping to 4 breaks the
+    // outline (axe's heading-order). The Heading-4 SIZE lives in .login-pitch.
+    expect(pitch.tagName).toBe('H2');
+    expect(pitch).toHaveClass('login-pitch');
+  });
+
+  test('the email field comes before every explanatory paragraph', () => {
+    renderLogin();
+    const email = screen.getByLabelText(/Email/);
+    for (const text of [
+      /OIUEEI's code is open source under the EUPL-1.2/i,
+      /a cookie banner: there is nothing to consent to/i,
+    ]) {
+      const prose = screen.getByText(text);
+      expect(
+        email.compareDocumentPosition(prose) & Node.DOCUMENT_POSITION_FOLLOWING,
+        `"${prose.textContent.slice(0, 40)}…" must sit below the form`
+      ).toBeTruthy();
+    }
+  });
+
+  test('the page no longer repeats what OIUEEI is above the form', () => {
+    // login.description was deleted outright (CA, 2026-09-21) — the licence
+    // paragraph below already says the same in fewer words, and this one stood
+    // between a returning member and the field they came for.
+    renderLogin();
+    expect(screen.queryByText(/Create a collection — things to gift, sell, rent/i)).toBeNull();
   });
 });
 

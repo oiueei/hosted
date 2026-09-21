@@ -874,6 +874,50 @@ body :focus-visible {
   max-width: 400px;
 }
 
+/* The front door's first line of words: Body XL bold (20px), on an <h2>. The
+   look is body text and the element is a heading, deliberately — the size is a
+   design decision, the level an accessibility one, and on this page they
+   disagree: the hero's own <h1> is the logo, so a lower-ranked heading here
+   would skip levels and axe's heading-order does catch that. */
+.login-pitch {
+  font-size: var(--fontsize-body-xl);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: var(--lineheight-l);
+  margin-bottom: var(--spacing-m);
+}
+
+/* The alpha warning on the front door: Body M bold, in brick (HDS "Tiili"),
+   heading the two help links under the door.
+   The shade is `brick-dark`, not plain `brick`, and that is a contrast
+   decision rather than a taste one: at 16px this is normal text, so it owes
+   4.5:1, and plain brick reaches only 3.94:1 on a bus-medium-light page
+   background (the Engel, Hopea and Suomenlinna theeemes). It cleared the bar
+   while this was 20px bold — WCAG large text, 3:1 — and stopped the moment
+   the size came down. paletteContrast.test.js reads the size, the weight and
+   the colour out of this rule and judges them together, so changing any one of
+   them back says so. */
+.login-alpha {
+  font-size: var(--fontsize-body-m);
+  font-weight: 700;
+  line-height: var(--lineheight-l);
+  color: var(--color-brick-dark);
+  margin-top: var(--spacing-l);
+  margin-bottom: var(--spacing-2-xs);
+}
+
+/* The four things under the door — the licence, the no-cookie-banner claim,
+   the way to reach a human, the legal link — read as ONE block at ONE size
+   (CA, 2026-09-21). They had drifted into three sizes and two greys, so the
+   checkable claims looked like small print beside the slogan they replaced.
+   The override reaches `.legal-link` deliberately: its shared recipe still
+   sets body-s for the other two doors that use it (MagicLinkJoinPage,
+   JoinToAct), which are not this page and were not asked about. */
+.login-footnotes,
+.login-footnotes .legal-link {
+  font-size: var(--fontsize-body-m);
+}
+
 /* The quiet "Legal notice & privacy" link that sits under each of those forms
    (DESIGN §9 / art. 13 at the point of collection). Same three declarations in
    LoginPage, MagicLinkJoinPage and JoinToAct — one recipe, one place. */

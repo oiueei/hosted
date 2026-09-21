@@ -234,6 +234,57 @@ function ringBands() {
   };
 }
 
+// ── The alpha warning on the front door ────────────────────────────────
+// `.login-alpha` paints a red on whatever `color_02` the visitor's last
+// session left in localStorage, so the one sentence /login owes a newcomer has
+// to be legible on all twelve palettes. At Body M it is NORMAL text (16px),
+// which owes 4.5:1 — plain `brick` reaches only 3.94:1 on bus-medium-light,
+// which is why the rule uses `brick-dark`.
+//
+// The size, the weight and the colour are read out of App.css and judged
+// together rather than restated here, because they only make sense together:
+// a bigger, bolder rule may use a weaker colour (WCAG large text, 3:1) and a
+// smaller one may not. Change any one of them and this suite re-judges the
+// set.
+
+const AA_LARGE = 3; // WCAG 1.4.3 — >= 18.66px bold or >= 24px
+
+// The font-size tokens this rule may use, in px, so "is it large text?" is a
+// question about the actual value rather than about the token's name.
+const FONTSIZE_PX = { 'body-m': 16, 'body-l': 18, 'body-xl': 20, 'heading-s': 20 };
+
+function loginAlphaRule() {
+  const css = readFileSync('src/App.css', 'utf8');
+  const block = /\.login-alpha\s*\{([^}]*)\}/.exec(css);
+  if (!block) throw new Error('no .login-alpha rule in App.css');
+  const colour = /color:\s*var\(--color-([a-z0-9-]+)\)/.exec(block[1]);
+  const size = /font-size:\s*var\(--fontsize-([a-z0-9-]+)\)/.exec(block[1]);
+  const weight = /font-weight:\s*(\d+)/.exec(block[1]);
+  if (!colour || !size || !weight) {
+    throw new Error('.login-alpha no longer states its colour, size and weight');
+  }
+  const px = FONTSIZE_PX[size[1]];
+  if (!px) throw new Error(`unknown font size for .login-alpha: ${size[1]}`);
+  return { colour: colour[1], px, weight: Number(weight[1]) };
+}
+
+describe('the /login alpha warning stays readable', () => {
+  const tokens = loadTokenHexMap();
+  const rule = loginAlphaRule();
+  // WCAG 1.4.3's own definition of large text, applied to what the rule says.
+  const isLarge = rule.px >= 24 || (rule.px >= 18.66 && rule.weight >= 700);
+  const floor = isLarge ? AA_LARGE : AA_NORMAL;
+
+  test.each(THEEEMES)('$name — the warning meets AA on the page background', (theeeme) => {
+    const ratio = contrastRatio(tokens[rule.colour], tokens[theeeme.color_02]);
+    expect(
+      ratio,
+      `${theeeme.name} — ${rule.colour} ${rule.px}px/${rule.weight} on ` +
+        `${theeeme.color_02}: ${ratio.toFixed(2)}:1, owes ${floor}:1`
+    ).toBeGreaterThanOrEqual(floor);
+  });
+});
+
 describe('keyboard focus ring', () => {
   const tokens = loadTokenHexMap();
   const bands = ringBands();
