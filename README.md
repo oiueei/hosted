@@ -194,7 +194,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) — refused for the owner and any co-owner |
 | POST | `/api/v1/collections/{code}/invite/propose/` | Members only, not a curator: recommend a guest to the owner. Nothing reaches the proposed address until a curator approves. Rate limited: 30/day |
 | POST | `/api/v1/proposals/{code}/{approve\|reject}/` | A curator's answer to a member's recommendation (owner or co-owner) |
-| POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h |
+| POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h. The bundled frontend no longer calls it — its members silence a group from the footer link of each digest |
 | POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner or co-owner, rate limited: 5/h) |
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner or co-owner) |
 | GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner or co-owner, rate limited: 10/day). A plain member gets 403, never a partial file |

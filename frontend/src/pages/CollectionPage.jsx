@@ -49,8 +49,6 @@ export default function CollectionPage() {
   const [broadcastResult, setBroadcastResult] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   const [shownCount, setShownCount] = useState(CARDS_PER_PAGE);
-  const [digestSaving, setDigestSaving] = useState(false);
-  const [digestError, setDigestError] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
   // The owner may have written the collection's text once per language; every
@@ -151,27 +149,6 @@ export default function CollectionPage() {
     setBroadcastSending(false);
   };
 
-  // Silence (or un-silence) this one group's digest. The narrow control that
-  // lets `notify_news` default to on: leaving a chatty group's summaries costs
-  // this member nothing else (DESIGN §6). Optimistic-free — the state only moves
-  // once the server has agreed, so a failure can't leave the label lying.
-  const toggleDigest = async () => {
-    const muted = !collection.is_digest_muted;
-    setDigestSaving(true);
-    setDigestError(false);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${code}/digest/`, {
-        method: 'POST',
-        body: JSON.stringify({ muted }),
-      });
-      if (res.ok) setCollection((prev) => ({ ...prev, is_digest_muted: muted }));
-      else setDigestError(true);
-    } catch {
-      setDigestError(true);
-    }
-    setDigestSaving(false);
-  };
-
   // Join a PUBLIC group you are only browsing. The signed-in half of
   // login-to-act: an anonymous reader gets `/collections/:code/join`, which
   // takes an email and mails a magic link — no use at all to a session that
@@ -209,6 +186,9 @@ export default function CollectionPage() {
   // click, no delete, so no hover/focus state to design for — so they follow
   // the theeeme's primary-button colours (color_01/color_06) instead of a
   // fixed HDS token pair, matching every other themed surface on the page.
+  // They are also the curators' own bookkeeping — how the group is set up, not
+  // something a member or a passer-by needs before the title (CA, 2026-09-21) —
+  // so both render for `isCurator` only.
   const tagTheme = tc.color_01
     ? {
         '--tag-background': `var(--color-${tc.color_01})`,
@@ -275,7 +255,7 @@ export default function CollectionPage() {
             />
             <h1 className="form-hero-title">
               {headline}
-              {collection.mode === 'COMMUNITY' && (
+              {isCurator && collection.mode === 'COMMUNITY' && (
                 <>
                   {' '}
                   <Tag theme={tagTheme}>{t('collectionPage.communityTag')}</Tag>
@@ -433,38 +413,6 @@ export default function CollectionPage() {
                 (/collections/:code/leave) is unchanged. */}
               </>
             )}
-            {/* The digest switch is a *member* perk, not a rank-and-file-only
-              one — a co-owner is still an ordinary `invites` row for the
-              digest (only the founder never receives their own group's
-              summary), so it reads `is_member || isCurator` rather than
-              nesting inside the block above, which a co-owner's `is_member`
-              is deliberately `false` to keep out of. */}
-            {isAuthenticated &&
-              !isOwner &&
-              (collection.is_member || isCurator) &&
-              collection.digest_frequency !== 'NONE' && (
-                <p className="digest-pref">
-                  {collection.is_digest_muted
-                    ? t('collectionPage.digestMuted')
-                    : t('collectionPage.digestSubscribed')}{' '}
-                  <button
-                    type="button"
-                    className="digest-pref-button"
-                    onClick={toggleDigest}
-                    disabled={digestSaving}
-                  >
-                    {collection.is_digest_muted
-                      ? t('collectionPage.digestUnmute')
-                      : t('collectionPage.digestMute')}
-                  </button>
-                  {digestError && (
-                    <>
-                      {' '}
-                      <span role="alert">{t('collectionPage.digestError')}</span>
-                    </>
-                  )}
-                </p>
-              )}
           </div>
         </div>
         {collection.thumbnail_url && (
