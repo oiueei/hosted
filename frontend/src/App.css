@@ -711,18 +711,11 @@ body :focus-visible {
   color: var(--hero-text-color, var(--color-black-90));
 }
 
-/* The member's per-collection digest switch in the hero ("Leave the group" left
-   for the profile). A <button> rather than a Link (it acts, it doesn't navigate) styled
-   as the surrounding text so it reads as one sentence — the same quiet register
-   as .invite-nudge, and the hero text colour keeps it legible on every theeeme.
-   Rendered only when the collection actually sends a digest: nothing to silence
-   otherwise (DESIGN §3). */
-.digest-pref {
-  margin-top: var(--spacing-2-xs);
-  font-size: var(--fontsize-body-s);
-  color: var(--hero-text-color, var(--color-black-90));
-}
-
+/* A <button> that acts rather than navigates, styled as the surrounding text so
+   it reads as one sentence — the same quiet register as .invite-nudge. It was
+   the member's per-collection digest switch (removed from the hero, CA,
+   2026-09-21); RecommendGuest's "recommend someone" opener is what still uses
+   it, hence the name that no longer says what it is. */
 .digest-pref-button {
   padding: 0;
   border: none;

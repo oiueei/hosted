@@ -31,8 +31,8 @@ export default function JoinPage() {
   const L = useLocalized();
   // The name is seeded from the navigation state when there is one — that
   // renders it with no flicker — but it can't be the only source. Only
-  // `ThingLinkbox` passes it; the hero's own "Join to take part" link, a
-  // refresh, and a /join URL somebody shared all arrive with nothing, and the
+  // `ThingLinkbox` passes it; a refresh, `ThingPage`'s reserve button and
+  // a /join URL somebody shared all arrive with nothing, and the
   // page then asked a stranger to hand over their email to join "Collection".
   // This is the first screen of the viral funnel, so it fetches the collection
   // itself. Public and ACTIVE by definition (login-to-act only exists there), so

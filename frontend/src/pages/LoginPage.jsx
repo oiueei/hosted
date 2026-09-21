@@ -147,16 +147,6 @@ export default function LoginPage() {
             door, so nobody signs in without having met it. Same sentence, word
             for word, as the FAQ and the legal notice (common.alphaNotice). */}
         <p className="login-alpha measure">{t('common.alphaNotice')}</p>
-        {/* Only when this deployment has a help page (frontend/src/deployment).
-            Upstream there is no FAQ content to link to — same reasoning as
-            aboutPath: a link to a 404 is worse than one link fewer. */}
-        {faqPath && (
-          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-            <Link to={faqPath} style={{ textDecoration: 'underline' }}>
-              {t('login.faqLink')}
-            </Link>
-          </p>
-        )}
         {/* Everything a newcomer may want to read BEFORE typing an email, below
             the door rather than in front of it: whoever already has an account
             sees only the title and the form. The claims themselves are
@@ -208,10 +198,29 @@ export default function LoginPage() {
               {t('login.operator')}
             </p>
           ) : null}
-          {/* The locked-out user's lifeline, paired with the legal link at the
-              foot of the page: both are things you go looking for deliberately,
-              and neither belongs between someone and the field they came for. */}
-          <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+          {/* The deployment's help page (frontend/src/deployment), when it has
+              one — upstream there is no FAQ content to link to, and a link to a
+              404 is worse than one link fewer. It sits with the other
+              deliberate-lookup links at the foot, directly above the sign-in
+              trouble line: first questions about the site, then problems
+              getting in (CA, 2026-09-21). */}
+          {faqPath && (
+            <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+              <Link to={faqPath} style={{ textDecoration: 'underline' }}>
+                {t('login.faqLink')}
+              </Link>
+            </p>
+          )}
+          {/* The locked-out user's lifeline, heading the deliberate-lookup
+              group at the foot of the page (the FAQ link above when this
+              deployment has one, the legal link below): all are things you go
+              looking for deliberately, and none belongs between someone and the
+              field they came for. Upstream — no FAQ link — it keeps the wider
+              gap itself, so the standalone page's rhythm is unchanged. */}
+          <p
+            className="measure"
+            style={{ marginTop: faqPath ? 'var(--spacing-2-xs)' : 'var(--spacing-m)' }}
+          >
             <Link to="/contact" style={{ textDecoration: 'underline' }}>
               {t('login.loginHelp')}
             </Link>

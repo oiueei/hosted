@@ -70,22 +70,32 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 });
 
-describe('CollectionPage anonymous visitor intro', () => {
-  test('shows a join link for a signed-out visitor', async () => {
+describe('CollectionPage signed-out reader', () => {
+  /**
+   * The hero's "This group shares its things on OIUEEI. Join to take part →"
+   * line was removed (CA, 2026-09-21). A signed-out reader still reaches
+   * /collections/:code/join from the action button on any card (login-to-act,
+   * pinned in `thingBooking.test.jsx`); what is gone is the standing invitation
+   * in the hero.
+   *
+   * Asserted through the link's target and the raw i18n key — the strings went
+   * with the line, so a resurrected `t('collectionPage.anonIntro')` renders its
+   * own key and an English-text query would pass for the wrong reason.
+   */
+  const PUBLIC_VIEW = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    visibility: 'PUBLIC',
+    owner: 'OTHER1',
+    is_curator: false,
+    is_member: false,
+  };
+
+  test('is offered no join line in the hero', async () => {
     localStorage.clear();
-    render(
-      <MemoryRouter initialEntries={['/collections/COL001']}>
-        <Routes>
-          <Route path="/collections/:code" element={<CollectionPage />} />
-        </Routes>
-      </MemoryRouter>
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => PUBLIC_VIEW })
     );
-
-    const link = await screen.findByRole('link', { name: /join to take part/i });
-    expect(link).toHaveAttribute('href', '/collections/COL001/join');
-  });
-
-  test('does not show the join link for an authenticated visitor', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/collections/COL001']}>
         <Routes>
@@ -97,7 +107,8 @@ describe('CollectionPage anonymous visitor intro', () => {
     await waitFor(() => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
-    expect(screen.queryByRole('link', { name: /join to take part/i })).toBeNull();
+    expect(container.querySelector('a[href="/collections/COL001/join"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/collectionPage\.anonIntro/);
   });
 });
 
@@ -164,12 +175,7 @@ describe('CollectionPage inactive-things grid', () => {
   });
 });
 
-describe('CollectionPage digest switch', () => {
-  // The per-group half of the email preferences. `User.notify_news` defaults on
-  // now, and this control is what makes that defensible rather than a pre-ticked
-  // opt-in (DESIGN §6): a member leaves one chatty group's summaries without
-  // giving up a single transactional email. So it has to be reachable, honest
-  // about its state, and it must never claim a change the server refused.
+describe('CollectionPage member hero', () => {
   const MEMBER_VIEW = {
     ...COLLECTION_WITH_PHOTO,
     thumbnail_url: '',
@@ -180,15 +186,13 @@ describe('CollectionPage digest switch', () => {
     is_curator: false,
     digest_frequency: 'WEEKLY',
     is_digest_muted: false,
+    allow_member_proposals: true,
   };
 
-  function mockPage(collection, { postOk = true } = {}) {
-    apiFetch.mockImplementation((url, opts) => {
-      if (opts?.method === 'POST') {
-        return Promise.resolve({ ok: postOk, status: postOk ? 200 : 500, json: async () => ({}) });
-      }
-      return Promise.resolve({ ok: true, status: 200, json: async () => collection });
-    });
+  function mockPage(collection) {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
     return apiFetch;
   }
 
@@ -202,75 +206,35 @@ describe('CollectionPage digest switch', () => {
     );
   }
 
-  test('a subscribed member is told so, and offered the way out', async () => {
-    mockPage(MEMBER_VIEW);
-    renderCollection();
-
-    expect(await screen.findByText("You get a summary of what's new here.")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
-  });
-
-  test('muting posts the member’s choice and only then moves the label', async () => {
-    const apiFetch = mockPage(MEMBER_VIEW);
-    renderCollection();
-    await screen.findByRole('button', { name: 'Turn it off' });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Turn it off' }));
-
-    await waitFor(() => {
-      const post = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
-      expect(post[0]).toBe('/api/v1/collections/COL001/digest/');
-      expect(JSON.parse(post[1].body)).toEqual({ muted: true });
-    });
-    expect(await screen.findByText('Summaries from this group are off.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Turn them back on' })).toBeInTheDocument();
-  });
-
-  test('a muted member can turn them back on', async () => {
-    const apiFetch = mockPage({ ...MEMBER_VIEW, is_digest_muted: true });
-    renderCollection();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Turn them back on' }));
-
-    await waitFor(() => {
-      const post = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
-      expect(JSON.parse(post[1].body)).toEqual({ muted: false });
-    });
-    expect(await screen.findByText("You get a summary of what's new here.")).toBeInTheDocument();
-  });
-
-  test('a failed save leaves the label telling the truth', async () => {
-    // The label must follow the server, not the click. A member who is told
-    // "summaries are off" while the row never changed keeps receiving them and
-    // has no reason to look at this control again.
-    mockPage(MEMBER_VIEW, { postOk: false });
-    renderCollection();
-    await screen.findByRole('button', { name: 'Turn it off' });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Turn it off' }));
-
-    expect(await screen.findByText(/Couldn't change that/)).toBeInTheDocument();
-    expect(screen.getByText("You get a summary of what's new here.")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
-  });
-
-  test('a group that sends no summary shows nothing to silence', async () => {
-    // DESIGN §3: there is nothing to turn off, so there is no control.
-    mockPage({ ...MEMBER_VIEW, digest_frequency: 'NONE' });
-    renderCollection();
-
+  /**
+   * The per-group "You get a summary of what's new here — turn it off" line
+   * left the hero (CA, 2026-09-21): a sentence about email, in the one place a
+   * member comes to look at things. Muting a group is still one click from the
+   * footer of every digest (`DigestMutePage`), and the endpoint behind the old
+   * switch is untouched, so this is only about what the page offers.
+   *
+   * Asserted three ways, because each alone can be fooled: the class the block
+   * carried, the raw i18n key (the strings were deleted with the block, so a
+   * resurrected `t('collectionPage.digestSubscribed')` renders its own key —
+   * an English-text assertion would pass for the wrong reason), and the one
+   * thing the switch could do, which is send a POST.
+   */
+  test.each([
+    ['a member of a group that sends a digest', MEMBER_VIEW],
+    ['a member who had muted it', { ...MEMBER_VIEW, is_digest_muted: true }],
+    [
+      'a co-curator, who is still an ordinary invitee for the digest',
+      { ...MEMBER_VIEW, is_member: false, is_curator: true },
+    ],
+  ])('%s is offered no digest switch', async (_who, view) => {
+    const fetchMock = mockPage(view);
+    const { container } = renderCollection();
     await screen.findByText('Things from the kitchen');
-    expect(screen.queryByRole('button', { name: 'Turn it off' })).toBeNull();
-    expect(screen.queryByText("You get a summary of what's new here.")).toBeNull();
-  });
 
-  test('the owner is not offered a switch for a digest they never receive', async () => {
-    // The digest goes to `invites`; an owner changes `digest_frequency` instead.
-    mockPage({ ...MEMBER_VIEW, owner: 'ABC123', is_member: false, is_curator: true });
-    renderCollection();
-
-    await screen.findByText('Things from the kitchen');
-    expect(screen.queryByRole('button', { name: 'Turn it off' })).toBeNull();
+    expect(container.querySelector('.digest-pref')).toBeNull();
+    expect(container.textContent).not.toMatch(/collectionPage\.digest/);
+    expect(screen.queryByRole('button', { name: /turn it off|turn them back on/i })).toBeNull();
+    expect(fetchMock.mock.calls.some(([, o]) => o?.method === 'POST')).toBe(false);
   });
 
   /**
@@ -286,13 +250,87 @@ describe('CollectionPage digest switch', () => {
   test('a member is given no way out of the group from the collection hero', async () => {
     mockPage(MEMBER_VIEW);
     const { container } = renderCollection();
-    // The member-only hero controls that stayed — so this is a page where the
+    // A member-only hero control that stayed — so this is a page where the
     // leave link *would* render, not one where the member section is missing.
-    await screen.findByRole('button', { name: 'Turn it off' });
+    await screen.findByRole('button', { name: /Recommend them/ });
 
     expect(container.querySelector('a[href="/collections/COL001/leave"]')).toBeNull();
     expect(screen.queryByRole('link', { name: /leave the group/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /leave the group/i })).toBeNull();
+  });
+});
+
+/**
+ * The Community / Public / Private tags after the title say how a group is set
+ * up — bookkeeping for whoever runs it, not something a member or a passer-by
+ * needs before they have read the name (CA, 2026-09-21). Community used to show
+ * to everyone; Public/Private was already curator-only. Now both are.
+ */
+describe('CollectionPage hero tags belong to the curators', () => {
+  const COMMUNITY_PUBLIC = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    mode: 'COMMUNITY',
+    visibility: 'PUBLIC',
+    digest_frequency: 'NONE',
+  };
+
+  function renderAs(collection, { signedIn = true } = {}) {
+    if (!signedIn) localStorage.removeItem('userCode');
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    return screen.findByRole('heading', { level: 1, name: /Kitchen Collection/ });
+  }
+
+  test('a curator sees both the mode and the visibility tag', async () => {
+    const title = await renderAs({ ...COMMUNITY_PUBLIC, is_curator: true });
+
+    expect(within(title).getByText('Community')).toBeInTheDocument();
+    expect(within(title).getByText('Public')).toBeInTheDocument();
+  });
+
+  test('a curator of a private, proprietary group sees just Private', async () => {
+    const title = await renderAs({
+      ...COMMUNITY_PUBLIC,
+      is_curator: true,
+      mode: 'PROPRIETARY',
+      visibility: 'PRIVATE',
+    });
+
+    expect(within(title).getByText('Private')).toBeInTheDocument();
+    expect(within(title).queryByText('Community')).toBeNull();
+  });
+
+  test('a member of the same group sees the title and nothing after it', async () => {
+    const title = await renderAs({
+      ...COMMUNITY_PUBLIC,
+      owner: 'OTHER1',
+      is_curator: false,
+      is_member: true,
+    });
+
+    expect(title).toHaveTextContent(/^Kitchen Collection$/);
+    expect(within(title).queryByText('Community')).toBeNull();
+    expect(within(title).queryByText('Public')).toBeNull();
+  });
+
+  test('an anonymous reader of a public group sees the title and nothing after it', async () => {
+    const title = await renderAs(
+      { ...COMMUNITY_PUBLIC, owner: 'OTHER1', is_curator: false, is_member: false },
+      { signedIn: false }
+    );
+
+    expect(title).toHaveTextContent(/^Kitchen Collection$/);
+    expect(within(title).queryByText('Community')).toBeNull();
+    expect(within(title).queryByText('Public')).toBeNull();
   });
 });
 
@@ -401,7 +439,7 @@ describe('A signed-in visitor on a public group', () => {
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
   });
 
-  test('a signed-out reader of an empty group is not sent to a form either', async () => {
+  test('a signed-out reader of an empty group is not sent to a form, nor offered a way in', async () => {
     localStorage.clear();
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
@@ -412,8 +450,14 @@ describe('A signed-in visitor on a public group', () => {
     expect(await screen.findByText(/No things in this collection yet/)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
-    // What they are offered instead is the way in.
-    expect(screen.getByRole('link', { name: /join to take part/i })).toBeInTheDocument();
+    // The hero's standing "Join to take part" line is gone (CA, 2026-09-21), and
+    // an empty group has no card whose action button could route them to the
+    // join page — so this reader is offered no way in at all. That is the known
+    // cost of removing the line, pinned so it stays a decision and cannot
+    // become an accident: if a way in is added, this is the test to change.
+    // By target, not by name: a resurrected line would render its raw i18n key
+    // (the strings were deleted), which no /join/ name query would ever match.
+    expect(document.querySelector('a[href$="/join"]')).toBeNull();
   });
 
   test('a member of an empty group is invited to start it', async () => {
@@ -1043,24 +1087,6 @@ describe('CollectionPage as a co-owner', () => {
     const line = (await screen.findByText(/Curator:/)).closest('p');
     expect(line).toHaveTextContent('Curator: The Founder');
     expect(screen.queryByText(/Co-curators:/)).not.toBeInTheDocument();
-  });
-
-  test('still sees their own digest switch, since they remain an ordinary invitee for it', async () => {
-    apiFetch.mockImplementation((url) =>
-      url.startsWith('/api/v1/inbox/')
-        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
-        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
-    );
-
-    render(
-      <MemoryRouter initialEntries={['/collections/COL001']}>
-        <Routes>
-          <Route path="/collections/:code" element={<CollectionPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByRole('button', { name: 'Turn it off' })).toBeInTheDocument();
   });
 });
 
