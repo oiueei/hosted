@@ -146,6 +146,56 @@ def test_the_legal_link_label_is_translated():
     assert ">Legal y privacidad<" in html
 
 
+# --- The magic link: greeting, button, fallback (CA, 2026-09-21) --------------
+
+
+@pytest.mark.django_db
+def test_magic_link_repeats_the_subjects_greeting_in_the_body():
+    """The subject names the collection being joined, but an inbox preview
+    shows only the subject — the body opens with the same greeting, in bold in
+    the HTML, so the message stands on its own once opened (and says *what*
+    was joined before asking for the click)."""
+    email_service.send_magic_link_email(
+        "someone@example.com",
+        "http://localhost:3000/verify/tok",
+        collection_headline="Chalmercadillo",
+    )
+    msg = mail.outbox[0]
+    assert "welcome to 'Chalmercadillo'" in msg.subject
+    assert "welcome to 'Chalmercadillo'" in msg.body
+    html = msg.alternatives[0][0]
+    # The greeting is the body's own bold headline. Django's autoescape turns
+    # the quotes around the name into &#x27; — assert the escaped form, that
+    # IS what the reader's client will decode back into 'Chalmercadillo'.
+    assert "<strong>Hello, welcome to &#x27;Chalmercadillo&#x27;!</strong>" in html
+    # The generic /login variant carries the same structure without a name.
+    mail.outbox.clear()
+    email_service.send_magic_link_email("someone@example.com", "http://x/verify/t")
+    assert "<strong>Hello, welcome to OIUEEI!</strong>" in mail.outbox[0].alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_magic_link_action_is_a_button_with_the_link_spelled_out():
+    """Email clients strip <form>/<button> and ignore CSS custom properties,
+    so the CTA is an inline-styled anchor in the app's literal bus blue — and
+    the raw link follows as text, because the one click this email exists for
+    is exactly what some clients refuse (CA, 2026-09-21)."""
+    link = "http://localhost:3000/verify/tok"
+    email_service.send_magic_link_email("someone@example.com", link)
+    html = mail.outbox[0].alternatives[0][0]
+    # The button: the magic link behind a bus-blue, white-text inline-styled
+    # anchor — the token styles travel inline or not at all.
+    assert (
+        f'<a href="{link}" '
+        'style="display:inline-block;background-color:#0000bf;color:#ffffff;' in html
+    )
+    # The fallback sentence, and the URL again as plain copy-pastable text.
+    assert "copy and paste this link into your browser" in html
+    assert f">{link}</a>" in html
+    # The plain-text half never stopped carrying the raw link.
+    assert link in mail.outbox[0].body
+
+
 @pytest.mark.django_db
 def test_the_invitation_email_tells_the_recipient_where_their_address_came_from():
     """Art. 14: this address was given to us by the inviter, not by its owner,

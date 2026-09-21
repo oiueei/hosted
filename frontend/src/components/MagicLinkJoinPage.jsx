@@ -5,6 +5,7 @@ import { TextInput, Button, Notification } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
 import PageLayout from './PageLayout';
+import ButtonLink from './ButtonLink';
 
 /**
  * Shared join landing page: an email form that POSTs to `/auth/join/` and
@@ -27,7 +28,8 @@ import PageLayout from './PageLayout';
  *   the real collection name once its `/share/{token}/preview/` GET lands, so a
  *   stranger sees "Join the Chalmercadillo", not "Join us on OIUEEI".
  * - `collectionDescription`: the collection's own description (already resolved
- *   to the reader's language) — a quiet paragraph under the intro when present.
+ *   to the reader's language) — rendered in the hero, under the title, when
+ *   present (PageLayout's `description` slot).
  * - `extraBody`: extra fields merged into the POST body.
  * - `endpoint`: which URL the form POSTs to (see `useJoin`) — every upstream
  *   caller leaves this at the default `/auth/join/`; a deployment's own open
@@ -62,19 +64,16 @@ export default function MagicLinkJoinPage({
     endpoint,
   });
 
-  const { btnStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle } = useTheeeme();
 
   return (
-    <PageLayout title={heroTitle}>
-      <p className="section-mt measure">{intro}</p>
-      {collectionDescription && (
-        <p
-          className="measure"
-          style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}
-        >
-          {collectionDescription}
-        </p>
-      )}
+    <PageLayout title={heroTitle} description={collectionDescription}>
+      {/* The door's first line of words, at the same size and weight as the
+          front door's pitch (.login-pitch, Body XL bold). A <p> here, not the
+          <h2> /login uses: this page's hero title is real words, so the intro
+          is body copy and must not enter the heading outline. The owner's own
+          description is already met above, in the hero. */}
+      <p className="login-pitch measure">{intro}</p>
       {status ? (
         <>
           <Notification
@@ -121,9 +120,14 @@ export default function MagicLinkJoinPage({
           {t('login.legalLink')}
         </Link>
       </p>
-      <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
-        <Link to="/login">{t(`${ns}.alreadyHaveAccount`)}</Link>
-      </p>
+      {/* The mirror of the front door's "new here?" button: someone who already
+          has an account is one secondary button away from /login — same shape
+          as the pop-in button there, so the two doors answer each other. */}
+      <div className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+        <ButtonLink to="/login" fullWidth style={btnSecondaryStyle}>
+          {t(`${ns}.alreadyHaveAccount`)}
+        </ButtonLink>
+      </div>
     </PageLayout>
   );
 }

@@ -21,6 +21,15 @@ the render.{% endcomment %}
 <ul>{% for l in b.links %}<li><a href="{{ l.url }}">{{ l.label }}</a></li>{% endfor %}</ul>
 {% elif b.type == "links" %}
 <p>{% for l in b.links %}<a href="{{ l.url }}">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
+{% elif b.type == "cta" %}
+{% comment %}The email action button. A real <button> or a CSS custom property
+would be ignored here — email clients strip forms and don't resolve var() — so
+this is an inline-styled anchor in the app's literal bus blue, followed by the
+action's URL as copy-pastable text for the clients (and the moments) where the
+button cannot be clicked.{% endcomment %}
+<p style="margin:20px 0;"><a href="{{ b.url }}" style="display:inline-block;background-color:#0000bf;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;line-height:1.4;text-decoration:none;padding:14px 24px;">{{ b.label }}</a></p>
+<p style="font-size:13px;color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
+<p style="font-size:13px;margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}">{{ b.url }}</a></p>
 {% elif b.type == "md" %}
 {{ b.html }}
 {% endif %}{% endfor %}

@@ -21,7 +21,7 @@ class TestEmailLanguage:
     def test_default_is_english(self):
         email_service.send_magic_link_email("a@example.com", "http://x/verify/tok")
         assert mail.outbox[0].subject == "Hello, welcome to OIUEEI!"
-        assert "Click here to sign in" in mail.outbox[0].body
+        assert "Click the link to sign in" in mail.outbox[0].body
 
     @override_settings(EMAIL_LANGUAGE="es")
     def test_spanish_deployment(self):
@@ -193,11 +193,11 @@ class TestCatalogueParity:
 
     def test_T_reads_settings_lazily(self):
         with override_settings(EMAIL_LANGUAGE="es"):
-            assert T("magic_cta") == "Iniciar sesión"
+            assert T("magic_cta") == "Iniciar sesión →"
         with override_settings(EMAIL_LANGUAGE="en"):
-            assert T("magic_cta") == "Sign in"
+            assert T("magic_cta") == "Sign in →"
         with override_settings(EMAIL_LANGUAGE="ca"):
-            assert T("magic_cta") == "Iniciar sessió"
+            assert T("magic_cta") == "Iniciar sessió →"
 
     @override_settings(EMAIL_LANGUAGE="ca")
     def test_ca_smoke(self):
