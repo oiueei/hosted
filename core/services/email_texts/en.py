@@ -30,9 +30,13 @@ TEXTS = {
     # Magic link
     "magic_subject": "Hello, welcome to OIUEEI!",
     "magic_subject_collection": "Hello, welcome to '{collection}' - OIUEEI!",
-    "magic_plain": "Hello! Click here to sign in: {link}",
-    "magic_intro": "Hello! Click here to sign in:",
-    "magic_cta": "Sign in",
+    # The greeting repeated at the top of the body — the inbox preview shows
+    # only the subject, the body has to stand on its own (see send_magic_link_email).
+    "magic_greeting": "Hello, welcome to OIUEEI!",
+    "magic_greeting_collection": "Hello, welcome to '{collection}'!",
+    "magic_plain": "Click the link to sign in: {link}",
+    "magic_cta": "Sign in →",
+    "magic_fallback": "If the button doesn't work, copy and paste this link into your browser:",
     # Collection invite
     "invite_subject": "You have an invitation to '{collection}' - OIUEEI!",
     "invite_plain": (

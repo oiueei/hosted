@@ -186,3 +186,55 @@ describe('MagicLinkJoinPage footer children (a deployment door adds its own link
     expect(screen.getByRole('link', { name: 'A deployment link' })).toHaveAttribute('href', '/faq');
   });
 });
+
+describe('MagicLinkJoinPage presentation (the door matches the front door)', () => {
+  test('the intro reads at the pitch size — but stays a paragraph, not a heading', () => {
+    // Same first line of words as /login's pitch: .login-pitch, Body XL bold.
+    // The element differs on purpose: this page's hero <h1> is real words
+    // ("Join us on OIUEEI"), so the intro is body copy and a heading here
+    // would put a full sentence in the outline.
+    renderShareVariant();
+    const intro = screen.getByText(/Enter your email and we'll send you a magic link/);
+    expect(intro.tagName).toBe('P');
+    expect(intro).toHaveClass('login-pitch');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Join us on OIUEEI' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+  });
+
+  test("the collection's own description is met in the hero, not repeated below it", () => {
+    // SharePage resolves the owner's description from the preview and hands it
+    // over; it belongs with the title in the koros band (PageLayout's
+    // `description` slot), where every other page carries it — not as a quiet
+    // paragraph under the form.
+    const { container } = render(
+      <MemoryRouter>
+        <MagicLinkJoinPage
+          ns="share"
+          docTitleKey="titles.share"
+          titleKey="share.pageTitle"
+          descriptionKey="share.pageDescription"
+          collectionDescription="We share the tools we have with the rest of the group."
+        />
+      </MemoryRouter>
+    );
+    const heroText = container.querySelector('.form-hero-text');
+    expect(heroText).not.toBeNull();
+    expect(heroText).toHaveTextContent('We share the tools we have with the rest of the group.');
+    // Once, in the hero — no muted duplicate in the page body.
+    expect(
+      screen.getAllByText(/We share the tools we have with the rest of the group\./)
+    ).toHaveLength(1);
+  });
+
+  test('"Already have an account" is a full-width button-shaped link, not bare text', () => {
+    // The mirror of the front door's "new here?" secondary button: one
+    // ButtonLink (one <a>, one tab stop) carrying the secondary tokens, so the
+    // two doors answer each other in the same shape.
+    renderShareVariant();
+    const link = screen.getByRole('link', { name: 'Already have an account? Sign in →' });
+    expect(link).toHaveClass('button-link--full');
+    expect(link).toHaveAttribute('href', '/login');
+  });
+});

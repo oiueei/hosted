@@ -76,84 +76,11 @@ export default function LoginPage() {
         />
       </div>
       <div className="page-container">
-        <p className="section-mt measure" style={{ fontWeight: 700 }}>
-          {t('login.pitch')}
-        </p>
-        <p
-          className="measure"
-          style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}
-        >
-          {t('login.description')}
-        </p>
-        <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
-          <Trans
-            i18nKey="login.licence"
-            components={[
-              <span key="0" />,
-              // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
-              <a
-                key="1"
-                href="https://github.com/oiueei/standalone"
-                target="_blank"
-                rel="noopener noreferrer"
-              />,
-            ]}
-          />
-        </p>
-        {/* The open code and the unfinished state are the two expectations this
-            screen owes a newcomer, so they sit together. Same sentence, word
-            for word, as the FAQ and the legal notice (common.alphaNotice). */}
-        <p
-          className="measure"
-          style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)' }}
-        >
-          {t('common.alphaNotice')}
-        </p>
-        <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
-          {t('login.manifesto')}
-        </p>
-        <p
-          className="measure"
-          style={{
-            marginTop: 'var(--spacing-2-xs)',
-            color: 'var(--color-black-60)',
-            fontSize: 'var(--fontsize-body-s)',
-          }}
-        >
-          <Trans
-            i18nKey="login.noBanner"
-            components={[
-              <span key="0" />,
-              // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
-              <a
-                key="1"
-                href="https://github.com/oiueei/standalone#privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-              />,
-            ]}
-          />
-        </p>
-        {/* Per-deployment note (who operates this instance and where it runs): empty in
-            the standalone repo, filled on the deploy branch — the same split as
-            src/legal/. Only rendered when the operator has actually written one. */}
-        {t('login.operator') ? (
-          <p
-            className="measure"
-            style={{
-              marginTop: 'var(--spacing-2-xs)',
-              color: 'var(--color-black-60)',
-              fontSize: 'var(--fontsize-body-s)',
-            }}
-          >
-            {t('login.operator')}
-          </p>
-        ) : null}
-        <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-          <Link to="/legal" className="legal-link">
-            {t('login.legalLink')}
-          </Link>
-        </p>
+        {/* What this page is, as a heading rather than a bold paragraph — the
+            hero's own <h1> is the logo, so this is the first thing with words
+            in it. Level 2 keeps the outline whole (h1 → h2); how big it looks
+            (Body XL bold) lives in .login-pitch. */}
+        <h2 className="login-pitch measure">{t('login.pitch')}</h2>
         {status ? (
           <>
             <Notification
@@ -204,21 +131,6 @@ export default function LoginPage() {
             </div>
           </form>
         )}
-        <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
-          <Link to="/contact" style={{ textDecoration: 'underline' }}>
-            {t('login.loginHelp')}
-          </Link>
-        </p>
-        {/* Only when this deployment has a help page (frontend/src/deployment).
-            Upstream there is no FAQ content to link to — same reasoning as
-            aboutPath: a link to a 404 is worse than one link fewer. */}
-        {faqPath && (
-          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-            <Link to={faqPath} style={{ textDecoration: 'underline' }}>
-              {t('login.faqLink')}
-            </Link>
-          </p>
-        )}
         {/* Only when this deployment has an open door (frontend/src/deployment).
             Without one there is nowhere for the button to go, and offering it
             would send a stranger to a 404 instead of telling them the truth:
@@ -230,6 +142,86 @@ export default function LoginPage() {
             </ButtonLink>
           </div>
         )}
+        {/* The one expectation this screen owes a newcomer, in brick and at a
+            size that is read rather than skimmed past — directly under the
+            door, so nobody signs in without having met it. Same sentence, word
+            for word, as the FAQ and the legal notice (common.alphaNotice). */}
+        <p className="login-alpha measure">{t('common.alphaNotice')}</p>
+        {/* Only when this deployment has a help page (frontend/src/deployment).
+            Upstream there is no FAQ content to link to — same reasoning as
+            aboutPath: a link to a 404 is worse than one link fewer. */}
+        {faqPath && (
+          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+            <Link to={faqPath} style={{ textDecoration: 'underline' }}>
+              {t('login.faqLink')}
+            </Link>
+          </p>
+        )}
+        {/* Everything a newcomer may want to read BEFORE typing an email, below
+            the door rather than in front of it: whoever already has an account
+            sees only the title and the form. The claims themselves are
+            unchanged — what moved is when you meet them. One block, one text
+            size (.login-footnotes), so a checkable claim never reads as small
+            print next to the licence. */}
+        <div className="login-footnotes">
+          <p className="measure">
+            <Trans
+              i18nKey="login.licence"
+              components={[
+                <span key="0" />,
+                // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
+                <a
+                  key="1"
+                  href="https://github.com/oiueei/standalone"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />,
+              ]}
+            />
+          </p>
+          <p
+            className="measure"
+            style={{ marginTop: 'var(--spacing-s)', color: 'var(--color-black-60)' }}
+          >
+            <Trans
+              i18nKey="login.noBanner"
+              components={[
+                <span key="0" />,
+                // eslint-disable-next-line jsx-a11y/anchor-has-content -- the link text is injected by <Trans> from the i18n string at runtime
+                <a
+                  key="1"
+                  href="https://github.com/oiueei/standalone#privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />,
+              ]}
+            />
+          </p>
+          {/* Per-deployment note (who operates this instance and where it runs): empty in
+              the standalone repo, filled on the deploy branch — the same split as
+              src/legal/. Only rendered when the operator has actually written one. */}
+          {t('login.operator') ? (
+            <p
+              className="measure"
+              style={{ marginTop: 'var(--spacing-2-xs)', color: 'var(--color-black-60)' }}
+            >
+              {t('login.operator')}
+            </p>
+          ) : null}
+          {/* The locked-out user's lifeline, paired with the legal link at the
+              foot of the page: both are things you go looking for deliberately,
+              and neither belongs between someone and the field they came for. */}
+          <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+            <Link to="/contact" style={{ textDecoration: 'underline' }}>
+              {t('login.loginHelp')}
+            </Link>
+          </p>
+          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
+            <Link to="/legal" className="legal-link">
+              {t('login.legalLink')}
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

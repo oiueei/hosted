@@ -15,9 +15,9 @@ that lets recipients change preferences without logging in.
 
 HTML bodies are rendered from the autoescaping ``email/layout.html`` template via
 small block builders (``_para``/``_strong``/``_field``/``_list``/``_links``/
-``_heading``), so user-supplied values are escaped by the template engine — no
-manual ``escape()`` in the body composition. Plain-text bodies (no XSS surface)
-stay as plain strings.
+``_heading``/``_cta``), so user-supplied values are escaped by the template
+engine — no manual ``escape()`` in the body composition. Plain-text bodies (no
+XSS surface) stay as plain strings.
 """
 
 import functools
@@ -559,6 +559,20 @@ def _links(*links):
     return {"type": "links", "links": [{"url": url, "label": label} for url, label in links]}
 
 
+def _cta(url, label, fallback):
+    """An email's single action as a button, with the URL spelled out under it.
+
+    The layout renders an inline-styled ``<a>`` (bus blue, literal hex) rather
+    than a ``<button>``: email clients strip forms and buttons, and none of
+    them resolves a CSS custom property, so the app's primary button can only
+    travel as a styled link. The ``fallback`` sentence and the raw URL beside
+    it cover the clients — and the moments — where the button cannot be
+    clicked at all (CA, 2026-09-21: this is the magic link, the one email
+    whose whole job is that one click).
+    """
+    return {"type": "cta", "url": url, "label": label, "fallback": fallback}
+
+
 # The owner's email note (Collection.email_note) renders a small Markdown subset
 # into an ``md`` block — the ONE block type whose html arrives pre-built and
 # mark_safe()d rather than autoescaped. See _note_blocks for the invariant.
@@ -848,16 +862,20 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
     """
     T = _texts(lang)
     if collection_headline:
-        subject = T("magic_subject_collection").format(
-            collection=resolve_localized(collection_headline, lang)
-        )
+        name = resolve_localized(collection_headline, lang)
+        subject = T("magic_subject_collection").format(collection=name)
+        greeting = T("magic_greeting_collection").format(collection=name)
     else:
         subject = T("magic_subject")
-    plain = T("magic_plain").format(link=magic_link)
+        greeting = T("magic_greeting")
+    # The subject's greeting opens the body too, in both formats: an inbox
+    # preview shows only the subject, and a body that starts at "click here"
+    # without naming what was joined reads as a form letter (CA, 2026-09-21).
+    plain = f"{greeting}\n\n{T('magic_plain').format(link=magic_link)}"
     html = _render_email(
         [
-            _para(T("magic_intro")),
-            _links((magic_link, T("magic_cta"))),
+            _strong(greeting),
+            _cta(magic_link, T("magic_cta"), T("magic_fallback")),
         ],
         lang=lang,
     )
