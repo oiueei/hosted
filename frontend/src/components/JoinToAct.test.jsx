@@ -50,6 +50,19 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     });
   });
 
+  test('the intro reads at the pitch size — but stays a paragraph, not a heading', () => {
+    // Same first line of words as /login's pitch: .login-pitch, Body XL bold
+    // (CA, 2026-09-21). The element differs on purpose: JoinPage's hero <h1> is
+    // real words, so this is body copy, and a heading here would put a full
+    // sentence in the outline.
+    renderJoin();
+
+    const intro = screen.getByText(/Tool Library/);
+    expect(intro.tagName).toBe('P');
+    expect(intro).toHaveClass('login-pitch');
+    expect(screen.queryByRole('heading')).toBeNull();
+  });
+
   test('a server failure reports inline and keeps the form usable', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
