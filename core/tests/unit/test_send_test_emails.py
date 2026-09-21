@@ -134,6 +134,47 @@ def test_no_email_in_any_language_leaks_an_unfilled_placeholder():
 
 
 @pytest.mark.django_db
+def test_the_mark_closes_every_html_email_right_above_the_legal_link():
+    """The OIUEEI mark's place is a rule of the layout (CA, 2026-09-21): one 53x15
+    mark, after the body, directly above "Legal & privacy". Checked here across
+    every real email in every language — the operator's own mail included, it
+    goes through the same layout — rather than on the two or three a unit test
+    builds by hand."""
+    sent = _run("--lang", "all")
+
+    assert len(sent) == len(SAMPLES) * len(LANGS)
+    for message in sent:
+        html = message.alternatives[0][0]
+        assert html.count("cid:oiueei-logo") == 1, message.subject
+        between = html[html.index("cid:oiueei-logo") : html.index("/legal")]
+        assert between.count("<p") == 1, message.subject
+
+
+@pytest.mark.django_db
+def test_every_email_says_everything_at_one_text_size():
+    """Body, buttons, links and footers share one size, `EMAIL_FONT_SIZE` (CA,
+    2026-09-21): it was 16px on the buttons, 13px on the fallback links, 12px on
+    the legal link and the footers, and whatever the client chose for the body —
+    so the same message read differently in Gmail and in Apple Mail. Checked on
+    every real email in every language, footers and the viral line included (they
+    are appended after the layout). The one exception is the collection-name
+    header, a title, and there is at most one of it."""
+    size = email_service.EMAIL_FONT_SIZE
+    sizes = re.compile(r"font-size:\s*([0-9.]+px)")
+
+    for message in _run("--lang", "all"):
+        found = sizes.findall(message.alternatives[0][0])
+        assert found, message.subject
+        assert set(found) <= {size, "18px"}, (message.subject, sorted(set(found)))
+        assert found.count("18px") <= 1, message.subject
+
+
+def test_the_button_styles_use_the_shared_size():
+    assert f"font-size:{email_service.EMAIL_FONT_SIZE};" in email_service.BTN_PRIMARY
+    assert f"font-size:{email_service.EMAIL_FONT_SIZE};" in email_service.BTN_SECONDARY
+
+
+@pytest.mark.django_db
 def test_only_narrows_the_samples():
     sent = _run("--only", "invite")
 

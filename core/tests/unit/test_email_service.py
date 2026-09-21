@@ -236,6 +236,16 @@ LOGO_IMG = (
     'style="display:block;width:53px;height:15px;border:0;">'
 )
 
+
+def _assert_the_mark_sits_right_above_the_legal_link(html):
+    """The OIUEEI mark closes every message, directly above "Legal & privacy"
+    (CA, 2026-09-21): exactly one, and nothing but the legal paragraph between
+    them. It used to lead the messages that had no collection header."""
+    assert html.count(LOGO_IMG) == 1
+    assert html.index(LOGO_IMG) < html.index("Legal")
+    assert html[html.index(LOGO_IMG) : html.index("Legal")].count("<p") == 1
+
+
 # --- The invitation: accept / decline as buttons (CA, 2026-09-21) -------------
 
 INVITE_ACCEPT = "http://localhost:3000/rsvp/accept"
@@ -593,15 +603,15 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
 # --- The collection name is the header, not the OIUEEI logo -----------------
 #
 # People recognise the group they're in, not the software. So a collection-
-# scoped email leads with the collection name where the logo used to sit, and
-# the logo drops to a half-size mark below the legal link.
+# scoped email leads with the collection name where the logo used to sit; the
+# small OIUEEI mark closes every message, right above the legal link.
 
 
 @pytest.mark.django_db
 def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, thing):
     """The `thing` fixture lives in "Test Collection". A reservation-style email
-    about it names that collection at the top, drops the wordmark to the
-    half-size mark at the foot, and puts the name on the first line of the
+    about it names that collection at the top, puts the small wordmark at the
+    foot above the legal link, and puts the name on the first line of the
     plain body too."""
     from datetime import date
 
@@ -627,18 +637,19 @@ def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, t
     # The name is the header: bold, before the body, before the legal link.
     assert "Test Collection" in html
     assert html.index("Test Collection") < html.index("Legal")
-    # The wordmark is the small mark, after the legal link, not at the top.
-    assert html.count(LOGO_IMG) == 1
-    assert html.index("Legal") < html.index(LOGO_IMG)
+    # The wordmark is the small mark, closing the message right above the legal
+    # link — after the body, never at the top.
+    _assert_the_mark_sits_right_above_the_legal_link(html)
+    assert html.index("Test Collection") < html.index(LOGO_IMG)
     # Plain-text body opens with the collection name.
     assert msg.body.startswith("Test Collection")
 
 
 @pytest.mark.django_db
-def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
-    """A thing in no collection has no group to name, so the OIUEEI wordmark
-    stays where it was — at the top, and at the same small size as the footer
-    mark (CA, 2026-09-21) — and nothing is prepended to the plain body."""
+def test_a_standalone_things_email_has_no_header_and_the_mark_at_the_foot(user, user2):
+    """A thing in no collection has no group to name, so nothing leads the
+    message but its own content; the small OIUEEI mark still closes it above the
+    legal link (CA, 2026-09-21), and nothing is prepended to the plain body."""
     from datetime import date
 
     from core.models import BookingPeriod, Thing
@@ -660,22 +671,21 @@ def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
     )
 
     html = mail.outbox[0].alternatives[0][0]
-    assert html.count(LOGO_IMG) == 1
-    # It leads the message: the very first paragraph, nothing drawn before it.
-    assert html[: html.index(LOGO_IMG)].count("<p") == 1
+    _assert_the_mark_sits_right_above_the_legal_link(html)
+    # No logo at the top: the body comes first, the mark after it.
+    assert html.index("Ladder") < html.index(LOGO_IMG)
     assert not mail.outbox[0].body.startswith("Ladder")
 
 
 @pytest.mark.django_db
-def test_a_non_collection_email_is_unchanged(user):
+def test_a_non_collection_email_grows_no_header(user):
     """Account-lifecycle mail (here: the erasure link) has no collection, so it
-    keeps the wordmark on top and grows no header."""
+    grows no header — and the mark sits at the foot like everywhere else."""
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]
-    assert html.count(LOGO_IMG) == 1
-    # It leads the message: the very first paragraph, nothing drawn before it.
-    assert html[: html.index(LOGO_IMG)].count("<p") == 1
+    _assert_the_mark_sits_right_above_the_legal_link(html)
+    assert "font-size:18px;font-weight:700" not in html
 
 
 @pytest.mark.django_db

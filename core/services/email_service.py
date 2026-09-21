@@ -340,7 +340,7 @@ def _send_per_language(
                 label, link = extra
                 plain = f"{plain}\n\n{label}: {link}"
                 html = (
-                    f'{html}<p style="color:#666;font-size:12px;">'
+                    f'{html}<p style="color:#666;font-size:{EMAIL_FONT_SIZE};">'
                     f'<a href="{escape(link)}">{escape(label)}</a></p>'
                 )
         _send(
@@ -354,6 +354,14 @@ def _send_per_language(
             lang=lang,
             collection=collection,
         )
+
+
+# One text size for everything an email says — body, buttons, links, footers (CA,
+# 2026-09-21). Set explicitly rather than left to the client, which is what let the
+# same message read at a different size in Gmail and in Apple Mail, and what let a
+# 16px button sit under 13px links. The one exception is the collection-name header
+# at the top of a message, a title and not text, which stays larger.
+EMAIL_FONT_SIZE = "13px"
 
 
 def _frontend_base_url():
@@ -378,7 +386,7 @@ def _with_footer(plain, html, email, category, user=_UNSET, lang=None):
     footer_plain = f"\n\n---\n{manage}: {link}"
     footer_html = (
         '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
-        '<p style="color:#666;font-size:12px;">'
+        f'<p style="color:#666;font-size:{EMAIL_FONT_SIZE};">'
         f'{escape(manage)}: <a href="{escape(link)}">{escape(link)}</a>'
         "</p>"
     )
@@ -402,7 +410,7 @@ def _with_viral_line(plain, html, user=_UNSET, lang=None):
     url = f"{_frontend_base_url()}/collections/new"
     plain += f"\n\n{line['text']}\n{line['cta']}: {url}"
     html += (
-        '<p style="margin-top:24px;font-size:13px;">'
+        f'<p style="margin-top:24px;font-size:{EMAIL_FONT_SIZE};">'
         f"{escape(line['text'])} "
         f'<a href="{escape(url)}">{escape(line["cta"])}</a>'
         "</p>"
@@ -581,12 +589,12 @@ def _cta(url, label, fallback):
 # to the layout, so the three button blocks cannot drift apart.
 BTN_PRIMARY = (
     "display:inline-block;background-color:#0000bf;color:#ffffff;"
-    "font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;"
+    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_FONT_SIZE};font-weight:600;"
     "line-height:1.4;text-decoration:none;padding:14px 24px;"
 )
 BTN_SECONDARY = (
     "display:inline-block;background-color:#ffffff;color:#000000;border:2px solid #0000bf;"
-    "font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;"
+    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_FONT_SIZE};font-weight:600;"
     "line-height:1.4;text-decoration:none;padding:12px 22px;"
 )
 
@@ -784,12 +792,11 @@ def _headline_prefix(header, plain):
 def _render_email(blocks, lang=None, header=None):
     """Render the HTML body from a list of blocks through the autoescaping layout.
 
-    ``header``, when set, is the collection name: it replaces the OIUEEI logo at
-    the top of the message and the logo drops to a half-size mark below the
-    legal link (``layout.html``). The plain-text counterpart is
-    ``_headline_prefix``, applied at the ``_send`` call. Left unset (operator
-    mail, magic links, account-lifecycle mail) the logo stays at the top as
-    before.
+    ``header``, when set, is the collection name and leads the message; the
+    plain-text counterpart is ``_headline_prefix``, applied at the ``_send``
+    call. The OIUEEI mark no longer depends on it: it sits right above the legal
+    link in every email (``layout.html``), so a message with no header simply
+    starts with its own content.
 
     ``has_logo`` mirrors whether ``_send()`` will find the asset to attach —
     the ``cid:`` reference is only rendered when there's a matching attachment
@@ -817,6 +824,7 @@ def _render_email(blocks, lang=None, header=None):
             "lang": resolved_lang,
             "legal_url": f"{_frontend_base_url()}/legal",
             "legal_label": T("footer_legal", lang=lang),
+            "font_size": EMAIL_FONT_SIZE,
             "btn_primary": BTN_PRIMARY,
             "btn_secondary": BTN_SECONDARY,
         },

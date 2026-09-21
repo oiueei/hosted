@@ -5,14 +5,15 @@ the "md" block (the owner's email note): its html arrives pre-built, escaped
 once and mark_safe()d, by email_service._note_blocks. This is a comment block
 rather than a one-line hash comment, so the multi-line note is stripped from
 the render.{% endcomment %}
-{% comment %}The OIUEEI mark is 53x15 wherever it appears — leading the message
-when there is no collection header, below the legal link when there is one (CA,
-2026-09-21). The size is declared twice, as attributes and as inline CSS, and the
-attached PNG is only 106x30 (twice the displayed size, for retina): Apple Mail
-ignored the attributes and drew the old 212x60 file at its natural size, giant,
-while Gmail honoured them.{% endcomment %}
+{% comment %}The OIUEEI mark closes the message: always 53x15, always right above the
+legal link (CA, 2026-09-21) — it used to lead the messages that had no collection
+header and follow the legal link in the ones that did. The size is declared twice,
+as attributes and as inline CSS, and the attached PNG is only 106x30 (twice the
+displayed size, for retina): Apple Mail ignored the attributes and drew the old
+212x60 file at its natural size, giant, while Gmail honoured them.{% endcomment %}
 <html lang="{{ lang }}">
-{% if header %}<p style="font-size:18px;font-weight:700;margin:0 0 16px;">{{ header }}</p>{% elif has_logo %}<p><img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" style="display:block;width:53px;height:15px;border:0;"></p>{% endif %}
+{% if header %}<p style="font-size:18px;font-weight:700;margin:0 0 16px;">{{ header }}</p>{% endif %}
+<div style="font-size:{{ font_size }};">
 {% for b in blocks %}{% if b.type == "para" %}
 <p>{{ b.text }}</p>
 {% elif b.type == "strong" %}
@@ -39,8 +40,8 @@ this is an inline-styled anchor in the app's literal bus blue, followed by the
 action's URL as copy-pastable text for the clients (and the moments) where the
 button cannot be clicked.{% endcomment %}
 <p style="margin:20px 0;"><a href="{{ b.url }}" style="{{ btn_primary }}">{{ b.label }}</a></p>
-<p style="font-size:13px;color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
-<p style="font-size:13px;margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}">{{ b.url }}</a></p>
+<p style="font-size:{{ font_size }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
+<p style="font-size:{{ font_size }};margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}">{{ b.url }}</a></p>
 {% elif b.type == "ctas" %}
 {% comment %}Two email actions, a primary and a secondary — see email_service._ctas.
 Same constraints as the "cta" block above (inline styles, literal hex, no
@@ -49,12 +50,13 @@ same bus blue as the border, black text — the app's own split. Its padding is
 two pixels short of the primary's on every side so the border brings both
 buttons to the same outer size. Both URLs follow as text, accept first.{% endcomment %}
 <p style="margin:20px 0 8px;"><a href="{{ b.primary.url }}" style="{{ btn_primary }}margin:0 12px 12px 0;">{{ b.primary.label }}</a><a href="{{ b.secondary.url }}" style="{{ btn_secondary }}margin:0 0 12px 0;">{{ b.secondary.label }}</a></p>
-<p style="font-size:13px;color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
-<p style="font-size:13px;margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}">{{ b.primary.url }}</a></p>
-<p style="font-size:13px;margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}">{{ b.secondary.url }}</a></p>
+<p style="font-size:{{ font_size }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
+<p style="font-size:{{ font_size }};margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}">{{ b.primary.url }}</a></p>
+<p style="font-size:{{ font_size }};margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}">{{ b.secondary.url }}</a></p>
 {% elif b.type == "md" %}
 {{ b.html }}
 {% endif %}{% endfor %}
-<p style="color:#666;font-size:12px;margin-top:24px;"><a href="{{ legal_url }}">{{ legal_label }}</a></p>
-{% if header and has_logo %}<p style="margin-top:16px;"><img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" style="display:block;width:53px;height:15px;border:0;"></p>{% endif %}
+</div>
+{% if has_logo %}<p style="margin:24px 0 8px;"><img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" style="display:block;width:53px;height:15px;border:0;"></p>{% endif %}
+<p style="color:#666;font-size:{{ font_size }};margin-top:{% if has_logo %}8{% else %}24{% endif %}px;"><a href="{{ legal_url }}">{{ legal_label }}</a></p>
 </html>
