@@ -220,8 +220,9 @@ export default function CollectionPage() {
   const singleType = (collection.allowed_thing_types || []).length === 1;
 
   // When the owner has given the group its own web address, the hero's back
-  // link ("← Inici") points there instead of the OIUEEI home. `sanitizeUrl`
-  // returns "#" for anything that isn't http(s), and we ignore that.
+  // link goes there instead of the OIUEEI home — but it still says "Home"
+  // (CA, 2026-09-21). `sanitizeUrl` returns "#" for anything that isn't
+  // http(s), and we ignore that.
   const homePageUrl = collection.home_page ? sanitizeUrl(collection.home_page) : '';
   const backHref = homePageUrl && homePageUrl !== '#' ? homePageUrl : null;
 
@@ -248,11 +249,11 @@ export default function CollectionPage() {
                 isPublic={collection.visibility === 'PUBLIC'}
               />
             )}
-            <BackLink
-              to="/"
-              href={backHref}
-              label={backHref ? t('collectionPage.backToSite') : t('common.home')}
-            />
+            {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
+                `home_page` when it has one, the app's home otherwise. It used to be
+                worded "The group's site" with an external-link icon; the wording
+                and the icon went, the destination stayed. */}
+            <BackLink to="/" href={backHref} label={t('common.home')} />
             <h1 className="form-hero-title">
               {headline}
               {isCurator && collection.mode === 'COMMUNITY' && (
