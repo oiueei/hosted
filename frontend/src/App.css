@@ -297,6 +297,21 @@ body {
   }
 }
 
+/* Photo hero, >=768px: the photo is an absolutely-positioned background across
+   the right of the hero, and the collection's description — a full-width block
+   in the content column — ran straight over it (CA, 2026-09-21). Keep the text
+   out of the photo's third. Percentages of padding resolve against the content
+   column's width, so it scales with the hero rather than being a fixed gap.
+   Below 768px the photo stacks under the text and there is nothing to avoid, so
+   a phone keeps its whole width for the words. The selector names the
+   description exactly: the "Curator:" attribution lines are short and stay as
+   they were, and UserPage's own .form-hero-text is not a markdown block. */
+@media (min-width: 768px) {
+  .form-hero--photo .markdown-text.form-hero-text {
+    padding-right: 34%;
+  }
+}
+
 .form-page {
   min-height: 100vh;
   background-color: var(--color-black-5);
