@@ -84,7 +84,13 @@ export default function MagicLinkJoinPage({
           >
             {message}
           </Notification>
-          {status === 'success' && <p className="section-mt">{t('common.closeThisTab')}</p>}
+          {/* Air between the notice and this line (CA, 2026-09-21): section-mt
+              pinned it flush against the Notification above. */}
+          {status === 'success' && (
+            <p style={{ marginTop: 'var(--spacing-s)', marginBottom: 'var(--spacing-m)' }}>
+              {t('common.closeThisTab')}
+            </p>
+          )}
         </>
       ) : (
         <form onSubmit={submit} className="measure">

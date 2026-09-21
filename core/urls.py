@@ -8,7 +8,7 @@ Never expose real codes (booking_code, reservation_code, etc.) in URLs.
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import path
-from django_ratelimit.decorators import ratelimit
+from django_ratelimit.core import is_ratelimited
 from rest_framework.routers import DefaultRouter
 
 from .views.auth import (
@@ -68,7 +68,6 @@ from .views.upload import UploadTicketView
 from .views.users import UserDetailView
 
 
-@ratelimit(key="ip", rate="60/m", method=("GET", "HEAD"), block=False)
 def health_check(request):
     """Liveness + database health, for uptime monitors.
 
@@ -81,16 +80,43 @@ def health_check(request):
     database on every hit: uncapped, it is cheap DB amplification rather than a
     monitor. 60/m per IP sits far above any real monitor (a 5-minute cadence is
     0.2/m) and far below a useful flood. HEAD counts too — monitors prefer it, so
-    a limiter scoped to GET alone would leave the flood one verb away.
+    a limiter scoped to GET alone would leave the flood one verb away. The cap
+    spares the connection and the query, not the database itself: the limiter's
+    own counter lives in ``CACHES['default']``, which here is ``DatabaseCache``
+    (config/settings/base.py) — so a capped flood still costs one indexed cache
+    read apiece.
 
-    ``block=False`` and an explicit 429: this is a plain Django view, not a DRF
-    one, so the handler that turns django-ratelimit's ``Ratelimited`` into a 429
-    (``core.exceptions.api_exception_handler``) never runs here — blocking would
-    answer 403, and "forbidden" is the wrong thing to tell a monitor about a
-    throttle. The refusal is returned before the database is touched, which is
-    the entire point of the cap.
+    **The limiter is called by hand, inside a ``try``, rather than through
+    ``@ratelimit``**, and that is the whole point of this shape. Its store being
+    the database means the one outage this endpoint exists to report is also the
+    outage that stops the limiter working: as a decorator it ran *before* the
+    body, so a refused Postgres connection surfaced from the limiter as an
+    unhandled exception and the monitor got a 500 with a traceback in Sentry,
+    never the 503 below (production, 2026-09-16 23:33 CEST — UptimeRobot's HEAD
+    probe). A limiter that cannot reach its counter must not be able to veto the
+    answer; the outage it failed on is the answer. Pinned by
+    ``test_health.py::test_degraded_when_the_outage_takes_the_limiter_with_it``.
+
+    An explicit 429 rather than ``block=True``: this is a plain Django view, not
+    a DRF one, so the handler that turns django-ratelimit's ``Ratelimited`` into
+    a 429 (``core.exceptions.api_exception_handler``) never runs here — blocking
+    would answer 403, and "forbidden" is the wrong thing to tell a monitor about
+    a throttle.
     """
-    if getattr(request, "limited", False):
+    try:
+        limited = is_ratelimited(
+            request=request,
+            # The group the @ratelimit decorator derived from this function, kept
+            # verbatim so live counters survive the change.
+            group="core.urls.health_check",
+            key="ip",
+            rate="60/m",
+            method=("GET", "HEAD"),
+            increment=True,
+        )
+    except Exception:
+        limited = False
+    if limited:
         return JsonResponse({"status": "throttled"}, status=429)
     try:
         with connection.cursor() as cursor:

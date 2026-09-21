@@ -12,8 +12,8 @@ import JoinPage from '../pages/JoinPage';
 
 // JoinPage is where an anonymous visitor is asked for their email — the first
 // screen of the viral funnel. It used to take the collection's name only from
-// navigation state, which just one caller passes (ThingLinkbox). The hero's own
-// "Join to take part" link, a refresh and a shared /join URL all arrived with
+// navigation state, which just one caller passes (ThingLinkbox). ThingPage's
+// reserve button, a refresh and a shared /join URL all arrived with
 // nothing, so the page asked a stranger to join "Collection".
 function renderJoin(state, search = '') {
   return render(

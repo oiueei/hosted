@@ -68,6 +68,11 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
 
     await screen.findByText(/Magic link sent! Check your inbox/);
     expect(screen.getByText(/You can close this tab now/)).toBeInTheDocument();
+    // Not flush against the notice above it (CA, 2026-09-21) — the line is
+    // the message's quiet coda, not a footnote stapled to the box.
+    expect(screen.getByText(/You can close this tab now/)).toHaveStyle({
+      marginTop: 'var(--spacing-s)',
+    });
     expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
   });
 
