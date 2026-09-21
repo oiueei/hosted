@@ -321,15 +321,12 @@ export default function CollectionPage() {
                 </a>
               </p>
             )}
-            {!isAuthenticated && (
-              <p className="invite-nudge">
-                {t('collectionPage.anonIntro')}{' '}
-                <Link to={`/collections/${code}/join`} className="owner-link">
-                  {t('collectionPage.anonIntroLink')}
-                </Link>
-              </p>
-            )}
-            {/* The same invitation for a reader who is already signed in. They
+            {/* A signed-out reader used to get a one-line "This group shares its
+              things on OIUEEI. Join to take part →" here; it was removed (CA,
+              2026-09-21). They still reach /collections/:code/join from the
+              action button on any card (login-to-act) — but not from an empty
+              group, which has no card to click. */}
+            {/* An invitation for a reader who is already signed in. They
               cannot be sent down the anonymous funnel — it asks for an email and
               answers with a magic link — so they get the action itself. Only on
               a PUBLIC collection: a private one is unreachable without an

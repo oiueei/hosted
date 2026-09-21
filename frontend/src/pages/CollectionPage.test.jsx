@@ -70,22 +70,32 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 });
 
-describe('CollectionPage anonymous visitor intro', () => {
-  test('shows a join link for a signed-out visitor', async () => {
+describe('CollectionPage signed-out reader', () => {
+  /**
+   * The hero's "This group shares its things on OIUEEI. Join to take part →"
+   * line was removed (CA, 2026-09-21). A signed-out reader still reaches
+   * /collections/:code/join from the action button on any card (login-to-act,
+   * pinned in `thingBooking.test.jsx`); what is gone is the standing invitation
+   * in the hero.
+   *
+   * Asserted through the link's target and the raw i18n key — the strings went
+   * with the line, so a resurrected `t('collectionPage.anonIntro')` renders its
+   * own key and an English-text query would pass for the wrong reason.
+   */
+  const PUBLIC_VIEW = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    visibility: 'PUBLIC',
+    owner: 'OTHER1',
+    is_curator: false,
+    is_member: false,
+  };
+
+  test('is offered no join line in the hero', async () => {
     localStorage.clear();
-    render(
-      <MemoryRouter initialEntries={['/collections/COL001']}>
-        <Routes>
-          <Route path="/collections/:code" element={<CollectionPage />} />
-        </Routes>
-      </MemoryRouter>
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => PUBLIC_VIEW })
     );
-
-    const link = await screen.findByRole('link', { name: /join to take part/i });
-    expect(link).toHaveAttribute('href', '/collections/COL001/join');
-  });
-
-  test('does not show the join link for an authenticated visitor', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/collections/COL001']}>
         <Routes>
@@ -97,7 +107,8 @@ describe('CollectionPage anonymous visitor intro', () => {
     await waitFor(() => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
-    expect(screen.queryByRole('link', { name: /join to take part/i })).toBeNull();
+    expect(container.querySelector('a[href="/collections/COL001/join"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/collectionPage\.anonIntro/);
   });
 });
 
@@ -428,7 +439,7 @@ describe('A signed-in visitor on a public group', () => {
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
   });
 
-  test('a signed-out reader of an empty group is not sent to a form either', async () => {
+  test('a signed-out reader of an empty group is not sent to a form, nor offered a way in', async () => {
     localStorage.clear();
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
@@ -439,8 +450,14 @@ describe('A signed-in visitor on a public group', () => {
     expect(await screen.findByText(/No things in this collection yet/)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
-    // What they are offered instead is the way in.
-    expect(screen.getByRole('link', { name: /join to take part/i })).toBeInTheDocument();
+    // The hero's standing "Join to take part" line is gone (CA, 2026-09-21), and
+    // an empty group has no card whose action button could route them to the
+    // join page — so this reader is offered no way in at all. That is the known
+    // cost of removing the line, pinned so it stays a decision and cannot
+    // become an accident: if a way in is added, this is the test to change.
+    // By target, not by name: a resurrected line would render its raw i18n key
+    // (the strings were deleted), which no /join/ name query would ever match.
+    expect(document.querySelector('a[href$="/join"]')).toBeNull();
   });
 
   test('a member of an empty group is invited to start it', async () => {

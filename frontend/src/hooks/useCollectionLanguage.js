@@ -8,7 +8,7 @@ const SUPPORTED_CODES = SUPPORTED_LANGUAGES.map((entry) => entry.code);
 
 /**
  * Applies a collection's own language to a page's generic interface chrome —
- * "Join to take part", "Curator:", every plain i18n string around the owner's
+ * "Curator:", "Join this group", every plain i18n string around the owner's
  * own headline/description, which already renders in the collection's
  * language for anyone via `resolve_localized` (`utils/localized.js`)
  * regardless of who is looking.
