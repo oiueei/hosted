@@ -205,6 +205,8 @@ git push heroku HEAD:main
 
 The `Procfile` release command runs migrations automatically on each deploy. If for any reason you need to run them manually:
 
+> **Before a deploy that carries migrations**, take a capture of your own — `heroku pg:backups:capture -a your-app-name` — rather than trusting that last night's scheduled one is close enough. **And delete it once the release has settled**: manual captures do not rotate with the daily ones, so one left behind quietly outlives whatever retention window you promise your members. See [Backups & the restore drill](#backups--the-restore-drill).
+
 ```bash
 heroku run python manage.py migrate -a your-app-name
 ```
@@ -361,37 +363,63 @@ If you want a periodic report on your own numbers, the `Event` log and `DailyAct
 
 ## Backups & the restore drill
 
-Scheduled logical backups run daily (`heroku pg:backups:schedule DATABASE_URL --at '04:00 Europe/Madrid' -a your-app-name`; check with `heroku pg:backups:schedules`). **An untested backup is a hope, not a backup** — run this drill after any big schema change, and at least every ~6 months. It restores the latest backup into a **throwaway** database and never touches production:
+Scheduled logical backups run daily (`heroku pg:backups:schedule DATABASE_URL --at '04:00 Europe/Madrid' -a your-app-name`; check with `heroku pg:backups:schedules`).
+
+**What that buys, and what it doesn't.** `heroku pg:info` prints two lines that read like a contradiction and are not: on an Essential-tier database `Rollback: Unsupported` sits next to `Continuous Protection: On`. The continuous protection is Heroku's own — it is how *they* recover their fleet, and you cannot invoke it. Your instrument is the daily dump, so **the worst case is losing up to a day** (a failure at 03:59 falls back to yesterday's 04:00 run). Point-in-time recovery starts at the Standard tier; if a day of loss is too much for what your deployment holds, that is the decision to take, not a backup setting to tune.
+
+**The schedule belongs to one database, not to the app.** It is armed against a specific `DATABASE_URL`. Recreate or swap the Postgres add-on — a plan change, a restore-from-scratch, anything that gives you a new database — and the schedule does not follow: re-arm it and check `pg:backups:schedules` afterwards.
+
+**Scheduled backups rotate; the ones you take by hand do not.** A capture before a risky deploy (`heroku pg:backups:capture`) is a good habit, and it lives on its own for as long as you leave it there — the daily window closes over the automatic ones around it and steps over yours. That matters beyond tidiness: **if your privacy notice tells people how long backups keep their data, a forgotten manual capture makes that sentence false**, and in the direction that counts. So delete it once the release has settled — `heroku pg:backups:delete <id> -a your-app-name --confirm your-app-name` — and make that the step after "the deploy is good", not a thing you remember later. Automating the deletion is the wrong reflex: the daily ones already rotate, so a cron would only ever clean up after a human decision, and it needs a write-scoped Heroku token — which on Heroku is account-wide, so the job that prunes backups can also delete the app. If you want a safety net, let it be one that **tells** you a backup has aged past your stated window (a read-scoped token, `heroku authorizations:create --scope read`), and keep the deletion in human hands.
+
+**An untested backup is a hope, not a backup** — run this drill after any big schema change, and at least every ~6 months. It restores the latest backup into a **throwaway** database and never touches the one your app is serving from:
 
 ```bash
 # 1. Confirm backups exist and are Completed
 heroku pg:backups -a your-app-name
 
-# 2. Create a throwaway database (cents/hour, prorated).
-#    Note the HEROKU_POSTGRESQL_<COLOR>_URL name it prints.
+# 2. Create a throwaway database (cents/hour, prorated), then STOP and read
+#    `pg:info`: DATABASE_URL must still name your original add-on, and the new
+#    one comes up as HEROKU_POSTGRESQL_<COLOR>_URL. Copy that name from the
+#    output — the next command is the one that can go wrong, and typing the
+#    colour from memory is how it does.
 heroku addons:create heroku-postgresql:essential-0 -a your-app-name
 heroku addons:wait -a your-app-name
+heroku pg:info -a your-app-name
 
-# 3. Restore the latest backup INTO THE THROWAWAY — always name the target!
-#    (Without an explicit target, pg:backups:restore restores over DATABASE_URL:
-#    that is the disaster-recovery command, not the drill.)
-heroku pg:backups:restore <backup-id> HEROKU_POSTGRESQL_<COLOR>_URL \
-  -a your-app-name --confirm your-app-name
+# 3. Restore the latest backup INTO THE THROWAWAY — always name the target, and
+#    deliberately WITHOUT --confirm: the prompt is the last thing standing
+#    between a drill and an overwrite, and it names the database it is about to
+#    erase. Read it. If it says DATABASE_URL, or anything but your throwaway,
+#    answer nothing and start again.
+#    (--confirm skips that prompt. With --confirm and no target, this command
+#    restores over DATABASE_URL without asking: that is disaster recovery, not
+#    a drill, and it is the same keystrokes.)
+heroku pg:backups:restore <backup-id> HEROKU_POSTGRESQL_<COLOR>_URL -a your-app-name
 
-# 4. Verify from a one-off dyno (no local psql needed): row counts + the
-#    migrations table. Keep the python free of inner quotes — print bare numbers.
+# 4. Verify from a one-off dyno (no local psql needed): row counts + the last
+#    migration the restored database knows. Keep the python free of inner
+#    quotes. The NAME, not the count: a count tells you how many migrations ran,
+#    never which — and "did this backup catch the release I just shipped?" is
+#    the question the drill exists to answer.
 heroku run -a your-app-name -- bash -c 'DATABASE_URL=$HEROKU_POSTGRESQL_<COLOR>_URL \
   python manage.py shell -c "from core.models import User, Collection, Thing
+from core.models.booking import BookingPeriod
 from django.db.migrations.recorder import MigrationRecorder
-print(User.objects.count(), Collection.objects.count(), Thing.objects.count(), MigrationRecorder.Migration.objects.count())"'
+print(User.objects.count(), Collection.objects.count(), Thing.objects.count(), BookingPeriod.objects.count())
+print(MigrationRecorder.Migration.objects.last().name)"'
 
-# 5. Sanity-check: counts should match production minus whatever happened after
-#    the backup's timestamp. Then destroy the throwaway (stops the billing):
+# 5. Sanity-check: the counts should match what the app holds, minus whatever
+#    happened after the backup's timestamp, and the migration name should be the
+#    newest one in core/migrations/. Then destroy the throwaway (stops the
+#    billing) — note this takes the ADD-ON name (postgresql-<word>-<digits>,
+#    from step 2), not the colour:
 heroku addons:destroy <addon-name> -a your-app-name --confirm your-app-name
 heroku pg:info -a your-app-name   # only DATABASE_URL should remain
 ```
 
-The app restarts briefly when the throwaway is attached and again when destroyed (config vars change) — harmless.
+The app restarts briefly when the throwaway is attached and again when destroyed (config vars change) — harmless, but not something to do at a busy hour.
+
+**The throwaway may come up on a newer Postgres major than the one you run** (a 17.9 database, a 18.3 throwaway, observed 2026-09). Let it: a logical dump restores forward, so the drill still proves what it is for — and it proves, for free, that your data goes into the next major, which is the rehearsal you would otherwise have to arrange for the upgrade. A restore that fails *there* is a finding about the upgrade, not about your backups; the database your app serves from was never involved.
 
 ## Troubleshooting
 
