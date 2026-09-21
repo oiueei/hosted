@@ -25,9 +25,13 @@ TEXTS = {
     # Magic link
     "magic_subject": "¡Hola, te damos la bienvenida a OIUEEI!",
     "magic_subject_collection": "¡Hola, te damos la bienvenida a '{collection}' - OIUEEI!",
-    "magic_plain": "¡Hola! Haz clic aquí para iniciar sesión: {link}",
-    "magic_intro": "¡Hola! Haz clic aquí para iniciar sesión:",
-    "magic_cta": "Iniciar sesión",
+    # The greeting repeated at the top of the body — the inbox preview shows
+    # only the subject, the body has to stand on its own (see send_magic_link_email).
+    "magic_greeting": "¡Hola, te damos la bienvenida a OIUEEI!",
+    "magic_greeting_collection": "¡Hola, te damos la bienvenida a '{collection}'!",
+    "magic_plain": "Haz clic en el enlace para iniciar sesión: {link}",
+    "magic_cta": "Iniciar sesión →",
+    "magic_fallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
     # Collection invite
     "invite_subject": "¡Tienes una invitación a '{collection}' - OIUEEI!",
     "invite_plain": (
