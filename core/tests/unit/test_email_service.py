@@ -243,20 +243,21 @@ def test_the_invitation_source_note_is_translated_too():
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
 
 
-# The OIUEEI mark as the footer draws it (53x15) — the small size, wherever a
-# non-generic email's footer still carries it. The generic "OIUEEI" parent
-# case is different: the mark moves to the <h1>, at double this size, and the
-# footer carries none (see GENERIC_H1_LOGO_IMG / test_a_no_parent_email_...).
+# The OIUEEI mark as the footer draws it (60x17, CA's own numbers, 2026-09-22
+# third review round) — the small size, wherever a non-generic email's footer
+# still carries it. The generic "OIUEEI" parent case is different: the mark
+# moves to the <h1>, bigger (see GENERIC_H1_LOGO_IMG / test_a_no_parent_email_...),
+# and the footer carries none.
 LOGO_IMG = (
-    '<img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" '
-    'style="display:block;width:53px;height:15px;margin-bottom:15px;border:0;">'
+    '<img src="cid:oiueei-logo" alt="OIUEEI" height="17" width="60" '
+    'style="display:block;width:60px;height:17px;margin-bottom:15px;border:0;">'
 )
 
-# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — double
-# the footer's size, since the mark itself is the title there.
+# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — 162x46
+# (CA's own numbers), since the mark itself is the title there.
 GENERIC_H1_LOGO_IMG = (
-    '<img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106" '
-    'style="display:block;width:106px;height:30px;border:0;">'
+    '<img src="cid:oiueei-logo" alt="OIUEEI" height="46" width="162" '
+    'style="display:block;width:162px;height:46px;border:0;">'
 )
 
 
@@ -852,35 +853,41 @@ def test_a_no_parent_email_still_gets_oiueei_as_its_h1(user):
 
 @pytest.mark.django_db
 def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
-    """The OIUEEI mark is 53x15 in the footer (CA, 2026-09-21) wherever the
-    parent is a real thing/collection/question — the erasure email now being
-    a GENERIC_PARENT case (its mark leads as a bigger <h1> instead, see the
-    test below), a collection-scoped send is what still exercises the small
-    footer mark. Apple Mail ignored the width/height attributes and drew the
-    old 212x60 file at its natural size while Gmail honoured them, so the
-    size is also declared as inline CSS, and the attached PNG is small enough
-    that a client which ignores both still cannot draw it giant: at most
-    twice the displayed size, which is what a retina screen wants anyway."""
+    """The OIUEEI mark is 60x17 in the footer (CA, 2026-09-22, third review
+    round — CA's own numbers, up from 53x15) wherever the parent is a real
+    thing/collection/question — the erasure email now being a GENERIC_PARENT
+    case (its mark leads as a bigger <h1> instead, see the test below), a
+    collection-scoped send is what still exercises the small footer mark.
+    Apple Mail ignored the width/height attributes and drew the old 212x60
+    file at its natural size while Gmail honoured them, so the size is also
+    declared as inline CSS regardless of the file's own pixels.
+    **The file itself is 846x240**, replacing the earlier 106x30 (2x) version,
+    which still looked pixelated on a real screen: a client honouring the
+    displayed 60x17 draws crisp, heavily-oversampled art; one that ignores
+    both attributes and CSS — Apple Mail's old behaviour — draws it at its
+    full file size, big rather than giant, and still not garbled. The PNG is
+    small on disk (~10 KB) despite the resolution because it is flat
+    two-colour line art."""
     import struct
 
     email_service.send_collection_revoke_email("Lala", "Chalmercadillo", user.email)
 
     msg = mail.outbox[0]
     html = msg.alternatives[0][0]
-    assert 'height="15" width="53"' in html
-    assert "width:53px;height:15px" in html
-    assert 'height="30"' not in html
+    assert 'height="17" width="60"' in html
+    assert "width:60px;height:17px" in html
+    assert 'height="46"' not in html
     logo = next(p for p in msg.attachments if p["Content-ID"] == "<oiueei-logo>")
     png = logo.get_payload(decode=True)
     width, height = struct.unpack(">II", png[16:24])
-    assert (width, height) == (106, 30)
+    assert (width, height) == (846, 240)
 
 
 @pytest.mark.django_db
-def test_a_generic_parent_emails_mark_is_the_h1_at_double_size(user):
+def test_a_generic_parent_emails_mark_is_the_h1_bigger_than_the_footer(user):
     """The one exception: when "OIUEEI" is the parent, its own mark leads the
-    message as the <h1> (CA, 2026-09-22) — 106x30, double the footer's 53x15
-    — and the footer carries none, so the mark never appears twice."""
+    message as the <h1> (CA, 2026-09-22) — 162x46, bigger than the footer's
+    60x17 — and the footer carries none, so the mark never appears twice."""
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]

@@ -48,10 +48,10 @@ unstyled, never broken.{% endcomment %}
 {% if header %}
 {% if header_is_logo and has_logo %}
 {% comment %}OIUEEI is this message's own parent (CA, 2026-09-22) — the mark
-itself leads it, at double the footer's size (106x30 vs 53x15), rather than
-the literal word "OIUEEI" in bold text. It does not also close the footer;
-see email_service._bottom().{% endcomment %}
-<h1 style="margin:0 0 16px;"><img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106" style="display:block;width:106px;height:30px;border:0;"></h1>
+itself leads it, at roughly 2.7x the footer's size (162x46 vs 60x17, CA's
+own numbers), rather than the literal word "OIUEEI" in bold text. It does
+not also close the footer; see email_service._bottom().{% endcomment %}
+<h1 style="margin:0 0 16px;"><img src="cid:oiueei-logo" alt="OIUEEI" height="46" width="162" style="display:block;width:162px;height:46px;border:0;"></h1>
 {% else %}
 <h1 style="font-size:{{ size_header }};font-weight:700;margin:0 0 16px;color:#000000;">{{ header }}</h1>
 {% endif %}

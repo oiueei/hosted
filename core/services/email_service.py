@@ -441,7 +441,7 @@ def _bottom(
     if _logo_bytes() is not None and header != GENERIC_PARENT:
         html_parts.append(
             '<p style="margin:16px 0 8px;"><img src="cid:oiueei-logo" alt="OIUEEI" '
-            'height="15" width="53" style="display:block;width:53px;height:15px;'
+            'height="17" width="60" style="display:block;width:60px;height:17px;'
             'margin-bottom:15px;border:0;"></p>'
         )
 

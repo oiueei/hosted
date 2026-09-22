@@ -136,23 +136,23 @@ def test_no_email_in_any_language_leaks_an_unfilled_placeholder():
 @pytest.mark.django_db
 def test_the_mark_sits_right_after_the_rule_in_every_html_email():
     """The OIUEEI mark's place is a rule of the layout (CA, 2026-09-22): one
-    53x15 mark, right after the <hr> that opens the footer, ahead of whatever
-    else applies (viral line, preferences, a digest's mute link) and always
-    before the legal link, genuinely last. Checked here across every real
-    email in every language — the operator's own mail included, it goes
-    through the same layout — rather than on the two or three a unit test
-    builds by hand.
+    60x17 mark (CA's own numbers, third review round), right after the <hr>
+    that opens the footer, ahead of whatever else applies (viral line,
+    preferences, a digest's mute link) and always before the legal link,
+    genuinely last. Checked here across every real email in every language —
+    the operator's own mail included, it goes through the same layout —
+    rather than on the two or three a unit test builds by hand.
 
     **Except the GENERIC_PARENT ("OIUEEI") emails**, where the mark already
-    led the message as its <h1>, at double size, and the footer carries none
-    of it — "OIUEEI is the protagonist", not repeated twice in one message."""
+    led the message as its <h1>, bigger, and the footer carries none of it —
+    "OIUEEI is the protagonist", not repeated twice in one message."""
     sent = _run("--lang", "all")
 
     assert len(sent) == len(SAMPLES) * len(LANGS)
     hr = '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
     generic_h1 = (
-        '<img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106" '
-        'style="display:block;width:106px;height:30px;border:0;">'
+        '<img src="cid:oiueei-logo" alt="OIUEEI" height="46" width="162" '
+        'style="display:block;width:162px;height:46px;border:0;">'
     )
     for message in sent:
         html = message.alternatives[0][0]
