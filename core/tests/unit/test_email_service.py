@@ -864,6 +864,42 @@ def test_a_thing_scoped_email_names_the_thing_not_its_collection(user, user2, th
 
 
 @pytest.mark.django_db
+def test_the_reservation_notice_names_the_requesters_email(user, user2, thing):
+    """CA, 2026-09-22: the notice named who reserved but not how to reach
+    them, leaving the owner with nothing to act on. The requester's address
+    is a legitimate one to show here (L2's own exception — the reader already
+    holds it, via BookingPeriodSerializer.requester_email in the app), so it
+    now rides the notice too, as a bus-blue mailto: link."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 3, 5),
+        end_date=date(2026, 3, 6),
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+
+    email_service.send_reservation_notice_email(user.email, user2, thing, booking)
+
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+    assert (
+        f'Email: <a href="mailto:{user2.email}" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        f"{user2.email}</a>" in html
+    )
+    assert f"Email: {user2.email}" in msg.body
+
+
+@pytest.mark.django_db
 def test_a_standalone_things_email_names_the_thing_too(user, user2):
     """A thing in no collection has no group to name either way — it was
     always the thing (or nothing) for a standalone one; unchanged here, this
