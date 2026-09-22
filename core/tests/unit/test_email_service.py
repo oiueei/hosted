@@ -690,6 +690,24 @@ def test_a_sender_with_no_lang_in_scope_still_declares_the_deployment_default():
     assert '<html lang="es">' in html
 
 
+# --- The viral line is a highlighted callout (CA, 2026-09-22) ----------------
+
+
+@pytest.mark.django_db
+def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
+    """CA, looking at the real thing: the growth line reads as one more grey
+    footer sentence otherwise. A pale-yellow background + padding sets it
+    apart; its own text is black, not the footer's muted grey — only the CTA
+    link inside keeps the bus-blue LINK_STYLE."""
+    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert (
+        f'<p style="font-size:{email_service.EMAIL_FOOTER_SIZE};color:#000000;'
+        'background-color:#fff1a8;padding:10px;margin-top:16px;">' in html
+    )
+
+
 # --- Dates in emails render DD/MM/YYYY, not ISO ------------------------------
 
 
