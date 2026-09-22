@@ -41,10 +41,25 @@ unstyled, never broken.{% endcomment %}
 <style>
 .btn-primary:hover { background-color: {{ bus_dark }} !important; }
 .btn-secondary:hover { background-color: {{ bus_light }} !important; }
+{% comment %}The card shrinks the reading column on a phone (CA, 2026-09-22,
+seen live in the Gmail iOS app): the outer page's 40px padding plus the
+card's own 24px stack to ~64px lost from EACH side on a ~375-414px screen.
+Below 480px both containers give up their own framing — no grey/white split,
+no border, no radius — and the outer div becomes the only padding, at a
+size small enough to still leave real reading width. `!important` is
+required: without it these rules lose to the elements' own inline styles,
+which the cascade always favours over a plain (non-!important) stylesheet
+rule regardless of media query. Progressive enhancement, same as the hover
+rules above — a client that drops <style> keeps the desktop layout, still
+usable, just cramped.{% endcomment %}
+@media only screen and (max-width: 480px) {
+  .oiueei-email-page { background-color: #ffffff !important; padding: 16px !important; }
+  .oiueei-email-card { max-width: 100% !important; border: none !important; border-radius: 0 !important; padding: 0 !important; }
+}
 </style>
 </head>
-<div style="background-color:#f9fafb;padding:40px;">
-<div style="max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #dddddd;border-radius:10px;padding:32px 24px;">
+<div class="oiueei-email-page" style="background-color:#f9fafb;padding:40px;">
+<div class="oiueei-email-card" style="max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #dddddd;border-radius:10px;padding:32px 24px;">
 {% if header %}
 {% if header_is_logo and has_logo %}
 {% comment %}OIUEEI is this message's own parent (CA, 2026-09-22) — the mark
