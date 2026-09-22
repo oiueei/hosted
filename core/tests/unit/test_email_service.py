@@ -177,10 +177,12 @@ def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     mail.outbox.clear()
     email_service.send_magic_link_email("someone@example.com", "http://x/verify/t")
     generic_html = mail.outbox[0].alternatives[0][0]
-    assert ">OIUEEI</h1>" in generic_html
+    # No collection to be the parent: the mark itself leads as the <h1>
+    # (CA, 2026-09-22), not the literal word "OIUEEI".
+    assert GENERIC_H1_LOGO_IMG in generic_html
     assert email_service.T("generic_parent_pitch", lang="en") in generic_html
     assert "Hello, welcome to OIUEEI!" in generic_html
-    assert generic_html.index(">OIUEEI</h1>") < generic_html.index(
+    assert generic_html.index(GENERIC_H1_LOGO_IMG) < generic_html.index(
         email_service.T("generic_parent_pitch", lang="en")
     )
 
@@ -241,24 +243,42 @@ def test_the_invitation_source_note_is_translated_too():
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
 
 
-# The OIUEEI mark, exactly as the layout draws it, wherever it appears.
+# The OIUEEI mark as the footer draws it (53x15) — the small size, wherever a
+# non-generic email's footer still carries it. The generic "OIUEEI" parent
+# case is different: the mark moves to the <h1>, at double this size, and the
+# footer carries none (see GENERIC_H1_LOGO_IMG / test_a_no_parent_email_...).
 LOGO_IMG = (
     '<img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" '
-    'style="display:block;width:53px;height:15px;border:0;">'
+    'style="display:block;width:53px;height:15px;margin-bottom:15px;border:0;">'
+)
+
+# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — double
+# the footer's size, since the mark itself is the title there.
+GENERIC_H1_LOGO_IMG = (
+    '<img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106" '
+    'style="display:block;width:106px;height:30px;border:0;">'
 )
 
 
-def _assert_the_footer_order(html):
+def _assert_the_footer_order(html, generic=False):
     """The bottom of every message, in one fixed order (CA, 2026-09-22): a
     rule, the OIUEEI mark, then whatever else applies (viral line, "manage
     your preferences", a sender-specific extra line), and always last the
     legal link. Checks the two fixed points — mark right after the rule,
-    legal genuinely last — since what sits between them varies per email."""
-    assert html.count(LOGO_IMG) == 1
+    legal genuinely last — since what sits between them varies per email.
+
+    ``generic=True`` is the GENERIC_PARENT ("OIUEEI") case: the mark already
+    led the message as its <h1>, at double size, so the footer carries none
+    — the rule goes straight to whatever comes next (or to the legal link)."""
+    if generic:
+        assert LOGO_IMG not in html
+    else:
+        assert html.count(LOGO_IMG) == 1
     hr = '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
     assert html.count(hr) == 1
-    assert html.index(hr) < html.index(LOGO_IMG)
-    assert html.index(LOGO_IMG) < html.index("Legal")
+    if not generic:
+        assert html.index(hr) < html.index(LOGO_IMG)
+        assert html.index(LOGO_IMG) < html.index("Legal")
     # Nothing after "Legal & privacy" but the card's own closing tags.
     tail = html[html.index("</a></p>", html.index("Legal")) :]
     assert tail.strip() == "</a></p></div></div></html>"
@@ -291,7 +311,7 @@ def test_the_invitation_answers_are_a_primary_and_a_secondary_button():
     )
     secondary = (
         f'<a href="{INVITE_REJECT}" '
-        'style="display:inline-block;background-color:#ffffff;color:#000000;'
+        'style="display:inline-block;background-color:#ffffff;color:#0000bf;'
         "border:2px solid #0000bf;"
     )
     assert primary in html
@@ -379,7 +399,7 @@ def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, use
     )
     secondary = (
         f'<a href="{HOLD_REJECT}" '
-        'style="display:inline-block;background-color:#ffffff;color:#000000;'
+        'style="display:inline-block;background-color:#ffffff;color:#0000bf;'
         "border:2px solid #0000bf;"
     )
     assert primary in html
@@ -444,14 +464,16 @@ def _first_button(url):
     return f'<a href="{url}" {BUTTON_PRIMARY_START}'
 
 
-def test_no_email_action_is_a_bare_text_link_except_the_erasure_one():
+def test_no_email_action_is_ever_a_bare_text_link():
     """The rule, enforced on the source so a NEW email cannot quietly break it.
 
-    `_links` draws a row of plain text links. Every email builder that calls it
-    must be in the allow-list below; a builder that is not gets told why. The one
-    entry is the account-erasure confirmation: a destructive step is deliberately
-    not styled as the app's friendliest control, and whether it should be a
-    button at all is CA's call, not something to slip through here."""
+    `_links` draws a row of plain text links. It used to have one allowed
+    caller — the account-erasure confirmation, kept a text link on the
+    reasoning that a destructive step was not obviously the place for the
+    app's friendliest control — until CA reviewed the real thing and asked for
+    it to be a button too (2026-09-22). `_links` now has NO callers left in
+    the module; this fails the moment a new email reaches for it instead of
+    `_cta` (one action) or `_ctas` (a yes/no pair)."""
     import ast
     import inspect
 
@@ -466,8 +488,8 @@ def test_no_email_action_is_a_bare_text_link_except_the_erasure_one():
                     and node.func.id == "_links"
                 ):
                     callers.add(fn.name)
-    assert callers == {"send_account_delete_email"}, (
-        f"{sorted(callers - {'send_account_delete_email'})} draw a bare text link. "
+    assert callers == set(), (
+        f"{sorted(callers)} draw a bare text link. "
         "An email's primary action is a primary button (_cta); a yes/no pair is "
         "_ctas (primary + secondary)."
     )
@@ -540,7 +562,7 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
     assert _first_button(approve) in html
     secondary = (
         f'<a href="{reject}" style="display:inline-block;background-color:#ffffff;'
-        "color:#000000;border:2px solid #0000bf;"
+        "color:#0000bf;border:2px solid #0000bf;"
     )
     assert secondary in html
     assert html.index(_first_button(approve)) < html.index(secondary)
@@ -734,22 +756,30 @@ def test_a_no_parent_email_still_gets_oiueei_as_its_h1(user):
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]
-    assert ">OIUEEI</h1>" in html
+    # The mark itself is the <h1> now — double the footer size, no literal
+    # "OIUEEI" text (CA, 2026-09-22: "OIUEEI is the protagonist" of this kind
+    # of email — the mark moves up rather than appearing twice).
+    assert GENERIC_H1_LOGO_IMG in html
+    assert html.count("cid:oiueei-logo") == 1  # once total: h1 only, footer none
+    assert ">OIUEEI</h1>" not in html
     assert email_service.T("generic_parent_pitch", lang="en") not in html
-    _assert_the_footer_order(html)
+    _assert_the_footer_order(html, generic=True)
 
 
 @pytest.mark.django_db
 def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
-    """The OIUEEI mark is 53x15 wherever it appears (CA, 2026-09-21). Apple Mail
-    ignored the width/height attributes and drew the old 212x60 file at its
-    natural size while Gmail honoured them, so the size is also declared as
-    inline CSS, and the attached PNG is small enough that a client which
-    ignores both still cannot draw it giant: at most twice the displayed size,
-    which is what a retina screen wants anyway."""
+    """The OIUEEI mark is 53x15 in the footer (CA, 2026-09-21) wherever the
+    parent is a real thing/collection/question — the erasure email now being
+    a GENERIC_PARENT case (its mark leads as a bigger <h1> instead, see the
+    test below), a collection-scoped send is what still exercises the small
+    footer mark. Apple Mail ignored the width/height attributes and drew the
+    old 212x60 file at its natural size while Gmail honoured them, so the
+    size is also declared as inline CSS, and the attached PNG is small enough
+    that a client which ignores both still cannot draw it giant: at most
+    twice the displayed size, which is what a retina screen wants anyway."""
     import struct
 
-    email_service.send_account_delete_email(user, "http://x/confirm")
+    email_service.send_collection_revoke_email("Lala", "Chalmercadillo", user.email)
 
     msg = mail.outbox[0]
     html = msg.alternatives[0][0]
@@ -760,6 +790,19 @@ def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
     png = logo.get_payload(decode=True)
     width, height = struct.unpack(">II", png[16:24])
     assert (width, height) == (106, 30)
+
+
+@pytest.mark.django_db
+def test_a_generic_parent_emails_mark_is_the_h1_at_double_size(user):
+    """The one exception: when "OIUEEI" is the parent, its own mark leads the
+    message as the <h1> (CA, 2026-09-22) — 106x30, double the footer's 53x15
+    — and the footer carries none, so the mark never appears twice."""
+    email_service.send_account_delete_email(user, "http://x/confirm")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert GENERIC_H1_LOGO_IMG in html
+    assert html.count("cid:oiueei-logo") == 1
+    assert LOGO_IMG not in html
 
 
 @pytest.mark.django_db

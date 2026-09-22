@@ -406,6 +406,7 @@ def _bottom(
     collection=None,
     include_viral=True,
     extra_footer=None,
+    header=None,
 ):
     """Everything after the message's own words, in one fixed order (CA,
     2026-09-22): a rule, the OIUEEI mark, the viral line (eligible recipients
@@ -435,10 +436,13 @@ def _bottom(
     plain_parts = [plain, "---"]
     html_parts = ['<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">']
 
-    if _logo_bytes() is not None:
+    # The mark already led this message as its <h1> — GENERIC_PARENT's own
+    # branch in layout.html — so it does not also close it (CA, 2026-09-22).
+    if _logo_bytes() is not None and header != GENERIC_PARENT:
         html_parts.append(
             '<p style="margin:16px 0 8px;"><img src="cid:oiueei-logo" alt="OIUEEI" '
-            'height="15" width="53" style="display:block;width:53px;height:15px;border:0;"></p>'
+            'height="15" width="53" style="display:block;width:53px;height:15px;'
+            'margin-bottom:15px;border:0;"></p>'
         )
 
     def footer_line(label, link):
@@ -576,6 +580,7 @@ def _send(
         collection=collection,
         include_viral=include_viral,
         extra_footer=extra_footer,
+        header=header,
     )
     try:
         # Always EmailMultiAlternatives (not the send_mail() shortcut) — the
@@ -626,9 +631,21 @@ def _strong(text):
     return {"type": "strong", "text": text}
 
 
-def _field(label, value):
-    """A ``Label: value`` line."""
-    return {"type": "field", "label": label, "value": value}
+def _field(label, value, email=False):
+    """A ``Label: value`` line. ``email=True`` colours the value bus blue —
+    the value is an address the reader should notice (CA, 2026-09-22)."""
+    return {"type": "field", "label": label, "value": value, "email": email}
+
+
+def _email(value):
+    """An email address shown as its own value, in bus blue (CA, 2026-09-22).
+
+    Not a clickable ``mailto:`` link — nobody asked for one, and turning a
+    proposed member's or a sender's address into an action would be a bigger
+    change than "colour it" — just the same colour and underline every other
+    link on the page carries, so an address reads as data worth noticing.
+    """
+    return {"type": "email", "value": value}
 
 
 def _heading(text):
@@ -664,17 +681,27 @@ def _cta(url, label, fallback):
 
 # The app's two button roles as inline CSS, literal hex (email clients resolve no
 # `var()`): the PRIMARY is the filled bus-blue button, the SECONDARY its outlined
-# counterpart — white fill, a bus-blue border, black text, like the app's own
-# split. The secondary's padding is two pixels short of the primary's on every
-# side so its border brings both to the same outer size. Defined once and handed
-# to the layout, so the three button blocks cannot drift apart.
+# counterpart — white fill, a bus-blue border, **bus-blue label** (CA,
+# 2026-09-22, reviewing the real thing: it was black text on the border colour,
+# which read as two different decisions on one button). The secondary's padding
+# is two pixels short of the primary's on every side so its border brings both
+# to the same outer size. Defined once and handed to the layout, so the three
+# button blocks cannot drift apart. `BTN_PRIMARY_HOVER`/`BTN_SECONDARY_HOVER`
+# are the two states the `<style>` block in layout.html switches to on
+# `:hover` — bus-dark fill for the primary, bus-light fill for the secondary
+# (its border and label stay bus blue) — a progressive enhancement: clients
+# that strip `<style>` (most mobile mail apps) simply never see it, and the
+# resting, inline-styled look above is what they show instead.
+BUS = "#0000bf"
+BUS_DARK = "#00005e"
+BUS_LIGHT = "#f0f0ff"
 BTN_PRIMARY = (
-    "display:inline-block;background-color:#0000bf;color:#ffffff;"
+    f"display:inline-block;background-color:{BUS};color:#ffffff;"
     f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_BODY_SIZE};font-weight:600;"
     "line-height:1.4;text-decoration:none;padding:14px 24px;"
 )
 BTN_SECONDARY = (
-    "display:inline-block;background-color:#ffffff;color:#000000;border:2px solid #0000bf;"
+    f"display:inline-block;background-color:#ffffff;color:{BUS};border:2px solid {BUS};"
     f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_BODY_SIZE};font-weight:600;"
     "line-height:1.4;text-decoration:none;padding:12px 22px;"
 )
@@ -872,11 +899,15 @@ def _render_email(blocks, lang=None, header=None):
         {
             "blocks": blocks,
             "header": header or "",
+            "header_is_logo": header == GENERIC_PARENT,
+            "has_logo": _logo_bytes() is not None,
             "lang": resolved_lang,
             "size_body": EMAIL_BODY_SIZE,
             "size_header": EMAIL_HEADER_SIZE,
             "btn_primary": BTN_PRIMARY,
             "btn_secondary": BTN_SECONDARY,
+            "bus_dark": BUS_DARK,
+            "bus_light": BUS_LIGHT,
         },
     )
 
@@ -1106,7 +1137,7 @@ def send_invitation_proposal_email(
     )
     blocks = [
         _para(T("proposal_intro").format(proposer=proposer_name, collection=headline)),
-        _strong(proposed_email),
+        _email(proposed_email),
     ]
     if note:
         blocks.append(_para(T("proposal_note").format(note=note)))
@@ -1146,14 +1177,22 @@ def send_proposal_declined_email(
     T, L = _texts(lang), _local(lang)
     headline = L(collection_headline)
     subject = T("proposal_declined_subject").format(collection=headline)
+    # The plain body stays one flowing sentence (proposal_declined_body,
+    # unchanged); the HTML pulls the address out into its own blue block
+    # (CA, 2026-09-22), the same treatment the proposal itself gives it.
     body = T("proposal_declined_body").format(
         owner=owner_name, collection=headline, email=proposed_email
     )
+    html_blocks = [
+        _para(T("proposal_declined_intro").format(owner=owner_name, collection=headline)),
+        _email(proposed_email),
+        _para(T("proposal_declined_outro")),
+    ]
     _send(
         proposer_email,
         subject,
         body,
-        _render_email([_para(body)], lang=lang, header=headline),
+        _render_email(html_blocks, lang=lang, header=headline),
         CATEGORY_ACTIVITY,
         user=user,
         lang=lang,
@@ -1205,7 +1244,7 @@ def send_account_delete_email(user, delete_link):
             _para(T("account_delete_intro")),
             _para(T("account_delete_deletes")),
             _para(T("account_delete_keeps")),
-            _links((delete_link, T("account_delete_cta"))),
+            _cta(delete_link, T("account_delete_cta"), T("cta_fallback")),
             _para(T("account_delete_outro")),
         ],
         lang=lang,
@@ -1298,7 +1337,7 @@ def send_contact_email(name, email, message, kind="support"):
         [
             _para(T("contact_intro")),
             _field(T("contact_name_label"), name or "-"),
-            _field(T("contact_email_label"), email),
+            _field(T("contact_email_label"), email, email=True),
             _para(message),
         ],
         lang=lang,
@@ -2030,14 +2069,18 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
         ("Owner code", owner.code if owner else "-"),
         ("Created", collection.created.isoformat()),
     ]
-    blocks = [
-        _para(
-            "A collection has crossed the mass-upload alarm threshold. This is "
-            "informational — nothing has been blocked and the owner has not been "
-            "notified. Review it if the volume looks wrong for this account."
-        )
-    ]
-    plain_lines = ["Collection passed the mass-upload alarm threshold.", ""]
+    # The alert's own explanation is its <h1> now (CA, 2026-09-22, reviewing the
+    # real thing) — it used to be the one email with no parent at all; ops mail
+    # gets the same title treatment as everything else, even though this makes
+    # for an unusually long heading (three sentences, not a short name) — CA's
+    # call, made on the rendered email rather than the source.
+    header = (
+        "A collection has crossed the mass-upload alarm threshold. This is "
+        "informational — nothing has been blocked and the owner has not been "
+        "notified. Review it if the volume looks wrong for this account."
+    )
+    blocks = []
+    plain_lines = [header, ""]
     for label, value in rows:
         blocks.append(_field(label, value))
         plain_lines.append(f"  {label}: {value}")
@@ -2048,6 +2091,14 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
     # No lang var here on purpose (see the docstring): this is operator-only
     # ops mail with no i18n catalogue, so the legal footer speaks the deployment
     # default rather than any particular recipient's preference.
-    html = _render_email(blocks, lang=None)
+    html = _render_email(blocks, lang=None, header=header)
     for recipient in recipients:
-        _send(recipient, subject, plain, html, CATEGORY_MANDATORY, include_viral=False)
+        _send(
+            recipient,
+            subject,
+            plain,
+            html,
+            CATEGORY_MANDATORY,
+            include_viral=False,
+            header=header,
+        )
