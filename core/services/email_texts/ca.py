@@ -290,6 +290,14 @@ TEXTS = {
     "proposal_approve_cta": "Convidar-lo",
     "proposal_reject_cta": "Ara no",
     "proposal_declined_subject": "Sobre la teva proposta per a {collection}",
+    "proposal_declined_intro": (
+        "Gràcies per pensar en algú per a {collection}. {owner} ha decidit "
+        "no enviar aquesta invitació de moment:"
+    ),
+    "proposal_declined_outro": (
+        "No hem contactat amb aquesta persona ni ho farem. No canvia res "
+        "més: continues formant part del grup."
+    ),
     "proposal_declined_body": (
         "Gràcies per pensar en algú per a {collection}. {owner} ha decidit no enviar aquesta "
         "invitació de moment, així que no hem contactat amb {email} ni ho farem. No canvia res "

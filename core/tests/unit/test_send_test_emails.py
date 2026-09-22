@@ -141,15 +141,26 @@ def test_the_mark_sits_right_after_the_rule_in_every_html_email():
     before the legal link, genuinely last. Checked here across every real
     email in every language — the operator's own mail included, it goes
     through the same layout — rather than on the two or three a unit test
-    builds by hand."""
+    builds by hand.
+
+    **Except the GENERIC_PARENT ("OIUEEI") emails**, where the mark already
+    led the message as its <h1>, at double size, and the footer carries none
+    of it — "OIUEEI is the protagonist", not repeated twice in one message."""
     sent = _run("--lang", "all")
 
     assert len(sent) == len(SAMPLES) * len(LANGS)
     hr = '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
+    generic_h1 = (
+        '<img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106" '
+        'style="display:block;width:106px;height:30px;border:0;">'
+    )
     for message in sent:
         html = message.alternatives[0][0]
         assert html.count("cid:oiueei-logo") == 1, message.subject
         assert html.count(hr) == 1, message.subject
+        if generic_h1 in html:
+            assert html.index(hr) < html.index("/legal"), message.subject
+            continue
         assert html.index(hr) < html.index("cid:oiueei-logo"), message.subject
         assert html.index("cid:oiueei-logo") < html.index("/legal"), message.subject
         # Nothing but the card's own closing tags after the legal link.
@@ -190,33 +201,32 @@ def test_the_button_styles_use_the_body_size():
 
 @pytest.mark.django_db
 def test_every_email_is_the_white_rounded_card_on_the_grey_page():
-    """The container (CA, 2026-09-22): a white, rounded box — max-width 600px,
-    a 1px #888888 border, 10px radius — sitting on a #F9FAFB page with 40px
-    padding. One card per email, every language, the operator's own mail
-    included (it goes through the same layout)."""
+    """The container (CA, 2026-09-22, border colour corrected the next day):
+    a white, rounded box — max-width 600px, a 1px #DDDDDD border, 10px radius
+    — sitting on a #F9FAFB page with 40px padding. One card per email, every
+    language, the operator's own mail included (it goes through the same
+    layout)."""
     for message in _run("--lang", "all"):
         html = message.alternatives[0][0]
         assert "background-color:#f9fafb;padding:40px;" in html
         assert (
             "max-width:600px;margin:0 auto;background-color:#ffffff;"
-            "border:1px solid #888888;border-radius:10px;"
+            "border:1px solid #dddddd;border-radius:10px;"
         ) in html, message.subject
         assert html.count("border-radius:10px") == 1, message.subject
 
 
 @pytest.mark.django_db
 def test_every_email_names_a_real_parent_or_oiueei():
-    """Every email has an <h1> now (CA, 2026-09-22) except the one exempted by
-    design — the operator's own capacity alarm, internal ops mail with no i18n
-    catalogue at all (see send_collection_capacity_alarm's docstring)."""
-    h1 = re.compile(r"<h1[^>]*>(.*?)</h1>")
+    """Every one of the 35 has exactly one <h1> — the operator's own capacity
+    alarm too, since CA reviewed the real thing (2026-09-22) and asked for its
+    own explanation to lead as a title, closing the one exemption this system
+    started with."""
+    h1 = re.compile(r"<h1[^>]*>(.*?)</h1>", re.S)
 
     for message in _run("--lang", "all"):
         html = message.alternatives[0][0]
         found = h1.findall(html)
-        if "capacity_alarm" in message.subject:
-            assert found == [], message.subject
-            continue
         assert len(found) == 1, message.subject
         assert found[0].strip(), message.subject
 

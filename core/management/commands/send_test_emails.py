@@ -140,6 +140,13 @@ class World:
             headline="Sala polivalente",
             language=lang,
             allowed_thing_types=[Thing.Type.RESERVE_THING],
+            # So the reservation-confirmation samples show what the owner's
+            # own note (request_info.EmailNote) actually looks like inline,
+            # not just the collection with none set (CA, 2026-09-22).
+            email_note=(
+                "**Antes de venir:** la llave está en portería, pide la de "
+                "la sala polivalente. Deja la sala como la encontraste."
+            ),
         )
         self.reserve = Thing.objects.create(
             type=Thing.Type.RESERVE_THING,
