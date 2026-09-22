@@ -459,8 +459,14 @@ def _bottom(
             line = random.choice(lines)
             url = f"{_frontend_base_url()}/collections/new"
             plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
+            # A highlighted callout, not plain footer prose (CA, 2026-09-22):
+            # a pale-yellow background + padding sets the growth line apart
+            # from the grey preferences/legal lines around it, and its own
+            # text is black rather than the footer's muted grey — only the
+            # CTA link inside keeps LINK_STYLE's bus blue.
             html_parts.append(
-                f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#888888;margin-top:16px;">'
+                f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#000000;'
+                'background-color:#fff1a8;padding:10px;margin-top:16px;">'
                 f"{escape(line['text'])} "
                 f'<a href="{escape(url)}" style="{LINK_STYLE}">'
                 f"{escape(line['cta'])}</a></p>"
