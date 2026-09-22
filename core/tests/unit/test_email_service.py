@@ -722,12 +722,34 @@ def test_the_card_and_page_shed_their_padding_below_480px():
 
     assert 'class="oiueei-email-page" style="background-color:#f9fafb;padding:40px;"' in html
     assert 'class="oiueei-email-card" style="max-width:600px;' in html
+    assert "@media only screen and (max-width: 480px) {" in html
     assert (
-        "@media only screen and (max-width: 480px) {\n"
-        "  .oiueei-email-page { background-color: #ffffff !important; padding: 16px !important; }\n"
-        "  .oiueei-email-card { max-width: 100% !important; border: none !important; "
-        "border-radius: 0 !important; padding: 0 !important; }\n"
-        "}" in html
+        ".oiueei-email-page { background-color: #ffffff !important; padding: 16px !important; }"
+        in html
+    )
+    assert (
+        ".oiueei-email-card { max-width: 100% !important; border: none !important; "
+        "border-radius: 0 !important; padding: 0 !important; }" in html
+    )
+
+
+def test_buttons_go_full_width_below_480px():
+    """CA, the same real message: a button sized to its own label sits
+    narrower than the paragraphs around it once the card's own padding is
+    gone too — full width, centred, aligned with the text column either
+    side. The `ctas` pair's side margin (for the desktop side-by-side
+    layout) has to be zeroed here too, or a 100%-wide box plus that margin
+    would overflow past the text's own right edge."""
+    html = email_service._render_email([email_service._para("Hi")], lang="en")
+
+    assert (
+        ".btn-primary, .btn-secondary {\n"
+        "    display: block !important;\n"
+        "    width: 100% !important;\n"
+        "    box-sizing: border-box !important;\n"
+        "    text-align: center !important;\n"
+        "    margin: 0 0 12px 0 !important;\n"
+        "  }" in html
     )
 
 

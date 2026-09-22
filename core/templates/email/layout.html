@@ -55,6 +55,21 @@ usable, just cramped.{% endcomment %}
 @media only screen and (max-width: 480px) {
   .oiueei-email-page { background-color: #ffffff !important; padding: 16px !important; }
   .oiueei-email-card { max-width: 100% !important; border: none !important; border-radius: 0 !important; padding: 0 !important; }
+  {% comment %}Full-width buttons on a phone (CA, 2026-09-22): a button sized
+  to its own label sits narrower than the paragraphs around it, out of step
+  with the rest of the message now that the card's own padding is gone too.
+  `box-sizing: border-box` keeps the button's existing padding from pushing
+  it past 100%; `ctas`' two buttons carry a side margin for their desktop
+  side-by-side layout (BTN_PRIMARY/BTN_SECONDARY, email_service.py) that has
+  to be zeroed here too, or a 100%-wide box plus that margin would overflow
+  past the text's own right edge.{% endcomment %}
+  .btn-primary, .btn-secondary {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+    margin: 0 0 12px 0 !important;
+  }
 }
 </style>
 </head>
