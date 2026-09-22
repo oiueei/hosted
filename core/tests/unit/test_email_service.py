@@ -570,6 +570,90 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
     assert f">{approve}</a>" in html and f">{reject}</a>" in html
 
 
+# --- Email addresses shown as data (CA, 2026-09-22, second review round) -----
+#
+# An address the reader should notice but not click as an action — a proposed
+# guest, a contact form's sender, an operator alert's Owner — is bus blue,
+# underlined, and now a real `mailto:` link: a client's own auto-linkification
+# (Gmail, iOS/Android "data detectors") wraps a bare address that LOOKS like
+# one in its own default blue regardless of any inline style on a non-anchor
+# element around it, which is what CA kept seeing after the first pass added
+# `!important` everywhere else. Making it a real anchor, in our colour, up
+# front removes the client's opening to re-wrap it its own way. None is bold —
+# `_email()` used to be; CA called that a second, unexplained treatment for
+# the same kind of value `_field(email=True)` already rendered plainly.
+
+
+def test_an_email_shown_as_its_own_value_is_a_plain_mailto_link():
+    """`_email()` — the proposed guest's address on an invitation proposal,
+    the declined proposal's own."""
+    html = email_service._render_email([email_service._email("guest@example.com")], lang="en")
+
+    assert (
+        '<p><a href="mailto:guest@example.com" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "guest@example.com</a></p>" in html
+    )
+    assert "<strong" not in html
+
+
+def test_a_field_shown_as_an_address_is_a_plain_mailto_link():
+    """`_field(label, value, email=True)` — the contact form's sender address."""
+    html = email_service._render_email(
+        [email_service._field("Email", "sender@example.com", email=True)], lang="en"
+    )
+
+    assert (
+        '<p>Email: <a href="mailto:sender@example.com" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "sender@example.com</a></p>" in html
+    )
+    assert "<strong" not in html
+
+
+def test_a_named_email_field_keeps_the_name_plain_and_links_only_the_address():
+    """`_named_email_field()` — the capacity alarm's Owner row (CA, 2026-09-22,
+    third review round): the person's name is not itself a link, only their
+    parenthesised address is."""
+    html = email_service._render_email(
+        [email_service._named_email_field("Owner", "Lala", "lala@example.com")], lang="en"
+    )
+
+    assert (
+        '<p>Owner: Lala (<a href="mailto:lala@example.com" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "lala@example.com</a>)</p>" in html
+    )
+
+
+@pytest.mark.django_db
+def test_the_capacity_alarms_owner_row_has_no_angle_brackets():
+    """CA's report, 2026-09-22: 'Owner: Lala <lala.sample@example.com>' read as
+    a stray, unstyled HTML tag next to the name — parentheses instead, and
+    only the address itself is a link (the two rows above)."""
+    from core.models import Collection, User
+
+    owner = User.objects.create(code="ALRMO2", email="alarmowner2@test.com", name="Lala")
+    collection = Collection.objects.create(
+        code="ALRMC2", owner=owner, headline="Busy", status="ACTIVE"
+    )
+    User.objects.create(code="ALRMS2", email="root2@test.com", is_superuser=True)
+    mail.outbox.clear()
+
+    email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert f"<{owner.email}>" not in html
+    assert (
+        f"Owner: {owner.display_name} "
+        f'(<a href="mailto:{owner.email}" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        f"{owner.email}</a>)" in html
+    )
+    plain = mail.outbox[0].body
+    assert f"Owner: {owner.display_name} ({owner.email})" in plain
+
+
 @pytest.mark.django_db
 def test_every_email_declares_its_language_on_the_html_tag():
     """A4: a screen reader picks its pronunciation from `<html lang>`, and
@@ -957,10 +1041,12 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
         "1. Confirma\n"
         "2. Llega pronto"
     )
-    # The plain half is the raw Markdown — the standard text/plain alternative.
-    assert plain.startswith("Hola! **Léenos**")
+    # The plain half is the raw Markdown — the standard text/plain alternative —
+    # led by the warning mark, its own leading line.
+    assert plain.startswith("⚠️\n\nHola! **Léenos**")
     assert len(blocks) == 1 and blocks[0]["type"] == "md"
     html = str(blocks[0]["html"])
+    assert html.startswith("<p>⚠️</p>")
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
         '<ul><li>Trae tu <a href="https://example.com/reglas" '
@@ -991,6 +1077,7 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     )
     html = str(blocks[0]["html"])
     assert html == (
+        "<p>⚠️</p>"
         '<p><a href="https://elsewhere.example/verify" '
         'style="color:#0000bf !important;text-decoration:underline !important;">https://www.oiueei.com/verify/abc</a>'
         " (elsewhere.example)</p>"
@@ -1005,6 +1092,7 @@ def test_a_link_whose_text_is_its_own_url_needs_no_host():
     # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
     # "(example.com)" repeating what the text already says.
     assert html == (
+        "<p>⚠️</p>"
         '<p><a href="https://example.com/a?b=1&amp;c=2" '
         'style="color:#0000bf !important;text-decoration:underline !important;">https://example.com/a?b=1&amp;c=2</a></p>'
     )

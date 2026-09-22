@@ -62,9 +62,11 @@ see email_service._bottom().{% endcomment %}
 {% elif b.type == "strong" %}
 <p><strong>{{ b.text }}</strong></p>
 {% elif b.type == "email" %}
-<p><strong style="{{ link_style }}">{{ b.value }}</strong></p>
+<p><a href="mailto:{{ b.value }}" style="{{ link_style }}">{{ b.value }}</a></p>
 {% elif b.type == "field" %}
-<p>{{ b.label }}: {% if b.email %}<span style="{{ link_style }}">{{ b.value }}</span>{% else %}{{ b.value }}{% endif %}</p>
+<p>{{ b.label }}: {% if b.email %}<a href="mailto:{{ b.value }}" style="{{ link_style }}">{{ b.value }}</a>{% else %}{{ b.value }}{% endif %}</p>
+{% elif b.type == "named_email_field" %}
+<p>{{ b.label }}: {{ b.name }} (<a href="mailto:{{ b.email }}" style="{{ link_style }}">{{ b.email }}</a>)</p>
 {% elif b.type == "heading" %}
 <h3>{{ b.text }}</h3>
 {% elif b.type == "list" %}

@@ -632,18 +632,31 @@ def _strong(text):
 
 
 def _field(label, value, email=False):
-    """A ``Label: value`` line. ``email=True`` colours the value bus blue —
-    the value is an address the reader should notice (CA, 2026-09-22)."""
+    """A ``Label: value`` line. ``email=True`` renders the value as a real
+    ``mailto:`` link, bus blue and NOT bold (CA, 2026-09-22, second review
+    round) — a client's own auto-linkification (Gmail, iOS/Android "data
+    detectors") wraps a bare address that looks like one in ITS OWN default
+    blue regardless of whatever inline style sits on an enclosing ``<span>``;
+    making it a real ``<a>`` up front, in our own colour, is what keeps the
+    client from re-wrapping it its own way."""
     return {"type": "field", "label": label, "value": value, "email": email}
 
 
-def _email(value):
-    """An email address shown as its own value, in bus blue (CA, 2026-09-22).
+def _named_email_field(label, name, email):
+    """A ``Label: Name (email)`` line where the name is plain black text and
+    only the parenthesised address is a bus-blue ``mailto:`` link (CA,
+    2026-09-22, third review round) — the capacity alarm's Owner row used to
+    colour the whole "Name (email)" string as if the name itself were a
+    link too."""
+    return {"type": "named_email_field", "label": label, "name": name, "email": email}
 
-    Not a clickable ``mailto:`` link — nobody asked for one, and turning a
-    proposed member's or a sender's address into an action would be a bigger
-    change than "colour it" — just the same colour and underline every other
-    link on the page carries, so an address reads as data worth noticing.
+
+def _email(value):
+    """An email address shown as its own value, as a real ``mailto:`` link in
+    bus blue, NOT bold (CA, 2026-09-22, second review round — it used to be
+    bold, unlike ``_field(email=True)``'s value, which read as two different
+    treatments for the same kind of thing). See ``_field``'s docstring for
+    why this is a real link now rather than just a coloured ``<strong>``.
     """
     return {"type": "email", "value": value}
 
@@ -825,10 +838,18 @@ def _note_blocks(resolved_text):
     again — a ``&`` in a link's URL would come out as ``&amp;amp;`` and send
     readers to a different address. NUL is stripped here and again inside
     ``_md_inline``.
+
+    **Led by a warning mark, ``⚠️`` (CA, 2026-09-22, third review round)** — a
+    standalone leading paragraph, not spliced onto the note's own first line:
+    doing that would feed a note that opens with a list marker (``- item``)
+    into the bullet/ordered-list regexes as ``⚠️ - item``, which no longer
+    matches either one. A blank line ahead of the owner's text keeps the two
+    independent regardless of how the note itself starts.
     """
     raw = (resolved_text or "").replace("\x00", "").strip()
     if not raw:
         return "", []
+    raw = f"⚠️\n\n{raw}"
     html = []
     open_list = None
     paragraph = []
@@ -2076,7 +2097,6 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
         ("Counter", noun),
         (noun.capitalize(), str(count)),
         ("Alarm threshold", str(threshold)),
-        ("Owner", f"{owner.display_name} ({owner.email})" if owner else "-"),
         ("Owner code", owner.code if owner else "-"),
         ("Created", collection.created.isoformat()),
     ]
@@ -2093,10 +2113,19 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
     blocks = []
     plain_lines = [header, ""]
     for label, value in rows:
-        # The owner row carries an address, same blue-value treatment as every
-        # other email shown as data (CA, 2026-09-22).
-        blocks.append(_field(label, value, email=(label == "Owner")))
+        blocks.append(_field(label, value))
         plain_lines.append(f"  {label}: {value}")
+        if label == "Alarm threshold":
+            # The owner's name is plain text; only their address is a link,
+            # bus blue (CA, 2026-09-22, third review round — the whole "Name
+            # (email)" string used to be coloured as if the name were a link
+            # too).
+            if owner:
+                blocks.append(_named_email_field("Owner", owner.display_name, owner.email))
+                plain_lines.append(f"  Owner: {owner.display_name} ({owner.email})")
+            else:
+                blocks.append(_field("Owner", "-"))
+                plain_lines.append("  Owner: -")
 
     # One send per superuser: _send takes a single address, and a per-recipient
     # send keeps a bad address from costing the others their alert.
