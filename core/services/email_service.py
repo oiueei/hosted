@@ -448,7 +448,7 @@ def _bottom(
     def footer_line(label, link):
         html_parts.append(
             f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#888888;margin-top:8px;">'
-            f'<a href="{escape(link)}" style="color:#0000bf;text-decoration:underline;">'
+            f'<a href="{escape(link)}" style="{LINK_STYLE}">'
             f"{escape(label)}</a></p>"
         )
 
@@ -462,7 +462,7 @@ def _bottom(
             html_parts.append(
                 f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#888888;margin-top:16px;">'
                 f"{escape(line['text'])} "
-                f'<a href="{escape(url)}" style="color:#0000bf;text-decoration:underline;">'
+                f'<a href="{escape(url)}" style="{LINK_STYLE}">'
                 f"{escape(line['cta'])}</a></p>"
             )
 
@@ -706,6 +706,16 @@ BTN_SECONDARY = (
     "line-height:1.4;text-decoration:none;padding:12px 22px;"
 )
 
+# Every plain-text link and every "this is data worth noticing" value (an
+# email address shown via `_email`/`_field(..., email=True)`) — bus blue,
+# underlined, `!important` on both (CA, 2026-09-22: seen not to apply in real
+# Gmail). A client's own stylesheet — Gmail webmail forces its own link blue
+# in places, and an unstyled `color-scheme` leaves auto-dark-mode free to
+# recolour inline styles that lack it — can otherwise beat a plain inline
+# style; `!important` on the inline style outranks anything but another
+# `!important` later in the cascade, which nothing here is.
+LINK_STYLE = f"color:{BUS} !important;text-decoration:underline !important;"
+
 
 def _ctas(primary, secondary, fallback):
     """Two actions as buttons — a primary and a secondary — with both URLs
@@ -777,7 +787,7 @@ def _md_inline(escaped_text):
         label, url = match.group(1), match.group(2)
         host = _link_host(url) if _MD_URL.match(url) else None
         if host:
-            anchor = f'<a href="{url}" style="color:#0000bf;text-decoration:underline;">{label}</a>'
+            anchor = f'<a href="{url}" style="{LINK_STYLE}">{label}</a>'
             if html_unescape(label).strip() != html_unescape(url):
                 anchor += f" ({escape(host)})"
             anchors.append(anchor)
@@ -908,6 +918,7 @@ def _render_email(blocks, lang=None, header=None):
             "btn_secondary": BTN_SECONDARY,
             "bus_dark": BUS_DARK,
             "bus_light": BUS_LIGHT,
+            "link_style": LINK_STYLE,
         },
     )
 
@@ -2065,7 +2076,7 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
         ("Counter", noun),
         (noun.capitalize(), str(count)),
         ("Alarm threshold", str(threshold)),
-        ("Owner", f"{owner.display_name} <{owner.email}>" if owner else "-"),
+        ("Owner", f"{owner.display_name} ({owner.email})" if owner else "-"),
         ("Owner code", owner.code if owner else "-"),
         ("Created", collection.created.isoformat()),
     ]
@@ -2082,7 +2093,9 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
     blocks = []
     plain_lines = [header, ""]
     for label, value in rows:
-        blocks.append(_field(label, value))
+        # The owner row carries an address, same blue-value treatment as every
+        # other email shown as data (CA, 2026-09-22).
+        blocks.append(_field(label, value, email=(label == "Owner")))
         plain_lines.append(f"  {label}: {value}")
 
     # One send per superuser: _send takes a single address, and a per-recipient

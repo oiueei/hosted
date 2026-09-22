@@ -516,7 +516,7 @@ def test_every_single_action_cta_spells_its_own_link_out_below_it():
     assert ">Go there</a>" in html
     assert "Trouble clicking?" in html
     assert (
-        '<a href="http://x/go" style="color:#0000bf;text-decoration:underline;">http://x/go</a>'
+        '<a href="http://x/go" style="color:#0000bf !important;text-decoration:underline !important;">http://x/go</a>'
         in html
     )
 
@@ -964,7 +964,8 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
         '<ul><li>Trae tu <a href="https://example.com/reglas" '
-        'style="color:#0000bf;text-decoration:underline;">carnet</a> (example.com)</li>'
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "carnet</a> (example.com)</li>"
         "<li>Planta 2</li></ul>"
     )
     assert expected_list in html
@@ -991,7 +992,7 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     html = str(blocks[0]["html"])
     assert html == (
         '<p><a href="https://elsewhere.example/verify" '
-        'style="color:#0000bf;text-decoration:underline;">https://www.oiueei.com/verify/abc</a>'
+        'style="color:#0000bf !important;text-decoration:underline !important;">https://www.oiueei.com/verify/abc</a>'
         " (elsewhere.example)</p>"
     )
 
@@ -1005,7 +1006,7 @@ def test_a_link_whose_text_is_its_own_url_needs_no_host():
     # "(example.com)" repeating what the text already says.
     assert html == (
         '<p><a href="https://example.com/a?b=1&amp;c=2" '
-        'style="color:#0000bf;text-decoration:underline;">https://example.com/a?b=1&amp;c=2</a></p>'
+        'style="color:#0000bf !important;text-decoration:underline !important;">https://example.com/a?b=1&amp;c=2</a></p>'
     )
 
 

@@ -36,7 +36,8 @@ def test_a_curator_gets_their_draft_rendered_as_members_will_see_it(
     assert "<strong>Bring ID.</strong>" in html
     assert "<li>Floor 2</li>" in html
     assert (
-        '<a href="https://example.com/rules" style="color:#0000bf;text-decoration:underline;">'
+        '<a href="https://example.com/rules" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
         "Rules</a> (example.com)" in html
     )
     assert "Test Collection" in sent.subject

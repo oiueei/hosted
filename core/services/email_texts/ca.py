@@ -36,9 +36,9 @@ TEXTS = {
     "magic_greeting_collection": "Hola, et donem la benvinguda a '{collection}'!",
     "magic_plain": "Fes clic a l'enllaç per iniciar sessió: {link}",
     "magic_cta": "Iniciar sessió →",
-    "cta_fallback": "Si el botó no funciona, copia i enganxa aquest enllaç al navegador:",
+    "cta_fallback": "Si ho prefereixes, copia i enganxa aquest enllaç al navegador:",
     # Shared by every CTA (one button or two) that has to spell its link out below it.
-    "ctas_fallback": "Si els botons no funcionen, copia i enganxa aquests enllaços al navegador:",
+    "ctas_fallback": "Si ho prefereixes, copia i enganxa aquests enllaços al navegador:",
     # The one-line "what is this" under the OIUEEI parent title, for the one
     # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
     "generic_parent_pitch": (
