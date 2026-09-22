@@ -31,9 +31,16 @@ TEXTS = {
     "magic_greeting_collection": "¡Hola, te damos la bienvenida a '{collection}'!",
     "magic_plain": "Haz clic en el enlace para iniciar sesión: {link}",
     "magic_cta": "Iniciar sesión →",
-    "magic_fallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
-    # Under every email that ends in two buttons (_ctas): the invitation, the hold request.
+    "cta_fallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+    # Shared by every CTA (one button or two) that has to spell its link out below it.
     "ctas_fallback": "Si los botones no funcionan, copia y pega estos enlaces en tu navegador:",
+    # The one-line "what is this" under the OIUEEI parent title, for the one
+    # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
+    "generic_parent_pitch": (
+        "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas "
+        "para regalar, vender, alquilar, prestar o reservar — e invita a la gente a "
+        "conocerlas y encargarlas."
+    ),
     # Collection invite
     "invite_subject": "¡Tienes una invitación a '{collection}' - OIUEEI!",
     "invite_plain": (
