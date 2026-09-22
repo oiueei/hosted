@@ -243,20 +243,21 @@ def test_the_invitation_source_note_is_translated_too():
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
 
 
-# The OIUEEI mark as the footer draws it (53x15) — the small size, wherever a
-# non-generic email's footer still carries it. The generic "OIUEEI" parent
-# case is different: the mark moves to the <h1>, at double this size, and the
-# footer carries none (see GENERIC_H1_LOGO_IMG / test_a_no_parent_email_...).
+# The OIUEEI mark as the footer draws it (60x17, CA's own numbers, 2026-09-22
+# third review round) — the small size, wherever a non-generic email's footer
+# still carries it. The generic "OIUEEI" parent case is different: the mark
+# moves to the <h1>, bigger (see GENERIC_H1_LOGO_IMG / test_a_no_parent_email_...),
+# and the footer carries none.
 LOGO_IMG = (
-    '<img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" '
-    'style="display:block;width:53px;height:15px;margin-bottom:15px;border:0;">'
+    '<img src="cid:oiueei-logo" alt="OIUEEI" height="17" width="60" '
+    'style="display:block;width:60px;height:17px;margin-bottom:15px;border:0;">'
 )
 
-# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — double
-# the footer's size, since the mark itself is the title there.
+# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — 162x46
+# (CA's own numbers), since the mark itself is the title there.
 GENERIC_H1_LOGO_IMG = (
-    '<img src="cid:oiueei-logo" alt="OIUEEI" height="30" width="106" '
-    'style="display:block;width:106px;height:30px;border:0;">'
+    '<img src="cid:oiueei-logo" alt="OIUEEI" height="46" width="162" '
+    'style="display:block;width:162px;height:46px;border:0;">'
 )
 
 
@@ -570,6 +571,90 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
     assert f">{approve}</a>" in html and f">{reject}</a>" in html
 
 
+# --- Email addresses shown as data (CA, 2026-09-22, second review round) -----
+#
+# An address the reader should notice but not click as an action — a proposed
+# guest, a contact form's sender, an operator alert's Owner — is bus blue,
+# underlined, and now a real `mailto:` link: a client's own auto-linkification
+# (Gmail, iOS/Android "data detectors") wraps a bare address that LOOKS like
+# one in its own default blue regardless of any inline style on a non-anchor
+# element around it, which is what CA kept seeing after the first pass added
+# `!important` everywhere else. Making it a real anchor, in our colour, up
+# front removes the client's opening to re-wrap it its own way. None is bold —
+# `_email()` used to be; CA called that a second, unexplained treatment for
+# the same kind of value `_field(email=True)` already rendered plainly.
+
+
+def test_an_email_shown_as_its_own_value_is_a_plain_mailto_link():
+    """`_email()` — the proposed guest's address on an invitation proposal,
+    the declined proposal's own."""
+    html = email_service._render_email([email_service._email("guest@example.com")], lang="en")
+
+    assert (
+        '<p><a href="mailto:guest@example.com" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "guest@example.com</a></p>" in html
+    )
+    assert "<strong" not in html
+
+
+def test_a_field_shown_as_an_address_is_a_plain_mailto_link():
+    """`_field(label, value, email=True)` — the contact form's sender address."""
+    html = email_service._render_email(
+        [email_service._field("Email", "sender@example.com", email=True)], lang="en"
+    )
+
+    assert (
+        '<p>Email: <a href="mailto:sender@example.com" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "sender@example.com</a></p>" in html
+    )
+    assert "<strong" not in html
+
+
+def test_a_named_email_field_keeps_the_name_plain_and_links_only_the_address():
+    """`_named_email_field()` — the capacity alarm's Owner row (CA, 2026-09-22,
+    third review round): the person's name is not itself a link, only their
+    parenthesised address is."""
+    html = email_service._render_email(
+        [email_service._named_email_field("Owner", "Lala", "lala@example.com")], lang="en"
+    )
+
+    assert (
+        '<p>Owner: Lala (<a href="mailto:lala@example.com" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        "lala@example.com</a>)</p>" in html
+    )
+
+
+@pytest.mark.django_db
+def test_the_capacity_alarms_owner_row_has_no_angle_brackets():
+    """CA's report, 2026-09-22: 'Owner: Lala <lala.sample@example.com>' read as
+    a stray, unstyled HTML tag next to the name — parentheses instead, and
+    only the address itself is a link (the two rows above)."""
+    from core.models import Collection, User
+
+    owner = User.objects.create(code="ALRMO2", email="alarmowner2@test.com", name="Lala")
+    collection = Collection.objects.create(
+        code="ALRMC2", owner=owner, headline="Busy", status="ACTIVE"
+    )
+    User.objects.create(code="ALRMS2", email="root2@test.com", is_superuser=True)
+    mail.outbox.clear()
+
+    email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert f"<{owner.email}>" not in html
+    assert (
+        f"Owner: {owner.display_name} "
+        f'(<a href="mailto:{owner.email}" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        f"{owner.email}</a>)" in html
+    )
+    plain = mail.outbox[0].body
+    assert f"Owner: {owner.display_name} ({owner.email})" in plain
+
+
 @pytest.mark.django_db
 def test_every_email_declares_its_language_on_the_html_tag():
     """A4: a screen reader picks its pronunciation from `<html lang>`, and
@@ -768,35 +853,42 @@ def test_a_no_parent_email_still_gets_oiueei_as_its_h1(user):
 
 @pytest.mark.django_db
 def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
-    """The OIUEEI mark is 53x15 in the footer (CA, 2026-09-21) wherever the
-    parent is a real thing/collection/question — the erasure email now being
-    a GENERIC_PARENT case (its mark leads as a bigger <h1> instead, see the
-    test below), a collection-scoped send is what still exercises the small
-    footer mark. Apple Mail ignored the width/height attributes and drew the
-    old 212x60 file at its natural size while Gmail honoured them, so the
-    size is also declared as inline CSS, and the attached PNG is small enough
-    that a client which ignores both still cannot draw it giant: at most
-    twice the displayed size, which is what a retina screen wants anyway."""
+    """The OIUEEI mark is 60x17 in the footer (CA, 2026-09-22, third review
+    round — CA's own numbers, up from 53x15) wherever the parent is a real
+    thing/collection/question — the erasure email now being a GENERIC_PARENT
+    case (its mark leads as a bigger <h1> instead, see the test below), a
+    collection-scoped send is what still exercises the small footer mark.
+    Apple Mail ignored the width/height attributes and drew the old 212x60
+    file at its natural size while Gmail honoured them, so the size is also
+    declared as inline CSS regardless of the file's own pixels.
+    **The file itself is 1944x552** (a second Figma export, CA: "un poco mas
+    ligero de peso" — a lighter font weight, same display sizes), replacing
+    the earlier 106x30 (2x) and then 846x240 versions, both reported pixelated
+    on a real screen: a client honouring the displayed 60x17 draws crisp,
+    heavily-oversampled art; one that ignores both attributes and CSS — Apple
+    Mail's old behaviour — draws it at its full file size, big rather than
+    giant, and still not garbled. The PNG stays small on disk despite the
+    resolution because it is flat two-colour line art."""
     import struct
 
     email_service.send_collection_revoke_email("Lala", "Chalmercadillo", user.email)
 
     msg = mail.outbox[0]
     html = msg.alternatives[0][0]
-    assert 'height="15" width="53"' in html
-    assert "width:53px;height:15px" in html
-    assert 'height="30"' not in html
+    assert 'height="17" width="60"' in html
+    assert "width:60px;height:17px" in html
+    assert 'height="46"' not in html
     logo = next(p for p in msg.attachments if p["Content-ID"] == "<oiueei-logo>")
     png = logo.get_payload(decode=True)
     width, height = struct.unpack(">II", png[16:24])
-    assert (width, height) == (106, 30)
+    assert (width, height) == (1944, 552)
 
 
 @pytest.mark.django_db
-def test_a_generic_parent_emails_mark_is_the_h1_at_double_size(user):
+def test_a_generic_parent_emails_mark_is_the_h1_bigger_than_the_footer(user):
     """The one exception: when "OIUEEI" is the parent, its own mark leads the
-    message as the <h1> (CA, 2026-09-22) — 106x30, double the footer's 53x15
-    — and the footer carries none, so the mark never appears twice."""
+    message as the <h1> (CA, 2026-09-22) — 162x46, bigger than the footer's
+    60x17 — and the footer carries none, so the mark never appears twice."""
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]
@@ -957,10 +1049,12 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
         "1. Confirma\n"
         "2. Llega pronto"
     )
-    # The plain half is the raw Markdown — the standard text/plain alternative.
-    assert plain.startswith("Hola! **Léenos**")
+    # The plain half is the raw Markdown — the standard text/plain alternative —
+    # led by the warning mark, its own leading line.
+    assert plain.startswith("⚠️\n\nHola! **Léenos**")
     assert len(blocks) == 1 and blocks[0]["type"] == "md"
     html = str(blocks[0]["html"])
+    assert html.startswith("<p>⚠️</p>")
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
         '<ul><li>Trae tu <a href="https://example.com/reglas" '
@@ -991,6 +1085,7 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     )
     html = str(blocks[0]["html"])
     assert html == (
+        "<p>⚠️</p>"
         '<p><a href="https://elsewhere.example/verify" '
         'style="color:#0000bf !important;text-decoration:underline !important;">https://www.oiueei.com/verify/abc</a>'
         " (elsewhere.example)</p>"
@@ -1005,6 +1100,7 @@ def test_a_link_whose_text_is_its_own_url_needs_no_host():
     # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
     # "(example.com)" repeating what the text already says.
     assert html == (
+        "<p>⚠️</p>"
         '<p><a href="https://example.com/a?b=1&amp;c=2" '
         'style="color:#0000bf !important;text-decoration:underline !important;">https://example.com/a?b=1&amp;c=2</a></p>'
     )
