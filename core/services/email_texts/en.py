@@ -36,9 +36,9 @@ TEXTS = {
     "magic_greeting_collection": "Hello, welcome to '{collection}'!",
     "magic_plain": "Click the link to sign in: {link}",
     "magic_cta": "Sign in →",
-    "cta_fallback": "If the button doesn't work, copy and paste this link into your browser:",
+    "cta_fallback": "If you'd rather, copy and paste this link into your browser:",
     # Shared by every CTA (one button or two) that has to spell its link out below it.
-    "ctas_fallback": "If the buttons don't work, copy and paste these links into your browser:",
+    "ctas_fallback": "If you'd rather, copy and paste these links into your browser:",
     # The one-line "what is this" under the OIUEEI parent title, for the one
     # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
     "generic_parent_pitch": (

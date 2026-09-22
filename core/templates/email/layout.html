@@ -17,15 +17,32 @@ Cat. 1 mail gets no preferences link). Splitting an HTML element's open and
 close tags across a template and a string concat is unusual; it is what lets
 that per-recipient tail exist at all without re-rendering the whole card.{% endcomment %}
 <html lang="{{ lang }}">
-{% comment %}Button hover states (CA, 2026-09-22) — the one thing that cannot
-travel as an inline style, since :hover needs a selector. Progressive
-enhancement only: most mobile mail apps strip <style> entirely, and a client
-that does is left with the plain resting look already set inline on each
-anchor — never unstyled, never broken.{% endcomment %}
+{% comment %}A real <head> (CA, 2026-09-22, second review pass): there was
+none before, which is likely why Gmail webmail (reported: Gmail via Safari)
+honoured neither the hover <style> below nor, for some readers, the inline
+link colours — a <style> tag outside <head> is non-conformant and clients are
+free to drop it, and with no color-scheme declared, a client's own dark mode
+is free to auto-recolour inline styles it decides are "light-mode" values.
+`color-scheme`/`supported-color-schemes` "light" opts every client that reads
+them out of that auto-recolouring; every link colour below also now carries
+`!important` (LINK_STYLE, email_service.py) as a second, independent
+defence against a client stylesheet that would otherwise win the
+cascade.{% endcomment %}
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+{% comment %}Button hover states — the one thing that cannot travel as an
+inline style, since :hover needs a selector. Progressive enhancement only:
+some mail clients still strip <style> even from <head>, and one that does is
+left with the plain resting look already set inline on each anchor — never
+unstyled, never broken.{% endcomment %}
 <style>
 .btn-primary:hover { background-color: {{ bus_dark }} !important; }
 .btn-secondary:hover { background-color: {{ bus_light }} !important; }
 </style>
+</head>
 <div style="background-color:#f9fafb;padding:40px;">
 <div style="max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #dddddd;border-radius:10px;padding:32px 24px;">
 {% if header %}
@@ -45,17 +62,17 @@ see email_service._bottom().{% endcomment %}
 {% elif b.type == "strong" %}
 <p><strong>{{ b.text }}</strong></p>
 {% elif b.type == "email" %}
-<p><strong style="color:#0000bf;text-decoration:underline;">{{ b.value }}</strong></p>
+<p><strong style="{{ link_style }}">{{ b.value }}</strong></p>
 {% elif b.type == "field" %}
-<p>{{ b.label }}: {% if b.email %}<span style="color:#0000bf;text-decoration:underline;">{{ b.value }}</span>{% else %}{{ b.value }}{% endif %}</p>
+<p>{{ b.label }}: {% if b.email %}<span style="{{ link_style }}">{{ b.value }}</span>{% else %}{{ b.value }}{% endif %}</p>
 {% elif b.type == "heading" %}
 <h3>{{ b.text }}</h3>
 {% elif b.type == "list" %}
 <ul>{% for item in b.items %}<li>{{ item }}</li>{% endfor %}</ul>
 {% elif b.type == "linklist" %}
-<ul>{% for l in b.links %}<li><a href="{{ l.url }}" style="color:#0000bf;text-decoration:underline;">{{ l.label }}</a></li>{% endfor %}</ul>
+<ul>{% for l in b.links %}<li><a href="{{ l.url }}" style="{{ link_style }}">{{ l.label }}</a></li>{% endfor %}</ul>
 {% elif b.type == "links" %}
-<p>{% for l in b.links %}<a href="{{ l.url }}" style="color:#0000bf;text-decoration:underline;">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
+<p>{% for l in b.links %}<a href="{{ l.url }}" style="{{ link_style }}">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
 {% elif b.type == "cta" %}
 {% comment %}An email's single action as a button, with its own link spelled out
 below it (CA, 2026-09-22: every CTA repeats its link as plain text, not only
@@ -67,7 +84,7 @@ btn-primary class carries only the :hover rule above; every other style is
 inline.{% endcomment %}
 <p style="margin:20px 0;"><a href="{{ b.url }}" style="{{ btn_primary }}" class="btn-primary">{{ b.label }}</a></p>
 <p style="font-size:{{ size_body }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
-<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}" style="color:#0000bf;text-decoration:underline;">{{ b.url }}</a></p>
+<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}" style="{{ link_style }}">{{ b.url }}</a></p>
 {% elif b.type == "ctas" %}
 {% comment %}Two email actions, a primary and a secondary — see email_service._ctas.
 Same constraints as the "cta" block above (inline styles, literal hex, no
@@ -78,8 +95,8 @@ side so the border brings both buttons to the same outer size. Both URLs
 follow as text, accept first.{% endcomment %}
 <p style="margin:20px 0 8px;"><a href="{{ b.primary.url }}" style="{{ btn_primary }}margin:0 12px 12px 0;" class="btn-primary">{{ b.primary.label }}</a><a href="{{ b.secondary.url }}" style="{{ btn_secondary }}margin:0 0 12px 0;" class="btn-secondary">{{ b.secondary.label }}</a></p>
 <p style="font-size:{{ size_body }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
-<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}" style="color:#0000bf;text-decoration:underline;">{{ b.primary.url }}</a></p>
-<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}" style="color:#0000bf;text-decoration:underline;">{{ b.secondary.url }}</a></p>
+<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}" style="{{ link_style }}">{{ b.primary.url }}</a></p>
+<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}" style="{{ link_style }}">{{ b.secondary.url }}</a></p>
 {% elif b.type == "md" %}
 {{ b.html }}
 {% endif %}{% endfor %}

@@ -239,7 +239,7 @@ def test_every_link_in_the_body_is_bus_blue_and_underlined():
     blue. Buttons are excluded on purpose: a button is not a text link (its
     own style carries no text-decoration at all, which is what keeps it from
     looking like one)."""
-    style = 'style="color:#0000bf;text-decoration:underline;"'
+    style = 'style="color:#0000bf !important;text-decoration:underline !important;"'
     for message in _run("--lang", "all"):
         html = message.alternatives[0][0]
         plain_links = re.findall(r"<a href=[^>]*>", html)
