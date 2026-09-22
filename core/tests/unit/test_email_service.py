@@ -861,13 +861,14 @@ def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
     Apple Mail ignored the width/height attributes and drew the old 212x60
     file at its natural size while Gmail honoured them, so the size is also
     declared as inline CSS regardless of the file's own pixels.
-    **The file itself is 846x240**, replacing the earlier 106x30 (2x) version,
-    which still looked pixelated on a real screen: a client honouring the
-    displayed 60x17 draws crisp, heavily-oversampled art; one that ignores
-    both attributes and CSS — Apple Mail's old behaviour — draws it at its
-    full file size, big rather than giant, and still not garbled. The PNG is
-    small on disk (~10 KB) despite the resolution because it is flat
-    two-colour line art."""
+    **The file itself is 1944x552** (a second Figma export, CA: "un poco mas
+    ligero de peso" — a lighter font weight, same display sizes), replacing
+    the earlier 106x30 (2x) and then 846x240 versions, both reported pixelated
+    on a real screen: a client honouring the displayed 60x17 draws crisp,
+    heavily-oversampled art; one that ignores both attributes and CSS — Apple
+    Mail's old behaviour — draws it at its full file size, big rather than
+    giant, and still not garbled. The PNG stays small on disk despite the
+    resolution because it is flat two-colour line art."""
     import struct
 
     email_service.send_collection_revoke_email("Lala", "Chalmercadillo", user.email)
@@ -880,7 +881,7 @@ def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
     logo = next(p for p in msg.attachments if p["Content-ID"] == "<oiueei-logo>")
     png = logo.get_payload(decode=True)
     width, height = struct.unpack(">II", png[16:24])
-    assert (width, height) == (846, 240)
+    assert (width, height) == (1944, 552)
 
 
 @pytest.mark.django_db
