@@ -1049,12 +1049,10 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
         "1. Confirma\n"
         "2. Llega pronto"
     )
-    # The plain half is the raw Markdown — the standard text/plain alternative —
-    # led by the warning mark, its own leading line.
-    assert plain.startswith("⚠️\n\nHola! **Léenos**")
+    # The plain half is the raw Markdown — the standard text/plain alternative.
+    assert plain.startswith("Hola! **Léenos**")
     assert len(blocks) == 1 and blocks[0]["type"] == "md"
     html = str(blocks[0]["html"])
-    assert html.startswith("<p>⚠️</p>")
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
         '<ul><li>Trae tu <a href="https://example.com/reglas" '
@@ -1085,7 +1083,6 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     )
     html = str(blocks[0]["html"])
     assert html == (
-        "<p>⚠️</p>"
         '<p><a href="https://elsewhere.example/verify" '
         'style="color:#0000bf !important;text-decoration:underline !important;">https://www.oiueei.com/verify/abc</a>'
         " (elsewhere.example)</p>"
@@ -1100,7 +1097,6 @@ def test_a_link_whose_text_is_its_own_url_needs_no_host():
     # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
     # "(example.com)" repeating what the text already says.
     assert html == (
-        "<p>⚠️</p>"
         '<p><a href="https://example.com/a?b=1&amp;c=2" '
         'style="color:#0000bf !important;text-decoration:underline !important;">https://example.com/a?b=1&amp;c=2</a></p>'
     )

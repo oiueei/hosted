@@ -838,18 +838,10 @@ def _note_blocks(resolved_text):
     again — a ``&`` in a link's URL would come out as ``&amp;amp;`` and send
     readers to a different address. NUL is stripped here and again inside
     ``_md_inline``.
-
-    **Led by a warning mark, ``⚠️`` (CA, 2026-09-22, third review round)** — a
-    standalone leading paragraph, not spliced onto the note's own first line:
-    doing that would feed a note that opens with a list marker (``- item``)
-    into the bullet/ordered-list regexes as ``⚠️ - item``, which no longer
-    matches either one. A blank line ahead of the owner's text keeps the two
-    independent regardless of how the note itself starts.
     """
     raw = (resolved_text or "").replace("\x00", "").strip()
     if not raw:
         return "", []
-    raw = f"⚠️\n\n{raw}"
     html = []
     open_list = None
     paragraph = []
