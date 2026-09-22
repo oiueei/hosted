@@ -708,6 +708,29 @@ def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
     )
 
 
+# --- The card gives up its own framing on a phone (CA, 2026-09-22) -----------
+
+
+def test_the_card_and_page_shed_their_padding_below_480px():
+    """CA, opening a real message in the Gmail iOS app: the page's 40px
+    padding plus the card's own 24px stack to ~64px lost from each side on a
+    phone-width screen, shrinking the reading column to almost nothing. Below
+    480px both containers give up their framing (no grey/white split, no
+    border, no radius) and the page div becomes the only, much smaller,
+    source of padding."""
+    html = email_service._render_email([email_service._para("Hi")], lang="en")
+
+    assert 'class="oiueei-email-page" style="background-color:#f9fafb;padding:40px;"' in html
+    assert 'class="oiueei-email-card" style="max-width:600px;' in html
+    assert (
+        "@media only screen and (max-width: 480px) {\n"
+        "  .oiueei-email-page { background-color: #ffffff !important; padding: 16px !important; }\n"
+        "  .oiueei-email-card { max-width: 100% !important; border: none !important; "
+        "border-radius: 0 !important; padding: 0 !important; }\n"
+        "}" in html
+    )
+
+
 # --- Dates in emails render DD/MM/YYYY, not ISO ------------------------------
 
 
