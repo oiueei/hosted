@@ -1918,8 +1918,16 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     plain = T("reservation_notice_plain").format(
         requester=requester_name, thing=headline, start=start, end=end
     )
+    # The requester's own address, so the owner can reach them directly (CA,
+    # 2026-09-22): a RESERVE_THING requester is always a collection member by
+    # the time this fires (403 otherwise, see request_reservation), so a real
+    # address is guaranteed here. The owner already sees it in the app
+    # (BookingPeriodSerializer.requester_email) — L2's own exception, the
+    # reader already holds it — this just puts it in the notice too.
+    plain += "\n\n" + T("reservation_requester_email_label") + ": " + requester.email
     blocks = [
         _para(T("reservation_notice_intro").format(requester=requester_name)),
+        _field(T("reservation_requester_email_label"), requester.email, email=True),
         _field(T("dates_label"), f"{start} - {end}"),
     ]
     if booking.project_note:
