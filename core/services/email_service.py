@@ -15,9 +15,18 @@ that lets recipients change preferences without logging in.
 
 HTML bodies are rendered from the autoescaping ``email/layout.html`` template via
 small block builders (``_para``/``_strong``/``_field``/``_list``/``_links``/
-``_heading``/``_cta``/``_ctas``/``_button``), so user-supplied values are escaped by the template
+``_heading``/``_cta``/``_ctas``), so user-supplied values are escaped by the template
 engine — no manual ``escape()`` in the body composition. Plain-text bodies (no
 XSS surface) stay as plain strings.
+
+Visual design (CA, 2026-09-22): every message is a white, rounded card
+(``EMAIL_BODY_SIZE``/``EMAIL_HEADER_SIZE``/``EMAIL_FOOTER_SIZE``, the card
+itself in ``layout.html``). Every email names one **parent** — the thing it is
+about — as an ``<h1>``: a thing's own headline for thing-scoped mail, a
+collection's for collection-scoped mail, the FAQ question itself for the three
+FAQ emails, or "OIUEEI" for the few with no natural parent. Every CTA is a
+button with its own link spelled out below it as plain text (``_cta``/
+``_ctas`` — the earlier, lighter ``_button`` with no fallback link is gone).
 """
 
 import functools
@@ -332,17 +341,11 @@ def _send_per_language(
         if lang not in composed:
             composed[lang] = compose(lang)
         subject, plain, html = composed[lang]
-        # Composed once per language, but this line is per recipient: it carries
-        # a token signed for *this* user, so it cannot join the cached body.
-        if extra_footer:
-            extra = extra_footer(user, lang)
-            if extra:
-                label, link = extra
-                plain = f"{plain}\n\n{label}: {link}"
-                html = (
-                    f'{html}<p style="color:#666;font-size:{EMAIL_FONT_SIZE};">'
-                    f'<a href="{escape(link)}">{escape(label)}</a></p>'
-                )
+        # The card is composed once per language and reused for many
+        # recipients, but the footer varies per person (a collection owner
+        # gets no viral line; extra_footer — the digest's per-collection mute
+        # link — carries a token signed for *this* user). _send appends it,
+        # per recipient, via _bottom().
         _send(
             email,
             subject,
@@ -353,15 +356,31 @@ def _send_per_language(
             user=user,
             lang=lang,
             collection=collection,
+            extra_footer=extra_footer,
         )
 
 
-# One text size for everything an email says — body, buttons, links, footers (CA,
-# 2026-09-21). Set explicitly rather than left to the client, which is what let the
-# same message read at a different size in Gmail and in Apple Mail, and what let a
-# 16px button sit under 13px links. The one exception is the collection-name header
-# at the top of a message, a title and not text, which stays larger.
-EMAIL_FONT_SIZE = "13px"
+# Three text sizes for a message (CA, 2026-09-22), replacing the single
+# EMAIL_FONT_SIZE from a day earlier: EMAIL_BODY_SIZE for everything that is
+# the message's own words — paragraphs, buttons, a CTA's fallback link —
+# EMAIL_HEADER_SIZE for the one <h1> "parent" title, EMAIL_FOOTER_SIZE for the
+# rule-separated block at the foot (the mark, "manage your preferences", the
+# legal link). Set explicitly rather than left to the client, which is what
+# let the same message read at a different size in Gmail and in Apple Mail.
+EMAIL_BODY_SIZE = "14px"
+EMAIL_HEADER_SIZE = "18px"
+EMAIL_FOOTER_SIZE = "12px"
+
+# The <h1> for an email with no thing, collection or FAQ question to be its
+# parent (CA, 2026-09-22) — the app itself, named the same untranslated way
+# every locale names it ("OIUEEI" is not a word to translate). Used with
+# ``generic_parent_pitch``, the one-line "what is this" the reader gets right
+# under it — added only where the reader may genuinely not know
+# (send_magic_link_email's generic branch). It is not added to
+# account-deletion, inactivity or operator mail: "OIUEEI" still names them as
+# the parent, but a pitch sentence has no place next to "delete my account" or
+# in a support ticket the operator already knows the product behind.
+GENERIC_PARENT = "OIUEEI"
 
 
 def _frontend_base_url():
@@ -377,45 +396,90 @@ def _notifications_link(email, user=_UNSET):
     return f"{base}/me/notifications"
 
 
-def _with_footer(plain, html, email, category, user=_UNSET, lang=None):
-    """Append the 'manage your emails' footer for Cat. 2 / Cat. 3 emails."""
-    if category == CATEGORY_MANDATORY:
-        return plain, html
-    link = _notifications_link(email, user=user)
-    manage = T("footer_manage", lang)
-    footer_plain = f"\n\n---\n{manage}: {link}"
-    footer_html = (
-        '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
-        f'<p style="color:#666;font-size:{EMAIL_FONT_SIZE};">'
-        f'{escape(manage)}: <a href="{escape(link)}">{escape(link)}</a>'
-        "</p>"
-    )
-    return plain + footer_plain, html + footer_html
+def _bottom(
+    plain,
+    html,
+    to_email,
+    category,
+    user=_UNSET,
+    lang=None,
+    collection=None,
+    include_viral=True,
+    extra_footer=None,
+):
+    """Everything after the message's own words, in one fixed order (CA,
+    2026-09-22): a rule, the OIUEEI mark, the viral line (eligible recipients
+    only — see below), "manage your preferences" (Cat. 2/3 mail; Cat. 1 has
+    nothing to opt out of), a sender-specific extra line if any (the digest's
+    per-collection mute link), and always last the legal-notice link — art. 14
+    GDPR, a disclosure and not a preference, so it shows on mandatory mail
+    too. Closes the two ``<div>``\\s the card opened in ``layout.html`` and
+    left open (see the comment there for why).
 
+    Replaces the earlier, separate ``_with_viral_line`` + ``_with_footer``:
+    their pieces now interleave in one fixed visual order — the mark used to
+    sit inside the card's own template render, ahead of a viral line that
+    *prepended* itself above a footer that was itself an independent
+    *append* — rather than being two composable prepend/append steps.
 
-def _with_viral_line(plain, html, user=_UNSET, lang=None):
-    """Prepend one random growth blurb above the preferences footer.
-
-    Shown to recipients who don't own a collection — the audience for "create
-    your own" — including not-yet-registered invitees (``user`` is None).
-    Suppressed for collection owners and when ``VIRAL_LINES`` is empty. The CTA
-    is the plain ``/collections/new`` URL, never tracking-wrapped (DESIGN §9).
+    Viral-line eligibility: recipients who don't own a collection — the
+    audience for "create your own" — including not-yet-registered invitees
+    (``user`` is ``None``). Suppressed for collection owners and when
+    ``VIRAL_LINES`` is empty. Its CTA is the plain ``/collections/new`` URL,
+    never tracking-wrapped (DESIGN §9).
     """
-    lines = viral_lines(lang)
-    if not lines:
-        return plain, html
-    if user is not _UNSET and user and getattr(user, "_owns_collection", False):
-        return plain, html
-    line = random.choice(lines)
-    url = f"{_frontend_base_url()}/collections/new"
-    plain += f"\n\n{line['text']}\n{line['cta']}: {url}"
-    html += (
-        f'<p style="margin-top:24px;font-size:{EMAIL_FONT_SIZE};">'
-        f"{escape(line['text'])} "
-        f'<a href="{escape(url)}">{escape(line["cta"])}</a>'
-        "</p>"
-    )
-    return plain, html
+    lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
+    legal_url = f"{_frontend_base_url()}/legal"
+    legal_label = T("footer_legal", lang)
+
+    plain_parts = [plain, "---"]
+    html_parts = ['<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">']
+
+    if _logo_bytes() is not None:
+        html_parts.append(
+            '<p style="margin:16px 0 8px;"><img src="cid:oiueei-logo" alt="OIUEEI" '
+            'height="15" width="53" style="display:block;width:53px;height:15px;border:0;"></p>'
+        )
+
+    def footer_line(label, link):
+        html_parts.append(
+            f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#888888;margin-top:8px;">'
+            f'<a href="{escape(link)}" style="color:#0000bf;text-decoration:underline;">'
+            f"{escape(label)}</a></p>"
+        )
+
+    if include_viral:
+        lines = viral_lines(lang)
+        owns_collection = user is not _UNSET and user and getattr(user, "_owns_collection", False)
+        if lines and not owns_collection:
+            line = random.choice(lines)
+            url = f"{_frontend_base_url()}/collections/new"
+            plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
+            html_parts.append(
+                f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#888888;margin-top:16px;">'
+                f"{escape(line['text'])} "
+                f'<a href="{escape(url)}" style="color:#0000bf;text-decoration:underline;">'
+                f"{escape(line['cta'])}</a></p>"
+            )
+
+    if category != CATEGORY_MANDATORY:
+        manage = T("footer_manage", lang)
+        link = _notifications_link(to_email, user=user)
+        plain_parts.append(f"{manage}: {link}")
+        footer_line(manage, link)
+
+    if extra_footer:
+        extra = extra_footer(user, lang)
+        if extra:
+            label, link = extra
+            plain_parts.append(f"{label}: {link}")
+            footer_line(label, link)
+
+    plain_parts.append(f"{legal_label}: {legal_url}")
+    footer_line(legal_label, legal_url)
+    html_parts.append("</div></div></html>")
+
+    return "\n\n".join(plain_parts), html + "".join(html_parts)
 
 
 @functools.lru_cache(maxsize=1)
@@ -456,6 +520,7 @@ def _send(
     lang=None,
     collection=None,
     header=None,
+    extra_footer=None,
 ):
     """Send a single email through the category + footer + viral pipeline.
 
@@ -482,10 +547,16 @@ def _send(
     ``resolve_email_language``); the footer and the viral line follow it, so the
     whole message speaks one language.
 
-    ``header`` is the collection name for a collection-scoped email — the HTML
-    side is already in ``html`` (the sender passed it to ``_render_email``);
-    this is where its plain-text counterpart is prepended, so a sender only
-    states it once per call site.
+    ``header`` is the email's "parent" (a thing, a collection, an FAQ
+    question, or "OIUEEI") — the HTML side is already in ``html`` (the sender
+    passed it to ``_render_email``); this is where its plain-text counterpart
+    is prepended, so a sender only states it once per call site.
+
+    ``extra_footer(user, lang) -> (label, url) | None`` adds one more footer
+    line, between "manage your preferences" and the legal link — only the
+    digest uses it today, for its per-collection mute link (a token signed for
+    *this* recipient, so it cannot be composed once and reused like the rest
+    of a multi-recipient send's body — see ``_send_per_language``).
     """
     plain = _headline_prefix(header, plain)
     # Resolve the recipient User once when something downstream needs it: the
@@ -495,9 +566,17 @@ def _send(
         user = _lookup_user(to_email)
     if not _should_send(to_email, category, user=user, collection=collection):
         return False
-    if include_viral:
-        plain, html = _with_viral_line(plain, html, user=user, lang=lang)
-    plain, html = _with_footer(plain, html, to_email, category, user=user, lang=lang)
+    plain, html = _bottom(
+        plain,
+        html,
+        to_email,
+        category,
+        user=user,
+        lang=lang,
+        collection=collection,
+        include_viral=include_viral,
+        extra_footer=extra_footer,
+    )
     try:
         # Always EmailMultiAlternatives (not the send_mail() shortcut) — the
         # inline logo needs .attach() on the message object, which send_mail()
@@ -568,15 +647,17 @@ def _links(*links):
 
 
 def _cta(url, label, fallback):
-    """An email's single action as a button, with the URL spelled out under it.
+    """An email's single action as a button, with its own link spelled out
+    below it as plain text.
 
     The layout renders an inline-styled ``<a>`` (bus blue, literal hex) rather
     than a ``<button>``: email clients strip forms and buttons, and none of
     them resolves a CSS custom property, so the app's primary button can only
-    travel as a styled link. The ``fallback`` sentence and the raw URL beside
-    it cover the clients — and the moments — where the button cannot be
-    clicked at all (CA, 2026-09-21: this is the magic link, the one email
-    whose whole job is that one click).
+    travel as a styled link. The ``fallback`` sentence and the raw URL cover
+    the clients — and the moments — where the button cannot be clicked at all.
+    **Every CTA carries this now** (CA, 2026-09-22): it used to be only the
+    ones whose whole job was that one click (the magic link, a yes/no pair);
+    the lighter, fallback-less ``_button`` this function replaced is gone.
     """
     return {"type": "cta", "url": url, "label": label, "fallback": fallback}
 
@@ -589,28 +670,14 @@ def _cta(url, label, fallback):
 # to the layout, so the three button blocks cannot drift apart.
 BTN_PRIMARY = (
     "display:inline-block;background-color:#0000bf;color:#ffffff;"
-    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_FONT_SIZE};font-weight:600;"
+    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_BODY_SIZE};font-weight:600;"
     "line-height:1.4;text-decoration:none;padding:14px 24px;"
 )
 BTN_SECONDARY = (
     "display:inline-block;background-color:#ffffff;color:#000000;border:2px solid #0000bf;"
-    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_FONT_SIZE};font-weight:600;"
+    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_BODY_SIZE};font-weight:600;"
     "line-height:1.4;text-decoration:none;padding:12px 22px;"
 )
-
-
-def _button(url, label):
-    """An email's one action as a primary button — nothing else.
-
-    The house rule (CA, 2026-09-21): the primary action of an email — sign in,
-    open the group, look at the thing — is a primary button, never a bare text
-    link. This is the light version of ``_cta``: no "copy and paste this link"
-    sentence and no raw URL under it. Those are for the emails whose whole job
-    is one click that some client might refuse (the magic link, the yes/no
-    questions); everywhere else the plain-text half already carries the URL and
-    a button a client will not draw is still a link that says what it does.
-    """
-    return {"type": "button", "url": url, "label": label}
 
 
 def _ctas(primary, secondary, fallback):
@@ -683,7 +750,7 @@ def _md_inline(escaped_text):
         label, url = match.group(1), match.group(2)
         host = _link_host(url) if _MD_URL.match(url) else None
         if host:
-            anchor = f'<a href="{url}">{label}</a>'
+            anchor = f'<a href="{url}" style="color:#0000bf;text-decoration:underline;">{label}</a>'
             if html_unescape(label).strip() != html_unescape(url):
                 anchor += f" ({escape(host)})"
             anchors.append(anchor)
@@ -772,15 +839,6 @@ def _thing_collection(thing):
     return thing.collections.first() if thing else None
 
 
-def _thing_header(thing, resolve):
-    """The collection-name header for a thing-scoped email — the first
-    collection's headline in the reader's language (``resolve`` is the sender's
-    ``L``), or ``""`` for a standalone thing.
-    """
-    collection = _thing_collection(thing)
-    return resolve(collection.headline) if collection else ""
-
-
 def _headline_prefix(header, plain):
     """Put the collection name on its own first line of the plain-text body —
     the plain-text half of the layout's HTML header. A no-op without a header,
@@ -790,26 +848,20 @@ def _headline_prefix(header, plain):
 
 
 def _render_email(blocks, lang=None, header=None):
-    """Render the HTML body from a list of blocks through the autoescaping layout.
+    """Render the card's top half through the autoescaping layout: the ``<h1>``
+    parent title (see the module docstring) and the body blocks, inside the
+    white rounded card ``layout.html`` opens. The card's bottom half — a rule,
+    the OIUEEI mark, the viral line, preferences, the legal link, and the two
+    closing ``</div>``\\s — is appended once per actual recipient by
+    ``_bottom()``, called from ``_send()``; see the comment at the top of
+    ``layout.html`` for why that split exists (a digest or broadcast composes
+    its card once per LANGUAGE and reuses it for many recipients, whose
+    footers still have to differ — a collection owner gets no viral line).
 
-    ``header``, when set, is the collection name and leads the message; the
-    plain-text counterpart is ``_headline_prefix``, applied at the ``_send``
-    call. The OIUEEI mark no longer depends on it: it sits right above the legal
-    link in every email (``layout.html``), so a message with no header simply
-    starts with its own content.
+    ``header``, when set, leads the message as the ``<h1>``; the plain-text
+    counterpart is ``_headline_prefix``, applied at the ``_send`` call.
 
-    ``has_logo`` mirrors whether ``_send()`` will find the asset to attach —
-    the ``cid:`` reference is only rendered when there's a matching attachment
-    coming, so a missing file never leaves a broken image in the email.
-
-    ``legal_url`` always resolves, whether or not the caller passes ``lang`` —
-    every email carries it, mandatory ones included, because it is the art. 14
-    disclosure link and not a preference (unlike the "manage your emails"
-    footer in ``_with_footer``, which only appears on the categories a
-    recipient can opt out of). ``lang`` here only picks the label's language;
-    ``T`` already falls back to the deployment default when it is ``None``.
-
-    The resolved ``lang`` also lands on ``<html lang="...">`` itself (A4) — a
+    The resolved ``lang`` lands on ``<html lang="...">`` itself (A4) — a
     screen reader picks its pronunciation from that attribute, and every email
     already speaks a specific, known language (``resolve_email_language``), so
     leaving the tag blank was never "unknown", only unstated.
@@ -819,12 +871,10 @@ def _render_email(blocks, lang=None, header=None):
         "email/layout.html",
         {
             "blocks": blocks,
-            "has_logo": _logo_bytes() is not None,
             "header": header or "",
             "lang": resolved_lang,
-            "legal_url": f"{_frontend_base_url()}/legal",
-            "legal_label": T("footer_legal", lang=lang),
-            "font_size": EMAIL_FONT_SIZE,
+            "size_body": EMAIL_BODY_SIZE,
+            "size_header": EMAIL_HEADER_SIZE,
             "btn_primary": BTN_PRIMARY,
             "btn_secondary": BTN_SECONDARY,
         },
@@ -928,21 +978,26 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
         name = resolve_localized(collection_headline, lang)
         subject = T("magic_subject_collection").format(collection=name)
         greeting = T("magic_greeting_collection").format(collection=name)
+        header = name
+        blocks = [_para(greeting), _cta(magic_link, T("magic_cta"), T("cta_fallback"))]
     else:
         subject = T("magic_subject")
         greeting = T("magic_greeting")
-    # The subject's greeting opens the body too, in both formats: an inbox
-    # preview shows only the subject, and a body that starts at "click here"
-    # without naming what was joined reads as a form letter (CA, 2026-09-21).
+        # No collection to be the parent: OIUEEI is, with its own one-line
+        # pitch as the intro — the one case in the catalogue where the reader
+        # may genuinely not know what this is (CA, 2026-09-22).
+        header = GENERIC_PARENT
+        blocks = [
+            _para(T("generic_parent_pitch")),
+            _para(greeting),
+            _cta(magic_link, T("magic_cta"), T("cta_fallback")),
+        ]
+    # The subject's greeting opens the plain body too, in both formats: an
+    # inbox preview shows only the subject, and a body that starts at "click
+    # here" without naming what was joined reads as a form letter.
     plain = f"{greeting}\n\n{T('magic_plain').format(link=magic_link)}"
-    html = _render_email(
-        [
-            _strong(greeting),
-            _cta(magic_link, T("magic_cta"), T("magic_fallback")),
-        ],
-        lang=lang,
-    )
-    _send(email, subject, plain, html, CATEGORY_MANDATORY, lang=lang)
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(email, subject, plain, html, CATEGORY_MANDATORY, lang=lang, header=header)
 
 
 def send_collection_invite_email(
@@ -1012,6 +1067,7 @@ def send_collection_invite_email(
         CATEGORY_MANDATORY,
         user=user,
         lang=lang,
+        header=headline,
     )
 
 
@@ -1121,13 +1177,13 @@ def send_collection_welcome_doc_email(collection_headline, doc_url, email, colle
     html = _render_email(
         [
             _para(T("welcome_doc_intro")),
-            _button(doc_url, T("welcome_doc_link_label")),
+            _cta(doc_url, T("welcome_doc_link_label"), T("cta_fallback")),
             _para(T("welcome_doc_outro")),
         ],
         lang=lang,
         header=headline,
     )
-    _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
+    _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang, header=headline)
 
 
 def send_account_delete_email(user, delete_link):
@@ -1153,6 +1209,7 @@ def send_account_delete_email(user, delete_link):
             _para(T("account_delete_outro")),
         ],
         lang=lang,
+        header=GENERIC_PARENT,
     )
     _send(
         user.email,
@@ -1163,6 +1220,7 @@ def send_account_delete_email(user, delete_link):
         user=user,
         include_viral=False,
         lang=lang,
+        header=GENERIC_PARENT,
     )
 
 
@@ -1194,7 +1252,7 @@ def send_inactivity_warning_email(user, months, days, will_delete=True):
             _para(T("inactivity_intro").format(months=months)),
             _para(T("inactivity_deletes").format(days=days)),
             _para(T("inactivity_keep")),
-            _button(login_url, T("inactivity_cta")),
+            _cta(login_url, T("inactivity_cta"), T("cta_fallback")),
             _para(T("inactivity_outro")),
         ]
     else:
@@ -1202,18 +1260,19 @@ def send_inactivity_warning_email(user, months, days, will_delete=True):
         blocks = [
             _para(T("inactivity_intro").format(months=months)),
             _para(T("inactivity_kept")),
-            _button(login_url, T("inactivity_cta")),
+            _cta(login_url, T("inactivity_cta"), T("cta_fallback")),
             _para(T("inactivity_kept_outro")),
         ]
     _send(
         user.email,
         T("inactivity_subject"),
         plain,
-        _render_email(blocks, lang=lang),
+        _render_email(blocks, lang=lang, header=GENERIC_PARENT),
         CATEGORY_MANDATORY,
         user=user,
         include_viral=False,
         lang=lang,
+        header=GENERIC_PARENT,
     )
 
 
@@ -1243,6 +1302,7 @@ def send_contact_email(name, email, message, kind="support"):
             _para(message),
         ],
         lang=lang,
+        header=GENERIC_PARENT,
     )
     _send(
         recipient,
@@ -1253,6 +1313,7 @@ def send_contact_email(name, email, message, kind="support"):
         reply_to=[email],
         include_viral=False,
         lang=lang,
+        header=GENERIC_PARENT,
     )
 
 
@@ -1272,7 +1333,7 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
         lang=lang,
         header=headline,
     )
-    _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang)
+    _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang, header=headline)
 
 
 # --- Category 2: Activity ------------------------------------------------------
@@ -1285,7 +1346,7 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
     requester_name = requester.display_name
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
-    header = _thing_header(thing, L)
+    header = headline  # the thing being requested is this email's parent
 
     if booking.start_date and booking.end_date:
         plain = T("booking_request_plain_dated").format(
@@ -1310,7 +1371,6 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
     html = _render_email(
         [
             _para(T("booking_request_intro").format(requester=requester_name, action=action)),
-            _strong(headline),
             *_booking_detail_blocks(booking, lang),
             # Confirming is the primary button, cancelling the secondary one, and
             # both links follow as text — the same two-answer shape as the
@@ -1342,6 +1402,7 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
     decision_word = T("decision_confirmed") if accepted else T("decision_cancelled")
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
+    header = headline  # the thing this decision is about is the parent
 
     # The reader is the requester, and this is the one booking email that used to
     # carry no link at all: it announced a decision and left them with nothing to
@@ -1367,12 +1428,10 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
     # a refused hold is unscannable in an inbox, and reads as a teaser rather
     # than as news (DESIGN §2 direct, §6 no curiosity gaps).
     subject = T("decision_subject_confirmed") if accepted else T("decision_subject_cancelled")
-    header = _thing_header(thing, L)
     html_blocks = [
         _para(T("decision_intro").format(action=action, decision=decision_word)),
-        _strong(headline),
         *_booking_detail_blocks(booking, lang),
-        _button(thing_url, T("view_thing_cta")),
+        _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
     ]
     # The owner's note rides an ACCEPTED decision only — that is the moment
     # the hold becomes real and the note's "how to collect / where we are"
@@ -1409,7 +1468,9 @@ def send_invite_rejected_email(invitee_name, collection_headline, owner_email, c
         lang=lang,
         header=headline,
     )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang)
+    _send(
+        owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=headline
+    )
 
 
 def send_booking_confirmation_email(requester, thing, booking, collection=None):
@@ -1419,17 +1480,15 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
     (``booking_service.resolve_request_collection``) and feeds exactly one
     thing: the owner's ``email_note``, appended after the listing link. It
     deliberately never reaches ``_recipient`` — a thing-scoped email follows
-    only the recipient's language — and the header keeps naming the thing's
-    *first* collection, the same one ``_thing_url`` links to.
+    only the recipient's language.
     """
     user, lang = _recipient(requester.email)
     T, L = _texts(lang), _local(lang)
     owner_name = _member_name(thing.owner.name, lang)
     thing_url = _thing_url(thing)
-    header_collection = thing.collections.first()
-    header = L(header_collection.headline) if header_collection else ""
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
+    header = headline  # the thing this confirms is this email's parent
 
     if booking.start_date and booking.end_date:
         plain = T("confirmation_plain_dated").format(
@@ -1450,14 +1509,12 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
         plain += "\n\n" + note_plain
 
     subject = T("confirmation_subject").format(action=action)
-    # "Part of: {collection}" is the layout header now — no longer a body field.
     html = _render_email(
         [
             _para(T("confirmation_intro").format(action=action)),
-            _strong(headline),
             *_booking_detail_blocks(booking, lang),
             _para(T("confirmation_outro").format(owner=owner_name)),
-            _button(thing_url, T("view_thing_cta")),
+            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
             *note_blocks,
         ],
         lang=lang,
@@ -1533,7 +1590,10 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
     questioner_name = _member_name(questioner_name, lang)
 
     subject = T("faq_question_subject")
-    header = _thing_header(thing, L)
+    # The question itself is this email's parent (CA, 2026-09-22) — it is what
+    # the owner opened the message to read, ahead of which thing it was asked
+    # about.
+    header = question
     plain = T("faq_question_plain").format(
         questioner=questioner_name, thing=headline, question=question, url=thing_url
     )
@@ -1541,8 +1601,7 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
         [
             _para(T("faq_question_intro").format(questioner=questioner_name)),
             _strong(headline),
-            _field(T("question_label"), question),
-            _button(thing_url, T("faq_view_reply_cta")),
+            _cta(thing_url, T("faq_view_reply_cta"), T("cta_fallback")),
         ],
         lang=lang,
         header=header,
@@ -1558,7 +1617,7 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
     headline = L(thing.headline)
     owner_name = _member_name(owner_name, lang)
     subject = T("faq_answer_subject")
-    header = _thing_header(thing, L)
+    header = question
     plain = T("faq_answer_plain").format(
         owner=owner_name, answer=answer, thing=headline, url=thing_url
     )
@@ -1566,9 +1625,8 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
         [
             _para(T("faq_answer_intro").format(owner=owner_name)),
             _strong(headline),
-            _field(T("your_question_label"), question),
             _field(T("reply_label"), answer),
-            _button(thing_url, T("view_thing_cta")),
+            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
         ],
         lang=lang,
         header=header,
@@ -1591,13 +1649,12 @@ def send_faq_hide_email(owner_name, thing, question, questioner_email):
     T, L = _texts(lang), _local(lang)
     owner_name = _member_name(owner_name, lang)
     subject = T("faq_hide_subject")
-    header = _thing_header(thing, L)
+    header = question
     plain = T("faq_hide_plain").format(owner=owner_name, question=question)
     html = _render_email(
         [
             _para(T("faq_hide_intro").format(owner=owner_name)),
             _strong(L(thing.headline)),
-            _field(T("question_label"), question),
         ],
         lang=lang,
         header=header,
@@ -1626,14 +1683,13 @@ def send_thing_reported_email(thing, owner_email):
     headline = L(thing.headline)
 
     subject = T("reported_subject")
-    header = _thing_header(thing, L)
+    header = headline
     plain = T("reported_plain").format(thing=headline, url=thing_url)
     html = _render_email(
         [
             _para(T("reported_intro")),
-            _strong(headline),
             _para(T("reported_outro")),
-            _button(thing_url, T("reported_review_cta")),
+            _cta(thing_url, T("reported_review_cta"), T("cta_fallback")),
         ],
         lang=lang,
         header=header,
@@ -1667,7 +1723,7 @@ def send_broadcast_email(
                 [
                     _para(T("broadcast_intro").format(owner=owner)),
                     _para(message),
-                    _button(collection_url, T("broadcast_open_cta")),
+                    _cta(collection_url, T("broadcast_open_cta"), T("cta_fallback")),
                 ],
                 lang=lang,
                 header=headline,
@@ -1684,7 +1740,7 @@ def send_return_reminder_email(requester_name, thing, end_date, owner_email):
     user, lang = _recipient(owner_email)
     T, L = _texts(lang), _local(lang)
     headline = L(thing.headline)
-    header = _thing_header(thing, L)
+    header = headline
     subject = T("reminder_subject")
     end = _fmt_date(end_date)
     plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end)
@@ -1707,13 +1763,13 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
     headline = L(thing.headline)
-    header = _thing_header(thing, L)
+    header = headline
     thing_url = _thing_url(thing)
     subject = T("return_due_subject").format(thing=headline)
     end = _fmt_date(end_date)
     plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end)
     body = T("return_due_body").format(owner=owner_name, thing=headline, end=end)
-    blocks = [_para(body), _button(thing_url, T("view_thing_cta"))]
+    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester_email,
@@ -1738,7 +1794,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     T, L = _texts(lang), _local(lang)
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
-    header = L(collection.headline) if collection else _thing_header(thing, L)
+    header = headline  # the space being reserved is this email's parent
 
     start, end = _fmt_when(booking)
     subject = T("reservation_confirmed_subject").format(thing=headline)
@@ -1747,14 +1803,13 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     )
     blocks = [
         _para(T("reservation_confirmed_intro")),
-        _strong(headline),
         _field(T("dates_label"), f"{start} - {end}"),
     ]
     if thing.fee:
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
-    blocks.append(_button(thing_url, T("view_thing_cta")))
+    blocks.append(_cta(thing_url, T("view_thing_cta"), T("cta_fallback")))
     # The owner's note for whoever books here — after the listing link, before
     # the legal footer (which _render_email appends itself). Same collection
     # fallback the header line above uses, so the note always belongs to the
@@ -1787,7 +1842,7 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     T, L = _texts(lang), _local(lang)
     requester_name = requester.display_name
     headline = L(thing.headline)
-    header = L(collection.headline) if collection else _thing_header(thing, L)
+    header = headline
 
     start, end = _fmt_when(booking)
     subject = T("reservation_notice_subject").format(requester=requester_name, thing=headline)
@@ -1796,7 +1851,6 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     )
     blocks = [
         _para(T("reservation_notice_intro").format(requester=requester_name)),
-        _strong(headline),
         _field(T("dates_label"), f"{start} - {end}"),
     ]
     if booking.project_note:
@@ -1818,7 +1872,7 @@ def send_reservation_cancelled_email(
     T, L = _texts(lang), _local(lang)
     other = _member_name(other_name, lang)
     headline = L(thing.headline)
-    header = _thing_header(thing, L)
+    header = headline
     side = "to_guest" if cancelled_by_owner else "to_owner"
 
     start, end = _fmt_when(booking)
@@ -1829,7 +1883,6 @@ def send_reservation_cancelled_email(
     html = _render_email(
         [
             _para(T(f"reservation_cancelled_{side}_intro").format(other=other)),
-            _strong(headline),
             _field(T("dates_label"), f"{start} - {end}"),
         ],
         lang=lang,
@@ -1861,7 +1914,7 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     T, L = _texts(lang), _local(lang)
     thing_url = _thing_url(thing)
     headline = L(thing.headline)
-    header = _thing_header(thing, L)
+    header = headline
     start, end = _fmt_when(booking)
     subject = T("reservation_reminder_subject").format(thing=headline)
     plain = T("reservation_reminder_plain").format(
@@ -1869,12 +1922,11 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     )
     blocks = [
         _para(T("reservation_reminder_intro")),
-        _strong(headline),
         _field(T("dates_label"), f"{start} - {end}"),
     ]
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
-    blocks.append(_button(thing_url, T("view_thing_cta")))
+    blocks.append(_cta(thing_url, T("view_thing_cta"), T("cta_fallback")))
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester_email,
@@ -1912,7 +1964,7 @@ def send_digest_email(
                 [
                     _para(T("digest_intro")),
                     _list(headlines),
-                    _button(collection_url, T("view_collection_cta")),
+                    _cta(collection_url, T("view_collection_cta"), T("cta_fallback")),
                 ],
                 lang=lang,
                 header=headline,

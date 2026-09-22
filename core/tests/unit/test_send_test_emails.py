@@ -134,44 +134,110 @@ def test_no_email_in_any_language_leaks_an_unfilled_placeholder():
 
 
 @pytest.mark.django_db
-def test_the_mark_closes_every_html_email_right_above_the_legal_link():
-    """The OIUEEI mark's place is a rule of the layout (CA, 2026-09-21): one 53x15
-    mark, after the body, directly above "Legal & privacy". Checked here across
-    every real email in every language — the operator's own mail included, it
-    goes through the same layout — rather than on the two or three a unit test
+def test_the_mark_sits_right_after_the_rule_in_every_html_email():
+    """The OIUEEI mark's place is a rule of the layout (CA, 2026-09-22): one
+    53x15 mark, right after the <hr> that opens the footer, ahead of whatever
+    else applies (viral line, preferences, a digest's mute link) and always
+    before the legal link, genuinely last. Checked here across every real
+    email in every language — the operator's own mail included, it goes
+    through the same layout — rather than on the two or three a unit test
     builds by hand."""
     sent = _run("--lang", "all")
 
     assert len(sent) == len(SAMPLES) * len(LANGS)
+    hr = '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
     for message in sent:
         html = message.alternatives[0][0]
         assert html.count("cid:oiueei-logo") == 1, message.subject
-        between = html[html.index("cid:oiueei-logo") : html.index("/legal")]
-        assert between.count("<p") == 1, message.subject
+        assert html.count(hr) == 1, message.subject
+        assert html.index(hr) < html.index("cid:oiueei-logo"), message.subject
+        assert html.index("cid:oiueei-logo") < html.index("/legal"), message.subject
+        # Nothing but the card's own closing tags after the legal link.
+        tail = html[html.index("</a></p>", html.index("/legal")) :]
+        assert tail.strip() == "</a></p></div></div></html>", message.subject
 
 
 @pytest.mark.django_db
-def test_every_email_says_everything_at_one_text_size():
-    """Body, buttons, links and footers share one size, `EMAIL_FONT_SIZE` (CA,
-    2026-09-21): it was 16px on the buttons, 13px on the fallback links, 12px on
-    the legal link and the footers, and whatever the client chose for the body —
-    so the same message read differently in Gmail and in Apple Mail. Checked on
-    every real email in every language, footers and the viral line included (they
-    are appended after the layout). The one exception is the collection-name
-    header, a title, and there is at most one of it."""
-    size = email_service.EMAIL_FONT_SIZE
+def test_every_email_uses_exactly_the_three_named_sizes():
+    """Three sizes, never a fourth (CA, 2026-09-22, superseding the single
+    13px every-email size from a day earlier): EMAIL_BODY_SIZE (14px) for the
+    message's own words — paragraphs, buttons, a CTA's fallback link —
+    EMAIL_HEADER_SIZE (18px) for the one <h1> parent title, EMAIL_FOOTER_SIZE
+    (12px) for the rule-separated block at the foot. Checked on every real
+    email in every language, footers and the viral line included (appended
+    per recipient by _bottom(), after the template render). The header is at
+    most one per email; the footer size is not (mark caption-free, but
+    "manage your preferences", the legal link, the viral line and a digest's
+    mute line are all footer text)."""
     sizes = re.compile(r"font-size:\s*([0-9.]+px)")
+    allowed = {
+        email_service.EMAIL_BODY_SIZE,
+        email_service.EMAIL_HEADER_SIZE,
+        email_service.EMAIL_FOOTER_SIZE,
+    }
 
     for message in _run("--lang", "all"):
         found = sizes.findall(message.alternatives[0][0])
         assert found, message.subject
-        assert set(found) <= {size, "18px"}, (message.subject, sorted(set(found)))
-        assert found.count("18px") <= 1, message.subject
+        assert set(found) <= allowed, (message.subject, sorted(set(found) - allowed))
+        assert found.count(email_service.EMAIL_HEADER_SIZE) <= 1, message.subject
 
 
-def test_the_button_styles_use_the_shared_size():
-    assert f"font-size:{email_service.EMAIL_FONT_SIZE};" in email_service.BTN_PRIMARY
-    assert f"font-size:{email_service.EMAIL_FONT_SIZE};" in email_service.BTN_SECONDARY
+def test_the_button_styles_use_the_body_size():
+    assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in email_service.BTN_PRIMARY
+    assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in email_service.BTN_SECONDARY
+
+
+@pytest.mark.django_db
+def test_every_email_is_the_white_rounded_card_on_the_grey_page():
+    """The container (CA, 2026-09-22): a white, rounded box — max-width 600px,
+    a 1px #888888 border, 10px radius — sitting on a #F9FAFB page with 40px
+    padding. One card per email, every language, the operator's own mail
+    included (it goes through the same layout)."""
+    for message in _run("--lang", "all"):
+        html = message.alternatives[0][0]
+        assert "background-color:#f9fafb;padding:40px;" in html
+        assert (
+            "max-width:600px;margin:0 auto;background-color:#ffffff;"
+            "border:1px solid #888888;border-radius:10px;"
+        ) in html, message.subject
+        assert html.count("border-radius:10px") == 1, message.subject
+
+
+@pytest.mark.django_db
+def test_every_email_names_a_real_parent_or_oiueei():
+    """Every email has an <h1> now (CA, 2026-09-22) except the one exempted by
+    design — the operator's own capacity alarm, internal ops mail with no i18n
+    catalogue at all (see send_collection_capacity_alarm's docstring)."""
+    h1 = re.compile(r"<h1[^>]*>(.*?)</h1>")
+
+    for message in _run("--lang", "all"):
+        html = message.alternatives[0][0]
+        found = h1.findall(html)
+        if "capacity_alarm" in message.subject:
+            assert found == [], message.subject
+            continue
+        assert len(found) == 1, message.subject
+        assert found[0].strip(), message.subject
+
+
+@pytest.mark.django_db
+def test_every_link_in_the_body_is_bus_blue_and_underlined():
+    """The design rule (CA, 2026-09-22): every plain text link — the CTA
+    fallback link, "manage your preferences", the legal link, the viral
+    line's CTA — is bus blue and underlined, never the client's own default
+    blue. Buttons are excluded on purpose: a button is not a text link (its
+    own style carries no text-decoration at all, which is what keeps it from
+    looking like one)."""
+    style = 'style="color:#0000bf;text-decoration:underline;"'
+    for message in _run("--lang", "all"):
+        html = message.alternatives[0][0]
+        plain_links = re.findall(r"<a href=[^>]*>", html)
+        # At least the legal link is always a plain text link.
+        assert any(style in a for a in plain_links), message.subject
+        for a in plain_links:
+            if a.startswith(f'<a href="{email_service._frontend_base_url()}/legal"'):
+                assert style in a, message.subject
 
 
 @pytest.mark.django_db

@@ -5,15 +5,22 @@ the "md" block (the owner's email note): its html arrives pre-built, escaped
 once and mark_safe()d, by email_service._note_blocks. This is a comment block
 rather than a one-line hash comment, so the multi-line note is stripped from
 the render.{% endcomment %}
-{% comment %}The OIUEEI mark closes the message: always 53x15, always right above the
-legal link (CA, 2026-09-21) — it used to lead the messages that had no collection
-header and follow the legal link in the ones that did. The size is declared twice,
-as attributes and as inline CSS, and the attached PNG is only 106x30 (twice the
-displayed size, for retina): Apple Mail ignored the attributes and drew the old
-212x60 file at its natural size, giant, while Gmail honoured them.{% endcomment %}
+{% comment %}The card (CA, 2026-09-22): a white, rounded box on a light grey
+page — the shape every message shares now. This template renders the TOP half
+only (the card opens here, the h1 "parent" and the body blocks) and does NOT
+close it: the bottom half (a rule, the OIUEEI mark, the viral line, "manage
+your preferences", the legal link, then the two closing </div>s) is built in
+Python by email_service._bottom(), appended once per actual recipient — the
+one part of a message (digests, broadcasts) that is composed once per
+LANGUAGE but has to vary per person (a collection owner gets no viral line;
+Cat. 1 mail gets no preferences link). Splitting an HTML element's open and
+close tags across a template and a string concat is unusual; it is what lets
+that per-recipient tail exist at all without re-rendering the whole card.{% endcomment %}
 <html lang="{{ lang }}">
-{% if header %}<p style="font-size:18px;font-weight:700;margin:0 0 16px;">{{ header }}</p>{% endif %}
-<div style="font-size:{{ font_size }};">
+<div style="background-color:#f9fafb;padding:40px;">
+<div style="max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #888888;border-radius:10px;padding:32px 24px;">
+{% if header %}<h1 style="font-size:{{ size_header }};font-weight:700;margin:0 0 16px;color:#000000;">{{ header }}</h1>{% endif %}
+<div style="font-size:{{ size_body }};line-height:1.5;color:#000000;">
 {% for b in blocks %}{% if b.type == "para" %}
 <p>{{ b.text }}</p>
 {% elif b.type == "strong" %}
@@ -25,38 +32,34 @@ displayed size, for retina): Apple Mail ignored the attributes and drew the old
 {% elif b.type == "list" %}
 <ul>{% for item in b.items %}<li>{{ item }}</li>{% endfor %}</ul>
 {% elif b.type == "linklist" %}
-<ul>{% for l in b.links %}<li><a href="{{ l.url }}">{{ l.label }}</a></li>{% endfor %}</ul>
+<ul>{% for l in b.links %}<li><a href="{{ l.url }}" style="color:#0000bf;text-decoration:underline;">{{ l.label }}</a></li>{% endfor %}</ul>
 {% elif b.type == "links" %}
-<p>{% for l in b.links %}<a href="{{ l.url }}">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
-{% elif b.type == "button" %}
-{% comment %}An email's primary action as a button, and only that — see
-email_service._button. The button styles come from email_service (BTN_PRIMARY /
-BTN_SECONDARY), the one place they are defined.{% endcomment %}
-<p style="margin:20px 0;"><a href="{{ b.url }}" style="{{ btn_primary }}">{{ b.label }}</a></p>
+<p>{% for l in b.links %}<a href="{{ l.url }}" style="color:#0000bf;text-decoration:underline;">{{ l.label }}</a>{% if not forloop.last %} | {% endif %}{% endfor %}</p>
 {% elif b.type == "cta" %}
-{% comment %}The email action button. A real <button> or a CSS custom property
-would be ignored here — email clients strip forms and don't resolve var() — so
-this is an inline-styled anchor in the app's literal bus blue, followed by the
-action's URL as copy-pastable text for the clients (and the moments) where the
-button cannot be clicked.{% endcomment %}
+{% comment %}An email's single action as a button, with its own link spelled out
+below it (CA, 2026-09-22: every CTA repeats its link as plain text, not only
+the ones whose whole job is one click). A real <button> or a CSS custom
+property would be ignored here — email clients strip forms and don't resolve
+var() — so this is an inline-styled anchor in the app's literal bus blue,
+via email_service.BTN_PRIMARY, the one place that style is defined.{% endcomment %}
 <p style="margin:20px 0;"><a href="{{ b.url }}" style="{{ btn_primary }}">{{ b.label }}</a></p>
-<p style="font-size:{{ font_size }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
-<p style="font-size:{{ font_size }};margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}">{{ b.url }}</a></p>
+<p style="font-size:{{ size_body }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
+<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;"><a href="{{ b.url }}" style="color:#0000bf;text-decoration:underline;">{{ b.url }}</a></p>
 {% elif b.type == "ctas" %}
 {% comment %}Two email actions, a primary and a secondary — see email_service._ctas.
 Same constraints as the "cta" block above (inline styles, literal hex, no
 button). The secondary is the primary's outlined counterpart: white fill, the
-same bus blue as the border, black text — the app's own split. Its padding is
-two pixels short of the primary's on every side so the border brings both
-buttons to the same outer size. Both URLs follow as text, accept first.{% endcomment %}
+same bus blue as the border, black text — the app's own split (CA's own call,
+2026-09-21, unrelated to the "links are bus blue" rule above — a secondary
+button is a button, not a text link). Its padding is two pixels short of the
+primary's on every side so the border brings both buttons to the same outer
+size. Both URLs follow as text, accept first.{% endcomment %}
 <p style="margin:20px 0 8px;"><a href="{{ b.primary.url }}" style="{{ btn_primary }}margin:0 12px 12px 0;">{{ b.primary.label }}</a><a href="{{ b.secondary.url }}" style="{{ btn_secondary }}margin:0 0 12px 0;">{{ b.secondary.label }}</a></p>
-<p style="font-size:{{ font_size }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
-<p style="font-size:{{ font_size }};margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}">{{ b.primary.url }}</a></p>
-<p style="font-size:{{ font_size }};margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}">{{ b.secondary.url }}</a></p>
+<p style="font-size:{{ size_body }};color:#555555;margin:16px 0 0;">{{ b.fallback }}</p>
+<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;">{{ b.primary.label }}: <a href="{{ b.primary.url }}" style="color:#0000bf;text-decoration:underline;">{{ b.primary.url }}</a></p>
+<p style="font-size:{{ size_body }};margin:4px 0 0;word-break:break-all;">{{ b.secondary.label }}: <a href="{{ b.secondary.url }}" style="color:#0000bf;text-decoration:underline;">{{ b.secondary.url }}</a></p>
 {% elif b.type == "md" %}
 {{ b.html }}
 {% endif %}{% endfor %}
 </div>
-{% if has_logo %}<p style="margin:24px 0 8px;"><img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" style="display:block;width:53px;height:15px;border:0;"></p>{% endif %}
-<p style="color:#666;font-size:{{ font_size }};margin-top:{% if has_logo %}8{% else %}24{% endif %}px;"><a href="{{ legal_url }}">{{ legal_label }}</a></p>
 </html>
