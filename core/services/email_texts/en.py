@@ -284,6 +284,14 @@ TEXTS = {
     "proposal_approve_cta": "Invite them",
     "proposal_reject_cta": "Not this time",
     "proposal_declined_subject": "About your suggestion for {collection}",
+    "proposal_declined_intro": (
+        "Thanks for thinking of someone for {collection}. {owner} has "
+        "decided not to send that invitation for now:"
+    ),
+    "proposal_declined_outro": (
+        "This person hasn't been contacted and won't be. Nothing else "
+        "changes — you're still part of the group."
+    ),
     "proposal_declined_body": (
         "Thanks for thinking of someone for {collection}. {owner} has decided not to send that "
         "invitation for now, so {email} hasn't been contacted and won't be. Nothing else changes "

@@ -31,9 +31,9 @@ TEXTS = {
     "magic_greeting_collection": "¡Hola, te damos la bienvenida a '{collection}'!",
     "magic_plain": "Haz clic en el enlace para iniciar sesión: {link}",
     "magic_cta": "Iniciar sesión →",
-    "cta_fallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+    "cta_fallback": "Si prefieres, copia y pega este enlace en tu navegador:",
     # Shared by every CTA (one button or two) that has to spell its link out below it.
-    "ctas_fallback": "Si los botones no funcionan, copia y pega estos enlaces en tu navegador:",
+    "ctas_fallback": "Si prefieres, copia y pega estos enlaces en tu navegador:",
     # The one-line "what is this" under the OIUEEI parent title, for the one
     # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
     "generic_parent_pitch": (
@@ -281,6 +281,14 @@ TEXTS = {
     "proposal_approve_cta": "Invitarle",
     "proposal_reject_cta": "Ahora no",
     "proposal_declined_subject": "Sobre tu propuesta para {collection}",
+    "proposal_declined_intro": (
+        "Gracias por pensar en alguien para {collection}. {owner} ha "
+        "decidido no enviar esa invitación por ahora:"
+    ),
+    "proposal_declined_outro": (
+        "No hemos contactado con esta persona ni lo haremos. No cambia "
+        "nada más: sigues formando parte del grupo."
+    ),
     "proposal_declined_body": (
         "Gracias por pensar en alguien para {collection}. {owner} ha decidido no enviar esa "
         "invitación por ahora, así que no hemos contactado con {email} ni lo haremos. No cambia "
