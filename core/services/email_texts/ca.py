@@ -36,9 +36,16 @@ TEXTS = {
     "magic_greeting_collection": "Hola, et donem la benvinguda a '{collection}'!",
     "magic_plain": "Fes clic a l'enllaç per iniciar sessió: {link}",
     "magic_cta": "Iniciar sessió →",
-    "magic_fallback": "Si el botó no funciona, copia i enganxa aquest enllaç al navegador:",
-    # Under every email that ends in two buttons (_ctas): the invitation, the hold request.
+    "cta_fallback": "Si el botó no funciona, copia i enganxa aquest enllaç al navegador:",
+    # Shared by every CTA (one button or two) that has to spell its link out below it.
     "ctas_fallback": "Si els botons no funcionen, copia i enganxa aquests enllaços al navegador:",
+    # The one-line "what is this" under the OIUEEI parent title, for the one
+    # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
+    "generic_parent_pitch": (
+        "Comparteix el que tens amb la gent que t'envolta. Crea una col·lecció de coses "
+        "per regalar, vendre, llogar, deixar o reservar — i convida la gent a "
+        "conèixer-les i demanar-les."
+    ),
     # Collection invite
     "invite_subject": "Tens una invitació a '{collection}' - OIUEEI!",
     "invite_plain": (

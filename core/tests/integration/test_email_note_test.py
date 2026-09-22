@@ -35,7 +35,10 @@ def test_a_curator_gets_their_draft_rendered_as_members_will_see_it(
     # The email's own renderer: bold, a list, a link with its real host after.
     assert "<strong>Bring ID.</strong>" in html
     assert "<li>Floor 2</li>" in html
-    assert '<a href="https://example.com/rules">Rules</a> (example.com)' in html
+    assert (
+        '<a href="https://example.com/rules" style="color:#0000bf;text-decoration:underline;">'
+        "Rules</a> (example.com)" in html
+    )
     assert "Test Collection" in sent.subject
     # The plain half carries the raw Markdown, as the real emails do.
     assert "**Bring ID.**" in sent.body

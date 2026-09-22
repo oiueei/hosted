@@ -152,9 +152,11 @@ def test_the_legal_link_label_is_translated():
 @pytest.mark.django_db
 def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     """The subject names the collection being joined, but an inbox preview
-    shows only the subject — the body opens with the same greeting, in bold in
-    the HTML, so the message stands on its own once opened (and says *what*
-    was joined before asking for the click)."""
+    shows only the subject — the body opens with the same greeting, so the
+    message stands on its own once opened (and says *what* was joined before
+    asking for the click). The collection is also this email's <h1> parent
+    now (CA, 2026-09-22), so the name appears twice — once as the title, once
+    in the sentence beneath it."""
     email_service.send_magic_link_email(
         "someone@example.com",
         "http://localhost:3000/verify/tok",
@@ -164,14 +166,23 @@ def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     assert "welcome to 'Chalmercadillo'" in msg.subject
     assert "welcome to 'Chalmercadillo'" in msg.body
     html = msg.alternatives[0][0]
-    # The greeting is the body's own bold headline. Django's autoescape turns
-    # the quotes around the name into &#x27; — assert the escaped form, that
-    # IS what the reader's client will decode back into 'Chalmercadillo'.
-    assert "<strong>Hello, welcome to &#x27;Chalmercadillo&#x27;!</strong>" in html
-    # The generic /login variant carries the same structure without a name.
+    # Django's autoescape turns the quotes around the name into &#x27; — assert
+    # the escaped form, that IS what the reader's client will decode back into
+    # 'Chalmercadillo'.
+    assert "<h1" in html and ">Chalmercadillo</h1>" in html
+    assert "Hello, welcome to &#x27;Chalmercadillo&#x27;!" in html
+    assert html.index(">Chalmercadillo</h1>") < html.index("Hello, welcome")
+    # The generic /login variant has no collection to be its parent: OIUEEI is,
+    # with its own one-line pitch as the intro.
     mail.outbox.clear()
     email_service.send_magic_link_email("someone@example.com", "http://x/verify/t")
-    assert "<strong>Hello, welcome to OIUEEI!</strong>" in mail.outbox[0].alternatives[0][0]
+    generic_html = mail.outbox[0].alternatives[0][0]
+    assert ">OIUEEI</h1>" in generic_html
+    assert email_service.T("generic_parent_pitch", lang="en") in generic_html
+    assert "Hello, welcome to OIUEEI!" in generic_html
+    assert generic_html.index(">OIUEEI</h1>") < generic_html.index(
+        email_service.T("generic_parent_pitch", lang="en")
+    )
 
 
 @pytest.mark.django_db
@@ -235,6 +246,23 @@ LOGO_IMG = (
     '<img src="cid:oiueei-logo" alt="OIUEEI" height="15" width="53" '
     'style="display:block;width:53px;height:15px;border:0;">'
 )
+
+
+def _assert_the_footer_order(html):
+    """The bottom of every message, in one fixed order (CA, 2026-09-22): a
+    rule, the OIUEEI mark, then whatever else applies (viral line, "manage
+    your preferences", a sender-specific extra line), and always last the
+    legal link. Checks the two fixed points — mark right after the rule,
+    legal genuinely last — since what sits between them varies per email."""
+    assert html.count(LOGO_IMG) == 1
+    hr = '<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">'
+    assert html.count(hr) == 1
+    assert html.index(hr) < html.index(LOGO_IMG)
+    assert html.index(LOGO_IMG) < html.index("Legal")
+    # Nothing after "Legal & privacy" but the card's own closing tags.
+    tail = html[html.index("</a></p>", html.index("Legal")) :]
+    assert tail.strip() == "</a></p></div></div></html>"
+
 
 # --- The invitation: accept / decline as buttons (CA, 2026-09-21) -------------
 
@@ -440,22 +468,35 @@ def test_no_email_action_is_a_bare_text_link_except_the_erasure_one():
                     callers.add(fn.name)
     assert callers == {"send_account_delete_email"}, (
         f"{sorted(callers - {'send_account_delete_email'})} draw a bare text link. "
-        "An email's primary action is a primary button (_button); a yes/no pair is "
+        "An email's primary action is a primary button (_cta); a yes/no pair is "
         "_ctas (primary + secondary)."
     )
 
 
-def test_a_single_action_button_is_primary_and_has_no_copy_paste_fallback():
-    """`_button` is the light version of `_cta`: the button and nothing else —
-    no sentence, no raw URL under it (the plain-text half already carries it)."""
+def test_the_light_no_fallback_button_is_gone():
+    """`_button` used to be a lighter `_cta`: a bare button, no "copy and paste
+    this link" sentence, no raw URL under it. The house rule grew a second
+    clause (CA, 2026-09-22): EVERY CTA repeats its link as plain text now, not
+    only the ones whose whole job is one click — so the light variant has
+    nothing left to be lighter than, and is deleted rather than kept unused."""
+    assert not hasattr(email_service, "_button")
+
+
+def test_every_single_action_cta_spells_its_own_link_out_below_it():
+    """The single-button case, generically: whatever URL and label a caller
+    gives `_cta`, both the fallback sentence and the raw link follow — this is
+    what `_button` no longer existing has to mean in practice."""
     html = email_service._render_email(
-        [email_service._button("http://x/go", "Go there")], lang="en"
+        [email_service._cta("http://x/go", "Go there", "Trouble clicking?")], lang="en"
     )
 
     assert _first_button("http://x/go") in html
     assert ">Go there</a>" in html
-    assert "copy and paste" not in html
-    assert ">http://x/go</a>" not in html
+    assert "Trouble clicking?" in html
+    assert (
+        '<a href="http://x/go" style="color:#0000bf;text-decoration:underline;">http://x/go</a>'
+        in html
+    )
 
 
 @pytest.mark.django_db
@@ -590,19 +631,39 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "2026-03-05" not in body and "2026-03-05" not in html
 
 
-# --- The collection name is the header, not the OIUEEI logo -----------------
+# --- Every email names one parent, as its <h1> (CA, 2026-09-22) -------------
 #
-# People recognise the group they're in, not the software. So a collection-
-# scoped email leads with the collection name where the logo used to sit, and
-# the logo drops to a half-size mark below the legal link.
+# A thing's own headline for thing-scoped mail (people recognise the drill,
+# the room, the listing — not a group name they may belong to several of), a
+# collection's for collection-scoped mail, the FAQ question itself for the
+# three FAQ emails, "OIUEEI" for the rest. It replaced an earlier rule where
+# every thing-scoped email named its *collection* at the top instead.
 
 
 @pytest.mark.django_db
-def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, thing):
-    """The `thing` fixture lives in "Test Collection". A reservation-style email
-    about it names that collection at the top, drops the wordmark to the
-    half-size mark at the foot, and puts the name on the first line of the
-    plain body too."""
+def test_a_collection_scoped_email_leads_with_the_collection_name(user):
+    """A genuinely collection-scoped email (no thing, no FAQ question involved)
+    still takes the collection's name as its <h1>, as it did before this
+    round — the invitation is one of these."""
+    email_service.send_collection_invite_email(
+        "Lala", "Chalmercadillo", "invitee@example.com", "http://x/a", "http://x/r"
+    )
+
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+    assert "<h1" in html and ">Chalmercadillo</h1>" in html
+    assert html.index(">Chalmercadillo</h1>") < html.index("Legal")
+    _assert_the_footer_order(html)
+    # Plain-text body opens with the collection name too.
+    assert msg.body.startswith("Chalmercadillo")
+
+
+@pytest.mark.django_db
+def test_a_thing_scoped_email_names_the_thing_not_its_collection(user, user2, thing):
+    """The `thing` fixture ("Test Thing") lives in "Test Collection" — a
+    reservation-style email about it now names the THING at the top, not the
+    group it happens to be in (CA, 2026-09-22; it used to be the collection's
+    name). The wordmark still closes the message, after the rule."""
     from datetime import date
 
     from core.models import BookingPeriod
@@ -624,21 +685,19 @@ def test_a_collection_scoped_email_leads_with_the_collection_name(user, user2, t
 
     msg = mail.outbox[0]
     html = msg.alternatives[0][0]
-    # The name is the header: bold, before the body, before the legal link.
-    assert "Test Collection" in html
-    assert html.index("Test Collection") < html.index("Legal")
-    # The wordmark is the small mark, after the legal link, not at the top.
-    assert html.count(LOGO_IMG) == 1
-    assert html.index("Legal") < html.index(LOGO_IMG)
-    # Plain-text body opens with the collection name.
-    assert msg.body.startswith("Test Collection")
+    assert "<h1" in html and ">Test Thing</h1>" in html
+    assert html.index(">Test Thing</h1>") < html.index("Legal")
+    assert "Test Collection" not in html
+    _assert_the_footer_order(html)
+    assert html.index(">Test Thing</h1>") < html.index(LOGO_IMG)
+    assert msg.body.startswith("Test Thing")
 
 
 @pytest.mark.django_db
-def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
-    """A thing in no collection has no group to name, so the OIUEEI wordmark
-    stays where it was — at the top, and at the same small size as the footer
-    mark (CA, 2026-09-21) — and nothing is prepended to the plain body."""
+def test_a_standalone_things_email_names_the_thing_too(user, user2):
+    """A thing in no collection has no group to name either way — it was
+    always the thing (or nothing) for a standalone one; unchanged here, this
+    just confirms the new footer order still holds for it."""
     from datetime import date
 
     from core.models import BookingPeriod, Thing
@@ -660,22 +719,24 @@ def test_a_standalone_things_email_keeps_the_wordmark_on_top(user, user2):
     )
 
     html = mail.outbox[0].alternatives[0][0]
-    assert html.count(LOGO_IMG) == 1
-    # It leads the message: the very first paragraph, nothing drawn before it.
-    assert html[: html.index(LOGO_IMG)].count("<p") == 1
-    assert not mail.outbox[0].body.startswith("Ladder")
+    assert ">Ladder</h1>" in html
+    _assert_the_footer_order(html)
+    assert html.index(">Ladder</h1>") < html.index(LOGO_IMG)
+    assert mail.outbox[0].body.startswith("Ladder")
 
 
 @pytest.mark.django_db
-def test_a_non_collection_email_is_unchanged(user):
-    """Account-lifecycle mail (here: the erasure link) has no collection, so it
-    keeps the wordmark on top and grows no header."""
+def test_a_no_parent_email_still_gets_oiueei_as_its_h1(user):
+    """Account-lifecycle mail (here: the erasure link) has no thing, no
+    collection, no question — "OIUEEI" is its <h1> (CA, 2026-09-22; it used to
+    grow no header at all), without the generic pitch (a destructive step is
+    not a pitch moment — see GENERIC_PARENT's own docstring)."""
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]
-    assert html.count(LOGO_IMG) == 1
-    # It leads the message: the very first paragraph, nothing drawn before it.
-    assert html[: html.index(LOGO_IMG)].count("<p") == 1
+    assert ">OIUEEI</h1>" in html
+    assert email_service.T("generic_parent_pitch", lang="en") not in html
+    _assert_the_footer_order(html)
 
 
 @pytest.mark.django_db
@@ -859,7 +920,8 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     html = str(blocks[0]["html"])
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
-        '<ul><li>Trae tu <a href="https://example.com/reglas">carnet</a> (example.com)</li>'
+        '<ul><li>Trae tu <a href="https://example.com/reglas" '
+        'style="color:#0000bf;text-decoration:underline;">carnet</a> (example.com)</li>'
         "<li>Planta 2</li></ul>"
     )
     assert expected_list in html
@@ -885,7 +947,8 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     )
     html = str(blocks[0]["html"])
     assert html == (
-        '<p><a href="https://elsewhere.example/verify">https://www.oiueei.com/verify/abc</a>'
+        '<p><a href="https://elsewhere.example/verify" '
+        'style="color:#0000bf;text-decoration:underline;">https://www.oiueei.com/verify/abc</a>'
         " (elsewhere.example)</p>"
     )
 
@@ -898,7 +961,8 @@ def test_a_link_whose_text_is_its_own_url_needs_no_host():
     # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
     # "(example.com)" repeating what the text already says.
     assert html == (
-        '<p><a href="https://example.com/a?b=1&amp;c=2">https://example.com/a?b=1&amp;c=2</a></p>'
+        '<p><a href="https://example.com/a?b=1&amp;c=2" '
+        'style="color:#0000bf;text-decoration:underline;">https://example.com/a?b=1&amp;c=2</a></p>'
     )
 
 
