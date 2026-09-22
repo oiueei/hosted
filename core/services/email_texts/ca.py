@@ -255,6 +255,7 @@ TEXTS = {
     "reservation_notice_subject": "{requester} ha reservat '{thing}'",
     "reservation_notice_plain": "{requester} ha reservat '{thing}' del {start} al {end}.",
     "reservation_notice_intro": "{requester} ha reservat:",
+    "reservation_requester_email_label": "Email",
     "reservation_note_label": "El seu missatge",
     "reservation_cancelled_subject": "Reserva cancel·lada: '{thing}'",
     "reservation_cancelled_to_guest_plain": (
