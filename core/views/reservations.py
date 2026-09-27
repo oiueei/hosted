@@ -109,9 +109,9 @@ class ThingRequestView(APIView):
 
         try:
             if thing.type == Thing.Type.RESERVE_THING:
-                return self._request_reservation(request, thing, owner_email)
+                return self._request_reservation(request, thing, owner_email, collection_code)
             if thing.type in DATE_BASED_TYPES:
-                return self._request_date_based(request, thing, owner_email)
+                return self._request_date_based(request, thing, owner_email, collection_code)
             else:
                 booking = request_standard_booking(
                     thing, request.user, owner_email, collection_code
@@ -123,7 +123,7 @@ class ThingRequestView(APIView):
         except BookingRequestError as exc:
             return Response(exc.as_body(), status=exc.status_code)
 
-    def _request_reservation(self, request, thing, owner_email):
+    def _request_reservation(self, request, thing, owner_email, collection_code):
         """RESERVE_THING — validate the request's shape, then delegate.
 
         The shape is a pickup date plus either a length in days or a start/end
@@ -137,7 +137,6 @@ class ThingRequestView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        collection_code = body_dict(request).get("collection_code")
         booking = request_reservation(
             thing,
             request.user,
@@ -161,7 +160,7 @@ class ThingRequestView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def _request_date_based(self, request, thing, owner_email):
+    def _request_date_based(self, request, thing, owner_email, collection_code):
         """Validate LEND/RENT dates then delegate to the service."""
         serializer = ThingRequestWithDatesSerializer(data=request.data)
         if not serializer.is_valid():
@@ -169,7 +168,6 @@ class ThingRequestView(APIView):
 
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
-        collection_code = body_dict(request).get("collection_code")
         rental_collection = resolve_rental_collection(thing, collection_code, request.user)
 
         booking = request_date_based_booking(
