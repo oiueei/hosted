@@ -10,12 +10,19 @@ uploads that never became a record at all.
 **Dry-run is the default.** It only lists what it *would* delete; pass
 ``--commit`` to actually delete. Safe to run on Heroku:
 
-    heroku run --app <app> "python manage.py cleanup_orphan_images"           # dry-run
-    heroku run --app <app> "python manage.py cleanup_orphan_images --commit"  # delete
+    # dry-run
+    heroku run --app <app> "python manage.py cleanup_orphan_images"
+    # delete — the bucket must be named, and must be the configured one
+    heroku run --app <app> "python manage.py cleanup_orphan_images --bucket <bucket> --commit"
 
 (Quote the inner command so the Heroku CLI doesn't eat ``--commit``.)
 
 Safety rails:
+- **Names its target.** ``--commit`` refuses to run unless ``--bucket`` names
+  the very bucket this deployment has configured (``OBJECT_STORAGE_BUCKET``),
+  and a ``--bucket`` that does not match is refused even on a dry-run — so a
+  ``.env`` pointing at another deployment's storage is a refusal, never a
+  deletion from that deployment's bucket.
 - Cross-references **every** DB asset field — Thing.thumbnail + Thing.gallery,
   User.photo, Collection.thumbnail and Collection.welcome_doc — so anything in use
   is kept. The welcome PDF matters here: it is an object in the same tree as the
@@ -44,6 +51,7 @@ from the sweep for another day.
 ``core/services/storage.py``, not in this file.
 """
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone as dj_timezone
 
@@ -80,10 +88,38 @@ class Command(BaseCommand):
             default="oiueei/",
             help="Storage key prefix to scan (default 'oiueei/').",
         )
+        parser.add_argument(
+            "--bucket",
+            default=None,
+            help=(
+                "The bucket you mean to delete from. With --commit it is required and must "
+                "equal this deployment's OBJECT_STORAGE_BUCKET; a mismatched value is "
+                "refused even on a dry-run."
+            ),
+        )
 
     def handle(self, *args, **options):
         commit = options["commit"]
+        bucket = options["bucket"]
         prefix = options["prefix"]
+        configured_bucket = settings.OBJECT_STORAGE_BUCKET
+
+        # The wrong .env has happened (BACKUP_TASKS §2: the local one once
+        # carried the production key), and against the wrong bucket this
+        # command is not an error — it is a deletion. So a delete has to name
+        # its target, and even a dry-run refuses a mismatched name, so the
+        # mistake surfaces before --commit is ever added.
+        if bucket is not None and bucket != configured_bucket:
+            raise CommandError(
+                f"Refusing to run: --bucket {bucket!r} does not match this deployment's "
+                f"OBJECT_STORAGE_BUCKET ({configured_bucket!r})."
+            )
+        if commit and bucket is None:
+            raise CommandError(
+                "--commit requires --bucket, so the deletion names its target. This "
+                f"deployment's OBJECT_STORAGE_BUCKET is {configured_bucket!r} — pass "
+                "exactly that."
+            )
         now = dj_timezone.now()
         min_age = dj_timezone.timedelta(hours=options["min_age_hours"])
         max_age = dj_timezone.timedelta(days=options["max_age_days"])
