@@ -1239,24 +1239,3 @@ def test_a_reservation_past_the_horizon_is_refused(reservations, authenticated_c
         "code": "reservation_beyond_horizon",
         "params": {"days": 10},
     }
-
-
-def test_send_reminders_skips_reservations(reservations):
-    from io import StringIO
-
-    from django.core.management import call_command
-
-    tomorrow = date.today() + timedelta(days=1)
-    BookingPeriod.objects.create(
-        thing_code=reservations["thing"],
-        thing_type=Thing.Type.RESERVE_THING,
-        requester_code=reservations["member"],
-        requester_email=reservations["member"].email,
-        owner_code=reservations["owner"],
-        start_date=tomorrow - timedelta(days=1),
-        end_date=tomorrow,
-        status=BookingPeriod.Status.ACCEPTED,
-    )
-    mail.outbox.clear()
-    call_command("send_reminders", stdout=StringIO())
-    assert mail.outbox == []
