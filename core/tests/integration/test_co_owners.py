@@ -262,6 +262,46 @@ class TestPromotingACoOwner:
         )
         assert res.status_code == 403
 
+    @pytest.fixture
+    def capped(self, db, owner):
+        """A collection already holding `MAX_CO_OWNERS` co-curators, plus one
+        more plain member a further promotion would have to fit."""
+        collection = Collection.objects.create(
+            code="GRPFUL", owner=owner, headline="Full house", mode=Collection.Mode.PROPRIETARY
+        )
+        for i in range(Collection.MAX_CO_OWNERS):
+            co_curator = User.objects.create(
+                code=f"COOF{i:02d}", email=f"full{i}@test.com", name=f"F{i}"
+            )
+            collection.invites.add(co_curator)
+            collection.co_owners.add(co_curator)
+        outsider = User.objects.create(code="OUTS01", email="outsider@test.com", name="Lulu")
+        collection.invites.add(outsider)
+        return collection
+
+    def test_promotion_at_the_cap_refuses_a_new_co_curator(self, capped, owner):
+        """With no bound on the set, one stolen curator credential could
+        promote the whole roster — and every promotion hands over the member
+        list with its emails. At `MAX_CO_OWNERS` a new promotion is a 400 and
+        the set stands exactly as it was."""
+        outsider = capped.invites.get(code="OUTS01")
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=capped.code), {"user_code": outsider.code}, format="json"
+        )
+        assert res.status_code == 400
+        assert capped.co_owners.count() == Collection.MAX_CO_OWNERS
+        assert not capped.co_owners.filter(code=outsider.code).exists()
+
+    def test_repromoting_an_existing_co_curator_at_the_cap_stays_idempotent(self, capped, owner):
+        # The `already` path must never hit the ceiling: promoting someone who
+        # is already a co-curator grows nothing, so it keeps answering 200.
+        existing = capped.co_owners.first()
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=capped.code), {"user_code": existing.code}, format="json"
+        )
+        assert res.status_code == 200
+        assert capped.co_owners.count() == Collection.MAX_CO_OWNERS
+
     def test_a_non_member_cannot_be_promoted(self, group, owner, stranger):
         res = client_for(owner).post(
             CO_OWNERS_URL.format(code=group.code), {"user_code": stranger.code}, format="json"

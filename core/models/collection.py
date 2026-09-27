@@ -27,6 +27,11 @@ class Collection(models.Model):
     Can be shared with other users via invites.
     """
 
+    # The ceiling on the co-curator set, enforced at the promote endpoint. The
+    # design intent is "owner + 1–2"; the 5 is the abuse ceiling, not the goal —
+    # a number, one line, for the owner to change whenever a real group asks.
+    MAX_CO_OWNERS = 5
+
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
         INACTIVE = "INACTIVE", "Inactive"

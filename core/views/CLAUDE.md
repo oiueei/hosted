@@ -495,6 +495,7 @@ Promote or demote a co-curator, **in either mode** (2026-09, co-curators in PROP
 **`POST` behaviour:**
 - 403 (`co_owners_denial`) if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`.
 - 400 if `user_code` isn't already in `invites` — promotion only, never a separate invite door (`co_owners ⊆ invites`).
+- 400 when the collection already holds `Collection.MAX_CO_OWNERS` (5) co-curators — the abuse bound on one stolen curator credential (every promotion hands over the member list), not the design intent of 1–2. Promoting someone who is *already* a co-curator stays idempotent and never hits the ceiling; a collection holding more than 5 is not broken, it just cannot grow.
 - Adds to `co_owners` (idempotent) and, on the first promotion only, creates a `PROMOTED_CO_OWNER` in-app notification for the member. No email — a deliberate v1 simplification.
 
 **`DELETE` behaviour:**
