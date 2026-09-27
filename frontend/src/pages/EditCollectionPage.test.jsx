@@ -63,7 +63,14 @@ function mockApi({
       return Promise.resolve({
         ok: calendar.ok,
         status: calendar.status ?? (calendar.ok ? 200 : 500),
-        headers: { get: (name) => (name === 'X-Calendar-Events' ? calendar.count : null) },
+        headers: {
+          get: (name) =>
+            name === 'X-Calendar-Events'
+              ? calendar.count
+              : name === 'Content-Disposition' && calendar.filename
+                ? `attachment; filename="${calendar.filename}"`
+                : null,
+        },
         blob: async () => new Blob(['Subject,Start Date\n'], { type: 'text/csv' }),
       });
     }
@@ -568,6 +575,22 @@ describe('EditCollectionPage — the calendar export', () => {
     expect(call[1].method).toBe('POST');
     expect(click.mock.contexts[0].download).toBe('COL001-calendar.csv');
     expect(await screen.findByText('2 new event(s) — check your downloads.')).toBeInTheDocument();
+  });
+
+  test('a filename the server sets wins over the local literal', async () => {
+    // `filenameFromResponse` exists so this download and the collection export
+    // cannot drift apart the day the server changes one of them (its own
+    // docstring says so). The mock serves a name no local literal produces, so
+    // this falls the moment the page goes back to naming the file itself.
+    mockApi({ calendar: { ok: true, count: '3', filename: 'sala-gran-2026-09.csv' } });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', button));
+
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(click.mock.contexts[0].download).toBe('sala-gran-2026-09.csv');
   });
 
   test('nothing new: no download, and it says so', async () => {
