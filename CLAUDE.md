@@ -65,66 +65,62 @@ Claude Code's own trailer is switched off (`"attribution": {"commit": ""}` in
 There is exactly one format:
 
 ```
-Co-Authored-By: <model name and version>[ (<context>)][ via Claude Code] <email>
+AI-assistant: Claude Code (<model name and version>)
 ```
 
-- **The name comes from the live model**, read from whichever model is actually
-  running: `Claude Opus 5`, `Claude Sonnet 5`, `GLM-5.2`. Never copied from a
+- **The model name comes from the live model**, read from whichever model is actually
+  running: `Claude Opus 5`, `Claude Sonnet 5`, `GLM-5.3`. Never copied from a
   constant, a config file, or a previous commit — when a new version ships, the
   line must reflect it on its own.
-- **The parenthesis is a closed list**, and today it holds one value: `(1M context)`.
-  Omitted by default. Nothing else may go there — not the subject of the commit, a
-  summary of the task, a date, a branch name, or an issue id. A new value is added
-  by asking, not by inventing.
-- **`via Claude Code`** is for models that are not Anthropic's. Claude models omit it.
-- **The email comes from this table, by provider** — never from the model name, and
-  it never carries a version:
-
-  | Provider | Email |
-  |---|---|
-  | Anthropic (`Claude *`) | `noreply@anthropic.com` |
-  | Z.ai (`GLM *`) | `noreply@z.ai` |
-
-  A provider that is not in the table is a **stop and ask**. Do not infer an
-  address from the model name or a domain, and never use a provider's real contact
-  mailbox — those are people, not co-author identities.
-- **Exactly one `Co-Authored-By` line — never two on the same commit.** A commit
-  carries the model that actually produced *that commit's* changes. Under
-  `opusplan` that is almost always Sonnet, since Opus only reasons in plan mode
-  and writes nothing to the tree itself; credit Opus instead only when Opus's own
-  output, not just its plan, is what landed in that diff. If two models' work
-  truly can't be told apart within one commit, that is a sign the commit should
-  have been split by concern — not a reason to stack trailers.
+- **The tool is always named**, whoever built the model: the line says what wrote
+  the code, and through what. A different assistant names itself in that slot.
+- **The parentheses hold the model name and version and nothing else** — not the
+  subject of the commit, a summary of the task, a date, a branch name, an issue id,
+  or a context-window marker. A second value is added by asking, not by inventing.
+- **No email address.** The old format carried one and it was pure syntax: a model
+  is not an author and holds no copyright, so no mailbox belongs to it. Inventing
+  one is what produced the `opus5@anthropic.com` errors of August 2026.
+- **Not `Co-Authored-By:`, deliberately** (changed 2026-09-27). Git, GitHub and DCO
+  practice all read that trailer as *another author with standing*, and this
+  codebase's licensing rests on all copyright sitting in one pair of hands
+  (`CONTRIBUTING.md`, and the CLA that closes before launch). A model cannot be a
+  co-author, so claiming it in the one field a reader checks was the wrong claim in
+  the most sensitive place. `AI-assistant:` says what actually happened and leaves
+  `Co-Authored-By:` for people.
+- **Exactly one `AI-assistant:` line — never two on the same commit.** A commit
+  names the model that actually produced *that commit's* changes. Under `opusplan`
+  that is almost always Sonnet, since Opus only reasons in plan mode and writes
+  nothing to the tree itself; name Opus instead only when Opus's own output, not
+  just its plan, is what landed in that diff. If two models' work truly can't be
+  told apart within one commit, that is a sign the commit should have been split by
+  concern — not a reason to stack trailers.
 - **Never copy a trailer from git history.** The body's style is worth imitating;
-  the trailers are not. Commits from August 2026 carry a wrong format — a task
-  descriptor in the parenthesis and invented addresses of the `opus5@anthropic.com`
-  shape — and some commits stack two `Co-Authored-By` lines on one change. Both are
-  known errors, left in place deliberately because the history is not being
-  rewritten, and neither is a precedent.
+  the trailers are not. Every commit up to and including `6dbf8e2` (2026-09-22)
+  carries the old `Co-Authored-By:` format, and the history is **not** being
+  rewritten — so `git log` has two eras and the older one is not a precedent.
+  Inside it, the commits of August 2026 are wrong even for their own era (a task
+  descriptor in the parenthesis, invented addresses, and some stacking two trailers
+  on one change); those were left in place deliberately too.
 
 Valid — one trailer per commit:
 
 ```
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+AI-assistant: Claude Code (Claude Sonnet 5)
 ```
 
 ```
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+AI-assistant: Claude Code (Claude Opus 5)
 ```
 
 ```
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
-```
-
-```
-Co-Authored-By: GLM-5.2 (1M context) via Claude Code <noreply@z.ai>
+AI-assistant: Claude Code (GLM-5.3)
 ```
 
 Invalid — two models stacked on one commit, even when both genuinely took part:
 
 ```
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+AI-assistant: Claude Code (Claude Opus 5)
+AI-assistant: Claude Code (Claude Sonnet 5)
 ```
 
 When in doubt about how to compose the line, ask rather than decide.

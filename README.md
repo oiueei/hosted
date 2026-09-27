@@ -6,7 +6,7 @@ No ads, no tracking of any kind, no third-party code running in your browser —
 
 ## Authorship & Development
 
-OIUEEI is designed and led by Carlos Alberto, a designer, and co-written with [Claude Code](https://claude.ai/code), Anthropic's command-line coding assistant. UI and UX design decisions, product scope, tone and voice, and the choice to build on HDS are Carlos Alberto's; Claude carries a large share of the Django, DRF, and React implementation under direction. Every commit involves Claude, is reviewed before it ships, and is signed with a `Co-Authored-By: Claude` trailer — the contribution history is fully transparent.
+OIUEEI is designed and led by Carlos Alberto, a designer, and co-written with [Claude Code](https://claude.ai/code), Anthropic's command-line coding assistant. UI and UX design decisions, product scope, tone and voice, and the choice to build on HDS are Carlos Alberto's; Claude carries a large share of the Django, DRF, and React implementation under direction. Every commit involves Claude, is reviewed before it ships, and names the tool and the model that wrote it in an `AI-assistant:` trailer — the contribution history is fully transparent. Commits up to 2026-09-22 carry a `Co-Authored-By:` trailer for this instead; that history is kept as it was rather than rewritten, and the trailer changed because a model cannot hold copyright and should not be recorded as an author.
 
 ## Try it (and tell me what breaks)
 
