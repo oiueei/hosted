@@ -69,14 +69,23 @@ AI-assistant: Claude Code (<model name and version>)
 ```
 
 - **The model name comes from the live model**, read from whichever model is actually
-  running: `Claude Opus 5`, `Claude Sonnet 5`, `GLM-5.3`. Never copied from a
+  running: `Claude Opus 5`, `Claude Sonnet 5`, `GLM-5.3 [1m]`. Never copied from a
   constant, a config file, or a previous commit — when a new version ships, the
-  line must reflect it on its own.
+  line must reflect it on its own. It is the readable name, not the API id, so
+  `claude-opus-5` is written `Claude Opus 5` and `glm-5.3` `GLM-5.3`.
 - **The tool is always named**, whoever built the model: the line says what wrote
   the code, and through what. A different assistant names itself in that slot.
-- **The parentheses hold the model name and version and nothing else** — not the
-  subject of the commit, a summary of the task, a date, a branch name, an issue id,
-  or a context-window marker. A second value is added by asking, not by inventing.
+- **The parentheses hold the model as it announces itself and nothing else** — not the
+  subject of the commit, a summary of the task, a date, a branch name, or an issue id.
+  A second value *about* the model is added by asking, not by inventing.
+- **A variant marker inside the model's own identifier travels with the name**, because
+  it is part of what the model says it is rather than a claim about it: GLM announces
+  itself as `glm-5.3[1m]`, so the line reads `GLM-5.3 [1m]`. Claude models announce no
+  variant (the id is `claude-opus-5`), so there is nothing to carry and **a
+  context-window marker is never added by hand**. The old format's `(1M context)` was
+  exactly that hand-added claim and is retired: on the 177 `Claude Opus 4.8` commits it
+  described a variant nobody could read off the model, while on the 25 `GLM-5.2` ones it
+  was this same `[1m]` paraphrased — two different things in one parenthesis.
 - **No email address.** The old format carried one and it was pure syntax: a model
   is not an author and holds no copyright, so no mailbox belongs to it. Inventing
   one is what produced the `opus5@anthropic.com` errors of August 2026.
@@ -113,7 +122,7 @@ AI-assistant: Claude Code (Claude Opus 5)
 ```
 
 ```
-AI-assistant: Claude Code (GLM-5.3)
+AI-assistant: Claude Code (GLM-5.3 [1m])
 ```
 
 Invalid — two models stacked on one commit, even when both genuinely took part:
