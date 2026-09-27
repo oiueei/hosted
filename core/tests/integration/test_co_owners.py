@@ -14,6 +14,7 @@ import json
 
 import pytest
 from django.core import mail
+from django.core.cache import caches
 from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -331,6 +332,39 @@ class TestDemotingACoOwner:
         )
 
         assert InAppNotification.objects.filter(
+            user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
+        ).exists()
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "co-owner-demote-ratelimit-test",
+            }
+        },
+    )
+    def test_demotion_is_rate_limited_like_promotion(self, group, owner, co_owner, member):
+        """`delete` carried no limit while `post` had 30/h, and any curator can
+        demote any other — so a compromised co-curator could thrash demotions
+        without a ceiling. The 31st in the window is a 429, and it changes
+        nothing: the co-curator it targeted keeps both the role and the member
+        list exactly as the 30th call left them."""
+        caches["default"].clear()
+        client = client_for(owner)
+        url = CO_OWNERS_URL.format(code=group.code)
+        # 30 harmless demotions of a plain member (a no-op remove, still 200)
+        # exhaust the window; the 31th targets a real co-curator.
+        statuses = [
+            client.delete(url, {"user_code": member.code}, format="json").status_code
+            for _ in range(30)
+        ]
+        assert statuses[0] == 200
+        rejected = client.delete(url, {"user_code": co_owner.code}, format="json")
+        assert rejected.status_code == 429
+        assert group.co_owners.filter(code=co_owner.code).exists()
+        assert group.invites.filter(code=co_owner.code).exists()
+        assert not InAppNotification.objects.filter(
             user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
         ).exists()
 

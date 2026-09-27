@@ -609,6 +609,9 @@ class CollectionCoOwnerView(APIView):
             status=status.HTTP_200_OK,
         )
 
+    # Same ceiling as promotion: without it a compromised curator could thrash
+    # demotions (each one firing a DEMOTED notice) without any bound.
+    @method_decorator(ratelimit(key="user", rate="30/h", method="DELETE", block=True))
     def delete(self, request, collection_code):
         # No `co_owners_denial()` check here, deliberately: the gate is on
         # *bringing this state into existence* (see `post`), not on living in
