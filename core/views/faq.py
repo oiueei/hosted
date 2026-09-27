@@ -2,6 +2,7 @@
 FAQ views for OIUEEI.
 """
 
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
@@ -20,7 +21,7 @@ from core.services.email_service import (
     send_faq_hide_email,
     send_faq_question_email,
 )
-from core.views._helpers import deny_if_cannot_view, viewer_code
+from core.views._helpers import deny_if_cannot_view, managers_ready_collections, viewer_code
 
 
 class ThingFAQListView(APIView):
@@ -40,7 +41,16 @@ class ThingFAQListView(APIView):
         return [AllowAny()]
 
     def get_thing(self, thing_code):
-        return get_object_or_404(Thing, code=thing_code)
+        # Collections prefetched manager-ready (each with its owner selected
+        # and its co-curators) so the manager set never costs a query per
+        # collection: both `can_manage` (GET and POST) and the question
+        # notice's `managers()` fan-out walk exactly that path.
+        return get_object_or_404(
+            Thing.objects.prefetch_related(
+                Prefetch("collections", queryset=managers_ready_collections())
+            ),
+            code=thing_code,
+        )
 
     def get(self, request, thing_code):
         thing = self.get_thing(thing_code)
