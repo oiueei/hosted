@@ -4,7 +4,10 @@ The bucket is mocked — what these assert is the command's classification logic
 which objects it treats as orphans, that a dry-run deletes nothing, that
 `--commit` deletes only orphans, that referenced / seed / out-of-window
 objects are always kept, and that a delete which does not name the configured
-bucket is refused before anything is listed or deleted.
+bucket is refused before anything is listed or deleted. And that the sweep
+never leaves the upload folders: the production dry-run of 2026-09-28 listed
+`oiueei/assets/Curiosa-Variable.woff2` — the font the Heroku build downloads,
+not in git — and only the folder restriction keeps that class of object out.
 
 The stakes are asymmetric and that is why the negative cases outnumber the
 positive one. A missed orphan costs a few kilobytes a month. A wrongly deleted
@@ -23,6 +26,7 @@ from django.core.management.base import CommandError
 from django.utils import timezone
 
 from core.models import Collection, Thing
+from core.services import storage
 
 pytestmark = pytest.mark.django_db
 
@@ -153,6 +157,92 @@ def test_seed_folder_is_never_touched():
     out, delete_mock = _run([_asset("oiueei/seed/lala-cup")], commit=True)
     delete_mock.assert_not_called()
     assert "1 seed" in out
+
+
+def test_objects_outside_the_upload_folders_are_never_swept():
+    """The 2026-09-28 production dry-run listed `oiueei/assets/Curiosa-Variable.
+    woff2` — the font the Heroku build downloads in heroku-postbuild (not in
+    git, licence), so deleting it breaks every deploy after it. The listing
+    mock answers *any* prefix it is asked for, handing back the font the moment
+    something outside the upload folders is requested — which is exactly the
+    request that must never happen."""
+    font = _asset("oiueei/assets/Curiosa-Variable.woff2")
+
+    def answering_iter(prefix):
+        if prefix.rstrip("/") == storage.THING_FOLDER:
+            return iter([_asset("oiueei/things/orphan1")])
+        if prefix.rstrip("/") in storage.ASSET_FOLDERS:
+            return iter([])
+        return iter([font])
+
+    with (
+        patch("core.services.storage.iter_objects", side_effect=answering_iter) as iter_mock,
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        out = StringIO()
+        call_command(
+            "cleanup_orphan_images",
+            commit=True,
+            bucket=settings.OBJECT_STORAGE_BUCKET,
+            stdout=out,
+        )
+
+    # Only the upload folders were ever asked to list — the font was invisible.
+    assert [c.args[0] for c in iter_mock.call_args_list] == sorted(storage.ASSET_FOLDERS)
+    assert delete_mock.call_args.args[0] == ["oiueei/things/orphan1"]
+    assert "Curiosa" not in out.getvalue()
+
+
+def test_a_prefix_outside_the_upload_folders_is_refused_before_listing():
+    """`--prefix oiueei/assets/` is a request to sweep something this command
+    has no business touching, so it is a CommandError before anything is
+    listed — the same stance as the `--bucket` guard, not a silent empty scan."""
+    with (
+        patch("core.services.storage.iter_objects", return_value=iter([])) as iter_mock,
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        with pytest.raises(CommandError, match="not inside any upload folder"):
+            call_command(
+                "cleanup_orphan_images",
+                prefix="oiueei/assets/",
+                bucket=settings.OBJECT_STORAGE_BUCKET,
+                stdout=StringIO(),
+            )
+    iter_mock.assert_not_called()
+    delete_mock.assert_not_called()
+
+
+def test_a_prefix_inside_an_upload_folder_still_narrows():
+    with (
+        patch("core.services.storage.iter_objects", return_value=iter([])) as iter_mock,
+        patch("core.services.storage.delete_many", side_effect=len),
+    ):
+        call_command(
+            "cleanup_orphan_images",
+            prefix="oiueei/things/",
+            bucket=settings.OBJECT_STORAGE_BUCKET,
+            stdout=StringIO(),
+        )
+    # Passed through as given — one folder asked, not all four.
+    assert [c.args[0] for c in iter_mock.call_args_list] == ["oiueei/things/"]
+
+
+def test_orphans_in_every_upload_folder_are_still_deleted():
+    resources = [
+        _asset("oiueei/things/o1"),
+        _asset("oiueei/collections/o2"),
+        _asset("oiueei/users/o3"),
+        _asset("oiueei/documents/o4"),
+    ]
+    out, delete_mock = _run(resources, commit=True)
+    sent = [key for call in delete_mock.call_args_list for key in call.args[0]]
+    assert sent == [
+        "oiueei/things/o1",
+        "oiueei/collections/o2",
+        "oiueei/users/o3",
+        "oiueei/documents/o4",
+    ]
+    assert "Deleted 4 orphan" in out
 
 
 def test_recent_uploads_are_skipped():

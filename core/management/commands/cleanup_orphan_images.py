@@ -23,15 +23,26 @@ Safety rails:
   and a ``--bucket`` that does not match is refused even on a dry-run — so a
   ``.env`` pointing at another deployment's storage is a refusal, never a
   deletion from that deployment's bucket.
+- **Only lists the upload folders** (``storage.ASSET_FOLDERS``: things,
+  collections, users, documents — the folders a ticketed upload may write to).
+  Scanning the whole ``oiueei/`` tree treated everything unreferenced as an
+  orphan, and the production dry-run of 2026-09-28 duly listed
+  ``oiueei/assets/Curiosa-Variable.woff2`` — the variable font the Heroku
+  build downloads in ``heroku-postbuild`` (not in git, licence): deleting it
+  would have broken every deploy after it. Any other prefix — ``assets/`` and
+  whatever comes next — is out by construction, not by an exception list, and
+  a ``--prefix`` that does not fall inside an upload folder is refused with a
+  ``CommandError`` before anything is listed.
 - Cross-references **every** DB asset field — Thing.thumbnail + Thing.gallery,
   User.photo, Collection.thumbnail and Collection.welcome_doc — so anything in use
   is kept. The welcome PDF matters here: it is an object in the same tree as the
   photos, so it turns up in this sweep like any of them, and a missing
-  cross-reference would delete a live document. The default ``--prefix`` is the
-  whole ``oiueei/`` tree, so welcome docs living in ``oiueei/documents/`` (S4)
-  need no special handling — they are swept alongside every other subfolder and
-  cross-referenced the same way.
-- Never touches the ``oiueei/seed/`` folder (the demo's shared image pool).
+  cross-reference would delete a live document. Welcome docs live in
+  ``oiueei/documents/`` (S4), one of the upload folders, so they are swept
+  alongside every other folder and cross-referenced the same way.
+- Never touches the ``oiueei/seed/`` folder (the demo's shared image pool) —
+  structurally now, since the seed folder is not an upload folder and is never
+  listed; the explicit prefix check stays as a second lock.
 - Only considers assets **older than --min-age-hours** (default 24h) so an
   in-flight upload mid-form isn't mistaken for an orphan, and **younger than
   --max-age-days** (default 30) so it stays a recent-window sweep. Run it
@@ -85,8 +96,12 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--prefix",
-            default="oiueei/",
-            help="Storage key prefix to scan (default 'oiueei/').",
+            default=None,
+            help=(
+                "Narrow the sweep to one upload folder (e.g. 'oiueei/things/'). Default: "
+                "every upload folder. A prefix outside the upload folders is refused — "
+                "the sweep only considers uploaded assets."
+            ),
         )
         parser.add_argument(
             "--bucket",
@@ -124,13 +139,14 @@ class Command(BaseCommand):
         min_age = dj_timezone.timedelta(hours=options["min_age_hours"])
         max_age = dj_timezone.timedelta(days=options["max_age_days"])
 
+        scan_prefixes = self._scan_prefixes(prefix)
         referenced = self._referenced_keys()
         self.stdout.write(f"Referenced by DB: {len(referenced)} image(s).")
 
         scanned = seed_skipped = referenced_skipped = window_skipped = 0
         orphans = []
 
-        for asset in self._iter_objects(prefix):
+        for asset in self._iter_objects(scan_prefixes):
             scanned += 1
             key = asset["key"]
 
@@ -167,6 +183,30 @@ class Command(BaseCommand):
         deleted = self._delete([key for key, _ in orphans])
         self.stdout.write(self.style.SUCCESS(f"Deleted {deleted} orphan image(s)."))
 
+    def _scan_prefixes(self, prefix):
+        """The prefixes to list: every upload folder, or the one a --prefix narrows to.
+
+        The sweep only ever considers ``storage.ASSET_FOLDERS`` — the folders a
+        ticketed upload may write to. Everything else under ``oiueei/`` is out
+        by construction, not by an exception list: the production dry-run of
+        2026-09-28 listed the build's own font (``oiueei/assets/``, not in
+        git), and deleting it would have broken every deploy after it. So a
+        --prefix that does not fall inside an upload folder is a mistake about
+        what this command may even look at — refused before anything is listed.
+        """
+        folders = sorted(storage.ASSET_FOLDERS)
+        if prefix is None:
+            return folders
+        normalized = prefix.rstrip("/")
+        if not any(
+            normalized == folder or normalized.startswith(folder + "/") for folder in folders
+        ):
+            raise CommandError(
+                f"Refusing to run: --prefix {prefix!r} is not inside any upload folder "
+                f"({', '.join(folders)}). The sweep only considers uploaded assets."
+            )
+        return [prefix]
+
     def _referenced_keys(self):
         """Every storage key referenced by any DB record."""
         referenced = set()
@@ -186,15 +226,16 @@ class Command(BaseCommand):
                 referenced.add(welcome_doc)
         return referenced
 
-    def _iter_objects(self, prefix):
-        """Yield every stored object under ``prefix``, paginated.
+    def _iter_objects(self, prefixes):
+        """Yield every stored object under each prefix, paginated.
 
         Wrapped so a misconfigured or unreachable bucket surfaces as a clean
         CommandError rather than a traceback — this is run by hand, usually on a
         dyno, and the first thing to get wrong is the credentials.
         """
         try:
-            yield from storage.iter_objects(prefix)
+            for prefix in prefixes:
+                yield from storage.iter_objects(prefix)
         except Exception as exc:  # noqa: BLE001 — surface any storage/config error cleanly
             raise CommandError(f"Could not list stored objects: {exc}") from exc
 
