@@ -871,8 +871,13 @@ def _notify_reservation_cancelled(booking, thing, by_user):
     """Tell the member (unless they cancelled) and every curator (bar whoever
     cancelled) that the slot is free again. `other_name` is always the person
     who actually cancelled, so the copy — "{other} cancelled a reservation of
-    {thing}" — is true for every reader."""
-    from core.services.email_service import send_reservation_cancelled_email
+    {thing}" — is true for every reader.
+
+    Whoever cancelled gets their own confirmation too — see below."""
+    from core.services.email_service import (
+        send_reservation_cancel_confirmation_email,
+        send_reservation_cancelled_email,
+    )
 
     requester_id = booking.requester_code_id
 
@@ -905,3 +910,16 @@ def _notify_reservation_cancelled(booking, thing, by_user):
             send_reservation_cancelled_email(
                 email, by_user.name, thing, booking, cancelled_by_owner=to_the_member
             )
+
+    # The one recipient the loop above never reaches, by construction — a
+    # confirmation, not the "somebody else acted" notice the others get. No
+    # in-app record: they just did this in the app and can see it.
+    is_own_reservation = by_user.code == requester_id
+    if by_user.email:
+        send_reservation_cancel_confirmation_email(
+            by_user.email,
+            thing,
+            booking,
+            is_own_reservation=is_own_reservation,
+            member_name=None if is_own_reservation else booking.requester_code.name,
+        )

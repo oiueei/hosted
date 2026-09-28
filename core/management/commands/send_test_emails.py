@@ -400,6 +400,24 @@ def _(w):
     )
 
 
+@sample("reservation_cancel_confirmation_self", "send_reservation_cancel_confirmation_email")
+def _(w):
+    es.send_reservation_cancel_confirmation_email(
+        w.to, w.reserve, w.booking(w.reserve, w.me, accepted=True), is_own_reservation=True
+    )
+
+
+@sample("reservation_cancel_confirmation_other", "send_reservation_cancel_confirmation_email")
+def _(w):
+    es.send_reservation_cancel_confirmation_email(
+        w.owner.email,
+        w.reserve,
+        w.booking(w.reserve, w.member, accepted=True),
+        is_own_reservation=False,
+        member_name=w.member.name,
+    )
+
+
 @sample("reservation_reminder", "send_reservation_reminder_email")
 def _(w):
     es.send_reservation_reminder_email(w.to, w.reserve, w.booking(w.reserve, w.me, accepted=True))

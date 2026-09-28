@@ -279,6 +279,16 @@ TEXTS = {
         "{other} ha cancel·lat la seva reserva de '{thing}' (del {start} al {end})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} ha cancel·lat la seva reserva de:",
+    "reservation_cancel_confirmation_subject_self": "La teva reserva de '{thing}' està cancel·lada",
+    "reservation_cancel_confirmation_subject_other": "Has cancel·lat una reserva de '{thing}'",
+    "reservation_cancel_confirmation_intro_self": "La teva reserva està cancel·lada:",
+    "reservation_cancel_confirmation_intro_other": "Has cancel·lat la reserva de {member}:",
+    "reservation_cancel_confirmation_plain_self": (
+        "La teva reserva de '{thing}' (del {start} al {end}) està cancel·lada."
+    ),
+    "reservation_cancel_confirmation_plain_other": (
+        "Has cancel·lat la reserva de {member} de '{thing}' (del {start} al {end})."
+    ),
     "reservation_reminder_subject": "La teva reserva de '{thing}' comença demà",
     "reservation_reminder_plain": (
         "Un recordatori: la teva reserva de '{thing}' va del {start} al {end}. "

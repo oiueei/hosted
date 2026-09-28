@@ -2069,6 +2069,60 @@ def send_reservation_cancelled_email(
     )
 
 
+def send_reservation_cancel_confirmation_email(
+    canceller_email, thing, booking, *, is_own_reservation, member_name=None
+):
+    """Confirm a cancellation to whoever just made it (RESERVE_THING).
+
+    The member who booked got "your reservation is confirmed" at the time; a
+    cancellation with no reply to them leaves that email as the last word in
+    their inbox, describing a reservation that no longer stands. No button, no
+    ``email_note`` — there is nothing left to do about this reservation.
+
+    ``is_own_reservation`` picks the wording: the member who cancelled their
+    own reads "your reservation is cancelled"; a curator who cancelled someone
+    else's reads "you cancelled {member}'s reservation" — ``member_name`` is
+    that person's bare ``name`` (L2: never ``display_name``, whose fallback is
+    their email address).
+    """
+    user, lang = _recipient(canceller_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    side = "self" if is_own_reservation else "other"
+    member = None if is_own_reservation else _member_name(member_name, lang)
+
+    start, end = _fmt_when(booking)
+    subject = T(f"reservation_cancel_confirmation_subject_{side}").format(thing=headline)
+    intro_key = f"reservation_cancel_confirmation_intro_{side}"
+    plain_key = f"reservation_cancel_confirmation_plain_{side}"
+    if is_own_reservation:
+        intro = T(intro_key)
+        plain = T(plain_key).format(thing=headline, start=start, end=end)
+    else:
+        intro = T(intro_key).format(member=member)
+        plain = T(plain_key).format(member=member, thing=headline, start=start, end=end)
+
+    html = _render_email(
+        [
+            _para(intro),
+            _field(T("dates_label"), f"{start} - {end}"),
+        ],
+        lang=lang,
+        header=header,
+    )
+    _send(
+        canceller_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
 def send_reservation_reminder_email(requester_email, thing, booking):
     """Remind the member their on-site reservation starts tomorrow (RESERVE_THING).
 

@@ -270,6 +270,16 @@ TEXTS = {
         "{other} has cancelled their reservation of '{thing}' ({start} to {end})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} has cancelled their reservation of:",
+    "reservation_cancel_confirmation_subject_self": "Your reservation of '{thing}' is cancelled",
+    "reservation_cancel_confirmation_subject_other": "You cancelled a reservation of '{thing}'",
+    "reservation_cancel_confirmation_intro_self": "Your reservation is cancelled:",
+    "reservation_cancel_confirmation_intro_other": "You cancelled {member}'s reservation:",
+    "reservation_cancel_confirmation_plain_self": (
+        "Your reservation of '{thing}' ({start} to {end}) is cancelled."
+    ),
+    "reservation_cancel_confirmation_plain_other": (
+        "You cancelled {member}'s reservation of '{thing}' ({start} to {end})."
+    ),
     "reservation_reminder_subject": "Your reservation of '{thing}' starts tomorrow",
     "reservation_reminder_plain": (
         "A friendly nudge: your reservation of '{thing}' runs {start} to {end}. "
