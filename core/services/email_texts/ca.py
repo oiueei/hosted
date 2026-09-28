@@ -210,6 +210,13 @@ TEXTS = {
     "faq_answer_intro": "{owner} ha respost a la teva pregunta sobre:",
     "your_question_label": "La teva pregunta",
     "reply_label": "Resposta",
+    # FAQ answer (to the rest of the managing team — not the answerer, not the asker)
+    "faq_answered_team_subject": "Una pregunta sobre '{thing}' ja té resposta",
+    "faq_answered_team_plain": (
+        "{answerer} ha respost una pregunta sobre '{thing}'. "
+        "Resposta: {answer} Veure la cosa: {url}"
+    ),
+    "faq_answered_team_intro": "{answerer} ha respost una pregunta sobre:",
     # FAQ hidden (to questioner)
     "faq_hide_subject": "S'ha amagat la teva pregunta",
     "faq_hide_plain": "{owner} ha amagat la teva pregunta: {question}",

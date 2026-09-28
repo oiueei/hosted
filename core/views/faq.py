@@ -18,10 +18,27 @@ from core.pagination import StandardResultsPagination
 from core.serializers import FAQAnswerSerializer, FAQCreateSerializer, FAQSerializer
 from core.services.email_service import (
     send_faq_answer_email,
+    send_faq_answered_to_team_email,
     send_faq_hide_email,
     send_faq_question_email,
 )
 from core.views._helpers import deny_if_cannot_view, managers_ready_collections, viewer_code
+
+
+def _clear_faq_question_notifications(faq):
+    """Drop every pending question notice for this FAQ, whoever holds it.
+
+    A FAQ_QUESTION notification asks its reader to answer; one answer — or
+    hiding the question — settles it for the whole team, so every copy goes,
+    not just whoever acted (the ``_clear_request_notifications`` pattern from
+    booking_service). Matched by ``payload__faq_code``: notifications created
+    before that key existed carry only thing_headline/questioner_name, never
+    match, and stay until dismissed by hand.
+    """
+    InAppNotification.objects.filter(
+        type=InAppNotification.Type.FAQ_QUESTION,
+        payload__faq_code=faq.code,
+    ).delete()
 
 
 class ThingFAQListView(APIView):
@@ -124,7 +141,12 @@ class ThingFAQListView(APIView):
             InAppNotification.objects.create(
                 user=manager,
                 type=InAppNotification.Type.FAQ_QUESTION,
-                payload={"thing_headline": thing.headline, "questioner_name": questioner_name},
+                payload={
+                    "thing_headline": thing.headline,
+                    "questioner_name": questioner_name,
+                    # What settles this notice (an answer or a hide) matches on.
+                    "faq_code": faq.code,
+                },
             )
 
         return Response(
@@ -191,14 +213,28 @@ class FAQAnswerView(APIView):
 
         # Notify questioner by email and in-app
         questioner = faq.questioner
+        answerer_name = request.user.name  # bare name (L2)
         if questioner and questioner.email:
-            owner_name = request.user.name  # bare name (L2)
-            send_faq_answer_email(owner_name, thing, faq.question, faq.answer, questioner.email)
+            send_faq_answer_email(answerer_name, thing, faq.question, faq.answer, questioner.email)
             InAppNotification.objects.create(
                 user=questioner,
                 type=InAppNotification.Type.FAQ_ANSWERED,
-                payload={"thing_headline": thing.headline, "owner_name": owner_name},
+                payload={"thing_headline": thing.headline, "owner_name": answerer_name},
             )
+
+        # The question asked every manager, so its answer is team news: the
+        # others learn who answered (they were holding the same open question),
+        # and the pending FAQ_QUESTION leaves every inbox — not just the
+        # answerer's view of it. Whoever answered and whoever asked are skipped:
+        # one already knows, the other has just been told.
+        _clear_faq_question_notifications(faq)
+        for manager in thing.managers():
+            if manager.code in (request.user.code, faq.questioner_id):
+                continue
+            if manager.email:
+                send_faq_answered_to_team_email(
+                    answerer_name, thing, faq.question, faq.answer, manager.email
+                )
 
         return Response(FAQSerializer(faq, context={"request": request}).data)
 

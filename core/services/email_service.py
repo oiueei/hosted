@@ -1724,6 +1724,47 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
     )
 
 
+def send_faq_answered_to_team_email(answerer, thing, question, answer, manager_email):
+    """Tell a curator who didn't answer that a teammate did (Cat. 2).
+
+    A question asks **every** manager of the thing, so its answer is team news:
+    without this, the co-curator's inbox kept a FAQ_QUESTION asking for a
+    decision the founder had already made — and the other way round. The
+    questioner is not this email's business (they get ``send_faq_answer_email``)
+    and neither is whoever answered.
+    """
+    user, lang = _recipient(manager_email)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing)
+    headline = L(thing.headline)
+    answerer = _member_name(answerer, lang)
+    subject = T("faq_answered_team_subject").format(thing=headline)
+    header = question
+    plain = T("faq_answered_team_plain").format(
+        answerer=answerer, thing=headline, answer=answer, url=thing_url
+    )
+    html = _render_email(
+        [
+            _para(T("faq_answered_team_intro").format(answerer=answerer)),
+            _strong(headline),
+            _field(T("reply_label"), answer),
+            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
+        ],
+        lang=lang,
+        header=header,
+    )
+    _send(
+        manager_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
 def send_faq_hide_email(owner_name, thing, question, questioner_email):
     """Send FAQ hidden notification email to questioner."""
     user, lang = _recipient(questioner_email)

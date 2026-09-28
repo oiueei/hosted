@@ -714,7 +714,7 @@ Returns a single FAQ. Hidden FAQs are only visible to a **manager** of the thing
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/answer/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Answers a FAQ. Sends a notification email + in-app to the questioner, naming whoever answered (`request.user.name`, bare — L2).
+Answers a FAQ. Sends a notification email + in-app to the questioner, naming whoever answered (`request.user.name`, bare — L2). **The rest of the team hears it too** (2026-09-28, CA's production report: a question warns every manager but the answer warned only the asker, so a co-curator's inbox kept a `FAQ_QUESTION` asking for a decision the founder had already made): `send_faq_answered_to_team_email` reaches every other manager of the thing (minus the answerer, minus the questioner — the questioner gets their own answer email), and every `FAQ_QUESTION` notification for this FAQ is deleted for **all** managers (`_clear_faq_question_notifications`, matched by `payload__faq_code` — the key is written at creation since this change; older notifications without it never match and stay until dismissed by hand).
 
 **Request body:**
 ```json

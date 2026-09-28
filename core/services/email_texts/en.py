@@ -205,6 +205,12 @@ TEXTS = {
     "faq_answer_intro": "{owner} has replied to your question about:",
     "your_question_label": "Your question",
     "reply_label": "Reply",
+    # FAQ answer (to the rest of the managing team — not the answerer, not the asker)
+    "faq_answered_team_subject": "A question about '{thing}' has been answered",
+    "faq_answered_team_plain": (
+        "{answerer} has answered a question about '{thing}'. Reply: {answer} View thing: {url}"
+    ),
+    "faq_answered_team_intro": "{answerer} answered a question about:",
     # FAQ hidden (to questioner)
     "faq_hide_subject": "Your question has been hidden",
     "faq_hide_plain": "{owner} has hidden your question: {question}",

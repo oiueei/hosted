@@ -330,6 +330,13 @@ def _(w):
     es.send_faq_answer_email("Lala", w.gift, "¿Sigue disponible?", "Sí, ven a por ella.", w.to)
 
 
+@sample("faq_answered_to_team", "send_faq_answered_to_team_email")
+def _(w):
+    es.send_faq_answered_to_team_email(
+        "Lala", w.gift, "¿Sigue disponible?", "Sí, ven a por ella.", w.to
+    )
+
+
 @sample("faq_hide", "send_faq_hide_email")
 def _(w):
     es.send_faq_hide_email("Lala", w.gift, "¿Sigue disponible?", w.to)
