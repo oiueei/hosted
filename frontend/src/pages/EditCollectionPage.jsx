@@ -25,6 +25,10 @@ import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import StatusRegion from '../components/StatusRegion';
 import EmailNoteTest from '../components/EmailNoteTest';
+import CalendarExportButton, {
+  CalendarExportStatus,
+  useCalendarExport,
+} from '../components/CalendarExportButton';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -110,9 +114,9 @@ export default function EditCollectionPage() {
   const [statsError, setStatsError] = useState(false);
   const [collectionExportError, setCollectionExportError] = useState(null);
   const [collectionExportDownloading, setCollectionExportDownloading] = useState(false);
-  const [calendarError, setCalendarError] = useState(null);
-  const [calendarInfo, setCalendarInfo] = useState(null);
-  const [calendarDownloading, setCalendarDownloading] = useState(false);
+  // The calendar CSV's request, label and outcome messages live in the shared
+  // CalendarExportButton — the same control also sits in the collection hero.
+  const calendarExport = useCalendarExport(code);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -348,39 +352,6 @@ export default function EditCollectionPage() {
       downloadBlob(await res.blob(), `${code}-stats.csv`);
     } catch {
       setStatsError(true);
-    }
-  };
-
-  const handleDownloadCalendar = async () => {
-    setCalendarError(null);
-    setCalendarInfo(null);
-    setCalendarDownloading(true);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${code}/calendar-export/`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        // The server counts the events it put in the file; 0 means everything
-        // was already exported, so there is nothing to hand the browser.
-        const count = Number(res.headers.get('X-Calendar-Events') || '0');
-        if (count > 0) {
-          // The server-set name, with the literal as fallback — the same rule
-          // the collection export two buttons up follows, so the two downloads
-          // cannot drift apart the day the server changes one.
-          downloadBlob(await res.blob(), filenameFromResponse(res, `${code}-calendar.csv`));
-          setCalendarInfo(t('calendarExport.done', { count }));
-        } else {
-          setCalendarInfo(t('calendarExport.nothingNew'));
-        }
-      } else if (res.status === 429) {
-        setCalendarError(t('common.tooManyAttempts'));
-      } else {
-        setCalendarError(t('calendarExport.error'));
-      }
-    } catch {
-      setCalendarError(t('common.connectionError'));
-    } finally {
-      setCalendarDownloading(false);
     }
   };
 
@@ -743,19 +714,11 @@ export default function EditCollectionPage() {
         </div>
         {/* The calendar CSV — only the date-based reservations (loans, rentals,
             on-site reservations), and only the ones added since the last
-            download, so importing it twice never doubles the calendar. */}
+            download, so importing it twice never doubles the calendar. The
+            control is the shared CalendarExportButton, the same one the
+            collection hero offers a curator. */}
         <div style={{ marginTop: 'var(--spacing-s)' }}>
-          <Button
-            variant="secondary"
-            fullWidth
-            disabled={calendarDownloading}
-            onClick={handleDownloadCalendar}
-            style={btnSecondaryStyle}
-          >
-            {calendarDownloading
-              ? t('calendarExport.downloading')
-              : t('calendarExport.downloadButton')}
-          </Button>
+          <CalendarExportButton calendar={calendarExport} fullWidth style={btnSecondaryStyle} />
           <p
             style={{
               marginTop: 'var(--spacing-2-xs)',
@@ -765,18 +728,7 @@ export default function EditCollectionPage() {
           >
             {t('calendarExport.notice')}
           </p>
-          <StatusRegion>
-            {calendarError && (
-              <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
-                {calendarError}
-              </Notification>
-            )}
-            {calendarInfo && (
-              <Notification type="success" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
-                {calendarInfo}
-              </Notification>
-            )}
-          </StatusRegion>
+          <CalendarExportStatus calendar={calendarExport} />
         </div>
       </div>
       <Toast toast={toast} onClose={() => setToast(null)} />
