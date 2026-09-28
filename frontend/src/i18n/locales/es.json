@@ -240,6 +240,8 @@
     "reservationMadeBody": "{{requester_name}} ha reservado {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancelada",
     "reservationCancelledBody": "{{other_name}} ha cancelado una reserva de {{thing_headline}}.",
+    "reservationRegisteredAt": "Fecha y hora de registro: {{when}}",
+    "reservationScheduledFor": "Fecha y horario de reserva: {{when}}",
     "promotedLabel": "Ahora eres co-curador",
     "promotedBody": "Ahora puedes ayudar a gestionar “{{collection_headline}}”: invitar y quitar invitados, editarla, escribir al grupo y ocuparte de sus preguntas, solicitudes y reservas. Tu nombre aparece ahora en la página del grupo como curador; solo quien lo creó puede borrarlo.",
     "demotedLabel": "Ya no eres co-curador",

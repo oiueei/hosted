@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
+import { formatBookingWhen, formatDateTime } from '../utils/rental';
 
 const ALERT_TYPES = new Set([
   'COLLECTION_DELETED',
@@ -19,6 +20,18 @@ const SUCCESS_TYPES = new Set([
   'INVITE_PROPOSAL_APPROVED',
   'PROMOTED_CO_OWNER',
 ]);
+
+// The two reservation notices are the only ones whose payload speaks the
+// booking's own field names (start/end date and time), so they are also the
+// only ones that can say *when* below their body.
+const RESERVATION_TYPES = new Set(['RESERVATION_MADE', 'RESERVATION_CANCELLED']);
+
+// The quiet meta lines under a notice, sized like a helper rather than body
+// copy — they qualify the sentence above, they don't continue it.
+const META_LINE_STYLE = {
+  margin: 'var(--spacing-2-xs) 0 0',
+  fontSize: 'var(--fontsize-body-s)',
+};
 
 // The owner said yes to a recommendation. Written as INVITE_PROPOSAL_APPROVED
 // since the 2026-08 design round; rows created before that are an
@@ -289,6 +302,17 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     <>
       {notifications.map((n) => {
         const link = notificationLink(n);
+        // The reservation notices say when, under their body: when the event
+        // the notice records happened (`created` — for a cancellation that is
+        // the cancellation's own stamp, which is the fact being reported) and
+        // when the reservation runs, read from the payload's booking fields by
+        // the same formatter the booking tables use, so the two never disagree
+        // about what '29/09/2026, 10:00–12:00' means. Either line with nothing
+        // to say (an unparseable stamp, a payload without dates) stays out.
+        const registeredAt = RESERVATION_TYPES.has(n.type) ? formatDateTime(n.created) : '';
+        const scheduledFor = RESERVATION_TYPES.has(n.type)
+          ? formatBookingWhen(n.payload, 'RESERVE_THING')
+          : '';
         return (
           <Notification
             key={n.code}
@@ -305,6 +329,16 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
                 {' '}
                 <Link to={link.to}>{link.label}</Link>
               </>
+            )}
+            {registeredAt && (
+              <p style={META_LINE_STYLE}>
+                {t('home.reservationRegisteredAt', { when: registeredAt })}
+              </p>
+            )}
+            {scheduledFor && (
+              <p style={META_LINE_STYLE}>
+                {t('home.reservationScheduledFor', { when: scheduledFor })}
+              </p>
             )}
           </Notification>
         );
