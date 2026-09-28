@@ -75,42 +75,123 @@ body {
   height: 60px;
 }
 
-/* Support channel (i8): quiet speech-bubble link at the hero's top-right,
-   anchored to the right edge of the hero's CONTENT column — not the raw
-   viewport edge — matching where .form-hero-content's own right padding falls
-   (same "(100% - min(100%, 1248px)) / 2" centring math). Rendered inside
-   .form-hero-content so --hero-text-color resolves (visible on dark theeemes,
-   like the back link), positioned against .form-hero. 44px target. */
-.contact-corner {
+/* The hero's top-right icon row (i8, S9, and the account menu, 2026-09-28):
+   ContactCorner, and where they apply AccountMenu and ShareCollectionMenu,
+   sit as flex items in ONE anchored row instead of each computing its own
+   `right:` offset. That is what lets the row close its own gaps: a member's
+   hero (no ShareCollectionMenu) or an anonymous one (no AccountMenu either)
+   just has fewer children, and `gap` never reserves space for one that isn't
+   there — the old per-icon offsets had to know the exact set of icons any
+   other icon might share the corner with, which the account menu's own
+   session-gating would have broken (`.contact-corner`'s offset assumed
+   ShareCollectionMenu was the only possible neighbour). Anchored to the right
+   edge of the hero's CONTENT column, not the raw viewport edge (the
+   "(100% - min(100%, 1248px)) / 2" centring math every hero uses), and sized
+   to its content (`inline-flex`) so that anchor is the row's own right edge,
+   not the hero's full width. Visual order follows DOM order left-to-right:
+   account · share · contact, contact rightmost as it always was. */
+.hero-corners {
   position: absolute;
   top: calc(var(--spacing-l) - 2px);
   right: calc((100% - min(100%, 1248px)) / 2 + var(--spacing-s));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2-xs);
+  z-index: 1;
+}
+
+/* Support channel (i8): quiet speech-bubble link, 44px target. Sizing only —
+   `.hero-corners` above owns the positioning now. */
+.contact-corner {
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--hero-text-color, var(--color-black-90));
-  z-index: 1;
+}
+
+/* Account menu (2026-09-28): "My profile" / "Edit profile" / "Create
+   collection" / "My requests" / "Requests to me" / "Log out", one click away
+   from every hero a signed-in visitor sees — including a collection whose
+   owner set a `home_page`, where the hero's own "Home" link leaves OIUEEI
+   entirely and this was otherwise the only way back. A plain disclosure
+   (button + `<nav>`), not ShareCollectionMenu's HDS-Select trick — every
+   option here is a route, not an action. `position: relative` is what anchors
+   the panel below the trigger regardless of where the flex row lays it out. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu-trigger {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hero-text-color, var(--color-black-90));
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + var(--spacing-2-xs));
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  max-width: calc(100vw - 2 * var(--spacing-s));
+  background-color: var(--color-white);
+  border: 1px solid var(--color-black-20);
+  border-radius: var(--spacing-2-xs);
+  box-shadow: var(--box-shadow-m, 0 2px 8px rgba(0, 0, 0, 0.15));
+  padding: var(--spacing-2-xs) 0;
+  /* Independent of --hero-text-color: the panel is a white surface on every
+     theeeme, so its links stay the app's ordinary body text colour. */
+  text-align: left;
+  color: var(--color-black-90);
+}
+
+.account-menu-panel a {
+  display: block;
+  padding: var(--spacing-2-xs) var(--spacing-s);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Hover only, deliberately no :focus-visible selector here: the global
+   `body :focus-visible` ring (below, in file order) already covers keyboard
+   focus, and paletteContrast.test.js finds that rule by the FIRST
+   `:focus-visible` occurrence in this file — a second one earlier would
+   shadow it there without changing anything visible. */
+.account-menu-panel a:hover {
+  background-color: var(--color-black-5);
+}
+
+.account-menu-divider {
+  border: none;
+  border-top: 1px solid var(--color-black-20);
+  margin: var(--spacing-2-xs) 0;
 }
 
 /* Share menu (S9, curator only): the ShareCollectionMenu Select restyled to a
-   single 44px icon trigger, sitting one slot to the left of .contact-corner.
-   HDS renders the trigger as one <button role="combobox"> holding an icon
-   <span>, a text <div> and an arrow <div>; hiding the last two (both already
-   aria-hidden) and clamping the box to 44px leaves an icon-only control with
-   HDS's open/close/keyboard logic and the button's composed aria-label intact.
-   HDS's own rules for these parts are three classes deep, so the size/visibility
-   overrides need `!important` to win; substring matches dodge the hashed
-   CSS-module suffixes. NOT testable in jsdom — verify by eye on an hds-react
-   bump (see frontend/CLAUDE.md § HDS Select quirks). */
+   single 44px icon trigger. HDS renders the trigger as one
+   <button role="combobox"> holding an icon <span>, a text <div> and an arrow
+   <div>; hiding the last two (both already aria-hidden) and clamping the box
+   to 44px leaves an icon-only control with HDS's open/close/keyboard logic
+   and the button's composed aria-label intact. HDS's own rules for these
+   parts are three classes deep, so the size/visibility overrides need
+   `!important` to win; substring matches dodge the hashed CSS-module
+   suffixes. NOT testable in jsdom — verify by eye on an hds-react bump (see
+   frontend/CLAUDE.md § HDS Select quirks). Sizing only — `.hero-corners`
+   above owns the positioning. */
 .share-corner {
-  position: absolute;
-  top: calc(var(--spacing-l) - 2px);
-  right: calc((100% - min(100%, 1248px)) / 2 + var(--spacing-s) + 44px + var(--spacing-2-xs));
   width: 44px;
   height: 44px;
-  z-index: 1;
 }
 
 /* The Select's own root/container carry a border, a white fill and a 64px

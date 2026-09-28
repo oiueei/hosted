@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Notification, Tag, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';
+import AccountMenu from '../components/AccountMenu';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -258,15 +259,18 @@ export default function CollectionPage() {
             className="form-hero-content"
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
-            <ContactCorner />
-            {isCurator && (
-              <ShareCollectionMenu
-                collectionCode={code}
-                collectionHeadline={headline}
-                ownerName={collection.owner_name}
-                isPublic={collection.visibility === 'PUBLIC'}
-              />
-            )}
+            <span className="hero-corners">
+              <AccountMenu />
+              {isCurator && (
+                <ShareCollectionMenu
+                  collectionCode={code}
+                  collectionHeadline={headline}
+                  ownerName={collection.owner_name}
+                  isPublic={collection.visibility === 'PUBLIC'}
+                />
+              )}
+              <ContactCorner />
+            </span>
             {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
                 `home_page` when it has one, the app's home otherwise. It used to be
                 worded "The group's site" with an external-link icon; the wording

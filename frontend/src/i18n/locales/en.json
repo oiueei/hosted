@@ -79,6 +79,9 @@
     "publicTag": "Public",
     "privateTag": "Private"
   },
+  "accountMenu": {
+    "label": "Your account"
+  },
   "common": {
     "skipToContent": "Skip to content",
     "error": "Error",

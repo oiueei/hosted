@@ -73,6 +73,9 @@
     "publicTag": "Pública",
     "privateTag": "Privada"
   },
+  "accountMenu": {
+    "label": "Tu cuenta"
+  },
   "common": {
     "skipToContent": "Saltar al contenido",
     "error": "Error",
