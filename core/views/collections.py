@@ -593,6 +593,21 @@ class CollectionCoOwnerView(APIView):
             return denied
 
         already = collection.co_owners.filter(code=member.code).exists()
+        # Re-promoting someone who is already a co-curator stays idempotent and
+        # never hits the ceiling — only growing the set does. The bound is the
+        # abuse ceiling (`Collection.MAX_CO_OWNERS`), not the design intent of
+        # 1–2: a compromised curator's credential must not be able to promote
+        # the whole roster, since each promotion hands over the member list.
+        if not already and collection.co_owners.count() >= Collection.MAX_CO_OWNERS:
+            return Response(
+                {
+                    "error": (
+                        "This collection already has the maximum of "
+                        f"{Collection.MAX_CO_OWNERS} co-curators"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         collection.co_owners.add(member)
         if not already:
             InAppNotification.objects.create(
@@ -609,6 +624,9 @@ class CollectionCoOwnerView(APIView):
             status=status.HTTP_200_OK,
         )
 
+    # Same ceiling as promotion: without it a compromised curator could thrash
+    # demotions (each one firing a DEMOTED notice) without any bound.
+    @method_decorator(ratelimit(key="user", rate="30/h", method="DELETE", block=True))
     def delete(self, request, collection_code):
         # No `co_owners_denial()` check here, deliberately: the gate is on
         # *bringing this state into existence* (see `post`), not on living in

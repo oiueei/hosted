@@ -131,13 +131,13 @@ value of `/ship` in this case — they are the verification, not the paperwork a
 4. **Write the message in British English:**
    - Imperative subject (e.g. "Add", "Fix", "Update", not "Added"), ≤ 72 characters
    - A body explaining *what* changed and *why* — the why is the part the diff cannot show
-   - The co-author trailer, composed **from the rules in `CLAUDE.md` §Commit
+   - The assistant trailer, composed **from the rules in `CLAUDE.md` §Commit
      attribution and nowhere else** — not from a previous commit, whose trailers
-     may be wrong (that section says which ones and why). The short version: the
-     live model's own name and version, no parenthesis unless it is `(1M context)`,
-     `via Claude Code` only for non-Anthropic models, and the email by provider.
+     may be wrong or from the older `Co-Authored-By:` era (that section says which
+     ones and why). The short version: the tool, then the live model's own name and
+     version in parentheses, nothing else in them, and no email.
      ```
-     Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+     AI-assistant: Claude Code (Claude Opus 5)
      ```
      Ask rather than guess if any part of the line is unclear.
    - **No "Para revisar (CA)" block** — visual-QA notes go in the chat, never in the message.

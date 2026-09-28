@@ -359,7 +359,7 @@ The daily commands are safe to run every day — each checks the current state a
 
 If you want a periodic report on your own numbers, the `Event` log and `DailyActivity` are there to be queried and a command of your own can ride the same chain — this repository ships the instrumentation, not the report.
 
-**Not in the daily chain:** `cleanup_orphan_images` (delete orphaned uploads from the bucket) is a separate, manual command — dry-run by default, `--commit` to actually delete. It's destructive and gated behind Heroku shell access, so it isn't auto-scheduled; run it by hand roughly weekly. Quote the inner command so the Heroku CLI doesn't eat the flag: `heroku run --app <app> "python manage.py cleanup_orphan_images --commit"`.
+**Not in the daily chain:** `cleanup_orphan_images` (delete orphaned uploads from the bucket) is a separate, manual command — dry-run by default, `--commit` to actually delete. It's destructive and gated behind Heroku shell access, so it isn't auto-scheduled; run it by hand roughly weekly. With `--commit` the command also insists on `--bucket` naming the very bucket the app has configured (`OBJECT_STORAGE_BUCKET`), and refuses a mismatched name even on a dry-run — a `--commit` that doesn't say which bucket it means never runs, so a wrong environment can't turn the sweep into a deletion from another deployment's storage. Quote the inner command so the Heroku CLI doesn't eat the flags: `heroku run --app <app> "python manage.py cleanup_orphan_images --bucket <bucket> --commit"`.
 
 ## Backups & the restore drill
 

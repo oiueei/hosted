@@ -364,7 +364,10 @@ export default function EditCollectionPage() {
         // was already exported, so there is nothing to hand the browser.
         const count = Number(res.headers.get('X-Calendar-Events') || '0');
         if (count > 0) {
-          downloadBlob(await res.blob(), `${code}-calendar.csv`);
+          // The server-set name, with the literal as fallback — the same rule
+          // the collection export two buttons up follows, so the two downloads
+          // cannot drift apart the day the server changes one.
+          downloadBlob(await res.blob(), filenameFromResponse(res, `${code}-calendar.csv`));
           setCalendarInfo(t('calendarExport.done', { count }));
         } else {
           setCalendarInfo(t('calendarExport.nothingNew'));

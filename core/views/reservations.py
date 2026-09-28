@@ -12,6 +12,8 @@ fan-out live. Business-rule failures come back as ``BookingRequestError`` and
 are mapped to the API's ``{"error": ...}`` responses here.
 """
 
+from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
@@ -32,7 +34,7 @@ from core.services.booking_service import (
     request_standard_booking,
     resolve_rental_collection,
 )
-from core.views._helpers import body_dict, get_viewable_thing
+from core.views._helpers import body_dict, deny_if_cannot_view, managers_ready_collections
 
 
 class ThingRequestView(APIView):
@@ -49,8 +51,18 @@ class ThingRequestView(APIView):
 
     @method_decorator(ratelimit(key="user", rate="10/h", method="POST", block=True))
     def post(self, request, thing_code):
-        thing, denied = get_viewable_thing(
-            thing_code, request.user.code, "Not authorized to request this thing"
+        # Collections prefetched manager-ready so the reservation notice's
+        # `managers()` fan-out (every curator of the reservations collection)
+        # never costs a query per collection — `get_viewable_thing` inlined for
+        # the prefetch, same guard.
+        thing = get_object_or_404(
+            Thing.objects.prefetch_related(
+                Prefetch("collections", queryset=managers_ready_collections())
+            ),
+            code=thing_code,
+        )
+        denied = deny_if_cannot_view(
+            thing, request.user.code, "Not authorized to request this thing"
         )
         if denied:
             return denied
@@ -109,9 +121,9 @@ class ThingRequestView(APIView):
 
         try:
             if thing.type == Thing.Type.RESERVE_THING:
-                return self._request_reservation(request, thing, owner_email)
+                return self._request_reservation(request, thing, owner_email, collection_code)
             if thing.type in DATE_BASED_TYPES:
-                return self._request_date_based(request, thing, owner_email)
+                return self._request_date_based(request, thing, owner_email, collection_code)
             else:
                 booking = request_standard_booking(
                     thing, request.user, owner_email, collection_code
@@ -123,7 +135,7 @@ class ThingRequestView(APIView):
         except BookingRequestError as exc:
             return Response(exc.as_body(), status=exc.status_code)
 
-    def _request_reservation(self, request, thing, owner_email):
+    def _request_reservation(self, request, thing, owner_email, collection_code):
         """RESERVE_THING — validate the request's shape, then delegate.
 
         The shape is a pickup date plus either a length in days or a start/end
@@ -137,7 +149,6 @@ class ThingRequestView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        collection_code = body_dict(request).get("collection_code")
         booking = request_reservation(
             thing,
             request.user,
@@ -161,7 +172,7 @@ class ThingRequestView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def _request_date_based(self, request, thing, owner_email):
+    def _request_date_based(self, request, thing, owner_email, collection_code):
         """Validate LEND/RENT dates then delegate to the service."""
         serializer = ThingRequestWithDatesSerializer(data=request.data)
         if not serializer.is_valid():
@@ -169,7 +180,6 @@ class ThingRequestView(APIView):
 
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
-        collection_code = body_dict(request).get("collection_code")
         rental_collection = resolve_rental_collection(thing, collection_code, request.user)
 
         booking = request_date_based_booking(
