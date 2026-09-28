@@ -5,7 +5,7 @@ All email action links use RSVP codes as intermediaries.
 Accept/reject can also be done by the owner via authenticated API endpoints.
 """
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import ListAPIView
@@ -30,7 +30,7 @@ from core.services.booking_service import (
     cancel_reservation,
     finalize_booking_decision,
 )
-from core.views._helpers import get_viewable_thing, viewer_code
+from core.views._helpers import get_viewable_thing, managers_ready_collections, viewer_code
 
 
 class ThingCalendarView(APIView):
@@ -126,7 +126,18 @@ class BookingCancelView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_code):
-        booking = get_object_or_404(BookingPeriod, code=booking_code)
+        # Collections prefetched manager-ready (and the thing select_related,
+        # which a cancel reads either way) so the RESERVE cancellation's
+        # `managers()` fan-out — the notice to every curator — never costs a
+        # query per collection.
+        booking = get_object_or_404(
+            BookingPeriod.objects.select_related(
+                "thing_code", "thing_code__owner"
+            ).prefetch_related(
+                Prefetch("thing_code__collections", queryset=managers_ready_collections())
+            ),
+            code=booking_code,
+        )
 
         if booking.thing_type == Thing.Type.RESERVE_THING:
             try:

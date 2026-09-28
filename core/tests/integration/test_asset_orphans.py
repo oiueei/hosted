@@ -2,8 +2,9 @@
 
 The bucket is mocked — what these assert is the command's classification logic:
 which objects it treats as orphans, that a dry-run deletes nothing, that
-`--commit` deletes only orphans, and that referenced / seed / out-of-window
-objects are always kept.
+`--commit` deletes only orphans, that referenced / seed / out-of-window
+objects are always kept, and that a delete which does not name the configured
+bucket is refused before anything is listed or deleted.
 
 The stakes are asymmetric and that is why the negative cases outnumber the
 positive one. A missed orphan costs a few kilobytes a month. A wrongly deleted
@@ -16,6 +17,7 @@ from io import StringIO
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
@@ -24,21 +26,30 @@ from core.models import Collection, Thing
 
 pytestmark = pytest.mark.django_db
 
+# Sentinel for _run: name the configured bucket, as a correct invocation must.
+_NAMED = object()
+
 
 def _asset(key, *, days_ago=2):
     """One listing entry, in the shape `storage.iter_objects` yields."""
     return {"key": key, "last_modified": timezone.now() - timedelta(days=days_ago), "size": 1024}
 
 
-def _run(objects, commit=False):
-    """Run the command with the bucket listing mocked; return (out, delete_mock)."""
+def _run(objects, commit=False, bucket=_NAMED):
+    """Run the command with the bucket listing mocked; return (out, delete_mock).
+
+    `bucket` defaults to the configured one (what a real run passes); `None`
+    omits --bucket entirely, and a string names another bucket.
+    """
+    if bucket is _NAMED:
+        bucket = settings.OBJECT_STORAGE_BUCKET
     out = StringIO()
     with (
         patch("core.services.storage.iter_objects", return_value=iter(objects)),
         # delete_many answers with how many keys it was handed, as the real one does.
         patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
     ):
-        call_command("cleanup_orphan_images", commit=commit, stdout=out)
+        call_command("cleanup_orphan_images", commit=commit, bucket=bucket, stdout=out)
     return out.getvalue(), delete_mock
 
 
@@ -63,6 +74,51 @@ def test_commit_deletes_only_orphans(user):
     delete_mock.assert_called_once()
     assert delete_mock.call_args.args[0] == ["oiueei/things/orphan1"]
     assert "Deleted 1 orphan" in out
+
+
+def test_commit_without_naming_the_bucket_refuses_and_deletes_nothing():
+    """A --commit that doesn't say which bucket it means would delete from
+    whatever OBJECT_STORAGE_BUCKET resolves to — and with the wrong .env that
+    is somebody else's bucket (the local one once carried the production key,
+    BACKUP_TASKS §2)."""
+    orphans = [_asset("oiueei/things/orphan1")]
+    with (
+        patch("core.services.storage.iter_objects", return_value=iter(orphans)),
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        with pytest.raises(CommandError, match="--commit requires --bucket"):
+            call_command("cleanup_orphan_images", commit=True, bucket=None, stdout=StringIO())
+    delete_mock.assert_not_called()
+
+
+def test_commit_against_the_wrong_bucket_refuses_and_deletes_nothing():
+    orphans = [_asset("oiueei/things/orphan1")]
+    with (
+        patch("core.services.storage.iter_objects", return_value=iter(orphans)),
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        with pytest.raises(CommandError, match="does not match this deployment's"):
+            call_command(
+                "cleanup_orphan_images",
+                commit=True,
+                bucket="oiueei-elsewhere",
+                stdout=StringIO(),
+            )
+    delete_mock.assert_not_called()
+
+
+def test_a_mismatched_bucket_is_refused_even_on_a_dry_run():
+    """The dry-run stays ceremony-free when --bucket is absent, but a wrong
+    name is refused there too — the mistake should surface before anyone
+    adds --commit to a command they believed was pointed elsewhere."""
+    orphans = [_asset("oiueei/things/orphan1")]
+    with (
+        patch("core.services.storage.iter_objects", return_value=iter(orphans)),
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        with pytest.raises(CommandError, match="does not match this deployment's"):
+            call_command("cleanup_orphan_images", bucket="oiueei-elsewhere", stdout=StringIO())
+    delete_mock.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -143,7 +199,13 @@ def test_a_failing_batch_is_reported_and_the_rest_still_go():
         ),
         patch("core.services.storage.delete_many", side_effect=flaky),
     ):
-        call_command("cleanup_orphan_images", commit=True, stdout=StringIO(), stderr=err)
+        call_command(
+            "cleanup_orphan_images",
+            commit=True,
+            bucket=settings.OBJECT_STORAGE_BUCKET,
+            stdout=StringIO(),
+            stderr=err,
+        )
 
     assert len(calls) == 3
     assert "Failed to delete batch" in err.getvalue()

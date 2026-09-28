@@ -18,9 +18,11 @@ this file *and* marked or in neither.
 
 Everything user-written that reaches a cell — a thing headline, a member name, a
 project note — goes through ``_csv_cell``, which neutralises a leading
-``= + - @`` (spreadsheet-formula injection) the way ``collection_stats_rows``
-avoids it by construction. Owner headlines that carry one text per language
-(inline JSON, O6) resolve to the collection's language.
+``= + - @`` (spreadsheet-formula injection), looking past any leading spaces
+the same way ``core.validators.reject_spreadsheet_formula`` does, the way
+``collection_stats_rows`` avoids the problem by construction. Owner headlines
+that carry one text per language (inline JSON, O6) resolve to the collection's
+language.
 """
 
 import csv
@@ -123,9 +125,16 @@ CALENDAR_TEXTS = {
 
 
 def _csv_cell(value):
-    """A cell no spreadsheet will read as a formula. ``None`` becomes ``""``."""
+    """A cell no spreadsheet will read as a formula. ``None`` becomes ``""``.
+
+    The guard looks past leading whitespace, like ``reject_spreadsheet_formula``
+    in ``core.validators`` — nothing can reach the cell with the space still on
+    today (DRF's ``trim_whitespace`` and ``_row``'s own ``.strip()`` eat it),
+    but a protection that depends on two unrelated layers staying polite is not
+    a protection.
+    """
     text = "" if value is None else str(value)
-    if text[:1] in _FORMULA_PREFIXES:
+    if text.lstrip()[:1] in _FORMULA_PREFIXES:
         return "'" + text
     return text
 

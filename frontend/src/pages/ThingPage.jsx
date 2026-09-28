@@ -96,7 +96,13 @@ export default function ThingPage() {
 
     const fetchThing = async () => {
       try {
-        const res = await apiFetch(`/api/v1/things/${thingCode}/`, { signal });
+        // In a collection's context, read the thing *through* that collection
+        // (the same shape as RequestThingPage): `available_today`,
+        // `next_available` and `can_manage` come back computed against the
+        // collection in the URL, so a thing living in two collections shows
+        // the one the reader is browsing, not whichever the server picks.
+        const query = code ? `?collection=${encodeURIComponent(code)}` : '';
+        const res = await apiFetch(`/api/v1/things/${thingCode}/${query}`, { signal });
         if (res.ok) {
           const data = await res.json();
           if (signal.aborted) return;
@@ -129,7 +135,9 @@ export default function ThingPage() {
     fetchThing();
     fetchTransfers();
     return () => controller.abort();
-  }, [userCode, thingCode, navigate, t]);
+    // `code` is a dependency on purpose: without it, moving between two
+    // collections that share this thing would keep the first one's answer.
+  }, [userCode, thingCode, code, navigate, t]);
 
   if (error) {
     return (

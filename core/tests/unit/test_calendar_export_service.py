@@ -24,6 +24,7 @@ from core.models import BookingPeriod, CalendarExportMark, Collection, Thing, Us
 from core.services.calendar_export_service import (
     CALENDAR_TEXTS,
     CSV_COLUMNS,
+    _csv_cell,
     build_calendar_export,
     calendar_filename,
 )
@@ -428,6 +429,17 @@ class TestSpreadsheetFormulaInjection:
         (row,) = _rows(build_calendar_export(group)[0])
 
         assert row["Location"] == "'-1+2"
+
+    def test_a_formula_hidden_behind_a_space_is_quoted_too(self):
+        # The guard used to read text[:1], so " =SUM(A1)" sailed through
+        # untouched. No real cell reaches it with the space still on — _row
+        # strips Location and project_note, DRF trims whitespace — which is
+        # exactly why the guard must not lean on those layers: a protection
+        # that depends on two unrelated doors staying polite is not a
+        # protection, and the sibling validator
+        # (core.validators.reject_spreadsheet_formula) already looks past
+        # spaces. Tested directly because every caller strips first.
+        assert _csv_cell(" =SUM(A1)") == "' =SUM(A1)"
 
 
 class TestLanguage:

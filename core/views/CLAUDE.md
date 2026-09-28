@@ -488,13 +488,14 @@ Removes a user from the collection's invite list. If the invite is still pending
 |---|---|
 | **Endpoints** | `POST` and `DELETE /api/v1/collections/{collection_code}/co-owners/` |
 | **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
-| **Rate limit** | POST: 30 requests/hour per user. DELETE: unrestricted. |
+| **Rate limit** | POST and DELETE: 30 requests/hour per user (the same decorator keyed to its method — demotion joined promotion's ceiling so a compromised curator can't thrash either). |
 
 Promote or demote a co-curator, **in either mode** (2026-09, co-curators in PROPRIETARY). **Any curator may** — appointing help is part of the founder's reach, which a co-curator now shares over everything except deleting the collection (the CASCADE-delete root, still `IsCollectionOwner`). The accepted trade-off: co-curators can ping-pong demotions, and the founder — an FK, never an `invites` row, so this endpoint structurally cannot demote them (`_get_target` 400s on a non-member) — is the circuit breaker.
 
 **`POST` behaviour:**
 - 403 (`co_owners_denial`) if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`.
 - 400 if `user_code` isn't already in `invites` — promotion only, never a separate invite door (`co_owners ⊆ invites`).
+- 400 when the collection already holds `Collection.MAX_CO_OWNERS` (5) co-curators — the abuse bound on one stolen curator credential (every promotion hands over the member list), not the design intent of 1–2. Promoting someone who is *already* a co-curator stays idempotent and never hits the ceiling; a collection holding more than 5 is not broken, it just cannot grow.
 - Adds to `co_owners` (idempotent) and, on the first promotion only, creates a `PROMOTED_CO_OWNER` in-app notification for the member. No email — a deliberate v1 simplification.
 
 **`DELETE` behaviour:**

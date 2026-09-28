@@ -370,3 +370,49 @@ class TestDataExportQueryBudgets:
 
         assert res.status_code == 200
         assert len(res.content) < 1_000_000, f"200 things weighed {len(res.content)} bytes"
+
+
+@pytest.mark.django_db
+class TestNoticeFanOutQueryBudgets:
+    """The FAQ-question notice fans out to every manager of the thing
+    (`Thing.managers()` — the owner plus the curators of each PROPRIETARY
+    collection it sits in). `managers()` is prefetch-aware; the fetch in
+    `ThingFAQListView.get_thing` is what makes it so here, keeping the POST
+    constant in the number of collections the thing lives in — without the
+    prefetch, every collection the fan-out considers costs its own co_owners
+    query."""
+
+    def test_asking_a_question_costs_no_query_per_collection(
+        self, authenticated_client2, user2, user
+    ):
+        thing = ThingFactory(owner=user)
+        home = CollectionFactory(owner=user, mode=Collection.Mode.PROPRIETARY)
+        home.invites.add(user2)
+        home.things.add(thing)
+        _warm_activity(authenticated_client2)
+
+        def ask():
+            with CaptureQueriesContext(connection) as captured:
+                r = authenticated_client2.post(
+                    f"/api/v1/things/{thing.code}/faq/",
+                    {"question": "How heavy is it?"},
+                    format="json",
+                )
+            assert r.status_code == 201
+            return len(captured)
+
+        one_collection = ask()
+
+        # Two more PROPRIETARY collections with the same owner and no
+        # co-curators, so the manager set stays {owner} — the only thing
+        # growing is the number of collections the fan-out considers.
+        for _ in range(2):
+            extra = CollectionFactory(owner=user, mode=Collection.Mode.PROPRIETARY)
+            extra.things.add(thing)
+
+        three_collections = ask()
+
+        assert three_collections == one_collection, (
+            f"N+1 on the FAQ notice fan-out: {one_collection} queries with one "
+            f"collection, {three_collections} with three"
+        )

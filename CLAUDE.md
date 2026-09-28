@@ -38,7 +38,7 @@ and the working copy may be left on any of the three branches.
 - **All PKs**: 6-character alphanumeric codes generated via `secrets.choice()` (not auto-increment)
 - **Dependencies are pinned, not ranged**: `requirements/*.txt` uses `==` on every direct dependency, so the `pip-audit` run in CI and the Heroku build resolve the same versions — a range let a release published between them reach production unaudited. Transitives are still unpinned; a full `pip-compile --generate-hashes` lock has to be resolved on Python 3.12 (`.python-version`), not on whatever is local. CI audits **both** `production.txt` and `development.txt`. Frontend: `npm ci` + `package-lock.json` already give this, gated by `frontend/scripts/audit-gate.mjs`.
 - **Emails**: All user content escaped via `django.utils.html.escape()`
-- **String length in migrations**: SQLite (local) does NOT enforce `CharField(max_length=N)` at the DB level — PostgreSQL (Heroku/production, **and CI**) does. Since the 2026-08 testing round CI runs the backend suite on Postgres (`DATABASE_URL` in `.github/workflows/tests.yml`), so an overflow now fails a build instead of reaching production — but a local `pytest` still won't see it. Always verify that seed data fits within the model's `max_length` before committing. Key limits: `headline` = 64, `description` = 2000 per language (Thing/Collection `description` are now `TextField` — long-form Markdown — with a per-language visible cap the serializer enforces, `LOCALIZED_DESCRIPTION_*` in `core/validators.py`; no column width to overflow), `name` = 32, `email` = 64, `question` = 64, `answer` = 256, `location` = 64 (widened from 32 for RESERVE addresses), `about` (User Markdown bio) = 2000, each `tags` label (Collection/Thing) = 32 (max 12 tags), `deposit_policy` (Collection) = 256 / 1024 stored (still `CharField`), `request_info` (Collection, the request-page note for every verb) = 512 / 2048 stored (CA's call, 2026-09: 256 was too short), `email_note` (Collection, the owner's note in the requester's emails) = 512 / 2048, `BookingPeriod.project_note` (RESERVE only) = 512. `Thing.type` column = 16. `Collection.reservation_max_days` (1–7) / `reservation_horizon_days` (1–365, default 90) / `reservation_max_active_per_member` (1–50, default 10) — RESERVE collections only. `Collection.reservation_unit` (DAY/HOUR) / `opening_hours` (JSON, HOUR only) / `reservation_min_minutes` / `reservation_max_minutes` (1–720 each, defaults 60/180, HOUR only, minutes — replaced hour-granular `reservation_max_hours` in migration 0150; the maximum applies to the full-day span too, no exception; `reservation_max_hours` left the model in 0152, its column kept with a database default of 3 until a later release drops it — dropping it in the same release would break the previous release's dynos, which still name it in every query, while the release phase runs). `Collection.home_page` = 128 (`URLField`, serializer-capped too).
+- **String length in migrations**: SQLite (local) does NOT enforce `CharField(max_length=N)` at the DB level — PostgreSQL (Heroku/production, **and CI**) does. Since the 2026-08 testing round CI runs the backend suite on Postgres (`DATABASE_URL` in `.github/workflows/tests.yml`), so an overflow now fails a build instead of reaching production — but a local `pytest` still won't see it. Always verify that seed data fits within the model's `max_length` before committing. Key limits: `headline` = 64, `description` = 2000 per language (Thing/Collection `description` are now `TextField` — long-form Markdown — with a per-language visible cap the serializer enforces, `LOCALIZED_DESCRIPTION_*` in `core/validators.py`; no column width to overflow), `name` = 32, `email` = 64, `question` = 64, `answer` = 256, `location` = 64 (widened from 32 for RESERVE addresses), `about` (User Markdown bio) = 2000, each `tags` label (Collection/Thing) = 32 (max 12 tags), `deposit_policy` (Collection) = 256 / 1024 stored (still `CharField`), `request_info` (Collection, the request-page note for every verb) = 512 / 2048 stored (CA's call, 2026-09: 256 was too short), `email_note` (Collection, the owner's note in the requester's emails) = 512 / 2048, `BookingPeriod.project_note` (RESERVE only) = 512. `Thing.type` column = 16. `Collection.reservation_max_days` (1–7) / `reservation_horizon_days` (1–365, default 90) / `reservation_max_active_per_member` (1–50, default 10) — RESERVE collections only. `Collection.reservation_unit` (DAY/HOUR) / `opening_hours` (JSON, HOUR only) / `reservation_min_minutes` / `reservation_max_minutes` (1–720 each, defaults 60/180, HOUR only, minutes — replaced hour-granular `reservation_max_hours` in migration 0150; the maximum applies to the full-day span too, no exception; `reservation_max_hours` left the model in 0152 and its column — kept meanwhile with a database default of 3 — was dropped in 0153, one release later on purpose: dropping it in the same release would have broken the previous release's dynos, which still name it in every query while the release phase runs). `Collection.home_page` = 128 (`URLField`, serializer-capped too).
 - **Owner content can be multilingual**: on **Thing and Collection**, `headline`, `description` and each `tags` label may hold one text per language as inline JSON — `{"es": "Las cosas de mamá", "ca": "Les coses de mama"}` — and every reader sees theirs (`core.utils.parse_localized` / `resolve_localized`, `frontend/src/utils/localized.js`). Anything that isn't a strict `{lang: text}` map over `es`/`ca`/`en` renders **verbatim**, so an owner writing prose never notices. Consequently the limits above are **per language**: Thing/Collection `headline` = 64 visible / 256 stored, `description` = 2000 visible (a `TextField` — no column cap; the serializer's `storage_max_length` 6400 is only a sanity bound), tag label = 32 / 160 (JSONField), Collection `deposit_policy` = 256 / 1024, `request_info` = 512 / 2048 (CA's call, 2026-09), `email_note` = 512 / 2048. The serializer (`LocalizedHeadlineField` / `LocalizedTextField`) is what enforces the visible limit — the column no longer does (and for `description` there is no column limit at all). `Report.thing_headline` snapshots `Thing.headline`, so it tracks its width.
 - **Demo data lives in a command, not migrations**: `python manage.py seed_demo` populates Lala/Lele/Lili/Lolo/Lulu and their collections. Idempotent (`update_or_create`). Fresh DBs start empty; run the command explicitly (also on Heroku: `heroku run --app <app> "python manage.py seed_demo"` — quote the inner command, otherwise the Heroku CLI intercepts inner flags like `--lang`/`--reset` as its own). Collection/thing text is always seeded in **all three languages at once** (inline `{es,ca,en}` localized maps, tag labels and `Collection.deposit_policy` included — the constants in `seed_data/common.py`); `--lang=en|es|ca` only picks the language of the plain-column text (user bios, FAQs), and `--reset` wipes demos before re-seeding. The shared structure lives in `seed_data/common.py` and each language's text in `seed_data/{lang}.py`, merged by `seed_demo.load_seed_data` (parity + length limits pinned by `core/tests/unit/test_seed_localized.py`). Don't add new demo data to migrations — edit the relevant `seed_data/*.py` and re-run. To add a new language, copy `en.py` → `{lang}.py` and translate only the text (keep the same codes/keys — the structure stays in `common.py`, respecting model max_length), then add the code to `SUPPORTED_LANGS` in `seed_demo.py`.
 
@@ -65,66 +65,71 @@ Claude Code's own trailer is switched off (`"attribution": {"commit": ""}` in
 There is exactly one format:
 
 ```
-Co-Authored-By: <model name and version>[ (<context>)][ via Claude Code] <email>
+AI-assistant: Claude Code (<model name and version>)
 ```
 
-- **The name comes from the live model**, read from whichever model is actually
-  running: `Claude Opus 5`, `Claude Sonnet 5`, `GLM-5.2`. Never copied from a
+- **The model name comes from the live model**, read from whichever model is actually
+  running: `Claude Opus 5`, `Claude Sonnet 5`, `GLM-5.3 [1m]`. Never copied from a
   constant, a config file, or a previous commit — when a new version ships, the
-  line must reflect it on its own.
-- **The parenthesis is a closed list**, and today it holds one value: `(1M context)`.
-  Omitted by default. Nothing else may go there — not the subject of the commit, a
-  summary of the task, a date, a branch name, or an issue id. A new value is added
-  by asking, not by inventing.
-- **`via Claude Code`** is for models that are not Anthropic's. Claude models omit it.
-- **The email comes from this table, by provider** — never from the model name, and
-  it never carries a version:
-
-  | Provider | Email |
-  |---|---|
-  | Anthropic (`Claude *`) | `noreply@anthropic.com` |
-  | Z.ai (`GLM *`) | `noreply@z.ai` |
-
-  A provider that is not in the table is a **stop and ask**. Do not infer an
-  address from the model name or a domain, and never use a provider's real contact
-  mailbox — those are people, not co-author identities.
-- **Exactly one `Co-Authored-By` line — never two on the same commit.** A commit
-  carries the model that actually produced *that commit's* changes. Under
-  `opusplan` that is almost always Sonnet, since Opus only reasons in plan mode
-  and writes nothing to the tree itself; credit Opus instead only when Opus's own
-  output, not just its plan, is what landed in that diff. If two models' work
-  truly can't be told apart within one commit, that is a sign the commit should
-  have been split by concern — not a reason to stack trailers.
+  line must reflect it on its own. It is the readable name, not the API id, so
+  `claude-opus-5` is written `Claude Opus 5` and `glm-5.3` `GLM-5.3`.
+- **The tool is always named**, whoever built the model: the line says what wrote
+  the code, and through what. A different assistant names itself in that slot.
+- **The parentheses hold the model as it announces itself and nothing else** — not the
+  subject of the commit, a summary of the task, a date, a branch name, or an issue id.
+  A second value *about* the model is added by asking, not by inventing.
+- **A variant marker inside the model's own identifier travels with the name**, because
+  it is part of what the model says it is rather than a claim about it: GLM announces
+  itself as `glm-5.3[1m]`, so the line reads `GLM-5.3 [1m]`. Claude models announce no
+  variant (the id is `claude-opus-5`), so there is nothing to carry and **a
+  context-window marker is never added by hand**. The old format's `(1M context)` was
+  exactly that hand-added claim and is retired: on the 177 `Claude Opus 4.8` commits it
+  described a variant nobody could read off the model, while on the 25 `GLM-5.2` ones it
+  was this same `[1m]` paraphrased — two different things in one parenthesis.
+- **No email address.** The old format carried one and it was pure syntax: a model
+  is not an author and holds no copyright, so no mailbox belongs to it. Inventing
+  one is what produced the `opus5@anthropic.com` errors of August 2026.
+- **Not `Co-Authored-By:`, deliberately** (changed 2026-09-27). Git, GitHub and DCO
+  practice all read that trailer as *another author with standing*, and this
+  codebase's licensing rests on all copyright sitting in one pair of hands
+  (`CONTRIBUTING.md`, and the CLA that closes before launch). A model cannot be a
+  co-author, so claiming it in the one field a reader checks was the wrong claim in
+  the most sensitive place. `AI-assistant:` says what actually happened and leaves
+  `Co-Authored-By:` for people.
+- **Exactly one `AI-assistant:` line — never two on the same commit.** A commit
+  names the model that actually produced *that commit's* changes. Under `opusplan`
+  that is almost always Sonnet, since Opus only reasons in plan mode and writes
+  nothing to the tree itself; name Opus instead only when Opus's own output, not
+  just its plan, is what landed in that diff. If two models' work truly can't be
+  told apart within one commit, that is a sign the commit should have been split by
+  concern — not a reason to stack trailers.
 - **Never copy a trailer from git history.** The body's style is worth imitating;
-  the trailers are not. Commits from August 2026 carry a wrong format — a task
-  descriptor in the parenthesis and invented addresses of the `opus5@anthropic.com`
-  shape — and some commits stack two `Co-Authored-By` lines on one change. Both are
-  known errors, left in place deliberately because the history is not being
-  rewritten, and neither is a precedent.
+  the trailers are not. Every commit up to and including `6dbf8e2` (2026-09-22)
+  carries the old `Co-Authored-By:` format, and the history is **not** being
+  rewritten — so `git log` has two eras and the older one is not a precedent.
+  Inside it, the commits of August 2026 are wrong even for their own era (a task
+  descriptor in the parenthesis, invented addresses, and some stacking two trailers
+  on one change); those were left in place deliberately too.
 
 Valid — one trailer per commit:
 
 ```
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+AI-assistant: Claude Code (Claude Sonnet 5)
 ```
 
 ```
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+AI-assistant: Claude Code (Claude Opus 5)
 ```
 
 ```
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
-```
-
-```
-Co-Authored-By: GLM-5.2 (1M context) via Claude Code <noreply@z.ai>
+AI-assistant: Claude Code (GLM-5.3 [1m])
 ```
 
 Invalid — two models stacked on one commit, even when both genuinely took part:
 
 ```
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+AI-assistant: Claude Code (Claude Opus 5)
+AI-assistant: Claude Code (Claude Sonnet 5)
 ```
 
 When in doubt about how to compose the line, ask rather than decide.

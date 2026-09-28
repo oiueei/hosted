@@ -14,6 +14,7 @@ import json
 
 import pytest
 from django.core import mail
+from django.core.cache import caches
 from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -261,6 +262,46 @@ class TestPromotingACoOwner:
         )
         assert res.status_code == 403
 
+    @pytest.fixture
+    def capped(self, db, owner):
+        """A collection already holding `MAX_CO_OWNERS` co-curators, plus one
+        more plain member a further promotion would have to fit."""
+        collection = Collection.objects.create(
+            code="GRPFUL", owner=owner, headline="Full house", mode=Collection.Mode.PROPRIETARY
+        )
+        for i in range(Collection.MAX_CO_OWNERS):
+            co_curator = User.objects.create(
+                code=f"COOF{i:02d}", email=f"full{i}@test.com", name=f"F{i}"
+            )
+            collection.invites.add(co_curator)
+            collection.co_owners.add(co_curator)
+        outsider = User.objects.create(code="OUTS01", email="outsider@test.com", name="Lulu")
+        collection.invites.add(outsider)
+        return collection
+
+    def test_promotion_at_the_cap_refuses_a_new_co_curator(self, capped, owner):
+        """With no bound on the set, one stolen curator credential could
+        promote the whole roster — and every promotion hands over the member
+        list with its emails. At `MAX_CO_OWNERS` a new promotion is a 400 and
+        the set stands exactly as it was."""
+        outsider = capped.invites.get(code="OUTS01")
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=capped.code), {"user_code": outsider.code}, format="json"
+        )
+        assert res.status_code == 400
+        assert capped.co_owners.count() == Collection.MAX_CO_OWNERS
+        assert not capped.co_owners.filter(code=outsider.code).exists()
+
+    def test_repromoting_an_existing_co_curator_at_the_cap_stays_idempotent(self, capped, owner):
+        # The `already` path must never hit the ceiling: promoting someone who
+        # is already a co-curator grows nothing, so it keeps answering 200.
+        existing = capped.co_owners.first()
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=capped.code), {"user_code": existing.code}, format="json"
+        )
+        assert res.status_code == 200
+        assert capped.co_owners.count() == Collection.MAX_CO_OWNERS
+
     def test_a_non_member_cannot_be_promoted(self, group, owner, stranger):
         res = client_for(owner).post(
             CO_OWNERS_URL.format(code=group.code), {"user_code": stranger.code}, format="json"
@@ -331,6 +372,39 @@ class TestDemotingACoOwner:
         )
 
         assert InAppNotification.objects.filter(
+            user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
+        ).exists()
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "co-owner-demote-ratelimit-test",
+            }
+        },
+    )
+    def test_demotion_is_rate_limited_like_promotion(self, group, owner, co_owner, member):
+        """`delete` carried no limit while `post` had 30/h, and any curator can
+        demote any other — so a compromised co-curator could thrash demotions
+        without a ceiling. The 31st in the window is a 429, and it changes
+        nothing: the co-curator it targeted keeps both the role and the member
+        list exactly as the 30th call left them."""
+        caches["default"].clear()
+        client = client_for(owner)
+        url = CO_OWNERS_URL.format(code=group.code)
+        # 30 harmless demotions of a plain member (a no-op remove, still 200)
+        # exhaust the window; the 31th targets a real co-curator.
+        statuses = [
+            client.delete(url, {"user_code": member.code}, format="json").status_code
+            for _ in range(30)
+        ]
+        assert statuses[0] == 200
+        rejected = client.delete(url, {"user_code": co_owner.code}, format="json")
+        assert rejected.status_code == 429
+        assert group.co_owners.filter(code=co_owner.code).exists()
+        assert group.invites.filter(code=co_owner.code).exists()
+        assert not InAppNotification.objects.filter(
             user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
         ).exists()
 
