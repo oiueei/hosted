@@ -215,6 +215,10 @@ TEXTS = {
     "faq_hide_subject": "Your question has been hidden",
     "faq_hide_plain": "{owner} has hidden your question: {question}",
     "faq_hide_intro": "{owner} has hidden your question about:",
+    # FAQ hidden (to the rest of the managing team — not the hider, not the asker)
+    "faq_hidden_team_subject": "A question about '{thing}' was hidden",
+    "faq_hidden_team_plain": "{hider} has hidden a question about '{thing}'. View thing: {url}",
+    "faq_hidden_team_intro": "{hider} hid a question about:",
     # Listing reported (to owner, anonymous)
     "reported_subject": "Someone reported one of your listings",
     "reported_plain": (

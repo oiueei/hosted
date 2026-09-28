@@ -19,6 +19,7 @@ from core.serializers import FAQAnswerSerializer, FAQCreateSerializer, FAQSerial
 from core.services.email_service import (
     send_faq_answer_email,
     send_faq_answered_to_team_email,
+    send_faq_hidden_to_team_email,
     send_faq_hide_email,
     send_faq_question_email,
 )
@@ -269,14 +270,25 @@ class FAQVisibilityView(APIView):
 
             # Notify questioner by email and in-app
             questioner = faq.questioner
+            hider_name = request.user.name  # bare name (L2)
             if questioner and questioner.email:
-                owner_name = request.user.name  # bare name (L2)
-                send_faq_hide_email(owner_name, thing, faq.question, questioner.email)
+                send_faq_hide_email(hider_name, thing, faq.question, questioner.email)
                 InAppNotification.objects.create(
                     user=questioner,
                     type=InAppNotification.Type.FAQ_HIDDEN,
-                    payload={"thing_headline": thing.headline, "owner_name": owner_name},
+                    payload={"thing_headline": thing.headline, "owner_name": hider_name},
                 )
+
+            # The same settling an answer gives: the other managers learn a
+            # teammate retired the question deliberately, and the pending
+            # FAQ_QUESTION leaves every inbox — an unanswered one stopped
+            # owing anybody a reply the moment it was hidden.
+            _clear_faq_question_notifications(faq)
+            for manager in thing.managers():
+                if manager.code in (request.user.code, faq.questioner_id):
+                    continue
+                if manager.email:
+                    send_faq_hidden_to_team_email(hider_name, thing, faq.question, manager.email)
 
             return Response(
                 {
@@ -285,6 +297,8 @@ class FAQVisibilityView(APIView):
                 }
             )
         elif action == "show":
+            # No notice to anyone: putting a question back is not something
+            # the team needs to hear about.
             faq.is_visible = True
             faq.save(update_fields=["is_visible"])
             return Response(

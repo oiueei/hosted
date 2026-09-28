@@ -214,6 +214,12 @@ TEXTS = {
     "faq_hide_subject": "Tu pregunta ha sido ocultada",
     "faq_hide_plain": "{owner} ha ocultado tu pregunta: {question}",
     "faq_hide_intro": "{owner} ha ocultado tu pregunta sobre:",
+    # FAQ hidden (to the rest of the managing team — not the hider, not the asker)
+    "faq_hidden_team_subject": "Se ha ocultado una pregunta sobre '{thing}'",
+    "faq_hidden_team_plain": (
+        "{hider} ha ocultado una pregunta sobre '{thing}'. Ver la cosa: {url}"
+    ),
+    "faq_hidden_team_intro": "{hider} ha ocultado una pregunta sobre:",
     # Listing reported (to owner, anonymous)
     "reported_subject": "Alguien ha denunciado uno de tus anuncios",
     "reported_plain": (

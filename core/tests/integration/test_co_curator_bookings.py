@@ -314,6 +314,101 @@ class TestAnAnswerSettlesTheQuestionForTheWholeTeam:
         assert [m.to[0] for m in mail.outbox] == [asker.email]
 
 
+TEAM_HIDE_SUBJECT = "A question about 'Sala polivalent' was hidden"
+
+
+class TestHidingSettlesTheQuestionForTheWholeTeam:
+    """The hide-side twin: retiring a question is as much a team decision as
+    answering it. Without a notice the other managers never learn the question
+    was withdrawn deliberately, and an unanswered one kept asking them for a
+    reply nobody owed any more."""
+
+    def _ask(self, space, member):
+        res = client_for(member).post(
+            f"/api/v1/things/{space['thing'].code}/faq/",
+            {"question": "Is there wifi?"},
+            format="json",
+        )
+        assert res.status_code == 201
+        mail.outbox.clear()
+        return FAQ.objects.get(code=res.data["code"])
+
+    def _team_emails(self):
+        return [m for m in mail.outbox if m.subject == TEAM_HIDE_SUBJECT]
+
+    def test_the_founder_hiding_tells_the_co_curator_once(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+
+        # One team email, to the co-curator only — not the hider, not the asker.
+        assert [m.to[0] for m in self._team_emails()] == [co_curator.email]
+        # The asker got their ordinary hidden notice, nothing more.
+        to_asker = [m.subject for m in mail.outbox if m.to[0] == member.email]
+        assert to_asker == ["Your question has been hidden"]
+        assert owner.email not in {m.to[0] for m in mail.outbox}
+
+    def test_the_co_curator_hiding_tells_the_founder(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+
+        res = client_for(co_curator).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+
+        assert [m.to[0] for m in self._team_emails()] == [owner.email]
+
+    def test_hiding_clears_the_pending_question_for_every_manager(
+        self, space, member, owner, co_curator
+    ):
+        faq = self._ask(space, member)
+        assert (
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_QUESTION).count() == 2
+        )
+
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_QUESTION
+        ).exists()
+
+    def test_a_community_hide_sends_no_team_email(self, db):
+        # In COMMUNITY the managers of a thing are its owner alone, and they
+        # hid it — there is no team left to tell.
+        contributor = User.objects.create(code="HCON01", email="hcon@test.com", name="Member")
+        asker = User.objects.create(code="HASK01", email="hask@test.com", name="Asker")
+        group = Collection.objects.create(
+            code="HCOM01", owner=asker, headline="Street", mode=Collection.Mode.COMMUNITY
+        )
+        thing = Thing.objects.create(
+            code="HTHG01", owner=contributor, headline="A tent", type="LEND_THING"
+        )
+        group.things.add(thing)
+
+        res = client_for(asker).post(
+            f"/api/v1/things/{thing.code}/faq/", {"question": "Waterproof?"}, format="json"
+        )
+        assert res.status_code == 201
+        faq = FAQ.objects.get(code=res.data["code"])
+        mail.outbox.clear()
+
+        res = client_for(contributor).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        # The asker's ordinary hidden notice, and nothing else.
+        assert [m.to[0] for m in mail.outbox] == [asker.email]
+
+    def test_showing_back_tells_nobody(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        mail.outbox.clear()
+
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/show/")
+        assert res.status_code == 200
+        # Putting a question back is not something the team needs to hear.
+        assert mail.outbox == []
+
+
 class TestACoCuratorDecidesHolds:
     def test_a_co_curator_accepts_a_hold_on_a_lend_thing(self, db):
         owner = User.objects.create(code="LOWN01", email="lowner@test.com", name="Owner")

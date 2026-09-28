@@ -728,14 +728,14 @@ Answers a FAQ. Sends a notification email + in-app to the questioner, naming who
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/hide/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text).
+Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text). **The rest of the team hears it too** (2026-09-28, same round as `FAQAnswerView`): `send_faq_hidden_to_team_email` reaches every other manager (minus the hider and the questioner), and every `FAQ_QUESTION` notification for this FAQ is deleted for all managers via the shared `_clear_faq_question_notifications` — an unanswered one stopped owing anybody a reply the moment it was hidden.
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/show/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Shows a previously hidden FAQ.
+Shows a previously hidden FAQ. **No notice to anyone** — putting a question back is not something the team needs to hear.
 
 ---
 

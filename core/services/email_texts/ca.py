@@ -221,6 +221,12 @@ TEXTS = {
     "faq_hide_subject": "S'ha amagat la teva pregunta",
     "faq_hide_plain": "{owner} ha amagat la teva pregunta: {question}",
     "faq_hide_intro": "{owner} ha amagat la teva pregunta sobre:",
+    # FAQ hidden (to the rest of the managing team — not the hider, not the asker)
+    "faq_hidden_team_subject": "S'ha amagat una pregunta sobre '{thing}'",
+    "faq_hidden_team_plain": (
+        "{hider} ha amagat una pregunta sobre '{thing}'. Veure la cosa: {url}"
+    ),
+    "faq_hidden_team_intro": "{hider} ha amagat una pregunta sobre:",
     # Listing reported (to owner, anonymous)
     "reported_subject": "Algú ha denunciat un dels teus anuncis",
     "reported_plain": (

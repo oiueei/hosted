@@ -342,6 +342,11 @@ def _(w):
     es.send_faq_hide_email("Lala", w.gift, "¿Sigue disponible?", w.to)
 
 
+@sample("faq_hidden_to_team", "send_faq_hidden_to_team_email")
+def _(w):
+    es.send_faq_hidden_to_team_email("Lala", w.gift, "¿Sigue disponible?", w.to)
+
+
 @sample("thing_reported", "send_thing_reported_email")
 def _(w):
     es.send_thing_reported_email(w.gift, w.to)

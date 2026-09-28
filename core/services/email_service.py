@@ -1765,6 +1765,45 @@ def send_faq_answered_to_team_email(answerer, thing, question, answer, manager_e
     )
 
 
+def send_faq_hidden_to_team_email(hider, thing, question, manager_email):
+    """Tell a curator who didn't hide it that a teammate did (Cat. 2).
+
+    The hide-side twin of ``send_faq_answered_to_team_email``: a teammate
+    retired a question the others may still have been holding as pending —
+    without this they never learn it was deliberate, and an unanswered one kept
+    asking them for a reply nobody owed any more. The questioner is not this
+    email's business (they get ``send_faq_hide_email``) and neither is whoever
+    hid it.
+    """
+    user, lang = _recipient(manager_email)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing)
+    headline = L(thing.headline)
+    hider = _member_name(hider, lang)
+    subject = T("faq_hidden_team_subject").format(thing=headline)
+    header = question
+    plain = T("faq_hidden_team_plain").format(hider=hider, thing=headline, url=thing_url)
+    html = _render_email(
+        [
+            _para(T("faq_hidden_team_intro").format(hider=hider)),
+            _strong(headline),
+            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
+        ],
+        lang=lang,
+        header=header,
+    )
+    _send(
+        manager_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
 def send_faq_hide_email(owner_name, thing, question, questioner_email):
     """Send FAQ hidden notification email to questioner."""
     user, lang = _recipient(questioner_email)
