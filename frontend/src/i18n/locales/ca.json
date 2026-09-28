@@ -10,11 +10,11 @@
     "error": "No hem pogut preparar l'exportació. Torna-ho a provar d'aquí un moment."
   },
   "calendarExport": {
-    "downloadButton": "Descarregar reserves per al calendari (CSV)",
+    "downloadButton": "Descarregar reserves per al calendari",
     "downloading": "Preparant el fitxer…",
-    "notice": "Els préstecs, lloguers i reserves com a esdeveniments de calendari — de tot el dia, o amb l'hora d'inici i de fi quan es reserva per hores. Només els apareguts des de l'última baixada, així que importar el fitxer dues vegades no duplica res.",
-    "done": "{{count}} esdeveniment(s) nou(s) — mira les teves baixades.",
-    "nothingNew": "Res de nou des de l'última baixada.",
+    "notice": "Totes les reserves futures, en un fitxer de calendari (.ics). Obre'l o importa'l a Google Calendar, Apple Calendar o Outlook; importar-lo un altre cop no duplica res.",
+    "done": "{{count}} esdeveniment(s) — mira les teves baixades.",
+    "nothingNew": "No hi ha reserves futures.",
     "error": "No hem pogut preparar el fitxer de calendari. Torna-ho a provar d'aquí un moment."
   },
   "ageRange": {

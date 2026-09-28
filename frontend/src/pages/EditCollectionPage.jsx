@@ -114,7 +114,7 @@ export default function EditCollectionPage() {
   const [statsError, setStatsError] = useState(false);
   const [collectionExportError, setCollectionExportError] = useState(null);
   const [collectionExportDownloading, setCollectionExportDownloading] = useState(false);
-  // The calendar CSV's request, label and outcome messages live in the shared
+  // The calendar .ics's request, label and outcome messages live in the shared
   // CalendarExportButton — the same control also sits in the collection hero.
   const calendarExport = useCalendarExport(code);
   const [errors, setErrors] = useState({});
@@ -712,10 +712,10 @@ export default function EditCollectionPage() {
             )}
           </StatusRegion>
         </div>
-        {/* The calendar CSV — only the date-based reservations (loans, rentals,
-            on-site reservations), and only the ones added since the last
-            download, so importing it twice never doubles the calendar. The
-            control is the shared CalendarExportButton, the same one the
+        {/* The calendar .ics — every upcoming date-based reservation (loans,
+            rentals, on-site reservations), every download; a stable per-
+            booking UID is what keeps a re-import from doubling the calendar.
+            The control is the shared CalendarExportButton, the same one the
             collection hero offers a curator. */}
         <div style={{ marginTop: 'var(--spacing-s)' }}>
           <CalendarExportButton calendar={calendarExport} fullWidth style={btnSecondaryStyle} />

@@ -71,7 +71,7 @@ function mockApi({
                 ? `attachment; filename="${calendar.filename}"`
                 : null,
         },
-        blob: async () => new Blob(['Subject,Start Date\n'], { type: 'text/csv' }),
+        blob: async () => new Blob(['BEGIN:VCALENDAR\r\n'], { type: 'text/calendar' }),
       });
     }
     if (url.includes('/stats/')) {
@@ -573,8 +573,8 @@ describe('EditCollectionPage — the calendar export', () => {
     const call = apiFetch.mock.calls.find((c) => c[0].includes('/calendar-export/'));
     expect(call[0]).toBe('/api/v1/collections/COL001/calendar-export/');
     expect(call[1].method).toBe('POST');
-    expect(click.mock.contexts[0].download).toBe('COL001-calendar.csv');
-    expect(await screen.findByText('2 new event(s) — check your downloads.')).toBeInTheDocument();
+    expect(click.mock.contexts[0].download).toBe('COL001-calendar.ics');
+    expect(await screen.findByText('2 event(s) — check your downloads.')).toBeInTheDocument();
   });
 
   test('a filename the server sets wins over the local literal', async () => {
@@ -582,7 +582,7 @@ describe('EditCollectionPage — the calendar export', () => {
     // cannot drift apart the day the server changes one of them (its own
     // docstring says so). The mock serves a name no local literal produces, so
     // this falls the moment the page goes back to naming the file itself.
-    mockApi({ calendar: { ok: true, count: '3', filename: 'sala-gran-2026-09.csv' } });
+    mockApi({ calendar: { ok: true, count: '3', filename: 'sala-gran-2026-09.ics' } });
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
@@ -590,7 +590,7 @@ describe('EditCollectionPage — the calendar export', () => {
     fireEvent.click(screen.getByRole('button', button));
 
     await waitFor(() => expect(click).toHaveBeenCalled());
-    expect(click.mock.contexts[0].download).toBe('sala-gran-2026-09.csv');
+    expect(click.mock.contexts[0].download).toBe('sala-gran-2026-09.ics');
   });
 
   test('nothing new: no download, and it says so', async () => {
@@ -601,17 +601,15 @@ describe('EditCollectionPage — the calendar export', () => {
 
     fireEvent.click(screen.getByRole('button', button));
 
-    expect(await screen.findByText('Nothing new since your last download.')).toBeInTheDocument();
+    expect(await screen.findByText('No upcoming reservations.')).toBeInTheDocument();
     expect(click).not.toHaveBeenCalled();
   });
 
-  test('the "only the new ones" promise is stated on the page before any click', async () => {
+  test('the "importing again adds nothing twice" promise is stated before any click', async () => {
     mockApi();
     renderPage();
 
-    expect(
-      await screen.findByText(/only the ones added since your last download/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/importing it again adds nothing twice/i)).toBeInTheDocument();
   });
 
   test('a 429 says "too many attempts", like every other rate-limited action', async () => {

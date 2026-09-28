@@ -112,10 +112,9 @@ class CollectionDataExportView(APIView):
         return response
 
 
-# A download, and a curator may legitimately press it again after a failed save
-# or to pick up a reservation confirmed since. Higher than the JSON exports
-# (which are the heaviest read in the app); still a cap, because each call is a
-# write.
+# A download a curator may legitimately press again — the .ics is idempotent on
+# re-import, so a second attempt after a failed import is the normal path, not
+# an anomaly. Still a cap: each call is the app's heaviest calendar read.
 CALENDAR_EXPORT_RATE = "20/h"
 
 
@@ -124,18 +123,17 @@ class CollectionCalendarExportView(APIView):
     POST /api/v1/collections/{collection_code}/calendar-export/
 
     The collection's upcoming date-based reservations (loans, rentals, on-site
-    reservations) as a Google Calendar CSV — one all-day event per reservation,
-    spanning its block. **Incremental**: each call returns only what has not
-    been exported for this collection before and records that it has, so
-    importing the file twice never doubles the calendar. `X-Calendar-Events`
-    carries the count (0 ⇒ header only, and the SPA offers no download).
+    reservations) as an iCalendar (.ics) file — one event per reservation,
+    every upcoming one each time (the per-booking UID makes a re-import update
+    in place rather than duplicate). `X-Calendar-Events` carries the count
+    (0 ⇒ a calendar with no events, and the SPA offers no download).
 
-    **POST, not GET**, for the same reason `DigestMuteByTokenView` is: the call
-    mutates (it marks the reservations delivered), so a mail-client link
-    scanner or a browser prefetch must not be able to fire it.
+    **POST, kept for contract stability**: the call mutated back when it marked
+    reservations as delivered, and the frontend's button was built against POST
+    — it no longer mutates anything, but changing the method now buys nothing
+    and moves a working contract.
 
-    Curator-only (owner or co-owner); the mark is per collection, since a
-    PROPRIETARY collection's curators run its catalogue together — see
+    Curator-only (owner or co-owner) — see
     [`calendar_export_service`](../services/CLAUDE.md).
     """
 
@@ -150,8 +148,8 @@ class CollectionCalendarExportView(APIView):
         if denied:
             return denied
 
-        csv_bytes, count = build_calendar_export(collection, user=request.user)
-        response = HttpResponse(csv_bytes, content_type="text/csv")
+        ics_bytes, count = build_calendar_export(collection, user=request.user)
+        response = HttpResponse(ics_bytes, content_type="text/calendar; charset=utf-8")
         response["Content-Disposition"] = (
             f'attachment; filename="{calendar_filename(collection.code)}"'
         )
@@ -159,6 +157,6 @@ class CollectionCalendarExportView(APIView):
         response["X-Calendar-Events"] = str(count)
         security_logger.info(
             f"Collection {collection.code} calendar exported by {request.user.code} "
-            f"({count} events, {len(csv_bytes)} bytes)"
+            f"({count} events, {len(ics_bytes)} bytes)"
         )
         return response

@@ -6,16 +6,18 @@ import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import StatusRegion from './StatusRegion';
 
 /**
- * The "Download reservations for your calendar (CSV)" control, shared by the
- * two places a curator meets it: the foot of `EditCollectionPage` (where it
- * was born, between the other admin downloads) and the hero of
- * `CollectionPage` — a curator managing the group can take its schedule with
- * them without walking into the settings first.
+ * The "Download reservations for your calendar" control, shared by the two
+ * places a curator meets it: the foot of `EditCollectionPage` (where it was
+ * born, between the other admin downloads) and the hero of `CollectionPage` —
+ * a curator managing the group can take its schedule with them without
+ * walking into the settings first.
  *
  * `useCalendarExport(code)` owns the whole request, so the two call sites
- * cannot drift: the **POST** (the call marks the reservations delivered, so a
- * mail-scanner GET must not fire it), the incremental count in the
- * `X-Calendar-Events` header (0 downloads nothing and says why), the
+ * cannot drift: the **POST** (kept for contract stability with the backend —
+ * the call used to mutate, marking reservations delivered; it no longer does,
+ * since 2026-09-28 the file is an .ics carrying every upcoming reservation
+ * every time, deduped on re-import by a stable per-booking UID), the count in
+ * the `X-Calendar-Events` header (0 downloads nothing and says why), the
  * server-set `Content-Disposition` filename, and the three failure shapes
  * (429 / anything else / a thrown request). The page calls it once and hands
  * the result to both halves:
@@ -48,14 +50,14 @@ export function useCalendarExport(code) {
         method: 'POST',
       });
       if (res.ok) {
-        // The server counts the events it put in the file; 0 means everything
-        // was already exported, so there is nothing to hand the browser.
+        // The server counts the events the file holds; 0 means there are no
+        // upcoming reservations at all, so there is nothing to hand the browser.
         const count = Number(res.headers.get('X-Calendar-Events') || '0');
         if (count > 0) {
           // The server-set name, with the literal as fallback — the same rule
           // the collection export follows, so the two downloads cannot drift
           // apart the day the server changes one.
-          downloadBlob(await res.blob(), filenameFromResponse(res, `${code}-calendar.csv`));
+          downloadBlob(await res.blob(), filenameFromResponse(res, `${code}-calendar.ics`));
           setInfo(t('calendarExport.done', { count }));
         } else {
           setInfo(t('calendarExport.nothingNew'));

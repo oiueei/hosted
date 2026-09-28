@@ -71,17 +71,17 @@ const COLLECTION = {
 };
 
 // A calendar-export response the way the endpoint really answers: the count
-// in `X-Calendar-Events`, the filename in `Content-Disposition`, the CSV as
+// in `X-Calendar-Events`, the filename in `Content-Disposition`, the .ics as
 // a blob. A Map stands in for Headers — `.get` with exact casing is all the
 // code ever reads.
-const calendarResponse = ({ count = '3', filename = 'COL001-cal.csv' } = {}) => ({
+const calendarResponse = ({ count = '3', filename = 'COL001-cal.ics' } = {}) => ({
   ok: true,
   status: 200,
   headers: new Map([
     ['X-Calendar-Events', count],
     ['Content-Disposition', `attachment; filename="${filename}"`],
   ]),
-  blob: () => Promise.resolve(new Blob(['csv'], { type: 'text/csv' })),
+  blob: () => Promise.resolve(new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' })),
 });
 
 function setApi(collection, calendar) {
@@ -107,7 +107,7 @@ function renderCollection(collection, calendar) {
   );
 }
 
-const BUTTON_NAME = 'Download reservations for your calendar (CSV)';
+const BUTTON_NAME = 'Download reservations for your calendar';
 
 beforeEach(() => {
   localStorage.clear();
@@ -131,15 +131,15 @@ beforeEach(() => {
  * The calendar download, offered where a curator already manages the group
  * (CA, 2026-09-28): the hero's curator button row, next to Edit / Add /
  * Manage guests. It is the same control the edit page offers at its foot —
- * the request, the filename rule and the "only the new ones" promise live in
- * `CalendarExportButton`, so these tests pin the hero's two own decisions:
+ * the request, the filename rule and the "every upcoming reservation" .ics
+ * shape live in `CalendarExportButton`, so these tests pin the hero's two own
+ * decisions:
  *
  * - WHO sees it: `is_curator` only (a member or an anonymous reader has
  *   nothing to import), and only where the group actually holds date-based
  *   things — the allowlist says so when it exists, the things themselves say
  *   so for an old collection that never restricted anything.
- * - What a click does: the incremental POST (never a GET — it marks the
- *   reservations delivered) and the count-gated download.
+ * - What a click does: the POST and the count-gated download.
  */
 describe('CalendarExportButton in the CollectionPage hero', () => {
   test('a curator of a collection whose allowlist names a date-based type gets the button', async () => {
@@ -217,7 +217,7 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
   });
 
   test('a click POSTs the export and saves the file under the server-set name', async () => {
-    renderCollection(COLLECTION, calendarResponse({ count: '3', filename: 'COL001-cal.csv' }));
+    renderCollection(COLLECTION, calendarResponse({ count: '3', filename: 'COL001-cal.ics' }));
 
     fireEvent.click(await screen.findByRole('button', { name: BUTTON_NAME }));
 
@@ -225,9 +225,9 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/COL001/calendar-export/', {
         method: 'POST',
       });
-      expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-cal.csv');
+      expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-cal.ics');
     });
-    expect(await screen.findByText('3 new event(s) — check your downloads.')).toBeInTheDocument();
+    expect(await screen.findByText('3 event(s) — check your downloads.')).toBeInTheDocument();
   });
 
   test('a zero count downloads nothing and says why', async () => {
@@ -235,7 +235,7 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: BUTTON_NAME }));
 
-    expect(await screen.findByText('Nothing new since your last download.')).toBeInTheDocument();
+    expect(await screen.findByText('No upcoming reservations.')).toBeInTheDocument();
     expect(downloadBlob).not.toHaveBeenCalled();
   });
 });

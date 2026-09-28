@@ -10,11 +10,11 @@
     "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
   },
   "calendarExport": {
-    "downloadButton": "Descargar reservas para el calendario (CSV)",
+    "downloadButton": "Descargar reservas para el calendario",
     "downloading": "Preparando el fichero…",
-    "notice": "Los préstamos, alquileres y reservas como eventos de calendario — de todo el día, o con su hora de inicio y fin cuando se reserva por horas. Solo los aparecidos desde la última descarga, así que importar el fichero dos veces no duplica nada.",
-    "done": "{{count}} evento(s) nuevo(s) — mira tus descargas.",
-    "nothingNew": "Nada nuevo desde la última descarga.",
+    "notice": "Todas las reservas futuras, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada.",
+    "done": "{{count}} evento(s) — mira tus descargas.",
+    "nothingNew": "No hay reservas futuras.",
     "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
   },
   "ageRange": {
