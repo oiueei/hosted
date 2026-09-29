@@ -280,6 +280,8 @@
     "addManyCsv": "Add several at once (CSV)",
     "allTags": "All",
     "noThingsForTag": "No things with this tag.",
+    "anonJoinCommunity": "Have something to add? Join the group →",
+    "anonJoinEmpty": "Join the group to hear when something arrives →",
     "communityTag": "Community",
     "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask the owner.",
     "notFound": "Collection not found.",

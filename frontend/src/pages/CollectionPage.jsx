@@ -235,6 +235,23 @@ export default function CollectionPage() {
   // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
   // the link is the curators' credential, and the member has "Recommend" instead.
   const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
+  // A signed-out reader of a PUBLIC group has no card to click in two places: an
+  // empty group, and the bottom of a COMMUNITY one, where to *contribute* they
+  // would have to press "Request" on somebody else's thing. CA reopened the
+  // hero's removed join line for exactly these two cases (2026-09-29) — but in
+  // the content, not the hero, and only where there is no button to press. A
+  // PROPRIETARY group with things needs nothing: its door is each thing's button.
+  // Which line: a COMMUNITY group asks for what the reader could add; a
+  // PROPRIETARY one that is empty promises the one thing a member does get, the
+  // weekly summary (the default digest), when something arrives.
+  const anonJoinKey =
+    !isAuthenticated && collection.visibility === 'PUBLIC'
+      ? collection.mode === 'COMMUNITY'
+        ? 'collectionPage.anonJoinCommunity'
+        : visibleThings.length === 0
+          ? 'collectionPage.anonJoinEmpty'
+          : null
+      : null;
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -603,6 +620,16 @@ export default function CollectionPage() {
               </>
             )}
           </>
+        )}
+        {/* A way in for a signed-out reader where no button leads there (see
+            `anonJoinKey`): under "No things in this collection yet." in an empty
+            group, and under the grid — after "Show more" — of a COMMUNITY one.
+            Not in the hero (CA removed that line on 2026-09-21), and it goes to
+            the group's join page with no ?thing=: there is no thing in it. */}
+        {anonJoinKey && (
+          <p className="invite-nudge">
+            <Link to={`/collections/${code}/join`}>{t(anonJoinKey)}</Link>
+          </p>
         )}
 
         {isCurator && collection.invites.length > 0 && (
