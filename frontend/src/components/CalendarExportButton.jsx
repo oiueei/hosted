@@ -16,8 +16,10 @@ import StatusRegion from './StatusRegion';
  * cannot drift: the **POST** (kept for contract stability with the backend —
  * the call used to mutate, marking reservations delivered; it no longer does,
  * since 2026-09-28 the file is an .ics carrying every upcoming reservation
- * every time, deduped on re-import by a stable per-booking UID), the count in
- * the `X-Calendar-Events` header (0 downloads nothing and says why), the
+ * every time, deduped on re-import by a stable per-booking UID), the counts in
+ * the `X-Calendar-Events` / `X-Calendar-Cancelled` headers (both 0 downloads
+ * nothing and says why — a file of cancellations alone is still downloaded,
+ * since importing it is what takes them off a calendar), the
  * server-set `Content-Disposition` filename, and the three failure shapes
  * (429 / anything else / a thrown request). The page calls it once and hands
  * the result to both halves:
@@ -50,15 +52,25 @@ export function useCalendarExport(code) {
         method: 'POST',
       });
       if (res.ok) {
-        // The server counts the events the file holds; 0 means there are no
-        // upcoming reservations at all, so there is nothing to hand the browser.
+        // The server counts what the file holds: confirmed events, and the
+        // cancellations that take earlier imports back off a calendar. Both 0
+        // means there is nothing to hand the browser.
         const count = Number(res.headers.get('X-Calendar-Events') || '0');
-        if (count > 0) {
+        const cancelled = Number(res.headers.get('X-Calendar-Cancelled') || '0');
+        if (count > 0 || cancelled > 0) {
           // The server-set name, with the literal as fallback — the same rule
           // the collection export follows, so the two downloads cannot drift
           // apart the day the server changes one.
           downloadBlob(await res.blob(), filenameFromResponse(res, `${code}-calendar.ics`));
-          setInfo(t('calendarExport.done', { count }));
+          if (count === 0) {
+            setInfo(t('calendarExport.doneOnlyCancelled', { count: cancelled }));
+          } else if (cancelled > 0) {
+            setInfo(
+              `${t('calendarExport.done', { count })} ${t('calendarExport.alsoCancelled', { count: cancelled })}`
+            );
+          } else {
+            setInfo(t('calendarExport.done', { count }));
+          }
         } else {
           setInfo(t('calendarExport.nothingNew'));
         }

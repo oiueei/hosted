@@ -74,11 +74,13 @@ const COLLECTION = {
 // in `X-Calendar-Events`, the filename in `Content-Disposition`, the .ics as
 // a blob. A Map stands in for Headers — `.get` with exact casing is all the
 // code ever reads.
-const calendarResponse = ({ count = '3', filename = 'COL001-cal.ics' } = {}) => ({
+const calendarResponse = ({ count = '3', cancelled, filename = 'COL001-cal.ics' } = {}) => ({
   ok: true,
   status: 200,
   headers: new Map([
     ['X-Calendar-Events', count],
+    // Absent unless a test names it — the SPA must read a missing header as 0.
+    ...(cancelled === undefined ? [] : [['X-Calendar-Cancelled', cancelled]]),
     ['Content-Disposition', `attachment; filename="${filename}"`],
   ]),
   blob: () => Promise.resolve(new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' })),
@@ -231,11 +233,37 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
   });
 
   test('a zero count downloads nothing and says why', async () => {
-    renderCollection(COLLECTION, calendarResponse({ count: '0' }));
+    renderCollection(COLLECTION, calendarResponse({ count: '0', cancelled: '0' }));
 
     fireEvent.click(await screen.findByRole('button', { name: BUTTON_NAME }));
 
     expect(await screen.findByText('No upcoming reservations.')).toBeInTheDocument();
     expect(downloadBlob).not.toHaveBeenCalled();
+  });
+
+  test('cancellations alone are still downloaded — importing them is what clears the calendar', async () => {
+    renderCollection(COLLECTION, calendarResponse({ count: '0', cancelled: '2' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: BUTTON_NAME }));
+
+    expect(
+      await screen.findByText(
+        'No upcoming reservations, but 2 cancelled — import the file so your calendar can drop them.'
+      )
+    ).toBeInTheDocument();
+    expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-cal.ics');
+  });
+
+  test('confirmed and cancelled together: both are said, in one message', async () => {
+    renderCollection(COLLECTION, calendarResponse({ count: '3', cancelled: '1' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: BUTTON_NAME }));
+
+    expect(
+      await screen.findByText(
+        '3 event(s) — check your downloads. It includes 1 cancelled, marked so your calendar can drop them.'
+      )
+    ).toBeInTheDocument();
+    expect(downloadBlob).toHaveBeenCalledTimes(1);
   });
 });

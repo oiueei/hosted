@@ -20,6 +20,8 @@ import datetime
 
 import pytest
 import time_machine
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import BookingPeriod, CalendarExportMark, Collection, Thing
 
@@ -153,6 +155,38 @@ class TestTheFile:
         assert _uids(first.content) == ["BKG010@oiueei"]
 
 
+class TestACancellationTakesTheEventBackOut:
+    """End to end: the member cancels through the real endpoint, and the
+    curator's next download carries that reservation as a cancellation — under
+    the UID their calendar already holds — counted in its own header, so the SPA
+    still downloads a file that holds nothing but cancellations."""
+
+    def test_the_next_download_carries_the_cancellation(
+        self, authenticated_client, user, user2, collection
+    ):
+        # Its own client: the shared fixtures hand user and user2 one APIClient.
+        member_client = APIClient()
+        member_client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user2).access_token}"
+        )
+        collection.invites.add(user2)
+        booking = _loan(collection, user, user2, code="BKG020")
+        booking.thing_code.type = booking.thing_type = "RESERVE_THING"
+        booking.thing_code.save()
+        booking.save()
+        first = authenticated_client.post(URL.format(code=collection.code))
+        assert first.status_code == 200, (first.status_code, first.content)
+        assert (first["X-Calendar-Events"], first["X-Calendar-Cancelled"]) == ("1", "0")
+
+        res = member_client.post(f"/api/v1/bookings/{booking.code}/cancel/")
+        assert res.status_code == 200, res.content
+        second = authenticated_client.post(URL.format(code=collection.code))
+
+        assert (second["X-Calendar-Events"], second["X-Calendar-Cancelled"]) == ("0", "1")
+        assert _uids(second.content) == _uids(first.content) == ["BKG020@oiueei"]
+        assert "STATUS:CANCELLED" in second.content.decode()
+
+
 class TestACrossOriginClientCanReadTheCount:
     """The event count rides only in ``X-Calendar-Events``. A frontend on
     another domain (a documented deployment shape) cannot see a custom response
@@ -174,4 +208,5 @@ class TestACrossOriginClientCanReadTheCount:
 
         exposed = {h.strip().lower() for h in res["Access-Control-Expose-Headers"].split(",")}
         assert "x-calendar-events" in exposed
+        assert "x-calendar-cancelled" in exposed
         assert "content-disposition" in exposed

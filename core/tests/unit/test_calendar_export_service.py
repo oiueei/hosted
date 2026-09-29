@@ -164,7 +164,7 @@ class TestOneEventPerReservation:
         # picked up the 14th, back the 17th → out on 14/15/16, free again the 17th
         _booking(thing, member, owner, start=datetime.date(2026, 9, 14), days=3)
 
-        ics_bytes, count = build_calendar_export(group)
+        ics_bytes, count, _ = build_calendar_export(group)
 
         assert count == 1
         (event,) = _events(ics_bytes)
@@ -357,8 +357,8 @@ class TestEveryDownloadCarriesEverything:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        first_bytes, first_count = build_calendar_export(group)
-        second_bytes, second_count = build_calendar_export(group)
+        first_bytes, first_count, _ = build_calendar_export(group)
+        second_bytes, second_count, _ = build_calendar_export(group)
 
         assert first_count == second_count == 1
         assert _events(second_bytes) == _events(first_bytes)
@@ -384,7 +384,7 @@ class TestEveryDownloadCarriesEverything:
         build_calendar_export(group)
         _booking(thing, member, owner, code="BKG101", start=TODAY + datetime.timedelta(days=20))
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 2
 
@@ -398,8 +398,8 @@ class TestEveryDownloadCarriesEverything:
         b.things.add(thing)
         _booking(thing, member, owner)
 
-        _, a_count = build_calendar_export(a)
-        _, b_count = build_calendar_export(b)
+        _, a_count, _ = build_calendar_export(a)
+        _, b_count, _ = build_calendar_export(b)
 
         assert a_count == 1
         assert b_count == 1
@@ -411,7 +411,7 @@ class TestRfc5545Shape:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        ics_bytes, _ = build_calendar_export(group)
+        ics_bytes, _, _ = build_calendar_export(group)
 
         text = ics_bytes.decode("utf-8")
         assert "\n" not in text.replace("\r\n", "")  # no bare LF anywhere
@@ -451,7 +451,7 @@ class TestRfc5545Shape:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        ics_bytes, _ = build_calendar_export(group)
+        ics_bytes, _, _ = build_calendar_export(group)
 
         for line in _physical_lines(ics_bytes):
             assert len(line.encode("utf-8")) <= 75, line
@@ -467,19 +467,22 @@ class TestOnlyRealCommitments:
         group.things.add(thing)
         _booking(thing, member, owner, status="PENDING")
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 0
 
     @pytest.mark.parametrize("status", ["REJECTED", "CANCELLED", "EXPIRED"])
     def test_a_settled_or_dead_hold_is_not_exported(self, group, owner, member, status):
+        # A loan is only ever cancelled while PENDING, so a cancelled one never
+        # reached a calendar and has nothing to take back off it.
         thing = _thing(owner)
         group.things.add(thing)
         _booking(thing, member, owner, status=status)
 
-        _, count = build_calendar_export(group)
+        ics_bytes, count, cancelled = build_calendar_export(group)
 
-        assert count == 0
+        assert (count, cancelled) == (0, 0)
+        assert _events(ics_bytes) == []
 
     @pytest.mark.parametrize("thing_type", ["GIFT_THING", "SELL_THING"])
     def test_a_dateless_gift_or_sale_is_never_in_the_calendar(
@@ -497,7 +500,7 @@ class TestOnlyRealCommitments:
             status="ACCEPTED",
         )
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 0
 
@@ -506,7 +509,7 @@ class TestOnlyRealCommitments:
         group.things.add(thing)
         _booking(thing, member, owner, start=TODAY - datetime.timedelta(days=10), days=3)
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 0
 
@@ -516,9 +519,84 @@ class TestOnlyRealCommitments:
         # started before today, ends after today — "en curso"
         _booking(thing, member, owner, start=TODAY - datetime.timedelta(days=1), days=5)
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 1
+
+
+class TestACancelledReservationLeavesTheCalendar:
+    """A calendar that imported a reservation keeps it after it is cancelled —
+    the file is a copy. So the next download carries the cancellation under the
+    same UID, as a revision (SEQUENCE above the confirmed copy's) with
+    STATUS:CANCELLED, for the importing app to drop."""
+
+    def test_a_confirmed_reservation_is_revision_zero_and_confirmed(self, group, owner, member):
+        thing = _thing(owner, thing_type="RESERVE_THING")
+        group.things.add(thing)
+        _booking(thing, member, owner, code="BKG070", days=1)
+
+        (event,) = _events(build_calendar_export(group)[0])
+
+        assert (event["STATUS"], event["SEQUENCE"]) == ("CONFIRMED", "0")
+
+    def test_a_cancelled_reservation_ships_as_a_cancelled_revision_of_its_event(
+        self, group, owner, member
+    ):
+        thing = _thing(owner, thing_type="RESERVE_THING")
+        group.things.add(thing)
+        booking = _booking(thing, member, owner, code="BKG071", days=1)
+        (confirmed,) = _events(build_calendar_export(group)[0])
+
+        booking.status = BookingPeriod.Status.CANCELLED
+        booking.save()
+        ics_bytes, count, cancelled = build_calendar_export(group)
+        (revision,) = _events(ics_bytes)
+
+        assert (count, cancelled) == (0, 1)
+        assert revision["UID"] == confirmed["UID"] == "BKG071@oiueei"
+        assert revision["STATUS"] == "CANCELLED"
+        assert int(revision["SEQUENCE"]) > int(confirmed["SEQUENCE"])
+        # Same slot, so an app that matches on more than the UID still finds it.
+        assert revision["DTSTART;VALUE=DATE"] == confirmed["DTSTART;VALUE=DATE"]
+
+    def test_confirmed_and_cancelled_are_counted_apart(self, group, owner, member):
+        thing = _thing(owner, thing_type="RESERVE_THING")
+        group.things.add(thing)
+        _booking(thing, member, owner, code="BKG072", days=1)
+        _booking(
+            thing,
+            member,
+            owner,
+            code="BKG073",
+            start=TODAY + datetime.timedelta(days=6),
+            days=1,
+            status="CANCELLED",
+        )
+
+        ics_bytes, count, cancelled = build_calendar_export(group)
+
+        assert (count, cancelled) == (1, 1)
+        by_uid = {e["UID"]: e["STATUS"] for e in _events(ics_bytes)}
+        assert by_uid == {"BKG072@oiueei": "CONFIRMED", "BKG073@oiueei": "CANCELLED"}
+
+    def test_a_cancellation_of_a_reservation_already_over_is_not_shipped(
+        self, group, owner, member
+    ):
+        thing = _thing(owner, thing_type="RESERVE_THING")
+        group.things.add(thing)
+        _booking(
+            thing,
+            member,
+            owner,
+            start=TODAY - datetime.timedelta(days=10),
+            days=1,
+            status="CANCELLED",
+        )
+
+        ics_bytes, count, cancelled = build_calendar_export(group)
+
+        assert (count, cancelled) == (0, 0)
+        assert _events(ics_bytes) == []
 
 
 class TestLanguage:

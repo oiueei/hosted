@@ -125,8 +125,10 @@ class CollectionCalendarExportView(APIView):
     The collection's upcoming date-based reservations (loans, rentals, on-site
     reservations) as an iCalendar (.ics) file — one event per reservation,
     every upcoming one each time (the per-booking UID makes a re-import update
-    in place rather than duplicate). `X-Calendar-Events` carries the count
-    (0 ⇒ a calendar with no events, and the SPA offers no download).
+    in place rather than duplicate), plus every upcoming reservation cancelled
+    since it was confirmed, marked `STATUS:CANCELLED`. `X-Calendar-Events`
+    carries the confirmed count and `X-Calendar-Cancelled` the cancelled one
+    (both 0 ⇒ nothing to import, and the SPA offers no download).
 
     **POST, kept for contract stability**: the call mutated back when it marked
     reservations as delivered, and the frontend's button was built against POST
@@ -148,15 +150,16 @@ class CollectionCalendarExportView(APIView):
         if denied:
             return denied
 
-        ics_bytes, count = build_calendar_export(collection, user=request.user)
+        ics_bytes, count, cancelled = build_calendar_export(collection, user=request.user)
         response = HttpResponse(ics_bytes, content_type="text/calendar; charset=utf-8")
         response["Content-Disposition"] = (
             f'attachment; filename="{calendar_filename(collection.code)}"'
         )
         response["Cache-Control"] = "private, no-store"
         response["X-Calendar-Events"] = str(count)
+        response["X-Calendar-Cancelled"] = str(cancelled)
         security_logger.info(
             f"Collection {collection.code} calendar exported by {request.user.code} "
-            f"({count} events, {len(ics_bytes)} bytes)"
+            f"({count} events, {cancelled} cancelled, {len(ics_bytes)} bytes)"
         )
         return response

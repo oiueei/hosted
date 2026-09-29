@@ -27,6 +27,19 @@ module neither reads nor writes it, the row stays in the schema for the
 release after this one, and it is dropped then (the two-release rule
 ``reservation_max_hours`` followed).
 
+**A cancelled reservation travels too, marked as cancelled.** A calendar that
+imported a reservation keeps it after the member (or a curator) cancels it —
+the file is a copy, not a subscription. So every download also carries each
+upcoming reservation that was cancelled, under the same UID, with
+``STATUS:CANCELLED`` and ``SEQUENCE:1`` (live events are ``SEQUENCE:0``): RFC
+5545 has a calendar accept a revision only when its SEQUENCE is higher than
+the copy it holds, and one that honours the status then drops or strikes out
+its copy. Only RESERVE_THING can get here — it is the one verb that goes from
+ACCEPTED to CANCELLED; a loan or rental is only ever cancelled while PENDING,
+so it never reached a calendar in the first place. How an importing app treats
+a cancellation it receives by file differs from app to app; the file says what
+the standard lets it say.
+
 Everything user-written that reaches a TEXT property — a thing headline, a
 member name, a project note — is escaped per RFC 5545 §3.3.11 (backslash,
 semicolon, comma, newline), which replaces the spreadsheet-formula guard the
@@ -38,6 +51,7 @@ import datetime
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from core.models import BookingPeriod
@@ -155,21 +169,32 @@ def _fmt_utc(moment):
 
 
 def _upcoming_bookings(collection):
-    """The collection's date-based, confirmed, not-yet-finished reservations,
-    oldest start first. Every one of them — the stable UID is what keeps a
-    re-import from duplicating, so there is no watermark to respect."""
+    """The collection's date-based, not-yet-finished reservations that belong
+    in a calendar, oldest start first: every confirmed one, and every
+    reservation cancelled after it was confirmed (RESERVE_THING, the only verb
+    that goes from ACCEPTED to CANCELLED — see the module docstring). Every one
+    of them — the stable UID is what keeps a re-import from duplicating, so
+    there is no watermark to respect."""
     today = timezone.localdate()
     return (
         BookingPeriod.objects.filter(
+            Q(status=BookingPeriod.Status.ACCEPTED)
+            | Q(
+                status=BookingPeriod.Status.CANCELLED,
+                thing_type=Thing.Type.RESERVE_THING,
+            ),
             thing_code__collections=collection,
             thing_type__in=DATE_BASED_TYPES,
-            status=BookingPeriod.Status.ACCEPTED,
             end_date__gte=today,
         )
         .select_related("thing_code", "requester_code")
         .distinct()
         .order_by("start_date", "code")
     )
+
+
+def _is_cancelled(booking):
+    return booking.status == BookingPeriod.Status.CANCELLED
 
 
 def _event_lines(booking, texts, lang, collection_headline, now):
@@ -196,6 +221,10 @@ def _event_lines(booking, texts, lang, collection_headline, now):
         # this event in place instead of growing a duplicate.
         f"UID:{booking.code}@oiueei",
         f"DTSTAMP:{_fmt_utc(now)}",
+        # A cancellation is the event's one revision, so it outranks the
+        # confirmed copy a calendar already holds (RFC 5545 §3.8.7.4).
+        f"SEQUENCE:{1 if _is_cancelled(booking) else 0}",
+        f"STATUS:{'CANCELLED' if _is_cancelled(booking) else 'CONFIRMED'}",
     ]
     if booking.start_time is not None and booking.end_time is not None:
         # An HOUR-unit reservation: a timed event, both clock times on
@@ -247,7 +276,11 @@ def calendar_filename(code):
 
 
 def build_calendar_export(collection, user=None):
-    """Return ``(ics_bytes, count)`` for every upcoming reservation.
+    """Return ``(ics_bytes, count, cancelled)`` for every upcoming reservation.
+
+    ``count`` is how many confirmed events the file holds, ``cancelled`` how
+    many cancellations ride along with them — a file of cancellations alone is
+    still worth downloading, since it is what takes them off a calendar.
 
     The whole future of the collection, not just what a previous download
     missed: the per-booking UID makes re-importing idempotent, which is what
@@ -264,4 +297,9 @@ def build_calendar_export(collection, user=None):
     texts = CALENDAR_TEXTS.get(lang, CALENDAR_TEXTS["en"])
 
     bookings = list(_upcoming_bookings(collection))
-    return _ics_bytes(bookings, texts, lang, collection), len(bookings)
+    cancelled = sum(1 for booking in bookings if _is_cancelled(booking))
+    return (
+        _ics_bytes(bookings, texts, lang, collection),
+        len(bookings) - cancelled,
+        cancelled,
+    )

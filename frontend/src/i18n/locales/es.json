@@ -12,8 +12,10 @@
   "calendarExport": {
     "downloadButton": "Descargar reservas para el calendario",
     "downloading": "Preparando el fichero…",
-    "notice": "Todas las reservas futuras, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada.",
+    "notice": "Todas las reservas futuras, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada, y una reserva cancelada desde entonces va marcada como cancelada.",
     "done": "{{count}} evento(s) — mira tus descargas.",
+    "alsoCancelled": "Incluye {{count}} cancelada(s), marcadas para que tu calendario pueda quitarlas.",
+    "doneOnlyCancelled": "No hay reservas futuras, pero sí {{count}} cancelada(s) — importa el fichero para que tu calendario pueda quitarlas.",
     "nothingNew": "No hay reservas futuras.",
     "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
   },
