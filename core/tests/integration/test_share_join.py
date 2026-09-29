@@ -232,6 +232,45 @@ class TestTheOperatorsCeiling:
         CACHES={
             "default": {
                 "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "share-join-quota",
+            }
+        },
+        COLLECTION_JOINS_PER_DAY=1,
+    )
+    def test_a_full_day_still_lets_the_owner_and_a_member_in(self, user, user2, owner, shared):
+        """The daily ceiling stops whoever is not in yet, not someone already in: a
+        member opening the link again, or the curator trying their own link on a
+        busy day, is answered as always and never told a group they belong to has
+        "taken today's joins". One client per person: the fixtures share one."""
+        caches["default"].clear()
+        member, stranger, founder = APIClient(), APIClient(), APIClient()
+        member.force_authenticate(user=user)
+        stranger.force_authenticate(user=user2)
+        founder.force_authenticate(user=owner)
+
+        # The one join the day allows, then proof that the day really is full.
+        assert _post(member).data == {"collection": shared.code, "joined": True}
+        assert _post(stranger).status_code == 429
+
+        again = _post(member)
+        from_the_owner = _post(founder)
+
+        assert (again.status_code, again.data) == (
+            200,
+            {"collection": shared.code, "joined": False},
+        )
+        assert (from_the_owner.status_code, from_the_owner.data) == (
+            200,
+            {"collection": shared.code, "joined": False},
+        )
+        assert _member_joined(shared, user).count() == 1
+        assert not shared.invites.filter(code=user2.code).exists()
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
                 "LOCATION": "share-join-ratelimit",
             }
         },
