@@ -616,8 +616,16 @@ class VerifyLinkView(APIView):
             status=status.HTTP_200_OK,
         )
 
-    def _handle_booking_action(self, rsvp, accepted):
-        """Shared handler for booking accept/reject via RSVP."""
+    def _handle_booking_action(self, request, rsvp, accepted):
+        """Shared handler for booking accept/reject via RSVP.
+
+        The link was minted to **one manager** of the thing (its owner, or a
+        curator of a PROPRIETARY collection it sits in — see
+        ``send_booking_request_notifications``), so the decision is theirs. But
+        it is judged when the link is *used*, not when it was sent: a co-curator
+        demoted or removed after the email, a collection turned COMMUNITY, or
+        the thing moved out of it, must not be able to decide with the old link.
+        """
         booking_code = rsvp.target_code
 
         try:
@@ -644,10 +652,26 @@ class VerifyLinkView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # The emailed link was minted to the owner's address alone, so the
-        # decision is theirs — passed explicitly rather than left to the
-        # service's owner fallback.
-        thing = finalize_booking_decision(booking, accepted=accepted, decided_by=booking.owner_code)
+        # Authority is checked again here, at the click. The link outlives the
+        # role that earned it (72h): the owner always may, anyone else only
+        # while they still run the thing. A refused link is burnt, so it cannot
+        # be tried again.
+        if not (rsvp.user_code_id == booking.owner_code_id or thing.can_manage(rsvp.user_code_id)):
+            ip = get_client_ip(request)
+            security_logger.warning(
+                f"Booking {booking.code} decision refused for {rsvp.user_code_id}: "
+                f"no longer manages the thing, from IP {ip}"
+            )
+            rsvp.delete()
+            return Response(
+                {"error": "Not authorized"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # The decision is signed by whoever the emailed link was minted to —
+        # the owner's own, or a co-curator's — passed explicitly rather than
+        # left to the service's owner fallback.
+        thing = finalize_booking_decision(booking, accepted=accepted, decided_by=rsvp.user_code)
 
         # A concurrent request (this link racing the in-app action, or the
         # sibling link) already transitioned this booking — the service no-ops.
@@ -760,11 +784,11 @@ class VerifyLinkView(APIView):
 
     def _handle_booking_accept(self, request, rsvp):
         """Handle booking accept action for all thing types."""
-        return self._handle_booking_action(rsvp, accepted=True)
+        return self._handle_booking_action(request, rsvp, accepted=True)
 
     def _handle_booking_reject(self, request, rsvp):
         """Handle booking reject action for all thing types."""
-        return self._handle_booking_action(rsvp, accepted=False)
+        return self._handle_booking_action(request, rsvp, accepted=False)
 
 
 class JoinView(APIView):

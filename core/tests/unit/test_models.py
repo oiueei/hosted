@@ -896,8 +896,9 @@ class TestRSVPModelEdgeCases:
             requester_email="req@example.com",
             owner_code=owner,
         )
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, "owner@example.com")
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, owner)
         assert rsvp.action == "BOOKING_ACCEPT"
         assert rsvp.target_code == booking.code
+        assert rsvp.user_code_id == owner.code
         assert rsvp.user_email == "owner@example.com"
         assert rsvp.context["thing_code"] == thing.code

@@ -339,13 +339,13 @@ class TestTwoRequestsForOneSlotAreSerialised:
         def first(guard):
             monkeypatch.setattr(BookingPeriod, "save", _one_shot(original, guard))
             try:
-                return request_standard_booking(thing, user2, user.email)
+                return request_standard_booking(thing, user2)
             finally:
                 monkeypatch.setattr(BookingPeriod, "save", original)
 
         def second():
             try:
-                return request_standard_booking(thing, other, user.email)
+                return request_standard_booking(thing, other)
             except BookingRequestError as exc:
                 return ("refused", exc.status_code)
 
@@ -372,13 +372,13 @@ class TestTwoRequestsForOneSlotAreSerialised:
         def first(guard):
             monkeypatch.setattr(BookingPeriod, "has_overlap", _one_shot(original, guard))
             try:
-                return request_date_based_booking(thing, user2, user.email, start, end)
+                return request_date_based_booking(thing, user2, start, end)
             finally:
                 monkeypatch.setattr(BookingPeriod, "has_overlap", original)
 
         def second():
             try:
-                return request_date_based_booking(thing, other, user.email, start, end)
+                return request_date_based_booking(thing, other, start, end)
             except BookingRequestError as exc:
                 return ("refused", exc.status_code)
 

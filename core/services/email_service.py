@@ -1421,9 +1421,12 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
 # --- Category 2: Activity ------------------------------------------------------
 
 
-def send_booking_request_email(requester, thing, booking, owner_email, accept_link, reject_link):
-    """Send booking request email to owner with accept/reject links."""
-    user, lang = _recipient(owner_email)
+def send_booking_request_email(requester, thing, booking, manager_email, accept_link, reject_link):
+    """Send a booking request email to one manager of the thing — its owner, or a
+    curator of a PROPRIETARY collection it sits in — with **their own**
+    accept/reject links (see ``send_booking_request_notifications``). Language and
+    the preference check follow the recipient."""
+    user, lang = _recipient(manager_email)
     T, L = _texts(lang), _local(lang)
     requester_name = requester.display_name
     action = _action_noun(thing, lang)
@@ -1466,7 +1469,9 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
         lang=lang,
         header=header,
     )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
+    _send(
+        manager_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header
+    )
 
 
 def send_booking_decision_email(booking, thing, accepted=True, collection=None):

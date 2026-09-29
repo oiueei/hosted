@@ -256,7 +256,7 @@ The `RSVP` model is the central intermediary for all email-based actions. It ser
 | `code` | CharField(6) | Auto | Primary key, 6-character alphanumeric ID. Used for DB joins/target lookups, **not** in URLs. |
 | `token` | CharField(26) | Auto | Unique high-entropy URL token (~134 bits): 26 lowercase alphanumerics via `generate_token()`. Backs every email action link (`action_link()` and the magic link) so links can't be brute-forced the way the 6-char PK (~31 bits) could. |
 | `created` | DateTimeField | Auto | Timestamp when RSVP was created |
-| `user_code` | ForeignKey(User) | **Yes** | User this RSVP is for |
+| `user_code` | ForeignKey(User) | **Yes** | User this RSVP is for. For a booking accept/reject it is the **manager the link was minted to** (owner or co-curator), and it is who signs the decision — see `VerifyLinkView._handle_booking_action` |
 | `user_email` | CharField(64) | **Yes** | Email address of the recipient |
 | `action` | CharField(20) | No | Action type (default: MAGIC_LINK). Indexed (`db_index=True`) |
 | `target_code` | CharField(6) | No | Target object code (booking, collection, etc.). Indexed (`db_index=True`) |
@@ -285,7 +285,7 @@ The `RSVP` model is the central intermediary for all email-based actions. It ser
 
 - `is_valid()` - Returns True if not expired, using the per-action lifetime from `expiry_hours_for`
 - `expiry_hours_for(action)` - Classmethod: hours an RSVP of the given action stays valid (24h magic / 72h booking / 720h invite). Used by both `is_valid()` and `cleanup_rsvps`
-- `create_for_booking(action, booking, owner_email)` - Factory method for booking RSVPs
+- `create_for_booking(action, booking, recipient)` / `create_booking_pair(booking, recipient)` - Factories for booking RSVPs, minted to `recipient` (a `User`: `user_code=recipient`, `user_email=recipient.email`) — one pair per manager of the thing, not one per booking
 
 ---
 
