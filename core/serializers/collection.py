@@ -505,16 +505,18 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         return _parse_closed_dates(value)
 
     def validate(self, attrs):
-        # Default visibility follows the mode when the client doesn't set it:
-        # community collections are born PUBLIC, proprietary ones PRIVATE. The
-        # owner can override either way via the toggle.
+        # A collection is born PRIVATE, whatever its mode, when the client doesn't
+        # say otherwise; making it PUBLIC is an explicit decision (CA, 2026-09-29).
+        # COMMUNITY used to be born PUBLIC "so a stranger can reach it", but the
+        # person who contributes a thing to a group is not shown whether it is
+        # public (the Public/Private tag is the curators' since 2026-09-21, and
+        # AddThingPage says nothing), so a group of neighbours' families was
+        # readable by anyone and the members never knew — photos, text and the
+        # thing's ``location`` on the open web. An explicit ``visibility`` is
+        # respected in either mode.
         mode = attrs.get("mode", Collection.Mode.PROPRIETARY)
         if not attrs.get("visibility"):
-            attrs["visibility"] = (
-                Collection.Visibility.PUBLIC
-                if mode == Collection.Mode.COMMUNITY
-                else Collection.Visibility.PRIVATE
-            )
+            attrs["visibility"] = Collection.Visibility.PRIVATE
         _validate_allowed_thing_types(attrs.get("allowed_thing_types", []), mode)
         _validate_reservation_minutes(
             attrs.get("reservation_min_minutes", 60), attrs.get("reservation_max_minutes", 180)

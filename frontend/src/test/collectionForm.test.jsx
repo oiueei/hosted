@@ -102,34 +102,53 @@ describe('CreateCollectionPage', () => {
     ).toBeInTheDocument();
   });
 
-  // The mode radio's one surviving side effect. It used to reveal the swap and
-  // share toggles as well; those types were extirpated this release, and the
-  // test that carried their name was left clicking the radio and asserting
-  // nothing at all — green no matter what the radio did. What the radio still
-  // decides is the group's visibility default: a community is born public so a
-  // stranger can reach it, a proprietary list private. Backwards, that either
-  // hides a community from the whole funnel or publishes a private list.
-  test('choosing Community makes the new group public, and Proprietary private again', () => {
+  // The mode radio does not decide who can read the group — only the switch does
+  // (CA, 2026-09-29). Community used to turn the switch on by itself, and again on
+  // every re-choice even after the curator had switched it off; but whoever
+  // contributes to a group is never shown whether it is public, so a group of
+  // neighbours' families ended up readable by anyone without its members knowing.
+  // Making a group public is now a deliberate act, in either mode.
+  test('choosing a mode leaves the group private: only the switch changes that', () => {
     const { container } = renderCreate();
     const visibility = () => container.querySelector('#create-collection-visibility');
 
     expect(visibility()).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
+    expect(visibility()).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(visibility());
     expect(visibility()).toHaveAttribute('aria-pressed', 'true');
 
+    // What the curator chose survives a change of mode (it used to go private)…
     fireEvent.click(screen.getByRole('radio', { name: 'Proprietary' }));
+    expect(visibility()).toHaveAttribute('aria-pressed', 'true');
+
+    // …and a switch they turned off stays off when Community is chosen again (it
+    // used to come back on).
+    fireEvent.click(visibility());
+    fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
     expect(visibility()).toHaveAttribute('aria-pressed', 'false');
   });
 
-  // It is a default, not a lock — "the owner can still flip the toggle
-  // afterwards". Which is only true if the flip survives to the POST.
-  test('the owner can overrule the mode default, and their choice is what ships', async () => {
+  // Public is a decision, and it has to survive to the POST.
+  test('a Community group the curator switched to public ships as COMMUNITY and PUBLIC', async () => {
+    const { container } = renderCreate();
+    await fillTheRequiredFields(container, 'An open community');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
+    fireEvent.click(container.querySelector('#create-collection-visibility'));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()?.visibility).toBe('PUBLIC'));
+    expect(createBody()?.mode).toBe('COMMUNITY');
+  });
+
+  test('a Community group whose switch was never touched ships as PRIVATE', async () => {
     const { container } = renderCreate();
     await fillTheRequiredFields(container, 'A quiet community');
 
     fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
-    fireEvent.click(container.querySelector('#create-collection-visibility'));
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(createBody()?.visibility).toBe('PRIVATE'));
