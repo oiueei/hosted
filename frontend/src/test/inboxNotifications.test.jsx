@@ -246,6 +246,52 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001',
     },
     {
+      // The team-side record of a decision (2026-09-29): whoever made the call
+      // reads their own trace, not a report of themselves in the third person.
+      what: 'a decision you made yourself is your own trace, naming who asked',
+      notification: {
+        code: 'NOTA09',
+        type: 'BOOKING_DECIDED',
+        payload: {
+          thing_headline: 'A mitre saw',
+          requester_name: 'Lulu',
+          decider_name: 'Lala',
+          accepted: true,
+          by_you: true,
+          booking_code: 'BKG009',
+          thing_code: 'THG009',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/You confirmed Lulu's request/i, /A mitre saw/],
+      links: '/collections/COL001/things/THG009',
+      linkName: /view listing/i,
+    },
+    {
+      what: "a teammate's decision names them, and whether it was a yes",
+      notification: {
+        code: 'NOTA10',
+        type: 'BOOKING_DECIDED',
+        payload: {
+          thing_headline: 'A board game',
+          requester_name: 'Lolo',
+          decider_name: 'Lala',
+          accepted: false,
+          by_you: false,
+          booking_code: 'BKG010',
+          thing_code: 'THG010',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/Lala declined Lolo's request/i, /A board game/],
+      links: '/collections/COL001/things/THG010',
+      linkName: /view listing/i,
+    },
+    {
       // Its link read "I can help!" — the retired WISH_THING call-for-help CTA —
       // under every group message, whatever the curator had written.
       what: 'a group message carries its text and a link that says where it goes',
@@ -266,7 +312,7 @@ describe('InboxNotifications — every type says something', () => {
     },
   ];
 
-  test.each(CASES)('$what', async ({ notification, says, links, rejects }) => {
+  test.each(CASES)('$what', async ({ notification, says, links, rejects, linkName }) => {
     apiFetch.mockImplementation((url) => {
       if (url.startsWith('/api/v1/inbox/')) return ok([notification]);
       if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
@@ -286,10 +332,9 @@ describe('InboxNotifications — every type says something', () => {
     // Not the broadcast fallback: that renders an empty body and a bare " — ".
     expect(container.textContent).not.toMatch(/\s—\s*Toy library\s*$/);
     expect(container.textContent).not.toMatch(/\{\{\w+\}\}/);
-    expect(screen.getByRole('link', { name: /decide now|open the group/i })).toHaveAttribute(
-      'href',
-      links
-    );
+    expect(
+      screen.getByRole('link', { name: linkName || /decide now|open the group/i })
+    ).toHaveAttribute('href', links);
     if (rejects) expect(container.textContent).not.toMatch(rejects);
   });
 

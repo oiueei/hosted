@@ -129,6 +129,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     member_name: named(payload.member_name),
     proposer_name: named(payload.proposer_name),
     other_name: named(payload.other_name),
+    decider_name: named(payload.decider_name),
   });
 
   const notificationLabel = (n) => {
@@ -144,6 +145,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.bookingRejectedLabel');
       case 'BOOKING_REQUESTED':
         return t('home.bookingRequestedLabel');
+      // The team-side record of a decision: same labels the requester's own
+      // notice uses, so one vocabulary for one event.
+      case 'BOOKING_DECIDED':
+        return p.accepted ? t('home.bookingAcceptedLabel') : t('home.bookingRejectedLabel');
       case 'FAQ_QUESTION':
         return t('home.faqQuestionLabel');
       case 'FAQ_ANSWERED':
@@ -254,6 +259,23 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
               proposer_name: p.proposer_name,
               email: p.email,
             });
+      case 'BOOKING_DECIDED':
+        // Whoever reads it either made the call or hears about a teammate's.
+        if (p.by_you)
+          return t(
+            p.accepted
+              ? 'home.bookingDecidedAcceptedByYouBody'
+              : 'home.bookingDecidedRejectedByYouBody',
+            { requester_name: p.requester_name, thing_headline: p.thing_headline }
+          );
+        return t(
+          p.accepted ? 'home.bookingDecidedAcceptedBody' : 'home.bookingDecidedRejectedBody',
+          {
+            decider_name: p.decider_name,
+            requester_name: p.requester_name,
+            thing_headline: p.thing_headline,
+          }
+        );
       case 'RESERVATION_MADE':
         return t('home.reservationMadeBody', {
           requester_name: p.requester_name,

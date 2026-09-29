@@ -427,6 +427,154 @@ def test_booking_accept_via_api_creates_in_app_notification(two_users, thing_wit
 
 
 @pytest.mark.django_db
+def test_the_team_sees_a_co_curators_decision(two_users, thing_with_collection):
+    """A hold request is a question put to whoever runs the thing, so its answer
+    reaches them all: the founder hears a co-curator's accept, the co-curator
+    keeps a trace of their own call, and the requester gets their own
+    BOOKING_ACCEPTED — not a "somebody decided" line about their own request."""
+    owner, requester = two_users
+    thing, collection = thing_with_collection
+    co_curator = User.objects.create(code="COC002", email="co@test.com", name="Co-Curator")
+    collection.invites.add(co_curator)
+    collection.co_owners.add(co_curator)
+    start = datetime.date.today() + datetime.timedelta(days=2)
+    end = start + datetime.timedelta(days=3)
+    booking = _make_booking(
+        owner, requester, thing, thing_type="LEND_THING", start_date=start, end_date=end
+    )
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = _make_client(co_curator).post(f"/api/v1/bookings/{booking.code}/accept/")
+
+    assert resp.status_code == status.HTTP_200_OK
+    to_owner = InAppNotification.objects.get(
+        user=owner, type=InAppNotification.Type.BOOKING_DECIDED
+    )
+    assert to_owner.payload["by_you"] is False
+    assert to_owner.payload["decider_name"] == co_curator.name
+    assert to_owner.payload["requester_name"] == requester.name
+    assert to_owner.payload["accepted"] is True
+    assert to_owner.payload["booking_code"] == booking.code
+    assert (to_owner.payload["start_date"], to_owner.payload["end_date"]) == (
+        str(start),
+        str(end),
+    )
+
+    to_co = InAppNotification.objects.get(
+        user=co_curator, type=InAppNotification.Type.BOOKING_DECIDED
+    )
+    assert to_co.payload["by_you"] is True
+
+    # The requester's copy is their BOOKING_ACCEPTED — no decided-trail on top.
+    assert not InAppNotification.objects.filter(
+        user=requester, type=InAppNotification.Type.BOOKING_DECIDED
+    ).exists()
+    assert InAppNotification.objects.filter(
+        user=requester, type=InAppNotification.Type.BOOKING_ACCEPTED
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_a_manager_who_asked_gets_no_team_trail_about_their_own_request(
+    two_users, thing_with_collection
+):
+    """A co-curator can request a teammate's thing in the same collection — and
+    is then both the requester and one of the thing's managers. Their copy of
+    the decision is the requester's own BOOKING_ACCEPTED; a team trail about
+    their own request on top would be noise in their inbox."""
+    owner, requester = two_users
+    thing, collection = thing_with_collection
+    collection.co_owners.add(requester)
+    booking = _make_booking(owner, requester, thing)
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = _make_client(owner).post(f"/api/v1/bookings/{booking.code}/accept/")
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert not InAppNotification.objects.filter(
+        user=requester, type=InAppNotification.Type.BOOKING_DECIDED
+    ).exists()
+    assert InAppNotification.objects.filter(
+        user=requester, type=InAppNotification.Type.BOOKING_ACCEPTED
+    ).exists()
+    decided = list(InAppNotification.objects.filter(type=InAppNotification.Type.BOOKING_DECIDED))
+    assert [n.user_id for n in decided] == [owner.code]
+
+
+@pytest.mark.django_db
+def test_the_owner_sees_their_own_emailed_rejection(two_users, thing_with_collection):
+    owner, requester = two_users
+    thing, _ = thing_with_collection
+    booking = _make_booking(owner, requester, thing)
+    rsvp = RSVP.objects.create(
+        user_code=owner,
+        user_email=owner.email,
+        action="BOOKING_REJECT",
+        target_code=booking.code,
+    )
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = APIClient().post(f"/api/v1/auth/verify/{rsvp.token}/")
+
+    assert resp.status_code == status.HTTP_200_OK
+    notif = InAppNotification.objects.get(user=owner, type=InAppNotification.Type.BOOKING_DECIDED)
+    assert notif.payload["by_you"] is True
+    assert notif.payload["accepted"] is False
+
+
+@pytest.mark.django_db
+def test_a_community_thing_has_one_manager_hearing_the_decision(two_users, thing_with_collection):
+    """COMMUNITY contributes, it doesn't co-manage: a thing's managers there are
+    just its owner, so a decision leaves exactly one team record — the owner's
+    own."""
+    owner, requester = two_users
+    thing, collection = thing_with_collection
+    collection.mode = Collection.Mode.COMMUNITY
+    collection.save()
+    booking = _make_booking(owner, requester, thing)
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = _make_client(owner).post(f"/api/v1/bookings/{booking.code}/accept/")
+
+    assert resp.status_code == status.HTTP_200_OK
+    decided = list(InAppNotification.objects.filter(type=InAppNotification.Type.BOOKING_DECIDED))
+    assert [n.user_id for n in decided] == [owner.code]
+    assert decided[0].payload["by_you"] is True
+
+
+@pytest.mark.django_db
+def test_the_decision_record_outlives_the_cleared_request(two_users, thing_with_collection):
+    """`_clear_request_notifications` matches by payload__booking_code but is
+    type-scoped to BOOKING_REQUESTED; the decision record carries the same code
+    under another type and must survive it. Without the type in that filter, the
+    owner's own trace of their decision would vanish with the question."""
+    owner, requester = two_users
+    thing, _ = thing_with_collection
+
+    with (
+        patch("core.services.email_service.send_booking_request_email"),
+        patch("core.services.email_service.send_booking_confirmation_email"),
+    ):
+        resp = _make_client(requester).post(
+            f"/api/v1/things/{thing.code}/request/", {}, format="json"
+        )
+    assert resp.status_code == status.HTTP_201_CREATED
+    booking = BookingPeriod.objects.get(thing_code=thing, requester_code=requester)
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = _make_client(owner).post(f"/api/v1/bookings/{booking.code}/accept/")
+    assert resp.status_code == status.HTTP_200_OK
+
+    assert not InAppNotification.objects.filter(
+        user=owner, type=InAppNotification.Type.BOOKING_REQUESTED
+    ).exists()
+    decided = InAppNotification.objects.filter(
+        user=owner, type=InAppNotification.Type.BOOKING_DECIDED
+    )
+    assert [n.payload["booking_code"] for n in decided] == [booking.code]
+
+
+@pytest.mark.django_db
 def test_an_accepted_loan_decision_notice_carries_the_dates(two_users, thing_with_collection):
     """The requester asked for dates; the answer has to say which ones were
     agreed to, the same way their request told the owner (2026-09-29)."""

@@ -392,6 +392,51 @@ def _clear_request_notifications(booking):
     ).delete()
 
 
+def _notify_team_of_decision(booking, thing, collection, decider, accepted):
+    """Leave a BOOKING_DECIDED record with everyone who runs the thing.
+
+    A hold request is a question put to the whole team that manages it, so its
+    answer has to reach them all: every manager (``thing.managers()`` — the
+    thing's owner plus a PROPRIETARY collection's curators), plus whoever
+    decided if they are not a manager already, **except the requester** — they
+    get their own BOOKING_ACCEPTED/REJECTED, and a "so-and-so decided" line
+    about their own request would be noise in their inbox. Without this, a
+    co-curator's inbox kept a request the founder had already settled, and
+    whoever decided had no trace of their own call (CA, 2026-09-29).
+
+    Runs after ``_clear_request_notifications``, which is type-scoped to
+    BOOKING_REQUESTED: the decision record carries the same ``booking_code``
+    but a different type, so the clear leaves it standing.
+    """
+    audience = {}
+    for manager in [*thing.managers(), decider]:
+        if manager.code == booking.requester_code_id:
+            continue
+        audience.setdefault(manager.code, manager)
+
+    for code, manager in audience.items():
+        payload = {
+            "thing_headline": thing.headline,
+            # Bare names (L2): every reader here is a co-member of the decider
+            # and the requester alike.
+            "requester_name": booking.requester_code.name,
+            "decider_name": decider.name,
+            "accepted": accepted,
+            "by_you": code == decider.code,
+            "booking_code": booking.code,
+            "thing_code": thing.code,
+            "collection_code": collection.code if collection else "",
+        }
+        if booking.start_date and booking.end_date:
+            payload["start_date"] = str(booking.start_date)
+            payload["end_date"] = str(booking.end_date)
+        InAppNotification.objects.create(
+            user=manager,
+            type=InAppNotification.Type.BOOKING_DECIDED,
+            payload=payload,
+        )
+
+
 def finalize_booking_decision(booking, accepted, decided_by=None):
     """Apply an owner's accept/reject decision and run the shared side-effects.
 
@@ -421,7 +466,8 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
     # the requester, a co-member, and the API withholds the owner's address from
     # them everywhere else (L2).
-    owner_name = (decided_by if decided_by is not None else booking.owner_code).name
+    decider = decided_by if decided_by is not None else booking.owner_code
+    owner_name = decider.name
     # The booking doesn't record which collection it was made through, so the
     # requester-side notification deep-links through the same approximation the
     # request-side one used.
@@ -454,6 +500,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     )
     send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)
+    _notify_team_of_decision(booking, thing, collection, decider, accepted)
     if accepted:
         # Anchored to the requester (like HOLD_REQUESTED) so a guest's request→accept
         # funnel and the overall holds success rate are both a plain count by kind.
