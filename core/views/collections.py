@@ -592,13 +592,15 @@ class CollectionCoOwnerView(APIView):
         if denied:
             return denied
 
-        already = collection.co_owners.filter(code=member.code).exists()
         # Re-promoting someone who is already a co-curator stays idempotent and
         # never hits the ceiling — only growing the set does. The bound is the
         # abuse ceiling (`Collection.MAX_CO_OWNERS`), not the design intent of
         # 1–2: a compromised curator's credential must not be able to promote
-        # the whole roster, since each promotion hands over the member list.
-        if not already and collection.co_owners.count() >= Collection.MAX_CO_OWNERS:
+        # the whole roster, since each promotion hands over the member list. The
+        # check and the add are one locked step in the model, so promotions
+        # running at once cannot all read the same count and overshoot it.
+        result = collection.promote_co_owner(member)
+        if result is Collection.Promotion.FULL:
             # Coded like a request's refusals (`BookingRequestError.as_body`): the
             # SPA says it in the reader's language from `requestErrors.co_owners_full`,
             # the English sentence stays as the fallback for a client that lacks it.
@@ -613,8 +615,7 @@ class CollectionCoOwnerView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        collection.co_owners.add(member)
-        if not already:
+        if result is Collection.Promotion.ADDED:
             InAppNotification.objects.create(
                 user=member,
                 type=InAppNotification.Type.PROMOTED_CO_OWNER,

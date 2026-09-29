@@ -2,12 +2,13 @@
 Collection model for OIUEEI.
 """
 
+import enum
 import logging
 import secrets
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from core.models.language import Language
@@ -385,6 +386,44 @@ class Collection(models.Model):
         switch, the same way `owner` itself is.
         """
         return self.is_owner(user_code) or any(u.code == user_code for u in self.co_owners.all())
+
+    class Promotion(enum.Enum):
+        """What `promote_co_owner` did."""
+
+        ADDED = "added"
+        ALREADY = "already"
+        FULL = "full"
+
+    def promote_co_owner(self, member):
+        """Make ``member`` a co-curator, unless the set is already at ``MAX_CO_OWNERS``.
+
+        Returns a `Promotion`: ``ADDED``, ``ALREADY`` (they were one — re-promoting
+        is idempotent and never meets the ceiling, since it grows nothing) or
+        ``FULL``.
+
+        **The read and the add are one atomic step on a locked row.** The ceiling
+        is what bounds a stolen curator credential (`MAX_CO_OWNERS`), and a bare
+        ``count()`` then ``add()`` lets every promotion running at once read the
+        same count and all add: at four, four requests at once end at eight. So the
+        collection's row is locked (``select_for_update``) and both the membership
+        test and the count are read **under** the lock — the second promotion waits
+        for the first to commit and then counts five. The lock is on the collection
+        rather than a constraint because the bound is a rule about a set, which a
+        row-level constraint cannot express.
+
+        Does not check that ``member`` is in ``invites`` (``co_owners ⊆ invites``):
+        the promote endpoint does, before it gets here. On SQLite Django drops the
+        ``FOR UPDATE``, so the race is only provable on PostgreSQL — see
+        ``test_booking_row_locks.py``.
+        """
+        with transaction.atomic():
+            locked = Collection.objects.select_for_update().get(pk=self.pk)
+            if locked.co_owners.filter(code=member.code).exists():
+                return self.Promotion.ALREADY
+            if locked.co_owners.count() >= self.MAX_CO_OWNERS:
+                return self.Promotion.FULL
+            locked.co_owners.add(member)
+            return self.Promotion.ADDED
 
     def is_community(self):
         """Check if this is a community collection."""

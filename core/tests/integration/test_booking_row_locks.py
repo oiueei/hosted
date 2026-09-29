@@ -1,4 +1,5 @@
-"""The row locks in ``booking_service`` — tested as locks, not as re-reads.
+"""The row locks in ``booking_service`` (and the collection lock behind the
+co-curator ceiling) — tested as locks, not as re-reads.
 
 Every accept/reject/cancel path re-reads its booking through
 ``select_for_update()`` and re-checks ``PENDING`` under that lock. Until this
@@ -388,3 +389,49 @@ class TestTwoRequestsForOneSlotAreSerialised:
         assert isinstance(first_result, BookingPeriod)
         assert second_result == ("refused", 409), second_result
         assert BookingPeriod.objects.filter(thing_code=thing).count() == 1
+
+
+# ── The collection row: the co-curator ceiling ───────────────────────────────
+# `Collection.promote_co_owner` reads the set's size and adds under a lock on the
+# collection row. A bare `count()` then `add()` (what the view did until
+# 2026-09-29) lets promotions that run together all read the same count.
+
+
+class TestTheCoCuratorCeilingIsAtomic:
+    def test_two_promotions_at_the_last_place_cannot_both_win(self, monkeypatch, user):
+        """The ceiling is what bounds a stolen curator credential, and a race is
+        how to walk past it: with the set one short of `MAX_CO_OWNERS`, two
+        promotions running together both read "room for one". Locked, the second
+        waits for the first to commit, counts the full set and is refused.
+
+        The barrier sits on the `add` — after the first promotion has read its
+        count under the lock — so that, unlocked, the second one reads the same
+        count while the first is still holding back its add. Nothing is patched
+        away: the wrapper calls straight through.
+        """
+        group = Collection.objects.create(code="CORC01", owner=user, headline="Curators")
+        for i in range(Collection.MAX_CO_OWNERS - 1):
+            curator = User.objects.create(code=f"CORM{i:02d}", email=f"corm{i}@test.com")
+            group.invites.add(curator)
+            group.co_owners.add(curator)
+        first_new = User.objects.create(code="CORN01", email="corn1@test.com")
+        second_new = User.objects.create(code="CORN02", email="corn2@test.com")
+        group.invites.add(first_new, second_new)
+        manager = Collection.co_owners.related_manager_cls
+        original = manager.add
+
+        def first(guard):
+            monkeypatch.setattr(manager, "add", _one_shot(original, guard))
+            try:
+                return group.promote_co_owner(first_new)
+            finally:
+                monkeypatch.setattr(manager, "add", original)
+
+        first_result, second_result, was_blocked = _run_both(
+            first, lambda: group.promote_co_owner(second_new)
+        )
+
+        assert was_blocked, "the second promotion read the count past the lock"
+        assert first_result is Collection.Promotion.ADDED
+        assert second_result is Collection.Promotion.FULL, second_result
+        assert group.co_owners.count() == Collection.MAX_CO_OWNERS
