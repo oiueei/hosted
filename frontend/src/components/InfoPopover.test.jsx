@@ -130,6 +130,71 @@ describe('InfoPopover', () => {
     removeSpy.mockRestore();
   });
 
+  // The panel of BulkAddCsv carries a link ("Download example (ZIP)"). Tabbing from the (i)
+  // towards it blurs the button first; if that closed the panel, the link would be gone
+  // before it could take the focus. `relatedTarget` is where the focus is going, and RTL's
+  // `fireEvent.blur` reaches React as the `focusout` its `onBlur` listens to. Driving it with
+  // `userEvent.tab()` instead would not prove anything: inside `act` React batches the close
+  // and the reopening the link's own focus triggers, and the test passes with the bug.
+  describe('focus moving inside the popover', () => {
+    const renderWithLink = () => {
+      render(
+        <div>
+          <InfoPopover title="CSV format" id="panel-1">
+            <p>body</p>
+            <a href="/example.zip">Download example</a>
+          </InfoPopover>
+          <button type="button">elsewhere</button>
+        </div>
+      );
+      const button = screen.getByRole('button', { name: 'CSV format' });
+      fireEvent.click(button);
+      return { button, link: screen.getByRole('link', { name: 'Download example' }) };
+    };
+
+    test('from the (i) button to a link in the panel keeps the panel open', () => {
+      const { button, link } = renderWithLink();
+
+      fireEvent.blur(button, { relatedTarget: link });
+
+      expect(screen.getByText('body')).toBeInTheDocument();
+      expect(link).toBeInTheDocument();
+      expect(button).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    test('and back from the link to the button keeps it open too', () => {
+      const { button, link } = renderWithLink();
+
+      fireEvent.blur(link, { relatedTarget: button });
+
+      expect(screen.getByText('body')).toBeInTheDocument();
+    });
+
+    test('leaving from the button for somewhere else closes it', () => {
+      const { button } = renderWithLink();
+
+      fireEvent.blur(button, { relatedTarget: screen.getByRole('button', { name: 'elsewhere' }) });
+
+      expect(screen.queryByText('body')).not.toBeInTheDocument();
+    });
+
+    test('leaving from the link — the last stop inside — closes it', () => {
+      const { link } = renderWithLink();
+
+      fireEvent.blur(link, { relatedTarget: screen.getByRole('button', { name: 'elsewhere' }) });
+
+      expect(screen.queryByText('body')).not.toBeInTheDocument();
+    });
+
+    test('focus going nowhere (the window lost it) closes it', () => {
+      const { button } = renderWithLink();
+
+      fireEvent.blur(button, { relatedTarget: null });
+
+      expect(screen.queryByText('body')).not.toBeInTheDocument();
+    });
+  });
+
   test('closes on blur', () => {
     render(
       <InfoPopover title="CSV format" id="panel-1">

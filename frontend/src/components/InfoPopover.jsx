@@ -3,7 +3,7 @@ import { Notification, IconInfoCircleFill } from 'hds-react';
 
 /**
  * (i) icon button that reveals an info panel on hover/focus/click, closing on
- * mouse-leave/blur/Escape. The positioning class (`.info-popover-panel`, in App.css)
+ * mouse-leave, when focus leaves the whole popover (not just the button), and Escape. The positioning class (`.info-popover-panel`, in App.css)
  * lives on the wrapper `<div>` below — never pass a positioning class as
  * `className` to the HDS `Notification` itself. Its rendered root carries
  * HDS's own `position: relative` at the same selector specificity as a
@@ -56,7 +56,13 @@ export default function InfoPopover({ title, children, id }) {
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
+      onBlur={(e) => {
+        // Only when focus leaves the whole popover. The panel can hold a link
+        // (BulkAddCsv's "Download example"): tabbing from the (i) button towards it
+        // blurs the button first, and closing then unmounts the panel before the
+        // link can receive the focus that was on its way there.
+        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+      }}
     >
       <button
         type="button"
