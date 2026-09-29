@@ -9,7 +9,9 @@ other test in the suite would notice going missing: nothing else renders a
 real message and inspects it, so a regression here is silent everywhere else.
 """
 
+import re
 import smtplib
+from html.parser import HTMLParser
 from unittest.mock import patch
 
 import pytest
@@ -747,24 +749,84 @@ def test_the_card_and_page_shed_their_padding_below_480px():
     )
 
 
-def test_buttons_go_full_width_below_480px():
-    """CA, the same real message: a button sized to its own label sits
-    narrower than the paragraphs around it once the card's own padding is
-    gone too — full width, centred, aligned with the text column either
-    side. The `ctas` pair's side margin (for the desktop side-by-side
-    layout) has to be zeroed here too, or a 100%-wide box plus that margin
-    would overflow past the text's own right edge."""
-    html = email_service._render_email([email_service._para("Hi")], lang="en")
+class _Page(HTMLParser):
+    """One email's anchors (their attributes) and its `<style>` text, read with a
+    real HTML parser rather than a regex over the markup."""
 
-    assert (
-        ".btn-primary, .btn-secondary {\n"
-        "    display: block !important;\n"
-        "    width: 100% !important;\n"
-        "    box-sizing: border-box !important;\n"
-        "    text-align: center !important;\n"
-        "    margin: 0 0 12px 0 !important;\n"
-        "  }" in html
+    def __init__(self, html):
+        super().__init__()
+        self.anchors = []
+        self.css = ""
+        self._in_style = False
+        self.feed(html)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self.anchors.append(dict(attrs))
+        elif tag == "style":
+            self._in_style = True
+
+    def handle_endtag(self, tag):
+        if tag == "style":
+            self._in_style = False
+
+    def handle_data(self, data):
+        if self._in_style:
+            self.css += data
+
+
+def _phone_rules(css):
+    """The rules inside the phone `@media` block of `css` (whitespace already
+    normalised), as {selector: [declarations]} — read up to the brace that closes
+    the block, so neither indentation nor line breaks matter."""
+    query = "@media only screen and (max-width: 480px) {"
+    assert query in css, "the phone media query is gone"
+    start = css.index(query) + len(query)
+    depth = 1
+    end = start
+    while depth:
+        depth += {"{": 1, "}": -1}.get(css[end], 0)
+        end += 1
+    return {
+        selector.strip(): [d.strip() for d in body.split(";") if d.strip()]
+        for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css[start : end - 1])
+    }
+
+
+def test_buttons_go_full_width_below_480px():
+    """Every button carries the class its phone and hover rules are written against,
+    so on a phone all of them fill the width of the text column. CA, the same
+    real message: a button sized to its own label sits
+    narrower than the paragraphs around it once the card's own padding is gone
+    too — full width, centred, aligned with the text column either side. The
+    `ctas` pair's side margin (for the desktop side-by-side layout) has to be
+    zeroed here too, or a 100%-wide box plus that margin would overflow past the
+    text's own right edge.
+
+    Read from a message that has a real button, and by declaration rather than by
+    the stylesheet's layout: the rule is inert unless the anchor carries the class."""
+    html = email_service._render_email(
+        [email_service._cta("https://x.test/a", "Go", "Or open:")], lang="en"
     )
+    page = _Page(html)
+
+    rules = _phone_rules(" ".join(page.css.split()))
+
+    selector = ".btn-primary, .btn-secondary"
+    assert selector in rules, sorted(rules)
+    assert set(rules[selector]) == {
+        "display: block !important",
+        "width: 100% !important",
+        "box-sizing: border-box !important",
+        "text-align: center !important",
+        "margin: 0 0 12px 0 !important",
+    }
+    # The button, not the plain fallback link under it (same href, no class).
+    [button] = [
+        a for a in page.anchors if (a.get("style") or "").startswith(email_service.BTN_PRIMARY)
+    ]
+    assert (button.get("class") or "").split() == ["btn-primary"]
 
 
 # --- Dates in emails render DD/MM/YYYY, not ISO ------------------------------
