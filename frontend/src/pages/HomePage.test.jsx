@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -24,14 +24,24 @@ const MINE = { ...GROUP, code: 'COL001', headline: 'My workshop' };
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
-function mockDashboard({ mine = [], invited = [] }) {
-  apiFetch.mockImplementation((url) => {
+// What the API answers each of the dashboard's five reads.
+function dashboardRoutes({ mine = [], invited = [], invitations = [] }) {
+  return (url) => {
     if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
     if (url.startsWith('/api/v1/collections/')) return ok({ results: mine });
     if (url.startsWith('/api/v1/invited-collections/')) return ok(invited);
-    return ok([]);
-  });
+    if (url.startsWith('/api/v1/my-invitations/')) return ok(invitations);
+    return ok([]); // the inbox
+  };
 }
+
+function mockDashboard(options = {}) {
+  apiFetch.mockImplementation(dashboardRoutes(options));
+}
+
+// A real connection failure rejects with a TypeError; an HTTP error status does not.
+const dropped = () => Promise.reject(new TypeError('Failed to fetch'));
+const refused = () => Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
 
 const renderHome = () =>
   render(
@@ -83,5 +93,131 @@ describe('HomePage — which section leads', () => {
 
     await screen.findByText('No one has shared a collection with you yet.');
     expect(sectionOrder()).toEqual(['My collections', 'Shared with me']);
+  });
+});
+
+/**
+ * The dashboard is five reads, and each can fail in its own way. A dropped
+ * connection (a rejected fetch) is not the same as a server that answered with
+ * an error, and both must be said, with a way to try again — otherwise the page
+ * is an endless spinner or a silent gap.
+ */
+describe('HomePage — when the connection drops', () => {
+  test('a dropped connection is said plainly, and Retry brings the dashboard back', async () => {
+    apiFetch.mockImplementation(dropped);
+    renderHome();
+
+    expect(await screen.findByText('Connection problem')).toBeInTheDocument();
+    expect(screen.getByText(/We can't reach OIUEEI right now/)).toBeInTheDocument();
+    expect(screen.queryByText('My workshop')).not.toBeInTheDocument();
+
+    mockDashboard({ mine: [MINE] });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('My workshop')).toBeInTheDocument();
+    // The warning goes with the failure it reported.
+    expect(screen.queryByText('Connection problem')).not.toBeInTheDocument();
+  });
+
+  test('the browser getting its connection back reloads the dashboard without a click', async () => {
+    apiFetch.mockImplementation(dropped);
+    renderHome();
+    await screen.findByText('Connection problem');
+
+    mockDashboard({ mine: [MINE] });
+    fireEvent(window, new Event('online'));
+
+    expect(await screen.findByText('My workshop')).toBeInTheDocument();
+    expect(screen.queryByText('Connection problem')).not.toBeInTheDocument();
+  });
+
+  test('the inbox losing its connection warns on the dashboard too', async () => {
+    const routes = dashboardRoutes({ mine: [MINE] });
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/') ? dropped() : routes(url)
+    );
+    renderHome();
+
+    // The rest of the page loaded; the banner sits above it, the page stays.
+    expect(await screen.findByText('My workshop')).toBeInTheDocument();
+    expect(await screen.findByText('Connection problem')).toBeInTheDocument();
+  });
+});
+
+describe('HomePage — a section the server refuses', () => {
+  test('it says so inline, leaves the other section alone, and Retry brings it back', async () => {
+    const routes = dashboardRoutes({ invited: [GROUP] });
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/collections/') ? refused() : routes(url)
+    );
+    renderHome();
+
+    expect(await screen.findByText("Couldn't load this section")).toBeInTheDocument();
+    expect(screen.getByText('Bibliocoses')).toBeInTheDocument();
+    // Not the connection banner: the connection worked, the answer was an error.
+    expect(screen.queryByText('Connection problem')).not.toBeInTheDocument();
+
+    mockDashboard({ mine: [MINE], invited: [GROUP] });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('My workshop')).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load this section")).not.toBeInTheDocument();
+  });
+});
+
+describe('HomePage — invitations waiting for an answer', () => {
+  const TOOLS = {
+    accept_code: 'ACC001',
+    reject_code: 'REJ001',
+    owner_name: 'Lele',
+    collection_headline: 'Tools',
+  };
+  const BOOKS = {
+    accept_code: 'ACC002',
+    reject_code: 'REJ002',
+    owner_name: 'Lili',
+    collection_headline: 'Books',
+  };
+
+  test('dismissing one removes that one and leaves the other waiting', async () => {
+    mockDashboard({ mine: [MINE], invitations: [TOOLS, BOOKS] });
+    renderHome();
+    await screen.findByText('Tools');
+    expect(screen.getByText('Books')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]);
+
+    await waitFor(() => expect(screen.queryByText('Tools')).not.toBeInTheDocument());
+    expect(screen.getByText('Books')).toBeInTheDocument();
+    // Still answerable: the remaining card keeps its own accept link.
+    expect(screen.getByRole('link', { name: 'Accept invitation' })).toHaveAttribute(
+      'href',
+      '/verify/ACC002'
+    );
+  });
+});
+
+describe('HomePage — collections that are switched off', () => {
+  const SHED = { ...GROUP, code: 'COL002', headline: 'Old shed', status: 'INACTIVE' };
+
+  test('they are listed apart, after the active ones, under their own heading', async () => {
+    mockDashboard({ mine: [MINE, SHED] });
+    renderHome();
+
+    await screen.findByText('Old shed');
+    expect(screen.getByRole('heading', { level: 2, name: 'Inactive collections' })).toBeVisible();
+    const active = screen.getByText('My workshop');
+    const inactive = screen.getByText('Old shed');
+    expect(
+      active.compareDocumentPosition(inactive) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  test('a group with nothing switched off shows no such heading', async () => {
+    mockDashboard({ mine: [MINE] });
+    renderHome();
+
+    await screen.findByText('My workshop');
+    expect(screen.queryByRole('heading', { name: 'Inactive collections' })).not.toBeInTheDocument();
   });
 });
