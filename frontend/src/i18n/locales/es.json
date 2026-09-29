@@ -249,6 +249,8 @@
     "reservationMadeBody": "{{requester_name}} ha reservado {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancelada",
     "reservationCancelledBody": "{{other_name}} ha cancelado una reserva de {{thing_headline}}.",
+    "reservationCancelledByYouOwnBody": "Has cancelado tu reserva de {{thing_headline}}.",
+    "reservationCancelledByYouOtherBody": "Has cancelado la reserva de {{member_name}} de {{thing_headline}}.",
     "reservationRegisteredAt": "Fecha y hora de registro: {{when}}",
     "reservationScheduledFor": "Fecha y horario de reserva: {{when}}",
     "promotedLabel": "Ahora eres co-curador",

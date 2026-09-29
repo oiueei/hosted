@@ -785,3 +785,83 @@ describe('InboxNotifications — a request or reservation notice says when', () 
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Whoever cancelled a reservation keeps an in-app record of their own (CA,
+ * 2026-09-29): the reservation's whole story lives in the inbox, and the
+ * canceller's copy used to stop at the email confirmation. Their record is in
+ * the first person — and names whose reservation it was when it wasn't theirs.
+ */
+describe('InboxNotifications — whoever cancelled keeps their own record', () => {
+  const renderInbox = (notifications) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok(notifications);
+      return ok([]);
+    });
+    return render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+  };
+
+  const BASE_PAYLOAD = {
+    thing_headline: 'The meeting room',
+    other_name: 'Lolo',
+    thing_code: 'THG001',
+    collection_code: 'COL001',
+    start_date: '2026-09-29',
+    end_date: '2026-09-30',
+    start_time: '10:00',
+    end_time: '12:00',
+  };
+
+  test('a member who cancelled their own reservation reads it in the first person', async () => {
+    renderInbox([
+      {
+        code: 'NOTR11',
+        type: 'RESERVATION_CANCELLED',
+        payload: { ...BASE_PAYLOAD, by_you: true },
+        created: '2026-09-29T10:30:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(/You cancelled your reservation of The meeting room/)
+    ).toBeInTheDocument();
+    // Not the third-person copy, and not their own name posing as somebody else's.
+    expect(screen.queryByText(/Lolo/)).not.toBeInTheDocument();
+  });
+
+  test("a curator who cancelled somebody else's is told whose it was", async () => {
+    renderInbox([
+      {
+        code: 'NOTR12',
+        type: 'RESERVATION_CANCELLED',
+        payload: { ...BASE_PAYLOAD, by_you: true, member_name: 'Lele' },
+        created: '2026-09-29T10:30:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(/You cancelled Lele's reservation of The meeting room/)
+    ).toBeInTheDocument();
+  });
+
+  test("an unnamed member's reservation still reads as somebody else's", async () => {
+    // The backend sends '' when the reservation's owner never set a name.
+    renderInbox([
+      {
+        code: 'NOTR13',
+        type: 'RESERVATION_CANCELLED',
+        payload: { ...BASE_PAYLOAD, by_you: true, member_name: '' },
+        created: '2026-09-29T10:30:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(/You cancelled A member's reservation of The meeting room/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/your reservation/)).not.toBeInTheDocument();
+  });
+});

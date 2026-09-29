@@ -282,6 +282,18 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           thing_headline: p.thing_headline,
         });
       case 'RESERVATION_CANCELLED':
+        // Whoever cancelled reads their own record in the first person — and
+        // learns whose reservation it was when it wasn't theirs. The wording is
+        // picked by whether the payload carries `member_name` at all, not by its
+        // value: `localizedPayload` fills a missing name with "a member", so `p`
+        // can never say (the backend sends '' for an unnamed owner).
+        if (p.by_you)
+          return t(
+            'member_name' in (n.payload || {})
+              ? 'home.reservationCancelledByYouOtherBody'
+              : 'home.reservationCancelledByYouOwnBody',
+            { member_name: p.member_name, thing_headline: p.thing_headline }
+          );
         return t('home.reservationCancelledBody', {
           other_name: p.other_name,
           thing_headline: p.thing_headline,

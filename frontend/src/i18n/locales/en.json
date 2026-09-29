@@ -255,6 +255,8 @@
     "reservationMadeBody": "{{requester_name}} reserved {{thing_headline}}.",
     "reservationCancelledLabel": "Reservation cancelled",
     "reservationCancelledBody": "{{other_name}} cancelled a reservation of {{thing_headline}}.",
+    "reservationCancelledByYouOwnBody": "You cancelled your reservation of {{thing_headline}}.",
+    "reservationCancelledByYouOtherBody": "You cancelled {{member_name}}'s reservation of {{thing_headline}}.",
     "reservationRegisteredAt": "Registered: {{when}}",
     "reservationScheduledFor": "Reserved for: {{when}}",
     "promotedLabel": "You're a co-curator now",
