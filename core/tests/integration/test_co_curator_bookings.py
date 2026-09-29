@@ -14,7 +14,7 @@ from django.core import mail
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import FAQ, BookingPeriod, Collection, Thing, User
+from core.models import FAQ, RSVP, BookingPeriod, Collection, Thing, ThingTransfer, User
 from core.models.notification import InAppNotification
 
 pytestmark = pytest.mark.django_db
@@ -602,3 +602,92 @@ class TestAHoldRequestWarnsTheWholeTeam:
         assert res.status_code == 200
 
         assert self._holders(booking) == set()
+
+
+class TestACuratorDecidingTheirOwnRequest:
+    """A curator who asks for a thing of their own group may accept or reject that
+    request themselves — **on purpose** (CA, 2026-09-29), not by oversight.
+
+    `BookingActionView` lets anyone who `can_manage` the thing decide, and a
+    curator of a PROPRIETARY collection manages every thing in it, so nothing
+    stops the person who asked from being the person who answers. For a GIFT or a
+    SELL that hands the thing over, in their own name. The alternatives — a guard
+    that refuses the requester, or a second curator's sign-off — were weighed and
+    turned down: the team is small and trusts itself, and it is told either way.
+    These tests fix the decision so that changing it is visible as one.
+    """
+
+    @pytest.fixture
+    def catalogue(self, owner, co_curator, member):
+        coll = Collection.objects.create(
+            code="SELF01", owner=owner, headline="Books", mode=Collection.Mode.PROPRIETARY
+        )
+        coll.invites.add(co_curator, member)
+        coll.co_owners.add(co_curator)
+        gift = Thing.objects.create(
+            code="SELG01", type=Thing.Type.GIFT_THING, owner=owner, headline="Old atlas"
+        )
+        coll.things.add(gift)
+        return gift
+
+    def _ask(self, who, thing):
+        res = client_for(who).post(f"/api/v1/things/{thing.code}/request/", {}, format="json")
+        assert res.status_code == 201, res.data
+        return BookingPeriod.objects.get(code=res.data["booking_code"])
+
+    def test_a_curator_may_decide_their_own_request_and_the_team_hears_of_it(
+        self, catalogue, owner, co_curator
+    ):
+        booking = self._ask(co_curator, catalogue)
+
+        res = client_for(co_curator).post(f"/api/v1/bookings/{booking.code}/accept/")
+
+        assert res.status_code == 200
+        catalogue.refresh_from_db()
+        assert catalogue.status == Thing.Status.INACTIVE
+        # The handover is recorded in the curator's own name.
+        transfer = ThingTransfer.objects.get(booking=booking)
+        assert (transfer.from_user_id, transfer.to_user_id) == (owner.code, co_curator.code)
+        # The team hears of it through BOOKING_DECIDED: the founder, who did not
+        # decide, gets the trail...
+        decided = InAppNotification.objects.filter(
+            type=InAppNotification.Type.BOOKING_DECIDED, payload__booking_code=booking.code
+        )
+        assert {n.user_id for n in decided} == {owner.code}
+        assert decided.get().payload["by_you"] is False
+        assert decided.get().payload["decider_name"] == "Lele"
+        # ...and the curator, as the requester, gets their own BOOKING_ACCEPTED —
+        # never a "so-and-so decided" line about their own request.
+        accepted = InAppNotification.objects.filter(
+            user=co_curator,
+            type=InAppNotification.Type.BOOKING_ACCEPTED,
+            payload__booking_code=booking.code,
+        )
+        assert accepted.count() == 1
+        assert accepted.get().payload["owner_name"] == "Lele"
+        assert not InAppNotification.objects.filter(
+            user=co_curator, type=InAppNotification.Type.BOOKING_DECIDED
+        ).exists()
+
+    def test_a_curator_may_reject_their_own_request_too(self, catalogue, owner, co_curator):
+        booking = self._ask(co_curator, catalogue)
+
+        res = client_for(co_curator).post(f"/api/v1/bookings/{booking.code}/reject/")
+
+        assert res.status_code == 200
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.REJECTED
+        catalogue.refresh_from_db()
+        assert catalogue.status == Thing.Status.ACTIVE
+
+    def test_the_email_fan_out_gives_whoever_asked_no_links_to_decide_with(
+        self, catalogue, owner, co_curator
+    ):
+        # The emailed accept/reject links go to the *other* managers: the requester
+        # is left out of the fan-out, so the only way for them to decide their own
+        # request is the app.
+        mail.outbox.clear()
+        booking = self._ask(co_curator, catalogue)
+
+        assert RSVP.objects.filter(user_code=co_curator, target_code=booking.code).count() == 0
+        assert RSVP.objects.filter(user_code=owner, target_code=booking.code).count() == 2

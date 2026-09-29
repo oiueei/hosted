@@ -925,6 +925,8 @@ Allows the requester to cancel their own pending booking. Validates `booking.req
 
 Accepts a pending booking. Calls `finalize_booking_decision()` with `decided_by=request.user` (so a co-curator's decision is signed by the co-curator in the requester's notice), which sends the decision email via `send_booking_decision_email()` and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links. A curator of a PROPRIETARY collection decides its holds, not only the founder (2026-09).
 
+**A curator may decide their own request — on purpose (CA, 2026-09-29).** Nothing here refuses the requester: a co-curator (or the founder, when the thing is not theirs) who asked for a GIFT or SELL of their own group can accept it themselves, the thing goes `INACTIVE` and the `ThingTransfer` is recorded in their name. The email fan-out already leaves them out (`send_booking_request_notifications` mints no accept/reject links for the requester, so in practice they decide from the app), and the rest of the team hears of it through `BOOKING_DECIDED` — the requester gets their own `BOOKING_ACCEPTED`/`REJECTED`, never a `BOOKING_DECIDED` about their own request. A guard `requester == request.user → 403` or a second curator's sign-off were weighed and turned down; adding either would be a decision, not a fix. Pinned by `TestACuratorDecidingTheirOwnRequest` in `test_co_curator_bookings.py` (each test goes red with such a guard).
+
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/reject/` |
