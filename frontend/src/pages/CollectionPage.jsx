@@ -242,14 +242,18 @@ export default function CollectionPage() {
   // the content, not the hero, and only where there is no button to press. A
   // PROPRIETARY group with things needs nothing: its door is each thing's button.
   // Which line: a COMMUNITY group asks for what the reader could add; a
-  // PROPRIETARY one that is empty promises the one thing a member does get, the
-  // weekly summary (the default digest), when something arrives.
+  // PROPRIETARY one that is empty promises the one thing a member does get — the
+  // summary of what arrives — but only when the group sends one. With its digest
+  // set to "None" nobody hears anything, so the line just says "Join the group".
+  const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
   const anonJoinKey =
     !isAuthenticated && collection.visibility === 'PUBLIC'
       ? collection.mode === 'COMMUNITY'
         ? 'collectionPage.anonJoinCommunity'
         : visibleThings.length === 0
-          ? 'collectionPage.anonJoinEmpty'
+          ? sendsDigest
+            ? 'collectionPage.anonJoinEmpty'
+            : 'collectionPage.anonJoinPlain'
           : null
       : null;
   // A collection locked to one thing type makes the per-card "Type = X" row

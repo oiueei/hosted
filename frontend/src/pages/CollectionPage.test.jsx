@@ -702,12 +702,28 @@ describe('A signed-in visitor on a public group', () => {
       );
     });
 
-    test('an empty PROPRIETARY group offers it with its own words: the summary of what arrives', async () => {
-      show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY' });
+    test.each(['WEEKLY', 'MONTHLY'])(
+      'an empty PROPRIETARY group with a %s digest offers it with its own words: the summary of what arrives',
+      async (digest) => {
+        show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: digest });
+
+        await screen.findByText(/No things in this collection yet/);
+        expect(joinLinks()).toHaveLength(1);
+        expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinEmpty);
+        expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
+      }
+    );
+
+    // "…to hear when something arrives" is a promise the digest keeps. A group
+    // whose curator set it to "None" sends nobody anything, so the same door
+    // must not make it: it only says "Join the group".
+    test('an empty PROPRIETARY group that sends no digest promises no summary', async () => {
+      show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: 'NONE' });
 
       await screen.findByText(/No things in this collection yet/);
       expect(joinLinks()).toHaveLength(1);
-      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinEmpty);
+      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinPlain);
+      expect(joinLinks()[0]).not.toHaveTextContent(en.collectionPage.anonJoinEmpty);
       expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
     });
 
