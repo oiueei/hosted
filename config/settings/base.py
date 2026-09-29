@@ -145,10 +145,23 @@ FORMS_URLFIELD_ASSUME_HTTPS = True
 # Note (I7): DatabaseCache increments are not atomic, so under heavy concurrency
 # a rate-limit counter can slightly under-count (a few requests over the limit).
 # Accepted: the limits are coarse abuse-prevention, not exact quotas.
+#
+# MAX_ENTRIES is set on purpose. Django's default is 300, and past it every write
+# culls: the expired rows go, and then a third of the live ones, lowest key
+# first. This table holds the operator's daily quotas (`invq:` invitations,
+# `joinq:` joins, ~24h) beside the short-lived limiter windows (`rl:`), and the
+# quotas sort first — so 300 live keys from anything (a few hundred client IPs
+# hitting any IP-limited endpoint within a minute, or 300 members active in a
+# day, one `da:` key each) wiped the allowances meant to protect the sending
+# domain. Measured on 2026-09-29: 420 IPs, one request each, erased both. At
+# 20,000 it takes that many live keys; the cost is the `COUNT(*)` DatabaseCache
+# runs on every write, over a table that may grow to that size before its
+# expired rows are culled.
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "oiueei_cache",
+        "OPTIONS": {"MAX_ENTRIES": 20_000},
     }
 }
 
