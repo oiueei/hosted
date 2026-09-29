@@ -10,13 +10,13 @@
     "error": "No hem pogut preparar l'exportació. Torna-ho a provar d'aquí un moment."
   },
   "calendarExport": {
-    "downloadButton": "Descarregar reserves per al calendari",
+    "downloadButton": "Descarregar el calendari",
     "downloading": "Preparant el fitxer…",
-    "notice": "Totes les reserves futures, en un fitxer de calendari (.ics). Obre'l o importa'l a Google Calendar, Apple Calendar o Outlook; importar-lo un altre cop no duplica res, i una reserva cancel·lada des d'aleshores hi va marcada com a cancel·lada.",
+    "notice": "Tots els préstecs, lloguers i reserves pròxims, en un fitxer de calendari (.ics). Obre'l o importa'l a Google Calendar, Apple Calendar o Outlook; importar-lo un altre cop no duplica res, i una reserva cancel·lada des d'aleshores hi va marcada com a cancel·lada.",
     "done": "{{count}} esdeveniment(s) — mira les teves baixades.",
-    "alsoCancelled": "Inclou {{count}} cancel·lada(es), marcades perquè el teu calendari les pugui treure.",
-    "doneOnlyCancelled": "No hi ha reserves futures, però sí {{count}} cancel·lada(es) — importa el fitxer perquè el teu calendari les pugui treure.",
-    "nothingNew": "No hi ha reserves futures.",
+    "alsoCancelled": "Inclou {{count}} reserva(es) cancel·lada(es), marcades perquè el teu calendari les pugui treure.",
+    "doneOnlyCancelled": "No hi ha res de previst, però sí {{count}} reserva(es) cancel·lada(es): importa el fitxer perquè el teu calendari les pugui treure.",
+    "nothingNew": "No hi ha res de previst al calendari.",
     "error": "No hem pogut preparar el fitxer de calendari. Torna-ho a provar d'aquí un moment."
   },
   "ageRange": {

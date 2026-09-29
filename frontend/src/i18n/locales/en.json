@@ -10,13 +10,13 @@
     "error": "Couldn't build the export. Please try again in a moment."
   },
   "calendarExport": {
-    "downloadButton": "Download reservations for your calendar",
+    "downloadButton": "Download the calendar",
     "downloading": "Preparing the file…",
-    "notice": "Every upcoming reservation, in a calendar file (.ics). Open it or import it into Google Calendar, Apple Calendar or Outlook; importing it again adds nothing twice, and a reservation cancelled since goes in marked as cancelled.",
+    "notice": "Every upcoming loan, rental and reservation, in a calendar file (.ics). Open it or import it into Google Calendar, Apple Calendar or Outlook; importing it again adds nothing twice, and a reservation cancelled since goes in marked as cancelled.",
     "done": "{{count}} event(s) — check your downloads.",
-    "alsoCancelled": "It includes {{count}} cancelled, marked so your calendar can drop them.",
-    "doneOnlyCancelled": "No upcoming reservations, but {{count}} cancelled — import the file so your calendar can drop them.",
-    "nothingNew": "No upcoming reservations.",
+    "alsoCancelled": "It includes {{count}} cancelled reservation(s), marked so your calendar can drop them.",
+    "doneOnlyCancelled": "Nothing coming up, but {{count}} cancelled reservation(s) — import the file so your calendar can drop them.",
+    "nothingNew": "Nothing coming up in the calendar.",
     "error": "Couldn't build the calendar file. Please try again in a moment."
   },
   "ageRange": {
