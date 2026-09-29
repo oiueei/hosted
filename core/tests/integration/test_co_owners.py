@@ -390,39 +390,6 @@ class TestDemotingACoOwner:
             user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
         ).exists()
 
-    @override_settings(
-        RATELIMIT_ENABLE=True,
-        CACHES={
-            "default": {
-                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-                "LOCATION": "co-owner-demote-ratelimit-test",
-            }
-        },
-    )
-    def test_demotion_is_rate_limited_like_promotion(self, group, owner, co_owner, member):
-        """`delete` carried no limit while `post` had 30/h, and any curator can
-        demote any other — so a compromised co-curator could thrash demotions
-        without a ceiling. The 31st in the window is a 429, and it changes
-        nothing: the co-curator it targeted keeps both the role and the member
-        list exactly as the 30th call left them."""
-        caches["default"].clear()
-        client = client_for(owner)
-        url = CO_OWNERS_URL.format(code=group.code)
-        # 30 harmless demotions of a plain member (a no-op remove, still 200)
-        # exhaust the window; the 31th targets a real co-curator.
-        statuses = [
-            client.delete(url, {"user_code": member.code}, format="json").status_code
-            for _ in range(30)
-        ]
-        assert statuses[0] == 200
-        rejected = client.delete(url, {"user_code": co_owner.code}, format="json")
-        assert rejected.status_code == 429
-        assert group.co_owners.filter(code=co_owner.code).exists()
-        assert group.invites.filter(code=co_owner.code).exists()
-        assert not InAppNotification.objects.filter(
-            user=co_owner, type=InAppNotification.Type.DEMOTED_CO_OWNER
-        ).exists()
-
     def test_a_demoted_co_owner_loses_the_curator_reach(self, group, owner, co_owner):
         # The M2M row going is half the story; the half that matters is that the
         # endpoints stop obeying them. Before this, nothing asked a demoted
@@ -506,3 +473,56 @@ class TestDemotingACoOwner:
 
         assert res.status_code == 200
         assert not legacy.co_owners.filter(code=co_owner.code).exists()
+
+
+class TestPromotingAndDemotingHaveAnHourlyCeiling:
+    """The ceiling on who can thrash the co-curator set: a compromised curator
+    credential must not be able to promote and demote without bound, each demotion
+    firing a notice. django-ratelimit counts `post` and `delete` in separate
+    groups, so each verb has its own thirty."""
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "co-owner-ceiling-ratelimit-test",
+            }
+        },
+    )
+    @pytest.mark.parametrize("verb", ["post", "delete"])
+    def test_a_curator_may_promote_or_demote_thirty_times_an_hour_and_no_more(
+        self, verb, group, owner, co_owner, member
+    ):
+        """Thirty calls in the hour all go through; the thirty-first is a 429 and
+        changes nothing. The thirty are calls that change nothing but still count
+        (demoting a plain member, re-promoting a co-curator — both a 200), so the
+        thirty-first can be aimed at someone the call *would* have changed and
+        the test can see it did not."""
+        caches["default"].clear()
+        client = client_for(owner)
+        url = CO_OWNERS_URL.format(code=group.code)
+        call = getattr(client, verb)
+        if verb == "delete":
+            idle, target = member, co_owner
+        else:
+            idle, target = co_owner, member
+
+        statuses = [
+            call(url, {"user_code": idle.code}, format="json").status_code for _ in range(30)
+        ]
+        assert statuses == [200] * 30
+
+        rejected = call(url, {"user_code": target.code}, format="json")
+
+        assert rejected.status_code == 429
+        if verb == "delete":
+            # The co-curator it targeted keeps the role and the membership.
+            assert group.co_owners.filter(code=co_owner.code).exists()
+            assert group.invites.filter(code=co_owner.code).exists()
+            notice = InAppNotification.Type.DEMOTED_CO_OWNER
+        else:
+            # The member it targeted stays a plain member.
+            assert not group.co_owners.filter(code=member.code).exists()
+            notice = InAppNotification.Type.PROMOTED_CO_OWNER
+        assert not InAppNotification.objects.filter(user=target, type=notice).exists()
