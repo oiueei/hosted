@@ -646,7 +646,7 @@ Four transitive pins, all security patches for packages we don't depend on direc
 |---|---|
 | `@typescript-eslint/typescript-estree` → `minimatch@9.0.9` | pre-existing |
 | `eslint-plugin-jsx-a11y` → `brace-expansion@1.1.18` | high DoS in `<1.1.18`; stays on the 1.x line, since `minimatch@3` needs `^1.1.7` |
-| `jsdom` → `undici@7.29.0` | five advisories in `<7.29.0`. **This pin is itself what holds the version** — when bumping, check the advisory floor, not just that it installs |
+| `jsdom` → `undici@7.29.1` | five advisories in `<7.29.0`, and two highs in `<7.29.1` that the CI's audit gate caught on 2026-09-30: a DoS via an unrequested WebSocket subprotocol (GHSA-rfgv-xxqx-mfg5) and a TLS certificate-validation bypass in `BalancedPool` (GHSA-w293-vg96-wgc3). Dev-only — `jsdom` runs the test suite, nothing ships. **This pin is itself what holds the version** — when bumping, check the advisory floor, not just that it installs |
 | `@eslint/eslintrc` → `js-yaml@4.3.1` | high quadratic-CPU in `!!omap` resolution (GHSA-5p4m-2wfm-xmqj, `>=4.0.0 <4.3.1`). Stays on the 4.x line (`v4-legacy`, which is where the fix was published): eslintrc wants `^4.1.1`, so v5 would be a needless major for a dev-only dependency |
 | `postcss` → `^8.5.25` (top level) | high path traversal in `sourceMappingURL` auto-loading (`<=8.5.17`). Top-level is safe here: `hds-react` and `vite` both want `^8`. **Do not take npm's suggested fix** — it downgrades `hds-react` to 5.2.2 and undoes the HDS 6 upgrade |
 
