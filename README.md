@@ -153,7 +153,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 ### Auth & RSVP Actions
 | Method | URL | Description |
 |--------|-----|-------------|
-| POST | `/api/v1/auth/request-link/` | Request magic link (rate limited: 5/min) |
+| POST | `/api/v1/auth/request-link/` | Request magic link (rate limited: 5/min); optional `next`: a same-site path the magic link returns to (a bad one is dropped, the response never changes) |
 | POST | `/api/v1/auth/join/` | Join a collection you were pointed at — by `share_token` (an owner's `/share/{token}` link) or by the `collection_code` of a PUBLIC one — and get a magic link. **Creates nothing without a valid target**, and answers identically either way (rate limited: 5/min per IP, 5/h per email) |
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |

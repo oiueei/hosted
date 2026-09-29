@@ -261,7 +261,7 @@ The `RSVP` model is the central intermediary for all email-based actions. It ser
 | `user_email` | CharField(64) | **Yes** | Email address of the recipient |
 | `action` | CharField(20) | No | Action type (default: MAGIC_LINK). Indexed (`db_index=True`) |
 | `target_code` | CharField(6) | No | Target object code (booking, collection, etc.). Indexed (`db_index=True`) |
-| `context` | JSONField | No | Additional context data for the action (`default=dict`). A login-to-act join stamps `{"thing_code": "..."}` here when the visitor clicked "Reserve" on one specific thing (S13), so `VerifyLinkView` can land them back on it; `deliver_invitation` uses `{"via": "recommendation"}` to keep an approved recommendation apart from a plain invite in the Event log |
+| `context` | JSONField | No | Additional context data for the action (`default=dict`). A login-to-act join stamps `{"thing_code": "..."}` here when the visitor clicked "Reserve" on one specific thing (S13), so `VerifyLinkView` can land them back on it; `deliver_invitation` uses `{"via": "recommendation"}` to keep an approved recommendation apart from a plain invite in the Event log; a `MAGIC_LINK` of `origin=LOGIN` stores `{"next": "/some/path"}` when the person asked for the link from a page their session had run out on (`RequestLinkView`, only after `core.utils.safe_next_path`; `VerifyLinkView` validates it again and lands them there — `landing: "path"`). Server-side rather than in browser storage because the link is often opened in another browser |
 
 ### Action Types
 

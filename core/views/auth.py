@@ -43,7 +43,7 @@ from core.services.invitation_service import (
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
 from core.services.team import managers_ready_collections
-from core.utils import doc_asset_url, get_client_ip, redact_email
+from core.utils import doc_asset_url, get_client_ip, redact_email, safe_next_path
 from core.views._helpers import body_dict
 
 security_logger = logging.getLogger("security")
@@ -218,6 +218,15 @@ class RequestLinkView(APIView):
 
         security_logger.info(f"Magic link requested for {redact_email(email)} from IP {ip}")
 
+        # Where the person was going when the session ran out. Read straight from
+        # the body, *not* through ``RequestLinkSerializer``: a bad ``next`` is
+        # dropped without a word and the answer does not change, whereas a 400
+        # would tell a caller which requests carried a bad one for no reason.
+        # ``safe_next_path`` is the only door — the SPA's own check is defence in
+        # depth. It rides on the RSVP, not in browser storage, because the link is
+        # often opened in another browser (webmail, the phone's mail app).
+        next_path = safe_next_path(body_dict(request).get("next"))
+
         # Create RSVP. ``origin=LOGIN`` tells VerifyLinkView this is a returning
         # user, not a first visit — the new-visitor landing never applies again.
         #
@@ -231,10 +240,13 @@ class RequestLinkView(APIView):
         # downgraded from a 500 into a silent no-email. The rate limits (5/m per
         # IP, 5/h per email) cap sampling far below what averaging a sub-millisecond
         # difference out of network noise would take, so the trade isn't worth it.
+        # Carrying ``next`` adds nothing to that delta: it is the same INSERT, with
+        # one more value in a column it already wrote.
         rsvp = RSVP.objects.create(
             user_code=user,
             user_email=email,
             origin=RSVP.Origin.LOGIN,
+            context={"next": next_path} if next_path else {},
         )
 
         # Send magic link email
@@ -301,6 +313,7 @@ class VerifyLinkView(APIView):
     LANDING_COLLECTION = "collection"
     LANDING_WELCOME = "welcome"
     LANDING_HOME = "home"
+    LANDING_PATH = "path"
 
     def _resolve_rsvp(self, request, token):
         """Look up and expiry-check an RSVP token.
@@ -450,8 +463,12 @@ class VerifyLinkView(APIView):
            It is kept for a deployment that adds an open door of its own, since
            this file is one it must never have to edit; the SPA resolves the
            landing against its own ``aboutPath`` and falls through to home.
-        3. Otherwise (``/login``, and any legacy magic link with no origin) → their
-           single ACTIVE collection when they have exactly one, else home.
+        3. Otherwise a ``/login`` link (or a legacy one with no origin) that
+           remembers where the person was going (``context["next"]``, stamped by
+           ``RequestLinkView``) → that path (``"path"``). It outranks the
+           single-collection rule: the email they came from named a page.
+        4. Otherwise → their single ACTIVE collection when they have exactly one,
+           else home.
         """
         ip = get_client_ip(request)
 
@@ -479,6 +496,10 @@ class VerifyLinkView(APIView):
         # The thing the visitor was trying to act on when they hit the join wall
         # (JoinView stashes it here); resolved to a landing detail below.
         context_thing = (rsvp.context or {}).get("thing_code")
+        # Checked again here even though ``RequestLinkView`` already did: the value
+        # comes from our own table, but a ``context`` written by another route
+        # must not be able to send a session anywhere. Read before the delete.
+        next_path = safe_next_path((rsvp.context or {}).get("next"))
 
         rsvp.delete()
 
@@ -506,6 +527,9 @@ class VerifyLinkView(APIView):
                 response_data["thing"] = context_thing
         elif origin == RSVP.Origin.POPIN:
             response_data["landing"] = self.LANDING_WELCOME
+        elif next_path:
+            response_data["landing"] = self.LANDING_PATH
+            response_data["path"] = next_path
         else:
             solo = self._solo_collection_code(user)
             if solo:
