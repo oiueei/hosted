@@ -42,6 +42,15 @@ body {
 }
 
 .form-hero-content {
+  /* How much of the content column's right edge the icon corner (.hero-corners)
+     can take: the widest it gets is a curator's hero on CollectionPage — account
+     menu, share menu, contact link — which is 3 controls of 44px (.contact-corner,
+     .account-menu-trigger and .share-corner all declare that) and the 2 gaps
+     between them (.hero-corners' `gap`). A hero with fewer icons reserves the same
+     width: the back link cannot know which ones its page will render. Pinned in
+     test/heroCornerLayout.test.jsx, which recomputes it from the DOM and these
+     rules. */
+  --hero-corners-width: calc(3 * 44px + 2 * var(--spacing-2-xs));
   max-width: 1248px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-s) var(--spacing-xl);
@@ -49,6 +58,11 @@ body {
 
 .form-hero-content .back-link {
   color: var(--hero-text-color, var(--color-black-90));
+  /* "← {collection name}" is the first thing in the hero and sits on the same
+     band as the corner icons, which are absolutely positioned and reserve
+     nothing: a long name ran underneath them. Capped so the text wraps before
+     the icons instead (a 320px screen leaves the link 288 - 148 - 8 = 132px). */
+  max-width: calc(100% - var(--hero-corners-width) - var(--spacing-xs));
 }
 
 .form-hero-title {
@@ -117,11 +131,16 @@ body {
    owner set a `home_page`, where the hero's own "Home" link leaves OIUEEI
    entirely and this was otherwise the only way back. A plain disclosure
    (button + `<nav>`), not ShareCollectionMenu's HDS-Select trick — every
-   option here is a route, not an action. `position: relative` is what anchors
-   the panel below the trigger regardless of where the flex row lays it out. */
-.account-menu {
-  position: relative;
-}
+   option here is a route, not an action.
+
+   `.account-menu` deliberately positions nothing. It used to be `position:
+   relative`, which anchored the panel to its own trigger — and for a curator
+   on CollectionPage that trigger is the FIRST of three, so at 320px its right
+   edge sits ~208px in while "Les meves sol·licituds" plus padding needs ~217px:
+   the panel ran off the left of the screen. With no positioned ancestor of its
+   own, the panel anchors to `.hero-corners` (absolutely positioned, above), so
+   `right: 0` is the edge of the content column whatever the row holds and the
+   `max-width` below always fits. */
 
 .account-menu-trigger {
   width: 44px;
