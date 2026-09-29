@@ -225,18 +225,65 @@ describe('CollectionPage hero corners', () => {
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
   });
 
-  test('a plain member gets the account menu and the contact link, never the share menu', async () => {
-    renderCollection({
-      ...COLLECTION_WITH_PHOTO,
-      owner: 'OTHER1',
-      is_curator: false,
-      is_member: true,
-    });
+  const MEMBER_VIEW = {
+    ...COLLECTION_WITH_PHOTO,
+    owner: 'OTHER1',
+    is_curator: false,
+    is_member: true,
+  };
+
+  test('a member of a PRIVATE group gets the account menu and the contact link, never the share menu', async () => {
+    // There the link is the curators' credential; the member has "Recommend".
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PRIVATE' });
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  // CA, 2026-09-29: a PUBLIC group is shared by its own address, so a member can
+  // bring people in without holding anything a curator would have to pull back.
+  test('a member of a PUBLIC group gets the share menu too — all three controls, in the corner', async () => {
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
+    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  test("a member's share menu has no Rotate or Stop sharing, and shares without calling share-link", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
+    await screen.findByText('Things from the kitchen');
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.queryByRole('option', { name: /rotate link/i })).toBeNull();
+    expect(screen.queryByRole('option', { name: /stop sharing/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Copy invite link' }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/collections/COL001`)
+    );
+    expect(apiFetch.mock.calls.some(([url]) => String(url).includes('/share-link/'))).toBe(false);
+  });
+
+  test('a signed-out reader of a PUBLIC group gets no share menu', async () => {
+    localStorage.clear();
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC', is_member: false });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  test('a signed-in reader who is not in a PUBLIC group gets no share menu either', async () => {
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC', is_member: false });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });
 

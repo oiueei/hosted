@@ -228,6 +228,13 @@ export default function CollectionPage() {
   // a reader who is not a member (signed in or not) would be sent through the
   // whole form, photos uploaded and all, to collect a 403 at the end.
   const canAddThing = isCurator || (collection.mode === 'COMMUNITY' && !!collection.is_member);
+  // Who may hand the group's link to someone: a curator, and — in a PUBLIC group
+  // — any member (CA, 2026-09-29). A PUBLIC group is shared by its own address,
+  // with no token to mint, rotate or revoke, so a member can pass it on without
+  // holding anything a curator would need to pull back; it is the cheapest way to
+  // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
+  // the link is the curators' credential, and the member has "Recommend" instead.
+  const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -265,11 +272,10 @@ export default function CollectionPage() {
           >
             <span className="hero-corners">
               <AccountMenu />
-              {isCurator && (
+              {canShare && (
                 <ShareCollectionMenu
                   collectionCode={code}
                   collectionHeadline={headline}
-                  ownerName={collection.owner_name}
                   isPublic={collection.visibility === 'PUBLIC'}
                 />
               )}

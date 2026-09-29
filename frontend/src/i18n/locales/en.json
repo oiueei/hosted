@@ -790,7 +790,7 @@
     "copy": "Copy invite link",
     "whatsapp": "WhatsApp",
     "emailSubject": "I'm inviting you to {{headline}} on OIUEEI",
-    "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI.\n\nYou can join here: {{url}}\n\nLove,\n{{name}}",
+    "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI.\n\nYou can join here: {{url}}",
     "whatsappText": "I'm inviting you to \"{{headline}}\" on OIUEEI: {{url}}",
     "copied": "Invite link copied to clipboard.",
     "copyError": "We couldn't copy the link. Try again or use one of the other options.",

@@ -784,7 +784,7 @@
     "copy": "Copia l'enllaç d'invitació",
     "whatsapp": "WhatsApp",
     "emailSubject": "T'invito a {{headline}} a OIUEEI",
-    "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI.\n\nPots unir-t'hi aquí: {{url}}\n\nUna abraçada,\n{{name}}",
+    "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI.\n\nPots unir-t'hi aquí: {{url}}",
     "whatsappText": "T'invito a \"{{headline}}\" a OIUEEI: {{url}}",
     "copied": "Enllaç copiat al porta-retalls.",
     "copyError": "No hem pogut copiar l'enllaç. Torna-ho a provar o fes servir una altra opció.",

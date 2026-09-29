@@ -784,7 +784,7 @@
     "copy": "Copiar enlace de invitación",
     "whatsapp": "WhatsApp",
     "emailSubject": "Te invito a {{headline}} en OIUEEI",
-    "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI.\n\nPuedes unirte aquí: {{url}}\n\nUn abrazo,\n{{name}}",
+    "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI.\n\nPuedes unirte aquí: {{url}}",
     "whatsappText": "Te invito a \"{{headline}}\" en OIUEEI: {{url}}",
     "copied": "Enlace copiado al portapapeles.",
     "copyError": "No hemos podido copiar el enlace. Inténtalo de nuevo o usa otra opción.",
