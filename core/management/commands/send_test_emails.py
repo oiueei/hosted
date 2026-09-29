@@ -330,9 +330,21 @@ def _(w):
     es.send_faq_answer_email("Lala", w.gift, "¿Sigue disponible?", "Sí, ven a por ella.", w.to)
 
 
+@sample("faq_answered_to_team", "send_faq_answered_to_team_email")
+def _(w):
+    es.send_faq_answered_to_team_email(
+        "Lala", w.gift, "¿Sigue disponible?", "Sí, ven a por ella.", w.to
+    )
+
+
 @sample("faq_hide", "send_faq_hide_email")
 def _(w):
     es.send_faq_hide_email("Lala", w.gift, "¿Sigue disponible?", w.to)
+
+
+@sample("faq_hidden_to_team", "send_faq_hidden_to_team_email")
+def _(w):
+    es.send_faq_hidden_to_team_email("Lala", w.gift, "¿Sigue disponible?", w.to)
 
 
 @sample("thing_reported", "send_thing_reported_email")
@@ -385,6 +397,24 @@ def _(w):
 def _(w):
     es.send_reservation_cancelled_email(
         w.to, "Lele", w.reserve, w.booking(w.reserve, w.member), cancelled_by_owner=False
+    )
+
+
+@sample("reservation_cancel_confirmation_self", "send_reservation_cancel_confirmation_email")
+def _(w):
+    es.send_reservation_cancel_confirmation_email(
+        w.to, w.reserve, w.booking(w.reserve, w.me, accepted=True), is_own_reservation=True
+    )
+
+
+@sample("reservation_cancel_confirmation_other", "send_reservation_cancel_confirmation_email")
+def _(w):
+    es.send_reservation_cancel_confirmation_email(
+        w.owner.email,
+        w.reserve,
+        w.booking(w.reserve, w.member, accepted=True),
+        is_own_reservation=False,
+        member_name=w.member.name,
     )
 
 

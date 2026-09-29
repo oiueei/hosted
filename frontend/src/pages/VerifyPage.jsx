@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
+import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
 import ButtonLink from '../components/ButtonLink';
@@ -26,7 +27,10 @@ function VerifyScreen({ tc, koro, title, action, children }) {
           className="form-hero-content"
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
-          <ContactCorner />
+          <span className="hero-corners">
+            <AccountMenu />
+            <ContactCorner />
+          </span>
           <h1 className="form-hero-title">{title}</h1>
           {action}
         </div>

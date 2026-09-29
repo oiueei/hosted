@@ -205,10 +205,20 @@ TEXTS = {
     "faq_answer_intro": "{owner} has replied to your question about:",
     "your_question_label": "Your question",
     "reply_label": "Reply",
+    # FAQ answer (to the rest of the managing team — not the answerer, not the asker)
+    "faq_answered_team_subject": "A question about '{thing}' has been answered",
+    "faq_answered_team_plain": (
+        "{answerer} has answered a question about '{thing}'. Reply: {answer} View thing: {url}"
+    ),
+    "faq_answered_team_intro": "{answerer} answered a question about:",
     # FAQ hidden (to questioner)
     "faq_hide_subject": "Your question has been hidden",
     "faq_hide_plain": "{owner} has hidden your question: {question}",
     "faq_hide_intro": "{owner} has hidden your question about:",
+    # FAQ hidden (to the rest of the managing team — not the hider, not the asker)
+    "faq_hidden_team_subject": "A question about '{thing}' was hidden",
+    "faq_hidden_team_plain": "{hider} has hidden a question about '{thing}'. View thing: {url}",
+    "faq_hidden_team_intro": "{hider} hid a question about:",
     # Listing reported (to owner, anonymous)
     "reported_subject": "Someone reported one of your listings",
     "reported_plain": (
@@ -260,6 +270,16 @@ TEXTS = {
         "{other} has cancelled their reservation of '{thing}' ({start} to {end})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} has cancelled their reservation of:",
+    "reservation_cancel_confirmation_subject_self": "Your reservation of '{thing}' is cancelled",
+    "reservation_cancel_confirmation_subject_other": "You cancelled a reservation of '{thing}'",
+    "reservation_cancel_confirmation_intro_self": "Your reservation is cancelled:",
+    "reservation_cancel_confirmation_intro_other": "You cancelled {member}'s reservation:",
+    "reservation_cancel_confirmation_plain_self": (
+        "Your reservation of '{thing}' ({start} to {end}) is cancelled."
+    ),
+    "reservation_cancel_confirmation_plain_other": (
+        "You cancelled {member}'s reservation of '{thing}' ({start} to {end})."
+    ),
     "reservation_reminder_subject": "Your reservation of '{thing}' starts tomorrow",
     "reservation_reminder_plain": (
         "A friendly nudge: your reservation of '{thing}' runs {start} to {end}. "

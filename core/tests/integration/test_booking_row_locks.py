@@ -34,10 +34,9 @@ from datetime import date, timedelta
 import pytest
 from django.db import connection, connections
 
-from core.models import CalendarExportMark, Collection, Thing, User
+from core.models import Collection, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.transfer import ThingTransfer
-from core.services import calendar_export_service
 from core.services.booking_service import (
     BookingRequestError,
     accept_booking,
@@ -389,53 +388,3 @@ class TestTwoRequestsForOneSlotAreSerialised:
         assert isinstance(first_result, BookingPeriod)
         assert second_result == ("refused", 409), second_result
         assert BookingPeriod.objects.filter(thing_code=thing).count() == 1
-
-
-class TestTwoCuratorsExportingTheCalendarAtOnce:
-    """`build_calendar_export` locks the collection row, then reads the
-    un-exported reservations and marks them delivered under that lock. Without
-    it two curators pressing "download" together each read the same reservations
-    — the second file duplicates the first (and the second `bulk_create` of the
-    marks trips the `(collection, booking)` unique constraint)."""
-
-    def test_the_second_download_carries_nothing_the_first_already_took(
-        self, monkeypatch, user, user2
-    ):
-        coll = Collection.objects.create(
-            code="RCECAL", owner=user, headline="Rooms", mode=Collection.Mode.PROPRIETARY
-        )
-        for i in range(3):
-            thing = Thing.objects.create(
-                code=f"RCEC{i}0", type=Thing.Type.LEND_THING, owner=user, headline=f"Tool {i}"
-            )
-            coll.things.add(thing)
-            BookingPeriod.objects.create(
-                thing_code=thing,
-                thing_type="LEND_THING",
-                requester_code=user2,
-                requester_email=user2.email,
-                owner_code=user,
-                start_date=date.today() + timedelta(days=5),
-                end_date=date.today() + timedelta(days=8),
-                status=BookingPeriod.Status.ACCEPTED,
-            )
-        original = calendar_export_service._pending_bookings
-
-        def first(guard):
-            monkeypatch.setattr(
-                calendar_export_service, "_pending_bookings", _one_shot(original, guard)
-            )
-            try:
-                return calendar_export_service.build_calendar_export(coll, user)
-            finally:
-                monkeypatch.setattr(calendar_export_service, "_pending_bookings", original)
-
-        def second():
-            return calendar_export_service.build_calendar_export(coll, user2)
-
-        first_result, second_result, was_blocked = _run_both(first, second)
-
-        assert was_blocked, "the second export ran straight through the first's lock"
-        assert first_result[1] == 3, "the curator who got there first carries all three"
-        assert second_result[1] == 0, "the other curator's file carries nothing new"
-        assert CalendarExportMark.objects.filter(collection=coll).count() == 3

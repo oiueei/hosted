@@ -10,11 +10,13 @@
     "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
   },
   "calendarExport": {
-    "downloadButton": "Descargar reservas para el calendario (CSV)",
+    "downloadButton": "Descargar reservas para el calendario",
     "downloading": "Preparando el fichero…",
-    "notice": "Los préstamos, alquileres y reservas como eventos de calendario — de todo el día, o con su hora de inicio y fin cuando se reserva por horas. Solo los aparecidos desde la última descarga, así que importar el fichero dos veces no duplica nada.",
-    "done": "{{count}} evento(s) nuevo(s) — mira tus descargas.",
-    "nothingNew": "Nada nuevo desde la última descarga.",
+    "notice": "Todas las reservas futuras, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada, y una reserva cancelada desde entonces va marcada como cancelada.",
+    "done": "{{count}} evento(s) — mira tus descargas.",
+    "alsoCancelled": "Incluye {{count}} cancelada(s), marcadas para que tu calendario pueda quitarlas.",
+    "doneOnlyCancelled": "No hay reservas futuras, pero sí {{count}} cancelada(s) — importa el fichero para que tu calendario pueda quitarlas.",
+    "nothingNew": "No hay reservas futuras.",
     "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
   },
   "ageRange": {
@@ -72,6 +74,9 @@
     "publicHelper": "Cualquiera con el enlace puede verla y unirse para participar. Desactívalo para mantenerla solo por invitación.",
     "publicTag": "Pública",
     "privateTag": "Privada"
+  },
+  "accountMenu": {
+    "label": "Tu cuenta"
   },
   "common": {
     "skipToContent": "Saltar al contenido",
@@ -240,6 +245,8 @@
     "reservationMadeBody": "{{requester_name}} ha reservado {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancelada",
     "reservationCancelledBody": "{{other_name}} ha cancelado una reserva de {{thing_headline}}.",
+    "reservationRegisteredAt": "Fecha y hora de registro: {{when}}",
+    "reservationScheduledFor": "Fecha y horario de reserva: {{when}}",
     "promotedLabel": "Ahora eres co-curador",
     "promotedBody": "Ahora puedes ayudar a gestionar “{{collection_headline}}”: invitar y quitar invitados, editarla, escribir al grupo y ocuparte de sus preguntas, solicitudes y reservas. Tu nombre aparece ahora en la página del grupo como curador; solo quien lo creó puede borrarlo.",
     "demotedLabel": "Ya no eres co-curador",

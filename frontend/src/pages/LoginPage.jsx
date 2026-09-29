@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { TextInput, Button, Notification, Koros } from 'hds-react';
 import { getCsrfToken } from '../services/api';
 import useTheeeme from '../hooks/useTheeeme';
+import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import { popInPath, faqPath } from '../deployment';
 import ButtonLink from '../components/ButtonLink';
@@ -64,7 +65,10 @@ export default function LoginPage() {
           className="form-hero-content"
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
-          <ContactCorner />
+          <span className="hero-corners">
+            <AccountMenu />
+            <ContactCorner />
+          </span>
           <h1 className="form-hero-title" aria-label={t('login.title')}>
             <span className="form-hero-title-logo" aria-hidden="true" />
           </h1>

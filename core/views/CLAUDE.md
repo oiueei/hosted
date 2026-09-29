@@ -714,7 +714,7 @@ Returns a single FAQ. Hidden FAQs are only visible to a **manager** of the thing
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/answer/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Answers a FAQ. Sends a notification email + in-app to the questioner, naming whoever answered (`request.user.name`, bare — L2).
+Answers a FAQ. Sends a notification email + in-app to the questioner, naming whoever answered (`request.user.name`, bare — L2). **The rest of the team hears it too** (2026-09-28, CA's production report: a question warns every manager but the answer warned only the asker, so a co-curator's inbox kept a `FAQ_QUESTION` asking for a decision the founder had already made): `send_faq_answered_to_team_email` reaches every other manager of the thing (minus the answerer, minus the questioner — the questioner gets their own answer email), and every `FAQ_QUESTION` notification for this FAQ is deleted for **all** managers (`_clear_faq_question_notifications`, matched by `payload__faq_code` — the key is written at creation since this change; older notifications without it never match and stay until dismissed by hand).
 
 **Request body:**
 ```json
@@ -728,14 +728,14 @@ Answers a FAQ. Sends a notification email + in-app to the questioner, naming who
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/hide/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text).
+Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text). **The rest of the team hears it too** (2026-09-28, same round as `FAQAnswerView`): `send_faq_hidden_to_team_email` reaches every other manager (minus the hider and the questioner), and every `FAQ_QUESTION` notification for this FAQ is deleted for all managers via the shared `_clear_faq_question_notifications` — an unanswered one stopped owing anybody a reply the moment it was hidden. Hiding a FAQ that is **already hidden** is a no-op that tells nobody (200, same body) — a double click or a teammate hiding it a moment later must not mail the asker and the team twice.
 
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/show/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Shows a previously hidden FAQ.
+Shows a previously hidden FAQ. **No notice to anyone** — putting a question back is not something the team needs to hear.
 
 ---
 
@@ -1093,8 +1093,9 @@ Daily command (`python manage.py send_digests`) that sends digest emails:
 On-demand command (`python manage.py cleanup_orphan_images`) that deletes **orphaned images from object storage** (#9) — uploads whose form was never submitted, so no DB row ever referenced them (the complement to `core.services.asset_cleanup`, which handles record *deletes*). Superuser-run (there is no in-app endpoint — the shell/Heroku access is the gate).
 
 - **Dry-run by default.** It only lists what it would delete; pass `--commit` to actually delete. On Heroku, quote the inner command so the CLI doesn't eat the flag: `heroku run --app <app> "python manage.py cleanup_orphan_images --commit"`.
+- **Only lists the upload folders** (`storage.ASSET_FOLDERS`: `oiueei/things`, `/collections`, `/users`, `/documents` — the folders a ticketed upload may write to). Scanning the whole `oiueei/` tree treated *everything* unreferenced as an orphan, and the production dry-run of 2026-09-28 duly listed `oiueei/assets/Curiosa-Variable.woff2` — the variable font the Heroku build downloads in `heroku-postbuild` (not in git, licence); deleting it would have broken every deploy after it. Any other prefix is out **by construction, not by an exception list**, and a `--prefix` that does not fall inside an upload folder is refused with a `CommandError` before anything is listed (the same stance as the `--bucket` guard). `--prefix` still narrows within a folder (`--prefix oiueei/things/`); the default sweeps every upload folder.
 - **Cross-references every DB image field** — `Thing.thumbnail` + `Thing.gallery`, `User.photo`, `Collection.thumbnail` — so anything in use is kept.
-- **Never touches `oiueei/seed/`** (the demo's shared image pool), even if unreferenced.
+- **Never touches `oiueei/seed/`** (the demo's shared image pool), even if unreferenced — structurally now (the seed folder is not an upload folder and is never listed); the explicit prefix check stays as a second lock.
 - **Age window:** only assets older than `--min-age-hours` (default 24, so an in-flight upload mid-form isn't mistaken for an orphan) and younger than `--max-age-days` (default 30, keeping it a recent sweep). Run regularly (e.g. weekly) so every orphan is caught within its window.
 - Pages through `storage.iter_objects` (prefix `oiueei/`), deletes in batches of 100 via `storage.delete_many`, and prints a per-run summary (scanned / in use / seed / outside window / orphans / deleted). The batch is kept well under S3's own limit of 1000 so a failed batch costs a hundred orphans rather than a thousand; a failure is reported and the run continues.
 - The age window reads S3's `LastModified`, which for these objects **is** the upload time — a key is random, written once and never rewritten. That is why an object must never be overwritten in place: it would reset the clock and hide the object from the sweep for another day.
@@ -1160,13 +1161,13 @@ Deliberately not folded into the account export: a collection of 4,000 things wo
 | **Permission** | `IsAuthenticated` + collection curator, owner or co-owner (`require_collection_curator`) |
 | **Rate limit** | 20 requests per hour per user |
 
-The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as a **Google Calendar CSV** — one all-day event per reservation, spanning its block, or one timed event for an `HOUR`-unit reservation (its real start and end, on its one day). The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv); this view is who may ask and what the browser may keep.
+The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, status `ACCEPTED`, `end_date >= today`) as an **iCalendar (`.ics`) VCALENDAR** — one all-day `VEVENT` per reservation, spanning its block, or one timed `VEVENT` (in UTC) for an `HOUR`-unit reservation (its real start and end, on its one day). The tree is built by [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-ics); this view is who may ask and what the browser may keep.
 
-**Incremental.** Each call returns only the reservations not exported *for this collection* before and records that it has (`CalendarExportMark`), so importing the file twice never doubles the calendar. The response header **`X-Calendar-Events`** carries the count; `0` means header-only CSV and the SPA shows "nothing new" instead of triggering a download. There is no "download everything" variant.
+**Every upcoming reservation, every call — not incremental any more.** The format switched from a Google Calendar CSV to `.ics` on 2026-09-28: the CSV's `MM/DD/YYYY` columns were misread by an importing account in a day/month locale (a real production report — a 1 October reservation landed on 10 January), and iCalendar's dates carry no such ambiguity. Each event's `UID` is stable per booking, so a calendar app that re-imports the file updates its own copy in place — which is what let the response drop the old incremental watermark (`CalendarExportMark`, now dormant — see [its model doc](../models/CLAUDE.md#calendarexportmark)) and simply ship the collection's whole upcoming future every time. The response header **`X-Calendar-Events`** still carries the confirmed count, and **`X-Calendar-Cancelled`** (2026-09-29) the number of upcoming reservations cancelled since they were confirmed, which ride along as `STATUS:CANCELLED` revisions of their events (see [`calendar_export_service`](../services/CLAUDE.md)); both `0` means nothing to import and the SPA shows "no upcoming reservations" instead of triggering a download. Both headers are in `CORS_EXPOSE_HEADERS`. There is still no "download everything **but the future**" variant — there was never anything else to ask for.
 
-**POST, not GET** — the same anti-prefetch reasoning as `DigestMuteByTokenView`: the call **mutates** (marks the reservations delivered), so a mail-client link scanner or a browser prefetch (a bare GET, no JS) must not be able to fire it. A GET gets 405.
+**POST, kept for contract stability** — the call used to mutate (it marked reservations delivered), which is why it was never a GET; it does not mutate anything any more, but changing the method now would only move a working contract for no benefit, so it stays POST.
 
-Response: `text/csv` attachment named `{code}-calendar.csv`, `Cache-Control: private, no-store` (it carries member names), and a `security` log line with the event count and byte size. Curator-only; a plain member gets the standard `{"error": ...}` 403.
+Response: `text/calendar; charset=utf-8` attachment named `{code}-calendar.ics`, `Cache-Control: private, no-store` (it carries member names), and a `security` log line with the event count and byte size. Curator-only; a plain member gets the standard `{"error": ...}` 403.
 
 ---
 

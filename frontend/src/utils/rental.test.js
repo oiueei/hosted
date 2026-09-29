@@ -13,6 +13,7 @@ import {
   isoToDisplay,
   displayToIso,
   formatDate,
+  formatDateTime,
   formatBookingWhen,
   formatRequestedWhen,
   closedDatesToDisplay,
@@ -267,6 +268,25 @@ describe('formatDate', () => {
     expect(formatDate(undefined)).toBe('');
     expect(formatDate('')).toBe('');
     expect(formatDate('not a date')).toBe('');
+  });
+});
+
+describe('formatDateTime', () => {
+  // The suite's TZ is America/New_York (UTC-4 in September), so both asserts
+  // pin the local rendering: the date and the clock time both come from the
+  // reader's timezone, never from the UTC the stamp was written in.
+  test('renders an ISO datetime as DD/MM/YYYY HH:MM in the reader’s local time', () => {
+    expect(formatDateTime('2026-09-28T15:11:00Z')).toBe('28/09/2026 11:11');
+  });
+
+  test('a Date renders the same way', () => {
+    expect(formatDateTime(new Date(2026, 8, 28, 15, 11))).toBe('28/09/2026 15:11');
+  });
+
+  test('is blank for an empty or unparseable value — no line renders', () => {
+    expect(formatDateTime(null)).toBe('');
+    expect(formatDateTime('')).toBe('');
+    expect(formatDateTime('not a date')).toBe('');
   });
 });
 

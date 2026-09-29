@@ -625,18 +625,24 @@ def send_booking_request_notifications(
     # the one whose note the request page showed them.
     collection = resolve_request_collection(thing, collection_code, requester)
     send_booking_confirmation_email(requester, thing, booking, collection)
+    payload = {
+        "thing_headline": thing.headline,
+        "requester_name": requester.display_name,
+        # The codes let the inbox deep-link the request, show it on its own
+        # collection's page, and drop it once the owner has decided.
+        "booking_code": booking.code,
+        "thing_code": thing.code,
+        "collection_code": collection.code if collection else "",
+    }
+    if booking.start_date and booking.end_date:
+        # A loan or rental asks for dates: the inbox says which, under the
+        # body, the way a reservation notice does. GIFT/SELL carry none.
+        payload["start_date"] = str(booking.start_date)
+        payload["end_date"] = str(booking.end_date)
     InAppNotification.objects.create(
         user=thing.owner,
         type=InAppNotification.Type.BOOKING_REQUESTED,
-        payload={
-            "thing_headline": thing.headline,
-            "requester_name": requester.display_name,
-            # The codes let the inbox deep-link the request, show it on its own
-            # collection's page, and drop it once the owner has decided.
-            "booking_code": booking.code,
-            "thing_code": thing.code,
-            "collection_code": collection.code if collection else "",
-        },
+        payload=payload,
     )
     Event.log(
         Event.Kind.HOLD_REQUESTED,
@@ -871,8 +877,13 @@ def _notify_reservation_cancelled(booking, thing, by_user):
     """Tell the member (unless they cancelled) and every curator (bar whoever
     cancelled) that the slot is free again. `other_name` is always the person
     who actually cancelled, so the copy — "{other} cancelled a reservation of
-    {thing}" — is true for every reader."""
-    from core.services.email_service import send_reservation_cancelled_email
+    {thing}" — is true for every reader.
+
+    Whoever cancelled gets their own confirmation too — see below."""
+    from core.services.email_service import (
+        send_reservation_cancel_confirmation_email,
+        send_reservation_cancelled_email,
+    )
 
     requester_id = booking.requester_code_id
 
@@ -905,3 +916,16 @@ def _notify_reservation_cancelled(booking, thing, by_user):
             send_reservation_cancelled_email(
                 email, by_user.name, thing, booking, cancelled_by_owner=to_the_member
             )
+
+    # The one recipient the loop above never reaches, by construction — a
+    # confirmation, not the "somebody else acted" notice the others get. No
+    # in-app record: they just did this in the app and can see it.
+    is_own_reservation = by_user.code == requester_id
+    if by_user.email:
+        send_reservation_cancel_confirmation_email(
+            by_user.email,
+            thing,
+            booking,
+            is_own_reservation=is_own_reservation,
+            member_name=None if is_own_reservation else booking.requester_code.name,
+        )

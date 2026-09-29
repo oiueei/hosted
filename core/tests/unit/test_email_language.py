@@ -238,6 +238,52 @@ class TestViralLine:
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", owner.email)
         assert "/collections/new" not in mail.outbox[0].body
 
+    def test_line_absent_for_a_co_curator(self):
+        """Since 2026-09 a co-curator has the founder's whole reach minus
+        deleting the collection, so the invitation to start one is a letter to
+        somebody who already runs one. In production (2026-09-28) the FAQ
+        notice reached the co-curator WITH the line and the owner without it —
+        same email, two curators, one wrongly addressed."""
+        founder = User.objects.create(code="OWNR3", email="founder@test.com", name="Founder")
+        co = User.objects.create(code="COOWN1", email="co-curator@test.com", name="Co")
+        collection = Collection.objects.create(
+            code="COCUR1", owner=founder, headline="Ours", status="ACTIVE"
+        )
+        collection.co_owners.add(co)
+        mail.outbox.clear()
+        email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", co.email)
+        assert "/collections/new" not in mail.outbox[0].body
+
+    def test_line_absent_for_a_co_curator_in_a_bulk_send(self):
+        # The bulk lookup resolves the same flag in one query for the whole
+        # list (broadcast is the shape that reaches it) — the suppression must
+        # survive that path too, not only the per-recipient lookup.
+        founder = User.objects.create(code="OWNR4", email="founder2@test.com", name="Founder")
+        co = User.objects.create(code="COOWN2", email="co-curator2@test.com", name="Co")
+        collection = Collection.objects.create(
+            code="COCUR2", owner=founder, headline="Ours", status="ACTIVE"
+        )
+        collection.co_owners.add(co)
+        mail.outbox.clear()
+        email_service.send_broadcast_email(
+            "Founder", founder.email, "Ours", collection.code, "Hello team", [co.email]
+        )
+        assert len(mail.outbox) == 1
+        assert "/collections/new" not in mail.outbox[0].body
+
+    def test_a_plain_member_still_gets_the_line(self):
+        # Being IN a collection is not curating one — the rank-and-file member
+        # is exactly the audience the growth line addresses.
+        owner = User.objects.create(code="OWNR5", email="owner5@test.com", name="Owner")
+        member = User.objects.create(code="MEMB1", email="member@test.com", name="Member")
+        collection = Collection.objects.create(
+            code="MEMC1", owner=owner, headline="Theirs", status="ACTIVE"
+        )
+        collection.invites.add(member)
+        mail.outbox.clear()
+        email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", member.email)
+        assert "/collections/new" in mail.outbox[0].body
+
     def test_line_present_on_magic_link_for_non_owner(self):
         # S2: the magic link is the one email every user gets, so the growth
         # CTA runs here too now — still gated by collection ownership.
