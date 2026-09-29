@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import MagicLinkJoinPage from './MagicLinkJoinPage';
@@ -231,6 +231,52 @@ describe('MagicLinkJoinPage presentation (the door matches the front door)', () 
     expect(
       screen.getAllByText(/We share the tools we have with the rest of the group\./)
     ).toHaveLength(1);
+  });
+
+  function renderWithDescription(collectionDescription) {
+    return render(
+      <MemoryRouter>
+        <MagicLinkJoinPage
+          ns="share"
+          docTitleKey="titles.share"
+          titleKey="share.pageTitle"
+          descriptionKey="share.pageDescription"
+          collectionDescription={collectionDescription}
+        />
+      </MemoryRouter>
+    );
+  }
+
+  test("the collection's description is Markdown, so bold and lists arrive as such", () => {
+    // What a curator writes for CollectionPage reaches a stranger through a shared link. Handed
+    // over as a plain string, the `**` showed as typed and the list ran into one line — on the
+    // first screen of the funnel, opened from a chat.
+    const { container } = renderWithDescription(
+      '**Horario**\n\n- Lunes de 10 a 12\n- Jueves de 17 a 19'
+    );
+
+    const heroText = container.querySelector('.form-hero-text');
+    expect(within(heroText).getByText('Horario').tagName).toBe('STRONG');
+    expect(
+      within(heroText)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent)
+    ).toEqual(['Lunes de 10 a 12', 'Jueves de 17 a 19']);
+    expect(heroText).not.toHaveTextContent('**');
+    // PageLayout's `.form-hero-text` is the only one: MarkdownText's own class would double the
+    // font size, padding and colour it sets.
+    expect(container.querySelectorAll('.form-hero-text')).toHaveLength(1);
+  });
+
+  test('HTML in the description is still shown as text, never run', () => {
+    // The string used to be escaped by React; MarkdownText injects HTML, so its own escaping is
+    // now what stands between an owner's text and the page.
+    const { container } = renderWithDescription('<img src=x onerror=alert(1)> and <b>bold</b>');
+
+    const heroText = container.querySelector('.form-hero-text');
+    expect(heroText.querySelector('img')).toBeNull();
+    expect(heroText.querySelector('b')).toBeNull();
+    expect(heroText).toHaveTextContent('<img src=x onerror=alert(1)> and <b>bold</b>');
   });
 
   test('"Already have an account" is a full-width button-shaped link, not bare text', () => {

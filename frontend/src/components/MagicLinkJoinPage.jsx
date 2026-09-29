@@ -6,6 +6,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
 import PageLayout from './PageLayout';
 import ButtonLink from './ButtonLink';
+import MarkdownText from './MarkdownText';
 
 /**
  * Shared join landing page: an email form that POSTs to `/auth/join/` and
@@ -67,7 +68,13 @@ export default function MagicLinkJoinPage({
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
 
   return (
-    <PageLayout title={heroTitle} description={collectionDescription}>
+    // The description is Markdown — CollectionPage paints it with MarkdownText — and this
+    // is the page a stranger reads first, from a link in a chat. PageLayout already wraps
+    // its `description` in `.form-hero-text`, so the class is not repeated here.
+    <PageLayout
+      title={heroTitle}
+      description={collectionDescription && <MarkdownText text={collectionDescription} />}
+    >
       {/* The door's first line of words, at the same size and weight as the
           front door's pitch (.login-pitch, Body XL bold). A <p> here, not the
           <h2> /login uses: this page's hero title is real words, so the intro
