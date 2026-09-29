@@ -458,11 +458,11 @@ def _bottom(
 
     if include_viral:
         lines = viral_lines(lang)
-        # A co-curator gets it suppressed too (2026-09-28): they have had the
-        # founder's whole reach minus deletion for a year of product life, so
-        # inviting them to "start a collection" is a letter to someone who
-        # already runs one. The flag is one Exists over both paths (owner or
-        # co-owner), folded into the lookup queries — no extra round-trip.
+        # A co-curator gets it suppressed too (2026-09-28): since 2026-09 they
+        # have the founder's whole reach minus deletion, so inviting them to
+        # "start a collection" is a letter to someone who already runs one. The
+        # flag is one Exists over both paths (owner or co-owner), folded into
+        # the lookup queries — no extra round-trip.
         curates_collection = (
             user is not _UNSET and user and getattr(user, "_curates_collection", False)
         )
