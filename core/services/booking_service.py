@@ -392,7 +392,52 @@ def _clear_request_notifications(booking):
     ).delete()
 
 
-def finalize_booking_decision(booking, accepted):
+def _notify_team_of_decision(booking, thing, collection, decider, accepted):
+    """Leave a BOOKING_DECIDED record with everyone who runs the thing.
+
+    A hold request is a question put to the whole team that manages it, so its
+    answer has to reach them all: every manager (``thing.managers()`` — the
+    thing's owner plus a PROPRIETARY collection's curators), plus whoever
+    decided if they are not a manager already, **except the requester** — they
+    get their own BOOKING_ACCEPTED/REJECTED, and a "so-and-so decided" line
+    about their own request would be noise in their inbox. Without this, a
+    co-curator's inbox kept a request the founder had already settled, and
+    whoever decided had no trace of their own call (CA, 2026-09-29).
+
+    Runs after ``_clear_request_notifications``, which is type-scoped to
+    BOOKING_REQUESTED: the decision record carries the same ``booking_code``
+    but a different type, so the clear leaves it standing.
+    """
+    audience = {}
+    for manager in [*thing.managers(), decider]:
+        if manager.code == booking.requester_code_id:
+            continue
+        audience.setdefault(manager.code, manager)
+
+    for code, manager in audience.items():
+        payload = {
+            "thing_headline": thing.headline,
+            # Bare names (L2): every reader here is a co-member of the decider
+            # and the requester alike.
+            "requester_name": booking.requester_code.name,
+            "decider_name": decider.name,
+            "accepted": accepted,
+            "by_you": code == decider.code,
+            "booking_code": booking.code,
+            "thing_code": thing.code,
+            "collection_code": collection.code if collection else "",
+        }
+        if booking.start_date and booking.end_date:
+            payload["start_date"] = str(booking.start_date)
+            payload["end_date"] = str(booking.end_date)
+        InAppNotification.objects.create(
+            user=manager,
+            type=InAppNotification.Type.BOOKING_DECIDED,
+            payload=payload,
+        )
+
+
+def finalize_booking_decision(booking, accepted, decided_by=None):
     """Apply an owner's accept/reject decision and run the shared side-effects.
 
     Wraps accept_booking()/reject_booking() (which perform the locked, race-safe
@@ -401,6 +446,12 @@ def finalize_booking_decision(booking, accepted):
     the email/RSVP path (VerifyLinkView) and the in-app API path
     (BookingActionView) so this money/ownership-sensitive sequence lives in one
     place.
+
+    ``decided_by`` is the account that made the call, and it is who the
+    requester's notice names — a decision may be a co-curator's since 2026-09,
+    and "the founder confirmed your request" would be false in their mouth.
+    ``None`` (and the emailed RSVP path, which passes the owner explicitly)
+    falls back to ``booking.owner_code``, the thing's owner.
 
     Returns the updated Thing, or None when the booking was no longer PENDING (a
     concurrent transition already handled it) — each caller turns None into its
@@ -415,13 +466,29 @@ def finalize_booking_decision(booking, accepted):
     # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
     # the requester, a co-member, and the API withholds the owner's address from
     # them everywhere else (L2).
-    owner_name = booking.owner_code.name
+    decider = decided_by if decided_by is not None else booking.owner_code
+    owner_name = decider.name
     # The booking doesn't record which collection it was made through, so the
     # requester-side notification deep-links through the same approximation the
     # request-side one used.
     # Only collections the requester may read: this one also picks the email
     # note the accepted decision carries to them.
     collection = resolve_request_collection(thing, requester=booking.requester_code)
+    payload = {
+        "thing_headline": thing.headline,
+        "owner_name": owner_name,
+        # The codes let the inbox deep-link the request the way the request-side
+        # notice does.
+        "booking_code": booking.code,
+        "thing_code": thing.code,
+        "collection_code": collection.code if collection else "",
+    }
+    if booking.start_date and booking.end_date:
+        # A loan or rental ran for dates: the requester's notice says which,
+        # under the body, the way their request told the owner (2026-09-29).
+        # GIFT/SELL carry none, and neither does a decision on one.
+        payload["start_date"] = str(booking.start_date)
+        payload["end_date"] = str(booking.end_date)
     InAppNotification.objects.create(
         user=booking.requester_code,
         type=(
@@ -429,15 +496,11 @@ def finalize_booking_decision(booking, accepted):
             if accepted
             else InAppNotification.Type.BOOKING_REJECTED
         ),
-        payload={
-            "thing_headline": thing.headline,
-            "owner_name": owner_name,
-            "thing_code": thing.code,
-            "collection_code": collection.code if collection else "",
-        },
+        payload=payload,
     )
     send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)
+    _notify_team_of_decision(booking, thing, collection, decider, accepted)
     if accepted:
         # Anchored to the requester (like HOLD_REQUESTED) so a guest's request→accept
         # funnel and the overall holds success rate are both a plain count by kind.
@@ -879,7 +942,10 @@ def _notify_reservation_cancelled(booking, thing, by_user):
     who actually cancelled, so the copy — "{other} cancelled a reservation of
     {thing}" — is true for every reader.
 
-    Whoever cancelled gets their own confirmation too — see below."""
+    Whoever cancelled gets their own confirmation too — an email (S2) and, since
+    2026-09-29, an in-app record of their own: the reservation's whole story
+    lives in the inbox, and theirs stopped at the confirmation, with no trace
+    that they were the one who ended it."""
     from core.services.email_service import (
         send_reservation_cancel_confirmation_email,
         send_reservation_cancelled_email,
@@ -896,21 +962,21 @@ def _notify_reservation_cancelled(booking, thing, by_user):
 
     # Bare name (L2): the email's `_member_name` and the frontend's
     # `common.aMember` cover an unset name.
+    payload = {
+        "thing_headline": thing.headline,
+        "other_name": by_user.name,
+        "start_date": str(booking.start_date),
+        "end_date": str(booking.end_date),
+        "start_time": booking.start_time.strftime("%H:%M") if booking.start_time else None,
+        "end_time": booking.end_time.strftime("%H:%M") if booking.end_time else None,
+        "thing_code": thing.code,
+    }
     for code, (user, email) in recipients.items():
         to_the_member = code == requester_id
         InAppNotification.objects.create(
             user=user,
             type=InAppNotification.Type.RESERVATION_CANCELLED,
-            payload={
-                "thing_headline": thing.headline,
-                "other_name": by_user.name,
-                "start_date": str(booking.start_date),
-                "end_date": str(booking.end_date),
-                "start_time": booking.start_time.strftime("%H:%M") if booking.start_time else None,
-                "end_time": booking.end_time.strftime("%H:%M") if booking.end_time else None,
-                "thing_code": thing.code,
-                "cancelled_by_owner": to_the_member,
-            },
+            payload={**payload, "cancelled_by_owner": to_the_member},
         )
         if email:
             send_reservation_cancelled_email(
@@ -918,9 +984,18 @@ def _notify_reservation_cancelled(booking, thing, by_user):
             )
 
     # The one recipient the loop above never reaches, by construction — a
-    # confirmation, not the "somebody else acted" notice the others get. No
-    # in-app record: they just did this in the app and can see it.
+    # confirmation, not the "somebody else acted" notice the others get. The
+    # record says so in its own words (`by_you`), and names whose reservation
+    # it was when the canceller is a curator, not the member.
     is_own_reservation = by_user.code == requester_id
+    self_payload = {**payload, "by_you": True}
+    if not is_own_reservation:
+        self_payload["member_name"] = booking.requester_code.name
+    InAppNotification.objects.create(
+        user=by_user,
+        type=InAppNotification.Type.RESERVATION_CANCELLED,
+        payload=self_payload,
+    )
     if by_user.email:
         send_reservation_cancel_confirmation_email(
             by_user.email,

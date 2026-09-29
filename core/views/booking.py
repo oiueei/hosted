@@ -211,7 +211,9 @@ class BookingActionView(APIView):
             )
 
         accepted = action == "accept"
-        thing = finalize_booking_decision(booking, accepted=accepted)
+        # Whoever presses the button signs the requester's notice — a
+        # co-curator's decision must not arrive as the founder's.
+        thing = finalize_booking_decision(booking, accepted=accepted, decided_by=request.user)
 
         # A concurrent request (double-click, or email link racing this call)
         # already transitioned this booking — the service no-ops and returns None.

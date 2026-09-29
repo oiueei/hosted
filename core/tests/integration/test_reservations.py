@@ -1160,7 +1160,9 @@ def test_the_owner_can_cancel_a_members_reservation(
 def test_the_member_who_cancels_gets_their_own_confirmation(reservations, authenticated_client2):
     """The requester got "your reservation is confirmed" when they booked it;
     without a reply on cancelling, that email is the last word in their inbox,
-    describing a reservation that no longer stands."""
+    describing a reservation that no longer stands. Since 2026-09-29 (CA) they
+    also keep an in-app record of their own: the reservation's whole story
+    lives in the inbox, and theirs used to stop at the confirmation."""
     booking = _make_booking(reservations, authenticated_client2)
     mail.outbox.clear()
 
@@ -1173,10 +1175,11 @@ def test_the_member_who_cancels_gets_their_own_confirmation(reservations, authen
     to_member = [m for m in mail.outbox if reservations["member"].email in m.to]
     assert len(to_member) == 1
     assert "is cancelled" in to_member[0].body
-    # No in-app record — they just did this in the app themselves.
-    assert not InAppNotification.objects.filter(
-        user=reservations["member"], type="RESERVATION_CANCELLED"
-    ).exists()
+    # Their own record, in the first person — and no member_name, because the
+    # reservation was theirs.
+    own = InAppNotification.objects.get(user=reservations["member"], type="RESERVATION_CANCELLED")
+    assert own.payload["by_you"] is True
+    assert "member_name" not in own.payload
 
 
 def test_the_owner_who_cancels_a_members_reservation_gets_their_own_confirmation(
@@ -1194,9 +1197,41 @@ def test_the_owner_who_cancels_a_members_reservation_gets_their_own_confirmation
     assert len(to_owner) == 1
     # Names the member whose reservation it was, never the owner's own name.
     assert "You cancelled Test User 2's reservation" in to_owner[0].body
-    assert not InAppNotification.objects.filter(
-        user=reservations["owner"], type="RESERVATION_CANCELLED"
-    ).exists()
+    # The owner's in-app record is in the first person too, naming the member.
+    own = InAppNotification.objects.get(user=reservations["owner"], type="RESERVATION_CANCELLED")
+    assert own.payload["by_you"] is True
+    assert own.payload["member_name"] == reservations["member"].name
+
+
+def test_a_co_curator_who_cancels_sees_their_own_record_too(
+    reservations, authenticated_client2, api_client
+):
+    """The fan-out still reaches everyone who didn't cancel — the member and
+    the founder both hear that the co-curator did — while the co-curator's own
+    copy is the first-person record naming whose reservation it was."""
+    booking = _make_booking(reservations, authenticated_client2)
+    mail.outbox.clear()
+
+    co = User.objects.create(code="COCR01", email="co@test.com", name="Co-Curator")
+    reservations["collection"].invites.add(co)
+    reservations["collection"].co_owners.add(co)
+
+    resp = _member_client(api_client, co).post(CANCEL_URL.format(booking.code))
+    assert resp.status_code == status.HTTP_200_OK
+
+    own = InAppNotification.objects.get(user=co, type="RESERVATION_CANCELLED")
+    assert own.payload["by_you"] is True
+    assert own.payload["member_name"] == reservations["member"].name
+
+    # Everyone who didn't cancel keeps the usual notice, naming who did.
+    for watcher in (reservations["member"], reservations["owner"]):
+        note = InAppNotification.objects.get(user=watcher, type="RESERVATION_CANCELLED")
+        assert "by_you" not in note.payload
+        assert note.payload["other_name"] == co.name
+    member_note = InAppNotification.objects.get(
+        user=reservations["member"], type="RESERVATION_CANCELLED"
+    )
+    assert member_note.payload["cancelled_by_owner"] is True
 
 
 def test_an_unrelated_user_cannot_cancel(reservations, authenticated_client2, api_client):

@@ -644,7 +644,10 @@ class VerifyLinkView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        thing = finalize_booking_decision(booking, accepted=accepted)
+        # The emailed link was minted to the owner's address alone, so the
+        # decision is theirs — passed explicitly rather than left to the
+        # service's owner fallback.
+        thing = finalize_booking_decision(booking, accepted=accepted, decided_by=booking.owner_code)
 
         # A concurrent request (this link racing the in-app action, or the
         # sibling link) already transitioned this booking — the service no-ops.
