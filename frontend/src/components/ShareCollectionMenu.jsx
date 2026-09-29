@@ -23,7 +23,12 @@ import Toast from './Toast';
 const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QRCodeSVG })));
 
 /**
- * Share menu for the CollectionPage hero (curator only).
+ * Share menu for the CollectionPage hero: a curator's, and any member's in a
+ * PUBLIC group (a PUBLIC group is shared by its own address — no token, nothing
+ * to rotate or revoke — so a member holds no credential a curator would have to
+ * pull back). The draft email carries no signature and no name: it opens in the
+ * *sender's* mail client, which already says who is writing, so the same text is
+ * right for the founder, a co-curator and a member.
  *
  * Presents as a single discreet `IconShare` in the hero's top-right, beside
  * `ContactCorner` — the `.share-corner` rule in App.css restyles the Select's
@@ -48,12 +53,7 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QR
  * `qrcode.react` (client-side, no network). It is handy for sharing in person —
  * a guest scans it with their phone camera.
  */
-export default function ShareCollectionMenu({
-  collectionCode,
-  collectionHeadline,
-  ownerName,
-  isPublic,
-}) {
+export default function ShareCollectionMenu({ collectionCode, collectionHeadline, isPublic }) {
   const { t, i18n } = useTranslation();
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const [toast, setToast] = useState(null);
@@ -82,7 +82,6 @@ export default function ShareCollectionMenu({
     t('shareMenu.emailBody', {
       headline: collectionHeadline,
       url,
-      name: ownerName || '',
     });
 
   const handleEmail = async (url) => {

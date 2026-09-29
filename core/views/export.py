@@ -1,5 +1,5 @@
 """
-The data-download endpoints (GDPR art. 20, the group copy, and the calendar CSV).
+The data-download endpoints (GDPR art. 20, the group copy, and the calendar as iCalendar).
 
 All are plain `HttpResponse` attachments rather than DRF `Response` bodies:
 what these return is a **file**, and a file has a name, a disposition and a

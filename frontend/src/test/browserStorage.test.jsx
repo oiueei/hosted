@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { STALE_CHUNK_KEY } from '../utils/reloadOnStaleChunk';
 
 /**
  * LSSI-CE art. 22.2 covers every device that stores and retrieves information
@@ -23,8 +24,14 @@ import path from 'node:path';
  * All three are strictly necessary (session state or the visitor's own
  * preference, nothing observed about them) and none needs consent.
  *
- * `sessionStorage` is unused entirely — asserted below by the absence of any
- * `sessionStorage.setItem` call, not by its omission from a list.
+ * `sessionStorage` holds **one** key since 2026-09-29: `staleChunkReloadAt`, the
+ * time of the last automatic reload after a deploy left a tab asking for a chunk
+ * that no longer exists (`utils/reloadOnStaleChunk.js` — the anti-loop mark). It
+ * used to be "unused entirely". That module reaches storage through a parameter,
+ * so a sweep for the literal `sessionStorage.setItem(` could not see it (and would
+ * have kept passing had the write been added under an alias) — the check below is
+ * therefore by *file*: any other source file that mentions `sessionStorage` is a new
+ * decision, and the key itself has to be the one README §Privacy names.
  *
  * **Not swept, and real**: `i18next-browser-languagedetector` caches the
  * chosen UI language under its own default key, `i18nextLng` (see
@@ -64,12 +71,22 @@ describe('what this app writes to the browser (LSSI-CE art. 22.2)', () => {
     expect(found).toEqual(EXPECTED_LOCAL_STORAGE_KEYS);
   });
 
-  test('sessionStorage is never written', () => {
+  test('sessionStorage is used by one module only, for the one key README names', () => {
+    // Comments are stripped: prose about `sessionStorage` is not a use of it.
+    const withoutComments = (source) =>
+      source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     const files = sourceFiles('src');
-    const offenders = files.filter(
-      (file) => storageKeys(fs.readFileSync(file, 'utf8'), 'sessionStorage').length > 0
+    const users = files.filter((file) =>
+      /\bsessionStorage\b/.test(withoutComments(fs.readFileSync(file, 'utf8')))
     );
 
-    expect(offenders).toEqual([]);
+    expect(users).toEqual([path.join('src', 'utils', 'reloadOnStaleChunk.js')]);
+    expect(STALE_CHUNK_KEY).toBe('staleChunkReloadAt');
+
+    // The claim is public (README §Privacy): the key must be in it, and the old
+    // "unused" sentence must not be.
+    const readme = fs.readFileSync('../README.md', 'utf8');
+    expect(readme).toContain(`\`${STALE_CHUNK_KEY}\``);
+    expect(readme).not.toContain('`sessionStorage` is unused');
   });
 });

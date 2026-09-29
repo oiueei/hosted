@@ -1,7 +1,12 @@
 import i18n from 'i18next';
+import { loginPathFor } from '../utils/nextPath';
 
 /**
  * Centralised fetch wrapper with cookie-based auth and 401 handling.
+ *
+ * When the session is gone for good, the redirect to `/login` carries the page
+ * the reader was on (`?next=`, see `utils/nextPath.js`), so the magic link they
+ * ask for brings them back to it instead of to Home.
  */
 
 export function getCsrfToken() {
@@ -127,14 +132,14 @@ export async function apiFetch(url, options = {}) {
       if (retryRes.status === 401) {
         if (optionalAuth) return retryRes;
         localStorage.removeItem('userCode');
-        window.location.href = '/login';
+        window.location.href = loginPathFor(window.location);
         throw new Error('Unauthorised');
       }
       return retryRes;
     }
     if (optionalAuth) return res;
     localStorage.removeItem('userCode');
-    window.location.href = '/login';
+    window.location.href = loginPathFor(window.location);
     throw new Error('Unauthorised');
   }
 

@@ -100,20 +100,3 @@ def require_collection_curator(collection, user_code, message):
     if not collection.is_curator(user_code):
         return Response({"error": message}, status=status.HTTP_403_FORBIDDEN)
     return None
-
-
-def managers_ready_collections():
-    """The collection queryset that makes ``Thing.managers()`` (and
-    ``can_manage``) fire **nothing** once prefetched: each collection with its
-    ``owner`` selected — the fan-out reads ``c.owner`` per collection, and a
-    plain ``prefetch_related("collections")`` would cost one owner query per
-    collection — and its ``co_owners`` prefetched.
-
-    Used as ``Prefetch("collections", queryset=managers_ready_collections())``
-    by the three notice fan-outs (a FAQ question, a reservation made, a
-    reservation cancelled), so a thing in many collections costs no query per
-    collection to notify the whole team that runs it.
-    """
-    from core.models.collection import Collection
-
-    return Collection.objects.select_related("owner").prefetch_related("co_owners")

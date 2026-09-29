@@ -42,6 +42,9 @@ class TestEmailLanguage:
             def first(self):
                 return None
 
+            def all(self):
+                return []
+
         class FakeThing:
             headline = "Tienda"
             code = "THG123"
@@ -63,6 +66,9 @@ class TestEmailLanguage:
         class FakeCollections:
             def first(self):
                 return None
+
+            def all(self):
+                return []
 
         class FakeThing:
             headline = "Taladro"
@@ -95,6 +101,9 @@ class TestEmailLanguage:
             def first(self):
                 return None
 
+            def all(self):
+                return []
+
         class FakeThing:
             headline = "Taladro"
             code = "THG123"
@@ -116,6 +125,9 @@ class TestEmailLanguage:
         class FakeCollections:
             def first(self):
                 return None
+
+            def all(self):
+                return []
 
         class FakeThing:
             headline = "Drill"
@@ -215,6 +227,9 @@ class TestViralLine:
         class FakeCollections:
             def first(self):
                 return None
+
+            def all(self):
+                return []
 
         class FakeThing:
             headline = "Taladro"

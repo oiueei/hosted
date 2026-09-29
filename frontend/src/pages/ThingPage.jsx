@@ -108,14 +108,14 @@ export default function ThingPage() {
           if (signal.aborted) return;
           setThing(data);
         } else if (res.status === 403) {
-          setError(t('thingPage.noPermission'));
+          setError('thingPage.noPermission');
         } else if (res.status === 404) {
-          setError(t('thingPage.notFound'));
+          setError('thingPage.notFound');
         } else {
-          setError(t('thingPage.errorLoading'));
+          setError('thingPage.errorLoading');
         }
       } catch {
-        if (!signal.aborted) setError(t('common.connectionError'));
+        if (!signal.aborted) setError('common.connectionError');
       }
     };
 
@@ -137,13 +137,16 @@ export default function ThingPage() {
     return () => controller.abort();
     // `code` is a dependency on purpose: without it, moving between two
     // collections that share this thing would keep the first one's answer.
-  }, [userCode, thingCode, code, navigate, t]);
+    // `t` is not: `error` holds an i18n key, translated where it is painted, and
+    // `useCollectionLanguage` swaps `t` once this very response lands — listing
+    // it fetched the thing (and its transfers) a second time.
+  }, [userCode, thingCode, code, navigate]);
 
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {t(error)}
         </Notification>
       </PageLayout>
     );

@@ -719,6 +719,61 @@ class TestBookingPeriodModel:
 
 
 @pytest.mark.django_db
+class TestPromoteCoOwner:
+    """`Collection.promote_co_owner` — the ceiling on the co-curator set, as one
+    locked step. What it does with the lock is proved on PostgreSQL in
+    `test_booking_row_locks.py`; these are the three answers it can give."""
+
+    def _group(self, co_owners):
+        """A group holding ``co_owners`` co-curators, and one more plain member."""
+        owner = User.objects.create(code="PCOOWN", email="pcoown@example.com")
+        group = Collection.objects.create(code="PCOGRP", owner=owner, headline="Group")
+        for i in range(co_owners):
+            curator = User.objects.create(code=f"PCOC{i:02d}", email=f"pcoc{i}@example.com")
+            group.invites.add(curator)
+            group.co_owners.add(curator)
+        newcomer = User.objects.create(code="PCONEW", email="pconew@example.com")
+        group.invites.add(newcomer)
+        return group, newcomer
+
+    def test_a_member_is_added_while_there_is_room(self):
+        group, newcomer = self._group(Collection.MAX_CO_OWNERS - 1)
+
+        result = group.promote_co_owner(newcomer)
+
+        assert result is Collection.Promotion.ADDED
+        assert group.co_owners.filter(code=newcomer.code).exists()
+        assert group.co_owners.count() == Collection.MAX_CO_OWNERS
+
+    def test_a_full_set_refuses_a_new_co_curator_and_stays_as_it_was(self):
+        group, newcomer = self._group(Collection.MAX_CO_OWNERS)
+
+        result = group.promote_co_owner(newcomer)
+
+        assert result is Collection.Promotion.FULL
+        assert not group.co_owners.filter(code=newcomer.code).exists()
+        assert group.co_owners.count() == Collection.MAX_CO_OWNERS
+
+    def test_someone_who_already_is_one_is_reported_as_such_even_at_the_ceiling(self):
+        # Re-promoting grows nothing, so it must never meet the ceiling: "already"
+        # and "full" are different answers, and the view notifies only on "added".
+        group, _ = self._group(Collection.MAX_CO_OWNERS)
+        existing = group.co_owners.first()
+
+        result = group.promote_co_owner(existing)
+
+        assert result is Collection.Promotion.ALREADY
+        assert group.co_owners.count() == Collection.MAX_CO_OWNERS
+
+    def test_promoting_the_same_member_twice_adds_them_once(self):
+        group, newcomer = self._group(1)
+
+        assert group.promote_co_owner(newcomer) is Collection.Promotion.ADDED
+        assert group.promote_co_owner(newcomer) is Collection.Promotion.ALREADY
+        assert group.co_owners.filter(code=newcomer.code).count() == 1
+
+
+@pytest.mark.django_db
 class TestCollectionModelEdgeCases:
     """Tests for Collection model DoesNotExist branches."""
 
@@ -896,8 +951,9 @@ class TestRSVPModelEdgeCases:
             requester_email="req@example.com",
             owner_code=owner,
         )
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, "owner@example.com")
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, owner)
         assert rsvp.action == "BOOKING_ACCEPT"
         assert rsvp.target_code == booking.code
+        assert rsvp.user_code_id == owner.code
         assert rsvp.user_email == "owner@example.com"
         assert rsvp.context["thing_code"] == thing.code

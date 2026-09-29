@@ -151,6 +151,49 @@ describe('apiFetch', () => {
     expect(window.location.href).toBe('/login');
   });
 
+  // The reader is sent to /login with the page they were on, so the magic link
+  // they ask for brings them back to it — the redirect used to drop it, and a
+  // session that ran out on a thing landed them on Home.
+  test('an unrecoverable 401 sends the reader to /login remembering the page they were on', async () => {
+    window.location.pathname = '/collections/X/things/Y';
+    window.location.search = '?z=1';
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 401 }));
+
+    await expect(apiFetch('/api/v1/things/Y/')).rejects.toThrow('Unauthorised');
+
+    expect(window.location.href).toBe('/login?next=%2Fcollections%2FX%2Fthings%2FY%3Fz%3D1');
+  });
+
+  test('the retry-still-401 path remembers the page too', async () => {
+    // Two different redirects live in apiFetch: refresh refused, and refresh
+    // accepted but the retried request still 401. Both must carry the page.
+    window.location.pathname = '/collections/X';
+    window.location.search = '';
+    globalThis.fetch = vi.fn((url) =>
+      String(url).includes('/auth/refresh/')
+        ? Promise.resolve({ ok: true, status: 200 })
+        : Promise.resolve({ ok: false, status: 401 })
+    );
+
+    await expect(apiFetch('/api/v1/collections/X/')).rejects.toThrow('Unauthorised');
+
+    expect(window.location.href).toBe('/login?next=%2Fcollections%2FX');
+  });
+
+  test('the refused-refresh path remembers the page too, and Home is a plain /login', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 401 }));
+
+    window.location.pathname = '/my-bookings';
+    window.location.search = '';
+    await expect(apiFetch('/api/v1/my-bookings/')).rejects.toThrow('Unauthorised');
+    expect(window.location.href).toBe('/login?next=%2Fmy-bookings');
+
+    window.location.href = '';
+    window.location.pathname = '/';
+    await expect(apiFetch('/api/v1/collections/')).rejects.toThrow('Unauthorised');
+    expect(window.location.href).toBe('/login');
+  });
+
   // `optionalAuth` exists for the public pages that show a little more when there
   // IS a session (/welcome). Without it, one authenticated call on a public page
   // evicts every anonymous visitor: the redirect fires inside apiFetch, so the

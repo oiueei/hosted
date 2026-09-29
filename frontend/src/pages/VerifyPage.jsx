@@ -6,6 +6,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
+import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 
 /**
@@ -156,6 +157,12 @@ export default function VerifyPage() {
             );
           } else if (data.landing === 'welcome' && aboutPath) {
             navigate(aboutPath);
+          } else if (data.landing === 'path' && safeNextPath(data.path)) {
+            // The page the reader was heading for when their session ran out
+            // (`next` on the login). The server already validated it; checked
+            // again here because it is fed to the router, and one that does not
+            // pass falls through to home rather than anywhere odd.
+            navigate(data.path);
           } else {
             navigate('/');
           }

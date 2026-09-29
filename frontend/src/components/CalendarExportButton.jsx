@@ -6,7 +6,7 @@ import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import StatusRegion from './StatusRegion';
 
 /**
- * The "Download reservations for your calendar" control, shared by the two
+ * The "Download the calendar" control, shared by the two
  * places a curator meets it: the foot of `EditCollectionPage` (where it was
  * born, between the other admin downloads) and the hero of `CollectionPage` —
  * a curator managing the group can take its schedule with them without

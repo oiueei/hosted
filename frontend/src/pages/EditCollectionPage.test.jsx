@@ -23,6 +23,7 @@ vi.mock('../hooks/useCollectionLanguage', () => ({ default: vi.fn() }));
 import { apiFetch } from '../services/api';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import EditCollectionPage from './EditCollectionPage';
+import { dropHdsStyles } from '../test/dropHdsStyles';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
 // visible, which fold into "More options", the pause section). These cover the
@@ -108,6 +109,7 @@ const renderPage = () =>
   );
 
 beforeEach(() => {
+  dropHdsStyles(); // ByRole queries cost ~10x less without them; see the helper
   localStorage.clear();
   localStorage.setItem('userCode', 'USR001');
   vi.clearAllMocks();
@@ -559,7 +561,7 @@ describe('EditCollectionPage — the collection export', () => {
 });
 
 describe('EditCollectionPage — the calendar export', () => {
-  const button = { name: /download reservations for your calendar/i };
+  const button = { name: /download the calendar/i };
 
   test('it POSTs to the calendar-export endpoint and downloads the file', async () => {
     mockApi({ calendar: { ok: true, count: '2' } });
@@ -601,7 +603,7 @@ describe('EditCollectionPage — the calendar export', () => {
 
     fireEvent.click(screen.getByRole('button', button));
 
-    expect(await screen.findByText('No upcoming reservations.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing coming up in the calendar.')).toBeInTheDocument();
     expect(click).not.toHaveBeenCalled();
   });
 

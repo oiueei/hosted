@@ -6,8 +6,10 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import re
 import secrets
 import string
+from urllib.parse import unquote
 
 from django.conf import settings
 
@@ -121,6 +123,52 @@ def get_client_ip(request):
             if trusted:
                 return trusted
     return _valid_ip(request.META.get("REMOTE_ADDR", "")) or UNKNOWN_CLIENT_IP
+
+
+# Where a magic link may send someone back to: a path on this site, nothing else.
+# The whitelist has no ``\``, ``#``, ``:`` or whitespace, so no scheme, no
+# backslash-as-slash and no control character can get through it.
+_NEXT_PATH_RE = re.compile(r"/[A-Za-z0-9/_\-.~?=&%]*")
+_NEXT_PATH_MAX_LENGTH = 256
+# The SPA's own doors: going "back" to one of them is a loop or nonsense.
+_NEXT_PATH_BLOCKED_ROOTS = frozenset({"login", "logout", "verify", "rsvp", "magic-link"})
+
+
+def safe_next_path(value):
+    """The same-site path a login should return to, or ``""`` if ``value`` isn't one.
+
+    The **only** door for a ``next`` that a client sent: ``RequestLinkView`` stores
+    it on the RSVP only after this, and ``VerifyLinkView`` asks again at the click
+    (the value comes from our own table, but a ``context`` written by another
+    route is one line of protection away). The SPA has the same rules in
+    ``frontend/src/utils/nextPath.js`` as defence in depth — this one is the gate,
+    and the two must not drift.
+
+    A value is accepted only when it is a ``str`` that
+
+    - is at most 256 characters and, in whole, matches the whitelist above — so
+      it starts with ``/`` and has no ``\\`` in it — and does not start with
+      ``//`` (a browser reads both ``//evil.com`` and ``/\\evil.com`` as another
+      origin; the whitelist stops the second, the explicit check the first);
+    - has no ``..``, in the raw text or once percent-decoded;
+    - is not ``/`` alone: with no destination the rule the login always had
+      applies (their one collection, or Home), which is better than Home;
+    - does not start at one of the SPA's own doors (``login``, ``logout``,
+      ``verify``, ``rsvp``, ``magic-link``), compared decoded and case-folded
+      because the router does both.
+    """
+    if not isinstance(value, str) or len(value) > _NEXT_PATH_MAX_LENGTH:
+        return ""
+    # ``fullmatch``, not ``match`` + ``$``: ``$`` also matches before a trailing newline.
+    if not _NEXT_PATH_RE.fullmatch(value) or value.startswith("//"):
+        return ""
+    decoded = unquote(value)
+    if ".." in decoded:
+        return ""
+    path = decoded.split("?", 1)[0]
+    if path == "/" or path.split("/")[1].lower() in _NEXT_PATH_BLOCKED_ROOTS:
+        return ""
+    return value
 
 
 def parse_localized(value):

@@ -39,13 +39,23 @@ if settings.DEBUG:
 
 
 def spa_index(request):
-    """Serve the React SPA index.html for all non-API routes."""
+    """Serve the React SPA index.html for all non-API routes.
+
+    ``Cache-Control: no-cache`` — the browser (or a CDN in front) may keep a copy
+    but has to ask before reusing it. It is what makes the reload a stale tab does
+    after a deploy (``reloadOnStaleChunk``) worth anything: the page names its
+    JS chunks by hash, a release replaces them, and a cached ``index.html`` would
+    hand the reload the very same page that names the chunks that are gone. The
+    hashed assets themselves are served (and cached) by the static layer.
+    """
     index_path = os.path.join(settings.BASE_DIR, "frontend", "dist", "index.html")
     try:
         with open(index_path, encoding="utf-8") as f:
-            return HttpResponse(f.read(), content_type="text/html")
+            response = HttpResponse(f.read(), content_type="text/html")
     except FileNotFoundError:
-        return HttpResponse("Frontend not built. Run: cd frontend && yarn build", status=503)
+        return HttpResponse("Frontend not built. Run: cd frontend && npm run build", status=503)
+    response["Cache-Control"] = "no-cache"
+    return response
 
 
 def deployment_urlpatterns():

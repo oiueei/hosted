@@ -1516,7 +1516,7 @@ class TestReservationViews:
         thing.save()
 
         # Create RSVP for accept action (as would be done when sending email)
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
 
         # Accept via RSVP link
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
@@ -1553,7 +1553,7 @@ class TestReservationViews:
         thing.save()
 
         # Create RSVP for reject action
-        rsvp = RSVP.create_for_booking("BOOKING_REJECT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_REJECT", booking, user)
 
         # Reject via RSVP link
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
@@ -1591,7 +1591,7 @@ class TestReservationViews:
         booking.save()
 
         # Create RSVP for accept action
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
 
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
 

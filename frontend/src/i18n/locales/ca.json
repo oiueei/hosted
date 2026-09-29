@@ -10,13 +10,13 @@
     "error": "No hem pogut preparar l'exportació. Torna-ho a provar d'aquí un moment."
   },
   "calendarExport": {
-    "downloadButton": "Descarregar reserves per al calendari",
+    "downloadButton": "Descarregar el calendari",
     "downloading": "Preparant el fitxer…",
-    "notice": "Totes les reserves futures, en un fitxer de calendari (.ics). Obre'l o importa'l a Google Calendar, Apple Calendar o Outlook; importar-lo un altre cop no duplica res, i una reserva cancel·lada des d'aleshores hi va marcada com a cancel·lada.",
+    "notice": "Tots els préstecs, lloguers i reserves pròxims, en un fitxer de calendari (.ics). Obre'l o importa'l a Google Calendar, Apple Calendar o Outlook; importar-lo un altre cop no duplica res, i una reserva cancel·lada des d'aleshores hi va marcada com a cancel·lada.",
     "done": "{{count}} esdeveniment(s) — mira les teves baixades.",
-    "alsoCancelled": "Inclou {{count}} cancel·lada(es), marcades perquè el teu calendari les pugui treure.",
-    "doneOnlyCancelled": "No hi ha reserves futures, però sí {{count}} cancel·lada(es) — importa el fitxer perquè el teu calendari les pugui treure.",
-    "nothingNew": "No hi ha reserves futures.",
+    "alsoCancelled": "Inclou {{count}} reserva(es) cancel·lada(es), marcades perquè el teu calendari les pugui treure.",
+    "doneOnlyCancelled": "No hi ha res de previst, però sí {{count}} reserva(es) cancel·lada(es): importa el fitxer perquè el teu calendari les pugui treure.",
+    "nothingNew": "No hi ha res de previst al calendari.",
     "error": "No hem pogut preparar el fitxer de calendari. Torna-ho a provar d'aquí un moment."
   },
   "ageRange": {
@@ -58,8 +58,8 @@
   },
   "joinToAct": {
     "heading": "Uneix-t'hi per participar",
-    "body": "Inicia la sessió per demanar, reservar, preguntar o afegir les teves coses. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
-    "bodyNamed": "Inicia la sessió per demanar, reservar, preguntar o afegir les teves coses a {{collection}}. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
+    "body": "Uneix-te per demanar, reservar, preguntar o afegir les teves coses. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
+    "bodyNamed": "Uneix-te per demanar, reservar, preguntar o afegir les teves coses a {{collection}}. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
     "emailLabel": "Correu electrònic",
     "emailPlaceholder": "tu@exemple.com",
     "join": "Envia'm un enllaç màgic",
@@ -152,7 +152,7 @@
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
     "sharedThings": "Compartit amb mi — OIUEEI",
     "dataExport": "Exportar dades — OIUEEI",
-    "reserveThing": "Reservar: {{headline}}"
+    "reserveThing": "Reservar: {{headline}} — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -163,6 +163,7 @@
     "magicLinkSent": "Si aquest correu està registrat, l'enllaç màgic ja és en camí — revisa la safata d'entrada i, per si de cas, la carpeta de correu brossa.",
     "errorSendingLink": "Error en enviar l'enllaç.",
     "pitch": "Comparteix el que tens amb la gent que t'envolta. Crea una col·lecció de coses per regalar, vendre, llogar, deixar o reservar — i convida la gent a conèixer-les i demanar-les.",
+    "nextNotice": "Entra i et portem directament a la pàgina que anaves a obrir.",
     "licence": "El codi d'OIUEEI és obert, sota la llicència EUPL-1.2, un copyleft fort. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà.",
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
@@ -273,6 +274,9 @@
     "addManyCsv": "Afegir-ne uns quants alhora (CSV)",
     "allTags": "Tots",
     "noThingsForTag": "No hi ha coses amb aquesta etiqueta.",
+    "anonJoinCommunity": "Tens alguna cosa per aportar? Uneix-te al grup →",
+    "anonJoinEmpty": "Uneix-te al grup per saber quan hi arribi alguna cosa →",
+    "anonJoinPlain": "Uneix-te al grup →",
     "communityTag": "Comunitària",
     "noPermission": "No tens accés a aquesta col·lecció. Pot estar inactiva, o el teu accés pot haver canviat — revisa les teves invitacions, o contacta amb el propietari.",
     "notFound": "Col·lecció no trobada.",
@@ -512,7 +516,7 @@
     "modeLabel": "Mode",
     "modeProprietary": "Pròpia",
     "modeCommunity": "Comunitària",
-    "modeProprietaryDesc": "Només tu pots afegir coses a aquesta llista.",
+    "modeProprietaryDesc": "Només els seus curadors hi afegeixen coses; d'entrada, tu.",
     "modeCommunityDesc": "Tots els convidats també poden afegir les seves pròpies coses.",
     "titleRequired": "El títol és obligatori.",
     "maxHeadline": "Màxim 64 caràcters per idioma.",
@@ -734,7 +738,11 @@
     "joining": "Enviant…",
     "magicLinkSent": "Enllaç enviat! Revisa la safata d'entrada i fes clic a l'enllaç per unir-te a la col·lecció.",
     "errorSendingLink": "Error en enviar l'enllaç.",
-    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →"
+    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →",
+    "joinSignedIn": "Unir-me a {{name}}",
+    "joinSignedInGeneric": "Unir-me a aquest grup",
+    "useAnotherEmail": "Fer servir un altre correu",
+    "linkGone": "Aquest enllaç d'invitació ja no funciona: demana'n un de nou a qui te l'ha enviat."
   },
   "endless": {
     "label": "Il·limitat — diverses persones la poden demanar alhora, la cosa sempre està activa"
@@ -783,7 +791,7 @@
     "copy": "Copia l'enllaç d'invitació",
     "whatsapp": "WhatsApp",
     "emailSubject": "T'invito a {{headline}} a OIUEEI",
-    "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI.\n\nPots unir-t'hi aquí: {{url}}\n\nUna abraçada,\n{{name}}",
+    "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI.\n\nPots unir-t'hi aquí: {{url}}",
     "whatsappText": "T'invito a \"{{headline}}\" a OIUEEI: {{url}}",
     "copied": "Enllaç copiat al porta-retalls.",
     "copyError": "No hem pogut copiar l'enllaç. Torna-ho a provar o fes servir una altra opció.",
@@ -1050,6 +1058,8 @@
   "requestErrors": {
     "already_requested": "Ja ho has demanat: espera la resposta de qui ho ofereix.",
     "cancel_forbidden": "No pots cancel·lar aquesta reserva.",
+    "co_owners_full_one": "Aquest grup ja té 1 co-curador: és el màxim que permet.",
+    "co_owners_full_other": "Aquest grup ja té {{count}} co-curadors: és el màxim que permet.",
     "dates_taken": "Aquestes dates ja estan agafades.",
     "not_a_member": "Has de ser membre d'aquest grup per reservar.",
     "not_available": "Ara mateix no està disponible.",

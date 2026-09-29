@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import en from '../i18n/locales/en.json';
 
 expect.extend(toHaveNoViolations);
 
@@ -225,18 +226,65 @@ describe('CollectionPage hero corners', () => {
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
   });
 
-  test('a plain member gets the account menu and the contact link, never the share menu', async () => {
-    renderCollection({
-      ...COLLECTION_WITH_PHOTO,
-      owner: 'OTHER1',
-      is_curator: false,
-      is_member: true,
-    });
+  const MEMBER_VIEW = {
+    ...COLLECTION_WITH_PHOTO,
+    owner: 'OTHER1',
+    is_curator: false,
+    is_member: true,
+  };
+
+  test('a member of a PRIVATE group gets the account menu and the contact link, never the share menu', async () => {
+    // There the link is the curators' credential; the member has "Recommend".
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PRIVATE' });
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  // CA, 2026-09-29: a PUBLIC group is shared by its own address, so a member can
+  // bring people in without holding anything a curator would have to pull back.
+  test('a member of a PUBLIC group gets the share menu too — all three controls, in the corner', async () => {
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
+    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  test("a member's share menu has no Rotate or Stop sharing, and shares without calling share-link", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
+    await screen.findByText('Things from the kitchen');
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.queryByRole('option', { name: /rotate link/i })).toBeNull();
+    expect(screen.queryByRole('option', { name: /stop sharing/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Copy invite link' }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/collections/COL001`)
+    );
+    expect(apiFetch.mock.calls.some(([url]) => String(url).includes('/share-link/'))).toBe(false);
+  });
+
+  test('a signed-out reader of a PUBLIC group gets no share menu', async () => {
+    localStorage.clear();
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC', is_member: false });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  test('a signed-in reader who is not in a PUBLIC group gets no share menu either', async () => {
+    renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC', is_member: false });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });
 
@@ -277,7 +325,9 @@ describe('CollectionPage signed-out reader', () => {
     await waitFor(() => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
-    expect(container.querySelector('a[href="/collections/COL001/join"]')).toBeNull();
+    // Nothing in the hero (CA removed the line on 2026-09-21 and reopened the
+    // question only for the content, 2026-09-29 — see the tests of the door below).
+    expect(container.querySelector('.form-hero a[href="/collections/COL001/join"]')).toBeNull();
     expect(container.textContent).not.toMatch(/collectionPage\.anonIntro/);
   });
 });
@@ -609,25 +659,109 @@ describe('A signed-in visitor on a public group', () => {
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
   });
 
-  test('a signed-out reader of an empty group is not sent to a form, nor offered a way in', async () => {
-    localStorage.clear();
-    apiFetch.mockImplementation(() =>
-      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
+  // A signed-out reader of a PUBLIC group has a button to press on every card; the
+  // hero's standing "join" line went on 2026-09-21. It left two places with no
+  // door at all — an empty group, whose curator's own share menu points here, and
+  // the bottom of a COMMUNITY group, where to contribute you would have to press
+  // "Request" on somebody else's thing — and CA reopened it for exactly those two
+  // on 2026-09-29. In the content, not the hero; to the group's join page, with no
+  // ?thing= (there is no thing in it). Asserted by target as well as by words.
+  describe('a signed-out reader is given a door where no button leads to one', () => {
+    const anThing = (n) => ({
+      code: `THG${String(n).padStart(3, '0')}`,
+      headline: `Thing ${n}`,
+      type: 'GIFT_THING',
+      status: 'ACTIVE',
+      owner: 'OTHER1',
+      owner_name: 'Someone',
+      created: '2026-07-01T10:00:00Z',
+      tags: [],
+      gallery_urls: [],
+    });
+    const show = (collection, { signedIn = false } = {}) => {
+      localStorage.clear();
+      if (signedIn) localStorage.setItem('userCode', 'VISITOR1');
+      apiFetch.mockImplementation(() =>
+        Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(collection) })
+      );
+      return renderPage();
+    };
+    const joinLinks = () => [...document.querySelectorAll('a[href$="/join"]')];
+
+    test('an empty COMMUNITY group offers the join page, under "No things yet", and no form', async () => {
+      show(PUBLIC_COMMUNITY);
+
+      const noThings = await screen.findByText(/No things in this collection yet/);
+      expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
+      expect(joinLinks()).toHaveLength(1);
+      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinCommunity);
+      expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
+      expect(noThings.compareDocumentPosition(joinLinks()[0])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
+
+    test.each(['WEEKLY', 'MONTHLY'])(
+      'an empty PROPRIETARY group with a %s digest offers it with its own words: the summary of what arrives',
+      async (digest) => {
+        show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: digest });
+
+        await screen.findByText(/No things in this collection yet/);
+        expect(joinLinks()).toHaveLength(1);
+        expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinEmpty);
+        expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
+      }
     );
 
-    renderPage();
+    // "…to hear when something arrives" is a promise the digest keeps. A group
+    // whose curator set it to "None" sends nobody anything, so the same door
+    // must not make it: it only says "Join the group".
+    test('an empty PROPRIETARY group that sends no digest promises no summary', async () => {
+      show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: 'NONE' });
 
-    expect(await screen.findByText(/No things in this collection yet/)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
-    // The hero's standing "Join to take part" line is gone (CA, 2026-09-21), and
-    // an empty group has no card whose action button could route them to the
-    // join page — so this reader is offered no way in at all. That is the known
-    // cost of removing the line, pinned so it stays a decision and cannot
-    // become an accident: if a way in is added, this is the test to change.
-    // By target, not by name: a resurrected line would render its raw i18n key
-    // (the strings were deleted), which no /join/ name query would ever match.
-    expect(document.querySelector('a[href$="/join"]')).toBeNull();
+      await screen.findByText(/No things in this collection yet/);
+      expect(joinLinks()).toHaveLength(1);
+      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinPlain);
+      expect(joinLinks()[0]).not.toHaveTextContent(en.collectionPage.anonJoinEmpty);
+      expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
+    });
+
+    test('a COMMUNITY group with things offers it under the grid, after "Show more"', async () => {
+      // 25 cards: one past the page size, so the "Show 1 more" button is there too.
+      const things = Array.from({ length: 25 }, (_, i) => anThing(i + 1));
+      show({ ...PUBLIC_COMMUNITY, things });
+
+      const more = await screen.findByRole('button', { name: /Show 1 more/ });
+      expect(joinLinks()).toHaveLength(1);
+      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinCommunity);
+      expect(more.compareDocumentPosition(joinLinks()[0])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(document.querySelector('.things-grid').compareDocumentPosition(joinLinks()[0])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
+
+    test("a PROPRIETARY group with things offers nothing: its door is each thing's own button", async () => {
+      show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', things: [anThing(1)] });
+
+      await screen.findByText('Thing 1');
+      expect(joinLinks()).toHaveLength(0);
+    });
+
+    test('a PRIVATE group is not reachable signed out, so it offers nothing either', async () => {
+      // Whatever the API sent for it, the door is for the PUBLIC ones.
+      show({ ...PUBLIC_COMMUNITY, visibility: 'PRIVATE' });
+
+      await screen.findByText(/No things in this collection yet/);
+      expect(joinLinks()).toHaveLength(0);
+    });
+
+    test('a signed-in reader has the "Join this group" button instead, and no such line', async () => {
+      show(PUBLIC_COMMUNITY, { signedIn: true });
+
+      expect(await screen.findByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+      expect(joinLinks()).toHaveLength(0);
+    });
   });
 
   test('a member of an empty group is invited to start it', async () => {

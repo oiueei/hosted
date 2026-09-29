@@ -451,3 +451,48 @@ class TestSignedInJoin:
 
         assert res.status_code == 429
         assert not public.invites.filter(code=user2.code).exists()
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "signed-in-join-quota",
+            }
+        },
+        COLLECTION_JOINS_PER_DAY=1,
+    )
+    def test_a_full_day_still_lets_the_owner_and_a_member_in(self, user, user2, join_setup):
+        """The daily ceiling stops whoever is not in yet, not someone already in: a
+        member, or the owner, on a day the group has filled its quota gets the
+        answer they always get, never "taken today's joins" about a group they
+        belong to. One client per person: the conftest fixtures share one."""
+        caches["default"].clear()
+        public = join_setup["public"]
+        member, stranger, founder = APIClient(), APIClient(), APIClient()
+        member.force_authenticate(user=user)
+        stranger.force_authenticate(user=user2)
+        founder.force_authenticate(user=public.owner)
+
+        # The one join the day allows, then proof that the day really is full.
+        assert self._join(member, public).status_code == 200
+        assert self._join(stranger, public).status_code == 429
+
+        again = self._join(member, public)
+        from_the_owner = self._join(founder, public)
+
+        assert (again.status_code, again.data) == (
+            200,
+            {"message": "You are a member of this collection"},
+        )
+        assert (from_the_owner.status_code, from_the_owner.data) == (
+            400,
+            {"detail": "You already own this collection."},
+        )
+        assert (
+            Event.objects.filter(
+                kind=Event.Kind.MEMBER_JOINED, collection_code=public.code, actor_code=user.code
+            ).count()
+            == 1
+        )
+        assert not public.invites.filter(code=user2.code).exists()

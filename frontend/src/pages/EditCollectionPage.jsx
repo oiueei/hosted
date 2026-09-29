@@ -223,16 +223,23 @@ export default function EditCollectionPage() {
           setPauseMessage(data.pause_message || '');
           setIsPaused(data.is_paused || false);
         } else {
-          setToast({ type: 'error', message: t('editCollection.errorLoading') });
+          setToast({ type: 'error', messageKey: 'editCollection.errorLoading' });
         }
       } catch {
-        setToast({ type: 'error', message: t('common.connectionError') });
+        setToast({ type: 'error', messageKey: 'common.connectionError' });
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [userCode, code, navigate, t, i18n]);
+    // Mount-once on purpose, like EditProfilePage's load (S7): `t` and `i18n` change
+    // whenever the language does, and `useCollectionLanguage` changes it as soon as
+    // this very response lands — listing them re-ran the load, which *sets every
+    // field of the form*, over anything typed in the meantime. The failure toasts
+    // carry a key (`Toast` translates it), and `i18n` is read once, above, for the
+    // draft language's default — a starting value, not something to track.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userCode, code, navigate]);
 
   const validate = () => {
     setSubmitAttempted(true);

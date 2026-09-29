@@ -1,10 +1,16 @@
 """Which reservations a collection has already handed to a calendar export.
 
-The collection calendar CSV download (``CollectionCalendarExportView``) is
-**incremental**: each download carries only the date-based reservations that
-haven't gone out before, then records that they have. This table is that
-record — one row per ``(collection, booking)`` a download has already
-delivered.
+**Dormant since 2026-09-28: nothing in the running app reads or writes this
+table any more.** The collection calendar download
+(``CollectionCalendarExportView``) used to be an **incremental CSV**: each
+download carried only the date-based reservations that hadn't gone out before,
+then recorded that they had. This table was that record — one row per
+``(collection, booking)`` a download had already delivered. The export is now an
+iCalendar (``.ics``) file that carries every upcoming reservation each time, under
+a stable per-booking ``UID``, so the calendar app does the deduplicating and no
+watermark is needed (``calendar_export_service``). The model stays one release,
+then goes (two releases, so the previous release's dynos never name a table that
+has been dropped); what follows describes what it did.
 
 Per collection, **not** per curator: a PROPRIETARY collection's curators run
 its catalogue together, so once anyone has exported a reservation it is done

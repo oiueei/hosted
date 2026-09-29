@@ -11,12 +11,15 @@ from datetime import date, timedelta
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, Collection
+from core.models import RSVP, BookingPeriod, Collection, Thing
 from core.models.transfer import ThingTransfer
 from core.tests.factories import (
     BookingPeriodFactory,
     CollectionFactory,
+    FAQFactory,
     RSVPFactory,
     ThingFactory,
     ThingTransferFactory,
@@ -416,3 +419,310 @@ class TestNoticeFanOutQueryBudgets:
             f"N+1 on the FAQ notice fan-out: {one_collection} queries with one "
             f"collection, {three_collections} with three"
         )
+
+    # -- The rest of the fan-outs -------------------------------------------
+    # Each test below runs the same action against a thing in one PROPRIETARY
+    # collection and then in three (the two extras have the same owner and no
+    # co-curators, so the manager set stays {owner}: the only thing growing is
+    # the number of collections the notice considers) and demands the same
+    # number of queries. `act` builds its own fresh state outside the measured
+    # block and returns the queries of the one request it measures.
+
+    @staticmethod
+    def _queries(send):
+        with CaptureQueriesContext(connection) as captured:
+            response = send()
+        return response, len(captured)
+
+    @staticmethod
+    def _grow(owner, thing, **collection_kwargs):
+        for _ in range(2):
+            extra = CollectionFactory(
+                owner=owner, mode=Collection.Mode.PROPRIETARY, **collection_kwargs
+            )
+            extra.things.add(thing)
+
+    def _assert_constant(self, owner, thing, act, what, **collection_kwargs):
+        one_collection = act()
+        self._grow(owner, thing, **collection_kwargs)
+        three_collections = act()
+        assert three_collections == one_collection, (
+            f"N+1 on {what}: {one_collection} queries with one collection, "
+            f"{three_collections} with three"
+        )
+
+    @staticmethod
+    def _client_for(user):
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
+        _warm_activity(client)
+        return client
+
+    def _team_thing(self, owner, *members, **thing_kwargs):
+        thing = ThingFactory(owner=owner, **thing_kwargs)
+        home = CollectionFactory(owner=owner, mode=Collection.Mode.PROPRIETARY)
+        home.invites.add(*members)
+        home.things.add(thing)
+        return thing
+
+    def test_answering_a_question_costs_no_query_per_collection(
+        self, authenticated_client, user, user2
+    ):
+        thing = self._team_thing(user, user2)
+        _warm_activity(authenticated_client)
+
+        def act():
+            faq = FAQFactory(thing=thing, questioner=user2)
+            response, count = self._queries(
+                lambda: authenticated_client.post(
+                    f"/api/v1/faq/{faq.code}/answer/", {"answer": "Two kilos."}, format="json"
+                )
+            )
+            assert response.status_code == 200
+            return count
+
+        self._assert_constant(user, thing, act, "answering a FAQ")
+
+    def test_hiding_a_question_costs_no_query_per_collection(
+        self, authenticated_client, user, user2
+    ):
+        thing = self._team_thing(user, user2)
+        _warm_activity(authenticated_client)
+
+        def act():
+            faq = FAQFactory(thing=thing, questioner=user2)
+            response, count = self._queries(
+                lambda: authenticated_client.post(f"/api/v1/faq/{faq.code}/hide/")
+            )
+            assert response.status_code == 200
+            return count
+
+        self._assert_constant(user, thing, act, "hiding a FAQ")
+
+    def _pending_loan(self, thing, requester, offset):
+        start = date.today() + timedelta(days=10 * offset)
+        return BookingPeriodFactory(
+            thing_code=thing,
+            requester_code=requester,
+            start_date=start,
+            end_date=start + timedelta(days=3),
+        )
+
+    @pytest.mark.parametrize("presser", ["owner", "co_curator"])
+    def test_accepting_a_hold_in_the_app_costs_no_query_per_collection(self, user, user2, presser):
+        # A co-curator has to prove they run the thing by walking its
+        # collections; the owner is recognised before that.
+        co_curator = UserFactory()
+        thing = self._team_thing(user, user2, type=Thing.Type.LEND_THING)
+        home = thing.collections.get()
+        home.invites.add(co_curator)
+        home.co_owners.add(co_curator)
+        client = self._client_for(user if presser == "owner" else co_curator)
+        bookings = iter(range(1, 10))
+
+        def act():
+            booking = self._pending_loan(thing, user2, next(bookings))
+            response, count = self._queries(
+                lambda: client.post(f"/api/v1/bookings/{booking.code}/accept/")
+            )
+            assert response.status_code == 200
+            return count
+
+        self._assert_constant(user, thing, act, "accepting a hold in the app")
+
+    @pytest.mark.parametrize("presser", ["owner", "co_curator"])
+    def test_accepting_a_hold_from_the_email_link_costs_no_query_per_collection(
+        self, api_client, user, user2, presser
+    ):
+        # The owner's link passes the authority check without asking who runs
+        # the thing; a co-curator's has to walk every collection to prove it.
+        co_curator = UserFactory()
+        thing = self._team_thing(user, user2, type=Thing.Type.LEND_THING)
+        home = thing.collections.get()
+        home.invites.add(co_curator)
+        home.co_owners.add(co_curator)
+        holder = user if presser == "owner" else co_curator
+        bookings = iter(range(1, 10))
+
+        def act():
+            booking = self._pending_loan(thing, user2, next(bookings))
+            link = RSVP.create_for_booking(RSVP.Action.BOOKING_ACCEPT, booking, holder)
+            response, count = self._queries(
+                lambda: api_client.post(f"/api/v1/auth/verify/{link.token}/")
+            )
+            assert response.status_code == 200
+            return count
+
+        self._assert_constant(user, thing, act, "accepting a hold from the email link")
+
+    def test_refusing_an_outsider_in_the_app_costs_no_query_per_collection(self, user, user2):
+        # Proving someone does NOT run a thing walks every collection it sits
+        # in, so this is where a missing prefetch shows.
+        thing = self._team_thing(user, user2, type=Thing.Type.LEND_THING)
+        client = self._client_for(user2)
+        bookings = iter(range(1, 10))
+
+        def act():
+            booking = self._pending_loan(thing, user2, next(bookings))
+            response, count = self._queries(
+                lambda: client.post(f"/api/v1/bookings/{booking.code}/accept/")
+            )
+            assert response.status_code == 403
+            return count
+
+        self._assert_constant(user, thing, act, "refusing an outsider in the app")
+
+    def test_refusing_a_demoted_co_curators_link_costs_no_query_per_collection(
+        self, api_client, user, user2
+    ):
+        former = UserFactory()  # was a co-curator when the email went out
+        thing = self._team_thing(user, user2, former, type=Thing.Type.LEND_THING)
+        bookings = iter(range(1, 10))
+
+        def act():
+            booking = self._pending_loan(thing, user2, next(bookings))
+            link = RSVP.create_for_booking(RSVP.Action.BOOKING_ACCEPT, booking, former)
+            response, count = self._queries(
+                lambda: api_client.post(f"/api/v1/auth/verify/{link.token}/")
+            )
+            assert response.status_code == 403
+            return count
+
+        self._assert_constant(user, thing, act, "refusing a demoted co-curator's link")
+
+    def test_a_decision_costs_no_query_per_collection_whoever_loaded_the_booking(self, user, user2):
+        # `finalize_booking_decision` is the one place every decision converges,
+        # so it does not trust its caller to have prefetched the team.
+        from core.services.booking_service import finalize_booking_decision
+
+        thing = self._team_thing(user, user2, type=Thing.Type.LEND_THING)
+        bookings = iter(range(1, 10))
+
+        def act():
+            pending = self._pending_loan(thing, user2, next(bookings))
+            booking = BookingPeriod.objects.get(pk=pending.pk)  # nothing prefetched
+            with CaptureQueriesContext(connection) as captured:
+                finalize_booking_decision(booking, accepted=True, decided_by=user)
+            return len(captured)
+
+        self._assert_constant(user, thing, act, "a decision loaded with no prefetch")
+
+    def test_asking_for_a_loan_costs_no_query_per_collection(self, user, user2):
+        thing = self._team_thing(user, user2, type=Thing.Type.LEND_THING)
+        requesters = iter(UserFactory.create_batch(4))
+        offsets = iter(range(1, 10))
+
+        def act():
+            requester = next(requesters)
+            for group in thing.collections.all():
+                group.invites.add(requester)
+            client = self._client_for(requester)
+            start = date.today() + timedelta(days=10 * next(offsets))
+            response, count = self._queries(
+                lambda: client.post(
+                    f"/api/v1/things/{thing.code}/request/",
+                    {"start_date": str(start), "end_date": str(start + timedelta(days=3))},
+                    format="json",
+                )
+            )
+            assert response.status_code == 201, response.data
+            return count
+
+        self._assert_constant(user, thing, act, "asking for a loan")
+
+    def test_asking_for_a_gift_costs_no_query_per_collection(self, user, user2):
+        thing = self._team_thing(user, user2, is_endless=True)
+        requesters = iter(UserFactory.create_batch(4))
+
+        def act():
+            requester = next(requesters)
+            for group in thing.collections.all():
+                group.invites.add(requester)
+            client = self._client_for(requester)
+            response, count = self._queries(
+                lambda: client.post(f"/api/v1/things/{thing.code}/request/", {}, format="json")
+            )
+            assert response.status_code == 201, response.data
+            return count
+
+        self._assert_constant(user, thing, act, "asking for a gift")
+
+    @staticmethod
+    def _reservations_collection(owner, **kwargs):
+        return CollectionFactory(
+            owner=owner,
+            mode=Collection.Mode.PROPRIETARY,
+            allowed_thing_types=["RESERVE_THING"],
+            reservation_max_days=3,
+            **kwargs,
+        )
+
+    def _space(self, owner, *members):
+        thing = ThingFactory(owner=owner, type=Thing.Type.RESERVE_THING)
+        home = self._reservations_collection(owner)
+        home.invites.add(*members)
+        home.things.add(thing)
+        return thing
+
+    def _grow_reservations(self, owner, thing):
+        for _ in range(2):
+            extra = self._reservations_collection(owner)
+            extra.things.add(thing)
+
+    def _assert_constant_reservations(self, owner, thing, act, what):
+        one_collection = act()
+        self._grow_reservations(owner, thing)
+        three_collections = act()
+        assert three_collections == one_collection, (
+            f"N+1 on {what}: {one_collection} queries with one collection, "
+            f"{three_collections} with three"
+        )
+
+    def test_reserving_a_space_costs_no_query_per_collection(self, user):
+        thing = self._space(user)
+        members = iter(UserFactory.create_batch(4))
+        weeks = iter(range(1, 10))
+
+        def act():
+            member = next(members)
+            for group in thing.collections.all():
+                group.invites.add(member)
+            client = self._client_for(member)
+            start = date.today() + timedelta(weeks=next(weeks))
+            response, count = self._queries(
+                lambda: client.post(
+                    f"/api/v1/things/{thing.code}/request/",
+                    {"start_date": str(start), "duration_days": 1},
+                    format="json",
+                )
+            )
+            assert response.status_code == 201, response.data
+            return count
+
+        self._assert_constant_reservations(user, thing, act, "reserving a space")
+
+    def test_cancelling_a_reservation_costs_no_query_per_collection(self, user):
+        thing = self._space(user)
+        members = iter(UserFactory.create_batch(4))
+        weeks = iter(range(1, 10))
+
+        def act():
+            member = next(members)
+            for group in thing.collections.all():
+                group.invites.add(member)
+            client = self._client_for(member)
+            start = date.today() + timedelta(weeks=next(weeks))
+            made = client.post(
+                f"/api/v1/things/{thing.code}/request/",
+                {"start_date": str(start), "duration_days": 1},
+                format="json",
+            )
+            assert made.status_code == 201, made.data
+            booking = BookingPeriod.objects.get(code=made.data["booking_code"])
+            response, count = self._queries(
+                lambda: client.post(f"/api/v1/bookings/{booking.code}/cancel/")
+            )
+            assert response.status_code == 200, response.data
+            return count
+
+        self._assert_constant_reservations(user, thing, act, "cancelling a reservation")

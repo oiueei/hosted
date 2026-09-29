@@ -43,6 +43,7 @@ from .views.collections import (
     CollectionViewSet,
     InvitedCollectionsView,
     MyPendingInvitationsView,
+    ShareJoinView,
     SharePreviewView,
 )
 from .views.contact import ContactView
@@ -252,6 +253,12 @@ urlpatterns = [
         "share/<str:token>/preview/",
         SharePreviewView.as_view(),
         name="share-preview",
+    ),
+    # Signed-in: accept a /share/{token} invitation with the session you already have
+    path(
+        "share/<str:token>/join/",
+        ShareJoinView.as_view(),
+        name="share-join",
     ),
     path(
         "collections/<str:collection_code>/things/bulk/",

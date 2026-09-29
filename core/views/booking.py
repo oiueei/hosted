@@ -30,7 +30,8 @@ from core.services.booking_service import (
     cancel_reservation,
     finalize_booking_decision,
 )
-from core.views._helpers import get_viewable_thing, managers_ready_collections, viewer_code
+from core.services.team import managers_ready_collections
+from core.views._helpers import get_viewable_thing, viewer_code
 
 
 class ThingCalendarView(APIView):
@@ -190,8 +191,13 @@ class BookingActionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_code, action):
+        # Collections prefetched manager-ready: `can_manage` reads them, and so
+        # does the decision's notice to the whole team (`managers()`).
         booking = get_object_or_404(
-            BookingPeriod.objects.select_related("thing_code"), code=booking_code
+            BookingPeriod.objects.select_related("thing_code").prefetch_related(
+                Prefetch("thing_code__collections", queryset=managers_ready_collections())
+            ),
+            code=booking_code,
         )
 
         # The thing owner, or a PROPRIETARY collection's curator, decides

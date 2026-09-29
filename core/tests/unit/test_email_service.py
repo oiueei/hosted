@@ -9,7 +9,9 @@ other test in the suite would notice going missing: nothing else renders a
 real message and inspects it, so a regression here is silent everywhere else.
 """
 
+import re
 import smtplib
+from html.parser import HTMLParser
 from unittest.mock import patch
 
 import pytest
@@ -120,6 +122,20 @@ def test_every_email_links_to_the_legal_page():
 
     html = mail.outbox[0].alternatives[0][0]
     assert 'href="http://localhost:3000/legal"' in html
+
+
+@pytest.mark.django_db
+def test_the_legal_link_sits_inside_the_one_html_document():
+    """The template renders only the top half of the card and `_bottom()` adds
+    the footer after it, so the document must close exactly once, at the very
+    end. Mandatory mail (the magic link) is the case with the shortest footer:
+    a rule, the mark and the legal link, and nothing else to hide behind."""
+    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert html.count("</html>") == 1
+    assert html.index('href="http://localhost:3000/legal"') < html.index("</html>")
+    assert html.rstrip().endswith("</html>")
 
 
 @pytest.mark.django_db
@@ -733,24 +749,84 @@ def test_the_card_and_page_shed_their_padding_below_480px():
     )
 
 
-def test_buttons_go_full_width_below_480px():
-    """CA, the same real message: a button sized to its own label sits
-    narrower than the paragraphs around it once the card's own padding is
-    gone too — full width, centred, aligned with the text column either
-    side. The `ctas` pair's side margin (for the desktop side-by-side
-    layout) has to be zeroed here too, or a 100%-wide box plus that margin
-    would overflow past the text's own right edge."""
-    html = email_service._render_email([email_service._para("Hi")], lang="en")
+class _Page(HTMLParser):
+    """One email's anchors (their attributes) and its `<style>` text, read with a
+    real HTML parser rather than a regex over the markup."""
 
-    assert (
-        ".btn-primary, .btn-secondary {\n"
-        "    display: block !important;\n"
-        "    width: 100% !important;\n"
-        "    box-sizing: border-box !important;\n"
-        "    text-align: center !important;\n"
-        "    margin: 0 0 12px 0 !important;\n"
-        "  }" in html
+    def __init__(self, html):
+        super().__init__()
+        self.anchors = []
+        self.css = ""
+        self._in_style = False
+        self.feed(html)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self.anchors.append(dict(attrs))
+        elif tag == "style":
+            self._in_style = True
+
+    def handle_endtag(self, tag):
+        if tag == "style":
+            self._in_style = False
+
+    def handle_data(self, data):
+        if self._in_style:
+            self.css += data
+
+
+def _phone_rules(css):
+    """The rules inside the phone `@media` block of `css` (whitespace already
+    normalised), as {selector: [declarations]} — read up to the brace that closes
+    the block, so neither indentation nor line breaks matter."""
+    query = "@media only screen and (max-width: 480px) {"
+    assert query in css, "the phone media query is gone"
+    start = css.index(query) + len(query)
+    depth = 1
+    end = start
+    while depth:
+        depth += {"{": 1, "}": -1}.get(css[end], 0)
+        end += 1
+    return {
+        selector.strip(): [d.strip() for d in body.split(";") if d.strip()]
+        for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css[start : end - 1])
+    }
+
+
+def test_buttons_go_full_width_below_480px():
+    """Every button carries the class its phone and hover rules are written against,
+    so on a phone all of them fill the width of the text column. CA, the same
+    real message: a button sized to its own label sits
+    narrower than the paragraphs around it once the card's own padding is gone
+    too — full width, centred, aligned with the text column either side. The
+    `ctas` pair's side margin (for the desktop side-by-side layout) has to be
+    zeroed here too, or a 100%-wide box plus that margin would overflow past the
+    text's own right edge.
+
+    Read from a message that has a real button, and by declaration rather than by
+    the stylesheet's layout: the rule is inert unless the anchor carries the class."""
+    html = email_service._render_email(
+        [email_service._cta("https://x.test/a", "Go", "Or open:")], lang="en"
     )
+    page = _Page(html)
+
+    rules = _phone_rules(" ".join(page.css.split()))
+
+    selector = ".btn-primary, .btn-secondary"
+    assert selector in rules, sorted(rules)
+    assert set(rules[selector]) == {
+        "display: block !important",
+        "width: 100% !important",
+        "box-sizing: border-box !important",
+        "text-align: center !important",
+        "margin: 0 0 12px 0 !important",
+    }
+    # The button, not the plain fallback link under it (same href, no class).
+    [button] = [
+        a for a in page.anchors if (a.get("style") or "").startswith(email_service.BTN_PRIMARY)
+    ]
+    assert (button.get("class") or "").split() == ["btn-primary"]
 
 
 # --- Dates in emails render DD/MM/YYYY, not ISO ------------------------------
@@ -1304,7 +1380,7 @@ def test_the_reservation_confirmation_embeds_the_note_after_the_listing_link(
     note_html = "<p>Trae el <strong>carnet</strong> 🛠️</p>"
     assert note_html in html_after
     # Position, both halves: after the listing link, before the footers.
-    thing_url = email_service._thing_url(thing)
+    thing_url = email_service._thing_url(thing, collection=collection)
     assert (
         plain_after.index(thing_url)
         < plain_after.index("Trae el **carnet** 🛠️")
@@ -1433,3 +1509,220 @@ def test_the_decision_takes_no_note_from_a_collection_it_was_not_given(
     email_service.send_booking_decision_email(booking, thing, accepted=True)
     assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
     assert "Recogida en" not in mail.outbox[0].body
+
+
+# --------------------------------------------------------------------------- #
+# The link in a thing-scoped email goes through a group its reader may open
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def two_groups(user, user2, thing, collection):
+    """``thing`` sits in COLL01, where ``user2`` is a member, and also in AAAAAA,
+    a private group ``user2`` was never invited to — whose code sorts first, which
+    is the one ``thing.collections.first()`` used to pick for everybody."""
+    from core.models import Collection
+
+    collection.invites.add(user2)
+    hidden = Collection.objects.create(code="AAAAAA", owner=user, headline="Private circle")
+    hidden.things.add(thing)
+    return collection, hidden
+
+
+def _a_booking(thing, requester, owner):
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    return BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=date(2026, 10, 5),
+        end_date=date(2026, 10, 6),
+        status=BookingPeriod.Status.PENDING,
+    )
+
+
+def _both_halves(message):
+    return message.body, message.alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_a_decision_email_links_a_group_its_reader_is_in_and_never_one_they_are_not(
+    user, user2, thing, two_groups
+):
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_the_team_answer_email_links_a_group_its_reader_is_in_and_never_one_they_are_not(
+    user, user2, thing, two_groups
+):
+    collection, _ = two_groups
+    collection.co_owners.add(user2)  # a co-curator of the PROPRIETARY group, not of AAAAAA
+
+    mail.outbox.clear()
+    email_service.send_faq_answered_to_team_email(
+        "Test User", thing, "Is it free?", "Yes", user2.email
+    )
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_a_reader_in_none_of_the_things_groups_gets_the_bare_thing_link(
+    user, thing, two_groups, django_user_model
+):
+    outsider = django_user_model.objects.create(code="OUTSD1", email="outsider@example.com")
+
+    mail.outbox.clear()
+    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", outsider.email)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/things/THNG01" in half
+        # (the viral line's own "/collections/new" is a different link)
+        assert "/collections/COLL01" not in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_an_address_with_no_account_gets_the_bare_thing_link(thing, two_groups):
+    mail.outbox.clear()
+    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", "new@example.com")
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/things/THNG01" in half
+        assert "/collections/COLL01" not in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_a_public_group_is_named_to_a_reader_who_is_not_in_it(
+    user, thing, collection, django_user_model
+):
+    from core.models import Collection
+
+    collection.visibility = Collection.Visibility.PUBLIC
+    collection.save(update_fields=["visibility"])
+    passer_by = django_user_model.objects.create(code="PASSBY", email="passer@example.com")
+
+    mail.outbox.clear()
+    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", passer_by.email)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+
+
+@pytest.mark.django_db
+def test_the_collection_the_caller_resolved_wins_over_the_first_one_the_reader_can_open(
+    user, user2, thing, two_groups
+):
+    collection, hidden = two_groups
+    hidden.invites.add(user2)  # now both are readable, and AAAAAA sorts first
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/AAAAAA/things/THNG01" in half  # the rule, unprompted
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True, collection=collection)
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("sender", ["confirmation", "reservation_confirmed"])
+def test_the_other_emails_that_receive_a_collection_link_that_one(
+    user, user2, thing, two_groups, sender
+):
+    collection, hidden = two_groups
+    hidden.invites.add(user2)
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    if sender == "confirmation":
+        email_service.send_booking_confirmation_email(user2, thing, booking, collection)
+    else:
+        email_service.send_reservation_confirmed_email(user2, thing, booking, collection)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+def _send_to(sender, thing, reader, booking):
+    """One call per thing-linking email, each addressed to ``reader``."""
+    from datetime import date
+
+    es = email_service
+    address = reader.email
+    calls = {
+        "decision": lambda: es.send_booking_decision_email(booking, thing, accepted=True),
+        "confirmation": lambda: es.send_booking_confirmation_email(reader, thing, booking),
+        "faq_question": lambda: es.send_faq_question_email("Ana", thing, "Free?", address),
+        "faq_answer": lambda: es.send_faq_answer_email("Ana", thing, "Free?", "Yes", address),
+        "faq_answered_to_team": lambda: es.send_faq_answered_to_team_email(
+            "Ana", thing, "Free?", "Yes", address
+        ),
+        "faq_hidden_to_team": lambda: es.send_faq_hidden_to_team_email(
+            "Ana", thing, "Free?", address
+        ),
+        "thing_reported": lambda: es.send_thing_reported_email(thing, address),
+        "return_due": lambda: es.send_return_due_email("Ana", thing, date(2026, 10, 6), address),
+        "reservation_confirmed": lambda: es.send_reservation_confirmed_email(
+            reader, thing, booking
+        ),
+        "reservation_reminder": lambda: es.send_reservation_reminder_email(address, thing, booking),
+    }
+    calls[sender]()
+
+
+THING_LINKING_EMAILS = [
+    "decision",
+    "confirmation",
+    "faq_question",
+    "faq_answer",
+    "faq_answered_to_team",
+    "faq_hidden_to_team",
+    "thing_reported",
+    "return_due",
+    "reservation_confirmed",
+    "reservation_reminder",
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("sender", THING_LINKING_EMAILS)
+def test_every_email_that_links_a_thing_names_only_a_group_its_reader_may_open(
+    user, user2, thing, two_groups, sender
+):
+    """The ten senders that link a thing, none of them handed a collection: each
+    must ask ``_thing_url`` on behalf of the person it is addressed to."""
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    _send_to(sender, thing, user2, booking)
+
+    assert len(mail.outbox) == 1
+    plain, html = _both_halves(mail.outbox[0])
+    # The return-due reminder's plain text has never carried the listing link
+    # (its catalogue string has no {url}); the button in the HTML does.
+    for half in (html,) if sender == "return_due" else (plain, html):
+        assert "/collections/COLL01/things/THNG01" in half
+    for half in (plain, html):
+        assert "AAAAAA" not in half

@@ -114,9 +114,13 @@ export default function CreateCollectionPage() {
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
     setMode(newMode);
-    // Visibility follows the mode default on create: a community is born public,
-    // a proprietary list private. The owner can still flip the toggle afterwards.
-    setVisibility(newMode === 'COMMUNITY' ? 'PUBLIC' : 'PRIVATE');
+    // The mode does not touch visibility: a new group is private in either mode
+    // and only the switch makes it public (CA, 2026-09-29). Community used to turn
+    // the switch on by itself — and again every time it was re-chosen, even after
+    // the curator had switched it off — but whoever contributes to a group is
+    // never shown whether it is public, so a group of families ended up readable
+    // by anyone without its members knowing. The server takes the same view when
+    // no visibility is sent (`CollectionCreateSerializer.validate`).
     // Both modes allow the same types, so the selection carries over untouched.
   };
 

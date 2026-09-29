@@ -109,7 +109,7 @@ function renderCollection(collection, calendar) {
   );
 }
 
-const BUTTON_NAME = 'Download reservations for your calendar';
+const BUTTON_NAME = 'Download the calendar';
 
 beforeEach(() => {
   localStorage.clear();
@@ -237,7 +237,7 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: BUTTON_NAME }));
 
-    expect(await screen.findByText('No upcoming reservations.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing coming up in the calendar.')).toBeInTheDocument();
     expect(downloadBlob).not.toHaveBeenCalled();
   });
 
@@ -248,7 +248,7 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
 
     expect(
       await screen.findByText(
-        'No upcoming reservations, but 2 cancelled — import the file so your calendar can drop them.'
+        'Nothing coming up, but 2 cancelled reservation(s) — import the file so your calendar can drop them.'
       )
     ).toBeInTheDocument();
     expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-cal.ics');
@@ -261,7 +261,7 @@ describe('CalendarExportButton in the CollectionPage hero', () => {
 
     expect(
       await screen.findByText(
-        '3 event(s) — check your downloads. It includes 1 cancelled, marked so your calendar can drop them.'
+        '3 event(s) — check your downloads. It includes 1 cancelled reservation(s), marked so your calendar can drop them.'
       )
     ).toBeInTheDocument();
     expect(downloadBlob).toHaveBeenCalledTimes(1);

@@ -10,18 +10,20 @@ origin and the user's collections.
 import pytest
 from rest_framework.test import APIClient
 
-from core.models import RSVP, Collection
+from core.models import RSVP, Collection, User
 
 VERIFY_URL = "/api/v1/auth/verify/{}/"
+REQUEST_LINK_URL = "/api/v1/auth/request-link/"
 
 
-def _magic_link(user, origin=RSVP.Origin.LOGIN, target_code=""):
+def _magic_link(user, origin=RSVP.Origin.LOGIN, target_code="", context=None):
     return RSVP.objects.create(
         user_code=user,
         user_email=user.email,
         action=RSVP.Action.MAGIC_LINK,
         origin=origin,
         target_code=target_code,
+        context=context or {},
     )
 
 
@@ -104,6 +106,98 @@ class TestMagicLinkLanding:
 
         assert res.data["landing"] == "collection"
         assert res.data["collection"] == collection.code
+
+
+def _request_link(email, **body):
+    """Ask for a login link as the SPA does, and hand back (response, the RSVP it minted)."""
+    response = APIClient().post(REQUEST_LINK_URL, {"email": email, **body}, format="json")
+    return response, RSVP.objects.filter(user_email=email).first()
+
+
+@pytest.mark.django_db
+class TestLoginReturnsToWhereTheyWereGoing:
+    """The session ran out on a page; the magic link must bring them back to it.
+
+    Kept on the server (the RSVP), not in browser storage, because the link is
+    often opened in another browser than the one that showed ``/login``.
+    """
+
+    def test_a_login_with_a_next_lands_on_that_path(self, user):
+        _, rsvp = _request_link(user.email, next="/collections/AbC123/things/XyZ789")
+
+        res = _verify(rsvp)
+
+        assert res.status_code == 200
+        assert res.data["landing"] == "path"
+        assert res.data["path"] == "/collections/AbC123/things/XyZ789"
+
+    def test_next_outranks_the_single_collection_rule(self, user, collection):
+        # `collection` is this user's only one: without a next they would land on it.
+        _, rsvp = _request_link(user.email, next="/me/edit")
+
+        res = _verify(rsvp)
+
+        assert res.data["landing"] == "path"
+        assert res.data["path"] == "/me/edit"
+        assert "collection" not in res.data
+
+    @pytest.mark.parametrize(
+        "bad_next",
+        ["//evil.com", "https://evil.com", "/login", "/", ["/me"], 123],
+    )
+    def test_a_next_that_is_not_a_same_site_path_is_dropped_and_the_usual_rule_applies(
+        self, user, collection, bad_next
+    ):
+        response, rsvp = _request_link(user.email, next=bad_next)
+
+        assert response.status_code == 200
+        assert rsvp.context == {}
+        res = _verify(rsvp)
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == collection.code
+        assert "path" not in res.data
+
+    def test_the_answer_is_byte_for_byte_the_same_with_and_without_a_next(self, user):
+        """A ``next`` must not turn request-link into a probe: not for a registered
+        address, not for an unregistered one, and not for a bad value."""
+        for email in (user.email, "nobody@test.com"):
+            plain, _ = _request_link(email)
+            with_next, _ = _request_link(email, next="/collections/AbC123")
+            with_bad_next, _ = _request_link(email, next="//evil.com")
+
+            assert plain.status_code == with_next.status_code == with_bad_next.status_code == 200
+            assert plain.content == with_next.content == with_bad_next.content
+
+    def test_an_unregistered_email_with_a_next_creates_nothing(self):
+        response, rsvp = _request_link("nobody@test.com", next="/collections/AbC123")
+
+        assert response.status_code == 200
+        assert rsvp is None
+        assert not User.objects.filter(email="nobody@test.com").exists()
+
+    def test_a_bad_next_written_straight_into_the_database_is_not_followed(self, user, collection):
+        # Not through request-link: a `context` written by some other route. The
+        # click checks again, so it still can't send the session off-site.
+        rsvp = _magic_link(user, context={"next": "//evil.com"})
+
+        res = _verify(rsvp)
+
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == collection.code
+        assert "path" not in res.data
+
+    def test_a_legacy_link_with_no_origin_follows_its_next(self, user):
+        res = _verify(_magic_link(user, origin="", context={"next": "/my-bookings"}))
+
+        assert res.data["landing"] == "path"
+        assert res.data["path"] == "/my-bookings"
+
+    def test_a_join_link_is_never_redirected_by_a_next(self, user):
+        # POPIN is the open-door rule (welcome), which outranks a stray next.
+        res = _verify(_magic_link(user, origin=RSVP.Origin.POPIN, context={"next": "/my-bookings"}))
+
+        assert res.data["landing"] == "welcome"
+        assert "path" not in res.data
 
 
 @pytest.mark.django_db

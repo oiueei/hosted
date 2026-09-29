@@ -15,6 +15,7 @@ from core.models.booking import SINGLE_USE_TYPES, BookingPeriod
 from core.models.event import Event
 from core.models.notification import InAppNotification
 from core.models.transfer import ThingTransfer
+from core.services.team import load_team
 
 DEFAULT_AVAILABILITY_HORIZON_DAYS = 90
 
@@ -375,18 +376,20 @@ def _delete_booking_rsvps(booking_code):
 
 
 def _clear_request_notifications(booking):
-    """Drop the owner's "someone asked for this" notification once the request is settled.
+    """Drop every copy of the "someone asked for this" notification once the request is settled.
 
-    A BOOKING_REQUESTED notification is a question put to the owner:
-    accept or reject? Accept, reject, auto-decline and requester-cancel all answer it,
-    so leaving it in the inbox asks for a decision that no longer exists — the owner
-    reads it as still pending and can't tell the stale ones from the live ones.
+    A BOOKING_REQUESTED notification is a question put to the whole team that
+    manages the thing (see ``send_booking_request_notifications``): accept or
+    reject? Accept, reject, auto-decline and requester-cancel all answer it, so
+    leaving any copy in an inbox asks for a decision that no longer exists — the
+    reader takes it as still pending and can't tell the stale ones from the live
+    ones. Deliberately **not** scoped to ``booking.owner_code``: the co-curators'
+    copies go too, whoever settled it.
 
     Matched by ``payload__booking_code``, so notifications created before that key
     existed simply don't match — they stay until dismissed by hand.
     """
     InAppNotification.objects.filter(
-        user=booking.owner_code,
         type=InAppNotification.Type.BOOKING_REQUESTED,
         payload__booking_code=booking.code,
     ).delete()
@@ -463,6 +466,14 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     if thing is None:
         return None
 
+    # ``thing`` is the row the transition just locked, and a fresh row has no
+    # collections loaded: walking them for the requester's collection and the
+    # team's notice would cost a few queries per collection. The booking's own
+    # thing is the same row as the caller loaded it — with its collections
+    # prefetched by the views that decide — so the team is read from there, and
+    # ``load_team`` covers a caller that did not (a no-op when it did).
+    team = load_team(booking.thing_code)
+
     # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
     # the requester, a co-member, and the API withholds the owner's address from
     # them everywhere else (L2).
@@ -473,7 +484,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     # request-side one used.
     # Only collections the requester may read: this one also picks the email
     # note the accepted decision carries to them.
-    collection = resolve_request_collection(thing, requester=booking.requester_code)
+    collection = resolve_request_collection(team, requester=booking.requester_code)
     payload = {
         "thing_headline": thing.headline,
         "owner_name": owner_name,
@@ -500,7 +511,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     )
     send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)
-    _notify_team_of_decision(booking, thing, collection, decider, accepted)
+    _notify_team_of_decision(booking, team, collection, decider, accepted)
     if accepted:
         # Anchored to the requester (like HOLD_REQUESTED) so a guest's request→accept
         # funnel and the overall holds success rate are both a plain count by kind.
@@ -522,6 +533,22 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
 # in-app notification / event via the shared *_notifications helpers. Rule
 # violations raise BookingRequestError so the view maps them to the exact
 # {"error": ...} response + status they used to return inline.
+
+
+def _readable_collections(collections, requester):
+    """The ``collections`` ``requester`` may read — all of them when there is no
+    requester to ask about. Their membership is settled in **one** query for the
+    whole list instead of an ``is_invited`` per collection, which is what made a
+    request's notices cost more the more groups the thing sits in; the rules
+    themselves are still ``Collection.can_view``'s, not a copy of them."""
+    if requester is None:
+        return list(collections)
+    invited_to = set(
+        requester.invited_to_collections.filter(
+            code__in=[collection.code for collection in collections]
+        ).values_list("code", flat=True)
+    )
+    return [c for c in collections if c.can_view(requester.code, invited_to=invited_to)]
 
 
 def _readable_by(collection, requester):
@@ -576,7 +603,7 @@ def resolve_request_collection(thing, collection_code=None, requester=None):
     Returns None when no candidate is left — the notification then carries no
     collection and the emails no note.
     """
-    collections = [c for c in thing.collections.all() if _readable_by(c, requester)]
+    collections = _readable_collections(thing.collections.all(), requester)
     code = (collection_code or "").strip()
     if code:
         for collection in collections:
@@ -593,7 +620,6 @@ def resolve_request_collection(thing, collection_code=None, requester=None):
 def request_date_based_booking(
     thing,
     requester,
-    owner_email,
     start_date,
     end_date,
     rental_collection=None,
@@ -628,22 +654,26 @@ def request_date_based_booking(
             end_date=end_date,
         )
 
-    send_booking_request_notifications(requester, thing, booking, owner_email, collection_code)
+    send_booking_request_notifications(requester, thing, booking, collection_code)
     return booking
 
 
-def request_standard_booking(thing, requester, owner_email, collection_code=None):
+def request_standard_booking(thing, requester, collection_code=None):
     """GIFT/SELL — no dates; single-use things flip to TAKEN to block other requests."""
+    # ``locked`` is the row read under ``select_for_update`` — fresh, but with no
+    # collections prefetched. The caller's ``thing`` is kept for the notices: the
+    # view loaded it with its collections manager-ready, so fanning the request
+    # out to the whole team (``thing.managers()``) costs no query per collection.
     with transaction.atomic():
-        thing = Thing.objects.select_for_update().get(code=thing.code)
+        locked = Thing.objects.select_for_update().get(code=thing.code)
 
-        if not thing.is_endless and thing.status != Thing.Status.ACTIVE:
+        if not locked.is_endless and locked.status != Thing.Status.ACTIVE:
             raise BookingRequestError(
                 "Thing is not available for reservation", code="not_available"
             )
 
         if BookingPeriod.objects.filter(
-            thing_code=thing,
+            thing_code=locked,
             requester_code=requester,
             status=BookingPeriod.Status.PENDING,
         ).exists():
@@ -652,36 +682,59 @@ def request_standard_booking(thing, requester, owner_email, collection_code=None
             )
 
         booking = BookingPeriod.objects.create(
-            thing_code=thing,
-            thing_type=thing.type,
-            deposit_amount=thing.deposit,
+            thing_code=locked,
+            thing_type=locked.type,
+            deposit_amount=locked.deposit,
             requester_code=requester,
             requester_email=requester.email,
-            owner_code=thing.owner,
+            owner_code=locked.owner,
         )
 
-        if not thing.is_endless:
-            thing.status = Thing.Status.TAKEN
-            thing.save(update_fields=["status"])
+        if not locked.is_endless:
+            locked.status = Thing.Status.TAKEN
+            locked.save(update_fields=["status"])
 
-    send_booking_request_notifications(requester, thing, booking, owner_email, collection_code)
+    send_booking_request_notifications(requester, thing, booking, collection_code)
     return booking
 
 
-def send_booking_request_notifications(
-    requester, thing, booking, owner_email, collection_code=None
-):
-    """Fan out a hold request: owner email (RSVP-protected), requester
-    confirmation, in-app notification, and a HOLD_REQUESTED event."""
+def send_booking_request_notifications(requester, thing, booking, collection_code=None):
+    """Fan out a hold request: to each manager an email with their own
+    accept/reject links and an in-app notification, the requester's
+    confirmation, and a HOLD_REQUESTED event.
+
+    A hold request is a question put to the whole team that can answer it —
+    ``thing.managers()``: the thing's owner plus the curators of every
+    PROPRIETARY collection it sits in, all of whom may decide (``can_manage``).
+    Each gets a BOOKING_REQUESTED notice and an email, **except the requester**:
+    a co-curator who asks for a thing is not warned about their own request.
+    ``thing`` should be the caller's prefetched instance
+    (``managers_ready_collections``), not a freshly locked one, or the fan-out
+    pays a query per collection.
+
+    **Every manager's email carries their own RSVP pair**, minted to them
+    (``RSVP.create_booking_pair(booking, manager)``): using the link signs the
+    decision as whoever it was minted to (``VerifyLinkView``), and the RSVPs
+    are all deleted once anyone decides. A shared pair would make the decision
+    the founder's whoever pressed it."""
     from core.services.email_service import (
         send_booking_confirmation_email,
         send_booking_request_email,
     )
 
-    rsvp_accept, rsvp_reject = RSVP.create_booking_pair(booking, owner_email)
-    send_booking_request_email(
-        requester, thing, booking, owner_email, rsvp_accept.action_link(), rsvp_reject.action_link()
-    )
+    managers = [manager for manager in thing.managers() if manager.code != requester.code]
+    for manager in managers:
+        if not manager.email:
+            continue
+        rsvp_accept, rsvp_reject = RSVP.create_booking_pair(booking, manager)
+        send_booking_request_email(
+            requester,
+            thing,
+            booking,
+            manager.email,
+            rsvp_accept.action_link(),
+            rsvp_reject.action_link(),
+        )
     # Resolved before the requester's confirmation so that email can carry the
     # owner's email_note for the group the request was actually made through —
     # with several collections on one thing, the one the member was browsing is
@@ -702,11 +755,12 @@ def send_booking_request_notifications(
         # body, the way a reservation notice does. GIFT/SELL carry none.
         payload["start_date"] = str(booking.start_date)
         payload["end_date"] = str(booking.end_date)
-    InAppNotification.objects.create(
-        user=thing.owner,
-        type=InAppNotification.Type.BOOKING_REQUESTED,
-        payload=payload,
-    )
+    for manager in managers:
+        InAppNotification.objects.create(
+            user=manager,
+            type=InAppNotification.Type.BOOKING_REQUESTED,
+            payload=payload,
+        )
     Event.log(
         Event.Kind.HOLD_REQUESTED,
         actor=requester,

@@ -592,24 +592,30 @@ class CollectionCoOwnerView(APIView):
         if denied:
             return denied
 
-        already = collection.co_owners.filter(code=member.code).exists()
         # Re-promoting someone who is already a co-curator stays idempotent and
         # never hits the ceiling — only growing the set does. The bound is the
         # abuse ceiling (`Collection.MAX_CO_OWNERS`), not the design intent of
         # 1–2: a compromised curator's credential must not be able to promote
-        # the whole roster, since each promotion hands over the member list.
-        if not already and collection.co_owners.count() >= Collection.MAX_CO_OWNERS:
+        # the whole roster, since each promotion hands over the member list. The
+        # check and the add are one locked step in the model, so promotions
+        # running at once cannot all read the same count and overshoot it.
+        result = collection.promote_co_owner(member)
+        if result is Collection.Promotion.FULL:
+            # Coded like a request's refusals (`BookingRequestError.as_body`): the
+            # SPA says it in the reader's language from `requestErrors.co_owners_full`,
+            # the English sentence stays as the fallback for a client that lacks it.
             return Response(
                 {
                     "error": (
                         "This collection already has the maximum of "
                         f"{Collection.MAX_CO_OWNERS} co-curators"
-                    )
+                    ),
+                    "code": "co_owners_full",
+                    "params": {"max": Collection.MAX_CO_OWNERS},
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        collection.co_owners.add(member)
-        if not already:
+        if result is Collection.Promotion.ADDED:
             InAppNotification.objects.create(
                 user=member,
                 type=InAppNotification.Type.PROMOTED_CO_OWNER,
@@ -1398,6 +1404,65 @@ class SharePreviewView(APIView):
                 "language": collection.language,
             }
         )
+
+
+class ShareJoinView(APIView):
+    """
+    POST /api/v1/share/{token}/join/
+
+    Lets a **signed-in** reader accept a ``/share/{token}`` invitation with a
+    click. ``SharePage`` used to ask for an email even when there was a session —
+    email, inbox, link, back — and in a neighbourhood the same people belong to
+    several groups, so this link (the main viral route) was a round trip for
+    exactly the people who use it most. It is the token's twin of
+    ``CollectionJoinView``, which joins a PUBLIC collection by its code: there
+    the credential is the collection's own publicness, here it is the token.
+
+    **The token is the whole credential, and it is looked up exactly like
+    ``SharePreviewView`` does**: ``share_token=token``, ACTIVE only. An unknown,
+    revoked or INACTIVE token is one generic ``404`` (``Http404``), so this reveals
+    nothing the preview does not — that endpoint already answers a bad token with
+    the same 404, to anyone, unauthenticated, so an account holder gets no new
+    oracle from asking here (and 30 an hour per user, on top). It never returns
+    or touches the token, creates no user and no RSVP (there is a session), and
+    answers with the collection's code, which the joined member is about to read
+    on every page anyway.
+
+    Idempotent: the owner and any member — co-curators are in ``invites`` — get a
+    ``200`` with ``joined: false`` and nothing else happens, so a curator trying
+    their own link lands on their collection instead of an error, and a double
+    tap logs one ``MEMBER_JOINED``. A new member goes through ``_join_collection``
+    like every other door (one event with ``source=SHARE``, the welcome document
+    if the owner set one), after the operator's per-collection daily ceiling has
+    been asked — the same cap and the same ``detail`` as ``CollectionJoinView``:
+    a ceiling that only stopped strangers would be one anyone with an account
+    could walk around.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    def post(self, request, token):
+        collection = Collection.objects.filter(
+            share_token=token, status=Collection.Status.ACTIVE
+        ).first()
+        if collection is None:
+            raise Http404
+
+        user_code = request.user.code
+        if collection.is_owner(user_code) or collection.invites.filter(code=user_code).exists():
+            return Response({"collection": collection.code, "joined": False})
+
+        if join_quota_exhausted(collection.code):
+            return Response(
+                {"detail": "This collection has taken today's joins. Try again tomorrow."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        _join_collection(collection, request.user, source=Event.Source.SHARE)
+        consume_join_quota(collection.code)
+
+        return Response({"collection": collection.code, "joined": True})
 
 
 class CollectionEmailNoteTestView(APIView):

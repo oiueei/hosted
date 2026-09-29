@@ -419,7 +419,8 @@ def _bottom(
     per-collection mute link), and always last the legal-notice link — art. 14
     GDPR, a disclosure and not a preference, so it shows on mandatory mail
     too. Closes the two ``<div>``\\s the card opened in ``layout.html`` and
-    left open (see the comment there for why).
+    left open (see the comment there for why), and the document itself: the
+    template stops short of ``</html>`` so the footer lands inside it.
 
     Replaces the earlier, separate ``_with_viral_line`` + ``_with_footer``:
     their pieces now interleave in one fixed visual order — the mark used to
@@ -900,9 +901,10 @@ def _note_blocks(resolved_text):
 
 
 def _thing_collection(thing):
-    """The one collection a thing-scoped email names at its top: the first the
-    thing belongs to — the same one ``_thing_url`` links to — or ``None`` for a
-    standalone thing, where the email keeps the OIUEEI wordmark.
+    """The first collection a thing belongs to, or ``None`` for a standalone
+    thing. Not checked against any reader — ``_thing_url`` no longer uses it for
+    that reason — so it may only name a group the recipient is known to be in, or
+    stand in for a ``collection`` the caller was meant to pass.
     """
     return thing.collections.first() if thing else None
 
@@ -1006,10 +1008,45 @@ def _booking_detail_blocks(booking, lang=None):
     return []
 
 
-def _thing_url(thing):
-    """Build the frontend URL for a thing (collection-scoped when possible)."""
+def _first_collection_readable_by(thing, reader):
+    """The first collection of ``thing`` (by code, so the choice is the same every
+    time) that ``reader`` may open, or ``None``.
+
+    Their membership is settled in **one** query for the whole list instead of an
+    ``is_invited`` per collection — the shape of
+    ``booking_service._readable_collections`` — and the visibility rules stay in
+    ``Collection.can_view``. Iterates ``.all()``, so a caller that prefetched the
+    thing's collections pays nothing for the list itself.
+    """
+    collections = sorted(thing.collections.all(), key=lambda c: c.code)
+    if not collections:
+        return None
+    invited_to = set(
+        reader.invited_to_collections.filter(code__in=[c.code for c in collections]).values_list(
+            "code", flat=True
+        )
+    )
+    return next((c for c in collections if c.can_view(reader.code, invited_to=invited_to)), None)
+
+
+def _thing_url(thing, reader=None, collection=None):
+    """Build the frontend URL for a thing, through a collection **its reader may open**.
+
+    The link's path carries a collection code, and a thing can sit in a private
+    group its reader was never invited to: naming it would hand them that group's
+    code and land them on a 403. So the collection is one of these, in order:
+
+    1. ``collection``, when the caller passed one — it already resolved it *for
+       this reader* (``resolve_request_collection(..., requester)``), so it is
+       the group the request was made through;
+    2. the first of the thing's collections that ``reader`` can open;
+    3. none — the bare ``/things/{code}`` route, which is what a reader with no
+       group in common gets, and what a call with no ``reader`` gets: a collection
+       nobody has checked for the person reading is never named.
+    """
     base = _frontend_base_url()
-    collection = thing.collections.first()
+    if collection is None and reader is not None:
+        collection = _first_collection_readable_by(thing, reader)
     if collection:
         return f"{base}/collections/{collection.code}/things/{thing.code}"
     return f"{base}/things/{thing.code}"
@@ -1420,9 +1457,12 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
 # --- Category 2: Activity ------------------------------------------------------
 
 
-def send_booking_request_email(requester, thing, booking, owner_email, accept_link, reject_link):
-    """Send booking request email to owner with accept/reject links."""
-    user, lang = _recipient(owner_email)
+def send_booking_request_email(requester, thing, booking, manager_email, accept_link, reject_link):
+    """Send a booking request email to one manager of the thing — its owner, or a
+    curator of a PROPRIETARY collection it sits in — with **their own**
+    accept/reject links (see ``send_booking_request_notifications``). Language and
+    the preference check follow the recipient."""
+    user, lang = _recipient(manager_email)
     T, L = _texts(lang), _local(lang)
     requester_name = requester.display_name
     action = _action_noun(thing, lang)
@@ -1465,7 +1505,9 @@ def send_booking_request_email(requester, thing, booking, owner_email, accept_li
         lang=lang,
         header=header,
     )
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
+    _send(
+        manager_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header
+    )
 
 
 def send_booking_decision_email(booking, thing, accepted=True, collection=None):
@@ -1489,7 +1531,7 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
     # carry no link at all: it announced a decision and left them with nothing to
     # press, at the moment the hold either becomes real or stops. The request
     # email has accept/reject, the FAQ ones link the thing; this one now does too.
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user, collection=collection)
 
     if booking.start_date and booking.end_date:
         plain = T("decision_plain_dated").format(
@@ -1566,7 +1608,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
     user, lang = _recipient(requester.email)
     T, L = _texts(lang), _local(lang)
     owner_name = _member_name(thing.owner.name, lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user, collection=collection)
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
     header = headline  # the thing this confirms is this email's parent
@@ -1666,7 +1708,7 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
     """Send FAQ question notification email to thing owner."""
     user, lang = _recipient(owner_email)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     headline = L(thing.headline)
     questioner_name = _member_name(questioner_name, lang)
 
@@ -1694,7 +1736,7 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
     """Send FAQ answer notification email to questioner, linking the thing."""
     user, lang = _recipient(questioner_email)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     headline = L(thing.headline)
     owner_name = _member_name(owner_name, lang)
     subject = T("faq_answer_subject")
@@ -1735,7 +1777,7 @@ def send_faq_answered_to_team_email(answerer, thing, question, answer, manager_e
     """
     user, lang = _recipient(manager_email)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     headline = L(thing.headline)
     answerer = _member_name(answerer, lang)
     subject = T("faq_answered_team_subject").format(thing=headline)
@@ -1777,7 +1819,7 @@ def send_faq_hidden_to_team_email(hider, thing, question, manager_email):
     """
     user, lang = _recipient(manager_email)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     headline = L(thing.headline)
     hider = _member_name(hider, lang)
     subject = T("faq_hidden_team_subject").format(thing=headline)
@@ -1840,7 +1882,7 @@ def send_thing_reported_email(thing, owner_email):
     """
     user, lang = _recipient(owner_email)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     headline = L(thing.headline)
 
     subject = T("reported_subject")
@@ -1925,7 +1967,7 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     T, L = _texts(lang), _local(lang)
     headline = L(thing.headline)
     header = headline
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     subject = T("return_due_subject").format(thing=headline)
     end = _fmt_date(end_date)
     plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end)
@@ -1953,7 +1995,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     """
     user, lang = _recipient(requester.email, collection)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user, collection=collection)
     headline = L(thing.headline)
     header = headline  # the space being reserved is this email's parent
 
@@ -2135,7 +2177,7 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
-    thing_url = _thing_url(thing)
+    thing_url = _thing_url(thing, reader=user)
     headline = L(thing.headline)
     header = headline
     start, end = _fmt_when(booking)

@@ -555,7 +555,7 @@ class TestBookingAcceptReject:
         )
 
         # Create RSVP for accept action (as would be done when sending email)
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
 
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
 
@@ -578,7 +578,7 @@ class TestBookingAcceptReject:
         )
 
         # Create RSVP for reject action
-        rsvp = RSVP.create_for_booking("BOOKING_REJECT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_REJECT", booking, user)
 
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
 
@@ -604,7 +604,7 @@ class TestBookingAcceptReject:
         booking.save()
 
         # Create RSVP for accept action
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
 
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
 
@@ -628,7 +628,7 @@ class TestBookingAcceptReject:
         )
 
         # Create RSVP for accept action
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
 
         response = api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
 
@@ -698,7 +698,7 @@ class TestLendingThingStatusNotTaken:
         )
 
         # Accept via RSVP
-        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
+        rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
         api_client.post(f"/api/v1/rsvp/{rsvp.token}/")
 
         lend_thing.refresh_from_db()
@@ -1494,8 +1494,8 @@ class TestBookingActionView:
             start_date=date.today(),
             end_date=date.today() + timedelta(days=3),
         )
-        RSVP.create_for_booking("BOOKING_ACCEPT", booking, user.email)
-        RSVP.create_for_booking("BOOKING_REJECT", booking, user.email)
+        RSVP.create_for_booking("BOOKING_ACCEPT", booking, user)
+        RSVP.create_for_booking("BOOKING_REJECT", booking, user)
         assert RSVP.objects.filter(target_code=booking.code).count() == 2
 
         authenticated_client.post(f"/api/v1/bookings/{booking.code}/accept/")
