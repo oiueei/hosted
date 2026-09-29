@@ -10,7 +10,7 @@ import logging
 import threading
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django_ratelimit.decorators import ratelimit
@@ -42,6 +42,7 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
+from core.services.team import managers_ready_collections
 from core.utils import doc_asset_url, get_client_ip, redact_email
 from core.views._helpers import body_dict
 
@@ -628,8 +629,16 @@ class VerifyLinkView(APIView):
         """
         booking_code = rsvp.target_code
 
+        # The thing comes with its collections manager-ready: the authority check
+        # below and the decision's notice to the whole team both walk them.
         try:
-            booking = BookingPeriod.objects.get(code=booking_code)
+            booking = (
+                BookingPeriod.objects.select_related("thing_code")
+                .prefetch_related(
+                    Prefetch("thing_code__collections", queryset=managers_ready_collections())
+                )
+                .get(code=booking_code)
+            )
         except BookingPeriod.DoesNotExist:
             rsvp.delete()
             return Response(

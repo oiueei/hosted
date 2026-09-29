@@ -23,7 +23,8 @@ from core.services.email_service import (
     send_faq_hide_email,
     send_faq_question_email,
 )
-from core.views._helpers import deny_if_cannot_view, managers_ready_collections, viewer_code
+from core.services.team import managers_ready_collections
+from core.views._helpers import deny_if_cannot_view, viewer_code
 
 
 def _clear_faq_question_notifications(faq):
@@ -187,6 +188,15 @@ class FAQDetailView(APIView):
         return Response(serializer.data)
 
 
+def _faq_with_team():
+    """FAQs with their thing's collections manager-ready: answering or hiding one
+    fans a notice out to every manager (``thing.managers()``), and `can_manage`
+    walks the same path, so neither may cost a query per collection."""
+    return FAQ.objects.select_related("questioner", "thing").prefetch_related(
+        Prefetch("thing__collections", queryset=managers_ready_collections())
+    )
+
+
 class FAQAnswerView(APIView):
     """
     POST /api/v1/faq/{faq_code}/answer/
@@ -197,7 +207,7 @@ class FAQAnswerView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, faq_code):
-        faq = get_object_or_404(FAQ.objects.select_related("questioner", "thing"), code=faq_code)
+        faq = get_object_or_404(_faq_with_team(), code=faq_code)
 
         thing = faq.thing
 
@@ -252,7 +262,7 @@ class FAQVisibilityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_faq_and_thing(self, faq_code):
-        faq = get_object_or_404(FAQ.objects.select_related("questioner", "thing"), code=faq_code)
+        faq = get_object_or_404(_faq_with_team(), code=faq_code)
         return faq, faq.thing
 
     def post(self, request, faq_code, action):

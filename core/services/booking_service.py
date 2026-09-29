@@ -15,6 +15,7 @@ from core.models.booking import SINGLE_USE_TYPES, BookingPeriod
 from core.models.event import Event
 from core.models.notification import InAppNotification
 from core.models.transfer import ThingTransfer
+from core.services.team import load_team
 
 DEFAULT_AVAILABILITY_HORIZON_DAYS = 90
 
@@ -465,6 +466,14 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     if thing is None:
         return None
 
+    # ``thing`` is the row the transition just locked, and a fresh row has no
+    # collections loaded: walking them for the requester's collection and the
+    # team's notice would cost a few queries per collection. The booking's own
+    # thing is the same row as the caller loaded it — with its collections
+    # prefetched by the views that decide — so the team is read from there, and
+    # ``load_team`` covers a caller that did not (a no-op when it did).
+    team = load_team(booking.thing_code)
+
     # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
     # the requester, a co-member, and the API withholds the owner's address from
     # them everywhere else (L2).
@@ -475,7 +484,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     # request-side one used.
     # Only collections the requester may read: this one also picks the email
     # note the accepted decision carries to them.
-    collection = resolve_request_collection(thing, requester=booking.requester_code)
+    collection = resolve_request_collection(team, requester=booking.requester_code)
     payload = {
         "thing_headline": thing.headline,
         "owner_name": owner_name,
@@ -502,7 +511,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     )
     send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)
-    _notify_team_of_decision(booking, thing, collection, decider, accepted)
+    _notify_team_of_decision(booking, team, collection, decider, accepted)
     if accepted:
         # Anchored to the requester (like HOLD_REQUESTED) so a guest's request→accept
         # funnel and the overall holds success rate are both a plain count by kind.
@@ -524,6 +533,22 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
 # in-app notification / event via the shared *_notifications helpers. Rule
 # violations raise BookingRequestError so the view maps them to the exact
 # {"error": ...} response + status they used to return inline.
+
+
+def _readable_collections(collections, requester):
+    """The ``collections`` ``requester`` may read — all of them when there is no
+    requester to ask about. Their membership is settled in **one** query for the
+    whole list instead of an ``is_invited`` per collection, which is what made a
+    request's notices cost more the more groups the thing sits in; the rules
+    themselves are still ``Collection.can_view``'s, not a copy of them."""
+    if requester is None:
+        return list(collections)
+    invited_to = set(
+        requester.invited_to_collections.filter(
+            code__in=[collection.code for collection in collections]
+        ).values_list("code", flat=True)
+    )
+    return [c for c in collections if c.can_view(requester.code, invited_to=invited_to)]
 
 
 def _readable_by(collection, requester):
@@ -578,7 +603,7 @@ def resolve_request_collection(thing, collection_code=None, requester=None):
     Returns None when no candidate is left — the notification then carries no
     collection and the emails no note.
     """
-    collections = [c for c in thing.collections.all() if _readable_by(c, requester)]
+    collections = _readable_collections(thing.collections.all(), requester)
     code = (collection_code or "").strip()
     if code:
         for collection in collections:

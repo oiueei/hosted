@@ -834,12 +834,18 @@ class Collection(models.Model):
             return True
         return self.is_community() and self.is_invited(user_code)
 
-    def can_view(self, user_code):
+    def can_view(self, user_code, invited_to=None):
         """Check if the given user can view this collection.
 
         Owner always; INACTIVE collections only the owner; PUBLIC collections
         anyone — including anonymous visitors (``user_code=None``); otherwise an
         invited member only.
+
+        ``invited_to`` is for a caller that judges **many** collections for one
+        user: the codes of the collections that user is already known to be
+        invited to (one query for the lot), so the last rule reads it instead of
+        firing an ``is_invited`` per collection. The rules themselves stay in
+        this one method — ``None`` (the default) asks the database.
         """
         if self.is_owner(user_code):
             return True
@@ -847,4 +853,6 @@ class Collection(models.Model):
             return False
         if self.is_public():
             return True
+        if invited_to is not None:
+            return self.code in invited_to
         return self.is_invited(user_code)

@@ -34,7 +34,8 @@ from core.services.booking_service import (
     request_standard_booking,
     resolve_rental_collection,
 )
-from core.views._helpers import body_dict, deny_if_cannot_view, managers_ready_collections
+from core.services.team import managers_ready_collections
+from core.views._helpers import body_dict, deny_if_cannot_view
 
 
 class ThingRequestView(APIView):
