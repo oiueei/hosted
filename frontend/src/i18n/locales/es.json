@@ -58,8 +58,8 @@
   },
   "joinToAct": {
     "heading": "Únete para participar",
-    "body": "Inicia sesión para pedir, reservar, preguntar o añadir tus propias cosas. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
-    "bodyNamed": "Inicia sesión para pedir, reservar, preguntar o añadir tus propias cosas a {{collection}}. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
+    "body": "Únete para pedir, reservar, preguntar o añadir tus propias cosas. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
+    "bodyNamed": "Únete para pedir, reservar, preguntar o añadir tus propias cosas a {{collection}}. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
     "emailLabel": "Correo electrónico",
     "emailPlaceholder": "tu@ejemplo.com",
     "join": "Envíame un enlace mágico",
@@ -152,7 +152,7 @@
     "ownerBookings": "Solicitudes para mí — OIUEEI",
     "sharedThings": "Compartido conmigo — OIUEEI",
     "dataExport": "Exportar datos — OIUEEI",
-    "reserveThing": "Reservar: {{headline}}"
+    "reserveThing": "Reservar: {{headline}} — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -162,7 +162,7 @@
     "tryAnotherEmail": "Probar con otro email",
     "magicLinkSent": "Si este correo está registrado, tu enlace mágico está en camino — revisa tu bandeja de entrada y, por si acaso, la carpeta de spam.",
     "errorSendingLink": "Error al enviar el enlace.",
-    "pitch": "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas para regalar, vender, alquilar, prestar o reservar — e invita a la gente a conocerlas y encargarlas.",
+    "pitch": "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas para regalar, vender, alquilar, prestar o reservar — e invita a la gente a conocerlas y pedirlas.",
     "nextNotice": "Entra y te llevamos directo a la página que ibas a abrir.",
     "licence": "El código de OIUEEI es abierto, bajo la licencia EUPL-1.2, un copyleft fuerte. El proyecto vive en <1>GitHub</1>: ideas, propuestas y colaboración, allí.",
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
@@ -513,7 +513,7 @@
     "modeLabel": "Modo",
     "modeProprietary": "Propia",
     "modeCommunity": "Comunitaria",
-    "modeProprietaryDesc": "Solo tú puedes añadir cosas a esta lista.",
+    "modeProprietaryDesc": "Solo sus curadores añaden cosas; de entrada, tú.",
     "modeCommunityDesc": "Todos los invitados también pueden añadir sus propias cosas.",
     "titleRequired": "El título es obligatorio.",
     "maxHeadline": "Máximo 64 caracteres por idioma.",

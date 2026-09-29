@@ -379,7 +379,7 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
     expect(postsTo(/\/reject\//)).toHaveLength(0);
   });
 
-  test('Cancel hold rejects it, and says so while it does', async () => {
+  test('Decline hold rejects it, and says so while it does', async () => {
     let settle;
     setApi({
       thing: makeThing({ type: 'LEND_THING', status: 'ACTIVE' }),
@@ -388,10 +388,12 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Cancel hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline hold' }));
 
     // In flight: the label says what is happening and neither button can be pressed again.
-    const cancelling = await screen.findByRole('button', { name: en.thingCard.cancelling });
+    // It is the manager *declining* a request, in the words es/ca already used
+    // ("Rechazando..."); "Cancelling..." said it was the requester withdrawing one.
+    const cancelling = await screen.findByRole('button', { name: 'Declining...' });
     expect(cancelling).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Confirm hold' })).toBeDisabled();
     expect(postsTo(/\/bookings\/BK1\/reject\//)).toHaveLength(1);
@@ -400,7 +402,7 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
 });
 
 describe('ThingPage — a requested gift or sale', () => {
-  test('Cancel hold puts the request back to the requester, rejecting that booking', async () => {
+  test('Decline hold puts the request back to the requester, rejecting that booking', async () => {
     setApi({
       thing: makeThing({ type: 'GIFT_THING', status: 'TAKEN' }),
       calendar: [{ code: 'BK2', status: 'PENDING', requester_name: 'Guest One' }],
@@ -410,7 +412,7 @@ describe('ThingPage — a requested gift or sale', () => {
     // with the calendar. Pressed before that they would answer for nobody.
     await screen.findByText(/Guest One/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel hold' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decline hold' }));
 
     await waitFor(() => expect(postsTo(/\/bookings\/BK2\/reject\//)).toHaveLength(1));
     expect(postsTo(/\/accept\//)).toHaveLength(0);

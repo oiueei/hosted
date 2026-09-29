@@ -64,8 +64,8 @@
   },
   "joinToAct": {
     "heading": "Join to take part",
-    "body": "Sign in to reserve, ask a question or add your own things. Enter your email and we'll send you a magic link — no password, no sign-up form.",
-    "bodyNamed": "Sign in to reserve, ask a question or add your own things to {{collection}}. Enter your email and we'll send you a magic link — no password, no sign-up form.",
+    "body": "Join to request, reserve, ask a question or add your own things. Enter your email and we'll send you a magic link — no password, no sign-up form.",
+    "bodyNamed": "Join to request, reserve, ask a question or add your own things to {{collection}}. Enter your email and we'll send you a magic link — no password, no sign-up form.",
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "join": "Send me a magic link",
@@ -158,7 +158,7 @@
     "ownerBookings": "Requests to me — OIUEEI",
     "sharedThings": "Shared with me — OIUEEI",
     "dataExport": "Data export — OIUEEI",
-    "reserveThing": "Reserve: {{headline}}"
+    "reserveThing": "Reserve: {{headline}} — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -353,10 +353,10 @@
   },
   "thingCard": {
     "confirmHold": "Confirm hold",
-    "cancelHold": "Cancel hold",
+    "cancelHold": "Decline hold",
     "reactivate": "Reactivate",
     "confirming": "Confirming...",
-    "cancelling": "Cancelling...",
+    "cancelling": "Declining...",
     "transferConfirmTitle": "Transfer ownership?",
     "transferConfirmBody": "Accepting this request transfers the item to the person who asked for it. It stays in the collection — you can still follow it in the journey.",
     "transferConfirm": "Transfer ownership",
@@ -519,7 +519,7 @@
     "modeLabel": "Mode",
     "modeProprietary": "Proprietary",
     "modeCommunity": "Community",
-    "modeProprietaryDesc": "Only you can add things to this list.",
+    "modeProprietaryDesc": "Only its curators add things — you, to start with.",
     "modeCommunityDesc": "Everyone you invite can add their own things too.",
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",

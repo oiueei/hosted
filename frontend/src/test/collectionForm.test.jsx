@@ -96,7 +96,9 @@ describe('CreateCollectionPage', () => {
 
     expect(screen.getByRole('radio', { name: 'Proprietary' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Community' })).toBeInTheDocument();
-    expect(screen.getByText('Only you can add things to this list.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Only its curators add things — you, to start with.')
+    ).toBeInTheDocument();
     expect(
       screen.getByText('Everyone you invite can add their own things too.')
     ).toBeInTheDocument();

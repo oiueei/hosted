@@ -53,7 +53,7 @@ React frontend using HDS (Helsinki Design System) from npm with OIUEEI customiza
 
 ## Page Titles
 
-Every page sets `document.title` via `useEffect` for meaningful browser tab titles and bookmarks. Dynamic pages (CollectionPage, ThingPage, UserPage, etc.) update the title when data loads. Format: `{Page context} — OIUEEI`.
+Every page sets `document.title` via `useEffect` for meaningful browser tab titles and bookmarks. Dynamic pages (CollectionPage, ThingPage, UserPage, etc.) update the title when data loads. Format: `{Page context} — OIUEEI` — and `test/i18nParity.test.js` checks every `titles.*` string in the three locales ends with it (`titles.reserveThing` was the one that forgot, in all three, until 2026-09-29).
 
 ---
 
@@ -213,8 +213,9 @@ Reusable component for rendering a thing as an HDS `Card`. Used by `CollectionPa
 - **Themed buttons**: all buttons use theeeme colors (`btnStyle` for primary, `btnSecondaryStyle` for secondary). Secondary buttons always have a white background (`--background-color: white`); the theeeme `color_01` is used for the border, and `color_04` for the text.
 - **Owner button matrix** (based on `thing.status`) — **gated on `canManage`, not `isOwner`** (2026-09): `canManage` is the backend's `thing.can_manage` (`useThingActions` derives it, floor `isOwner`), so a curator of a PROPRIETARY collection sees the whole matrix on any thing in it, and the reserve button is hidden from them (staff answer requests, they don't make them). `OwnerBookingsList`, `ThingTags`' owner-only chips and the FAQ answer/hide controls (`ThingFaqSection`) all key on the same value. `isOwner` stays only for the genuinely owner-identity bits (the "transfer ownership?" confirm copy). The COMMUNITY collection-owner's standalone "Delete" on a member's contributed thing is `isCollectionOwner && !canManage`.
   - `ACTIVE` (no pending hold): "Edit" (**primary**), "Delete" (secondary). "Delete" is suppressed when pending bookings exist. There is no dedicated "Hide" button — hiding a thing is done by setting it `INACTIVE` from `EditThingPage`.
-  - `ACTIVE` (date-based with pending hold): "Confirm hold" (primary) + "Cancel hold" (secondary) targeting `activePendingCode`, then "Edit" (secondary).
-  - `TAKEN`: "Confirm hold" (primary), "Cancel hold" (secondary), "Edit" (secondary). After each accept/cancel, `activePendingCode` advances to the next pending.
+  - `ACTIVE` (date-based with pending hold): "Confirm hold" (primary) + "Decline hold" (secondary) targeting `activePendingCode`, then "Edit" (secondary).
+  - **The button is "Decline hold", not "Cancel hold" (2026-09-29, `thingCard.cancelHold` / `.cancelling` in en).** It is the manager *rejecting* a request — es/ca already said "Rechazar solicitud" / "Rechazando..." — and "Cancel" reads as the requester withdrawing their own (`MyBookingsPage`'s "Cancel request"). The key names keep "cancel" (renaming is churn); en `thingPage.holdCancelled` and `errorCancellingHold`, the toasts after it, still say "cancel" and were not part of that change.
+  - `TAKEN`: "Confirm hold" (primary), "Decline hold" (secondary), "Edit" (secondary). After each accept/cancel, `activePendingCode` advances to the next pending.
   - `INACTIVE`: "Reactivate" (primary, calls `POST /api/v1/things/{code}/activate/`), "Edit" (secondary), "Delete" (secondary, navigates to `DeleteThingPage` with `{ state: { backPath, backLabel } }`).
 - **Reservation button** logic (non-owners). The label is computed once (`buttonLabel`) so a disabled button always states its reason (P1-2):
   - `ACTIVE`: enabled button showing the per-type action verb (`thingCard.action.{type}`, default `thingCard.hold`).
@@ -242,11 +243,11 @@ Detail page for a thing with full information and FAQs section.
 - **Owner bookings display**: fetches `GET /api/v1/things/{thingCode}/calendar/` for date-based types (LEND/RENT) and for any TAKEN thing (GIFT/SELL). Same logic as ThingLinkbox: filters past bookings, syncs `activePendingCode` to the first PENDING from the calendar, shows bookings list with requester name, request date, date ranges, and status. Active pending booking is bold; starred when multiple pending exist.
 - **Owner actions:** Full parity with ThingLinkbox button matrix:
   - `ACTIVE` (no pending): "Edit" (**primary**) + "Delete" (secondary, suppressed when pending bookings exist). No "Hide" button — hiding is setting the thing `INACTIVE` via `EditThingPage`.
-  - `ACTIVE` (date-based with pending): "Confirm hold" + "Cancel hold" + "Edit" (secondary).
-  - `TAKEN`: "Confirm hold" (primary) → "Cancel hold" (secondary) → "Edit" (secondary). `activePendingCode` advances to next pending after each action.
+  - `ACTIVE` (date-based with pending): "Confirm hold" + "Decline hold" + "Edit" (secondary).
+  - `TAKEN`: "Confirm hold" (primary) → "Decline hold" (secondary) → "Edit" (secondary). `activePendingCode` advances to next pending after each action.
   - `INACTIVE`: "Reactivate" (primary) + "Edit" (secondary) + "Delete" (secondary).
   - Delete navigates to `DeleteThingPage` with `{ state: { backPath, backLabel } }`.
-  - The page's own copies of these buttons are pinned like the card's (`test/thingCardAndPageRoutes.test.jsx`): Confirm/Cancel hold on a date-based thing call accept/reject for the pending booking and disable both while it is in flight ("Cancelling…"); Cancel hold on a requested GIFT/SELL rejects the booking the calendar reports — **its buttons show at once but the booking code arrives with `/calendar/`**, so a click before that acts for nobody; Reactivate reads "Reactivating…" and cannot be pressed twice. A load that fails says why — 403, 404, any other status, no connection — each with the way home.
+  - The page's own copies of these buttons are pinned like the card's (`test/thingCardAndPageRoutes.test.jsx`): Confirm/Decline hold on a date-based thing call accept/reject for the pending booking and disable both while it is in flight ("Declining…"); Decline hold on a requested GIFT/SELL rejects the booking the calendar reports — **its buttons show at once but the booking code arrives with `/calendar/`**, so a click before that acts for nobody; Reactivate reads "Reactivating…" and cannot be pressed twice. A load that fails says why — 403, 404, any other status, no connection — each with the way home.
 - **Reservation:** Non-owners see the "Hold" button. GIFT/SELL submit directly via `POST .../request/`; date-based (LEND/RENT) types navigate to `RequestThingPage` with `{ state: { backPath, backLabel } }`.
 - **FAQs section:**
   - Lists all FAQs with question, `questioner_name`, and answer. Hidden FAQs shown with reduced opacity (owner only).
@@ -591,6 +592,8 @@ All UI strings are externalised via `react-i18next`. No hardcoded strings in com
   - **What a collection holds is a "cosa / cosa / thing"**, never "artículo / article" (the two had ended up on the same screen). No "espacio / espai / space", "local" or "sala" for what a reservations collection offers either — it can be machinery, a resource or an expert's time: leave the noun out where the sentence allows ("¿Cómo se reserva?", "Un miembro puede reservar de 1 a N días"), and say "cosa" where one is needed.
   - **es/ca: "solicitud / sol·licitud" is a pending request** (a hold on a gift, sale, loan or rental, which the owner confirms or declines) and **"reserva" is only RESERVE_THING**, which confirms on the spot. The two used to share "reserva" — "Confirmar reserva" on a loan card, "Reserva confirmada" in the inbox for a hold — while English already said *hold/request* vs *reservation*. The generic verb for acting on a card is "pedir / demanar"; where a sentence covers both, it names both ("solicitudes y reservas").
   - English "Proprietary" and "Lend" stay as they are (D4/D5, declined).
+  - **The door for someone with no account says "Join", not "Sign in"** (`joinToAct.body` / `bodyNamed`, 2026-09-29: en "Join to request, reserve…", es "Únete para pedir…", ca "Uneix-te per demanar…"): `JoinPage`'s title is "Join to take part", and the person there typed an address to *create* the account, so "Sign in" promised something they don't have. `login.pitch` in es says "pedirlas", the generic verb (D2), not "encargarlas".
+  - **A Proprietary group is not "only you"**: since co-curators, `createCollection.modeProprietaryDesc` says "Only its curators add things — you, to start with." — true even where a deployment turns co-curators off (`co_owners_enabled`).
 
 ---
 

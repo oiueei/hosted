@@ -58,8 +58,8 @@
   },
   "joinToAct": {
     "heading": "Uneix-t'hi per participar",
-    "body": "Inicia la sessió per demanar, reservar, preguntar o afegir les teves coses. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
-    "bodyNamed": "Inicia la sessió per demanar, reservar, preguntar o afegir les teves coses a {{collection}}. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
+    "body": "Uneix-te per demanar, reservar, preguntar o afegir les teves coses. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
+    "bodyNamed": "Uneix-te per demanar, reservar, preguntar o afegir les teves coses a {{collection}}. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
     "emailLabel": "Correu electrònic",
     "emailPlaceholder": "tu@exemple.com",
     "join": "Envia'm un enllaç màgic",
@@ -152,7 +152,7 @@
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
     "sharedThings": "Compartit amb mi — OIUEEI",
     "dataExport": "Exportar dades — OIUEEI",
-    "reserveThing": "Reservar: {{headline}}"
+    "reserveThing": "Reservar: {{headline}} — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -513,7 +513,7 @@
     "modeLabel": "Mode",
     "modeProprietary": "Pròpia",
     "modeCommunity": "Comunitària",
-    "modeProprietaryDesc": "Només tu pots afegir coses a aquesta llista.",
+    "modeProprietaryDesc": "Només els seus curadors hi afegeixen coses; d'entrada, tu.",
     "modeCommunityDesc": "Tots els convidats també poden afegir les seves pròpies coses.",
     "titleRequired": "El títol és obligatori.",
     "maxHeadline": "Màxim 64 caràcters per idioma.",

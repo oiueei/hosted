@@ -239,23 +239,23 @@ describe('ThingLinkbox — owner button matrix', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  test('TAKEN shows Confirm hold + Cancel hold + Edit', async () => {
+  test('TAKEN shows Confirm hold + Decline hold + Edit', async () => {
     const thing = makeThing({ status: 'TAKEN' });
     renderLinkbox({ thing, userCode: 'OWNER1' });
 
     expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel hold' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline hold' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
   });
 
   // The pending booking arrives from the /calendar/ fetch (date-based type).
-  test('ACTIVE date-based with a pending booking shows Confirm/Cancel hold', async () => {
+  test('ACTIVE date-based with a pending booking shows Confirm/Decline hold', async () => {
     const thing = makeThing({ type: 'LEND_THING', status: 'ACTIVE' });
     setApi({ calendar: [{ code: 'BK1', status: 'PENDING', end_date: '2099-12-31' }] });
     renderLinkbox({ thing, userCode: 'OWNER1' });
 
     expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel hold' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline hold' })).toBeInTheDocument();
     // The Delete button is suppressed while a pending hold exists.
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
   });
@@ -322,13 +322,13 @@ describe('ThingPage — owner button matrix', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  test('TAKEN shows Confirm hold + Cancel hold + Edit', async () => {
+  test('TAKEN shows Confirm hold + Decline hold + Edit', async () => {
     localStorage.setItem('userCode', 'OWNER1');
     setApi({ thing: makeThing({ status: 'TAKEN', owner: 'OWNER1' }) });
     renderThingPage();
 
     expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel hold' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline hold' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
   });
 });
@@ -492,7 +492,7 @@ describe('useThingBooking — the owner decides a hold', () => {
   test('rejecting a gift puts it back on offer', async () => {
     const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Cancel hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline hold' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BK1/reject/', { method: 'POST' })
@@ -508,7 +508,7 @@ describe('useThingBooking — the owner decides a hold', () => {
   // decision may only move which request is waiting — never the status.
   test.each([
     ['accepting', 'Confirm hold', 'accept'],
-    ['rejecting', 'Cancel hold', 'reject'],
+    ['rejecting', 'Decline hold', 'reject'],
   ])('%s a rental leaves the thing active', async (_name, label, action) => {
     const onUpdateThing = renderOwner(makeThing({ type: 'LEND_THING', status: 'ACTIVE' }));
 
@@ -536,7 +536,7 @@ describe('useThingBooking — the owner decides a hold', () => {
     );
 
     // The buttons now act on the second request, with no reload in between.
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel hold' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decline hold' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BK2/reject/', { method: 'POST' })
@@ -562,7 +562,7 @@ describe('useThingBooking — the owner decides a hold', () => {
 
   test.each([
     ['confirm', 'Confirm hold', 'Error confirming hold.'],
-    ['cancel', 'Cancel hold', 'Error cancelling hold.'],
+    ['decline', 'Decline hold', 'Error cancelling hold.'],
   ])(
     'a failed %s says which way it failed and leaves the thing alone',
     async (_n, label, message) => {

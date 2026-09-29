@@ -21,6 +21,21 @@ function keyPaths(obj, prefix = '') {
 const reference = new Set(keyPaths(en));
 const locales = { es, ca };
 
+// Every page title reads "{page} — OIUEEI" so a tab, a bookmark and a history
+// entry say whose page it is. `titles.reserveThing` was the one that forgot, in
+// all three languages, and nothing noticed because a title is only ever seen in
+// a browser tab.
+describe('page titles', () => {
+  for (const [name, data] of Object.entries({ en, ...locales })) {
+    test(`every ${name} title ends with the site name`, () => {
+      const without = Object.entries(data.titles)
+        .filter(([, title]) => !title.endsWith(' — OIUEEI'))
+        .map(([key]) => key);
+      expect(without).toEqual([]);
+    });
+  }
+});
+
 describe('i18n key parity', () => {
   test('en is the reference and is non-empty', () => {
     expect(reference.size).toBeGreaterThan(0);
