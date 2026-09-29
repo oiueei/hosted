@@ -140,6 +140,12 @@ export default function HomePage() {
     setPendingInvitations((prev) => prev.filter((inv) => inv.accept_code !== acceptCode));
   };
 
+  // Derive theeeme styles from the freshly-fetched colours (fall back to
+  // localStorage/DEFAULT before the fetch resolves). Called at the top level so
+  // the hook order stays stable across the `!user` early return below — and
+  // above the two notices that follow, whose Retry buttons wear the style.
+  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
+
   const offlineBanner = (
     <Notification
       type="alert"
@@ -148,7 +154,7 @@ export default function HomePage() {
     >
       {t('home.offlineBody')}
       <div style={{ marginTop: 'var(--spacing-xs)' }}>
-        <Button size="small" onClick={reloadDashboard}>
+        <Button size="small" onClick={reloadDashboard} style={btnSecondaryStyle}>
           {t('common.retry')}
         </Button>
       </div>
@@ -170,6 +176,7 @@ export default function HomePage() {
       <div style={{ marginTop: 'var(--spacing-xs)' }}>
         <Button
           size="small"
+          style={btnSecondaryStyle}
           onClick={() => {
             setMyCollectionsError(false);
             setInvitedError(false);
@@ -181,11 +188,6 @@ export default function HomePage() {
       </div>
     </Notification>
   );
-
-  // Derive theeeme styles from the freshly-fetched colours (fall back to
-  // localStorage/DEFAULT before the fetch resolves). Called at the top level so
-  // the hook order stays stable across the `!user` early return below.
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
 
   // Most accounts are members, not curators: they arrive through somebody
   // else's group and may never start one. Leading with "My collections" gave

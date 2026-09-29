@@ -228,6 +228,7 @@ export default function ManageInvitesPage() {
         <div className="spacer-m" />
         <Button
           variant="secondary"
+          style={btnSecondaryStyle}
           onClick={() => {
             setLoading(true);
             fetchCollection();
@@ -276,6 +277,7 @@ export default function ManageInvitesPage() {
                 </Button>
                 <Button
                   variant="secondary"
+                  style={btnSecondaryStyle}
                   disabled={answering === p.code}
                   onClick={() => answerProposal(p.code, 'reject')}
                 >

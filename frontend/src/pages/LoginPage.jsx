@@ -103,6 +103,7 @@ export default function LoginPage() {
             <div style={{ marginTop: 'var(--spacing-s)' }}>
               <Button
                 variant="secondary"
+                style={btnSecondaryStyle}
                 onClick={() => {
                   setStatus(null);
                   setMessage('');

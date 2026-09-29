@@ -91,6 +91,8 @@ form-page
 
 All buttons across the app use theeeme colors (`btnStyle` for primary, `btnSecondaryStyle` for secondary). Secondary buttons always have a white background; `color_01` drives the border and `color_04` the text.
 
+**A sweep enforces it** (`test/themedButtons.test.js`, 2026-09-29): every HDS `<Button>` opening tag in `pages/` and `components/` must carry a `style=`, a spread `{...}`, or `variant="supplementary"` / `variant="danger"` — the icon-only buttons and the account-erasure confirms, which are the two written exceptions. Six had slipped through unseen (`DataExportPage`'s only button, `ManageInvitesPage`'s Reject and Retry, `LoginPage`'s "Try another email", `HomePage`'s two Retry buttons), each painting HDS's default blue on a page in the viewer's palette; a bare button works, is labelled and passes axe, so nothing else could see it. The sweep *walks* each tag counting braces and strings rather than matching `<Button[^>]*>`, which ends at the `=>` of an `onClick` and misreads the props after it; and it reads only the tag's top level, so a `style=` on an element nested in an attribute (`icon={<Icon style=… />}`) does not stand in for the button's own.
+
 Pages using this pattern: HomePage, CollectionPage, CreateCollectionPage, EditCollectionPage, EditProfilePage, ManageInvitesPage, MyBookingsPage, EditThingPage, ThingPage, RequestThingPage, DeleteThingPage, RemoveGuestPage, UserPage.
 
 ---

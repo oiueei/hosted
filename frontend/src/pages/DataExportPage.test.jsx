@@ -31,6 +31,7 @@ describe('DataExportPage', () => {
   beforeEach(() => {
     downloadBlobMock.mockClear();
     apiFetchMock.mockClear();
+    localStorage.clear();
   });
 
   test('lists what the export excludes — the point of the page', () => {
@@ -45,6 +46,31 @@ describe('DataExportPage', () => {
     expect(screen.getByText(/session cookies/i)).toBeInTheDocument();
     expect(screen.getByText(/no bin/i)).toBeInTheDocument();
     expect(screen.getByText(/anonymous by design/i)).toBeInTheDocument();
+  });
+
+  test("the download button wears the viewer's theeeme, not HDS's default blue", () => {
+    // The page used not to read the theeeme at all: its one button painted the default
+    // blue on a page whose hero and background are the viewer's own palette.
+    localStorage.setItem(
+      'theeemeColors',
+      JSON.stringify({
+        color_01: 'copper',
+        color_02: 'suomenlinna-light',
+        color_03: 'copper',
+        color_04: 'black',
+        color_05: 'white',
+        color_06: 'white',
+      })
+    );
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
+
+    const button = screen.getByRole('button', { name: 'Download my data' });
+    expect(button.style.getPropertyValue('--background-color')).toBe('var(--color-copper)');
+    expect(button.style.getPropertyValue('--color')).toBe('var(--color-white)');
   });
 
   test('a successful click hands the response to downloadBlob under the server-set name', async () => {
