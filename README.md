@@ -189,6 +189,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/collections/{code}/share-link/` | Generate or rotate the public share token (owner or co-owner). Returns `share_url` and `share_token`. Pass `{"rotate": true}` to force a fresh token. Rate limited: 30/h. |
 | DELETE | `/api/v1/collections/{code}/share-link/` | Revoke the public share token (owner or co-owner) |
 | GET | `/api/v1/share/{token}/preview/` | **Public.** The `headline` and `description` (only) of the collection a `/share/{token}` link opens, so the join page can name it. Generic 404 for an unknown, revoked or inactive token. Rate limited: 30/min per IP |
+| POST | `/api/v1/share/{token}/join/` | Accept a `/share/{token}` invitation **with the session you already have** — the signed-in twin of `POST /auth/join/`'s share-token door, which asks for an email and answers with a magic link no live session needs. The token is the credential: generic 404 for an unknown, revoked or inactive one (the same answer as the preview, so it reveals nothing new), `200 {"collection", "joined"}` otherwise (`joined: false` for the owner or a member: idempotent), 429 past the `COLLECTION_JOINS_PER_DAY` ceiling. Never returns the token. Rate limited: 30/h per user |
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
 | POST | `/api/v1/collections/{code}/join/` | Join a PUBLIC collection you are browsing while signed in (self-join) — the half of login-to-act the anonymous `/auth/join/` can't serve, since a magic link is no use to a live session. Honours the same `COLLECTION_JOINS_PER_DAY` ceiling. Rate limited: 30/h |
@@ -464,6 +465,7 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Rate Limiting | Collection bulk invite | 5 req/hour per user |
 | Rate Limiting | Invitation emails | Off by default; set `INVITE_EMAILS_PER_DAY` to cap per account — single, bulk and approved recommendations combined, on both of the owner's routes |
 | Rate Limiting | Collection share-link | 30 req/hour per user |
+| Rate Limiting | Share-link join (`/share/{token}/join/`) | 30 req/hour per user (plus the per-collection daily ceiling) |
 | Rate Limiting | Thing request | 10 req/hour per user |
 | Rate Limiting | Thing bulk create | 10 req/hour per user |
 | Rate Limiting | Thing report | 10 req/hour per user |

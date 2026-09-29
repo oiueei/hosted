@@ -230,6 +230,8 @@ The **daily invitation-email quota** helpers live here too (`_invite_quota_left`
 
 `POST /auth/join/` mails a magic link to whatever address is typed into it, and **neither door that reaches it is a secret**: a PUBLIC collection's `collection_code` is printed in that collection's own URL, and a share token exists to be passed around. So without a cap, anyone may ask a deployment to send mail to anyone — a relay pointed at the operator's own sending domain, ending in complaints against it and genuine magic links landing in spam.
 
+**The two signed-in doors count against the same cap** (`CollectionJoinView`, and `ShareJoinView` — `POST /share/{token}/join/`, added 2026-09-29): they send no mail, but a ceiling that only stopped strangers would be one anyone with an account could walk around, and each asks `join_quota_exhausted()` before joining and calls `consume_join_quota()` after.
+
 The view's own rate limits never closed this and were not meant to: they cap how often **one IP** asks (5/min) and how often **one victim** is mailed (5/hour), which says nothing about a hundred IPs mailing a hundred different strangers once each. `INVITE_EMAILS_PER_DAY` did not either — it counts what an *account* sends through the owner's invite routes, and this is the one door with no account behind it.
 
 | Function | Behaviour |

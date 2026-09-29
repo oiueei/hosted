@@ -620,6 +620,25 @@ The **name, description and language** of the collection a `/share/{token}` link
 
 Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked or INACTIVE token — the same `share_token=… , status=ACTIVE` filter `JoinView._resolve_target` uses — so the preview goes dark the instant the link does and reveals nothing the link itself doesn't already. The bearer link is the credential and whoever holds it already knows a real collection is behind it, so naming that collection to them is not a leak; naming anything *else* would be.
 
+### ShareJoinView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/share/{token}/join/` |
+| **Permission** | `IsAuthenticated` (cookie or Bearer, so CSRF applies like every other cookie-authenticated POST) |
+| **Rate limit** | 30 requests/hour per user, plus the operator's `COLLECTION_JOINS_PER_DAY` ceiling |
+
+Accepts a `/share/{token}` invitation with the session the reader already has. `SharePage` used to ask for an email even then — email, inbox, link, back — and in a neighbourhood the same people are in several groups while this link is the main viral route, so it was a round trip for the people who use it most. It is the token's twin of `CollectionJoinView` (which joins a **PUBLIC** collection by its code): there the credential is the collection being public, here it is the token.
+
+**The token is looked up exactly as `SharePreviewView` looks it up** — `share_token=token`, `status=ACTIVE` — and an unknown, revoked or INACTIVE one is one generic **404** (`Http404`), the same body for all three (`test_an_unknown_a_revoked_and_an_inactive_token_answer_the_same_404` compares them). **Why that does not break the anti-enumeration the anonymous door keeps:** the preview already answers a bad token with that very 404, to anyone, with no account, so an account holder learns nothing new by asking here; the space is 22 URL-safe characters, and this adds 30/h per user on top of the preview's 30/min per IP. Nothing else can be probed: the collection's *code* (`PUBLIC` groups print it in their URL) is not looked up as a token (`test_a_public_group_code_is_not_a_token`), and a PRIVATE group is reachable only through its token.
+
+- **Never returns or touches the token**, and creates no `User` and no `RSVP` (there is a session, and the magic link is what this replaces). The answer is `{"collection": code, "joined": bool}` — the code is what the SPA navigates to, and the person is now a member who reads it on every page.
+- **Idempotent.** The owner and any member — a co-curator is in `invites` — get `200` with `joined: false` and nothing else happens: a curator trying their own link lands on their collection instead of an error, and a double tap logs one `MEMBER_JOINED` and sends no second welcome PDF.
+- **The one funnel.** A new member goes through `_join_collection(collection, user, source=Event.Source.SHARE)` — one `MEMBER_JOINED`, the welcome document if the owner set one, the member counter — after `join_quota_exhausted()` has been asked (**429**, the same `detail` as `CollectionJoinView`, nobody joins) and followed by `consume_join_quota()`. A ceiling that only stopped strangers would be one anyone with an account could walk around, and an account costs a free mailbox.
+- **Unauthenticated → 401.** The SPA's `apiFetch` then sends the reader to `/login?next=/share/{token}` and, after the magic link, back to the button (see `RequestLinkView`'s `next`).
+
+Pinned by `core/tests/integration/test_share_join.py`, each test named for its behaviour and each guarantee mutated (see the commit that added it).
+
 ### CollectionEmailNoteTestView
 
 | | |
@@ -1244,6 +1263,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/collections/{code}/email-note/test/` POST — 10 requests per hour per user
 - `/collections/{code}/broadcast/` POST — 5 requests per day per user
 - `/collections/{code}/share-link/` POST — 30 requests per hour per user
+- `/share/{token}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling, `COLLECTION_JOINS_PER_DAY`)
 - `/things/{code}/report/` POST — 10 requests per hour per user
 - `/notifications/token/{t}/` — GET 20/min per IP, PATCH 10/min per IP
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
