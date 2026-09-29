@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { STALE_CHUNK_KEY } from '../utils/reloadOnStaleChunk';
+import { aboutPath, deploymentRoutes, faqPath, popInPath } from '../deployment';
 
 /**
  * LSSI-CE art. 22.2 covers every device that stores and retrieves information
@@ -32,6 +33,16 @@ import { STALE_CHUNK_KEY } from '../utils/reloadOnStaleChunk';
  * have kept passing had the write been added under an alias) — the check below is
  * therefore by *file*: any other source file that mentions `sessionStorage` is a new
  * decision, and the key itself has to be the one README §Privacy names.
+ *
+ * **The code and the claim are checked apart**, because only the code travels. A
+ * deployment built on this repo keeps every source file but replaces `README.md`
+ * with its own, and publishes its storage inventory in its own legal page
+ * (`frontend/src/legal/`), which it guards itself. So the two sweeps run
+ * everywhere, and the README check runs in the standalone — recognised the way
+ * `CLAUDE.md` defines it, by `src/deployment/` exporting nothing but empty stubs —
+ * where it asks for the §Privacy row and every key in it. It used to read the
+ * root README unconditionally, which failed on the first deployment to merge the
+ * `sessionStorage` key (2026-09-30).
  *
  * **Not swept, and real**: `i18next-browser-languagedetector` caches the
  * chosen UI language under its own default key, `i18nextLng` (see
@@ -71,7 +82,7 @@ describe('what this app writes to the browser (LSSI-CE art. 22.2)', () => {
     expect(found).toEqual(EXPECTED_LOCAL_STORAGE_KEYS);
   });
 
-  test('sessionStorage is used by one module only, for the one key README names', () => {
+  test('sessionStorage is used by one module only, for one key', () => {
     // Comments are stripped: prose about `sessionStorage` is not a use of it.
     const withoutComments = (source) =>
       source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -82,11 +93,26 @@ describe('what this app writes to the browser (LSSI-CE art. 22.2)', () => {
 
     expect(users).toEqual([path.join('src', 'utils', 'reloadOnStaleChunk.js')]);
     expect(STALE_CHUNK_KEY).toBe('staleChunkReloadAt');
+  });
+});
 
-    // The claim is public (README §Privacy): the key must be in it, and the old
-    // "unused" sentence must not be.
+// Upstream's `src/deployment/` exports empties; a deployment's exports real pages.
+const isStandalone =
+  deploymentRoutes.length === 0 && aboutPath === null && faqPath === null && popInPath === null;
+
+describe.runIf(isStandalone)('the public inventory in README §Privacy (standalone)', () => {
+  test('its browser-storage row names every key the app writes, and nothing says "unused"', () => {
     const readme = fs.readFileSync('../README.md', 'utf8');
-    expect(readme).toContain(`\`${STALE_CHUNK_KEY}\``);
+    // The row that says this test guards it: without it there is no claim to check,
+    // which in the standalone is itself the regression.
+    const row = readme
+      .split('\n')
+      .find((line) => line.includes('frontend/src/test/browserStorage.test.jsx'));
+    expect(row, 'README §Privacy lost its browser-storage row').toBeDefined();
+
+    for (const key of [...EXPECTED_LOCAL_STORAGE_KEYS, STALE_CHUNK_KEY]) {
+      expect(row).toContain(`\`${key}\``);
+    }
     expect(readme).not.toContain('`sessionStorage` is unused');
   });
 });
