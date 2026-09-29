@@ -620,6 +620,51 @@ describe('InboxNotifications — a reservation notice says when', () => {
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 
+  test('a loan request shows both lines, the slot pickup to return', async () => {
+    renderInbox([
+      {
+        code: 'NOTR05',
+        type: 'BOOKING_REQUESTED',
+        payload: {
+          requester_name: 'Lulu',
+          thing_headline: 'A mitre saw',
+          booking_code: 'BKG005',
+          thing_code: 'THG005',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T06:38:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T06:38:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+  });
+
+  test('a request without dates (a gift, or one from before) grows no lines', async () => {
+    renderInbox([
+      {
+        code: 'NOTR06',
+        type: 'BOOKING_REQUESTED',
+        payload: {
+          requester_name: 'Lulu',
+          thing_headline: 'A board game',
+          booking_code: 'BKG006',
+          thing_code: 'THG006',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T06:38:00Z',
+      },
+    ]);
+
+    expect(await screen.findByText(/A board game/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Registered: /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+
   test('a reservation payload without dates shows the stamp but no schedule line', async () => {
     renderInbox([
       {

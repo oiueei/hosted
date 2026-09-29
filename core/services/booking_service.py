@@ -625,18 +625,24 @@ def send_booking_request_notifications(
     # the one whose note the request page showed them.
     collection = resolve_request_collection(thing, collection_code, requester)
     send_booking_confirmation_email(requester, thing, booking, collection)
+    payload = {
+        "thing_headline": thing.headline,
+        "requester_name": requester.display_name,
+        # The codes let the inbox deep-link the request, show it on its own
+        # collection's page, and drop it once the owner has decided.
+        "booking_code": booking.code,
+        "thing_code": thing.code,
+        "collection_code": collection.code if collection else "",
+    }
+    if booking.start_date and booking.end_date:
+        # A loan or rental asks for dates: the inbox says which, under the
+        # body, the way a reservation notice does. GIFT/SELL carry none.
+        payload["start_date"] = str(booking.start_date)
+        payload["end_date"] = str(booking.end_date)
     InAppNotification.objects.create(
         user=thing.owner,
         type=InAppNotification.Type.BOOKING_REQUESTED,
-        payload={
-            "thing_headline": thing.headline,
-            "requester_name": requester.display_name,
-            # The codes let the inbox deep-link the request, show it on its own
-            # collection's page, and drop it once the owner has decided.
-            "booking_code": booking.code,
-            "thing_code": thing.code,
-            "collection_code": collection.code if collection else "",
-        },
+        payload=payload,
     )
     Event.log(
         Event.Kind.HOLD_REQUESTED,

@@ -21,10 +21,14 @@ const SUCCESS_TYPES = new Set([
   'PROMOTED_CO_OWNER',
 ]);
 
-// The two reservation notices are the only ones whose payload speaks the
-// booking's own field names (start/end date and time), so they are also the
-// only ones that can say *when* below their body.
+// The notices whose payload speaks the booking's own field names (start/end
+// date and time), and so can say *when* below their body: the two reservation
+// notices, and a loan or rental request (BOOKING_REQUESTED carries its dates
+// since 2026-09-29 — a gift/sale request, or one written before then, has none
+// and grows no lines).
 const RESERVATION_TYPES = new Set(['RESERVATION_MADE', 'RESERVATION_CANCELLED']);
+const saysWhen = (n) =>
+  RESERVATION_TYPES.has(n.type) || (n.type === 'BOOKING_REQUESTED' && !!n.payload?.start_date);
 
 // The quiet meta lines under a notice, sized like a helper rather than body
 // copy — they qualify the sentence above, they don't continue it.
@@ -302,17 +306,22 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     <>
       {notifications.map((n) => {
         const link = notificationLink(n);
-        // The reservation notices say when, under their body: when the event
-        // the notice records happened (`created` — for a cancellation that is
-        // the cancellation's own stamp, which is the fact being reported) and
-        // when the reservation runs, read from the payload's booking fields by
-        // the same formatter the booking tables use, so the two never disagree
-        // about what '29/09/2026, 10:00–12:00' means. Either line with nothing
-        // to say (an unparseable stamp, a payload without dates) stays out.
-        const registeredAt = RESERVATION_TYPES.has(n.type) ? formatDateTime(n.created) : '';
-        const scheduledFor = RESERVATION_TYPES.has(n.type)
-          ? formatBookingWhen(n.payload, 'RESERVE_THING')
-          : '';
+        // The reservation and loan/rental request notices say when, under
+        // their body: when the event the notice records happened (`created` —
+        // for a cancellation that is the cancellation's own stamp, which is the
+        // fact being reported) and when the booking runs, read from the
+        // payload's booking fields by the same formatter the booking tables
+        // use, so the two never disagree about what '29/09/2026, 10:00–12:00'
+        // means. A loan or rental reads pickup — return. Either line with
+        // nothing to say (an unparseable stamp, a payload without dates) stays
+        // out.
+        const when = saysWhen(n);
+        const registeredAt = when ? formatDateTime(n.created) : '';
+        const scheduledFor = !when
+          ? ''
+          : RESERVATION_TYPES.has(n.type)
+            ? formatBookingWhen(n.payload, 'RESERVE_THING')
+            : formatBookingWhen(n.payload);
         return (
           <Notification
             key={n.code}

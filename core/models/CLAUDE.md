@@ -468,7 +468,7 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `COLLECTION_REVOKED` | Owner removes a guest from collection | Removed user | `collection_headline`, `owner_name` |
 | `BOOKING_ACCEPTED` | Owner accepts a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
 | `BOOKING_REJECTED` | Owner rejects a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
-| `BOOKING_REQUESTED` | User requests a hold | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code` |
+| `BOOKING_REQUESTED` | User requests a hold | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code`; plus `start_date`/`end_date` for a dated (LEND/RENT) request, since 2026-09-29 — the inbox shows them |
 | `FAQ_QUESTION` | User asks a FAQ question | **Every manager** of the thing (`Thing.managers` — the owner, plus a PROPRIETARY collection's curators), minus the asker. Just the owner in COMMUNITY | `thing_headline`, `questioner_name` |
 | `FAQ_ANSWERED` | Owner answers a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `FAQ_HIDDEN` | Owner hides a FAQ | Questioner | `thing_headline`, `owner_name` |
