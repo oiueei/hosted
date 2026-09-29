@@ -27,6 +27,13 @@ Invariants, each pinned by a test in ``core/tests/unit/test_export_service.py``:
   shows them — never in ones they were merely invited to. The optional
   demographics follow ``Collection.is_community()``, exactly as
   ``CollectionSerializer.get_invites`` does.
+- **A group's copy is the history of that group.** A thing can sit in two
+  groups and a booking records who asked, not through which group; so outside
+  PROPRIETARY (whose curators manage every thing in it) the copy carries the
+  requests made by the owner and the members, and the hidden questions of the
+  same people, and leaves out what a person from another group asked about a
+  member's thing. The organiser of a COMMUNITY group does not manage the
+  members' things, and the app never shows them that.
 - **Reports stay anonymous.** Reports the exporter filed are theirs; reports
   filed *against* their things appear in neither export. This file must not
   become the leak the notification carefully avoids.
@@ -44,7 +51,7 @@ import json
 from collections import Counter, defaultdict
 from datetime import timedelta
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, Subquery
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
 from core.models import (
@@ -143,6 +150,9 @@ README_TEXTS = {
                 "Your members' notifications and activity — those are theirs, not the group's.",
                 "Birth ranges and postal codes, unless this is a community group: in every "
                 "other mode nobody but each member sees them.",
+                "In a community group, requests and hidden questions from people outside the "
+                "group: they concern a member's thing, and only whoever runs that thing sees "
+                "them.",
                 "Photos and PDFs travel as links, not as files.",
             ],
         },
@@ -198,6 +208,9 @@ README_TEXTS = {
                 "Las notificaciones y la actividad de tus miembros: son suyas, no del grupo.",
                 "La generación y el código postal, salvo que este sea un grupo comunitario: "
                 "en los demás modos no los ve nadie más que cada miembro.",
+                "En un grupo comunitario, las solicitudes y las preguntas ocultas de gente de "
+                "fuera del grupo: son sobre la cosa de un miembro, y solo las ve quien la "
+                "gestiona.",
                 "Las fotos y los PDF viajan como enlaces, no como archivos.",
             ],
         },
@@ -253,6 +266,8 @@ README_TEXTS = {
                 "Les notificacions i l'activitat dels teus membres: són seves, no del grup.",
                 "La generació i el codi postal, tret que aquest sigui un grup comunitari: en "
                 "els altres modes no els veu ningú més que cada membre.",
+                "En un grup comunitari, les sol·licituds i les preguntes amagades de gent de "
+                "fora del grup: són sobre la cosa d'un membre, i només les veu qui la gestiona.",
                 "Les fotos i els PDF viatgen com a enllaços, no com a fitxers.",
             ],
         },
@@ -841,11 +856,27 @@ def _collection_members(collection):
     return collection.owner_member_rows(collection.invites.all().order_by("name", "code"))
 
 
-def _collection_bookings(thing_codes):
-    bookings = (
-        BookingPeriod.objects.filter(thing_code__in=thing_codes)
-        .select_related("thing_code", "owner_code", "requester_code")
-        .order_by("created")
+def _group_people(collection):
+    """Who counts as *inside* this group, or ``None`` when everything does.
+
+    ``None`` for PROPRIETARY: its curators run every thing in it, so the app
+    already shows them each request and each hidden question. In any other mode
+    the curator manages nothing but the group itself (``Thing.can_manage``), and
+    a thing can sit in a second group whose members are none of this one's
+    business — a booking records *who asked*, not *through which group*, so the
+    only honest line to draw is the person: the owner and the invited members.
+    """
+    if collection.mode == Collection.Mode.PROPRIETARY:
+        return None
+    return {collection.owner_id, *collection.invites.values_list("code", flat=True)}
+
+
+def _collection_bookings(thing_codes, people=None):
+    bookings = BookingPeriod.objects.filter(thing_code__in=thing_codes)
+    if people is not None:
+        bookings = bookings.filter(requester_code_id__in=people)
+    bookings = bookings.select_related("thing_code", "owner_code", "requester_code").order_by(
+        "created"
     )
     return [
         {
@@ -857,12 +888,14 @@ def _collection_bookings(thing_codes):
     ]
 
 
-def _collection_faqs(thing_codes):
-    faqs = (
-        FAQ.objects.filter(thing__in=thing_codes)
-        .select_related("thing", "questioner")
-        .order_by("created")
-    )
+def _collection_faqs(thing_codes, people=None):
+    faqs = FAQ.objects.filter(thing__in=thing_codes)
+    if people is not None:
+        # A visible question shows its author to anyone who sees the thing; a
+        # hidden one is only its questioner's and its managers'. A deleted
+        # account (``questioner`` NULL) is nobody in this group.
+        faqs = faqs.filter(Q(is_visible=True) | Q(questioner_id__in=people))
+    faqs = faqs.select_related("thing", "questioner").order_by("created")
     return [{**_faq_columns(faq), "questioner": _person(faq.questioner)} for faq in faqs]
 
 
@@ -888,6 +921,7 @@ def build_collection_export(collection):
     (``require_collection_curator``); this function trusts it."""
     things = list(collection.things.select_related("owner").order_by("created"))
     thing_codes = [thing.code for thing in things]
+    people = _group_people(collection)
     data = {
         "collection": {**_collection_columns(collection), "owner": _person(collection.owner)},
         "members": _collection_members(collection),
@@ -903,8 +937,8 @@ def build_collection_export(collection):
             }
             for thing in things
         ],
-        "bookings": _collection_bookings(thing_codes),
-        "faqs": _collection_faqs(thing_codes),
+        "bookings": _collection_bookings(thing_codes, people),
+        "faqs": _collection_faqs(thing_codes, people),
         "transfers": _collection_transfers(thing_codes),
         "stats": dict(collection_stats_rows(collection)),
     }

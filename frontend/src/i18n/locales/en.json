@@ -10,13 +10,13 @@
     "error": "Couldn't build the export. Please try again in a moment."
   },
   "calendarExport": {
-    "downloadButton": "Download reservations for your calendar",
+    "downloadButton": "Download the calendar",
     "downloading": "Preparing the file…",
-    "notice": "Every upcoming reservation, in a calendar file (.ics). Open it or import it into Google Calendar, Apple Calendar or Outlook; importing it again adds nothing twice, and a reservation cancelled since goes in marked as cancelled.",
+    "notice": "Every upcoming loan, rental and reservation, in a calendar file (.ics). Open it or import it into Google Calendar, Apple Calendar or Outlook; importing it again adds nothing twice, and a reservation cancelled since goes in marked as cancelled.",
     "done": "{{count}} event(s) — check your downloads.",
-    "alsoCancelled": "It includes {{count}} cancelled, marked so your calendar can drop them.",
-    "doneOnlyCancelled": "No upcoming reservations, but {{count}} cancelled — import the file so your calendar can drop them.",
-    "nothingNew": "No upcoming reservations.",
+    "alsoCancelled": "It includes {{count}} cancelled reservation(s), marked so your calendar can drop them.",
+    "doneOnlyCancelled": "Nothing coming up, but {{count}} cancelled reservation(s) — import the file so your calendar can drop them.",
+    "nothingNew": "Nothing coming up in the calendar.",
     "error": "Couldn't build the calendar file. Please try again in a moment."
   },
   "ageRange": {
@@ -64,8 +64,8 @@
   },
   "joinToAct": {
     "heading": "Join to take part",
-    "body": "Sign in to reserve, ask a question or add your own things. Enter your email and we'll send you a magic link — no password, no sign-up form.",
-    "bodyNamed": "Sign in to reserve, ask a question or add your own things to {{collection}}. Enter your email and we'll send you a magic link — no password, no sign-up form.",
+    "body": "Join to request, reserve, ask a question or add your own things. Enter your email and we'll send you a magic link — no password, no sign-up form.",
+    "bodyNamed": "Join to request, reserve, ask a question or add your own things to {{collection}}. Enter your email and we'll send you a magic link — no password, no sign-up form.",
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "join": "Send me a magic link",
@@ -158,7 +158,7 @@
     "ownerBookings": "Requests to me — OIUEEI",
     "sharedThings": "Shared with me — OIUEEI",
     "dataExport": "Data export — OIUEEI",
-    "reserveThing": "Reserve: {{headline}}"
+    "reserveThing": "Reserve: {{headline}} — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -169,6 +169,7 @@
     "magicLinkSent": "If this email is registered, your magic link is on its way — check your inbox, and your spam folder just in case.",
     "errorSendingLink": "Error sending link.",
     "pitch": "Share what you have with the people around you. Create a collection of things to gift, sell, rent, lend or reserve — and invite people to browse it and ask for what they need.",
+    "nextNotice": "Sign in and we'll take you straight to the page you were opening.",
     "licence": "OIUEEI's code is open source under the EUPL-1.2, a strong copyleft licence. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there.",
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
@@ -279,6 +280,9 @@
     "addManyCsv": "Add several at once (CSV)",
     "allTags": "All",
     "noThingsForTag": "No things with this tag.",
+    "anonJoinCommunity": "Have something to add? Join the group →",
+    "anonJoinEmpty": "Join the group to hear when something arrives →",
+    "anonJoinPlain": "Join the group →",
     "communityTag": "Community",
     "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask the owner.",
     "notFound": "Collection not found.",
@@ -326,9 +330,9 @@
     "thingReactivated": "Thing reactivated.",
     "errorReactivatingThing": "Error reactivating thing.",
     "holdConfirmed": "Hold confirmed.",
-    "holdCancelled": "Hold cancelled.",
+    "holdCancelled": "Hold declined.",
     "errorConfirmingHold": "Error confirming hold.",
-    "errorCancellingHold": "Error cancelling hold.",
+    "errorCancellingHold": "Error declining hold.",
     "questionSent": "Question sent.",
     "errorSendingQuestion": "Error sending question.",
     "answerSent": "Answer sent.",
@@ -352,10 +356,10 @@
   },
   "thingCard": {
     "confirmHold": "Confirm hold",
-    "cancelHold": "Cancel hold",
+    "cancelHold": "Decline hold",
     "reactivate": "Reactivate",
     "confirming": "Confirming...",
-    "cancelling": "Cancelling...",
+    "cancelling": "Declining...",
     "transferConfirmTitle": "Transfer ownership?",
     "transferConfirmBody": "Accepting this request transfers the item to the person who asked for it. It stays in the collection — you can still follow it in the journey.",
     "transferConfirm": "Transfer ownership",
@@ -518,7 +522,7 @@
     "modeLabel": "Mode",
     "modeProprietary": "Proprietary",
     "modeCommunity": "Community",
-    "modeProprietaryDesc": "Only you can add things to this list.",
+    "modeProprietaryDesc": "Only its curators add things — you, to start with.",
     "modeCommunityDesc": "Everyone you invite can add their own things too.",
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
@@ -740,7 +744,11 @@
     "joining": "Sending…",
     "magicLinkSent": "Magic link sent! Check your inbox and click the link to join the collection.",
     "errorSendingLink": "Error sending link.",
-    "alreadyHaveAccount": "Already have an account? Sign in →"
+    "alreadyHaveAccount": "Already have an account? Sign in →",
+    "joinSignedIn": "Join {{name}}",
+    "joinSignedInGeneric": "Join this group",
+    "useAnotherEmail": "Use another email instead",
+    "linkGone": "This invitation link no longer works — ask whoever sent it for a new one."
   },
   "endless": {
     "label": "Endless — multiple people can hold at the same time, thing stays active forever"
@@ -789,7 +797,7 @@
     "copy": "Copy invite link",
     "whatsapp": "WhatsApp",
     "emailSubject": "I'm inviting you to {{headline}} on OIUEEI",
-    "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI.\n\nYou can join here: {{url}}\n\nLove,\n{{name}}",
+    "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI.\n\nYou can join here: {{url}}",
     "whatsappText": "I'm inviting you to \"{{headline}}\" on OIUEEI: {{url}}",
     "copied": "Invite link copied to clipboard.",
     "copyError": "We couldn't copy the link. Try again or use one of the other options.",
@@ -1050,6 +1058,8 @@
   "requestErrors": {
     "already_requested": "You've already asked for this — wait for the owner's answer.",
     "cancel_forbidden": "You can't cancel this reservation.",
+    "co_owners_full_one": "This group already has its 1 co-curator — the most it allows.",
+    "co_owners_full_other": "This group already has {{count}} co-curators — the most it allows.",
     "dates_taken": "Those dates are already taken.",
     "not_a_member": "You need to be a member of this group to reserve.",
     "not_available": "This isn't available right now.",

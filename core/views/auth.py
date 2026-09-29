@@ -10,7 +10,7 @@ import logging
 import threading
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django_ratelimit.decorators import ratelimit
@@ -42,7 +42,8 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
-from core.utils import doc_asset_url, get_client_ip, redact_email
+from core.services.team import managers_ready_collections
+from core.utils import doc_asset_url, get_client_ip, redact_email, safe_next_path
 from core.views._helpers import body_dict
 
 security_logger = logging.getLogger("security")
@@ -217,6 +218,15 @@ class RequestLinkView(APIView):
 
         security_logger.info(f"Magic link requested for {redact_email(email)} from IP {ip}")
 
+        # Where the person was going when the session ran out. Read straight from
+        # the body, *not* through ``RequestLinkSerializer``: a bad ``next`` is
+        # dropped without a word and the answer does not change, whereas a 400
+        # would tell a caller which requests carried a bad one for no reason.
+        # ``safe_next_path`` is the only door — the SPA's own check is defence in
+        # depth. It rides on the RSVP, not in browser storage, because the link is
+        # often opened in another browser (webmail, the phone's mail app).
+        next_path = safe_next_path(body_dict(request).get("next"))
+
         # Create RSVP. ``origin=LOGIN`` tells VerifyLinkView this is a returning
         # user, not a first visit — the new-visitor landing never applies again.
         #
@@ -230,10 +240,13 @@ class RequestLinkView(APIView):
         # downgraded from a 500 into a silent no-email. The rate limits (5/m per
         # IP, 5/h per email) cap sampling far below what averaging a sub-millisecond
         # difference out of network noise would take, so the trade isn't worth it.
+        # Carrying ``next`` adds nothing to that delta: it is the same INSERT, with
+        # one more value in a column it already wrote.
         rsvp = RSVP.objects.create(
             user_code=user,
             user_email=email,
             origin=RSVP.Origin.LOGIN,
+            context={"next": next_path} if next_path else {},
         )
 
         # Send magic link email
@@ -300,6 +313,7 @@ class VerifyLinkView(APIView):
     LANDING_COLLECTION = "collection"
     LANDING_WELCOME = "welcome"
     LANDING_HOME = "home"
+    LANDING_PATH = "path"
 
     def _resolve_rsvp(self, request, token):
         """Look up and expiry-check an RSVP token.
@@ -449,8 +463,12 @@ class VerifyLinkView(APIView):
            It is kept for a deployment that adds an open door of its own, since
            this file is one it must never have to edit; the SPA resolves the
            landing against its own ``aboutPath`` and falls through to home.
-        3. Otherwise (``/login``, and any legacy magic link with no origin) → their
-           single ACTIVE collection when they have exactly one, else home.
+        3. Otherwise a ``/login`` link (or a legacy one with no origin) that
+           remembers where the person was going (``context["next"]``, stamped by
+           ``RequestLinkView``) → that path (``"path"``). It outranks the
+           single-collection rule: the email they came from named a page.
+        4. Otherwise → their single ACTIVE collection when they have exactly one,
+           else home.
         """
         ip = get_client_ip(request)
 
@@ -478,6 +496,10 @@ class VerifyLinkView(APIView):
         # The thing the visitor was trying to act on when they hit the join wall
         # (JoinView stashes it here); resolved to a landing detail below.
         context_thing = (rsvp.context or {}).get("thing_code")
+        # Checked again here even though ``RequestLinkView`` already did: the value
+        # comes from our own table, but a ``context`` written by another route
+        # must not be able to send a session anywhere. Read before the delete.
+        next_path = safe_next_path((rsvp.context or {}).get("next"))
 
         rsvp.delete()
 
@@ -505,6 +527,9 @@ class VerifyLinkView(APIView):
                 response_data["thing"] = context_thing
         elif origin == RSVP.Origin.POPIN:
             response_data["landing"] = self.LANDING_WELCOME
+        elif next_path:
+            response_data["landing"] = self.LANDING_PATH
+            response_data["path"] = next_path
         else:
             solo = self._solo_collection_code(user)
             if solo:
@@ -616,12 +641,28 @@ class VerifyLinkView(APIView):
             status=status.HTTP_200_OK,
         )
 
-    def _handle_booking_action(self, rsvp, accepted):
-        """Shared handler for booking accept/reject via RSVP."""
+    def _handle_booking_action(self, request, rsvp, accepted):
+        """Shared handler for booking accept/reject via RSVP.
+
+        The link was minted to **one manager** of the thing (its owner, or a
+        curator of a PROPRIETARY collection it sits in — see
+        ``send_booking_request_notifications``), so the decision is theirs. But
+        it is judged when the link is *used*, not when it was sent: a co-curator
+        demoted or removed after the email, a collection turned COMMUNITY, or
+        the thing moved out of it, must not be able to decide with the old link.
+        """
         booking_code = rsvp.target_code
 
+        # The thing comes with its collections manager-ready: the authority check
+        # below and the decision's notice to the whole team both walk them.
         try:
-            booking = BookingPeriod.objects.get(code=booking_code)
+            booking = (
+                BookingPeriod.objects.select_related("thing_code")
+                .prefetch_related(
+                    Prefetch("thing_code__collections", queryset=managers_ready_collections())
+                )
+                .get(code=booking_code)
+            )
         except BookingPeriod.DoesNotExist:
             rsvp.delete()
             return Response(
@@ -644,10 +685,26 @@ class VerifyLinkView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # The emailed link was minted to the owner's address alone, so the
-        # decision is theirs — passed explicitly rather than left to the
-        # service's owner fallback.
-        thing = finalize_booking_decision(booking, accepted=accepted, decided_by=booking.owner_code)
+        # Authority is checked again here, at the click. The link outlives the
+        # role that earned it (72h): the owner always may, anyone else only
+        # while they still run the thing. A refused link is burnt, so it cannot
+        # be tried again.
+        if not (rsvp.user_code_id == booking.owner_code_id or thing.can_manage(rsvp.user_code_id)):
+            ip = get_client_ip(request)
+            security_logger.warning(
+                f"Booking {booking.code} decision refused for {rsvp.user_code_id}: "
+                f"no longer manages the thing, from IP {ip}"
+            )
+            rsvp.delete()
+            return Response(
+                {"error": "Not authorized"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # The decision is signed by whoever the emailed link was minted to —
+        # the owner's own, or a co-curator's — passed explicitly rather than
+        # left to the service's owner fallback.
+        thing = finalize_booking_decision(booking, accepted=accepted, decided_by=rsvp.user_code)
 
         # A concurrent request (this link racing the in-app action, or the
         # sibling link) already transitioned this booking — the service no-ops.
@@ -760,11 +817,11 @@ class VerifyLinkView(APIView):
 
     def _handle_booking_accept(self, request, rsvp):
         """Handle booking accept action for all thing types."""
-        return self._handle_booking_action(rsvp, accepted=True)
+        return self._handle_booking_action(request, rsvp, accepted=True)
 
     def _handle_booking_reject(self, request, rsvp):
         """Handle booking reject action for all thing types."""
-        return self._handle_booking_action(rsvp, accepted=False)
+        return self._handle_booking_action(request, rsvp, accepted=False)
 
 
 class JoinView(APIView):

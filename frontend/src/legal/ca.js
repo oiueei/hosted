@@ -21,6 +21,8 @@ OIUEEI és programari de codi obert (llicència EUPL-1.2). Aquesta pàgina descr
 
 **On van:** el correu surt pel proveïdor SMTP que l'operador hagi configurat i les imatges i els documents es desen al bucket d'emmagatzematge d'objectes del mateix operador. Res més no surt de la instància: sense SDKs de tercers, sense esdeveniments enviats enfora. Les mètriques d'ús són pròpies, pseudonimitzades i mai no es comparteixen.
 
+**Qui veu què dins d'un grup:** una sol·licitud que fas sobre una cosa (un préstec, un lloguer, un regal, una compra o una reserva) arriba a qui gestiona aquesta cosa —el seu propietari i, en un grup que porta un equip, els seus co-curadors— amb el teu nom i el teu email, perquè et puguin respondre. Una pregunta que fas en una cosa s'hi mostra amb el teu nom a qui hagi entrat amb el seu compte i pugui veure la cosa, tret que qui la gestiona l'amagui. Quan s'accepta un préstec, un lloguer, un regal o una venda, l'historial de la cosa mostra el teu nom de la mateixa manera (tret d'un regal o una venda marcats com a «il·limitat», que no deixen historial). Qui administra un grup també pot descarregar-ne el calendari, amb el nom de cada reserva, préstec o lloguer.
+
 **Cookies:** només tècniques (sessió i seguretat). No hi ha cookies de tercers ni de publicitat, per això no hi ha bàner.
 
 **Esborrar el teu compte:** des del teu perfil (Editar perfil → Esborrar el compte), amb confirmació per correu. És immediat i irreversible: el teu compte, les teves col·leccions, les teves coses amb les seves fotos i les teves sol·licituds s'eliminen. Les preguntes que vas fer en coses d'altres persones i l'historial de mans es conserven **sense el teu nom** («Antic membre»).

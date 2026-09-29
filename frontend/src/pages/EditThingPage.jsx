@@ -92,16 +92,20 @@ export default function EditThingPage() {
           setThingCollectionLanguage(data.collection_language || '');
           setLoadedTexts([data.headline, data.description]);
         } else {
-          setToast({ type: 'error', message: t('editThing.errorLoading') });
+          setToast({ type: 'error', messageKey: 'editThing.errorLoading' });
         }
       } catch {
-        setToast({ type: 'error', message: t('common.connectionError') });
+        setToast({ type: 'error', messageKey: 'common.connectionError' });
       } finally {
         setLoading(false);
       }
     };
     fetchThing();
-  }, [userCode, thingCode, navigate, code, t]);
+    // No `t`: the failure toasts carry a key (`Toast` translates it). This load
+    // *sets every field of the form*, and `useCollectionLanguage` swaps `t` once
+    // its response lands — listing it re-ran the load and wrote the server's copy
+    // over anything the editor had typed in the meantime.
+  }, [userCode, thingCode, navigate, code]);
 
   const returnPath = thingCollectionCode ? `/collections/${thingCollectionCode}` : '/';
   const returnLabel =

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { TextInput, Button, Notification } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
+import { loginPathFor } from '../utils/nextPath';
 
 /**
  * "Log in to act" body rendered by JoinPage for an anonymous visitor on a PUBLIC
@@ -26,6 +27,13 @@ export default function JoinToAct({ collectionCode, collectionHeadline, thingCod
       ? { collection_code: collectionCode, thing_code: thingCode }
       : { collection_code: collectionCode },
   });
+
+  // Someone with an account who pressed "Request" on a public group they are not
+  // in lands here and picks "already have an account": after the login they go
+  // back to the thing they were looking at, or the group, not to Home.
+  const returnPath = thingCode
+    ? `/collections/${collectionCode}/things/${thingCode}`
+    : `/collections/${collectionCode}`;
 
   if (status === 'success') {
     return (
@@ -89,7 +97,7 @@ export default function JoinToAct({ collectionCode, collectionHeadline, thingCod
         </Link>
       </p>
       <p style={{ marginBottom: 0 }}>
-        <Link to="/login">{t('joinToAct.alreadyHaveAccount')}</Link>
+        <Link to={loginPathFor({ pathname: returnPath })}>{t('joinToAct.alreadyHaveAccount')}</Link>
       </p>
     </>
   );

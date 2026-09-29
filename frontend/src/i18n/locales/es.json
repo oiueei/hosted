@@ -10,13 +10,13 @@
     "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
   },
   "calendarExport": {
-    "downloadButton": "Descargar reservas para el calendario",
+    "downloadButton": "Descargar el calendario",
     "downloading": "Preparando el fichero…",
-    "notice": "Todas las reservas futuras, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada, y una reserva cancelada desde entonces va marcada como cancelada.",
+    "notice": "Todos los préstamos, alquileres y reservas próximos, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada, y una reserva cancelada desde entonces va marcada como cancelada.",
     "done": "{{count}} evento(s) — mira tus descargas.",
-    "alsoCancelled": "Incluye {{count}} cancelada(s), marcadas para que tu calendario pueda quitarlas.",
-    "doneOnlyCancelled": "No hay reservas futuras, pero sí {{count}} cancelada(s) — importa el fichero para que tu calendario pueda quitarlas.",
-    "nothingNew": "No hay reservas futuras.",
+    "alsoCancelled": "Incluye {{count}} reserva(s) cancelada(s), marcadas para que tu calendario pueda quitarlas.",
+    "doneOnlyCancelled": "No hay nada próximo, pero sí {{count}} reserva(s) cancelada(s): importa el fichero para que tu calendario pueda quitarlas.",
+    "nothingNew": "No hay nada próximo en el calendario.",
     "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
   },
   "ageRange": {
@@ -58,8 +58,8 @@
   },
   "joinToAct": {
     "heading": "Únete para participar",
-    "body": "Inicia sesión para pedir, reservar, preguntar o añadir tus propias cosas. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
-    "bodyNamed": "Inicia sesión para pedir, reservar, preguntar o añadir tus propias cosas a {{collection}}. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
+    "body": "Únete para pedir, reservar, preguntar o añadir tus propias cosas. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
+    "bodyNamed": "Únete para pedir, reservar, preguntar o añadir tus propias cosas a {{collection}}. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
     "emailLabel": "Correo electrónico",
     "emailPlaceholder": "tu@ejemplo.com",
     "join": "Envíame un enlace mágico",
@@ -152,7 +152,7 @@
     "ownerBookings": "Solicitudes para mí — OIUEEI",
     "sharedThings": "Compartido conmigo — OIUEEI",
     "dataExport": "Exportar datos — OIUEEI",
-    "reserveThing": "Reservar: {{headline}}"
+    "reserveThing": "Reservar: {{headline}} — OIUEEI"
   },
   "login": {
     "title": "OIUEEI",
@@ -162,7 +162,8 @@
     "tryAnotherEmail": "Probar con otro email",
     "magicLinkSent": "Si este correo está registrado, tu enlace mágico está en camino — revisa tu bandeja de entrada y, por si acaso, la carpeta de spam.",
     "errorSendingLink": "Error al enviar el enlace.",
-    "pitch": "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas para regalar, vender, alquilar, prestar o reservar — e invita a la gente a conocerlas y encargarlas.",
+    "pitch": "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas para regalar, vender, alquilar, prestar o reservar — e invita a la gente a conocerlas y pedirlas.",
+    "nextNotice": "Entra y te llevamos directo a la página que ibas a abrir.",
     "licence": "El código de OIUEEI es abierto, bajo la licencia EUPL-1.2, un copyleft fuerte. El proyecto vive en <1>GitHub</1>: ideas, propuestas y colaboración, allí.",
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
     "operator": "",
@@ -273,6 +274,9 @@
     "addManyCsv": "Añadir varios a la vez (CSV)",
     "allTags": "Todos",
     "noThingsForTag": "No hay cosas con este tag.",
+    "anonJoinCommunity": "¿Tienes algo que aportar? Únete al grupo →",
+    "anonJoinEmpty": "Únete al grupo para enterarte cuando llegue algo →",
+    "anonJoinPlain": "Únete al grupo →",
     "communityTag": "Comunitaria",
     "noPermission": "No tienes acceso a esta colección. Puede estar inactiva, o tu acceso puede haber cambiado — revisa tus invitaciones, o contacta con el dueño.",
     "notFound": "Colección no encontrada.",
@@ -512,7 +516,7 @@
     "modeLabel": "Modo",
     "modeProprietary": "Propia",
     "modeCommunity": "Comunitaria",
-    "modeProprietaryDesc": "Solo tú puedes añadir cosas a esta lista.",
+    "modeProprietaryDesc": "Solo sus curadores añaden cosas; de entrada, tú.",
     "modeCommunityDesc": "Todos los invitados también pueden añadir sus propias cosas.",
     "titleRequired": "El título es obligatorio.",
     "maxHeadline": "Máximo 64 caracteres por idioma.",
@@ -734,7 +738,11 @@
     "joining": "Enviando…",
     "magicLinkSent": "¡Enlace enviado! Revisa tu bandeja de entrada y pulsa el enlace para unirte a la colección.",
     "errorSendingLink": "Error al enviar el enlace.",
-    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión →"
+    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión →",
+    "joinSignedIn": "Unirme a {{name}}",
+    "joinSignedInGeneric": "Unirme a este grupo",
+    "useAnotherEmail": "Usar otro correo",
+    "linkGone": "Este enlace de invitación ya no funciona: pide uno nuevo a quien te lo envió."
   },
   "endless": {
     "label": "Sin límite — varias personas pueden pedirla a la vez, la cosa siempre está activa"
@@ -783,7 +791,7 @@
     "copy": "Copiar enlace de invitación",
     "whatsapp": "WhatsApp",
     "emailSubject": "Te invito a {{headline}} en OIUEEI",
-    "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI.\n\nPuedes unirte aquí: {{url}}\n\nUn abrazo,\n{{name}}",
+    "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI.\n\nPuedes unirte aquí: {{url}}",
     "whatsappText": "Te invito a \"{{headline}}\" en OIUEEI: {{url}}",
     "copied": "Enlace copiado al portapapeles.",
     "copyError": "No hemos podido copiar el enlace. Inténtalo de nuevo o usa otra opción.",
@@ -1050,6 +1058,8 @@
   "requestErrors": {
     "already_requested": "Ya lo has pedido: espera la respuesta de quien lo ofrece.",
     "cancel_forbidden": "No puedes cancelar esta reserva.",
+    "co_owners_full_one": "Este grupo ya tiene 1 co-curador: es el máximo que permite.",
+    "co_owners_full_other": "Este grupo ya tiene {{count}} co-curadores: es el máximo que permite.",
     "dates_taken": "Esas fechas ya están cogidas.",
     "not_a_member": "Tienes que ser miembro de este grupo para reservar.",
     "not_available": "Ahora mismo no está disponible.",

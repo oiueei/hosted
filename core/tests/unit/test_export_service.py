@@ -23,6 +23,8 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from core.models import (
     FAQ,
@@ -465,6 +467,184 @@ class TestCollectionExport:
         assert payload["stats"]["Members"] == 1
         assert payload["stats"]["Things total"] == 2
         assert payload["stats"]["Born 1965-1980 (Gen X)"] == 1
+
+
+class TestCollectionExportStaysInsideTheGroup:
+    """A group's copy is the history of *that group*, not of a thing's every visitor.
+
+    A thing can sit in two groups, and a booking records who asked — not through
+    which group. The organiser of a COMMUNITY group manages nothing but the group
+    (``Thing.can_manage`` wants PROPRIETARY), so a request a cousin from *another*
+    group made on a member's drill, or a question of theirs its owner hid, is
+    something the app never shows them — and the file must not either. Asserted on
+    the bytes for the person, since the row shape is the file's business.
+    """
+
+    @pytest.fixture
+    def cousin(self, db):
+        """Somebody in a second group that holds a member's thing — not in MINE01."""
+        return User.objects.create(code="CUSN01", email="cousin@example.com", name="Cousin Out")
+
+    @pytest.fixture
+    def family(self, world, user2, cousin):
+        """A second group holding the member's ladder, with the cousin in it."""
+        family = Collection.objects.create(code="FAMY01", owner=user2, headline="Family")
+        family.invites.add(cousin)
+        family.things.add(world["member_thing"])
+        return family
+
+    @pytest.fixture
+    def member(self, world):
+        """A second member of MINE01, so a request can be made *inside* the group."""
+        member = User.objects.create(code="MEMB02", email="member@example.com", name="Member Two")
+        world["mine"].invites.add(member)
+        return member
+
+    def _booking(self, code, thing, requester):
+        return BookingPeriod.objects.create(
+            code=code,
+            thing_code=thing,
+            thing_type=thing.type,
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=thing.owner,
+            start_date=date(2026, 9, 1),
+            end_date=date(2026, 9, 3),
+        )
+
+    def _codes(self, payload, key):
+        return {row["code"] for row in payload[key]}
+
+    def test_a_request_from_someone_outside_a_community_group_is_not_in_its_copy(
+        self, world, family, cousin
+    ):
+        self._booking("BKOUT1", world["member_thing"], cousin)
+
+        payload = build_collection_export(world["mine"])
+
+        assert "BKOUT1" not in self._codes(payload, "bookings")
+        raw = export_bytes(payload)
+        assert b"CUSN01" not in raw
+        assert b"Cousin Out" not in raw
+
+    def test_a_request_from_a_member_is_in_a_community_groups_copy(self, world, member):
+        self._booking("BKMEM1", world["my_thing"], member)
+
+        payload = build_collection_export(world["mine"])
+
+        booking = next(b for b in payload["bookings"] if b["code"] == "BKMEM1")
+        assert booking["requester"] == {"code": "MEMB02", "name": "Member Two"}
+
+    def test_the_organisers_own_request_is_in_their_groups_copy(self, world, user):
+        self._booking("BKORG1", world["member_thing"], user)
+
+        payload = build_collection_export(world["mine"])
+
+        assert "BKORG1" in self._codes(payload, "bookings")
+
+    def test_a_hidden_question_from_someone_outside_the_group_is_not_in_its_copy(
+        self, world, family, cousin
+    ):
+        FAQ.objects.create(
+            code="FAQHID",
+            thing=world["member_thing"],
+            questioner=cousin,
+            question="Is it dented?",
+            is_visible=False,
+        )
+
+        payload = build_collection_export(world["mine"])
+
+        assert "FAQHID" not in self._codes(payload, "faqs")
+        raw = export_bytes(payload)
+        assert b"CUSN01" not in raw
+        assert b"Cousin Out" not in raw
+
+    def test_a_hidden_question_from_a_member_is_in_a_community_groups_copy(self, world, member):
+        FAQ.objects.create(
+            code="FAQMEM",
+            thing=world["my_thing"],
+            questioner=member,
+            question="Is it loud?",
+            is_visible=False,
+        )
+
+        payload = build_collection_export(world["mine"])
+
+        faq = next(f for f in payload["faqs"] if f["code"] == "FAQMEM")
+        assert faq["questioner"] == {"code": "MEMB02", "name": "Member Two"}
+
+    def test_a_hidden_question_whose_account_is_gone_is_nobodys_in_the_group(self, world):
+        FAQ.objects.create(
+            code="FAQGON",
+            thing=world["my_thing"],
+            questioner=None,
+            question="Who am I?",
+            is_visible=False,
+        )
+
+        payload = build_collection_export(world["mine"])
+
+        assert "FAQGON" not in self._codes(payload, "faqs")
+
+    def test_a_visible_question_from_someone_outside_the_group_is_in_the_copy_with_its_author(
+        self, world, family, cousin
+    ):
+        # Anyone who sees the thing sees this question and who asked it; there is
+        # nothing to withhold from the organiser that the thing's own page shows.
+        FAQ.objects.create(
+            code="FAQVIS",
+            thing=world["member_thing"],
+            questioner=cousin,
+            question="Is it tall?",
+            is_visible=True,
+        )
+
+        payload = build_collection_export(world["mine"])
+
+        faq = next(f for f in payload["faqs"] if f["code"] == "FAQVIS")
+        assert faq["questioner"] == {"code": "CUSN01", "name": "Cousin Out"}
+
+    def test_a_proprietary_groups_copy_keeps_requests_from_other_groups(self, user, cousin):
+        # Its curators manage every thing in it and already read every request in
+        # the app, so nothing is withheld there and the copy must not start.
+        private = Collection.objects.create(
+            code="PRIV01", owner=user, headline="Private", mode=Collection.Mode.PROPRIETARY
+        )
+        drill = Thing.objects.create(code="PRTH01", owner=user, headline="Drill")
+        private.things.add(drill)
+        self._booking("BKPRV1", drill, cousin)
+        FAQ.objects.create(
+            code="FAQPRV",
+            thing=drill,
+            questioner=cousin,
+            question="Is it sharp?",
+            is_visible=False,
+        )
+
+        payload = build_collection_export(private)
+
+        assert "BKPRV1" in self._codes(payload, "bookings")
+        assert "FAQPRV" in self._codes(payload, "faqs")
+
+    def test_the_boundary_costs_no_query_per_row(self, world, member):
+        # The group's people are settled once for the whole file, not asked of each
+        # booking (``is_invited`` per row is what K3 spent a round removing).
+        with CaptureQueriesContext(connection) as few:
+            build_collection_export(world["mine"])
+        for n in range(6):
+            self._booking(f"BKROW{n}", world["my_thing"], member)
+            FAQ.objects.create(
+                code=f"FQROW{n}",
+                thing=world["my_thing"],
+                questioner=member,
+                question=f"Question {n}?",
+                is_visible=n % 2 == 0,
+            )
+        with CaptureQueriesContext(connection) as many:
+            build_collection_export(world["mine"])
+
+        assert len(many) == len(few)
 
 
 class TestReadme:

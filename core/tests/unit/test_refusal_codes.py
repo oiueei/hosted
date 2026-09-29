@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SOURCES = [
     ROOT / "core" / "models" / "collection.py",
     ROOT / "core" / "services" / "booking_service.py",
+    ROOT / "core" / "views" / "collections.py",
 ]
 LOCALES = ROOT / "frontend" / "src" / "i18n" / "locales"
 
@@ -60,13 +61,20 @@ def _codes_in_source():
         # BookingRequestError(…, code="code", …) and the clash's conditional code.
         codes |= set(re.findall(r'code="([a-z_]+)"', text))
         codes |= set(re.findall(r'else "([a-z_]+)"', text))
+        # A view's own coded refusal, written as a response body: {"code": "…", …}.
+        codes |= set(re.findall(r'"code":\s*"([a-z_]+)"', text))
     return codes
 
 
 def test_every_code_a_request_can_be_refused_with_is_translated():
     codes = _codes_in_source()
     # The scan itself must be finding things, or this test proves nothing.
-    assert {"reservation_already_begun", "rental_pickup_weekday", "time_taken"} <= codes
+    assert {
+        "reservation_already_begun",
+        "rental_pickup_weekday",
+        "time_taken",
+        "co_owners_full",
+    } <= codes
     for lang in ("en", "es", "ca"):
         table = json.loads((LOCALES / f"{lang}.json").read_text())["requestErrors"]
         # A code whose sentence carries a number is pluralised (`_one`/`_other`).

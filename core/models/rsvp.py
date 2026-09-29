@@ -141,14 +141,20 @@ class RSVP(models.Model):
         return f"{settings.RSVP_BASE_URL}/{self.token}"
 
     @classmethod
-    def create_for_booking(cls, action, booking, owner_email):
+    def create_for_booking(cls, action, booking, recipient):
         """
         Create an RSVP for a booking accept/reject action.
 
         Args:
             action: 'BOOKING_ACCEPT' or 'BOOKING_REJECT'
             booking: BookingPeriod instance
-            owner_email: Email of the owner to send the link to
+            recipient: the ``User`` the link is minted to and sent to — whoever
+                runs the thing and was asked to decide (its owner, or a
+                curator of a PROPRIETARY collection it sits in). The RSVP is
+                that person's: ``user_code`` says who clicked when it is used,
+                and the decision is signed by them, not by the thing's owner.
+                ``VerifyLinkView`` re-checks they still may decide at the
+                moment of the click.
         """
         context = {
             "thing_code": booking.thing_code_id,
@@ -163,20 +169,21 @@ class RSVP(models.Model):
             context["end_date"] = str(booking.end_date)
 
         return cls.objects.create(
-            user_code=booking.owner_code,
-            user_email=owner_email,
+            user_code=recipient,
+            user_email=recipient.email,
             action=action,
             target_code=booking.code,
             context=context,
         )
 
     @classmethod
-    def create_booking_pair(cls, booking, owner_email):
-        """Create the accept + reject RSVP pair for a booking decision.
+    def create_booking_pair(cls, booking, recipient):
+        """Create the accept + reject RSVP pair for a booking decision, minted to
+        ``recipient`` (a ``User``; see ``create_for_booking``).
 
         Returns ``(accept_rsvp, reject_rsvp)``.
         """
         return (
-            cls.create_for_booking(cls.Action.BOOKING_ACCEPT, booking, owner_email),
-            cls.create_for_booking(cls.Action.BOOKING_REJECT, booking, owner_email),
+            cls.create_for_booking(cls.Action.BOOKING_ACCEPT, booking, recipient),
+            cls.create_for_booking(cls.Action.BOOKING_REJECT, booking, recipient),
         )

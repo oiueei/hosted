@@ -21,6 +21,8 @@ OIUEEI es software de código abierto (licencia EUPL-1.2). Esta página describe
 
 **A dónde van:** el correo sale por el proveedor SMTP que el operador haya configurado y las imágenes y documentos se guardan en el bucket de almacenamiento de objetos del propio operador. Nada más sale de la instancia: sin SDKs de terceros, sin eventos enviados fuera. Las métricas de uso son propias, seudonimizadas y nunca se comparten.
 
+**Quién ve qué dentro de un grupo:** una solicitud que haces sobre una cosa (un préstamo, un alquiler, un regalo, una compra o una reserva) le llega a quien gestiona esa cosa —su dueño y, en un grupo que lleva un equipo, sus co-curadores— con tu nombre y tu email, para que puedan responderte. Una pregunta que haces en una cosa se muestra en ella con tu nombre a quien haya entrado con su cuenta y pueda ver la cosa, salvo que quien la gestiona la oculte. Cuando se acepta un préstamo, un alquiler, un regalo o una venta, el historial de la cosa muestra tu nombre de la misma forma (salvo en un regalo o una venta marcados como «sin límite», que no dejan historial). Quien administra un grupo también puede descargar su calendario, con el nombre de cada reserva, préstamo o alquiler.
+
 **Cookies:** solo técnicas (sesión y seguridad). No hay cookies de terceros ni de publicidad, por eso no hay banner.
 
 **Borrar tu cuenta:** desde tu perfil (Editar perfil → Borrar cuenta), con confirmación por correo. Es inmediato e irreversible: tu cuenta, tus colecciones, tus cosas y sus fotos y tus solicitudes se eliminan. Las preguntas que hiciste en cosas de otras personas y el historial de manos se conservan **sin tu nombre** («Antiguo miembro»).

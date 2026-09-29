@@ -1,0 +1,250 @@
+"""Each manager decides a hold with their own emailed link (CA, 2026-09-29).
+
+A hold request is emailed to every manager of the thing (its owner and the
+curators of a PROPRIETARY collection it sits in), each with **their own**
+accept/reject pair. Using a link signs the decision as whoever it was minted to,
+and — the reason this is safe — authority is checked again at the click: a
+co-curator demoted after the email cannot decide with the old link.
+"""
+
+from datetime import date, timedelta
+
+import pytest
+from django.core import mail
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from core.models import RSVP, BookingPeriod, Collection, Thing, User
+from core.models.notification import InAppNotification
+
+pytestmark = pytest.mark.django_db
+
+
+def client_for(user):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
+    return client
+
+
+@pytest.fixture
+def owner(db):
+    return User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
+
+
+@pytest.fixture
+def co_curator(db):
+    return User.objects.create(code="COCU01", email="cocurator@test.com", name="Lele")
+
+
+@pytest.fixture
+def member(db):
+    return User.objects.create(code="MEMB01", email="member@test.com", name="Lili")
+
+
+@pytest.fixture
+def catalogue(owner, co_curator, member):
+    coll = Collection.objects.create(
+        code="HOLD01", owner=owner, headline="Tools", mode=Collection.Mode.PROPRIETARY
+    )
+    coll.invites.add(co_curator, member)
+    coll.co_owners.add(co_curator)
+    lend = Thing.objects.create(
+        code="LEND01", type=Thing.Type.LEND_THING, owner=owner, headline="Drill"
+    )
+    gift = Thing.objects.create(
+        code="GIFT01", type=Thing.Type.GIFT_THING, owner=owner, headline="Books"
+    )
+    coll.things.add(lend, gift)
+    return {"collection": coll, "lend": lend, "gift": gift}
+
+
+def _ask(who, thing):
+    body = {}
+    if thing.type == Thing.Type.LEND_THING:
+        start = date.today() + timedelta(days=2)
+        body = {"start_date": str(start), "end_date": str(start + timedelta(days=3))}
+    res = client_for(who).post(f"/api/v1/things/{thing.code}/request/", body, format="json")
+    assert res.status_code == 201, res.data
+    return BookingPeriod.objects.get(code=res.data["booking_code"])
+
+
+def _link(booking, user, action=RSVP.Action.BOOKING_ACCEPT):
+    return RSVP.objects.get(target_code=booking.code, user_code=user, action=action)
+
+
+def _press(rsvp):
+    """What the confirm button on the verify page does: POST the token."""
+    return APIClient().post(f"/api/v1/auth/verify/{rsvp.token}/")
+
+
+class TestEveryManagerGetsTheirOwnEmail:
+    def test_each_manager_is_mailed_separately_with_links_only_they_hold(
+        self, catalogue, member, owner, co_curator
+    ):
+        mail.outbox.clear()
+        booking = _ask(member, catalogue["lend"])
+
+        to_managers = {
+            m.to[0]: m for m in mail.outbox if m.to[0] in {owner.email, co_curator.email}
+        }
+        assert set(to_managers) == {owner.email, co_curator.email}
+        assert all(len(m.to) == 1 for m in mail.outbox)  # never one message to both
+
+        tokens = {}
+        for who in (owner, co_curator):
+            accept = _link(booking, who)
+            reject = _link(booking, who, RSVP.Action.BOOKING_REJECT)
+            assert accept.user_email == who.email
+            body = to_managers[who.email].body
+            assert accept.action_link() in body
+            assert reject.action_link() in body
+            tokens[who.code] = {accept.token, reject.token}
+
+        assert tokens[owner.code].isdisjoint(tokens[co_curator.code])
+        # Each one's message carries nobody else's links.
+        for who, other in ((owner, co_curator), (co_curator, owner)):
+            for token in tokens[other.code]:
+                assert token not in to_managers[who.email].body
+
+    def test_a_co_curator_who_asks_gets_no_email_and_no_links(self, catalogue, owner, co_curator):
+        mail.outbox.clear()
+        booking = _ask(co_curator, catalogue["gift"])
+
+        assert not RSVP.objects.filter(target_code=booking.code, user_code=co_curator).exists()
+        assert co_curator.email in {m.to[0] for m in mail.outbox}  # their own confirmation…
+        request_mail = [m for m in mail.outbox if _link(booking, owner).token in m.body]
+        assert [m.to[0] for m in request_mail] == [owner.email]  # …and no request
+
+    def test_in_a_community_group_a_curator_who_is_not_the_owner_gets_no_links(
+        self, db, owner, co_curator
+    ):
+        contributor = User.objects.create(code="CONT01", email="contrib@test.com", name="Lolo")
+        asker = User.objects.create(code="ASKR01", email="asker@test.com", name="Lulu")
+        group = Collection.objects.create(
+            code="COMM01", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
+        )
+        group.invites.add(co_curator, contributor, asker)
+        group.co_owners.add(co_curator)
+        tent = Thing.objects.create(
+            code="TENT01", type=Thing.Type.GIFT_THING, owner=contributor, headline="A tent"
+        )
+        group.things.add(tent)
+
+        booking = _ask(asker, tent)
+
+        holders = set(
+            RSVP.objects.filter(target_code=booking.code).values_list("user_code_id", flat=True)
+        )
+        assert holders == {contributor.code}
+
+
+class TestTheDecisionIsSignedByWhoeverPressed:
+    def test_a_co_curators_link_accepts_and_names_them(self, catalogue, member, owner, co_curator):
+        booking = _ask(member, catalogue["gift"])
+
+        res = _press(_link(booking, co_curator))
+
+        assert res.status_code == 200, res.data
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.ACCEPTED
+        # The requester is told by the co-curator, not by the founder…
+        told = InAppNotification.objects.get(
+            user=member, type=InAppNotification.Type.BOOKING_ACCEPTED
+        )
+        assert told.payload["owner_name"] == co_curator.name
+        # …the co-curator keeps their own record of the call, the founder gets one too.
+        decided = {
+            n.user_id: n.payload
+            for n in InAppNotification.objects.filter(type=InAppNotification.Type.BOOKING_DECIDED)
+        }
+        assert decided[co_curator.code]["by_you"] is True
+        assert decided[owner.code]["by_you"] is False
+        assert decided[owner.code]["decider_name"] == co_curator.name
+
+    def test_the_founders_link_still_works_as_before(self, catalogue, member, owner, co_curator):
+        booking = _ask(member, catalogue["gift"])
+
+        res = _press(_link(booking, owner))
+
+        assert res.status_code == 200, res.data
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.ACCEPTED
+        told = InAppNotification.objects.get(
+            user=member, type=InAppNotification.Type.BOOKING_ACCEPTED
+        )
+        assert told.payload["owner_name"] == owner.name
+
+    def test_once_anyone_decides_every_managers_links_are_dead(
+        self, catalogue, member, owner, co_curator
+    ):
+        booking = _ask(member, catalogue["lend"])
+        founders = [
+            _link(booking, owner),
+            _link(booking, owner, RSVP.Action.BOOKING_REJECT),
+        ]
+
+        assert _press(_link(booking, co_curator)).status_code == 200
+
+        assert not RSVP.objects.filter(target_code=booking.code).exists()
+        for rsvp in founders:
+            assert _press(rsvp).status_code == 401
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.ACCEPTED
+
+
+class TestAuthorityIsCheckedAtTheClick:
+    """The link outlives the role that earned it — 72 hours, in the mailbox of
+    someone who may since have been demoted or removed."""
+
+    def test_a_co_curator_demoted_after_the_email_cannot_decide(
+        self, catalogue, member, owner, co_curator
+    ):
+        booking = _ask(member, catalogue["gift"])
+        accept = _link(booking, co_curator)
+        reject = _link(booking, co_curator, RSVP.Action.BOOKING_REJECT)
+        catalogue["collection"].co_owners.remove(co_curator)
+
+        res = _press(accept)
+
+        assert res.status_code == 403
+        assert res.data == {"error": "Not authorized"}
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.PENDING
+        assert not RSVP.objects.filter(pk=accept.pk).exists()
+        # The refusal decided nothing for anyone: no notice went to the requester
+        # and the founder can still answer.
+        assert not InAppNotification.objects.filter(
+            user=member, type=InAppNotification.Type.BOOKING_ACCEPTED
+        ).exists()
+        # The sibling link is no more use to them.
+        assert _press(reject).status_code == 403
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.PENDING
+        assert _press(_link(booking, owner)).status_code == 200
+
+    def test_a_curator_of_a_collection_turned_community_cannot_decide(
+        self, catalogue, member, owner, co_curator
+    ):
+        booking = _ask(member, catalogue["gift"])
+        accept = _link(booking, co_curator)
+        collection = catalogue["collection"]
+        collection.mode = Collection.Mode.COMMUNITY
+        collection.save()
+
+        assert _press(accept).status_code == 403
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.PENDING
+
+    def test_a_previewing_scanner_never_reaches_the_check_or_the_booking(
+        self, catalogue, member, co_curator
+    ):
+        booking = _ask(member, catalogue["gift"])
+        accept = _link(booking, co_curator)
+
+        res = APIClient().get(f"/api/v1/auth/verify/{accept.token}/")
+
+        assert res.status_code == 200
+        assert res.data["requires_confirmation"] is True
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.PENDING
+        assert RSVP.objects.filter(pk=accept.pk).exists()

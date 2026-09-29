@@ -10,6 +10,7 @@ also the broadest smoke test the emails have.
 import ast
 import inspect
 import re
+from html.parser import HTMLParser
 
 import pytest
 from django.core import mail
@@ -38,6 +39,50 @@ def _send_functions():
         for node in tree.body
         if isinstance(node, ast.FunctionDef) and node.name.startswith("send_")
     }
+
+
+class _Page(HTMLParser):
+    """One email's anchors (their attributes) and its `<style>` text, read with a
+    real HTML parser rather than a regex over the markup."""
+
+    def __init__(self, html):
+        super().__init__()
+        self.anchors = []
+        self.css = ""
+        self._in_style = False
+        self.feed(html)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self.anchors.append(dict(attrs))
+        elif tag == "style":
+            self._in_style = True
+
+    def handle_endtag(self, tag):
+        if tag == "style":
+            self._in_style = False
+
+    def handle_data(self, data):
+        if self._in_style:
+            self.css += data
+
+
+PHONE_QUERY = "@media only screen and (max-width: 480px) {"
+
+
+def _phone_selectors(css):
+    """Every selector of every rule inside the phone `@media` block of `css`
+    (whitespace already normalised), read up to the brace that closes the block."""
+    assert PHONE_QUERY in css, "the phone media query is gone"
+    start = css.index(PHONE_QUERY) + len(PHONE_QUERY)
+    depth = 1
+    end = start
+    while depth:
+        depth += {"{": 1, "}": -1}.get(css[end], 0)
+        end += 1
+    rules = re.findall(r"([^{}]+)\{[^{}]*\}", css[start : end - 1])
+    return {sel.strip() for rule in rules for sel in rule.split(",")}
 
 
 def test_every_email_the_service_can_send_has_a_sample():
@@ -169,6 +214,20 @@ def test_the_mark_sits_right_after_the_rule_in_every_html_email():
 
 
 @pytest.mark.django_db
+def test_every_html_email_is_one_document_with_its_footer_inside_it():
+    """The footer (preferences, art. 14 legal link) is appended in Python after
+    the template renders, so the template must not close the document itself:
+    it used to end in `</html>`, which left two of them in every email and the
+    footer outside the first. A mail filter that cuts at the first `</html>`
+    would then take exactly the unsubscribe and legal links with it."""
+    for message in _run("--lang", "all"):
+        html = message.alternatives[0][0]
+        assert html.count("</html>") == 1, message.subject
+        assert html.index("/legal") < html.index("</html>"), message.subject
+        assert html.rstrip().endswith("</html>"), message.subject
+
+
+@pytest.mark.django_db
 def test_every_email_uses_exactly_the_three_named_sizes():
     """Three sizes, never a fourth (CA, 2026-09-22, superseding the single
     13px every-email size from a day earlier): EMAIL_BODY_SIZE (14px) for the
@@ -197,6 +256,41 @@ def test_every_email_uses_exactly_the_three_named_sizes():
 def test_the_button_styles_use_the_body_size():
     assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in email_service.BTN_PRIMARY
     assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in email_service.BTN_SECONDARY
+
+
+@pytest.mark.django_db
+def test_every_button_in_every_email_carries_the_class_its_phone_and_hover_rules_target():
+    """Every button of every email carries the class its phone rule and its hover
+    rule are written against, so on a phone all of them fill the width of the text
+    column. The rules live in the `<style>` and match nothing on their own: a
+    button that loses its class keeps its resting look and quietly loses both."""
+    roles = {"btn-primary": email_service.BTN_PRIMARY, "btn-secondary": email_service.BTN_SECONDARY}
+    found = {lang: dict.fromkeys(roles, 0) for lang in LANGS}
+
+    for message in _run("--lang", "all"):
+        lang = message.subject.split("]")[0].split()[2]
+        page = _Page(message.alternatives[0][0])
+        css = " ".join(page.css.split())
+        phone = _phone_selectors(css)
+        for anchor in page.anchors:
+            style = anchor.get("style") or ""
+            for cls, base in roles.items():
+                # `ctas` trails a margin after the shared style, hence "starts with".
+                if not style.startswith(base):
+                    continue
+                found[lang][cls] += 1
+                assert cls in (anchor.get("class") or "").split(), message.subject
+                assert f".{cls}:hover {{" in css, message.subject
+                assert f".{cls}" in phone, message.subject
+
+    # A floor, or a BTN_PRIMARY that stopped matching the markup would pass with
+    # zero buttons checked. Measured when this was written: per language, 25 primary buttons
+    # and 5 secondary ones (the five `ctas` emails carry one of each; the other
+    # twenty primaries are `cta` blocks). Asking for "at least one" of each rather
+    # than those numbers keeps a new email from breaking the test, while a role
+    # that vanished from a whole language still does.
+    for lang, per_role in found.items():
+        assert all(per_role.values()), (lang, per_role)
 
 
 @pytest.mark.django_db

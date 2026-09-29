@@ -235,7 +235,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
           <p className="bulk-add-format-body">{t('bulkAdd.formatBody')}</p>
           <pre className="bulk-add-example">{EXAMPLE_CSV}</pre>
           <p className="bulk-add-format-body">
-            <a href="/cocina-ejemplo.zip" download>
+            <a href={`${import.meta.env.BASE_URL}cocina-ejemplo.zip`} download>
               {t('bulkAdd.downloadExample')}
             </a>
           </p>

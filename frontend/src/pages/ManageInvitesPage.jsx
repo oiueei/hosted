@@ -83,15 +83,19 @@ export default function ManageInvitesPage() {
         // empty list — "no guests, and you can't invite anyone" — which is not
         // what happened. Every other data page in the app stops and says so.
         setLoadError(
-          res.status === 403 ? t('manageInvites.noPermission') : t('manageInvites.errorLoading')
+          res.status === 403 ? 'manageInvites.noPermission' : 'manageInvites.errorLoading'
         );
       }
     } catch {
-      setLoadError(t('common.connectionError'));
+      setLoadError('common.connectionError');
     } finally {
       setLoading(false);
     }
-  }, [code, t]);
+    // `loadError` is an i18n key, translated where it is painted, so this callback
+    // — and the effect below that re-runs whenever it changes — does not depend on
+    // `t`. `useCollectionLanguage` swaps `t` once the first response lands; listing
+    // it here fetched the collection a second time.
+  }, [code]);
 
   useEffect(() => {
     // Calling the memoised fetch rather than inlining it: this same function is
@@ -168,7 +172,13 @@ export default function ManageInvitesPage() {
           message: promote ? t('manageInvites.promoted') : t('manageInvites.demoted'),
         });
         fetchCollection();
+      } else if (res.status === 429) {
+        // Both directions are rate-limited (30/h), and a 429 has no body worth
+        // showing.
+        setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
+        // A coded refusal (the co-curator ceiling) is said in the reader's
+        // language by `extractApiError`, from `requestErrors.<code>`.
         const detail = await extractApiError(res);
         setToast({ type: 'error', message: detail || t('common.error') });
       }
@@ -219,11 +229,12 @@ export default function ManageInvitesPage() {
         backLabel={t('common.collection')}
       >
         <Notification label={t('common.error')} type="error">
-          {loadError}
+          {t(loadError)}
         </Notification>
         <div className="spacer-m" />
         <Button
           variant="secondary"
+          style={btnSecondaryStyle}
           onClick={() => {
             setLoading(true);
             fetchCollection();
@@ -272,6 +283,7 @@ export default function ManageInvitesPage() {
                 </Button>
                 <Button
                   variant="secondary"
+                  style={btnSecondaryStyle}
                   disabled={answering === p.code}
                   onClick={() => answerProposal(p.code, 'reject')}
                 >

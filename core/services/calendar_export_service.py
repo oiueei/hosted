@@ -40,6 +40,17 @@ so it never reached a calendar in the first place. How an importing app treats
 a cancellation it receives by file differs from app to app; the file says what
 the standard lets it say.
 
+**Why this file needs no "people outside the group" filter, unlike the group
+copy** (``export_service.build_collection_export``, which has one). It carries
+accepted reservations only (and cancelled RESERVE_THINGs). An accepted LEND or
+RENT is already in the thing's journey: ``accept_booking`` writes the
+``ThingTransfer``, and ``ThingTransferView`` shows it, name included, to anyone
+signed in who can see the thing — so the calendar tells a COMMUNITY organiser
+nothing the thing's own page does not. RESERVE_THING lives only in PROPRIETARY
+collections, where the curators run every thing anyway. A security review took
+this for a leak on 2026-09-29 and proved it was not one; the pending, refused
+and cancelled requests that *do* stay private never reach an ``.ics``.
+
 Everything user-written that reaches a TEXT property — a thing headline, a
 member name, a project note — is escaped per RFC 5545 §3.3.11 (backslash,
 semicolon, comma, newline), which replaces the spreadsheet-formula guard the

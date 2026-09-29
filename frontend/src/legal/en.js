@@ -21,6 +21,8 @@ OIUEEI is open source software (EUPL-1.2 licence). This page describes **one ins
 
 **Where it goes:** email leaves through whatever SMTP provider the operator configured, and images and documents are stored in the operator's own object-storage bucket. Nothing else leaves the instance: no third-party SDKs, no events sent anywhere. Usage metrics are first-party, pseudonymised and never shared.
 
+**Who sees what inside a group:** a request you make for a thing (a loan, a rental, a gift, a purchase or a reservation) reaches whoever runs that thing — its owner and, in a group run by a team, its co-curators — with your name and your email, so they can answer you. A question you ask on a thing is shown on it with your name to anyone signed in who can see the thing, unless whoever runs it hides it. Once a loan, a rental, a gift or a sale is accepted, the thing's history shows your name the same way (except for a gift or a sale marked as endless, which keeps no history). Whoever runs a group can also download its calendar, with the name on each reservation, loan or rental.
+
 **Cookies:** technical only (session and security). There are no third-party or advertising cookies, which is why there is no banner.
 
 **Deleting your account:** from your profile (Edit profile → Delete account), with email confirmation. It is immediate and irreversible: your account, your collections, your things and their photos, and your requests are erased. Questions you asked on other people's things and the transfer history stay **without your name** ("Former member").

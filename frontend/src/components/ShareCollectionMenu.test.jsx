@@ -22,7 +22,6 @@ import ShareCollectionMenu from './ShareCollectionMenu';
 const props = {
   collectionCode: 'COL001',
   collectionHeadline: 'My Collection',
-  ownerName: 'Owner',
 };
 
 function openMenu() {
@@ -275,6 +274,24 @@ describe('handing the link over', () => {
     const draft = decodeURIComponent(window.location.href);
     expect(draft).toContain('http://x/share/NEWTOKEN');
     expect(draft).toContain('My Collection');
+  });
+
+  // The draft opens in the mail client of whoever is sharing — the founder, a
+  // co-curator or, in a PUBLIC group, an ordinary member — which already says who
+  // is writing. It used to end "Love,\n{{name}}" with the *founder's* name, so a
+  // co-curator's email went out signed by somebody else.
+  test('the email draft ends at the link: no sign-off and no name', async () => {
+    // `ownerName` is a prop this component no longer takes; passing it must not
+    // put a name back into the draft.
+    render(<ShareCollectionMenu {...props} ownerName="Founder Person" isPublic />);
+
+    pick('Email');
+
+    await waitFor(() => expect(window.location.href).toMatch(/^mailto:\?subject=/));
+    const body = decodeURIComponent(window.location.href.split('&body=')[1]);
+    expect(body.endsWith('http://localhost:3000/collections/COL001')).toBe(true);
+    expect(body).not.toMatch(/Love/);
+    expect(body).not.toMatch(/Founder Person/);
   });
 
   test('the WhatsApp hand-off carries the link and cannot reach back', async () => {

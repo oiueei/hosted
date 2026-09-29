@@ -58,7 +58,11 @@ describe('JoinPage — the collection is named', () => {
     renderJoin(undefined);
 
     // The test i18n runs in English, so the raw map must never reach the screen.
-    expect(await screen.findByText(/things to Tool Library/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        /Join to request, reserve, ask a question or add your own things to Tool Library/
+      )
+    ).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\{"en"/);
   });
 
@@ -68,7 +72,7 @@ describe('JoinPage — the collection is named', () => {
     renderJoin(undefined);
 
     await waitFor(() => expect(apiFetch).toHaveBeenCalled());
-    expect(screen.getByText(/Sign in to reserve/)).toBeInTheDocument();
+    expect(screen.getByText(/Join to request, reserve/)).toBeInTheDocument();
   });
 
   test('a ?thing= from a "Reserve" click rides into the join request (S13)', async () => {

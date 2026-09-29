@@ -96,25 +96,29 @@ export default function CollectionPage() {
           if (signal.aborted) return;
           setCollection(data);
         } else if (res.status === 403) {
-          setError(t('collectionPage.noPermission'));
+          setError('collectionPage.noPermission');
         } else if (res.status === 404) {
-          setError(t('collectionPage.notFound'));
+          setError('collectionPage.notFound');
         } else {
-          setError(t('collectionPage.errorLoading'));
+          setError('collectionPage.errorLoading');
         }
       } catch {
-        if (!signal.aborted) setError(t('common.connectionError'));
+        if (!signal.aborted) setError('common.connectionError');
       }
     };
     fetchCollection();
     return () => controller.abort();
-  }, [code, navigate, t]);
+    // `error` holds the i18n *key*, translated where it is painted, so this effect
+    // never reads `t`: `useCollectionLanguage` changes the language once the first
+    // response lands, `t` gets a new identity, and listing it here fetched the
+    // whole collection a second time.
+  }, [code, navigate]);
 
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {t(error)}
         </Notification>
       </PageLayout>
     );
@@ -224,6 +228,34 @@ export default function CollectionPage() {
   // a reader who is not a member (signed in or not) would be sent through the
   // whole form, photos uploaded and all, to collect a 403 at the end.
   const canAddThing = isCurator || (collection.mode === 'COMMUNITY' && !!collection.is_member);
+  // Who may hand the group's link to someone: a curator, and — in a PUBLIC group
+  // — any member (CA, 2026-09-29). A PUBLIC group is shared by its own address,
+  // with no token to mint, rotate or revoke, so a member can pass it on without
+  // holding anything a curator would need to pull back; it is the cheapest way to
+  // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
+  // the link is the curators' credential, and the member has "Recommend" instead.
+  const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
+  // A signed-out reader of a PUBLIC group has no card to click in two places: an
+  // empty group, and the bottom of a COMMUNITY one, where to *contribute* they
+  // would have to press "Request" on somebody else's thing. CA reopened the
+  // hero's removed join line for exactly these two cases (2026-09-29) — but in
+  // the content, not the hero, and only where there is no button to press. A
+  // PROPRIETARY group with things needs nothing: its door is each thing's button.
+  // Which line: a COMMUNITY group asks for what the reader could add; a
+  // PROPRIETARY one that is empty promises the one thing a member does get — the
+  // summary of what arrives — but only when the group sends one. With its digest
+  // set to "None" nobody hears anything, so the line just says "Join the group".
+  const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
+  const anonJoinKey =
+    !isAuthenticated && collection.visibility === 'PUBLIC'
+      ? collection.mode === 'COMMUNITY'
+        ? 'collectionPage.anonJoinCommunity'
+        : visibleThings.length === 0
+          ? sendsDigest
+            ? 'collectionPage.anonJoinEmpty'
+            : 'collectionPage.anonJoinPlain'
+          : null
+      : null;
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -261,11 +293,10 @@ export default function CollectionPage() {
           >
             <span className="hero-corners">
               <AccountMenu />
-              {isCurator && (
+              {canShare && (
                 <ShareCollectionMenu
                   collectionCode={code}
                   collectionHeadline={headline}
-                  ownerName={collection.owner_name}
                   isPublic={collection.visibility === 'PUBLIC'}
                 />
               )}
@@ -593,6 +624,16 @@ export default function CollectionPage() {
               </>
             )}
           </>
+        )}
+        {/* A way in for a signed-out reader where no button leads there (see
+            `anonJoinKey`): under "No things in this collection yet." in an empty
+            group, and under the grid — after "Show more" — of a COMMUNITY one.
+            Not in the hero (CA removed that line on 2026-09-21), and it goes to
+            the group's join page with no ?thing=: there is no thing in it. */}
+        {anonJoinKey && (
+          <p className="invite-nudge">
+            <Link to={`/collections/${code}/join`}>{t(anonJoinKey)}</Link>
+          </p>
         )}
 
         {isCurator && collection.invites.length > 0 && (

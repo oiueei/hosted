@@ -377,6 +377,28 @@ describe('where a magic link lands', () => {
     expect(await screen.findByText('landed on /')).toBeInTheDocument();
   });
 
+  test('a login that remembers where it was going lands on that page', async () => {
+    // The session ran out on a thing; the server kept the path and sends it back
+    // as `landing: "path"`, outranking the lone-collection landing.
+    renderMagicLink({ landing: 'path', path: '/collections/COL001/things/THG001' });
+
+    expect(
+      await screen.findByText('landed on /collections/COL001/things/THG001')
+    ).toBeInTheDocument();
+    expect(localStorage.getItem('userCode')).toBe('USR002');
+  });
+
+  test.each(['//evil.com', 'https://evil.com', '/login', undefined])(
+    'a path that is not somewhere to return to falls back to home (%s)',
+    async (path) => {
+      // The server checks it first; the page checks again because it is fed to
+      // the router, and a value that fails goes home rather than anywhere odd.
+      renderMagicLink({ landing: 'path', path });
+
+      expect(await screen.findByText('landed on /')).toBeInTheDocument();
+    }
+  );
+
   /* A `landing: "welcome"` case belongs in `deployment.test.jsx`, not here: where
      it lands depends on `aboutPath`, which is null upstream and a real page on a
      deployment that replaces `src/deployment/`. Asserting this checkout's value

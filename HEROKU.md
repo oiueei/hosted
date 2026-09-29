@@ -141,6 +141,19 @@ heroku config:set \
 > response is what stops it being used to probe which codes are real); you see it in the `security`
 > log — `grep` your dyno logs for `COLLECTION_JOINS_PER_DAY` if joins go quiet.
 
+> **Leave alone — anonymous read ceiling:** `ANON_API_RATE` (default `300/m`) caps how many API
+> requests one IP may make per minute **while not signed in**, so a script cannot scrape a PUBLIC
+> collection's things, calendars, FAQ and journeys as fast as your dynos answer. It is on by default
+> and you do not need to set anything: a signed-in member is never counted, a page is a handful of
+> reads, and the bucket is the real client IP (`TRUSTED_PROXY_COUNT`, `1` on Heroku). Two things to
+> know. The count lives in each web process's memory, not in Postgres — it costs no query, and it
+> is approximate: every gunicorn process (`WEB_CONCURRENCY` per dyno) counts on its own, so one
+> address gets up to the rate times your processes, and a restart or deploy forgets it. And an office
+> or school behind a single address shares one allowance — raise it (`heroku config:set
+> ANON_API_RATE=1000/m -a your-app-name`) if you serve a group like that, or set it to `0` to switch
+> it off. A value that is not a rate (`300/M`, `abc`) fails `manage.py check`, so the release phase
+> stops before the dyno boots.
+
 > **Recommended — mass-upload guards:** four per-collection thresholds, all **off unless set**
 > (`COLLECTION_THINGS_ALARM` / `_BLOCK`, `COLLECTION_INVITES_ALARM` / `_BLOCK`). The `_ALARM` pair
 > emails your superusers once per collection and changes nothing else — a tripwire you watch. The
@@ -351,7 +364,7 @@ Heroku Scheduler config lives in the dashboard and nowhere else, so keep the das
 | `python manage.py expire_bookings` | daily (chained) | Expires PENDING bookings past 72h; restores single-use things to ACTIVE. |
 | `python manage.py cleanup_rsvps` | daily (chained) | Deletes RSVP tokens that expired 24h+ ago. |
 | `python manage.py close_transfers` | daily (chained) | Sets `returned_date` on transfers whose ACCEPTED booking's `end_date` has passed. |
-| `python manage.py send_reminders` | daily (chained) | Return/delivery reminders for bookings due tomorrow. |
+| `python manage.py send_reminders` | daily (chained) | Return reminders for loans and rentals that end tomorrow (to the owner and the borrower), and arrival reminders for on-site reservations that start tomorrow (to the member who booked). |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
 | `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email (at most 200 warnings per run — see `--max-warnings`). **Dry-run without `--commit`** — read the warning above before arming it. |
 

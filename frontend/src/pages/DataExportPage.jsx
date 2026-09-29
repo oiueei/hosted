@@ -5,6 +5,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import StatusRegion from '../components/StatusRegion';
+import useTheeeme from '../hooks/useTheeeme';
 
 // Mirrors export_service.build_account_export's top-level keys, in the order
 // the manifest lists them — this is what "what you take" actually is, not a
@@ -47,6 +48,7 @@ const DONT_TAKE_KEYS = [
  */
 export default function DataExportPage() {
   const { t } = useTranslation();
+  const { btnStyle } = useTheeeme();
   useEffect(() => {
     document.title = t('titles.dataExport');
   }, [t]);
@@ -105,7 +107,7 @@ export default function DataExportPage() {
             </Notification>
           )}
         </StatusRegion>
-        <Button disabled={downloading} onClick={handleDownload}>
+        <Button disabled={downloading} onClick={handleDownload} style={btnStyle}>
           {downloading ? t('dataExport.downloading') : t('dataExport.downloadButton')}
         </Button>
       </div>

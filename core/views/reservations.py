@@ -34,7 +34,8 @@ from core.services.booking_service import (
     request_standard_booking,
     resolve_rental_collection,
 )
-from core.views._helpers import body_dict, deny_if_cannot_view, managers_ready_collections
+from core.services.team import managers_ready_collections
+from core.views._helpers import body_dict, deny_if_cannot_view
 
 
 class ThingRequestView(APIView):
@@ -104,7 +105,9 @@ class ThingRequestView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Check owner email early (avoids duplicating this check in each handler)
+        # Check owner email early (avoids duplicating this check in each handler).
+        # Only RESERVE_THING reads it afterwards: the other verbs mail each
+        # manager at their own address.
         owner_email = thing.owner.email
         if not owner_email:
             return Response(
@@ -123,11 +126,9 @@ class ThingRequestView(APIView):
             if thing.type == Thing.Type.RESERVE_THING:
                 return self._request_reservation(request, thing, owner_email, collection_code)
             if thing.type in DATE_BASED_TYPES:
-                return self._request_date_based(request, thing, owner_email, collection_code)
+                return self._request_date_based(request, thing, collection_code)
             else:
-                booking = request_standard_booking(
-                    thing, request.user, owner_email, collection_code
-                )
+                booking = request_standard_booking(thing, request.user, collection_code)
                 return Response(
                     {"message": "Booking request sent", "booking_code": booking.code},
                     status=status.HTTP_201_CREATED,
@@ -172,7 +173,7 @@ class ThingRequestView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def _request_date_based(self, request, thing, owner_email, collection_code):
+    def _request_date_based(self, request, thing, collection_code):
         """Validate LEND/RENT dates then delegate to the service."""
         serializer = ThingRequestWithDatesSerializer(data=request.data)
         if not serializer.is_valid():
@@ -185,7 +186,6 @@ class ThingRequestView(APIView):
         booking = request_date_based_booking(
             thing,
             request.user,
-            owner_email,
             start_date,
             end_date,
             rental_collection,

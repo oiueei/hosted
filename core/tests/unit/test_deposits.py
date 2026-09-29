@@ -248,7 +248,6 @@ class TestWhatAReservationRemembers:
         return request_date_based_booking(
             thing,
             requester,
-            thing.owner.email,
             date.today() + timedelta(days=1),
             date.today() + timedelta(days=3),
         )
@@ -278,7 +277,7 @@ class TestWhatAReservationRemembers:
             code="GIFT01", owner=user, headline="A lamp", type=Thing.Type.GIFT_THING
         )
 
-        booking = request_standard_booking(gift, user2, user.email)
+        booking = request_standard_booking(gift, user2)
 
         assert booking.deposit_amount is None
 

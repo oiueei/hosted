@@ -1,8 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../services/api', () => ({
+// Only the network is faked: `extractApiError` (how a 429 reads its reason) is the real one.
+vi.mock('../services/api', async () => ({
+  ...(await vi.importActual('../services/api')),
   apiFetch: vi.fn(),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
@@ -11,6 +13,7 @@ vi.mock('../hooks/useCollectionLanguage', () => ({ default: vi.fn() }));
 import { apiFetch } from '../services/api';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import SharePage from './SharePage';
+import en from '../i18n/locales/en.json';
 
 // A stand-in for the 22-char URL-safe share token; kept low-entropy so a
 // secret scanner doesn't mistake the fixture for a real credential.
@@ -21,6 +24,7 @@ function renderShare() {
     <MemoryRouter initialEntries={[`/share/${TOKEN}`]}>
       <Routes>
         <Route path="/share/:token" element={<SharePage />} />
+        <Route path="/collections/:code" element={<p>landed on collection</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -32,9 +36,163 @@ function preview(body, ok = true) {
 
 beforeEach(() => {
   apiFetch.mockReset();
+  localStorage.clear();
   document.title = '';
 });
 afterEach(() => vi.restoreAllMocks());
+
+/**
+ * A reader who already has a session accepts the invitation with one button
+ * (`POST /share/{token}/join/`) instead of typing an email and waiting for a magic
+ * link they have no need of — and everyone else still gets the form. In a
+ * neighbourhood the same people are in several groups and this link is the main
+ * viral route, so the round trip was paid by exactly the people who use it most.
+ */
+describe('SharePage — a reader who is already signed in', () => {
+  const JOIN = `/api/v1/share/${TOKEN}/join/`;
+  const answer = (status, body) =>
+    Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
+  const posts = () => apiFetch.mock.calls.filter(([, options]) => options?.method === 'POST');
+
+  /** The preview always lands; `join` decides what the POST does. */
+  function serve(join) {
+    apiFetch.mockImplementation((url) =>
+      url === JOIN ? join() : preview({ headline: 'The Tool Library', description: '' })
+    );
+  }
+
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'USR001');
+  });
+
+  test('sees one button that names the group, and no email field', async () => {
+    serve(() => answer(200, { collection: 'COL001', joined: true }));
+    renderShare();
+
+    expect(
+      await screen.findByRole('button', { name: 'Join The Tool Library' })
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Email/)).toBeNull();
+    // The intro that asks for an email would contradict the button.
+    expect(screen.queryByText(/Enter your email/)).toBeNull();
+    expect(screen.queryByRole('link', { name: /Already have an account/ })).toBeNull();
+  });
+
+  test('before the group is named, the button says "Join this group"', async () => {
+    apiFetch.mockImplementation(() => preview({ detail: 'Not found' }, false));
+    renderShare();
+
+    expect(
+      await screen.findByRole('button', { name: en.share.joinSignedInGeneric })
+    ).toBeInTheDocument();
+  });
+
+  test('pressing it POSTs to this token and lands on the collection', async () => {
+    serve(() => answer(200, { collection: 'COL001', joined: true }));
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    expect(await screen.findByText('landed on collection')).toBeInTheDocument();
+    expect(posts().map(([url]) => url)).toEqual([JOIN]);
+  });
+
+  test('two presses in the same tick ask once, and the button is disabled while it waits', async () => {
+    let settle;
+    serve(() => new Promise((resolve) => (settle = resolve)));
+    renderShare();
+
+    const button = await screen.findByRole('button', { name: 'Join The Tool Library' });
+    // Both inside one act: neither has seen the other's state update yet, so only
+    // a guard that does not depend on a re-render can stop the second.
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(screen.getByRole('button', { name: 'Join The Tool Library' })).toBeDisabled();
+    settle(await answer(200, { collection: 'COL001', joined: true }));
+  });
+
+  test('"use another email instead" brings back the form, for a shared computer', async () => {
+    serve(() => answer(200, { collection: 'COL001', joined: true }));
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: en.share.useAnotherEmail }));
+
+    expect(await screen.findByLabelText(/Email/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join The Tool Library' })).toBeNull();
+    expect(posts()).toHaveLength(0);
+  });
+
+  test('a link that no longer works says so and asks for a new one', async () => {
+    serve(() => answer(404, { detail: 'Not found.' }));
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    expect(await screen.findByText(en.share.linkGone)).toBeInTheDocument();
+    expect(screen.queryByText('landed on collection')).toBeNull();
+  });
+
+  test('the hourly limit, which has no body, says to wait', async () => {
+    serve(() =>
+      Promise.resolve({ ok: false, status: 429, json: () => Promise.reject(new Error('no body')) })
+    );
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    expect(await screen.findByText(en.common.tooManyAttempts)).toBeInTheDocument();
+  });
+
+  test("the operator's daily ceiling says why, in the server's own words", async () => {
+    const detail = "This collection has taken today's joins. Try again tomorrow.";
+    serve(() => answer(429, { detail }));
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    expect(await screen.findByText(detail)).toBeInTheDocument();
+  });
+
+  test('a dropped connection is said, and the button is usable again', async () => {
+    serve(() => Promise.reject(new TypeError('Failed to fetch')));
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    expect(await screen.findByText(en.common.connectionError)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join The Tool Library' })).toBeEnabled();
+  });
+
+  test('a session that ran out is apiFetch redirecting to the login: no error over it', async () => {
+    // apiFetch clears the session, sends the reader to /login?next=/share/… and
+    // throws. Announcing "connection error" in the moment before it navigates
+    // would be false.
+    serve(() => Promise.reject(new Error('Unauthorised')));
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(screen.queryByText(en.common.connectionError)).toBeNull();
+    expect(screen.queryByText(en.share.linkGone)).toBeNull();
+  });
+});
+
+describe('SharePage — a reader with no session', () => {
+  test('gets the form as always, and never a join button', async () => {
+    apiFetch.mockReturnValue(preview({ headline: 'The Tool Library', description: '' }));
+    renderShare();
+
+    expect(await screen.findByLabelText(/Email/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Join The Tool Library$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.share.useAnotherEmail })).toBeNull();
+    expect(screen.getByRole('link', { name: /Already have an account/ })).toBeInTheDocument();
+  });
+});
 
 describe('SharePage — naming the collection a /share link opens (S10)', () => {
   test('asks the preview endpoint for this token on mount', async () => {
