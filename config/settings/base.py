@@ -261,22 +261,24 @@ RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
 TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "1"))
 
 # API requests one IP may make per window while **not signed in** — `"300/m"`
-# is 300 a minute, any django-ratelimit rate works (`"20/s"`, `"1000/5m"`). A
-# PUBLIC collection is readable by anyone, and without a ceiling a script can
-# scrape its things, calendars, FAQ and journeys as fast as the dynos answer and
-# multiply the queries behind each read. The ceiling is per real client IP
-# (`RATELIMIT_IP_META_KEY`, so `TRUSTED_PROXY_COUNT` applies). A page is a
-# handful of reads and a person does not open five a second, so 300 a minute is
-# there for scripts, not for visitors — but a whole office or school behind one
-# address shares it.
+# is 300 a minute; a count, a slash, an optional multiplier and s/m/h/d
+# (`"20/s"`, `"1000/5m"`). A PUBLIC collection is readable by anyone, and without
+# a ceiling a script can scrape its things, calendars, FAQ and journeys as fast as
+# the dynos answer. The ceiling is per real client IP (`core.utils.get_client_ip`,
+# so `TRUSTED_PROXY_COUNT` applies). A page is a handful of reads and a person
+# does not open five a second, so 300 a minute is there for scripts, not for
+# visitors — but a whole office or school behind one address shares it.
 #
 # It counts **only** requests with no session: a signed-in member is never
 # throttled by it. `"0"` (or empty) switches it off, as does `RATELIMIT_ENABLE`
-# (development and the tests). The counter lives in `CACHES["default"]`, which in
-# production is a DatabaseCache: one extra query per anonymous request, and the
-# same non-atomic increment as every other limit here (I7). A mistyped rate fails
-# the deploy — `core.checks.check_anon_api_rate` — rather than 500ing every
-# anonymous request. See `core/throttles.py`.
+# (development and the tests). **The count is kept in each web process's memory,
+# not in `CACHES`**: it costs the database nothing, and it is approximate on
+# purpose — every gunicorn process counts on its own, so one address gets up to
+# this rate × processes × dynos, and a restart forgets it. Counted in the shared
+# DatabaseCache it quadrupled the queries of every anonymous read and crowded the
+# daily quotas out of that table (2026-09-29). A mistyped rate fails the deploy —
+# `core.checks.check_anon_api_rate` — rather than 500ing every anonymous
+# request. See `core/throttles.py`.
 ANON_API_RATE = os.environ.get("ANON_API_RATE", "300/m")
 
 # Invitation emails one account may send per day. This is **operator policy,

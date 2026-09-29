@@ -184,10 +184,10 @@ class TestObjectStorageIsAllOrNone:
 
 
 class TestAnonApiRateIsARateTheThrottleCanRead:
-    """`ANON_API_RATE` is handed to django-ratelimit on every anonymous request, so
-    a value it cannot read is a 500 for the whole public side of the product —
-    found by a visitor, after the deploy. Each case is one thing an operator can
-    actually type into a config var."""
+    """`ANON_API_RATE` is read by `core.throttles.parse_rate` on every anonymous
+    request, so a value it cannot read is a 500 for the whole public side of the
+    product — found by a visitor, after the deploy. The check calls that same
+    reader. Each case is one thing an operator can actually type into a config var."""
 
     @pytest.mark.parametrize("rate", ["300/m", "20/s", "1000/5m", "5/h", "10000/d", " 300/m "])
     def test_a_real_rate_passes(self, rate):
@@ -202,13 +202,13 @@ class TestAnonApiRateIsARateTheThrottleCanRead:
     @pytest.mark.parametrize(
         "rate",
         [
-            "abc",  # the library raises AttributeError parsing it: a 500 per request
+            "abc",  # not a rate at all: a 500 per anonymous request
             "300",  # no slash, same
-            "300/M",  # a capital: the library reads it as 300 a *second* — no limit at all
+            "300/M",  # a capital: a lenient reader took it for 300 a *second*
             "300/",  # no period, ditto
             "300/x",  # not a period
-            "0/m",  # zero a minute refuses everybody from the first request
-            "300/0m",  # a window of no length: ImproperlyConfigured on the first request
+            "0/m",  # zero a minute would refuse everybody from the first request
+            "300/0m",  # a window of no length
             "-5/m",
             "3.5/m",
             "300/m; drop",

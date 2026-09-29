@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import FAQ, RSVP, Collection, Theeeme, Thing, User
 from core.services import storage
+from core.throttles import reset_counters
 
 
 @pytest.fixture(autouse=True)
@@ -39,6 +40,19 @@ def object_storage_configured(settings):
     storage._clients.clear()
     yield
     storage._clients.clear()
+
+
+@pytest.fixture(autouse=True)
+def anonymous_api_counts_start_at_zero():
+    """Every test starts with no anonymous request counted.
+
+    `AnonymousApiThrottle` counts in process memory, which — unlike the shared
+    cache's database table — no test transaction rolls back, so without this one
+    test's anonymous reads would spend the next one's allowance.
+    """
+    reset_counters()
+    yield
+    reset_counters()
 
 
 @pytest.fixture(autouse=True)

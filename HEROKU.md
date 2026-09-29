@@ -146,7 +146,9 @@ heroku config:set \
 > collection's things, calendars, FAQ and journeys as fast as your dynos answer. It is on by default
 > and you do not need to set anything: a signed-in member is never counted, a page is a handful of
 > reads, and the bucket is the real client IP (`TRUSTED_PROXY_COUNT`, `1` on Heroku). Two things to
-> know. It costs one extra query per anonymous request, in the `oiueei_cache` table. And an office
+> know. The count lives in each web process's memory, not in Postgres — it costs no query, and it
+> is approximate: every gunicorn process (`WEB_CONCURRENCY` per dyno) counts on its own, so one
+> address gets up to the rate times your processes, and a restart or deploy forgets it. And an office
 > or school behind a single address shares one allowance — raise it (`heroku config:set
 > ANON_API_RATE=1000/m -a your-app-name`) if you serve a group like that, or set it to `0` to switch
 > it off. A value that is not a rate (`300/M`, `abc`) fails `manage.py check`, so the release phase

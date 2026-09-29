@@ -46,24 +46,22 @@ user who could not add a photo.
 
 ## `ANON_API_RATE`, the ceiling every anonymous API request is counted against
 
-`core.throttles.AnonymousApiThrottle` hands the setting to django-ratelimit on
-**every** anonymous request, so a value it cannot parse does not degrade a corner:
-it answers 500 to each visitor with no session — the whole public side of the
-product — and only after the deploy has been declared successful. Worse, the
-library parses leniently: `"300/M"` (a capital) reads as 300 a **second**, which
-is no limit at all and says nothing. The check is stricter than the library on
-purpose: a count of at least 1, a slash, an optional multiplier and an explicit
-period `s`/`m`/`h`/`d`. The off switch is `"0"` (or empty) on its own, never `"0/m"`.
+`core.throttles.AnonymousApiThrottle` reads the setting on **every** anonymous
+request, so a value it cannot parse does not degrade a corner: it answers 500 to
+each visitor with no session — the whole public side of the product — and only
+after the deploy has been declared successful. The check asks the throttle's own
+reader, `core.throttles.parse_rate`, so the two cannot disagree about what a rate
+is. That reader is strict on purpose (a lenient one read `"300/M"`, a capital, as
+300 a **second**): a count of at least 1, a slash, an optional multiplier and an
+explicit period `s`/`m`/`h`/`d`. The off switch is `"0"` (or empty) on its own,
+never `"0/m"`.
 """
-
-import re
 
 from django.conf import settings
 from django.core.checks import Error, Warning, register
 from django.utils.module_loading import import_string
 
-# `ANON_API_RATE`: a count of at least 1, "/", an optional multiplier, a period.
-_ANON_API_RATE = re.compile(r"([1-9]\d*)/([1-9]\d*)?([smhd])")
+from core.throttles import parse_rate
 
 # The five that make up one credential set (`core/services/storage.py::_config`).
 _STORAGE_SETTINGS = (
@@ -173,8 +171,11 @@ def check_object_storage(app_configs, **kwargs):
 def check_anon_api_rate(app_configs, **kwargs):
     """`ANON_API_RATE` is `"0"`/empty (off) or a rate like `"300/m"` the throttle can read."""
     rate = str(getattr(settings, "ANON_API_RATE", "") or "").strip()
-    if rate in ("", "0") or _ANON_API_RATE.fullmatch(rate):
+    try:
+        parse_rate(rate)
         return []
+    except ValueError:
+        pass
     return [
         Error(
             f"ANON_API_RATE is {rate!r}, which is not a rate.",
