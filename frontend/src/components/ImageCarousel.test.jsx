@@ -50,6 +50,140 @@ describe('ImageCarousel navigation', () => {
   });
 });
 
+describe('ImageCarousel keyboard', () => {
+  test('the keys stop at both ends, like the arrows', () => {
+    renderCarousel();
+
+    // ArrowLeft on the first photo has nowhere to go.
+    fireEvent.keyDown(prev(), { key: 'ArrowLeft' });
+    expect(shownSrc()).toBe('a.jpg');
+
+    fireEvent.keyDown(next(), { key: 'ArrowRight' });
+    fireEvent.keyDown(next(), { key: 'ArrowRight' });
+    expect(shownSrc()).toBe('c.jpg');
+    // ...nor does ArrowRight on the last: it must not wrap to the first.
+    fireEvent.keyDown(next(), { key: 'ArrowRight' });
+    expect(shownSrc()).toBe('c.jpg');
+  });
+
+  test('an arrow key is consumed — the page behind does not scroll sideways as well', () => {
+    renderCarousel();
+
+    // `fireEvent` returns false when the event's default was prevented.
+    expect(fireEvent.keyDown(next(), { key: 'ArrowRight' })).toBe(false);
+    expect(fireEvent.keyDown(prev(), { key: 'ArrowLeft' })).toBe(false);
+  });
+
+  test('any other key leaves the photo alone and the browser its default', () => {
+    renderCarousel();
+
+    for (const key of ['ArrowUp', 'ArrowDown', 'Enter', 'a', 'Tab']) {
+      // Not prevented: Tab must still leave the group, and typing must still type.
+      expect(fireEvent.keyDown(next(), { key }), key).toBe(true);
+    }
+    expect(shownSrc()).toBe('a.jpg');
+  });
+});
+
+describe('ImageCarousel swiping', () => {
+  // A finger drag on the photo: where it lands in `touchstart`, where it lifts in `touchend`.
+  const swipe = (from, to) => {
+    const photo = screen.getByRole('img');
+    fireEvent.touchStart(photo, { touches: [{ clientX: from }] });
+    fireEvent.touchEnd(photo, { changedTouches: [{ clientX: to }] });
+  };
+
+  test('dragging left brings the next photo, dragging right the previous', () => {
+    renderCarousel();
+
+    swipe(300, 100); // the content follows the finger: left is forward
+    expect(shownSrc()).toBe('b.jpg');
+    swipe(100, 300);
+    expect(shownSrc()).toBe('a.jpg');
+  });
+
+  test('a swipe stops at the ends, it does not wrap', () => {
+    renderCarousel();
+
+    swipe(100, 300); // right on the first photo
+    expect(shownSrc()).toBe('a.jpg');
+
+    swipe(300, 100);
+    swipe(300, 100);
+    expect(shownSrc()).toBe('c.jpg');
+    swipe(300, 100); // left on the last
+    expect(shownSrc()).toBe('c.jpg');
+  });
+
+  test('a drag of 40px or less is a tap or a slip, not a swipe; more than that is', () => {
+    renderCarousel();
+
+    swipe(200, 160); // exactly 40 to the left
+    expect(shownSrc()).toBe('a.jpg');
+    swipe(200, 159); // 41
+    expect(shownSrc()).toBe('b.jpg');
+
+    swipe(200, 240); // exactly 40 to the right
+    expect(shownSrc()).toBe('b.jpg');
+    swipe(200, 241); // 41
+    expect(shownSrc()).toBe('a.jpg');
+  });
+
+  test('a touch that ends here but began elsewhere does nothing', () => {
+    renderCarousel();
+    // From the second photo, so that a phantom swipe could go either way.
+    fireEvent.click(next());
+    expect(shownSrc()).toBe('b.jpg');
+
+    // No `touchstart` on the photo: the finger came in from outside it. (Far from 0 on
+    // purpose: the guard's absence would read a missing start as 0 and swipe backwards.)
+    fireEvent.touchEnd(screen.getByRole('img'), { changedTouches: [{ clientX: 300 }] });
+
+    expect(shownSrc()).toBe('b.jpg');
+  });
+
+  test('one swipe moves one photo, however many `touchend`s follow it', () => {
+    renderCarousel();
+    const photo = screen.getByRole('img');
+    fireEvent.touchStart(photo, { touches: [{ clientX: 300 }] });
+    fireEvent.touchEnd(photo, { changedTouches: [{ clientX: 100 }] });
+    expect(shownSrc()).toBe('b.jpg');
+
+    // The start is spent by the first end; a stray second one has none to measure from.
+    fireEvent.touchEnd(photo, { changedTouches: [{ clientX: 100 }] });
+
+    expect(shownSrc()).toBe('b.jpg');
+  });
+
+  test('the live region announces the photo a swipe arrives at', () => {
+    renderCarousel();
+    const photo = screen.getByRole('img');
+    fireEvent.touchStart(photo, { touches: [{ clientX: 300 }] });
+    fireEvent.touchEnd(photo, { changedTouches: [{ clientX: 100 }] });
+
+    expect(document.querySelector('.image-carousel [aria-live="polite"]')).toHaveTextContent(
+      /image 2 of 3/i
+    );
+  });
+});
+
+describe('ImageCarousel variants', () => {
+  test('the card variant sizes the group and the photo for the collection grid', () => {
+    const { container } = renderCarousel({ variant: 'card' });
+
+    expect(container.querySelector('[role="group"]')).toHaveClass('image-carousel--card');
+    expect(screen.getByRole('img')).toHaveClass('image-carousel-image--card');
+    expect(screen.getByRole('img')).not.toHaveClass('detail-image');
+  });
+
+  test('the default, detail variant is the page-sized photo', () => {
+    const { container } = renderCarousel();
+
+    expect(container.querySelector('[role="group"]')).not.toHaveClass('image-carousel--card');
+    expect(screen.getByRole('img')).toHaveClass('detail-image');
+  });
+});
+
 describe('ImageCarousel end-of-gallery focus', () => {
   // Why the assertion is on the attribute rather than on document.activeElement:
   // the failure being guarded is a *browser* behaviour — disabling the element
