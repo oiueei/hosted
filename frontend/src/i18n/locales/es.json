@@ -1050,6 +1050,8 @@
   "requestErrors": {
     "already_requested": "Ya lo has pedido: espera la respuesta de quien lo ofrece.",
     "cancel_forbidden": "No puedes cancelar esta reserva.",
+    "co_owners_full_one": "Este grupo ya tiene 1 co-curador: es el máximo que permite.",
+    "co_owners_full_other": "Este grupo ya tiene {{count}} co-curadores: es el máximo que permite.",
     "dates_taken": "Esas fechas ya están cogidas.",
     "not_a_member": "Tienes que ser miembro de este grupo para reservar.",
     "not_available": "Ahora mismo no está disponible.",

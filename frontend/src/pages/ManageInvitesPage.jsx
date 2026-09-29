@@ -172,7 +172,13 @@ export default function ManageInvitesPage() {
           message: promote ? t('manageInvites.promoted') : t('manageInvites.demoted'),
         });
         fetchCollection();
+      } else if (res.status === 429) {
+        // Both directions are rate-limited (30/h), and a 429 has no body worth
+        // showing.
+        setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
+        // A coded refusal (the co-curator ceiling) is said in the reader's
+        // language by `extractApiError`, from `requestErrors.<code>`.
         const detail = await extractApiError(res);
         setToast({ type: 'error', message: detail || t('common.error') });
       }

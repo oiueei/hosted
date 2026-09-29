@@ -294,9 +294,14 @@ describe('ManageInvitesPage load failures', () => {
 });
 
 describe('ManageInvitesPage — co-owners', () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
     localStorage.clear();
+    // `useCollectionLanguage` moves the whole UI to the collection's language;
+    // put it back so the next test starts in English.
+    const { default: i18n } = await import('../i18n');
+    await i18n.changeLanguage('en');
+    localStorage.removeItem('i18nextLng');
   });
 
   const TWO_MEMBERS = {
@@ -316,6 +321,9 @@ describe('ManageInvitesPage — co-owners', () => {
       if (url.endsWith('/co-owners/')) {
         return respond(coOwner.status, coOwner.body ?? { message: 'ok' });
       }
+      // A signed-in reader with no language saved on their profile — which is
+      // what lets the collection's own language reach the page's chrome.
+      if (url.endsWith('/auth/me/')) return respond(200, { code: 'OWNER1', language: '' });
       return respond(200, collection);
     });
   }
@@ -379,6 +387,87 @@ describe('ManageInvitesPage — co-owners', () => {
     const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/co-owners/'));
     expect(options.method).toBe('DELETE');
     expect(JSON.parse(options.body)).toEqual({ user_code: 'GST002' });
+  });
+
+  // The server's own English sentence, as `CollectionCoOwnerView` sends it, and
+  // the code + number that let this page say it in the reader's language.
+  const CEILING = {
+    error: 'This collection already has the maximum of 5 co-curators',
+    code: 'co_owners_full',
+    params: { max: 5 },
+  };
+
+  test('the co-curator ceiling is said in English from its code, not as the server’s sentence', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes({ coOwner: { status: 400, body: CEILING } });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Make them a co-curator' }));
+
+    expect(
+      await screen.findByText('This group already has 5 co-curators — the most it allows.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/maximum of 5 co-curators/)).not.toBeInTheDocument();
+  });
+
+  test('in a Spanish group the ceiling comes out in castellano', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes({
+      collection: { ...TWO_MEMBERS, language: 'es' },
+      coOwner: { status: 400, body: CEILING },
+    });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    // The UI follows the collection's language once its first response lands.
+    fireEvent.click(await screen.findByRole('button', { name: 'Nombrar co-curador' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Nombrarle co-curador' }));
+
+    expect(
+      await screen.findByText('Este grupo ya tiene 5 co-curadores: es el máximo que permite.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/maximum of 5 co-curators/)).not.toBeInTheDocument();
+  });
+
+  test('a refusal with no code the page knows still shows the server’s sentence', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes({
+      coOwner: { status: 400, body: { error: 'Only an existing member can be promoted' } },
+    });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Make them a co-curator' }));
+
+    expect(await screen.findByText('Only an existing member can be promoted')).toBeInTheDocument();
+  });
+
+  test('a 429 on promoting says to wait, not the API’s bare error', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes({ coOwner: { status: 429, body: { detail: 'Request was throttled.' } } });
+    renderPage();
+    await screen.findByText(/Ana/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Make them a co-curator' }));
+
+    expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
+    expect(screen.queryByText('Request was throttled.')).not.toBeInTheDocument();
+  });
+
+  test('a 429 on demoting says to wait too', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    mockCoOwnerRoutes({ coOwner: { status: 429, body: { detail: 'Request was throttled.' } } });
+    renderPage();
+    await screen.findByText(/Bea/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove co-curator status' }));
+
+    expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
+    expect(screen.queryByText('Request was throttled.')).not.toBeInTheDocument();
   });
 
   test('a co-curator gets the promote toggle too (2026-09 — any curator may)', async () => {

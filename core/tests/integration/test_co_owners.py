@@ -292,6 +292,21 @@ class TestPromotingACoOwner:
         assert capped.co_owners.count() == Collection.MAX_CO_OWNERS
         assert not capped.co_owners.filter(code=outsider.code).exists()
 
+    def test_the_cap_refusal_is_coded_so_the_spa_can_say_it_in_the_readers_language(
+        self, capped, owner
+    ):
+        """`core` has no gettext catalogue, so the sentence is English; the code
+        and its number are what let the SPA say it in Catalan or Spanish (the same
+        shape a request's refusals carry), with the sentence as the fallback."""
+        outsider = capped.invites.get(code="OUTS01")
+        res = client_for(owner).post(
+            CO_OWNERS_URL.format(code=capped.code), {"user_code": outsider.code}, format="json"
+        )
+        assert res.status_code == 400
+        assert res.data["code"] == "co_owners_full"
+        assert res.data["params"] == {"max": Collection.MAX_CO_OWNERS}
+        assert "maximum of" in res.data["error"]
+
     def test_repromoting_an_existing_co_curator_at_the_cap_stays_idempotent(self, capped, owner):
         # The `already` path must never hit the ceiling: promoting someone who
         # is already a co-curator grows nothing, so it keeps answering 200.

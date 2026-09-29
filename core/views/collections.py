@@ -599,12 +599,17 @@ class CollectionCoOwnerView(APIView):
         # 1–2: a compromised curator's credential must not be able to promote
         # the whole roster, since each promotion hands over the member list.
         if not already and collection.co_owners.count() >= Collection.MAX_CO_OWNERS:
+            # Coded like a request's refusals (`BookingRequestError.as_body`): the
+            # SPA says it in the reader's language from `requestErrors.co_owners_full`,
+            # the English sentence stays as the fallback for a client that lacks it.
             return Response(
                 {
                     "error": (
                         "This collection already has the maximum of "
                         f"{Collection.MAX_CO_OWNERS} co-curators"
-                    )
+                    ),
+                    "code": "co_owners_full",
+                    "params": {"max": Collection.MAX_CO_OWNERS},
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )

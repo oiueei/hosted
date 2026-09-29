@@ -1050,6 +1050,8 @@
   "requestErrors": {
     "already_requested": "You've already asked for this — wait for the owner's answer.",
     "cancel_forbidden": "You can't cancel this reservation.",
+    "co_owners_full_one": "This group already has its 1 co-curator — the most it allows.",
+    "co_owners_full_other": "This group already has {{count}} co-curators — the most it allows.",
     "dates_taken": "Those dates are already taken.",
     "not_a_member": "You need to be a member of this group to reserve.",
     "not_available": "This isn't available right now.",

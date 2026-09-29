@@ -1050,6 +1050,8 @@
   "requestErrors": {
     "already_requested": "Ja ho has demanat: espera la resposta de qui ho ofereix.",
     "cancel_forbidden": "No pots cancel·lar aquesta reserva.",
+    "co_owners_full_one": "Aquest grup ja té 1 co-curador: és el màxim que permet.",
+    "co_owners_full_other": "Aquest grup ja té {{count}} co-curadors: és el màxim que permet.",
     "dates_taken": "Aquestes dates ja estan agafades.",
     "not_a_member": "Has de ser membre d'aquest grup per reservar.",
     "not_available": "Ara mateix no està disponible.",
