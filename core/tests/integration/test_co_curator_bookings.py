@@ -397,6 +397,27 @@ class TestHidingSettlesTheQuestionForTheWholeTeam:
         # The asker's ordinary hidden notice, and nothing else.
         assert [m.to[0] for m in mail.outbox] == [asker.email]
 
+    def test_hiding_an_already_hidden_question_tells_nobody_again(
+        self, space, member, owner, co_curator
+    ):
+        faq = self._ask(space, member)
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        mail.outbox.clear()
+        notices_before = InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_HIDDEN
+        ).count()
+
+        # The co-curator hides it a moment later (or the founder clicks twice).
+        res = client_for(co_curator).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        assert res.data["faq"]["is_visible"] is False
+        assert mail.outbox == []
+        assert (
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_HIDDEN).count()
+            == notices_before
+        )
+
     def test_showing_back_tells_nobody(self, space, member, owner, co_curator):
         faq = self._ask(space, member)
         res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")

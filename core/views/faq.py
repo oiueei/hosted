@@ -265,6 +265,16 @@ class FAQVisibilityView(APIView):
             )
 
         if action == "hide":
+            # Hiding a question that is already hidden changes nothing, so it
+            # tells nobody: a double click, or a teammate hiding it a moment
+            # after another, must not mail the asker and the whole team again.
+            if not faq.is_visible:
+                return Response(
+                    {
+                        "message": "FAQ hidden",
+                        "faq": FAQSerializer(faq, context={"request": request}).data,
+                    }
+                )
             faq.is_visible = False
             faq.save(update_fields=["is_visible"])
 

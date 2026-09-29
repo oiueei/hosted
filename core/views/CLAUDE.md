@@ -728,7 +728,7 @@ Answers a FAQ. Sends a notification email + in-app to the questioner, naming who
 | **Endpoint** | `POST /api/v1/faq/{faq_code}/hide/` |
 | **Permission** | `IsAuthenticated` + manager of the thing (`Thing.can_manage`) |
 
-Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text). **The rest of the team hears it too** (2026-09-28, same round as `FAQAnswerView`): `send_faq_hidden_to_team_email` reaches every other manager (minus the hider and the questioner), and every `FAQ_QUESTION` notification for this FAQ is deleted for all managers via the shared `_clear_faq_question_notifications` — an unanswered one stopped owing anybody a reply the moment it was hidden.
+Hides a FAQ. Sends notification email to questioner (includes thing headline only, no question text). **The rest of the team hears it too** (2026-09-28, same round as `FAQAnswerView`): `send_faq_hidden_to_team_email` reaches every other manager (minus the hider and the questioner), and every `FAQ_QUESTION` notification for this FAQ is deleted for all managers via the shared `_clear_faq_question_notifications` — an unanswered one stopped owing anybody a reply the moment it was hidden. Hiding a FAQ that is **already hidden** is a no-op that tells nobody (200, same body) — a double click or a teammate hiding it a moment later must not mail the asker and the team twice.
 
 | | |
 |---|---|
