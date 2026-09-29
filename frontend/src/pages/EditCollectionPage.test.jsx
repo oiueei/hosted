@@ -23,6 +23,7 @@ vi.mock('../hooks/useCollectionLanguage', () => ({ default: vi.fn() }));
 import { apiFetch } from '../services/api';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import EditCollectionPage from './EditCollectionPage';
+import { dropHdsStyles } from '../test/dropHdsStyles';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
 // visible, which fold into "More options", the pause section). These cover the
@@ -108,6 +109,7 @@ const renderPage = () =>
   );
 
 beforeEach(() => {
+  dropHdsStyles(); // ByRole queries cost ~10x less without them; see the helper
   localStorage.clear();
   localStorage.setItem('userCode', 'USR001');
   vi.clearAllMocks();

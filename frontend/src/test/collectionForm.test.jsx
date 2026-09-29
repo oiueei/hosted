@@ -18,6 +18,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
+import { dropHdsStyles } from './dropHdsStyles';
 
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
@@ -59,6 +60,7 @@ function renderEdit(collection) {
 }
 
 beforeEach(() => {
+  dropHdsStyles(); // ByRole queries cost ~10x less without them; see the helper
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
   localStorage.setItem(
