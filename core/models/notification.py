@@ -43,6 +43,15 @@ class InAppNotification(models.Model):
         # cancelled variant reaches whichever party did *not* cancel.
         RESERVATION_MADE = "RESERVATION_MADE"
         RESERVATION_CANCELLED = "RESERVATION_CANCELLED"
+        # A hold was accepted or rejected, and the record is for the team that
+        # runs the thing — every manager plus whoever decided, never the
+        # requester (their own copy is the BOOKING_ACCEPTED/REJECTED above).
+        # A request is a question put to whoever runs the thing, and without
+        # this its answer only reached the asker: a co-curator's inbox kept a
+        # request the founder had already settled, and whoever decided had no
+        # trace of their own call. It carries no question, and it is not good
+        # or bad news for its readers — a trail, so it renders as info.
+        BOOKING_DECIDED = "BOOKING_DECIDED"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")

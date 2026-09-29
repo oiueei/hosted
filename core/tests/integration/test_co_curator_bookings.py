@@ -122,16 +122,21 @@ class TestACoCuratorRunsTheBookings:
         assert booking.status == BookingPeriod.Status.CANCELLED
 
         # the member hears it; the founder (the other curator) hears it; the
-        # co-curator who did it does not
+        # co-curator who did it keeps a record of their own (CA, 2026-09-29)
         told = set(
             InAppNotification.objects.filter(
                 type=InAppNotification.Type.RESERVATION_CANCELLED
             ).values_list("user_id", flat=True)
         )
-        assert told == {member.code, owner.code}
+        assert told == {member.code, owner.code, co_curator.code}
         # `other_name` is whoever actually cancelled
         note = InAppNotification.objects.filter(user=member.code).first()
         assert note.payload["other_name"] == co_curator.name
+        # theirs is the first-person copy, naming whose reservation it was
+        mine = InAppNotification.objects.get(user=co_curator.code)
+        assert mine.payload["by_you"] is True
+        assert mine.payload["member_name"] == member.name
+        assert "by_you" not in note.payload
 
     def test_owner_bookings_lists_the_spaces_reservations_for_a_co_curator(
         self, space, member, co_curator

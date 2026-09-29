@@ -246,6 +246,52 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001',
     },
     {
+      // The team-side record of a decision (2026-09-29): whoever made the call
+      // reads their own trace, not a report of themselves in the third person.
+      what: 'a decision you made yourself is your own trace, naming who asked',
+      notification: {
+        code: 'NOTA09',
+        type: 'BOOKING_DECIDED',
+        payload: {
+          thing_headline: 'A mitre saw',
+          requester_name: 'Lulu',
+          decider_name: 'Lala',
+          accepted: true,
+          by_you: true,
+          booking_code: 'BKG009',
+          thing_code: 'THG009',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/You confirmed Lulu's request/i, /A mitre saw/],
+      links: '/collections/COL001/things/THG009',
+      linkName: /view listing/i,
+    },
+    {
+      what: "a teammate's decision names them, and whether it was a yes",
+      notification: {
+        code: 'NOTA10',
+        type: 'BOOKING_DECIDED',
+        payload: {
+          thing_headline: 'A board game',
+          requester_name: 'Lolo',
+          decider_name: 'Lala',
+          accepted: false,
+          by_you: false,
+          booking_code: 'BKG010',
+          thing_code: 'THG010',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/Lala declined Lolo's request/i, /A board game/],
+      links: '/collections/COL001/things/THG010',
+      linkName: /view listing/i,
+    },
+    {
       // Its link read "I can help!" — the retired WISH_THING call-for-help CTA —
       // under every group message, whatever the curator had written.
       what: 'a group message carries its text and a link that says where it goes',
@@ -266,7 +312,7 @@ describe('InboxNotifications — every type says something', () => {
     },
   ];
 
-  test.each(CASES)('$what', async ({ notification, says, links, rejects }) => {
+  test.each(CASES)('$what', async ({ notification, says, links, rejects, linkName }) => {
     apiFetch.mockImplementation((url) => {
       if (url.startsWith('/api/v1/inbox/')) return ok([notification]);
       if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
@@ -286,10 +332,9 @@ describe('InboxNotifications — every type says something', () => {
     // Not the broadcast fallback: that renders an empty body and a bare " — ".
     expect(container.textContent).not.toMatch(/\s—\s*Toy library\s*$/);
     expect(container.textContent).not.toMatch(/\{\{\w+\}\}/);
-    expect(screen.getByRole('link', { name: /decide now|open the group/i })).toHaveAttribute(
-      'href',
-      links
-    );
+    expect(
+      screen.getByRole('link', { name: linkName || /decide now|open the group/i })
+    ).toHaveAttribute('href', links);
     if (rejects) expect(container.textContent).not.toMatch(rejects);
   });
 
@@ -494,20 +539,24 @@ describe('InboxNotifications — a person with no name still has a subject', () 
 });
 
 /**
- * A reservation notice says when (CA, 2026-09-28): under the body and its link,
- * two quiet lines — when the event the notice records happened (`created`, the
+ * A request or reservation notice says when (CA, 2026-09-28 for reservations,
+ * 2026-09-29 for every request notice): under the body and its link, two quiet
+ * lines — when the event the notice records happened (`created`, the
  * notification's own stamp: for a cancellation that is the cancellation's
- * moment, which is the fact being reported) and when the reservation runs,
- * read from the payload's booking fields by `formatBookingWhen` — the same
- * formatter the booking tables use, so an hourly slot reads identically here
- * and in My requests.
+ * moment, which is the fact being reported) and, when the payload carries
+ * dates, when the booking runs, read from the payload's booking fields by
+ * `formatBookingWhen` — the same formatter the booking tables use, so an
+ * hourly slot reads identically here and in My requests. An undated notice (a
+ * gift or sale — or a row written before its type carried dates) shows only
+ * the registration line: the when it happened is knowable, the when it runs
+ * is not.
  *
  * The registered stamp renders in the reader's own timezone, so its expected
  * string is built from the same instant locally — never a hardcoded offset
  * that only holds where the suite happens to run. The formatter's timezone
  * behaviour itself is pinned separately by rental.test.js under a stubbed TZ.
  */
-describe('InboxNotifications — a reservation notice says when', () => {
+describe('InboxNotifications — a request or reservation notice says when', () => {
   const localStamp = (iso) => {
     const d = new Date(iso);
     const pad = (n) => String(n).padStart(2, '0');
@@ -644,7 +693,56 @@ describe('InboxNotifications — a reservation notice says when', () => {
     expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
   });
 
-  test('a request without dates (a gift, or one from before) grows no lines', async () => {
+  test('an accepted loan shows both lines, the slot pickup to return', async () => {
+    renderInbox([
+      {
+        code: 'NOTR07',
+        type: 'BOOKING_ACCEPTED',
+        payload: {
+          owner_name: 'Lala',
+          thing_headline: 'A mitre saw',
+          booking_code: 'BKG007',
+          thing_code: 'THG007',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T08:12:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+  });
+
+  test('a rejected gift shows the registration line but nothing to schedule', async () => {
+    renderInbox([
+      {
+        code: 'NOTR08',
+        type: 'BOOKING_REJECTED',
+        payload: {
+          owner_name: 'Lala',
+          thing_headline: 'A board game',
+          booking_code: 'BKG008',
+          thing_code: 'THG008',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T08:12:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+
+  test('a request without dates (a gift, or one from before) shows only the registration line', async () => {
+    // The rule changed on 2026-09-29: registration is knowable for every
+    // request notice even when the run dates are not, so the gift keeps the
+    // first line — it grew none at all before.
     renderInbox([
       {
         code: 'NOTR06',
@@ -660,8 +758,9 @@ describe('InboxNotifications — a reservation notice says when', () => {
       },
     ]);
 
-    expect(await screen.findByText(/A board game/)).toBeInTheDocument();
-    expect(screen.queryByText(/^Registered: /)).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T06:38:00Z')}`)
+    ).toBeInTheDocument();
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 
@@ -684,5 +783,85 @@ describe('InboxNotifications — a reservation notice says when', () => {
       await screen.findByText(`Registered: ${localStamp('2026-09-28T13:11:00Z')}`)
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Whoever cancelled a reservation keeps an in-app record of their own (CA,
+ * 2026-09-29): the reservation's whole story lives in the inbox, and the
+ * canceller's copy used to stop at the email confirmation. Their record is in
+ * the first person — and names whose reservation it was when it wasn't theirs.
+ */
+describe('InboxNotifications — whoever cancelled keeps their own record', () => {
+  const renderInbox = (notifications) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok(notifications);
+      return ok([]);
+    });
+    return render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+  };
+
+  const BASE_PAYLOAD = {
+    thing_headline: 'The meeting room',
+    other_name: 'Lolo',
+    thing_code: 'THG001',
+    collection_code: 'COL001',
+    start_date: '2026-09-29',
+    end_date: '2026-09-30',
+    start_time: '10:00',
+    end_time: '12:00',
+  };
+
+  test('a member who cancelled their own reservation reads it in the first person', async () => {
+    renderInbox([
+      {
+        code: 'NOTR11',
+        type: 'RESERVATION_CANCELLED',
+        payload: { ...BASE_PAYLOAD, by_you: true },
+        created: '2026-09-29T10:30:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(/You cancelled your reservation of The meeting room/)
+    ).toBeInTheDocument();
+    // Not the third-person copy, and not their own name posing as somebody else's.
+    expect(screen.queryByText(/Lolo/)).not.toBeInTheDocument();
+  });
+
+  test("a curator who cancelled somebody else's is told whose it was", async () => {
+    renderInbox([
+      {
+        code: 'NOTR12',
+        type: 'RESERVATION_CANCELLED',
+        payload: { ...BASE_PAYLOAD, by_you: true, member_name: 'Lele' },
+        created: '2026-09-29T10:30:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(/You cancelled Lele's reservation of The meeting room/)
+    ).toBeInTheDocument();
+  });
+
+  test("an unnamed member's reservation still reads as somebody else's", async () => {
+    // The backend sends '' when the reservation's owner never set a name.
+    renderInbox([
+      {
+        code: 'NOTR13',
+        type: 'RESERVATION_CANCELLED',
+        payload: { ...BASE_PAYLOAD, by_you: true, member_name: '' },
+        created: '2026-09-29T10:30:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(/You cancelled A member's reservation of The meeting room/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/your reservation/)).not.toBeInTheDocument();
   });
 });

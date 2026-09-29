@@ -922,7 +922,7 @@ Allows the requester to cancel their own pending booking. Validates `booking.req
 | **Endpoint** | `POST /api/v1/bookings/{booking_code}/accept/` |
 | **Permission** | `IsAuthenticated` + a **manager** of the thing (`booking.owner_code == user` **or** `booking.thing_code.can_manage(user)`) |
 
-Accepts a pending booking. Calls `finalize_booking_decision()`, sends the decision email via `send_booking_decision_email()`, and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links. A curator of a PROPRIETARY collection decides its holds, not only the founder (2026-09).
+Accepts a pending booking. Calls `finalize_booking_decision()` with `decided_by=request.user` (so a co-curator's decision is signed by the co-curator in the requester's notice), which sends the decision email via `send_booking_decision_email()` and deletes related RSVPs (`BOOKING_ACCEPT`/`BOOKING_REJECT`) to invalidate old email links. A curator of a PROPRIETARY collection decides its holds, not only the founder (2026-09).
 
 | | |
 |---|---|

@@ -21,14 +21,22 @@ const SUCCESS_TYPES = new Set([
   'PROMOTED_CO_OWNER',
 ]);
 
-// The notices whose payload speaks the booking's own field names (start/end
-// date and time), and so can say *when* below their body: the two reservation
-// notices, and a loan or rental request (BOOKING_REQUESTED carries its dates
-// since 2026-09-29 — a gift/sale request, or one written before then, has none
-// and grows no lines).
+// The notices about a request or reservation say when they were registered
+// under their body — CA, 2026-09-29: reading "confirmed" with no idea of when
+// that happened asked the member to trust a dateless sentence. The two
+// reservation notices additionally speak the booking's own field names
+// (start/end date and time), and a dated request or decision does too; a gift
+// or sale (no dates in the payload) shows only the registration line.
+// BOOKING_DECIDED does not exist until 2026-09-29's team-notice work; it rides
+// along here so the rule is one list.
 const RESERVATION_TYPES = new Set(['RESERVATION_MADE', 'RESERVATION_CANCELLED']);
-const saysWhen = (n) =>
-  RESERVATION_TYPES.has(n.type) || (n.type === 'BOOKING_REQUESTED' && !!n.payload?.start_date);
+const BOOKING_NOTICE_TYPES = new Set([
+  ...RESERVATION_TYPES,
+  'BOOKING_REQUESTED',
+  'BOOKING_ACCEPTED',
+  'BOOKING_REJECTED',
+  'BOOKING_DECIDED',
+]);
 
 // The quiet meta lines under a notice, sized like a helper rather than body
 // copy — they qualify the sentence above, they don't continue it.
@@ -121,6 +129,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     member_name: named(payload.member_name),
     proposer_name: named(payload.proposer_name),
     other_name: named(payload.other_name),
+    decider_name: named(payload.decider_name),
   });
 
   const notificationLabel = (n) => {
@@ -136,6 +145,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.bookingRejectedLabel');
       case 'BOOKING_REQUESTED':
         return t('home.bookingRequestedLabel');
+      // The team-side record of a decision: same labels the requester's own
+      // notice uses, so one vocabulary for one event.
+      case 'BOOKING_DECIDED':
+        return p.accepted ? t('home.bookingAcceptedLabel') : t('home.bookingRejectedLabel');
       case 'FAQ_QUESTION':
         return t('home.faqQuestionLabel');
       case 'FAQ_ANSWERED':
@@ -246,12 +259,41 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
               proposer_name: p.proposer_name,
               email: p.email,
             });
+      case 'BOOKING_DECIDED':
+        // Whoever reads it either made the call or hears about a teammate's.
+        if (p.by_you)
+          return t(
+            p.accepted
+              ? 'home.bookingDecidedAcceptedByYouBody'
+              : 'home.bookingDecidedRejectedByYouBody',
+            { requester_name: p.requester_name, thing_headline: p.thing_headline }
+          );
+        return t(
+          p.accepted ? 'home.bookingDecidedAcceptedBody' : 'home.bookingDecidedRejectedBody',
+          {
+            decider_name: p.decider_name,
+            requester_name: p.requester_name,
+            thing_headline: p.thing_headline,
+          }
+        );
       case 'RESERVATION_MADE':
         return t('home.reservationMadeBody', {
           requester_name: p.requester_name,
           thing_headline: p.thing_headline,
         });
       case 'RESERVATION_CANCELLED':
+        // Whoever cancelled reads their own record in the first person — and
+        // learns whose reservation it was when it wasn't theirs. The wording is
+        // picked by whether the payload carries `member_name` at all, not by its
+        // value: `localizedPayload` fills a missing name with "a member", so `p`
+        // can never say (the backend sends '' for an unnamed owner).
+        if (p.by_you)
+          return t(
+            'member_name' in (n.payload || {})
+              ? 'home.reservationCancelledByYouOtherBody'
+              : 'home.reservationCancelledByYouOwnBody',
+            { member_name: p.member_name, thing_headline: p.thing_headline }
+          );
         return t('home.reservationCancelledBody', {
           other_name: p.other_name,
           thing_headline: p.thing_headline,
@@ -306,22 +348,20 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     <>
       {notifications.map((n) => {
         const link = notificationLink(n);
-        // The reservation and loan/rental request notices say when, under
-        // their body: when the event the notice records happened (`created` —
-        // for a cancellation that is the cancellation's own stamp, which is the
-        // fact being reported) and when the booking runs, read from the
-        // payload's booking fields by the same formatter the booking tables
-        // use, so the two never disagree about what '29/09/2026, 10:00–12:00'
-        // means. A loan or rental reads pickup — return. Either line with
-        // nothing to say (an unparseable stamp, a payload without dates) stays
-        // out.
-        const when = saysWhen(n);
-        const registeredAt = when ? formatDateTime(n.created) : '';
-        const scheduledFor = !when
-          ? ''
-          : RESERVATION_TYPES.has(n.type)
+        // Every request- and reservation-notice says when, under its body:
+        // when the event the notice records happened (`created` — for a
+        // cancellation that is the cancellation's own stamp, which is the fact
+        // being reported) and, when the payload carries dates, when the
+        // booking runs — read by the same formatter the booking tables use, so
+        // the two never disagree about what '29/09/2026, 10:00–12:00' means. A
+        // loan or rental reads pickup — return. Either line with nothing to
+        // say (an unparseable stamp, a payload without dates) stays out.
+        const registeredAt = BOOKING_NOTICE_TYPES.has(n.type) ? formatDateTime(n.created) : '';
+        const scheduledFor = n.payload?.start_date
+          ? RESERVATION_TYPES.has(n.type)
             ? formatBookingWhen(n.payload, 'RESERVE_THING')
-            : formatBookingWhen(n.payload);
+            : formatBookingWhen(n.payload)
+          : '';
         return (
           <Notification
             key={n.code}
