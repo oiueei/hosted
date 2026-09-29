@@ -1,6 +1,6 @@
 """Deploy-time checks for the settings that only fail once somebody uses them.
 
-Both checks here guard the same class of outage rather than a feature: a setting
+The checks here guard the same class of outage rather than a feature: a setting
 that nothing reads at startup passes `manage.py check`, passes the Heroku
 `release` phase, boots a healthy dyno — and then surfaces as a 500 on a request,
 after the deploy has already been declared successful.
@@ -43,11 +43,27 @@ and bucket, so existing images render and the CSP is right — while
 attempts. Nothing before that moment says a word. All-or-none is the real
 contract, so it is worth stating at deploy time rather than discovering from a
 user who could not add a photo.
+
+## `ANON_API_RATE`, the ceiling every anonymous API request is counted against
+
+`core.throttles.AnonymousApiThrottle` hands the setting to django-ratelimit on
+**every** anonymous request, so a value it cannot parse does not degrade a corner:
+it answers 500 to each visitor with no session — the whole public side of the
+product — and only after the deploy has been declared successful. Worse, the
+library parses leniently: `"300/M"` (a capital) reads as 300 a **second**, which
+is no limit at all and says nothing. The check is stricter than the library on
+purpose: a count of at least 1, a slash, an optional multiplier and an explicit
+period `s`/`m`/`h`/`d`. The off switch is `"0"` (or empty) on its own, never `"0/m"`.
 """
+
+import re
 
 from django.conf import settings
 from django.core.checks import Error, Warning, register
 from django.utils.module_loading import import_string
+
+# `ANON_API_RATE`: a count of at least 1, "/", an optional multiplier, a period.
+_ANON_API_RATE = re.compile(r"([1-9]\d*)/([1-9]\d*)?([smhd])")
 
 # The five that make up one credential set (`core/services/storage.py::_config`).
 _STORAGE_SETTINGS = (
@@ -149,5 +165,25 @@ def check_object_storage(app_configs, **kwargs):
                 "tries. Set all five, or none (uploads are simply off)."
             ),
             id="core.W001",
+        )
+    ]
+
+
+@register()
+def check_anon_api_rate(app_configs, **kwargs):
+    """`ANON_API_RATE` is `"0"`/empty (off) or a rate like `"300/m"` the throttle can read."""
+    rate = str(getattr(settings, "ANON_API_RATE", "") or "").strip()
+    if rate in ("", "0") or _ANON_API_RATE.fullmatch(rate):
+        return []
+    return [
+        Error(
+            f"ANON_API_RATE is {rate!r}, which is not a rate.",
+            hint=(
+                'Use a count, a slash and a period — "300/m", "20/s", "1000/5m", '
+                '"5/h", "10000/d" — or "0" to switch the ceiling off. Every request '
+                "with no session is counted against it, so a value the throttle "
+                "cannot read answers 500 to all of them."
+            ),
+            id="core.E005",
         )
     ]

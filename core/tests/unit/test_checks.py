@@ -17,7 +17,7 @@ from django.core.management import call_command
 from django.core.management.base import SystemCheckError
 from django.test import override_settings
 
-from core.checks import check_creator_policy, check_object_storage
+from core.checks import check_anon_api_rate, check_creator_policy, check_object_storage
 from core.services.creator_policy import Capabilities, CreatorPolicy
 
 
@@ -181,3 +181,58 @@ class TestObjectStorageIsAllOrNone:
         would be the check that gets deleted."""
         with override_settings(**{**self.ALL_FIVE, "OBJECT_STORAGE_REGION": ""}):
             call_command("check")  # does not raise SystemCheckError
+
+
+class TestAnonApiRateIsARateTheThrottleCanRead:
+    """`ANON_API_RATE` is handed to django-ratelimit on every anonymous request, so
+    a value it cannot read is a 500 for the whole public side of the product —
+    found by a visitor, after the deploy. Each case is one thing an operator can
+    actually type into a config var."""
+
+    @pytest.mark.parametrize("rate", ["300/m", "20/s", "1000/5m", "5/h", "10000/d", " 300/m "])
+    def test_a_real_rate_passes(self, rate):
+        with override_settings(ANON_API_RATE=rate):
+            assert check_anon_api_rate(None) == []
+
+    @pytest.mark.parametrize("off", ["0", "", None])
+    def test_zero_or_empty_is_the_off_switch_and_is_silent(self, off):
+        with override_settings(ANON_API_RATE=off):
+            assert check_anon_api_rate(None) == []
+
+    @pytest.mark.parametrize(
+        "rate",
+        [
+            "abc",  # the library raises AttributeError parsing it: a 500 per request
+            "300",  # no slash, same
+            "300/M",  # a capital: the library reads it as 300 a *second* — no limit at all
+            "300/",  # no period, ditto
+            "300/x",  # not a period
+            "0/m",  # zero a minute refuses everybody from the first request
+            "300/0m",  # a window of no length: ImproperlyConfigured on the first request
+            "-5/m",
+            "3.5/m",
+            "300/m; drop",
+        ],
+    )
+    def test_anything_else_is_an_error_at_check_time(self, rate):
+        with override_settings(ANON_API_RATE=rate):
+            errors = check_anon_api_rate(None)
+
+        assert ids(errors) == ["core.E005"]
+        assert isinstance(errors[0], Error)
+        assert repr(rate) in errors[0].msg
+
+    def test_it_fails_the_command_the_release_phase_runs(self):
+        """Registered, not merely written (see `TestTheCheckActuallyRunsAtCheckTime`)."""
+        with override_settings(ANON_API_RATE="300/M"):
+            with pytest.raises(SystemCheckError) as raised:
+                call_command("check")
+
+        assert "core.E005" in str(raised.value)
+        assert "ANON_API_RATE" in str(raised.value)
+
+    def test_the_shipped_default_does_not_fail_a_deploy_that_is_fine(self):
+        from django.conf import settings
+
+        assert check_anon_api_rate(None) == []
+        assert settings.ANON_API_RATE  # the check above ran on a real, non-empty default

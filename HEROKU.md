@@ -141,6 +141,17 @@ heroku config:set \
 > response is what stops it being used to probe which codes are real); you see it in the `security`
 > log — `grep` your dyno logs for `COLLECTION_JOINS_PER_DAY` if joins go quiet.
 
+> **Leave alone — anonymous read ceiling:** `ANON_API_RATE` (default `300/m`) caps how many API
+> requests one IP may make per minute **while not signed in**, so a script cannot scrape a PUBLIC
+> collection's things, calendars, FAQ and journeys as fast as your dynos answer. It is on by default
+> and you do not need to set anything: a signed-in member is never counted, a page is a handful of
+> reads, and the bucket is the real client IP (`TRUSTED_PROXY_COUNT`, `1` on Heroku). Two things to
+> know. It costs one extra query per anonymous request, in the `oiueei_cache` table. And an office
+> or school behind a single address shares one allowance — raise it (`heroku config:set
+> ANON_API_RATE=1000/m -a your-app-name`) if you serve a group like that, or set it to `0` to switch
+> it off. A value that is not a rate (`300/M`, `abc`) fails `manage.py check`, so the release phase
+> stops before the dyno boots.
+
 > **Recommended — mass-upload guards:** four per-collection thresholds, all **off unless set**
 > (`COLLECTION_THINGS_ALARM` / `_BLOCK`, `COLLECTION_INVITES_ALARM` / `_BLOCK`). The `_ALARM` pair
 > emails your superusers once per collection and changes nothing else — a tripwire you watch. The

@@ -173,6 +173,9 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardResultsPagination",
     "PAGE_SIZE": 20,
+    # One ceiling per IP for whatever a visitor with no session reads; see
+    # `ANON_API_RATE` below and `core/throttles.py`.
+    "DEFAULT_THROTTLE_CLASSES": ["core.throttles.AnonymousApiThrottle"],
 }
 
 
@@ -243,6 +246,25 @@ RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
 # a fresh rate-limit bucket per request, defeating every IP limit in the app.
 # Raise it above 1 only when another trusted proxy (a CDN) sits in front.
 TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "1"))
+
+# API requests one IP may make per window while **not signed in** — `"300/m"`
+# is 300 a minute, any django-ratelimit rate works (`"20/s"`, `"1000/5m"`). A
+# PUBLIC collection is readable by anyone, and without a ceiling a script can
+# scrape its things, calendars, FAQ and journeys as fast as the dynos answer and
+# multiply the queries behind each read. The ceiling is per real client IP
+# (`RATELIMIT_IP_META_KEY`, so `TRUSTED_PROXY_COUNT` applies). A page is a
+# handful of reads and a person does not open five a second, so 300 a minute is
+# there for scripts, not for visitors — but a whole office or school behind one
+# address shares it.
+#
+# It counts **only** requests with no session: a signed-in member is never
+# throttled by it. `"0"` (or empty) switches it off, as does `RATELIMIT_ENABLE`
+# (development and the tests). The counter lives in `CACHES["default"]`, which in
+# production is a DatabaseCache: one extra query per anonymous request, and the
+# same non-atomic increment as every other limit here (I7). A mistyped rate fails
+# the deploy — `core.checks.check_anon_api_rate` — rather than 500ing every
+# anonymous request. See `core/throttles.py`.
+ANON_API_RATE = os.environ.get("ANON_API_RATE", "300/m")
 
 # Invitation emails one account may send per day. This is **operator policy,
 # not a product rule**: it protects the deployment's own sending domain and
