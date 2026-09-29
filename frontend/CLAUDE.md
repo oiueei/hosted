@@ -224,6 +224,7 @@ Reusable component for rendering a thing as an HDS `Card`. Used by `CollectionPa
   - `GIFT_THING`, `SELL_THING` — button submits directly via `POST /api/v1/things/{code}/request/`, no extra fields.
   - `LEND_THING`, `RENT_THING` — button navigates to `RequestThingPage` for date selection.
 - **Back navigation**: passes `{ state: { backPath, backLabel } }` to RequestThingPage and ThingPage based on context (collection headline or home).
+  Every navigation the card makes carries its own way back, and each is pinned in `test/thingCardAndPageRoutes.test.jsx`: **Delete** (ACTIVE, INACTIVE, and the COMMUNITY owner's Delete on a member's contribution) hands `DeleteThingPage` `{ backPath, backLabel }` — the collection and its headline ("Collection" while the name is unknown), or Home from the dashboard — because that page's Cancel and its post-delete redirect have no other way to know where to go; a date-based verb goes to the request page with the same state instead of posting; an anonymous click goes to `/collections/:code/join?thing=…` with `{ collectionHeadline }`.
 
 ### ThingPage (`src/pages/ThingPage.jsx`)
 
@@ -243,6 +244,7 @@ Detail page for a thing with full information and FAQs section.
   - `TAKEN`: "Confirm hold" (primary) → "Cancel hold" (secondary) → "Edit" (secondary). `activePendingCode` advances to next pending after each action.
   - `INACTIVE`: "Reactivate" (primary) + "Edit" (secondary) + "Delete" (secondary).
   - Delete navigates to `DeleteThingPage` with `{ state: { backPath, backLabel } }`.
+  - The page's own copies of these buttons are pinned like the card's (`test/thingCardAndPageRoutes.test.jsx`): Confirm/Cancel hold on a date-based thing call accept/reject for the pending booking and disable both while it is in flight ("Cancelling…"); Cancel hold on a requested GIFT/SELL rejects the booking the calendar reports — **its buttons show at once but the booking code arrives with `/calendar/`**, so a click before that acts for nobody; Reactivate reads "Reactivating…" and cannot be pressed twice. A load that fails says why — 403, 404, any other status, no connection — each with the way home.
 - **Reservation:** Non-owners see the "Hold" button. GIFT/SELL submit directly via `POST .../request/`; date-based (LEND/RENT) types navigate to `RequestThingPage` with `{ state: { backPath, backLabel } }`.
 - **FAQs section:**
   - Lists all FAQs with question, `questioner_name`, and answer. Hidden FAQs shown with reduced opacity (owner only).
