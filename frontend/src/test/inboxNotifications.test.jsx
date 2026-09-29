@@ -494,20 +494,24 @@ describe('InboxNotifications — a person with no name still has a subject', () 
 });
 
 /**
- * A reservation notice says when (CA, 2026-09-28): under the body and its link,
- * two quiet lines — when the event the notice records happened (`created`, the
+ * A request or reservation notice says when (CA, 2026-09-28 for reservations,
+ * 2026-09-29 for every request notice): under the body and its link, two quiet
+ * lines — when the event the notice records happened (`created`, the
  * notification's own stamp: for a cancellation that is the cancellation's
- * moment, which is the fact being reported) and when the reservation runs,
- * read from the payload's booking fields by `formatBookingWhen` — the same
- * formatter the booking tables use, so an hourly slot reads identically here
- * and in My requests.
+ * moment, which is the fact being reported) and, when the payload carries
+ * dates, when the booking runs, read from the payload's booking fields by
+ * `formatBookingWhen` — the same formatter the booking tables use, so an
+ * hourly slot reads identically here and in My requests. An undated notice (a
+ * gift or sale — or a row written before its type carried dates) shows only
+ * the registration line: the when it happened is knowable, the when it runs
+ * is not.
  *
  * The registered stamp renders in the reader's own timezone, so its expected
  * string is built from the same instant locally — never a hardcoded offset
  * that only holds where the suite happens to run. The formatter's timezone
  * behaviour itself is pinned separately by rental.test.js under a stubbed TZ.
  */
-describe('InboxNotifications — a reservation notice says when', () => {
+describe('InboxNotifications — a request or reservation notice says when', () => {
   const localStamp = (iso) => {
     const d = new Date(iso);
     const pad = (n) => String(n).padStart(2, '0');
@@ -644,7 +648,56 @@ describe('InboxNotifications — a reservation notice says when', () => {
     expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
   });
 
-  test('a request without dates (a gift, or one from before) grows no lines', async () => {
+  test('an accepted loan shows both lines, the slot pickup to return', async () => {
+    renderInbox([
+      {
+        code: 'NOTR07',
+        type: 'BOOKING_ACCEPTED',
+        payload: {
+          owner_name: 'Lala',
+          thing_headline: 'A mitre saw',
+          booking_code: 'BKG007',
+          thing_code: 'THG007',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T08:12:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+  });
+
+  test('a rejected gift shows the registration line but nothing to schedule', async () => {
+    renderInbox([
+      {
+        code: 'NOTR08',
+        type: 'BOOKING_REJECTED',
+        payload: {
+          owner_name: 'Lala',
+          thing_headline: 'A board game',
+          booking_code: 'BKG008',
+          thing_code: 'THG008',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T08:12:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+
+  test('a request without dates (a gift, or one from before) shows only the registration line', async () => {
+    // The rule changed on 2026-09-29: registration is knowable for every
+    // request notice even when the run dates are not, so the gift keeps the
+    // first line — it grew none at all before.
     renderInbox([
       {
         code: 'NOTR06',
@@ -660,8 +713,9 @@ describe('InboxNotifications — a reservation notice says when', () => {
       },
     ]);
 
-    expect(await screen.findByText(/A board game/)).toBeInTheDocument();
-    expect(screen.queryByText(/^Registered: /)).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T06:38:00Z')}`)
+    ).toBeInTheDocument();
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 

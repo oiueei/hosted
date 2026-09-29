@@ -428,6 +428,21 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
     # Only collections the requester may read: this one also picks the email
     # note the accepted decision carries to them.
     collection = resolve_request_collection(thing, requester=booking.requester_code)
+    payload = {
+        "thing_headline": thing.headline,
+        "owner_name": owner_name,
+        # The codes let the inbox deep-link the request the way the request-side
+        # notice does.
+        "booking_code": booking.code,
+        "thing_code": thing.code,
+        "collection_code": collection.code if collection else "",
+    }
+    if booking.start_date and booking.end_date:
+        # A loan or rental ran for dates: the requester's notice says which,
+        # under the body, the way their request told the owner (2026-09-29).
+        # GIFT/SELL carry none, and neither does a decision on one.
+        payload["start_date"] = str(booking.start_date)
+        payload["end_date"] = str(booking.end_date)
     InAppNotification.objects.create(
         user=booking.requester_code,
         type=(
@@ -435,12 +450,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
             if accepted
             else InAppNotification.Type.BOOKING_REJECTED
         ),
-        payload={
-            "thing_headline": thing.headline,
-            "owner_name": owner_name,
-            "thing_code": thing.code,
-            "collection_code": collection.code if collection else "",
-        },
+        payload=payload,
     )
     send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
     _clear_request_notifications(booking)

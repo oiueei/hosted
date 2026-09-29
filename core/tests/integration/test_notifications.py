@@ -373,13 +373,15 @@ def _make_client(user):
     return client
 
 
-def _make_booking(owner, requester, thing, thing_type="GIFT_THING"):
+def _make_booking(owner, requester, thing, thing_type="GIFT_THING", start_date=None, end_date=None):
     return BookingPeriod.objects.create(
         thing_code=thing,
         thing_type=thing_type,
         requester_code=requester,
         requester_email=requester.email,
         owner_code=owner,
+        start_date=start_date,
+        end_date=end_date,
         status="PENDING",
     )
 
@@ -417,6 +419,35 @@ def test_booking_accept_via_api_creates_in_app_notification(two_users, thing_wit
     )
     assert notif.payload["thing_headline"] == thing.headline
     assert notif.payload["owner_name"] == owner.name
+    # A gift asks for no dates, so the decision notice carries none to show —
+    # but it does carry the booking's code, like the request-side notice.
+    assert notif.payload["booking_code"] == booking.code
+    assert "start_date" not in notif.payload
+    assert "end_date" not in notif.payload
+
+
+@pytest.mark.django_db
+def test_an_accepted_loan_decision_notice_carries_the_dates(two_users, thing_with_collection):
+    """The requester asked for dates; the answer has to say which ones were
+    agreed to, the same way their request told the owner (2026-09-29)."""
+    owner, requester = two_users
+    thing, _ = thing_with_collection
+    start = datetime.date.today() + datetime.timedelta(days=2)
+    end = start + datetime.timedelta(days=3)
+    booking = _make_booking(
+        owner, requester, thing, thing_type="LEND_THING", start_date=start, end_date=end
+    )
+    client = _make_client(owner)
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = client.post(f"/api/v1/bookings/{booking.code}/accept/")
+
+    assert resp.status_code == status.HTTP_200_OK
+    notif = InAppNotification.objects.get(
+        user=requester, type=InAppNotification.Type.BOOKING_ACCEPTED
+    )
+    assert (notif.payload["start_date"], notif.payload["end_date"]) == (str(start), str(end))
+    assert notif.payload["booking_code"] == booking.code
 
 
 @pytest.mark.django_db
