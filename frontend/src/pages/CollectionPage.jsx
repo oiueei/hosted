@@ -96,25 +96,29 @@ export default function CollectionPage() {
           if (signal.aborted) return;
           setCollection(data);
         } else if (res.status === 403) {
-          setError(t('collectionPage.noPermission'));
+          setError('collectionPage.noPermission');
         } else if (res.status === 404) {
-          setError(t('collectionPage.notFound'));
+          setError('collectionPage.notFound');
         } else {
-          setError(t('collectionPage.errorLoading'));
+          setError('collectionPage.errorLoading');
         }
       } catch {
-        if (!signal.aborted) setError(t('common.connectionError'));
+        if (!signal.aborted) setError('common.connectionError');
       }
     };
     fetchCollection();
     return () => controller.abort();
-  }, [code, navigate, t]);
+    // `error` holds the i18n *key*, translated where it is painted, so this effect
+    // never reads `t`: `useCollectionLanguage` changes the language once the first
+    // response lands, `t` gets a new identity, and listing it here fetched the
+    // whole collection a second time.
+  }, [code, navigate]);
 
   if (error) {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {t(error)}
         </Notification>
       </PageLayout>
     );
