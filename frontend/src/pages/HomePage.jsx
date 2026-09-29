@@ -311,27 +311,17 @@ export default function HomePage() {
             {t('home.greeting', { name: user.name || user.email })}
           </h1>
           {user.headline && <p className="form-hero-text">{user.headline}</p>}
+          {/* One button, the one thing only Home offers. "My profile", "My
+              requests" and "Requests to me" live in the account menu above (in
+              every hero since 2026-09-28): this row used to repeat all three, up
+              to four full-width buttons stacked on a phone before the inbox and
+              the groups — the crowding the groups-first round wanted gone. It
+              also judged "Requests to me" differently from the menu (hidden from
+              whoever cannot receive requests, where the menu always shows it). */}
           <div className="button-row-wide">
             <ButtonLink to="/collections/new" style={btnStyle}>
               {t('home.createCollection')}
             </ButtonLink>
-            <ButtonLink to="/me" style={btnSecondaryStyle}>
-              {t('home.myProfile')}
-            </ButtonLink>
-            <ButtonLink to="/my-bookings" style={btnSecondaryStyle}>
-              {t('home.myRequests')}
-            </ButtonLink>
-            {/* For people who can actually receive requests — owning a *thing*
-                (a COMMUNITY contribution can be asked for in someone else's
-                group), or curating a PROPRIETARY collection whose whole
-                catalogue's bookings are the curators' collectively (2026-09), so
-                a co-curator who owns nothing still gets here. */}
-            {(user.things?.length > 0 ||
-              myCollections?.some((c) => c.mode === 'PROPRIETARY' && c.is_curator)) && (
-              <ButtonLink to="/owner-bookings" style={btnSecondaryStyle}>
-                {t('home.requestsToMe')}
-              </ButtonLink>
-            )}
           </div>
         </div>
         <Koros

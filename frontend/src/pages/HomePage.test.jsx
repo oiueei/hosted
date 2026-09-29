@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -25,9 +25,9 @@ const MINE = { ...GROUP, code: 'COL001', headline: 'My workshop' };
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
 // What the API answers each of the dashboard's five reads.
-function dashboardRoutes({ mine = [], invited = [], invitations = [] }) {
+function dashboardRoutes({ mine = [], invited = [], invitations = [], user = USER }) {
   return (url) => {
-    if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
+    if (url.startsWith('/api/v1/auth/me/')) return ok(user);
     if (url.startsWith('/api/v1/collections/')) return ok({ results: mine });
     if (url.startsWith('/api/v1/invited-collections/')) return ok(invited);
     if (url.startsWith('/api/v1/my-invitations/')) return ok(invitations);
@@ -93,6 +93,62 @@ describe('HomePage — which section leads', () => {
 
     await screen.findByText('No one has shared a collection with you yet.');
     expect(sectionOrder()).toEqual(['My collections', 'Shared with me']);
+  });
+});
+
+/**
+ * The hero used to repeat the account menu: "My profile", "My requests" and, for
+ * some accounts, "Requests to me", each a full-width button, so a phone showed up
+ * to four of them stacked before the inbox and the groups. It keeps the one thing
+ * only Home offers; the rest is in the account menu, in every hero.
+ */
+describe('HomePage — the hero holds one button', () => {
+  // The accounts the old row judged differently: a plain member, someone who owns
+  // a thing (a Community contribution), a curator of a Proprietary collection.
+  const ACCOUNTS = [
+    ['a member', { invited: [GROUP] }],
+    ['someone who owns a thing', { user: { ...USER, things: [{ code: 'THG001' }] } }],
+    [
+      'a curator of a Proprietary collection',
+      { mine: [{ ...MINE, mode: 'PROPRIETARY', is_curator: true }] },
+    ],
+  ];
+
+  test.each(ACCOUNTS)('%s sees only "Create collection" in the hero', async (_who, options) => {
+    mockDashboard(options);
+    const { container } = renderHome();
+    await screen.findByText(/Lulu/);
+
+    const row = container.querySelector('.form-hero .button-row-wide');
+    const links = [...row.querySelectorAll('a')];
+    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Create collection', '/collections/new'],
+    ]);
+    expect(row.querySelectorAll('button')).toHaveLength(0);
+    // …and nothing else in the hero points at the account's own pages.
+    const hero = container.querySelector('.form-hero');
+    for (const href of ['/me', '/my-bookings', '/owner-bookings']) {
+      expect(hero.querySelector(`a[href="${href}"]`)).toBeNull();
+    }
+  });
+
+  test('the account menu still reaches My profile, My requests and Requests to me', async () => {
+    mockDashboard({ invited: [GROUP] });
+    renderHome();
+    await screen.findByText(/Lulu/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
+
+    const menu = screen.getByRole('navigation', { name: 'Your account' });
+    expect(within(menu).getByRole('link', { name: 'My profile' })).toHaveAttribute('href', '/me');
+    expect(within(menu).getByRole('link', { name: 'My requests' })).toHaveAttribute(
+      'href',
+      '/my-bookings'
+    );
+    expect(within(menu).getByRole('link', { name: 'Requests to me' })).toHaveAttribute(
+      'href',
+      '/owner-bookings'
+    );
   });
 });
 
