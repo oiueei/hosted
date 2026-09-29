@@ -375,18 +375,20 @@ def _delete_booking_rsvps(booking_code):
 
 
 def _clear_request_notifications(booking):
-    """Drop the owner's "someone asked for this" notification once the request is settled.
+    """Drop every copy of the "someone asked for this" notification once the request is settled.
 
-    A BOOKING_REQUESTED notification is a question put to the owner:
-    accept or reject? Accept, reject, auto-decline and requester-cancel all answer it,
-    so leaving it in the inbox asks for a decision that no longer exists — the owner
-    reads it as still pending and can't tell the stale ones from the live ones.
+    A BOOKING_REQUESTED notification is a question put to the whole team that
+    manages the thing (see ``send_booking_request_notifications``): accept or
+    reject? Accept, reject, auto-decline and requester-cancel all answer it, so
+    leaving any copy in an inbox asks for a decision that no longer exists — the
+    reader takes it as still pending and can't tell the stale ones from the live
+    ones. Deliberately **not** scoped to ``booking.owner_code``: the co-curators'
+    copies go too, whoever settled it.
 
     Matched by ``payload__booking_code``, so notifications created before that key
     existed simply don't match — they stay until dismissed by hand.
     """
     InAppNotification.objects.filter(
-        user=booking.owner_code,
         type=InAppNotification.Type.BOOKING_REQUESTED,
         payload__booking_code=booking.code,
     ).delete()
@@ -634,16 +636,20 @@ def request_date_based_booking(
 
 def request_standard_booking(thing, requester, owner_email, collection_code=None):
     """GIFT/SELL — no dates; single-use things flip to TAKEN to block other requests."""
+    # ``locked`` is the row read under ``select_for_update`` — fresh, but with no
+    # collections prefetched. The caller's ``thing`` is kept for the notices: the
+    # view loaded it with its collections manager-ready, so fanning the request
+    # out to the whole team (``thing.managers()``) costs no query per collection.
     with transaction.atomic():
-        thing = Thing.objects.select_for_update().get(code=thing.code)
+        locked = Thing.objects.select_for_update().get(code=thing.code)
 
-        if not thing.is_endless and thing.status != Thing.Status.ACTIVE:
+        if not locked.is_endless and locked.status != Thing.Status.ACTIVE:
             raise BookingRequestError(
                 "Thing is not available for reservation", code="not_available"
             )
 
         if BookingPeriod.objects.filter(
-            thing_code=thing,
+            thing_code=locked,
             requester_code=requester,
             status=BookingPeriod.Status.PENDING,
         ).exists():
@@ -652,17 +658,17 @@ def request_standard_booking(thing, requester, owner_email, collection_code=None
             )
 
         booking = BookingPeriod.objects.create(
-            thing_code=thing,
-            thing_type=thing.type,
-            deposit_amount=thing.deposit,
+            thing_code=locked,
+            thing_type=locked.type,
+            deposit_amount=locked.deposit,
             requester_code=requester,
             requester_email=requester.email,
-            owner_code=thing.owner,
+            owner_code=locked.owner,
         )
 
-        if not thing.is_endless:
-            thing.status = Thing.Status.TAKEN
-            thing.save(update_fields=["status"])
+        if not locked.is_endless:
+            locked.status = Thing.Status.TAKEN
+            locked.save(update_fields=["status"])
 
     send_booking_request_notifications(requester, thing, booking, owner_email, collection_code)
     return booking
@@ -672,7 +678,16 @@ def send_booking_request_notifications(
     requester, thing, booking, owner_email, collection_code=None
 ):
     """Fan out a hold request: owner email (RSVP-protected), requester
-    confirmation, in-app notification, and a HOLD_REQUESTED event."""
+    confirmation, an in-app notification for each manager, and a HOLD_REQUESTED
+    event.
+
+    A hold request is a question put to the whole team that can answer it —
+    ``thing.managers()``: the thing's owner plus the curators of every
+    PROPRIETARY collection it sits in, all of whom may decide (``can_manage``).
+    Each gets a BOOKING_REQUESTED notice, **except the requester**: a co-curator
+    who asks for a thing is not warned about their own request. ``thing`` should
+    be the caller's prefetched instance (``managers_ready_collections``), not a
+    freshly locked one, or the fan-out pays a query per collection."""
     from core.services.email_service import (
         send_booking_confirmation_email,
         send_booking_request_email,
@@ -702,11 +717,14 @@ def send_booking_request_notifications(
         # body, the way a reservation notice does. GIFT/SELL carry none.
         payload["start_date"] = str(booking.start_date)
         payload["end_date"] = str(booking.end_date)
-    InAppNotification.objects.create(
-        user=thing.owner,
-        type=InAppNotification.Type.BOOKING_REQUESTED,
-        payload=payload,
-    )
+    for manager in thing.managers():
+        if manager.code == requester.code:
+            continue
+        InAppNotification.objects.create(
+            user=manager,
+            type=InAppNotification.Type.BOOKING_REQUESTED,
+            payload=payload,
+        )
     Event.log(
         Event.Kind.HOLD_REQUESTED,
         actor=requester,

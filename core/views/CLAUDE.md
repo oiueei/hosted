@@ -975,11 +975,11 @@ Creates a reservation/booking request. The view is **thin**: it runs the shared 
 - Thing status changes to `TAKEN` (blocks other requests).
 
 **Common behaviour:**
-0. Reads an optional **`collection_code`** from the body — the collection the requester was browsing. It already governed the rental rules (above); it now also decides which collection the owner's in-app notification belongs to, so the request shows up on the right collection's page (a thing can live in several — see `resolve_request_collection`). The SPA sends it from the card and the detail page whenever it has one; the standalone `/things/:code` page has none and the service approximates.
+0. Reads an optional **`collection_code`** from the body — the collection the requester was browsing. It already governed the rental rules (above); it now also decides which collection the managers' in-app notifications belong to, so the request shows up on the right collection's page (a thing can live in several — see `resolve_request_collection`). The SPA sends it from the card and the detail page whenever it has one; the standalone `/things/:code` page has none and the service approximates.
 1. Validates owner email in the parent `post()` method (shared across all type handlers).
 2. Creates `BookingPeriod` with status `PENDING`.
 3. Creates two RSVPs (`BOOKING_ACCEPT` and `BOOKING_REJECT`) for the owner's email action links via `booking_service.send_booking_request_notifications()`.
-4. Sends booking request email to owner with accept/reject links, and a confirmation email to the requester ("Hold request sent").
+4. Sends booking request email to owner with accept/reject links, and a confirmation email to the requester ("Hold request sent"). Every manager of the thing (`Thing.managers()` — the owner plus a PROPRIETARY collection's curators, never the requester) also gets an in-app `BOOKING_REQUESTED`; the view's manager-ready collection prefetch is what keeps that fan-out from costing a query per collection (see `request_standard_booking` in `core/services/CLAUDE.md`).
 
 **INACTIVE collection enforcement:**
 If all collections containing the thing are INACTIVE, the request is blocked with 400 "This collection is currently inactive".
