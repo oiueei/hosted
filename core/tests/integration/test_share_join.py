@@ -155,9 +155,9 @@ class TestWhatTheTokenDoesNotOpen:
             owner=owner,
             headline="Archived",
             status=Collection.Status.INACTIVE,
-            share_token="tok_inactive_group_0123",
+            share_token="tok_inactive_grp_0123",
         )
-        inactive = _post(signed_in, "tok_inactive_group_0123")
+        inactive = _post(signed_in, "tok_inactive_grp_0123")
 
         assert unknown.status_code == revoked.status_code == inactive.status_code == 404
         assert unknown.content == revoked.content == inactive.content
