@@ -214,7 +214,7 @@ def test_a_prefix_outside_the_upload_folders_is_refused_before_listing():
     delete_mock.assert_not_called()
 
 
-def test_a_prefix_inside_an_upload_folder_still_narrows():
+def test_a_prefix_naming_an_upload_folder_lists_that_folder_alone():
     with (
         patch("core.services.storage.iter_objects", return_value=iter([])) as iter_mock,
         patch("core.services.storage.delete_many", side_effect=len),
@@ -225,8 +225,39 @@ def test_a_prefix_inside_an_upload_folder_still_narrows():
             bucket=settings.OBJECT_STORAGE_BUCKET,
             stdout=StringIO(),
         )
-    # Passed through as given — one folder asked, not all four.
+    # The folder, with its slash — one folder asked, not all four.
     assert [c.args[0] for c in iter_mock.call_args_list] == ["oiueei/things/"]
+
+
+def test_a_prefix_inside_an_upload_folder_is_passed_through_exactly_as_given():
+    """Keys are flat — `oiueei/things/<random token>` — so a prefix "inside" an
+    upload folder is the start of a key, not a subfolder. The operator asked for
+    the keys that begin `oiueei/things/Ab`, and that is what the bucket is asked:
+    no slash appended (which would match nothing, or a different thing), no other
+    folder listed. The mock answers any *other* prefix with orphans that are not
+    the ones asked for, so a sweep that widened or reshaped the request would
+    hand them to `delete_many`."""
+    wanted = "oiueei/things/AbCdEf"
+
+    def answering_iter(prefix):
+        if prefix == "oiueei/things/Ab":
+            return iter([_asset(wanted)])
+        return iter([_asset("oiueei/things/ZzTop1"), _asset("oiueei/users/Qq1")])
+
+    with (
+        patch("core.services.storage.iter_objects", side_effect=answering_iter) as iter_mock,
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        call_command(
+            "cleanup_orphan_images",
+            commit=True,
+            prefix="oiueei/things/Ab",
+            bucket=settings.OBJECT_STORAGE_BUCKET,
+            stdout=StringIO(),
+        )
+
+    assert [c.args[0] for c in iter_mock.call_args_list] == ["oiueei/things/Ab"]
+    assert [c.args[0] for c in delete_mock.call_args_list] == [[wanted]]
 
 
 def test_a_folder_prefix_without_its_slash_does_not_reach_a_sibling_folder():
