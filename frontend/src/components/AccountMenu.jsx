@@ -65,6 +65,10 @@ export default function AccountMenu() {
   if (!userCode) return null;
 
   const label = t('accountMenu.label');
+  // Following any link closes the panel: one to the page already on screen
+  // (Home from `/`, My profile from `/me`) keeps this component mounted, and
+  // the panel would otherwise stay open over the page it just "went" to.
+  const close = () => setOpen(false);
 
   return (
     <span className="account-menu" ref={wrapperRef}>
@@ -81,14 +85,28 @@ export default function AccountMenu() {
       </button>
       {open && (
         <nav id={PANEL_ID} className="account-menu-panel" aria-label={label}>
-          <Link to="/">{t('common.home')}</Link>
-          <Link to="/me">{t('home.myProfile')}</Link>
-          <Link to="/me/edit">{t('userPage.editProfile')}</Link>
-          <Link to="/collections/new">{t('home.createCollection')}</Link>
-          <Link to="/my-bookings">{t('home.myRequests')}</Link>
-          <Link to="/owner-bookings">{t('home.requestsToMe')}</Link>
+          <Link to="/" onClick={close}>
+            {t('common.home')}
+          </Link>
+          <Link to="/me" onClick={close}>
+            {t('home.myProfile')}
+          </Link>
+          <Link to="/me/edit" onClick={close}>
+            {t('userPage.editProfile')}
+          </Link>
+          <Link to="/collections/new" onClick={close}>
+            {t('home.createCollection')}
+          </Link>
+          <Link to="/my-bookings" onClick={close}>
+            {t('home.myRequests')}
+          </Link>
+          <Link to="/owner-bookings" onClick={close}>
+            {t('home.requestsToMe')}
+          </Link>
           <hr className="account-menu-divider" />
-          <Link to="/logout">{t('userPage.logout')}</Link>
+          <Link to="/logout" onClick={close}>
+            {t('userPage.logout')}
+          </Link>
         </nav>
       )}
     </span>

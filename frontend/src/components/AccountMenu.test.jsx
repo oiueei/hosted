@@ -40,6 +40,21 @@ beforeEach(() => {
 });
 
 describe('AccountMenu — signed in', () => {
+  test('following a link closes the panel, even to the page already on screen', () => {
+    // MemoryRouter at '/': the Home link does not unmount the menu, so only
+    // the menu itself can close its panel.
+    renderMenu();
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    fireEvent.click(screen.getByRole('link', { name: /home/i }));
+
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /your account/i })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+  });
+
   test('the trigger has an accessible name and starts collapsed', () => {
     renderMenu();
 
