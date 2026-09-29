@@ -195,12 +195,15 @@ class Command(BaseCommand):
         what this command may even look at — refused before anything is listed.
         """
         folders = sorted(storage.ASSET_FOLDERS)
+        # Listed with their trailing slash: an object store's prefix is a plain
+        # string match, so a bare "oiueei/users" would also list a sibling like
+        # "oiueei/users-old/".
         if prefix is None:
-            return folders
+            return [f"{folder}/" for folder in folders]
         normalized = prefix.rstrip("/")
-        if not any(
-            normalized == folder or normalized.startswith(folder + "/") for folder in folders
-        ):
+        if normalized in folders:
+            return [f"{normalized}/"]
+        if not any(normalized.startswith(folder + "/") for folder in folders):
             raise CommandError(
                 f"Refusing to run: --prefix {prefix!r} is not inside any upload folder "
                 f"({', '.join(folders)}). The sweep only considers uploaded assets."

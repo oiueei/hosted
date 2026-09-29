@@ -188,7 +188,9 @@ def test_objects_outside_the_upload_folders_are_never_swept():
         )
 
     # Only the upload folders were ever asked to list — the font was invisible.
-    assert [c.args[0] for c in iter_mock.call_args_list] == sorted(storage.ASSET_FOLDERS)
+    assert [c.args[0] for c in iter_mock.call_args_list] == [
+        f"{folder}/" for folder in sorted(storage.ASSET_FOLDERS)
+    ]
     assert delete_mock.call_args.args[0] == ["oiueei/things/orphan1"]
     assert "Curiosa" not in out.getvalue()
 
@@ -225,6 +227,30 @@ def test_a_prefix_inside_an_upload_folder_still_narrows():
         )
     # Passed through as given — one folder asked, not all four.
     assert [c.args[0] for c in iter_mock.call_args_list] == ["oiueei/things/"]
+
+
+def test_a_folder_prefix_without_its_slash_does_not_reach_a_sibling_folder():
+    """An object store matches a prefix as a plain string, so `oiueei/things`
+    handed through bare would also list `oiueei/things-old/…` — a folder that is
+    not an upload folder. The sweep asks for the folder *with* its slash."""
+    sibling = _asset("oiueei/things-old/keep-me")
+
+    def answering_iter(prefix):
+        return iter([sibling]) if not prefix.endswith("/") else iter([])
+
+    with (
+        patch("core.services.storage.iter_objects", side_effect=answering_iter) as iter_mock,
+        patch("core.services.storage.delete_many", side_effect=len) as delete_mock,
+    ):
+        call_command(
+            "cleanup_orphan_images",
+            commit=True,
+            prefix="oiueei/things",
+            bucket=settings.OBJECT_STORAGE_BUCKET,
+            stdout=StringIO(),
+        )
+    assert [c.args[0] for c in iter_mock.call_args_list] == ["oiueei/things/"]
+    delete_mock.assert_not_called()
 
 
 def test_orphans_in_every_upload_folder_are_still_deleted():
