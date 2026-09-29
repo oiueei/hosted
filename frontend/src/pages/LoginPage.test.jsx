@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach } from 'vitest';
 import LoginPage from './LoginPage';
+import en from '../i18n/locales/en.json';
 
 function renderLogin(url = '/login') {
   return render(
@@ -85,6 +86,31 @@ describe('LoginPage magic-link request (the front door)', () => {
       email: 'lala@example.com',
     });
     await screen.findByText(/your magic link is on its way/);
+  });
+
+  // The line says why they are on the login: the page they were opening. It is
+  // read from en.json so the test survives CA rewording it — what is pinned is
+  // when it shows, not its words.
+  test('a login that arrives with somewhere to go back to says so above the form', () => {
+    renderLogin('/login?next=%2Fcollections%2FX%2Fthings%2FY');
+
+    const notice = screen.getByText(en.login.nextNotice);
+    expect(notice).toHaveClass('text-muted');
+    // Between the pitch and the form, as the reader meets them.
+    const pitch = screen.getByText(en.login.pitch);
+    const field = screen.getByLabelText(/Email/);
+    expect(pitch.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notice.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test.each([
+    ['no next at all', '/login'],
+    ['a next that is not a same-site path', '/login?next=%2F%2Fevil.com'],
+    ['a next that loops back to the login', '/login?next=%2Flogin'],
+  ])('the line is absent with %s', (_label, url) => {
+    renderLogin(url);
+
+    expect(screen.queryByText(en.login.nextNotice)).not.toBeInTheDocument();
   });
 
   test('the result takes the focus the vanished button was holding', async () => {

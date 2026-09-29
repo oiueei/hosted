@@ -93,6 +93,11 @@ export default function LoginPage() {
             in it. Level 2 keeps the outline whole (h1 → h2); how big it looks
             (Body XL bold) lives in .login-pitch. */}
         <h2 className="login-pitch measure">{t('login.pitch')}</h2>
+        {/* Why they are here, when they arrive with somewhere to go back to: the
+            page they were opening. It says nothing about a session having
+            expired — for someone who never had one (a stranger who opened a
+            private page) that would be false. */}
+        {next && <p className="measure text-muted">{t('login.nextNotice')}</p>}
         {status ? (
           <>
             <Notification

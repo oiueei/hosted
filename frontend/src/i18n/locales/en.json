@@ -169,6 +169,7 @@
     "magicLinkSent": "If this email is registered, your magic link is on its way — check your inbox, and your spam folder just in case.",
     "errorSendingLink": "Error sending link.",
     "pitch": "Share what you have with the people around you. Create a collection of things to gift, sell, rent, lend or reserve — and invite people to browse it and ask for what they need.",
+    "nextNotice": "Sign in and we'll take you straight to the page you were opening.",
     "licence": "OIUEEI's code is open source under the EUPL-1.2, a strong copyleft licence. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there.",
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",

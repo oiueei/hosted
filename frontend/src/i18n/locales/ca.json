@@ -163,6 +163,7 @@
     "magicLinkSent": "Si aquest correu està registrat, l'enllaç màgic ja és en camí — revisa la safata d'entrada i, per si de cas, la carpeta de correu brossa.",
     "errorSendingLink": "Error en enviar l'enllaç.",
     "pitch": "Comparteix el que tens amb la gent que t'envolta. Crea una col·lecció de coses per regalar, vendre, llogar, deixar o reservar — i convida la gent a conèixer-les i demanar-les.",
+    "nextNotice": "Entra i et portem directament a la pàgina que anaves a obrir.",
     "licence": "El codi d'OIUEEI és obert, sota la llicència EUPL-1.2, un copyleft fort. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà.",
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
