@@ -1318,7 +1318,7 @@ def test_the_reservation_confirmation_embeds_the_note_after_the_listing_link(
     note_html = "<p>Trae el <strong>carnet</strong> 🛠️</p>"
     assert note_html in html_after
     # Position, both halves: after the listing link, before the footers.
-    thing_url = email_service._thing_url(thing)
+    thing_url = email_service._thing_url(thing, collection=collection)
     assert (
         plain_after.index(thing_url)
         < plain_after.index("Trae el **carnet** 🛠️")
@@ -1447,3 +1447,220 @@ def test_the_decision_takes_no_note_from_a_collection_it_was_not_given(
     email_service.send_booking_decision_email(booking, thing, accepted=True)
     assert "Recogida en" not in mail.outbox[0].alternatives[0][0]
     assert "Recogida en" not in mail.outbox[0].body
+
+
+# --------------------------------------------------------------------------- #
+# The link in a thing-scoped email goes through a group its reader may open
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def two_groups(user, user2, thing, collection):
+    """``thing`` sits in COLL01, where ``user2`` is a member, and also in AAAAAA,
+    a private group ``user2`` was never invited to — whose code sorts first, which
+    is the one ``thing.collections.first()`` used to pick for everybody."""
+    from core.models import Collection
+
+    collection.invites.add(user2)
+    hidden = Collection.objects.create(code="AAAAAA", owner=user, headline="Private circle")
+    hidden.things.add(thing)
+    return collection, hidden
+
+
+def _a_booking(thing, requester, owner):
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    return BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=requester,
+        requester_email=requester.email,
+        owner_code=owner,
+        start_date=date(2026, 10, 5),
+        end_date=date(2026, 10, 6),
+        status=BookingPeriod.Status.PENDING,
+    )
+
+
+def _both_halves(message):
+    return message.body, message.alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_a_decision_email_links_a_group_its_reader_is_in_and_never_one_they_are_not(
+    user, user2, thing, two_groups
+):
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_the_team_answer_email_links_a_group_its_reader_is_in_and_never_one_they_are_not(
+    user, user2, thing, two_groups
+):
+    collection, _ = two_groups
+    collection.co_owners.add(user2)  # a co-curator of the PROPRIETARY group, not of AAAAAA
+
+    mail.outbox.clear()
+    email_service.send_faq_answered_to_team_email(
+        "Test User", thing, "Is it free?", "Yes", user2.email
+    )
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_a_reader_in_none_of_the_things_groups_gets_the_bare_thing_link(
+    user, thing, two_groups, django_user_model
+):
+    outsider = django_user_model.objects.create(code="OUTSD1", email="outsider@example.com")
+
+    mail.outbox.clear()
+    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", outsider.email)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/things/THNG01" in half
+        # (the viral line's own "/collections/new" is a different link)
+        assert "/collections/COLL01" not in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_an_address_with_no_account_gets_the_bare_thing_link(thing, two_groups):
+    mail.outbox.clear()
+    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", "new@example.com")
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/things/THNG01" in half
+        assert "/collections/COLL01" not in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_a_public_group_is_named_to_a_reader_who_is_not_in_it(
+    user, thing, collection, django_user_model
+):
+    from core.models import Collection
+
+    collection.visibility = Collection.Visibility.PUBLIC
+    collection.save(update_fields=["visibility"])
+    passer_by = django_user_model.objects.create(code="PASSBY", email="passer@example.com")
+
+    mail.outbox.clear()
+    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", passer_by.email)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+
+
+@pytest.mark.django_db
+def test_the_collection_the_caller_resolved_wins_over_the_first_one_the_reader_can_open(
+    user, user2, thing, two_groups
+):
+    collection, hidden = two_groups
+    hidden.invites.add(user2)  # now both are readable, and AAAAAA sorts first
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/AAAAAA/things/THNG01" in half  # the rule, unprompted
+
+    mail.outbox.clear()
+    email_service.send_booking_decision_email(booking, thing, accepted=True, collection=collection)
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("sender", ["confirmation", "reservation_confirmed"])
+def test_the_other_emails_that_receive_a_collection_link_that_one(
+    user, user2, thing, two_groups, sender
+):
+    collection, hidden = two_groups
+    hidden.invites.add(user2)
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    if sender == "confirmation":
+        email_service.send_booking_confirmation_email(user2, thing, booking, collection)
+    else:
+        email_service.send_reservation_confirmed_email(user2, thing, booking, collection)
+
+    for half in _both_halves(mail.outbox[0]):
+        assert "/collections/COLL01/things/THNG01" in half
+        assert "AAAAAA" not in half
+
+
+def _send_to(sender, thing, reader, booking):
+    """One call per thing-linking email, each addressed to ``reader``."""
+    from datetime import date
+
+    es = email_service
+    address = reader.email
+    calls = {
+        "decision": lambda: es.send_booking_decision_email(booking, thing, accepted=True),
+        "confirmation": lambda: es.send_booking_confirmation_email(reader, thing, booking),
+        "faq_question": lambda: es.send_faq_question_email("Ana", thing, "Free?", address),
+        "faq_answer": lambda: es.send_faq_answer_email("Ana", thing, "Free?", "Yes", address),
+        "faq_answered_to_team": lambda: es.send_faq_answered_to_team_email(
+            "Ana", thing, "Free?", "Yes", address
+        ),
+        "faq_hidden_to_team": lambda: es.send_faq_hidden_to_team_email(
+            "Ana", thing, "Free?", address
+        ),
+        "thing_reported": lambda: es.send_thing_reported_email(thing, address),
+        "return_due": lambda: es.send_return_due_email("Ana", thing, date(2026, 10, 6), address),
+        "reservation_confirmed": lambda: es.send_reservation_confirmed_email(
+            reader, thing, booking
+        ),
+        "reservation_reminder": lambda: es.send_reservation_reminder_email(address, thing, booking),
+    }
+    calls[sender]()
+
+
+THING_LINKING_EMAILS = [
+    "decision",
+    "confirmation",
+    "faq_question",
+    "faq_answer",
+    "faq_answered_to_team",
+    "faq_hidden_to_team",
+    "thing_reported",
+    "return_due",
+    "reservation_confirmed",
+    "reservation_reminder",
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("sender", THING_LINKING_EMAILS)
+def test_every_email_that_links_a_thing_names_only_a_group_its_reader_may_open(
+    user, user2, thing, two_groups, sender
+):
+    """The ten senders that link a thing, none of them handed a collection: each
+    must ask ``_thing_url`` on behalf of the person it is addressed to."""
+    booking = _a_booking(thing, user2, user)
+
+    mail.outbox.clear()
+    _send_to(sender, thing, user2, booking)
+
+    assert len(mail.outbox) == 1
+    plain, html = _both_halves(mail.outbox[0])
+    # The return-due reminder's plain text has never carried the listing link
+    # (its catalogue string has no {url}); the button in the HTML does.
+    for half in (html,) if sender == "return_due" else (plain, html):
+        assert "/collections/COLL01/things/THNG01" in half
+    for half in (plain, html):
+        assert "AAAAAA" not in half
