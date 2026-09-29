@@ -501,7 +501,7 @@ describe('useThingBooking — the owner decides a hold', () => {
       status: 'ACTIVE',
       pending_booking: null,
     });
-    expect(await screen.findByText('Hold cancelled.')).toBeInTheDocument();
+    expect(await screen.findByText('Hold declined.')).toBeInTheDocument();
   });
 
   // LEND/RENT (bookingKeepsStatus true): the thing keeps circulating, so a
@@ -562,7 +562,7 @@ describe('useThingBooking — the owner decides a hold', () => {
 
   test.each([
     ['confirm', 'Confirm hold', 'Error confirming hold.'],
-    ['decline', 'Decline hold', 'Error cancelling hold.'],
+    ['decline', 'Decline hold', 'Error declining hold.'],
   ])(
     'a failed %s says which way it failed and leaves the thing alone',
     async (_n, label, message) => {
