@@ -3,10 +3,10 @@ import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import JoinToAct from './JoinToAct';
 
-function renderJoin() {
+function renderJoin(props = {}) {
   return render(
     <MemoryRouter>
-      <JoinToAct collectionCode="PUB001" collectionHeadline="Tool Library" />
+      <JoinToAct collectionCode="PUB001" collectionHeadline="Tool Library" {...props} />
     </MemoryRouter>
   );
 }
@@ -48,6 +48,27 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
       email: 'visitor@example.com',
       collection_code: 'PUB001',
     });
+  });
+
+  // Somebody from another group who pressed "Request" on a public group, chose
+  // "already have an account" and ended up on Home: the same failure as a session
+  // that ran out, in small. Sign-in now brings them back to what they came for.
+  test('"already have an account" returns to the thing they were looking at', () => {
+    renderJoin({ thingCode: 'THG001' });
+
+    expect(screen.getByRole('link', { name: /Already have an account/ })).toHaveAttribute(
+      'href',
+      '/login?next=%2Fcollections%2FPUB001%2Fthings%2FTHG001'
+    );
+  });
+
+  test('"already have an account" returns to the group when there was no thing', () => {
+    renderJoin();
+
+    expect(screen.getByRole('link', { name: /Already have an account/ })).toHaveAttribute(
+      'href',
+      '/login?next=%2Fcollections%2FPUB001'
+    );
   });
 
   test('the intro reads at the pitch size — but stays a paragraph, not a heading', () => {

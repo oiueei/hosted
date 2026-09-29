@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { apiFetch } from '../services/api';
+import { loginPathFor } from '../utils/nextPath';
 import LoadingSpinner from './LoadingSpinner';
 
 /**
  * Route guard for authenticated pages. Renders the nested protected routes when
- * the user is authenticated; otherwise redirects to `/login`.
+ * the user is authenticated; otherwise redirects to `/login` — with the page the
+ * reader was heading for as `?next=`, so the magic link brings them back to it.
  *
  * Centralises the per-page `if (!userCode) navigate('/login')` check that was
  * duplicated across ~18 pages. `userCode` is the only auth marker kept in
@@ -20,6 +22,7 @@ import LoadingSpinner from './LoadingSpinner';
  * `userCode` and render the route; only a genuine 401 sends them to `/login`.
  */
 export default function RequireAuth() {
+  const location = useLocation();
   // 'authed' — userCode present (or /auth/me/ confirmed); 'checking' — probing
   // cookies; 'anon' — no valid session, redirect to /login.
   const [status, setStatus] = useState(() =>
@@ -54,6 +57,6 @@ export default function RequireAuth() {
   }, [status]);
 
   if (status === 'checking') return <LoadingSpinner />;
-  if (status === 'anon') return <Navigate to="/login" replace />;
+  if (status === 'anon') return <Navigate to={loginPathFor(location)} replace />;
   return <Outlet />;
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { TextInput, Button, Notification, Koros } from 'hds-react';
 import { getCsrfToken } from '../services/api';
+import { safeNextPath } from '../utils/nextPath';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
@@ -14,6 +15,13 @@ export default function LoginPage() {
   useEffect(() => {
     document.title = t('titles.login');
   }, [t]);
+  // Where the reader was going when their session ran out (`?next=`, put there
+  // by `apiFetch` / `RequireAuth`). Sent with the request so the magic link comes
+  // back to it — even when it is opened in another browser, which is why the
+  // server keeps it and the browser's storage does not. Anything that is not a
+  // same-site path is dropped here too; the server checks again.
+  const [searchParams] = useSearchParams();
+  const next = safeNextPath(searchParams.get('next'));
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'alert' | 'error'
@@ -30,7 +38,7 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
           'X-CSRFToken': getCsrfToken(),
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(next ? { email, next } : { email }),
       });
       if (res.ok) {
         setStatus('success');

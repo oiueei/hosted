@@ -3,9 +3,9 @@ import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach } from 'vitest';
 import LoginPage from './LoginPage';
 
-function renderLogin() {
+function renderLogin(url = '/login') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <LoginPage />
     </MemoryRouter>
   );
@@ -45,6 +45,46 @@ describe('LoginPage magic-link request (the front door)', () => {
     // The form is replaced — no double submits from this screen.
     expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try another email' })).toBeInTheDocument();
+  });
+
+  test('a login that came from a page carries where it was going, so the link can return there', async () => {
+    // `?next=` is put on /login by apiFetch / RequireAuth when a session runs
+    // out. It goes to the server, not into browser storage, because the magic
+    // link is often opened in another browser.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderLogin('/login?next=%2Fme%2Fedit');
+
+    submitEmail('lala@example.com');
+
+    expect(JSON.parse(globalThis.fetch.mock.calls[0][1].body)).toEqual({
+      email: 'lala@example.com',
+      next: '/me/edit',
+    });
+    await screen.findByText(/your magic link is on its way/);
+  });
+
+  test.each([
+    ['another origin', '/login?next=%2F%2Fevil.com'],
+    ['a loop back to the login', '/login?next=%2Flogin'],
+    ['no destination at all', '/login?next=%2F'],
+  ])('a next that is not somewhere to return to is never sent (%s)', async (_label, url) => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderLogin(url);
+
+    submitEmail('lala@example.com');
+
+    expect(JSON.parse(globalThis.fetch.mock.calls[0][1].body)).toEqual({
+      email: 'lala@example.com',
+    });
+    await screen.findByText(/your magic link is on its way/);
   });
 
   test('the result takes the focus the vanished button was holding', async () => {
