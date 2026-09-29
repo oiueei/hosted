@@ -737,7 +737,11 @@
     "joining": "Enviant…",
     "magicLinkSent": "Enllaç enviat! Revisa la safata d'entrada i fes clic a l'enllaç per unir-te a la col·lecció.",
     "errorSendingLink": "Error en enviar l'enllaç.",
-    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →"
+    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →",
+    "joinSignedIn": "Unir-me a {{name}}",
+    "joinSignedInGeneric": "Unir-me a aquest grup",
+    "useAnotherEmail": "Fer servir un altre correu",
+    "linkGone": "Aquest enllaç d'invitació ja no funciona: demana'n un de nou a qui te l'ha enviat."
   },
   "endless": {
     "label": "Il·limitat — diverses persones la poden demanar alhora, la cosa sempre està activa"

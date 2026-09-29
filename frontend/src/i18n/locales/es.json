@@ -737,7 +737,11 @@
     "joining": "Enviando…",
     "magicLinkSent": "¡Enlace enviado! Revisa tu bandeja de entrada y pulsa el enlace para unirte a la colección.",
     "errorSendingLink": "Error al enviar el enlace.",
-    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión →"
+    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión →",
+    "joinSignedIn": "Unirme a {{name}}",
+    "joinSignedInGeneric": "Unirme a este grupo",
+    "useAnotherEmail": "Usar otro correo",
+    "linkGone": "Este enlace de invitación ya no funciona: pide uno nuevo a quien te lo envió."
   },
   "endless": {
     "label": "Sin límite — varias personas pueden pedirla a la vez, la cosa siempre está activa"

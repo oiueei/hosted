@@ -38,6 +38,12 @@ import MarkdownText from './MarkdownText';
  * - `children`: rendered just under the form, above the `/legal` and `/login`
  *   links. Upstream `SharePage` passes none; a deployment's door uses it for
  *   its own footer link (the hosted `/popin` points it at its `/faq`).
+ * - `signedInAction`: optional. When set it takes the place of everything below
+ *   the hero — the intro (which asks for an email), the form, and the rows that
+ *   only make sense with one (the privacy link, "already have an account?").
+ *   `SharePage` passes it to a reader who already has a session, so accepting the
+ *   invitation is one button rather than email, inbox, link, back. Without it the
+ *   page is exactly what it was, which is what a deployment's own door relies on.
  */
 export default function MagicLinkJoinPage({
   ns,
@@ -51,6 +57,7 @@ export default function MagicLinkJoinPage({
   extraBody,
   endpoint,
   children,
+  signedInAction,
 }) {
   const { t } = useTranslation();
   const heroTitle = titleText || t(titleKey);
@@ -66,6 +73,20 @@ export default function MagicLinkJoinPage({
   });
 
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
+
+  if (signedInAction) {
+    // Same hero, then the one action. The intro is left out: it says "enter your
+    // email and we'll send you a magic link", which is exactly what this reader
+    // no longer has to do.
+    return (
+      <PageLayout
+        title={heroTitle}
+        description={collectionDescription && <MarkdownText text={collectionDescription} />}
+      >
+        {signedInAction}
+      </PageLayout>
+    );
+  }
 
   return (
     // The description is Markdown — CollectionPage paints it with MarkdownText — and this
