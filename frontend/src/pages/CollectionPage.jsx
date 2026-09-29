@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Notification, Tag, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';
+import AccountMenu from '../components/AccountMenu';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -18,7 +19,12 @@ import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
+import CalendarExportButton, {
+  CalendarExportStatus,
+  useCalendarExport,
+} from '../components/CalendarExportButton';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import { DATE_TYPES } from '../constants/things';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -56,6 +62,9 @@ export default function CollectionPage() {
   const L = useLocalized();
   const headline = L(collection?.headline);
   useCollectionLanguage(collection?.language, [collection?.headline, collection?.description]);
+  // Called unconditionally (it is a hook): non-curators simply never fire it,
+  // the same way they never see the button.
+  const calendarExport = useCalendarExport(code);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })
@@ -218,6 +227,16 @@ export default function CollectionPage() {
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
+  // Whether the calendar download has anything to offer: only date-based
+  // things (loans, rentals, on-site reservations) ever reach that CSV. The
+  // allowlist says so directly; an old collection with no allowlist never
+  // restricted anything, so its own things are the answer — a RENT drill in a
+  // restriction-free group is as bookable as one the list names.
+  const allowedTypes = collection.allowed_thing_types || [];
+  const hasDateThings =
+    allowedTypes.length > 0
+      ? allowedTypes.some((type) => DATE_TYPES.includes(type))
+      : collection.things.some((thg) => DATE_TYPES.includes(thg.type));
 
   // When the owner has given the group its own web address, the hero's back
   // link goes there instead of the OIUEEI home — but it still says "Home"
@@ -240,15 +259,18 @@ export default function CollectionPage() {
             className="form-hero-content"
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
-            <ContactCorner />
-            {isCurator && (
-              <ShareCollectionMenu
-                collectionCode={code}
-                collectionHeadline={headline}
-                ownerName={collection.owner_name}
-                isPublic={collection.visibility === 'PUBLIC'}
-              />
-            )}
+            <span className="hero-corners">
+              <AccountMenu />
+              {isCurator && (
+                <ShareCollectionMenu
+                  collectionCode={code}
+                  collectionHeadline={headline}
+                  ownerName={collection.owner_name}
+                  isPublic={collection.visibility === 'PUBLIC'}
+                />
+              )}
+              <ContactCorner />
+            </span>
             {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
                 `home_page` when it has one, the app's home otherwise. It used to be
                 worded "The group's site" with an external-link icon; the wording
@@ -364,7 +386,17 @@ export default function CollectionPage() {
                   <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
                     {t('collectionPage.manageGuests')}
                   </ButtonLink>
+                  {/* The group's schedule, taken where the group is managed
+                      (CA, 2026-09-28) — the same download the edit page
+                      offers at its foot. Curators only (members and passers-by
+                      have nothing to import), and only where a date-based
+                      thing exists to fill the file. The row holds buttons
+                      alone; the outcome message lands underneath it. */}
+                  {hasDateThings && (
+                    <CalendarExportButton calendar={calendarExport} style={btnSecondaryStyle} />
+                  )}
                 </div>
+                {hasDateThings && <CalendarExportStatus calendar={calendarExport} />}
                 <div className="spacer-s"></div>
                 {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
                 showing but hasn't invited anyone — a quiet one-line pointer, no

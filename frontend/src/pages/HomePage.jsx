@@ -8,6 +8,7 @@ import FeedbackLink from '../components/FeedbackLink';
 import CollectionLinkbox from '../components/CollectionLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
 import useTheeeme from '../hooks/useTheeeme';
+import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
 import { useLocalized } from '../utils/localized';
@@ -300,7 +301,10 @@ export default function HomePage() {
           className="form-hero-content"
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
-          <ContactCorner />
+          <span className="hero-corners">
+            <AccountMenu />
+            <ContactCorner />
+          </span>
           <h1 className="form-hero-title" style={{ paddingTop: 'var(--spacing-xl)' }}>
             {t('home.greeting', { name: user.name || user.email })}
           </h1>

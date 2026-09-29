@@ -5,6 +5,7 @@ import { Koros } from 'hds-react';
 import BackLink from '../components/BackLink';
 import JoinToAct from '../components/JoinToAct';
 import useTheeeme from '../hooks/useTheeeme';
+import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
@@ -78,7 +79,10 @@ export default function JoinPage() {
           className="form-hero-content"
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
-          <ContactCorner />
+          <span className="hero-corners">
+            <AccountMenu />
+            <ContactCorner />
+          </span>
           <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
           <h1 className="form-hero-title">{t('joinToAct.heading')}</h1>
         </div>

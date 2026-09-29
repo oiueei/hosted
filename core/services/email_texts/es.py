@@ -203,10 +203,23 @@ TEXTS = {
     "faq_answer_intro": "{owner} ha respondido a tu pregunta sobre:",
     "your_question_label": "Tu pregunta",
     "reply_label": "Respuesta",
+    # FAQ answer (to the rest of the managing team — not the answerer, not the asker)
+    "faq_answered_team_subject": "Una pregunta sobre '{thing}' ya tiene respuesta",
+    "faq_answered_team_plain": (
+        "{answerer} ha respondido a una pregunta sobre '{thing}'. "
+        "Respuesta: {answer} Ver la cosa: {url}"
+    ),
+    "faq_answered_team_intro": "{answerer} ha respondido a una pregunta sobre:",
     # FAQ hidden (to questioner)
     "faq_hide_subject": "Tu pregunta ha sido ocultada",
     "faq_hide_plain": "{owner} ha ocultado tu pregunta: {question}",
     "faq_hide_intro": "{owner} ha ocultado tu pregunta sobre:",
+    # FAQ hidden (to the rest of the managing team — not the hider, not the asker)
+    "faq_hidden_team_subject": "Se ha ocultado una pregunta sobre '{thing}'",
+    "faq_hidden_team_plain": (
+        "{hider} ha ocultado una pregunta sobre '{thing}'. Ver la cosa: {url}"
+    ),
+    "faq_hidden_team_intro": "{hider} ha ocultado una pregunta sobre:",
     # Listing reported (to owner, anonymous)
     "reported_subject": "Alguien ha denunciado uno de tus anuncios",
     "reported_plain": (
@@ -258,6 +271,16 @@ TEXTS = {
         "{other} ha cancelado su reserva de '{thing}' (del {start} al {end})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} ha cancelado su reserva de:",
+    "reservation_cancel_confirmation_subject_self": "Tu reserva de '{thing}' está cancelada",
+    "reservation_cancel_confirmation_subject_other": "Has cancelado una reserva de '{thing}'",
+    "reservation_cancel_confirmation_intro_self": "Tu reserva está cancelada:",
+    "reservation_cancel_confirmation_intro_other": "Has cancelado la reserva de {member}:",
+    "reservation_cancel_confirmation_plain_self": (
+        "Tu reserva de '{thing}' (del {start} al {end}) está cancelada."
+    ),
+    "reservation_cancel_confirmation_plain_other": (
+        "Has cancelado la reserva de {member} de '{thing}' (del {start} al {end})."
+    ),
     "reservation_reminder_subject": "Tu reserva de '{thing}' empieza mañana",
     "reservation_reminder_plain": (
         "Un recordatorio: tu reserva de '{thing}' va del {start} al {end}. Ver la ficha: {url}"

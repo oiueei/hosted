@@ -1131,7 +1131,9 @@ def test_cancelling_an_hourly_reservation_carries_the_hours_in_the_notice(
     )
     assert note.payload["start_time"] == "11:00"
     assert note.payload["end_time"] == "13:00"
-    (m,) = mail.outbox
+    # Two emails now — the owner's notice and the member's own cancellation
+    # confirmation (both render the same hourly slot) — so pick the owner's.
+    (m,) = [m for m in mail.outbox if hourly_reservations["owner"].email in m.to]
     assert f"{mon.strftime('%d/%m/%Y')} 11:00" in m.body and "13:00" in m.body
 
 
@@ -1153,6 +1155,48 @@ def test_the_owner_can_cancel_a_members_reservation(
         user=reservations["member"], type="RESERVATION_CANCELLED"
     ).exists()
     assert any(reservations["member"].email in m.to for m in mail.outbox)
+
+
+def test_the_member_who_cancels_gets_their_own_confirmation(reservations, authenticated_client2):
+    """The requester got "your reservation is confirmed" when they booked it;
+    without a reply on cancelling, that email is the last word in their inbox,
+    describing a reservation that no longer stands."""
+    booking = _make_booking(reservations, authenticated_client2)
+    mail.outbox.clear()
+
+    resp = authenticated_client2.post(CANCEL_URL.format(booking.code))
+    assert resp.status_code == status.HTTP_200_OK
+
+    # Exactly one recipient each: the member's own confirmation and the
+    # owner's "somebody cancelled" notice — nobody gets two.
+    assert len(mail.outbox) == 2
+    to_member = [m for m in mail.outbox if reservations["member"].email in m.to]
+    assert len(to_member) == 1
+    assert "is cancelled" in to_member[0].body
+    # No in-app record — they just did this in the app themselves.
+    assert not InAppNotification.objects.filter(
+        user=reservations["member"], type="RESERVATION_CANCELLED"
+    ).exists()
+
+
+def test_the_owner_who_cancels_a_members_reservation_gets_their_own_confirmation(
+    reservations, authenticated_client2, api_client
+):
+    booking = _make_booking(reservations, authenticated_client2)
+    mail.outbox.clear()
+
+    owner_client = _member_client(api_client, reservations["owner"])
+    resp = owner_client.post(CANCEL_URL.format(booking.code))
+    assert resp.status_code == status.HTTP_200_OK
+
+    assert len(mail.outbox) == 2
+    to_owner = [m for m in mail.outbox if reservations["owner"].email in m.to]
+    assert len(to_owner) == 1
+    # Names the member whose reservation it was, never the owner's own name.
+    assert "You cancelled Test User 2's reservation" in to_owner[0].body
+    assert not InAppNotification.objects.filter(
+        user=reservations["owner"], type="RESERVATION_CANCELLED"
+    ).exists()
 
 
 def test_an_unrelated_user_cannot_cancel(reservations, authenticated_client2, api_client):

@@ -11,6 +11,7 @@ import CollectionLinkbox from '../components/CollectionLinkbox';
 import { useLocalized } from '../utils/localized';
 import { formatDate } from '../utils/rental';
 import HeroPhoto from '../components/HeroPhoto';
+import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import ButtonLink from '../components/ButtonLink';
 import useTheeeme from '../hooks/useTheeeme';
@@ -107,7 +108,10 @@ export default function UserPage() {
       className="form-hero-content"
       style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
     >
-      <ContactCorner />
+      <span className="hero-corners">
+        <AccountMenu />
+        <ContactCorner />
+      </span>
       <BackLink to="/" label={t('common.home')} />
       <div className="spacer-m" />
       {user.headline && (

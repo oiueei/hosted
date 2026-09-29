@@ -1,23 +1,27 @@
-"""POST /api/v1/collections/{code}/calendar-export/ — the calendar CSV download.
+"""POST /api/v1/collections/{code}/calendar-export/ — the calendar .ics download.
 
 Behaviours guarded here:
 
 - only a curator (owner or co-owner) can pull the file; a plain member and a
   stranger both get 403;
-- it is **POST-only** — a bare GET (a mail scanner, a prefetch) gets 405 and
-  changes nothing, the same anti-prefetch contract as the digest unsubscribe;
-- the response is a CSV attachment named ``{code}-calendar.csv``, tagged
-  ``no-store`` (it carries member names) and carrying the new-event count;
-- the second POST of the day returns nothing new (the incremental promise, end
-  to end).
+- it is **POST-only** — a bare GET gets DRF's default 405 (the view declares no
+  ``get``); kept POST for contract stability with the frontend, per the view's
+  own docstring, not because the call still mutates anything — it doesn't;
+- the response is an iCalendar attachment named ``{code}-calendar.ics``, typed
+  ``text/calendar``, tagged ``no-store`` (it carries member names) and carrying
+  the event count in ``X-Calendar-Events``;
+- a second POST the same day carries the **same** events, not an empty file —
+  the stable per-booking UID (``calendar_export_service``) is what makes
+  re-importing idempotent, which is what retired the old incremental watermark
+  (``CalendarExportMark``, end to end: this view never writes one any more).
 """
 
-import csv
 import datetime
-import io
 
 import pytest
 import time_machine
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import BookingPeriod, CalendarExportMark, Collection, Thing
 
@@ -82,31 +86,41 @@ class TestWhoMayDownloadIt:
 
 
 class TestPostOnly:
-    def test_a_get_is_405_and_marks_nothing(self, authenticated_client, user, user2, collection):
+    def test_a_get_is_405(self, authenticated_client, user, user2, collection):
         _loan(collection, user, user2)
 
         res = authenticated_client.get(URL.format(code=collection.code))
 
         assert res.status_code == 405
-        assert not CalendarExportMark.objects.exists()
+
+
+def _uids(content):
+    """The UID of every VEVENT in a downloaded ``.ics`` body, in file order."""
+    return [
+        line.split(":", 1)[1].strip()
+        for line in content.decode().splitlines()
+        if line.startswith("UID:")
+    ]
 
 
 class TestTheFile:
-    def test_it_is_a_named_csv_attachment_no_cache_may_keep(
+    def test_it_is_a_named_ics_attachment_no_cache_may_keep(
         self, authenticated_client, user, user2, collection
     ):
         _loan(collection, user, user2)
 
         res = authenticated_client.post(URL.format(code=collection.code))
 
-        assert res["Content-Type"].startswith("text/csv")
-        assert f'filename="{collection.code}-calendar.csv"' in res["Content-Disposition"]
+        assert res["Content-Type"].startswith("text/calendar")
+        assert f'filename="{collection.code}-calendar.ics"' in res["Content-Disposition"]
         assert res["Cache-Control"] == "private, no-store"
         assert res["X-Calendar-Events"] == "1"
-        header = next(csv.reader(io.StringIO(res.content.decode())))
-        assert header[0] == "Subject" and "All Day Event" in header
+        body = res.content.decode()
+        assert body.startswith("BEGIN:VCALENDAR\r\n")
+        assert body.endswith("END:VCALENDAR\r\n")
+        assert body.count("BEGIN:VEVENT") == 1
 
-    def test_the_second_download_of_the_day_brings_nothing_new(
+    def test_a_second_download_the_same_day_carries_the_same_event_not_an_empty_file(
         self, authenticated_client, user, user2, collection
     ):
         _loan(collection, user, user2)
@@ -114,16 +128,16 @@ class TestTheFile:
         first = authenticated_client.post(URL.format(code=collection.code))
         second = authenticated_client.post(URL.format(code=collection.code))
 
-        assert first["X-Calendar-Events"] == "1"
-        assert second["X-Calendar-Events"] == "0"
-        # header only, no data rows
-        assert len(second.content.decode().strip().splitlines()) == 1
+        assert first["X-Calendar-Events"] == second["X-Calendar-Events"] == "1"
+        assert _uids(second.content) == _uids(first.content)
+        # No watermark, ever — the stable UID is what makes re-import safe.
+        assert not CalendarExportMark.objects.exists()
 
-    def test_a_reservation_confirmed_between_downloads_shows_up_next_time(
+    def test_a_reservation_confirmed_between_downloads_joins_the_earlier_one(
         self, authenticated_client, user, user2, collection
     ):
         _loan(collection, user, user2, code="BKG010")
-        authenticated_client.post(URL.format(code=collection.code))
+        first = authenticated_client.post(URL.format(code=collection.code))
 
         _loan(
             collection,
@@ -132,21 +146,54 @@ class TestTheFile:
             code="BKG011",
             start=TODAY + datetime.timedelta(days=30),
         )
-        res = authenticated_client.post(URL.format(code=collection.code))
+        second = authenticated_client.post(URL.format(code=collection.code))
 
-        assert res["X-Calendar-Events"] == "1"
-        rows = list(csv.DictReader(io.StringIO(res.content.decode())))
-        assert len(rows) == 1
+        assert second["X-Calendar-Events"] == "2"
+        # Both bookings ship — the earlier one is not dropped for having gone
+        # out before, since there is no watermark left to consult.
+        assert set(_uids(second.content)) == {"BKG010@oiueei", "BKG011@oiueei"}
+        assert _uids(first.content) == ["BKG010@oiueei"]
+
+
+class TestACancellationTakesTheEventBackOut:
+    """End to end: the member cancels through the real endpoint, and the
+    curator's next download carries that reservation as a cancellation — under
+    the UID their calendar already holds — counted in its own header, so the SPA
+    still downloads a file that holds nothing but cancellations."""
+
+    def test_the_next_download_carries_the_cancellation(
+        self, authenticated_client, user, user2, collection
+    ):
+        # Its own client: the shared fixtures hand user and user2 one APIClient.
+        member_client = APIClient()
+        member_client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user2).access_token}"
+        )
+        collection.invites.add(user2)
+        booking = _loan(collection, user, user2, code="BKG020")
+        booking.thing_code.type = booking.thing_type = "RESERVE_THING"
+        booking.thing_code.save()
+        booking.save()
+        first = authenticated_client.post(URL.format(code=collection.code))
+        assert first.status_code == 200, (first.status_code, first.content)
+        assert (first["X-Calendar-Events"], first["X-Calendar-Cancelled"]) == ("1", "0")
+
+        res = member_client.post(f"/api/v1/bookings/{booking.code}/cancel/")
+        assert res.status_code == 200, res.content
+        second = authenticated_client.post(URL.format(code=collection.code))
+
+        assert (second["X-Calendar-Events"], second["X-Calendar-Cancelled"]) == ("0", "1")
+        assert _uids(second.content) == _uids(first.content) == ["BKG020@oiueei"]
+        assert "STATUS:CANCELLED" in second.content.decode()
 
 
 class TestACrossOriginClientCanReadTheCount:
-    """The event count rides only in ``X-Calendar-Events``, and the export has
-    already marked those reservations delivered by the time the client reads it.
-    A frontend on another domain (a documented deployment shape) cannot see a
-    custom response header unless it is in ``Access-Control-Expose-Headers`` —
-    without it the SPA reads a missing count as 0, skips the download, and the
-    marked events never come back out. ``CORS_EXPOSE_HEADERS`` in ``base.py``
-    names it; this pins that the header actually reaches such a client.
+    """The event count rides only in ``X-Calendar-Events``. A frontend on
+    another domain (a documented deployment shape) cannot see a custom response
+    header unless it is in ``Access-Control-Expose-Headers`` — without it the
+    SPA reads a missing count as 0 and skips a download the server actually
+    built. ``CORS_EXPOSE_HEADERS`` in ``base.py`` names it; this pins that the
+    header actually reaches such a client.
     """
 
     def test_the_count_and_filename_headers_are_exposed_cross_origin(
@@ -161,4 +208,5 @@ class TestACrossOriginClientCanReadTheCount:
 
         exposed = {h.strip().lower() for h in res["Access-Control-Expose-Headers"].split(",")}
         assert "x-calendar-events" in exposed
+        assert "x-calendar-cancelled" in exposed
         assert "content-disposition" in exposed

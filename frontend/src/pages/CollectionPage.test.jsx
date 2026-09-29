@@ -193,6 +193,53 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 });
 
+describe('CollectionPage hero corners', () => {
+  /**
+   * The three icon-only controls that can share the hero's top-right corner
+   * (2026-09-28): the account menu (any signed-in visitor), the share menu
+   * (curators only) and the contact link (everyone). They sit together in
+   * one `.hero-corners` flex row now instead of each computing its own
+   * absolute offset — this pins that a curator gets all three and a plain
+   * member gets the two that apply to them, not a gap where the share menu
+   * used to reserve its slot.
+   */
+  function renderCollection(collection) {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  test('a curator gets the account menu, the share menu and the contact link', async () => {
+    renderCollection(COLLECTION_WITH_PHOTO); // is_curator: true
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
+    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+
+  test('a plain member gets the account menu and the contact link, never the share menu', async () => {
+    renderCollection({
+      ...COLLECTION_WITH_PHOTO,
+      owner: 'OTHER1',
+      is_curator: false,
+      is_member: true,
+    });
+    await screen.findByText('Things from the kitchen');
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+  });
+});
+
 describe('CollectionPage signed-out reader', () => {
   /**
    * The hero's "This group shares its things on OIUEEI. Join to take part →"

@@ -1,30 +1,32 @@
-"""The collection calendar export — one CSV row per date-based reservation.
+"""The collection calendar export — one VEVENT per date-based reservation (.ics).
 
 The behaviours this file guards:
 
-- a confirmed loan/rental/reservation becomes exactly one all-day event that
-  spans its block, in Google Calendar's column order;
-- a reservation already handed to this collection's calendar is never in a
-  second download (the "solo lo nuevo" promise);
-- what is *not* a calendar commitment — a pending hold, a rejected one, a
-  gift/sale with no dates, a booking that already ended — stays out;
-- an owner headline that starts with ``=`` cannot become a spreadsheet formula
-  in the exported cell;
-- the same booking, exported for two collections, is tracked per collection.
+- a confirmed loan/rental/reservation becomes exactly one event, all-day over
+  the days the thing is out, with the exclusive DTEND that leaves the return
+  day open;
+- an hourly reservation renders in UTC, read in the deployment's timezone —
+  correctly on both sides of a DST change, which is the exact shape of the
+  production bug that retired the CSV (an account's locale read ``10/01/2026``
+  as January the 10th);
+- the file is honest RFC 5545: CRLF everywhere, TEXT escaping, folding at 75
+  *octets* that never splits a UTF-8 character;
+- every upcoming reservation ships every time, under a stable UID — no
+  watermark, no ``CalendarExportMark`` written;
+- what is *not* a calendar commitment — a pending hold, a rejected or cancelled
+  one, a gift/sale with no dates, a booking that already ended — stays out.
 """
 
-import csv
 import datetime
-import io
+import re
 
 import pytest
 import time_machine
+from django.test import override_settings
 
 from core.models import BookingPeriod, CalendarExportMark, Collection, Thing, User
 from core.services.calendar_export_service import (
     CALENDAR_TEXTS,
-    CSV_COLUMNS,
-    _csv_cell,
     build_calendar_export,
     calendar_filename,
 )
@@ -42,8 +44,53 @@ def _frozen_today():
         yield
 
 
-def _rows(csv_bytes):
-    return list(csv.DictReader(io.StringIO(csv_bytes.decode("utf-8"))))
+# --- Reading the file back ----------------------------------------------------
+
+
+def _physical_lines(ics_bytes):
+    """The file's actual lines — CRLF-delimited, as RFC 5545 demands."""
+    text = ics_bytes.decode("utf-8")
+    assert text.endswith("\r\n")
+    return text.split("\r\n")[:-1]
+
+
+def _unfolded(ics_bytes):
+    """Content lines with RFC 5545 folding undone (a continuation is a line
+    starting with exactly one space)."""
+    out = []
+    for line in _physical_lines(ics_bytes):
+        if line.startswith(" ") and out:
+            out[-1] += line[1:]
+        else:
+            out.append(line)
+    return out
+
+
+def _events(ics_bytes):
+    """The VEVENTs as ``{name: value}`` dicts — a property's parameters
+    (``DTSTART;VALUE=DATE``) are folded into the name."""
+    events = []
+    current = None
+    for line in _unfolded(ics_bytes):
+        if line == "BEGIN:VEVENT":
+            current = {}
+        elif line == "END:VEVENT":
+            events.append(current)
+            current = None
+        elif current is not None:
+            name, _, value = line.partition(":")
+            current[name] = value
+    return events
+
+
+def _calendar_props(ics_bytes):
+    props = {}
+    for line in _unfolded(ics_bytes):
+        if line.startswith(("BEGIN:VEVENT", "END:VEVENT")):
+            break
+        name, _, value = line.partition(":")
+        props[name] = value
+    return props
 
 
 @pytest.fixture
@@ -117,61 +164,40 @@ class TestOneEventPerReservation:
         # picked up the 14th, back the 17th → out on 14/15/16, free again the 17th
         _booking(thing, member, owner, start=datetime.date(2026, 9, 14), days=3)
 
-        csv_bytes, count = build_calendar_export(group)
+        ics_bytes, count, _ = build_calendar_export(group)
 
         assert count == 1
-        (row,) = _rows(csv_bytes)
-        assert row["Subject"] == "Préstamo: Taladre → Júlia"  # es default
-        assert row["All Day Event"] == "True"
-        assert row["Start Time"] == "" and row["End Time"] == ""
-        assert row["Start Date"] == "09/14/2026"  # MM/DD/YYYY, Google's importer
-        # OIUEEI's end_date and Google's CSV End Date are both exclusive — the
-        # 17th is the day it is free again, so the event ends there and the 17th
-        # stays open for the next booking.
-        assert row["End Date"] == "09/17/2026"
-        assert row["Location"] == "Nau 3"
-        assert row["Private"] == "True"
-        assert "Devolución el 17/09/2026" in row["Description"]
+        (event,) = _events(ics_bytes)
+        assert event["SUMMARY"] == "Préstamo: Taladre → Júlia"  # es default
+        assert event["DTSTART;VALUE=DATE"] == "20260914"
+        # iCalendar's all-day DTEND is exclusive — OIUEEI's end_date already
+        # is the day the thing is free again, so the 17th stays open.
+        assert event["DTEND;VALUE=DATE"] == "20260917"
+        assert event["LOCATION"] == "Nau 3"
+        assert "Devolución el 17/09/2026" in event["DESCRIPTION"]
+        assert event["UID"] == "BKG001@oiueei"
+        assert re.fullmatch(r"\d{8}T\d{6}Z", event["DTSTAMP"])
 
     def test_a_weeks_loan_blocks_seven_days_and_leaves_the_return_day_open(
         self, group, owner, member
     ):
-        # CA's rule, verified against a real Google import (2026-09-10): pick up
-        # Monday the 14th, return Monday the 21st → the 14th–20th are blocked and
-        # the 21st is bookable again.
+        # CA's rule: pick up Monday the 14th, return Monday the 21st → the
+        # 14th–20th are blocked and the 21st is bookable again.
         thing = _thing(owner)
         group.things.add(thing)
         _booking(thing, member, owner, start=datetime.date(2026, 9, 14), days=7)
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["Start Date"] == "09/14/2026"
-        assert row["End Date"] == "09/21/2026"  # exclusive: covers 14–20, frees 21
-
-    def test_the_header_is_googles_exact_column_order(self, group, owner, member):
-        thing = _thing(owner)
-        group.things.add(thing)
-        _booking(thing, member, owner)
-
-        csv_bytes, _ = build_calendar_export(group)
-
-        header = next(csv.reader(io.StringIO(csv_bytes.decode("utf-8"))))
-        assert header == CSV_COLUMNS
-        assert header[:6] == [
-            "Subject",
-            "Start Date",
-            "Start Time",
-            "End Date",
-            "End Time",
-            "All Day Event",
-        ]
+        assert event["DTSTART;VALUE=DATE"] == "20260914"
+        assert event["DTEND;VALUE=DATE"] == "20260921"  # exclusive: covers 14–20, frees 21
 
     def test_a_one_day_reservation_blocks_exactly_that_day(self, group, owner, member):
         thing = _thing(owner, thing_type="RESERVE_THING")
         group.things.add(thing)
         # request_reservation stores end_date = start + duration, so a 1-day
-        # reservation has end_date = start + 1 — the exclusive End Date that
-        # Google renders as the single booked day.
+        # reservation has end_date = start + 1 — the exclusive DTEND that
+        # renders as the single booked day.
         _booking(
             thing,
             member,
@@ -181,15 +207,14 @@ class TestOneEventPerReservation:
             days=1,
         )
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["Start Date"] == "09/20/2026"
-        assert row["End Date"] == "09/21/2026"  # exclusive → Google shows only the 20th
+        assert event["DTSTART;VALUE=DATE"] == "20260920"
+        assert event["DTEND;VALUE=DATE"] == "20260921"  # exclusive → only the 20th shows
 
     def test_a_multi_day_reservation_blocks_every_booked_day(self, group, owner, member):
         # A 4-day reservation blocks all 4 days (unlike a loan, whose "return
-        # day" is free) — end_date = start + 4, exclusive, so Google renders
-        # 20/21/22/23.
+        # day" is free) — end_date = start + 4, exclusive, so 20/21/22/23.
         thing = _thing(owner, thing_type="RESERVE_THING")
         group.things.add(thing)
         _booking(
@@ -201,10 +226,10 @@ class TestOneEventPerReservation:
             days=4,
         )
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["Start Date"] == "09/20/2026"
-        assert row["End Date"] == "09/24/2026"  # covers 20, 21, 22, 23
+        assert event["DTSTART;VALUE=DATE"] == "20260920"
+        assert event["DTEND;VALUE=DATE"] == "20260924"  # covers 20, 21, 22, 23
 
     def test_a_deposit_and_a_project_note_reach_the_description(self, group, owner, member):
         loan = _thing(owner, code="THG010", thing_type="RENT_THING")
@@ -220,20 +245,32 @@ class TestOneEventPerReservation:
             note="Ensayo de teatro",
         )
 
-        rows = {r["Subject"]: r["Description"] for r in _rows(build_calendar_export(group)[0])}
+        events = {e["SUMMARY"]: e["DESCRIPTION"] for e in _events(build_calendar_export(group)[0])}
 
-        assert "Fianza: 25.00" in rows["Alquiler: Taladre → Júlia"]
-        assert "Proyecto: Ensayo de teatro" in rows["Reserva: Sala — Júlia"]
+        assert "Fianza: 25.00" in events["Alquiler: Taladre → Júlia"]
+        assert "Proyecto: Ensayo de teatro" in events["Reserva: Sala — Júlia"]
+
+    def test_the_calendar_names_the_collection(self, group, owner, member):
+        thing = _thing(owner)
+        group.things.add(thing)
+        _booking(thing, member, owner)
+
+        props = _calendar_props(build_calendar_export(group)[0])
+
+        assert props["X-WR-CALNAME"] == "El taller"
+        assert props["VERSION"] == "2.0"
+        assert props["PRODID"] == "-//OIUEEI//Calendar export//EN"
+        assert props["CALSCALE"] == "GREGORIAN"
+        assert props["METHOD"] == "PUBLISH"
 
 
 class TestHourlyReservation:
-    def test_an_hour_unit_reservation_is_a_timed_event_ending_the_same_day(
-        self, group, owner, member
-    ):
-        # HOUR-unit RESERVE_THING stores end_date = start_date + 1 (the
-        # day-based "free again" marker every other consumer reads) — the
-        # calendar export must not treat that as the real end, or the event
-        # lands a day late.
+    @override_settings(TIME_ZONE="Europe/Madrid")
+    def test_the_exact_production_bug_17_to_21_on_oct_1st(self, group, owner, member):
+        # CA's early adopter, 2026-09-28: the CSV rendered 01/10/2026 and a
+        # day/month Google account imported it as January the 10th. In .ics it
+        # is 17:00–21:00 Europe/Madrid (UTC+2) = 15:00–19:00 UTC, and no
+        # account's locale can read it any other way.
         thing = _thing(owner, thing_type="RESERVE_THING", headline="Sala")
         group.things.add(thing)
         _booking(
@@ -241,19 +278,52 @@ class TestHourlyReservation:
             member,
             owner,
             thing_type="RESERVE_THING",
-            start=datetime.date(2026, 9, 20),
+            start=datetime.date(2026, 10, 1),
             days=1,
-            start_time=datetime.time(10, 0),
-            end_time=datetime.time(13, 0),
+            start_time=datetime.time(17, 0),
+            end_time=datetime.time(21, 0),
         )
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["All Day Event"] == "False"
-        assert row["Start Date"] == "09/20/2026"
-        assert row["End Date"] == "09/20/2026"  # same day — not the exclusive end_date (21st)
-        assert row["Start Time"] == "10:00 AM"
-        assert row["End Time"] == "01:00 PM"
+        assert event["DTSTART"] == "20261001T150000Z"
+        assert event["DTEND"] == "20261001T190000Z"
+        assert "DTSTART;VALUE=DATE" not in event  # timed, never all-day
+
+    @override_settings(TIME_ZONE="Europe/Madrid")
+    def test_both_sides_of_the_dst_change_render_their_own_utc_offset(self, group, owner, member):
+        # 1 October is UTC+2 (CEST); 1 December is UTC+1 (CET) — the same wall
+        # clock must land an hour apart in UTC, or the export only works on one
+        # side of the change.
+        thing = _thing(owner, thing_type="RESERVE_THING", headline="Sala")
+        group.things.add(thing)
+        _booking(
+            thing,
+            member,
+            owner,
+            code="BKGOCT",
+            thing_type="RESERVE_THING",
+            start=datetime.date(2026, 10, 1),
+            days=1,
+            start_time=datetime.time(17, 0),
+            end_time=datetime.time(18, 0),
+        )
+        _booking(
+            thing,
+            member,
+            owner,
+            code="BKGDEC",
+            thing_type="RESERVE_THING",
+            start=datetime.date(2026, 12, 1),
+            days=1,
+            start_time=datetime.time(17, 0),
+            end_time=datetime.time(18, 0),
+        )
+
+        by_uid = {e["UID"]: e for e in _events(build_calendar_export(group)[0])}
+
+        assert by_uid["BKGOCT@oiueei"]["DTSTART"] == "20261001T150000Z"  # +2
+        assert by_uid["BKGDEC@oiueei"]["DTSTART"] == "20261201T160000Z"  # +1
 
     def test_a_whole_day_reservation_stays_an_all_day_event(self, group, owner, member):
         # A DAY-unit reservation has start_time = NULL and must keep the
@@ -269,11 +339,126 @@ class TestHourlyReservation:
             days=1,
         )
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["All Day Event"] == "True"
-        assert row["Start Time"] == "" and row["End Time"] == ""
-        assert row["End Date"] == "09/21/2026"  # exclusive, as ever
+        assert event["DTSTART;VALUE=DATE"] == "20260920"
+        assert "DTSTART" not in event  # no timed DTSTART bled in
+        assert event["DTEND;VALUE=DATE"] == "20260921"  # exclusive, as ever
+
+
+class TestEveryDownloadCarriesEverything:
+    """The stable UID retired the incremental watermark: re-downloading after a
+    failed import is the normal path now, and the calendar dedupes on its side."""
+
+    def test_a_second_download_carries_the_same_events_not_an_empty_file(
+        self, group, owner, member
+    ):
+        thing = _thing(owner)
+        group.things.add(thing)
+        _booking(thing, member, owner)
+
+        first_bytes, first_count, _ = build_calendar_export(group)
+        second_bytes, second_count, _ = build_calendar_export(group)
+
+        assert first_count == second_count == 1
+        assert _events(second_bytes) == _events(first_bytes)
+        assert not CalendarExportMark.objects.exists()  # nothing written, ever
+
+    def test_the_uid_is_identical_across_downloads(self, group, owner, member):
+        thing = _thing(owner)
+        group.things.add(thing)
+        _booking(thing, member, owner)
+
+        first = _events(build_calendar_export(group)[0])
+        second = _events(build_calendar_export(group)[0])
+
+        assert first[0]["UID"] == second[0]["UID"] == "BKG001@oiueei"
+
+    def test_a_reservation_confirmed_after_a_download_ships_with_the_rest(
+        self, group, owner, member
+    ):
+        thing = _thing(owner)
+        group.things.add(thing)
+        _booking(thing, member, owner, code="BKG100")
+
+        build_calendar_export(group)
+        _booking(thing, member, owner, code="BKG101", start=TODAY + datetime.timedelta(days=20))
+
+        _, count, _ = build_calendar_export(group)
+
+        assert count == 2
+
+    def test_a_thing_in_two_collections_exports_from_both(self, owner, member):
+        # No watermark also means no per-collection bookkeeping to get right —
+        # each collection simply ships its own reservations.
+        thing = _thing(owner)
+        a = Collection.objects.create(code="GRPA00", owner=owner, headline="A")
+        b = Collection.objects.create(code="GRPB00", owner=owner, headline="B")
+        a.things.add(thing)
+        b.things.add(thing)
+        _booking(thing, member, owner)
+
+        _, a_count, _ = build_calendar_export(a)
+        _, b_count, _ = build_calendar_export(b)
+
+        assert a_count == 1
+        assert b_count == 1
+
+
+class TestRfc5545Shape:
+    def test_every_line_ends_crlf_and_none_is_blank(self, group, owner, member):
+        thing = _thing(owner)
+        group.things.add(thing)
+        _booking(thing, member, owner)
+
+        ics_bytes, _, _ = build_calendar_export(group)
+
+        text = ics_bytes.decode("utf-8")
+        assert "\n" not in text.replace("\r\n", "")  # no bare LF anywhere
+        assert all(line for line in _physical_lines(ics_bytes))
+
+    def test_text_values_escape_comma_semicolon_backslash_and_newline(self, group, owner, member):
+        thing = _thing(
+            owner,
+            thing_type="RESERVE_THING",
+            headline="Sala, principal; 1ª",
+            location="Carrer Nou, 3; baixos",
+        )
+        group.things.add(thing)
+        _booking(
+            thing,
+            member,
+            owner,
+            thing_type="RESERVE_THING",
+            note="Línea uno\nlínea dos, con coma; y punto\\coma",
+        )
+
+        (event,) = _events(build_calendar_export(group)[0])
+
+        assert event["SUMMARY"] == r"Reserva: Sala\, principal\; 1ª — Júlia"
+        assert event["LOCATION"] == r"Carrer Nou\, 3\; baixos"
+        # A newline becomes literal \n in the TEXT value; commas/semicolons in
+        # the note are escaped too, and the backslash itself is doubled.
+        # (The default `group` fixture's language is "es" — "Proyecto:", not
+        # the Catalan "Projecte:" the fixture would use with language="ca".)
+        assert r"Proyecto: Línea uno\nlínea dos\, con coma\; y punto\\coma" in event["DESCRIPTION"]
+
+    def test_a_long_accented_headline_folds_at_75_octets_and_unfolds_exactly(
+        self, group, owner, member
+    ):
+        headline = "Bicicleta de carril boladísima ñandú camión japonés " + "éàüöß" * 12
+        thing = _thing(owner, headline=headline)
+        group.things.add(thing)
+        _booking(thing, member, owner)
+
+        ics_bytes, _, _ = build_calendar_export(group)
+
+        for line in _physical_lines(ics_bytes):
+            assert len(line.encode("utf-8")) <= 75, line
+        # The fold never split a UTF-8 character: unfolding recovers the exact
+        # headline, accents and all.
+        (event,) = _events(ics_bytes)
+        assert headline in event["SUMMARY"]
 
 
 class TestOnlyRealCommitments:
@@ -282,19 +467,22 @@ class TestOnlyRealCommitments:
         group.things.add(thing)
         _booking(thing, member, owner, status="PENDING")
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 0
 
     @pytest.mark.parametrize("status", ["REJECTED", "CANCELLED", "EXPIRED"])
     def test_a_settled_or_dead_hold_is_not_exported(self, group, owner, member, status):
+        # A loan is only ever cancelled while PENDING, so a cancelled one never
+        # reached a calendar and has nothing to take back off it.
         thing = _thing(owner)
         group.things.add(thing)
         _booking(thing, member, owner, status=status)
 
-        _, count = build_calendar_export(group)
+        ics_bytes, count, cancelled = build_calendar_export(group)
 
-        assert count == 0
+        assert (count, cancelled) == (0, 0)
+        assert _events(ics_bytes) == []
 
     @pytest.mark.parametrize("thing_type", ["GIFT_THING", "SELL_THING"])
     def test_a_dateless_gift_or_sale_is_never_in_the_calendar(
@@ -312,7 +500,7 @@ class TestOnlyRealCommitments:
             status="ACCEPTED",
         )
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 0
 
@@ -321,7 +509,7 @@ class TestOnlyRealCommitments:
         group.things.add(thing)
         _booking(thing, member, owner, start=TODAY - datetime.timedelta(days=10), days=3)
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 0
 
@@ -331,115 +519,84 @@ class TestOnlyRealCommitments:
         # started before today, ends after today — "en curso"
         _booking(thing, member, owner, start=TODAY - datetime.timedelta(days=1), days=5)
 
-        _, count = build_calendar_export(group)
+        _, count, _ = build_calendar_export(group)
 
         assert count == 1
 
 
-class TestIncremental:
-    def test_a_reservation_already_downloaded_is_not_in_the_next_file(self, group, owner, member):
-        thing = _thing(owner)
+class TestACancelledReservationLeavesTheCalendar:
+    """A calendar that imported a reservation keeps it after it is cancelled —
+    the file is a copy. So the next download carries the cancellation under the
+    same UID, as a revision (SEQUENCE above the confirmed copy's) with
+    STATUS:CANCELLED, for the importing app to drop."""
+
+    def test_a_confirmed_reservation_is_revision_zero_and_confirmed(self, group, owner, member):
+        thing = _thing(owner, thing_type="RESERVE_THING")
         group.things.add(thing)
-        _booking(thing, member, owner)
+        _booking(thing, member, owner, code="BKG070", days=1)
 
-        first_bytes, first_count = build_calendar_export(group)
-        second_bytes, second_count = build_calendar_export(group)
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert first_count == 1
-        assert second_count == 0
-        assert _rows(second_bytes) == []  # header only
-        assert CalendarExportMark.objects.filter(collection=group).count() == 1
+        assert (event["STATUS"], event["SEQUENCE"]) == ("CONFIRMED", "0")
 
-    def test_a_reservation_confirmed_after_the_last_download_is_picked_up(
+    def test_a_cancelled_reservation_ships_as_a_cancelled_revision_of_its_event(
         self, group, owner, member
     ):
-        thing = _thing(owner)
+        thing = _thing(owner, thing_type="RESERVE_THING")
         group.things.add(thing)
-        _booking(thing, member, owner, code="BKG100")
+        booking = _booking(thing, member, owner, code="BKG071", days=1)
+        (confirmed,) = _events(build_calendar_export(group)[0])
 
-        build_calendar_export(group)
-        _booking(thing, member, owner, code="BKG101", start=TODAY + datetime.timedelta(days=20))
+        booking.status = BookingPeriod.Status.CANCELLED
+        booking.save()
+        ics_bytes, count, cancelled = build_calendar_export(group)
+        (revision,) = _events(ics_bytes)
 
-        _, count = build_calendar_export(group)
+        assert (count, cancelled) == (0, 1)
+        assert revision["UID"] == confirmed["UID"] == "BKG071@oiueei"
+        assert revision["STATUS"] == "CANCELLED"
+        assert int(revision["SEQUENCE"]) > int(confirmed["SEQUENCE"])
+        # Same slot, so an app that matches on more than the UID still finds it.
+        assert revision["DTSTART;VALUE=DATE"] == confirmed["DTSTART;VALUE=DATE"]
 
-        assert count == 1
-        assert {m.booking_id for m in CalendarExportMark.objects.filter(collection=group)} == {
-            "BKG100",
-            "BKG101",
-        }
+    def test_confirmed_and_cancelled_are_counted_apart(self, group, owner, member):
+        thing = _thing(owner, thing_type="RESERVE_THING")
+        group.things.add(thing)
+        _booking(thing, member, owner, code="BKG072", days=1)
+        _booking(
+            thing,
+            member,
+            owner,
+            code="BKG073",
+            start=TODAY + datetime.timedelta(days=6),
+            days=1,
+            status="CANCELLED",
+        )
 
-    def test_the_watermark_is_per_collection_not_per_booking(self, owner, member):
-        # A thing lives in two curated collections. Exporting one must not
-        # silence the reservation for the other.
-        thing = _thing(owner)
-        a = Collection.objects.create(code="GRPA00", owner=owner, headline="A")
-        b = Collection.objects.create(code="GRPB00", owner=owner, headline="B")
-        a.things.add(thing)
-        b.things.add(thing)
-        _booking(thing, member, owner)
+        ics_bytes, count, cancelled = build_calendar_export(group)
 
-        _, a_count = build_calendar_export(a)
-        _, b_count = build_calendar_export(b)
+        assert (count, cancelled) == (1, 1)
+        by_uid = {e["UID"]: e["STATUS"] for e in _events(ics_bytes)}
+        assert by_uid == {"BKG072@oiueei": "CONFIRMED", "BKG073@oiueei": "CANCELLED"}
 
-        assert a_count == 1
-        assert b_count == 1
-
-    def test_the_same_reservation_cannot_be_marked_twice_for_one_collection(
+    def test_a_cancellation_of_a_reservation_already_over_is_not_shipped(
         self, group, owner, member
     ):
-        from django.db import IntegrityError
-
-        thing = _thing(owner)
+        thing = _thing(owner, thing_type="RESERVE_THING")
         group.things.add(thing)
-        booking = _booking(thing, member, owner)
-        CalendarExportMark.objects.create(collection=group, booking=booking)
+        _booking(
+            thing,
+            member,
+            owner,
+            start=TODAY - datetime.timedelta(days=10),
+            days=1,
+            status="CANCELLED",
+        )
 
-        with pytest.raises(IntegrityError):
-            CalendarExportMark.objects.create(collection=group, booking=booking)
+        ics_bytes, count, cancelled = build_calendar_export(group)
 
-
-class TestSpreadsheetFormulaInjection:
-    FORMULA_PREFIXES = ("=", "+", "-", "@")
-
-    def test_no_exported_cell_can_be_read_as_a_formula(self, group, owner, member):
-        # The serializer rejects these on input; the export must not depend on
-        # that having happened — a row can predate the guard or arrive by import.
-        thing = _thing(owner, headline="=cmd|calc", location="-2+3")
-        group.things.add(thing)
-        _booking(thing, member, owner, thing_type="RESERVE_THING", note="@SUM(A1)")
-        thing.type = "RESERVE_THING"
-        thing.save()
-
-        (row,) = _rows(build_calendar_export(group)[0])
-
-        for column, cell in row.items():
-            head = cell.lstrip()[:1]
-            assert head not in self.FORMULA_PREFIXES or cell.startswith("'"), (column, cell)
-
-    def test_a_location_that_is_a_formula_char_is_the_one_cell_that_needs_the_quote(
-        self, group, owner, member
-    ):
-        # Location is the only cell whose first character is raw owner content
-        # (Subject/Description always start with a label), so it is where the
-        # quote actually does work.
-        thing = _thing(owner, location="-1+2")
-        group.things.add(thing)
-        _booking(thing, member, owner)
-
-        (row,) = _rows(build_calendar_export(group)[0])
-
-        assert row["Location"] == "'-1+2"
-
-    def test_a_formula_hidden_behind_a_space_is_quoted_too(self):
-        # The guard used to read text[:1], so " =SUM(A1)" sailed through
-        # untouched. No real cell reaches it with the space still on — _row
-        # strips Location and project_note, DRF trims whitespace — which is
-        # exactly why the guard must not lean on those layers: a protection
-        # that depends on two unrelated doors staying polite is not a
-        # protection, and the sibling validator
-        # (core.validators.reject_spreadsheet_formula) already looks past
-        # spaces. Tested directly because every caller strips first.
-        assert _csv_cell(" =SUM(A1)") == "' =SUM(A1)"
+        assert (count, cancelled) == (0, 0)
+        assert _events(ics_bytes) == []
 
 
 class TestLanguage:
@@ -450,9 +607,9 @@ class TestLanguage:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["Subject"].startswith("Préstec:")  # ca, not es "Préstamo:"
+        assert event["SUMMARY"].startswith("Préstec:")  # ca, not es "Préstamo:"
 
     def test_the_downloading_curator_language_wins_over_the_group(self, group, owner, member):
         group.language = "ca"
@@ -463,9 +620,9 @@ class TestLanguage:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        (row,) = _rows(build_calendar_export(group, user=owner)[0])
+        (event,) = _events(build_calendar_export(group, user=owner)[0])
 
-        assert row["Subject"].startswith("Loan:")
+        assert event["SUMMARY"].startswith("Loan:")
 
     def test_a_localized_headline_map_resolves_to_that_language(self, group, owner, member):
         group.language = "ca"
@@ -474,10 +631,10 @@ class TestLanguage:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert "Trepant" in row["Subject"]
-        assert "{" not in row["Subject"]
+        assert "Trepant" in event["SUMMARY"]
+        assert "{" not in event["SUMMARY"]
 
     def test_a_deployment_language_the_catalogue_lacks_falls_back_to_english(
         self, group, owner, member, settings
@@ -489,9 +646,9 @@ class TestLanguage:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["Subject"].startswith("Loan:")
+        assert event["SUMMARY"].startswith("Loan:")
 
 
 class TestMemberIdentity:
@@ -504,10 +661,10 @@ class TestMemberIdentity:
         group.things.add(thing)
         _booking(thing, member, owner)
 
-        (row,) = _rows(build_calendar_export(group)[0])
+        (event,) = _events(build_calendar_export(group)[0])
 
-        assert row["Subject"].endswith("un miembro")
-        assert member.email not in row["Subject"]
+        assert event["SUMMARY"].endswith("un miembro")
+        assert member.email not in event["SUMMARY"]
 
 
 class TestCatalogueParity:
@@ -524,12 +681,14 @@ class TestCatalogueParity:
                 assert texts[f"subject_{thing_type}"], (lang, thing_type)
 
 
-def test_the_filename_matches_the_stats_csv_shape():
-    assert calendar_filename("ABC123") == "ABC123-calendar.csv"
+def test_the_filename_is_an_ics():
+    assert calendar_filename("ABC123") == "ABC123-calendar.ics"
 
 
 def test_a_mark_names_its_collection_and_booking(group, owner, member):
     # The admin row an operator reads when a reservation was exported twice.
+    # The model is dormant since the .ics switch; this stays so the moment it
+    # is dropped from the schema, this test goes with it.
     thing = _thing(owner)
     group.things.add(thing)
     booking = _booking(thing, member, owner, code="BKG777")

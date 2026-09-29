@@ -92,6 +92,21 @@ export const formatDate = (value) => {
   return `${dd}/${mm}/${d.getFullYear()}`;
 };
 
+// An ISO datetime *with* its clock time — 'DD/MM/YYYY HH:MM' in the reader's
+// own timezone, formatDate plus local hours/minutes. The stamp a notification
+// carries (`created`, when something happened) is the caller that needs it:
+// `formatDate` deliberately drops the time it is composed of, so a reader in
+// another timezone would see the event's UTC day alone. '' for anything
+// unparseable, like formatDate (an absent stamp renders no line at all).
+export const formatDateTime = (value) => {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${formatDate(d)} ${hh}:${mi}`;
+};
+
 // A booking's date/time range for a listing row — MyBookingsPage,
 // OwnerBookingsPage, OwnerBookingsList — read straight off the API's own
 // field names (`start_date`/`end_date` ISO dates, `start_time`/`end_time`

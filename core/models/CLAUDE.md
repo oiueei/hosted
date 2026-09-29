@@ -468,7 +468,7 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `COLLECTION_REVOKED` | Owner removes a guest from collection | Removed user | `collection_headline`, `owner_name` |
 | `BOOKING_ACCEPTED` | Owner accepts a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
 | `BOOKING_REJECTED` | Owner rejects a hold request | Requester | `thing_headline`, `owner_name`, `thing_code`, `collection_code` |
-| `BOOKING_REQUESTED` | User requests a hold | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code` |
+| `BOOKING_REQUESTED` | User requests a hold | Thing owner | `thing_headline`, `requester_name`, `booking_code`, `thing_code`, `collection_code`; plus `start_date`/`end_date` for a dated (LEND/RENT) request, since 2026-09-29 — the inbox shows them |
 | `FAQ_QUESTION` | User asks a FAQ question | **Every manager** of the thing (`Thing.managers` — the owner, plus a PROPRIETARY collection's curators), minus the asker. Just the owner in COMMUNITY | `thing_headline`, `questioner_name` |
 | `FAQ_ANSWERED` | Owner answers a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `FAQ_HIDDEN` | Owner hides a FAQ | Questioner | `thing_headline`, `owner_name` |
@@ -628,7 +628,9 @@ nothing about — so **the member proposes and the owner decides**.
 
 ## CalendarExportMark
 
-One reservation already delivered to a collection's **calendar CSV** download (`POST /collections/{code}/calendar-export/` → [`calendar_export_service`](../services/CLAUDE.md#calendar_export_servicepy--the-collection-calendar-csv)). The download is incremental — "solo lo nuevo desde la última descarga" — and this table is the watermark.
+⚠️ **Dormant since 2026-09-28.** `calendar_export_service` used to watermark every reservation it had delivered so a curator's calendar **CSV** download only ever carried what was new; the CSV format itself turned out to be the bug — Google Calendar's CSV importer reads dates in the *importing account's* locale, so `10/01/2026` (meant as 1 October) landed as 10 January for a day/month account. The export moved to **iCalendar (.ics)**, whose per-booking UID (`{booking.code}@oiueei`) makes a re-import idempotent on the calendar app's own side, which retired the watermark this table existed for: `build_calendar_export` now ships every upcoming reservation on every download and neither reads nor writes this model at all.
+
+The model and its table are kept **one release, dormant, then dropped** — the two-release pattern `reservation_max_hours` set: dropping a column in the same release that stops writing it would break the previous release's dynos, which still name it in every query while the release phase runs. Everything below describes what it did; nothing in the running app still does it.
 
 ### Fields
 
@@ -639,9 +641,9 @@ One reservation already delivered to a collection's **calendar CSV** download (`
 | `booking` | ForeignKey(BookingPeriod) | **Yes** | CASCADE, reverse `calendar_export_marks` |
 | `exported_at` | DateTimeField | Auto | When this reservation went out |
 
-### Business Rules
+### Business Rules (historical — no longer enforced by any running code)
 
-1. **One mark per `(collection, booking)`** — `UniqueConstraint(collection, booking)` (`uniq_calendar_export_collection_booking`). `build_calendar_export` reads the unmarked reservations and `bulk_create`s their marks inside a transaction that `select_for_update`s the collection row, so two curators pressing the button at once can't both carry — or both mark — the same reservation.
-2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exports a reservation it's done for the group. It also can't be a flag on `BookingPeriod`: a thing can sit in two collections and each keeps its own watermark on the same booking.
+1. **One mark per `(collection, booking)`** — `UniqueConstraint(collection, booking)` (`uniq_calendar_export_collection_booking`). `build_calendar_export` read the unmarked reservations and `bulk_create`d their marks inside a transaction that `select_for_update`d the collection row, so two curators pressing the button at once couldn't both carry — or both mark — the same reservation.
+2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exported a reservation it was done for the group. It also couldn't be a flag on `BookingPeriod`: a thing can sit in two collections and each kept its own watermark on the same booking.
 3. **Both FKs CASCADE** — a booking or collection that no longer exists can't be re-exported anyway.
-4. **No un-mark, no "export everything"** (CA's call) — the download is purely forward. Losing the file means those events don't come back out; the reservations themselves are still on `/owner-bookings` and each thing's calendar.
+4. **No un-mark, no "export everything"** (CA's call, superseded) — the download was purely forward. The `.ics` format is what made "export everything, every time" both correct and free of the earlier problem (losing a download used to mean those events never came back out).

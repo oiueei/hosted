@@ -492,3 +492,197 @@ describe('InboxNotifications — a person with no name still has a subject', () 
     expect(screen.queryByText(/@/)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * A reservation notice says when (CA, 2026-09-28): under the body and its link,
+ * two quiet lines — when the event the notice records happened (`created`, the
+ * notification's own stamp: for a cancellation that is the cancellation's
+ * moment, which is the fact being reported) and when the reservation runs,
+ * read from the payload's booking fields by `formatBookingWhen` — the same
+ * formatter the booking tables use, so an hourly slot reads identically here
+ * and in My requests.
+ *
+ * The registered stamp renders in the reader's own timezone, so its expected
+ * string is built from the same instant locally — never a hardcoded offset
+ * that only holds where the suite happens to run. The formatter's timezone
+ * behaviour itself is pinned separately by rental.test.js under a stubbed TZ.
+ */
+describe('InboxNotifications — a reservation notice says when', () => {
+  const localStamp = (iso) => {
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`;
+  };
+
+  const renderInbox = (notifications) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok(notifications);
+      return ok([]);
+    });
+    return render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+  };
+
+  // The backend's own shapes: an hourly slot carries start/end time and its
+  // `end_date` is only the free-again marker; a day reservation carries no
+  // times and its `end_date` is start + duration, so the last *inclusive* day
+  // is one earlier (formatBookingWhen's RESERVE_THING branch).
+  const MADE_HOURLY = {
+    code: 'NOTR01',
+    type: 'RESERVATION_MADE',
+    payload: {
+      requester_name: 'Lele',
+      thing_headline: 'The meeting room',
+      thing_code: 'THG001',
+      collection_code: 'COL001',
+      start_date: '2026-09-29',
+      end_date: '2026-09-30',
+      start_time: '10:00',
+      end_time: '12:00',
+    },
+    created: '2026-09-28T13:11:00Z',
+  };
+
+  const MADE_BY_DAYS = {
+    code: 'NOTR02',
+    type: 'RESERVATION_MADE',
+    payload: {
+      requester_name: 'Lili',
+      thing_headline: 'The workshop',
+      thing_code: 'THG002',
+      collection_code: 'COL001',
+      start_date: '2026-10-03',
+      end_date: '2026-10-06',
+      start_time: null,
+      end_time: null,
+    },
+    created: '2026-09-28T09:05:00Z',
+  };
+
+  const CANCELLED = {
+    code: 'NOTR03',
+    type: 'RESERVATION_CANCELLED',
+    payload: {
+      other_name: 'Lolo',
+      thing_headline: 'The meeting room',
+      thing_code: 'THG001',
+      collection_code: 'COL001',
+      start_date: '2026-09-29',
+      end_date: '2026-09-30',
+      start_time: '10:00',
+      end_time: '12:00',
+    },
+    // The cancellation's own moment — not the reservation's.
+    created: '2026-09-28T16:40:00Z',
+  };
+
+  test('an hourly reservation shows both lines, the stamp local and the slot exact', async () => {
+    renderInbox([MADE_HOURLY]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-28T13:11:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 29/09/2026, 10:00–12:00')).toBeInTheDocument();
+  });
+
+  test('a day reservation shows the span inclusive of its last day', async () => {
+    renderInbox([MADE_BY_DAYS]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-28T09:05:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 03/10/2026 — 05/10/2026')).toBeInTheDocument();
+  });
+
+  test('a cancellation shows both lines, its registered stamp being its own moment', async () => {
+    renderInbox([CANCELLED]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-28T16:40:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 29/09/2026, 10:00–12:00')).toBeInTheDocument();
+    // Not the reservation's original stamp posing as the cancellation's.
+    expect(
+      screen.queryByText(`Registered: ${localStamp('2026-09-28T13:11:00Z')}`)
+    ).not.toBeInTheDocument();
+  });
+
+  test('no other type of notice grows the two lines', async () => {
+    renderInbox([ELSEWHERE_NOTIFICATION]);
+
+    expect(await screen.findByText(/A ladder/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Registered: /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+
+  test('a loan request shows both lines, the slot pickup to return', async () => {
+    renderInbox([
+      {
+        code: 'NOTR05',
+        type: 'BOOKING_REQUESTED',
+        payload: {
+          requester_name: 'Lulu',
+          thing_headline: 'A mitre saw',
+          booking_code: 'BKG005',
+          thing_code: 'THG005',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T06:38:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-29T06:38:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+  });
+
+  test('a request without dates (a gift, or one from before) grows no lines', async () => {
+    renderInbox([
+      {
+        code: 'NOTR06',
+        type: 'BOOKING_REQUESTED',
+        payload: {
+          requester_name: 'Lulu',
+          thing_headline: 'A board game',
+          booking_code: 'BKG006',
+          thing_code: 'THG006',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T06:38:00Z',
+      },
+    ]);
+
+    expect(await screen.findByText(/A board game/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Registered: /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+
+  test('a reservation payload without dates shows the stamp but no schedule line', async () => {
+    renderInbox([
+      {
+        code: 'NOTR04',
+        type: 'RESERVATION_MADE',
+        payload: {
+          requester_name: 'Lulu',
+          thing_headline: 'The meeting room',
+          thing_code: 'THG001',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-28T13:11:00Z',
+      },
+    ]);
+
+    expect(
+      await screen.findByText(`Registered: ${localStamp('2026-09-28T13:11:00Z')}`)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+});

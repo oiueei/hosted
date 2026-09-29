@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
+import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
 import ButtonLink from '../components/ButtonLink';
 
@@ -28,7 +29,10 @@ export default function NotFoundPage() {
           className="form-hero-content"
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
-          <ContactCorner />
+          <span className="hero-corners">
+            <AccountMenu />
+            <ContactCorner />
+          </span>
           <h1 className="form-hero-title">{t('notFound.title')}</h1>
           <div>
             <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>

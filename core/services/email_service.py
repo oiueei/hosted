@@ -141,13 +141,15 @@ _UNSET = object()
 
 
 def _lookup_user(email):
-    from django.db.models import Exists, OuterRef
+    from django.db.models import Exists, OuterRef, Q
 
     from core.models import Collection, User
 
     return (
         User.objects.annotate(
-            _owns_collection=Exists(Collection.objects.filter(owner=OuterRef("pk")))
+            _curates_collection=Exists(
+                Collection.objects.filter(Q(owner=OuterRef("pk")) | Q(co_owners=OuterRef("pk")))
+            )
         )
         .filter(email=email)
         .only("code", "language", "notify_activity", "notify_news")
@@ -163,14 +165,16 @@ def _lookup_users(emails):
     ``users.get(email)`` (None) and ``_send`` treats them as opted-in non-users
     without firing another lookup.
     """
-    from django.db.models import Exists, OuterRef
+    from django.db.models import Exists, OuterRef, Q
 
     from core.models import Collection, User
 
     return {
         u.email: u
         for u in User.objects.annotate(
-            _owns_collection=Exists(Collection.objects.filter(owner=OuterRef("pk")))
+            _curates_collection=Exists(
+                Collection.objects.filter(Q(owner=OuterRef("pk")) | Q(co_owners=OuterRef("pk")))
+            )
         )
         .filter(email__in=list(emails))
         .only("code", "email", "language", "notify_activity", "notify_news")
@@ -454,8 +458,15 @@ def _bottom(
 
     if include_viral:
         lines = viral_lines(lang)
-        owns_collection = user is not _UNSET and user and getattr(user, "_owns_collection", False)
-        if lines and not owns_collection:
+        # A co-curator gets it suppressed too (2026-09-28): since 2026-09 they
+        # have the founder's whole reach minus deletion, so inviting them to
+        # "start a collection" is a letter to someone who already runs one. The
+        # flag is one Exists over both paths (owner or co-owner), folded into
+        # the lookup queries — no extra round-trip.
+        curates_collection = (
+            user is not _UNSET and user and getattr(user, "_curates_collection", False)
+        )
+        if lines and not curates_collection:
             line = random.choice(lines)
             url = f"{_frontend_base_url()}/collections/new"
             plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
@@ -546,12 +557,13 @@ def _send(
     as ``_UNSET`` and the lookup happens here, as before.
 
     ``include_viral`` prepends a growth CTA above the footer (suppressed for
-    collection owners — see ``_with_viral_line``). The operator's own ops mail
-    is the one sender that passes ``False`` (an operator report, not growth
-    copy); everything else, including ``send_magic_link_email`` since S2, uses
-    the default — so magic-link sends now do the one recipient lookup they
-    used to skip (see that function's docstring for why the extra query is
-    still timing-safe).
+    anyone who curates a collection — owner or co-curator; the gate is the
+    ``_curates_collection`` flag folded into the lookup queries). The operator's
+    own ops mail is the one sender that passes ``False`` (an operator report,
+    not growth copy); everything else, including ``send_magic_link_email``
+    since S2, uses the default — so magic-link sends now do the one recipient
+    lookup they used to skip (see that function's docstring for why the extra
+    query is still timing-safe).
 
     ``lang`` is the language the sender composed this email in (see
     ``resolve_email_language``); the footer and the viral line follow it, so the
@@ -1712,6 +1724,86 @@ def send_faq_answer_email(owner_name, thing, question, answer, questioner_email)
     )
 
 
+def send_faq_answered_to_team_email(answerer, thing, question, answer, manager_email):
+    """Tell a curator who didn't answer that a teammate did (Cat. 2).
+
+    A question asks **every** manager of the thing, so its answer is team news:
+    without this, the co-curator's inbox kept a FAQ_QUESTION asking for a
+    decision the founder had already made — and the other way round. The
+    questioner is not this email's business (they get ``send_faq_answer_email``)
+    and neither is whoever answered.
+    """
+    user, lang = _recipient(manager_email)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing)
+    headline = L(thing.headline)
+    answerer = _member_name(answerer, lang)
+    subject = T("faq_answered_team_subject").format(thing=headline)
+    header = question
+    plain = T("faq_answered_team_plain").format(
+        answerer=answerer, thing=headline, answer=answer, url=thing_url
+    )
+    html = _render_email(
+        [
+            _para(T("faq_answered_team_intro").format(answerer=answerer)),
+            _strong(headline),
+            _field(T("reply_label"), answer),
+            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
+        ],
+        lang=lang,
+        header=header,
+    )
+    _send(
+        manager_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
+def send_faq_hidden_to_team_email(hider, thing, question, manager_email):
+    """Tell a curator who didn't hide it that a teammate did (Cat. 2).
+
+    The hide-side twin of ``send_faq_answered_to_team_email``: a teammate
+    retired a question the others may still have been holding as pending —
+    without this they never learn it was deliberate, and an unanswered one kept
+    asking them for a reply nobody owed any more. The questioner is not this
+    email's business (they get ``send_faq_hide_email``) and neither is whoever
+    hid it.
+    """
+    user, lang = _recipient(manager_email)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing)
+    headline = L(thing.headline)
+    hider = _member_name(hider, lang)
+    subject = T("faq_hidden_team_subject").format(thing=headline)
+    header = question
+    plain = T("faq_hidden_team_plain").format(hider=hider, thing=headline, url=thing_url)
+    html = _render_email(
+        [
+            _para(T("faq_hidden_team_intro").format(hider=hider)),
+            _strong(headline),
+            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
+        ],
+        lang=lang,
+        header=header,
+    )
+    _send(
+        manager_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
 def send_faq_hide_email(owner_name, thing, question, questioner_email):
     """Send FAQ hidden notification email to questioner."""
     user, lang = _recipient(questioner_email)
@@ -1967,6 +2059,60 @@ def send_reservation_cancelled_email(
     )
     _send(
         recipient_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
+def send_reservation_cancel_confirmation_email(
+    canceller_email, thing, booking, *, is_own_reservation, member_name=None
+):
+    """Confirm a cancellation to whoever just made it (RESERVE_THING).
+
+    The member who booked got "your reservation is confirmed" at the time; a
+    cancellation with no reply to them leaves that email as the last word in
+    their inbox, describing a reservation that no longer stands. No button, no
+    ``email_note`` — there is nothing left to do about this reservation.
+
+    ``is_own_reservation`` picks the wording: the member who cancelled their
+    own reads "your reservation is cancelled"; a curator who cancelled someone
+    else's reads "you cancelled {member}'s reservation" — ``member_name`` is
+    that person's bare ``name`` (L2: never ``display_name``, whose fallback is
+    their email address).
+    """
+    user, lang = _recipient(canceller_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    side = "self" if is_own_reservation else "other"
+    member = None if is_own_reservation else _member_name(member_name, lang)
+
+    start, end = _fmt_when(booking)
+    subject = T(f"reservation_cancel_confirmation_subject_{side}").format(thing=headline)
+    intro_key = f"reservation_cancel_confirmation_intro_{side}"
+    plain_key = f"reservation_cancel_confirmation_plain_{side}"
+    if is_own_reservation:
+        intro = T(intro_key)
+        plain = T(plain_key).format(thing=headline, start=start, end=end)
+    else:
+        intro = T(intro_key).format(member=member)
+        plain = T(plain_key).format(member=member, thing=headline, start=start, end=end)
+
+    html = _render_email(
+        [
+            _para(intro),
+            _field(T("dates_label"), f"{start} - {end}"),
+        ],
+        lang=lang,
+        header=header,
+    )
+    _send(
+        canceller_email,
         subject,
         plain,
         html,

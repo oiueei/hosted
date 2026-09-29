@@ -215,6 +215,221 @@ class TestACoCuratorRunsTheBookings:
         assert told == {contributor.code}  # the thing's owner, not the group's curators
 
 
+TEAM_ANSWER_SUBJECT = "A question about 'Sala polivalent' has been answered"
+
+
+class TestAnAnswerSettlesTheQuestionForTheWholeTeam:
+    """CA's production report (2026-09-28): a question warns EVERY manager, but
+    the answer warned only the asker — so the co-curator's inbox kept a
+    FAQ_QUESTION asking for a decision the founder had already made (and the
+    other way round). One answer settles the question for the team: the others
+    hear who answered, and the pending notice leaves every inbox."""
+
+    def _ask(self, space, member):
+        res = client_for(member).post(
+            f"/api/v1/things/{space['thing'].code}/faq/",
+            {"question": "Is there wifi?"},
+            format="json",
+        )
+        assert res.status_code == 201
+        mail.outbox.clear()
+        return FAQ.objects.get(code=res.data["code"])
+
+    def _team_emails(self):
+        return [m for m in mail.outbox if m.subject == TEAM_ANSWER_SUBJECT]
+
+    def test_the_founder_answering_tells_the_co_curator_once(
+        self, space, member, owner, co_curator
+    ):
+        faq = self._ask(space, member)
+
+        res = client_for(owner).post(
+            f"/api/v1/faq/{faq.code}/answer/", {"answer": "Yes, fibre."}, format="json"
+        )
+        assert res.status_code == 200
+
+        # One team email, to the co-curator only — not the answerer, not the asker.
+        team = self._team_emails()
+        assert [m.to[0] for m in team] == [co_curator.email]
+        # The asker got their ordinary answer notice, nothing more.
+        to_asker = [m.subject for m in mail.outbox if m.to[0] == member.email]
+        assert to_asker == ["Your question has been answered"]
+        assert owner.email not in {m.to[0] for m in mail.outbox}
+
+    def test_the_co_curator_answering_tells_the_founder(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+
+        res = client_for(co_curator).post(
+            f"/api/v1/faq/{faq.code}/answer/", {"answer": "Yes, fibre."}, format="json"
+        )
+        assert res.status_code == 200
+
+        assert [m.to[0] for m in self._team_emails()] == [owner.email]
+
+    def test_answering_clears_the_pending_question_for_every_manager(
+        self, space, member, owner, co_curator
+    ):
+        faq = self._ask(space, member)
+        holders = set(
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_QUESTION).values_list(
+                "user_id", flat=True
+            )
+        )
+        assert holders == {owner.code, co_curator.code}  # the premise of the bug
+
+        res = client_for(owner).post(
+            f"/api/v1/faq/{faq.code}/answer/", {"answer": "Yes."}, format="json"
+        )
+        assert res.status_code == 200
+
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_QUESTION
+        ).exists()
+
+    def test_a_community_answer_sends_no_team_email(self, db):
+        # In COMMUNITY the managers of a thing are its owner alone, and they
+        # answered — there is no team left to tell.
+        contributor = User.objects.create(code="ACON01", email="acon@test.com", name="Member")
+        asker = User.objects.create(code="AASK01", email="aask@test.com", name="Asker")
+        group = Collection.objects.create(
+            code="ACOM01", owner=asker, headline="Street", mode=Collection.Mode.COMMUNITY
+        )
+        thing = Thing.objects.create(
+            code="ATHG01", owner=contributor, headline="A tent", type="LEND_THING"
+        )
+        group.things.add(thing)
+
+        res = client_for(asker).post(
+            f"/api/v1/things/{thing.code}/faq/", {"question": "Waterproof?"}, format="json"
+        )
+        assert res.status_code == 201
+        faq = FAQ.objects.get(code=res.data["code"])
+        mail.outbox.clear()
+
+        res = client_for(contributor).post(
+            f"/api/v1/faq/{faq.code}/answer/", {"answer": "Yes."}, format="json"
+        )
+        assert res.status_code == 200
+        # The asker's ordinary answer notice, and nothing else.
+        assert [m.to[0] for m in mail.outbox] == [asker.email]
+
+
+TEAM_HIDE_SUBJECT = "A question about 'Sala polivalent' was hidden"
+
+
+class TestHidingSettlesTheQuestionForTheWholeTeam:
+    """The hide-side twin: retiring a question is as much a team decision as
+    answering it. Without a notice the other managers never learn the question
+    was withdrawn deliberately, and an unanswered one kept asking them for a
+    reply nobody owed any more."""
+
+    def _ask(self, space, member):
+        res = client_for(member).post(
+            f"/api/v1/things/{space['thing'].code}/faq/",
+            {"question": "Is there wifi?"},
+            format="json",
+        )
+        assert res.status_code == 201
+        mail.outbox.clear()
+        return FAQ.objects.get(code=res.data["code"])
+
+    def _team_emails(self):
+        return [m for m in mail.outbox if m.subject == TEAM_HIDE_SUBJECT]
+
+    def test_the_founder_hiding_tells_the_co_curator_once(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+
+        # One team email, to the co-curator only — not the hider, not the asker.
+        assert [m.to[0] for m in self._team_emails()] == [co_curator.email]
+        # The asker got their ordinary hidden notice, nothing more.
+        to_asker = [m.subject for m in mail.outbox if m.to[0] == member.email]
+        assert to_asker == ["Your question has been hidden"]
+        assert owner.email not in {m.to[0] for m in mail.outbox}
+
+    def test_the_co_curator_hiding_tells_the_founder(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+
+        res = client_for(co_curator).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+
+        assert [m.to[0] for m in self._team_emails()] == [owner.email]
+
+    def test_hiding_clears_the_pending_question_for_every_manager(
+        self, space, member, owner, co_curator
+    ):
+        faq = self._ask(space, member)
+        assert (
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_QUESTION).count() == 2
+        )
+
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_QUESTION
+        ).exists()
+
+    def test_a_community_hide_sends_no_team_email(self, db):
+        # In COMMUNITY the managers of a thing are its owner alone, and they
+        # hid it — there is no team left to tell.
+        contributor = User.objects.create(code="HCON01", email="hcon@test.com", name="Member")
+        asker = User.objects.create(code="HASK01", email="hask@test.com", name="Asker")
+        group = Collection.objects.create(
+            code="HCOM01", owner=asker, headline="Street", mode=Collection.Mode.COMMUNITY
+        )
+        thing = Thing.objects.create(
+            code="HTHG01", owner=contributor, headline="A tent", type="LEND_THING"
+        )
+        group.things.add(thing)
+
+        res = client_for(asker).post(
+            f"/api/v1/things/{thing.code}/faq/", {"question": "Waterproof?"}, format="json"
+        )
+        assert res.status_code == 201
+        faq = FAQ.objects.get(code=res.data["code"])
+        mail.outbox.clear()
+
+        res = client_for(contributor).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        # The asker's ordinary hidden notice, and nothing else.
+        assert [m.to[0] for m in mail.outbox] == [asker.email]
+
+    def test_hiding_an_already_hidden_question_tells_nobody_again(
+        self, space, member, owner, co_curator
+    ):
+        faq = self._ask(space, member)
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        mail.outbox.clear()
+        notices_before = InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_HIDDEN
+        ).count()
+
+        # The co-curator hides it a moment later (or the founder clicks twice).
+        res = client_for(co_curator).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        assert res.data["faq"]["is_visible"] is False
+        assert mail.outbox == []
+        assert (
+            InAppNotification.objects.filter(type=InAppNotification.Type.FAQ_HIDDEN).count()
+            == notices_before
+        )
+
+    def test_showing_back_tells_nobody(self, space, member, owner, co_curator):
+        faq = self._ask(space, member)
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/hide/")
+        assert res.status_code == 200
+        mail.outbox.clear()
+
+        res = client_for(owner).post(f"/api/v1/faq/{faq.code}/show/")
+        assert res.status_code == 200
+        # Putting a question back is not something the team needs to hear.
+        assert mail.outbox == []
+
+
 class TestACoCuratorDecidesHolds:
     def test_a_co_curator_accepts_a_hold_on_a_lend_thing(self, db):
         owner = User.objects.create(code="LOWN01", email="lowner@test.com", name="Owner")

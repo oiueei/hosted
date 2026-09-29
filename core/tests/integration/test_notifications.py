@@ -12,6 +12,7 @@ Covers:
 - InAppNotification created for all user-action-triggered events.
 """
 
+import datetime
 from unittest.mock import patch
 
 import pytest
@@ -473,6 +474,36 @@ def test_booking_request_creates_in_app_notification_for_owner(two_users, thing_
     notif = InAppNotification.objects.get(user=owner, type=InAppNotification.Type.BOOKING_REQUESTED)
     assert notif.payload["thing_headline"] == thing.headline
     assert notif.payload["requester_name"] == requester.name
+    # A gift asks for no dates, so the notice carries none to show.
+    assert "start_date" not in notif.payload
+    assert "end_date" not in notif.payload
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("thing_type", ["LEND_THING", "RENT_THING"])
+def test_a_loan_or_rental_request_notice_carries_the_dates_asked_for(
+    two_users, thing_with_collection, thing_type
+):
+    owner, requester = two_users
+    thing, _ = thing_with_collection
+    thing.type = thing_type
+    thing.save()
+    start = datetime.date.today() + datetime.timedelta(days=2)
+    end = start + datetime.timedelta(days=3)
+
+    with (
+        patch("core.services.email_service.send_booking_request_email"),
+        patch("core.services.email_service.send_booking_confirmation_email"),
+    ):
+        resp = _make_client(requester).post(
+            f"/api/v1/things/{thing.code}/request/",
+            {"start_date": str(start), "end_date": str(end)},
+            format="json",
+        )
+
+    assert resp.status_code == status.HTTP_201_CREATED, resp.content
+    notif = InAppNotification.objects.get(user=owner, type=InAppNotification.Type.BOOKING_REQUESTED)
+    assert (notif.payload["start_date"], notif.payload["end_date"]) == (str(start), str(end))
 
 
 @pytest.mark.django_db
