@@ -9,7 +9,9 @@ the render.{% endcomment %}
 page — the shape every message shares now. This template renders the TOP half
 only (the card opens here, the h1 "parent" and the body blocks) and does NOT
 close it: the bottom half (a rule, the OIUEEI mark, the viral line, "manage
-your preferences", the legal link, then the two closing </div>s) is built in
+your preferences", the legal link, then the two closing </div>s and the
+closing </html> — this template must not close the document itself, or the
+footer would land outside it) is built in
 Python by email_service._bottom(), appended once per actual recipient — the
 one part of a message (digests, broadcasts) that is composed once per
 LANGUAGE but has to vary per person (a collection owner gets no viral line;
@@ -133,4 +135,3 @@ follow as text, accept first.{% endcomment %}
 {{ b.html }}
 {% endif %}{% endfor %}
 </div>
-</html>

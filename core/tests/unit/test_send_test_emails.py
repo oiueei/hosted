@@ -169,6 +169,20 @@ def test_the_mark_sits_right_after_the_rule_in_every_html_email():
 
 
 @pytest.mark.django_db
+def test_every_html_email_is_one_document_with_its_footer_inside_it():
+    """The footer (preferences, art. 14 legal link) is appended in Python after
+    the template renders, so the template must not close the document itself:
+    it used to end in `</html>`, which left two of them in every email and the
+    footer outside the first. A mail filter that cuts at the first `</html>`
+    would then take exactly the unsubscribe and legal links with it."""
+    for message in _run("--lang", "all"):
+        html = message.alternatives[0][0]
+        assert html.count("</html>") == 1, message.subject
+        assert html.index("/legal") < html.index("</html>"), message.subject
+        assert html.rstrip().endswith("</html>"), message.subject
+
+
+@pytest.mark.django_db
 def test_every_email_uses_exactly_the_three_named_sizes():
     """Three sizes, never a fourth (CA, 2026-09-22, superseding the single
     13px every-email size from a day earlier): EMAIL_BODY_SIZE (14px) for the

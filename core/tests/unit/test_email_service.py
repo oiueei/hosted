@@ -123,6 +123,20 @@ def test_every_email_links_to_the_legal_page():
 
 
 @pytest.mark.django_db
+def test_the_legal_link_sits_inside_the_one_html_document():
+    """The template renders only the top half of the card and `_bottom()` adds
+    the footer after it, so the document must close exactly once, at the very
+    end. Mandatory mail (the magic link) is the case with the shortest footer:
+    a rule, the mark and the legal link, and nothing else to hide behind."""
+    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert html.count("</html>") == 1
+    assert html.index('href="http://localhost:3000/legal"') < html.index("</html>")
+    assert html.rstrip().endswith("</html>")
+
+
+@pytest.mark.django_db
 def test_the_legal_link_follows_the_deployments_own_frontend_url():
     """Not hardcoded to localhost: a deployment sets MAGIC_LINK_BASE_URL to its
     real domain, and every derived link — this one included — has to follow."""

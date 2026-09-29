@@ -419,7 +419,8 @@ def _bottom(
     per-collection mute link), and always last the legal-notice link — art. 14
     GDPR, a disclosure and not a preference, so it shows on mandatory mail
     too. Closes the two ``<div>``\\s the card opened in ``layout.html`` and
-    left open (see the comment there for why).
+    left open (see the comment there for why), and the document itself: the
+    template stops short of ``</html>`` so the footer lands inside it.
 
     Replaces the earlier, separate ``_with_viral_line`` + ``_with_footer``:
     their pieces now interleave in one fixed visual order — the mark used to
