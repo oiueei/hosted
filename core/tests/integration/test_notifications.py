@@ -420,6 +420,30 @@ def test_booking_accept_via_api_creates_in_app_notification(two_users, thing_wit
 
 
 @pytest.mark.django_db
+def test_a_co_curators_decision_is_signed_by_the_co_curator(two_users, thing_with_collection):
+    """Since 2026-09 a PROPRIETARY collection's co-curator may decide its holds.
+    The requester's notice must name whoever actually decided: signed by the
+    thing's owner, a co-curator's accept would read as the founder confirming
+    a request she never saw."""
+    owner, requester = two_users
+    thing, collection = thing_with_collection
+    co_curator = User.objects.create(code="COC001", email="co@test.com", name="Co-Curator")
+    collection.invites.add(co_curator)
+    collection.co_owners.add(co_curator)
+    booking = _make_booking(owner, requester, thing)
+    client = _make_client(co_curator)
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = client.post(f"/api/v1/bookings/{booking.code}/accept/")
+
+    assert resp.status_code == status.HTTP_200_OK
+    notif = InAppNotification.objects.get(
+        user=requester, type=InAppNotification.Type.BOOKING_ACCEPTED
+    )
+    assert notif.payload["owner_name"] == co_curator.name
+
+
+@pytest.mark.django_db
 def test_booking_reject_via_api_creates_in_app_notification(two_users, thing_with_collection):
     owner, requester = two_users
     thing, _ = thing_with_collection
@@ -453,9 +477,12 @@ def test_booking_accept_via_rsvp_creates_in_app_notification(two_users, thing_wi
         resp = client.post(f"/api/v1/auth/verify/{rsvp.token}/")
 
     assert resp.status_code == status.HTTP_200_OK
-    assert InAppNotification.objects.filter(
+    notif = InAppNotification.objects.get(
         user=requester, type=InAppNotification.Type.BOOKING_ACCEPTED
-    ).exists()
+    )
+    # The emailed link was minted to the owner's address alone, so the decision
+    # is signed by the owner, not by whoever the fallback would pick.
+    assert notif.payload["owner_name"] == owner.name
 
 
 @pytest.mark.django_db

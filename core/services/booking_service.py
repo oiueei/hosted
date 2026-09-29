@@ -392,7 +392,7 @@ def _clear_request_notifications(booking):
     ).delete()
 
 
-def finalize_booking_decision(booking, accepted):
+def finalize_booking_decision(booking, accepted, decided_by=None):
     """Apply an owner's accept/reject decision and run the shared side-effects.
 
     Wraps accept_booking()/reject_booking() (which perform the locked, race-safe
@@ -401,6 +401,12 @@ def finalize_booking_decision(booking, accepted):
     the email/RSVP path (VerifyLinkView) and the in-app API path
     (BookingActionView) so this money/ownership-sensitive sequence lives in one
     place.
+
+    ``decided_by`` is the account that made the call, and it is who the
+    requester's notice names — a decision may be a co-curator's since 2026-09,
+    and "the founder confirmed your request" would be false in their mouth.
+    ``None`` (and the emailed RSVP path, which passes the owner explicitly)
+    falls back to ``booking.owner_code``, the thing's owner.
 
     Returns the updated Thing, or None when the booking was no longer PENDING (a
     concurrent transition already handled it) — each caller turns None into its
@@ -415,7 +421,7 @@ def finalize_booking_decision(booking, accepted):
     # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
     # the requester, a co-member, and the API withholds the owner's address from
     # them everywhere else (L2).
-    owner_name = booking.owner_code.name
+    owner_name = (decided_by if decided_by is not None else booking.owner_code).name
     # The booking doesn't record which collection it was made through, so the
     # requester-side notification deep-links through the same approximation the
     # request-side one used.
