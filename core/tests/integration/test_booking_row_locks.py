@@ -18,8 +18,12 @@ commits, re-reads, finds the booking settled and returns ``None``.
 **This file is why CI runs on Postgres.** SQLite reports
 ``has_select_for_update = False``, so Django drops the clause silently and these
 tests would measure the unlocked behaviour — they skip there instead of lying.
-Locally they are skipped; in CI (``DATABASE_URL`` → postgres:16) they run. To
-rehearse one by hand, point DATABASE_URL at a Postgres and run this file.
+Locally they are skipped; in CI (``DATABASE_URL`` → postgres:16) they run. The
+skip must never happen *in the job that has Postgres*: ``tests.yml`` declares
+``REQUIRE_POSTGRES_LOCK_TESTS=1`` next to its ``DATABASE_URL``, and under that
+promise a lockless database fails the run instead of skipping it. To rehearse
+one by hand, point DATABASE_URL at a Postgres and run this file; to rehearse
+the guard, run it on SQLite with the variable set.
 
 The barrier is the only artificial part, and it buys determinism rather than
 behaviour: ``BookingPeriod.accept``/``reject``/``cancel`` are wrapped so the
@@ -28,6 +32,7 @@ locked read. Nothing about the code under test is patched — the wrapper calls
 straight through.
 """
 
+import os
 import threading
 import time
 from datetime import date, timedelta
@@ -48,13 +53,33 @@ from core.services.booking_service import (
     request_standard_booking,
 )
 
-pytestmark = [
-    pytest.mark.django_db(transaction=True),
-    pytest.mark.skipif(
-        not connection.features.has_select_for_update,
-        reason="SQLite drops FOR UPDATE silently — these prove the lock, so they need Postgres",
-    ),
-]
+pytestmark = [pytest.mark.django_db(transaction=True)]
+
+
+@pytest.fixture(autouse=True)
+def _postgres_or_skip():
+    """The module's database gate, checked per test so ``-k`` can deselect it.
+
+    A ``skipif`` would keep the build green even where silence is the lie: if
+    the CI job that owns this file ever lost its ``postgres`` service or its
+    ``DATABASE_URL``, the seven lock tests would quietly not run. That job
+    declares ``REQUIRE_POSTGRES_LOCK_TESTS=1`` next to its ``DATABASE_URL``
+    (see ``tests.yml``), and under that promise a database without
+    ``select_for_update`` fails the run instead of skipping it. Jobs without
+    Postgres — ``hosted.yml``'s, which runs ``-k hosted`` and never collects
+    this file — never set the variable. Locally on SQLite the tests skip as
+    they always did; set the variable to rehearse the guard.
+    """
+    if connection.features.has_select_for_update:
+        return
+    if os.environ.get("REQUIRE_POSTGRES_LOCK_TESTS"):
+        pytest.fail(
+            "REQUIRE_POSTGRES_LOCK_TESTS is set — this job promises Postgres, but the "
+            "database reports no select_for_update support, so these lock tests "
+            "would silently not run",
+            pytrace=False,
+        )
+    pytest.skip("SQLite drops FOR UPDATE silently — these prove the lock, so they need Postgres")
 
 
 def _pending_booking(thing, owner, requester):

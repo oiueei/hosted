@@ -59,6 +59,9 @@ jobs:
 
     env:
       DATABASE_URL: postgres://oiueei:oiueei@localhost:5432/oiueei_test
+      # Promised to test_booking_row_locks.py: if this job ever lost its postgres
+      # service or DATABASE_URL, that promise turns the silent skip into a red run.
+      REQUIRE_POSTGRES_LOCK_TESTS: "1"
 
     steps:
       - name: Checkout code
