@@ -1,0 +1,48 @@
+{
+  "_about": "Shared by core/tests/unit/test_safe_next_path.py and frontend/src/utils/nextPath.test.js. The server (core.utils.safe_next_path) is the gate and the browser (utils/nextPath.js) is defence in depth; both decide whether a login's `next` may carry the reader to a page. Every row is either a same-site path the SPA really has or one thing a browser could read as somewhere else. The last row of each list is the length boundary (256 accepted, 257 refused), written out in full so a hand edit cannot quietly move it. JS keeps one extra local row, undefined, which JSON cannot carry.",
+  "accepted": [
+    "/collections/AbC123/things/XyZ789",
+    "/collections/new",
+    "/me/edit",
+    "/my-bookings",
+    "/AbC123",
+    "/collections/AbC123/join?thing=XyZ789",
+    "/collections/AbC123/things/XyZ789?back=%2Fcollections%2FAbC123",
+    "/xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "rejected": [
+    "//evil.com",
+    "/\\evil.com",
+    "https://evil.com",
+    "javascript:alert(1)",
+    "/login",
+    "/login?next=/x",
+    "/login/",
+    "/LOGIN",
+    "/%6Cogin",
+    "/logout",
+    "/verify/tok",
+    "/rsvp/tok",
+    "/magic-link/tok",
+    "/",
+    "/?a=1",
+    "",
+    null,
+    123,
+    ["/me"],
+    {
+      "path": "/me"
+    },
+    "/a b",
+    "/a\nb",
+    "/me\n",
+    "/x#y",
+    "/a:b",
+    "/a<b",
+    "/../me",
+    "/me/..",
+    "/%2e%2e/me",
+    "/%2E%2E/me",
+    "/xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ]
+}

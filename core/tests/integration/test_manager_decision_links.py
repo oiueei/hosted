@@ -138,6 +138,61 @@ class TestEveryManagerGetsTheirOwnEmail:
         assert holders == {contributor.code}
 
 
+class TestAManagerOfBothCollectionsHearsARequestOnce:
+    """A thing may sit in two PROPRIETARY collections with the same people
+    running both — the drill listed under "Tools" and under "Neighbours".
+    Whoever curates the two hears one request **once**: one email, one link
+    pair, one inbox notice, not one of each per collection. That is what the
+    dedupe in ``Thing.managers()`` buys; the query budget in
+    ``test_query_counts.py`` guards the fan-out's cost, but a rewrite of it
+    would not name this behaviour."""
+
+    def test_a_curator_of_both_collections_is_emailed_linked_and_warned_once(
+        self, db, owner, co_curator, member
+    ):
+        drill = Thing.objects.create(
+            code="LEND02", type=Thing.Type.LEND_THING, owner=owner, headline="Drill"
+        )
+        for code, name in (("HOLD02", "Tools"), ("HOLD03", "Neighbours")):
+            coll = Collection.objects.create(
+                code=code, owner=owner, headline=name, mode=Collection.Mode.PROPRIETARY
+            )
+            coll.invites.add(co_curator, member)
+            coll.co_owners.add(co_curator)
+            coll.things.add(drill)
+
+        mail.outbox.clear()
+        booking = _ask(member, drill)
+
+        for who in (owner, co_curator):
+            theirs = [m for m in mail.outbox if m.to == [who.email]]
+            assert len(theirs) == 1, f"{who.name} got {len(theirs)} emails, wanted 1"
+            links = RSVP.objects.filter(target_code=booking.code, user_code=who)
+            assert links.count() == 2
+            assert set(links.values_list("action", flat=True)) == {
+                RSVP.Action.BOOKING_ACCEPT,
+                RSVP.Action.BOOKING_REJECT,
+            }
+            assert (
+                InAppNotification.objects.filter(
+                    user=who,
+                    type=InAppNotification.Type.BOOKING_REQUESTED,
+                    payload__booking_code=booking.code,
+                ).count()
+                == 1
+            )
+        # And the fan-out as a whole: two managers, one pair of links and one
+        # notice each — nothing per collection.
+        assert RSVP.objects.filter(target_code=booking.code).count() == 4
+        assert (
+            InAppNotification.objects.filter(
+                type=InAppNotification.Type.BOOKING_REQUESTED,
+                payload__booking_code=booking.code,
+            ).count()
+            == 2
+        )
+
+
 class TestTheDecisionIsSignedByWhoeverPressed:
     def test_a_co_curators_link_accepts_and_names_them(self, catalogue, member, owner, co_curator):
         booking = _ask(member, catalogue["gift"])

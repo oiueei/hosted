@@ -1,57 +1,15 @@
 import { describe, test, expect } from 'vitest';
+import parity from '../test/nextPathParity.json';
 import { safeNextPath, loginPathFor } from './nextPath';
 
-// The same tables as core/tests/unit/test_safe_next_path.py (the rule is
-// duplicated on purpose: the server is the gate, this is defence in depth, and
-// nothing but these two tables stops them drifting). Where a row has no
-// meaning in JS it is left out: there is no `\n`-before-`$` quirk to guard, since
-// a JS `$` without the `m` flag only matches at the very end — but the row stays,
-// because "a trailing newline is refused" is the behaviour either way.
-const ACCEPTED = [
-  '/collections/AbC123/things/XyZ789',
-  '/collections/new',
-  '/me/edit',
-  '/my-bookings',
-  '/AbC123',
-  '/collections/AbC123/join?thing=XyZ789',
-  '/collections/AbC123/things/XyZ789?back=%2Fcollections%2FAbC123',
-  `/x${'a'.repeat(254)}`, // exactly 256 characters
-];
-
-const REJECTED = [
-  '//evil.com',
-  '/\\evil.com',
-  'https://evil.com',
-  'javascript:alert(1)',
-  '/login',
-  '/login?next=/x',
-  '/login/',
-  '/LOGIN',
-  '/%6Cogin',
-  '/logout',
-  '/verify/tok',
-  '/rsvp/tok',
-  '/magic-link/tok',
-  '/',
-  '/?a=1',
-  '',
-  null,
-  undefined,
-  123,
-  ['/me'],
-  { path: '/me' },
-  '/a b',
-  '/a\nb',
-  '/me\n',
-  '/x#y',
-  '/a:b',
-  '/a<b',
-  '/../me',
-  '/me/..',
-  '/%2e%2e/me',
-  '/%2E%2E/me',
-  `/x${'a'.repeat(255)}`, // one character over the limit
-];
+// The tables live in src/test/nextPathParity.json, read by this suite and by
+// core/tests/unit/test_safe_next_path.py (one of the two shared fixtures
+// CLAUDE.md names): the server is the gate, this is defence in depth, and one
+// file is what stops them drifting. The one row JSON cannot carry stays local:
+// `undefined` has no JSON spelling, and "a non-string is refused" is worth
+// saying on this side too.
+const ACCEPTED = parity.accepted;
+const REJECTED = [...parity.rejected, undefined];
 
 describe('safeNextPath', () => {
   test.each(ACCEPTED)('a same-site path the SPA has is returned untouched: %s', (value) => {
@@ -64,6 +22,18 @@ describe('safeNextPath', () => {
       expect(safeNextPath(value)).toBe('');
     }
   );
+
+  test('the shared table travelled intact', () => {
+    // The file held 31 rejected rows (+ undefined, which JSON cannot carry)
+    // and 8 accepted when the tables moved into it. The floor is against a
+    // reshaped or emptied copy silently testing nothing.
+    expect(parity.rejected.length).toBeGreaterThanOrEqual(30);
+    expect(ACCEPTED.length).toBeGreaterThanOrEqual(8);
+    // The boundary rows travel as full strings; a hand edit that changed their
+    // length would quietly move the limit every other row is measured against.
+    expect(ACCEPTED.at(-1), 'exactly at the limit').toHaveLength(256);
+    expect(parity.rejected.at(-1), 'one character over the limit').toHaveLength(257);
+  });
 
   test('a lone percent sign does not throw (the server tolerates it, so must this)', () => {
     // decodeURIComponent('%') throws; the whitelist allows '%', so a naive port of

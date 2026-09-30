@@ -267,7 +267,57 @@ describe('InboxNotifications — every type says something', () => {
         created: '2026-09-29T09:00:00Z',
       },
       says: [/You confirmed Lulu's request/i, /A mitre saw/],
+      label: /Hold confirmed/i,
       links: '/collections/COL001/things/THG009',
+      linkName: /view listing/i,
+    },
+    {
+      // The other two corners of the by_you × accepted square: the bodies are
+      // four keys and only two were pinned, so a crossed wire between the two
+      // first-person ones (or the two third-person ones) shipped invisibly.
+      what: 'a rejection you made yourself is your own trace, naming who asked',
+      notification: {
+        code: 'NOTA11',
+        type: 'BOOKING_DECIDED',
+        payload: {
+          thing_headline: 'A mitre saw',
+          requester_name: 'Lulu',
+          decider_name: 'Lala',
+          accepted: false,
+          by_you: true,
+          booking_code: 'BKG011',
+          thing_code: 'THG011',
+          collection_code: 'COL001',
+          start_date: '2026-10-01',
+          end_date: '2026-10-04',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/You declined Lulu's request/i, /A mitre saw/],
+      label: /Hold declined/i,
+      links: '/collections/COL001/things/THG011',
+      linkName: /view listing/i,
+    },
+    {
+      what: "a teammate's acceptance names them, and says it was a yes",
+      notification: {
+        code: 'NOTA12',
+        type: 'BOOKING_DECIDED',
+        payload: {
+          thing_headline: 'A board game',
+          requester_name: 'Lolo',
+          decider_name: 'Lala',
+          accepted: true,
+          by_you: false,
+          booking_code: 'BKG012',
+          thing_code: 'THG012',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/Lala confirmed Lolo's request/i, /A board game/],
+      label: /Hold confirmed/i,
+      links: '/collections/COL001/things/THG012',
       linkName: /view listing/i,
     },
     {
@@ -288,6 +338,7 @@ describe('InboxNotifications — every type says something', () => {
         created: '2026-09-29T09:00:00Z',
       },
       says: [/Lala declined Lolo's request/i, /A board game/],
+      label: /Hold declined/i,
       links: '/collections/COL001/things/THG010',
       linkName: /view listing/i,
     },
@@ -312,7 +363,7 @@ describe('InboxNotifications — every type says something', () => {
     },
   ];
 
-  test.each(CASES)('$what', async ({ notification, says, links, rejects, linkName }) => {
+  test.each(CASES)('$what', async ({ notification, says, links, rejects, linkName, label }) => {
     apiFetch.mockImplementation((url) => {
       if (url.startsWith('/api/v1/inbox/')) return ok([notification]);
       if (url.startsWith('/api/v1/auth/me/')) return ok(USER);
@@ -329,6 +380,9 @@ describe('InboxNotifications — every type says something', () => {
     for (const phrase of says) {
       expect(await screen.findByText(phrase, { exact: false })).toBeInTheDocument();
     }
+    // Only the four BOOKING_DECIDED rows carry one: their label is a separate
+    // key from the body and says which way the decision went.
+    if (label) expect(await screen.findByText(label)).toBeInTheDocument();
     // Not the broadcast fallback: that renders an empty body and a bare " — ".
     expect(container.textContent).not.toMatch(/\s—\s*Toy library\s*$/);
     expect(container.textContent).not.toMatch(/\{\{\w+\}\}/);
