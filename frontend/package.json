@@ -53,7 +53,7 @@
       "minimatch": "9.0.9"
     },
     "eslint-plugin-jsx-a11y": {
-      "brace-expansion": "1.1.18"
+      "brace-expansion": "1.1.21"
     },
     "jsdom": {
       "undici": "7.29.1"
