@@ -119,14 +119,22 @@ export default defineConfig(({ mode }) => ({
       // All four now sit 1.9-2.5 points under. Mirrored in CLAUDE.md, which
       // quotes these numbers — they move together or the doc starts lying.
       //
+      // Raised a seventh time at the close of the 2026-09-30 nice-to-have
+      // round (the two unpinned BOOKING_DECIDED corners, the i18n key sweep,
+      // the shared safe_next_path table). The suite reads 92.2 / 87.0 / 86.3 /
+      // 94.3 — twice, identically: the functions metric that wobbled with
+      // HomePage on 2026-09-29 held still on both runs, and two agreeing runs
+      // were the precondition for raising anything. All four sit 2.2-3.0
+      // points under.
+      //
       // The floor is not the goal — it only catches a drop. New code still owes
       // tests that name a behaviour; a change that lands under this line means
       // the code needs covering, never that the line needs lowering.
       thresholds: {
-        statements: 88,
-        branches: 82,
-        functions: 81,
-        lines: 90,
+        statements: 90,
+        branches: 84,
+        functions: 84,
+        lines: 92,
       },
     },
   },

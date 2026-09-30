@@ -3,67 +3,36 @@
 A magic link can carry the page the person was heading for when their session ran
 out, so the login can send them back to it. That is a redirect built from a value
 a client typed, which is exactly the shape of an open redirect: every row of the
-tables below is either a same-site path the SPA really has, or one thing a
-browser could read as *somewhere else* (another origin, a script, a page that only
-loops). The frontend mirrors the same tables in ``nextPath.test.js``.
+table in ``frontend/src/test/nextPathParity.json`` is either a same-site path the
+SPA really has, or one thing a browser could read as *somewhere else* (another
+origin, a script, a page that only loops). ``nextPath.test.js`` runs the same
+file — one of the two fixtures ``CLAUDE.md`` names as shared across the wire, so
+the server's table and the browser's defence in depth cannot drift apart.
 """
+
+import json
+from pathlib import Path
 
 import pytest
 
 from core.utils import safe_next_path
 
-ACCEPTED = [
-    "/collections/AbC123/things/XyZ789",
-    "/collections/new",
-    "/me/edit",
-    "/my-bookings",
-    "/AbC123",
-    "/collections/AbC123/join?thing=XyZ789",
-    # An encoded query value is what ``encodeURIComponent`` produces.
-    "/collections/AbC123/things/XyZ789?back=%2Fcollections%2FAbC123",
-    "/x" + "a" * 254,  # exactly 256 characters
-]
+ROOT = Path(__file__).resolve().parents[3]
+TABLE = json.loads((ROOT / "frontend" / "src" / "test" / "nextPathParity.json").read_text())
+ACCEPTED = TABLE["accepted"]
+REJECTED = TABLE["rejected"]
 
-REJECTED = [
-    # Another origin, or no path at all.
-    "//evil.com",
-    "/\\evil.com",
-    "https://evil.com",
-    "javascript:alert(1)",
-    # The SPA's own doors: a loop, or a page with nothing to return to.
-    "/login",
-    "/login?next=/x",
-    "/login/",
-    "/LOGIN",
-    "/%6Cogin",
-    "/logout",
-    "/verify/tok",
-    "/rsvp/tok",
-    "/magic-link/tok",
-    # No destination: the login's usual rule is better than Home.
-    "/",
-    "/?a=1",
-    "",
-    # Not a string.
-    None,
-    123,
-    ["/me"],
-    {"path": "/me"},
-    # Characters outside the whitelist.
-    "/a b",
-    "/a\nb",
-    "/me\n",  # ``$`` would let a trailing newline through
-    "/x#y",
-    "/a:b",
-    "/a<b",
-    # Traversal, raw or encoded.
-    "/../me",
-    "/me/..",
-    "/%2e%2e/me",
-    "/%2E%2E/me",
-    # One character over the limit.
-    "/x" + "a" * 255,
-]
+
+def test_the_shared_table_travelled_intact():
+    """The table is data now: a reshaped or emptied file must fail loudly, not
+    silently test nothing. It moved here holding 31 rejected and 8 accepted
+    rows, each list ending on its length boundary."""
+    assert len(REJECTED) >= 30
+    assert len(ACCEPTED) >= 8
+    # The boundary rows travel as full strings; a hand edit that changed their
+    # length would quietly move the limit every other row is measured against.
+    assert len(ACCEPTED[-1]) == 256  # exactly at the limit
+    assert len(REJECTED[-1]) == 257  # one character over
 
 
 @pytest.mark.parametrize("value", ACCEPTED)
