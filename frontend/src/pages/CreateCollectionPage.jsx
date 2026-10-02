@@ -35,7 +35,7 @@ export default function CreateCollectionPage() {
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
-  const [allowProposals, setAllowProposals] = useState(true);
+  const [allowProposals, setAllowProposals] = useState(false);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
