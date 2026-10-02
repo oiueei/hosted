@@ -289,6 +289,8 @@
     "errorLoading": "Error loading collection.",
     "curator": "Run by:",
     "curatorsLabel": "Run by:",
+    "curatorsMore_one": "and {{count}} more person",
+    "curatorsMore_other": "and {{count}} more people",
     "showMoreThings_one": "Show 1 more thing",
     "showMoreThings_other": "Show {{count}} more things",
     "visitorIntro": "You're browsing this group as a visitor.",

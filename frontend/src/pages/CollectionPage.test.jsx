@@ -1396,14 +1396,82 @@ describe('CollectionPage as a co-owner', () => {
     expect(screen.getAllByText('Run by:')).toHaveLength(1);
   });
 
+  // The hero's team line as a signed-in non-founder sees it, in the collection's
+  // own language: the profile has none saved, which is what lets the collection's
+  // reach the page's chrome.
+  const renderTeamHero = (language, overrides) => {
+    const respond = (body) => Promise.resolve({ ok: true, status: 200, json: async () => body });
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return respond([]);
+      if (url.endsWith('/auth/me/')) return respond({ code: 'ABC123', language: '' });
+      return respond({ ...CO_OWNED, language, ...overrides });
+    });
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  // The API sends a co-curator's bare `name` — never the email in its place (L2) —
+  // so one who set none arrives as ''. Joined with commas that left "Oriol, ," on
+  // the page; whoever has no name is counted after the names instead (CA, 2026-10-02).
+  describe('a co-curator with no name is counted at the end, not listed', () => {
+    const nameless = (code) => ({ code, name: '' });
+    const linked = (line) =>
+      within(line)
+        .getAllByRole('link')
+        .map((a) => a.textContent);
+
+    test('two without a name leave "and 2 more people" and no gaps', async () => {
+      renderTeamHero('en', { co_owners: [nameless('XYZ001'), nameless('XYZ002')] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder and 2 more people$/);
+      // Only who has a name is linked: a profile with no name has nothing to show.
+      expect(linked(line)).toEqual(['The Founder']);
+    });
+
+    test('one without a name is "1 more person"', async () => {
+      renderTeamHero('en', { co_owners: [nameless('XYZ001')] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder and 1 more person$/);
+    });
+
+    test('named and unnamed together: the names with commas, then the count', async () => {
+      renderTeamHero('en', { co_owners: [{ code: 'XYZ999', name: 'Nil' }, nameless('XYZ001')] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder, Nil and 1 more person$/);
+      expect(linked(line)).toEqual(['The Founder', 'Nil']);
+    });
+
+    test('a founder with no name is one of the people counted', async () => {
+      renderTeamHero('en', { owner_name: '', co_owners: [{ code: 'XYZ999', name: 'Nil' }] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: Nil and 1 more person$/);
+    });
+
+    test('with nobody named there is no line at all', async () => {
+      renderTeamHero('en', { owner_name: '', co_owners: [nameless('XYZ001'), nameless('XYZ002')] });
+
+      await screen.findByText('Kitchen Collection');
+      expect(screen.queryByText('Run by:')).not.toBeInTheDocument();
+    });
+  });
+
   // The label is one noun, "Dinamización:" — like a credit line, no gender, no
   // number — for a team of one and a team of three (CA, 2026-10-02), so it is
   // the same word in both lines. Nothing but these pins the Spanish and Catalan
   // wording of the hero.
   describe.each([
-    ['es', 'Dinamización:'],
-    ['ca', 'Dinamització:'],
-  ])('in a %s group', (language, label) => {
+    ['es', 'Dinamización:', 'y 2 personas más'],
+    ['ca', 'Dinamització:', 'i 2 persones més'],
+  ])('in a %s group', (language, label, twoMore) => {
     afterEach(async () => {
       // `useCollectionLanguage` moves the whole UI to the collection's language;
       // put it back so the next test starts in English.
@@ -1412,23 +1480,8 @@ describe('CollectionPage as a co-owner', () => {
       localStorage.removeItem('i18nextLng');
     });
 
-    const renderHero = (overrides) => {
-      const respond = (body) => Promise.resolve({ ok: true, status: 200, json: async () => body });
-      apiFetch.mockImplementation((url) => {
-        if (url.startsWith('/api/v1/inbox/')) return respond([]);
-        // A signed-in reader with no language saved on their profile, which is
-        // what lets the collection's own language reach the page's chrome.
-        if (url.endsWith('/auth/me/')) return respond({ code: 'ABC123', language: '' });
-        return respond({ ...CO_OWNED, language, owner_name: 'El Fundador', ...overrides });
-      });
-      render(
-        <MemoryRouter initialEntries={['/collections/COL001']}>
-          <Routes>
-            <Route path="/collections/:code" element={<CollectionPage />} />
-          </Routes>
-        </MemoryRouter>
-      );
-    };
+    const renderHero = (overrides) =>
+      renderTeamHero(language, { owner_name: 'El Fundador', ...overrides });
 
     test(`the founder and two co-curators come on one "${label}" line`, async () => {
       renderHero({
@@ -1449,6 +1502,18 @@ describe('CollectionPage as a co-owner', () => {
       const line = (await screen.findByText(label)).closest('p');
       expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador$`));
       expect(screen.getAllByText(label)).toHaveLength(1);
+    });
+
+    test(`co-curators with no name are counted after the names: "${twoMore}"`, async () => {
+      renderHero({
+        co_owners: [
+          { code: 'XYZ001', name: '' },
+          { code: 'XYZ002', name: '' },
+        ],
+      });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${twoMore}$`));
     });
   });
 });

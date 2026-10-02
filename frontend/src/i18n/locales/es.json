@@ -283,6 +283,8 @@
     "errorLoading": "Error al cargar la colección.",
     "curator": "Dinamización:",
     "curatorsLabel": "Dinamización:",
+    "curatorsMore_one": "y {{count}} persona más",
+    "curatorsMore_other": "y {{count}} personas más",
     "showMoreThings_one": "Ver 1 cosa más",
     "showMoreThings_other": "Ver {{count}} cosas más",
     "visitorIntro": "Estás viendo este grupo como visitante.",
