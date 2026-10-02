@@ -233,3 +233,123 @@ class TestSeedPoolIsNeverDestroyed:
             with django_capture_on_commit_callbacks(execute=True):
                 thing.delete()
         destroy.assert_called_once_with("oiueei/things/a-real-upload")
+
+
+@pytest.mark.django_db
+class TestAKeyAnotherRecordHoldsIsKept:
+    """Deleting a record never deletes a photo another record still shows.
+
+    A row does not own its keys. A key is the path of its photo's public URL, and
+    ``ImageIdField`` binds it to a folder, not to whoever uploaded it — so anyone
+    who can see a photo can save its key on a thing of their own. Before
+    2026-10-02, deleting that thing deleted the photo for its real owner too.
+    """
+
+    BORROWED = "oiueei/things/someone-elses-photo"
+
+    def test_a_member_cannot_delete_someone_elses_photo_by_borrowing_its_key(
+        self, authenticated_client, collection, user2, django_capture_on_commit_callbacks
+    ):
+        theirs = Thing.objects.create(
+            owner=user2, headline="Their lamp", type="GIFT_THING", thumbnail=self.BORROWED
+        )
+        created = authenticated_client.post(
+            "/api/v1/things/",
+            {
+                "headline": "Mine, with their photo",
+                "type": "GIFT_THING",
+                "collection_code": collection.code,
+                "thumbnail": self.BORROWED,
+            },
+            format="json",
+        )
+        assert created.status_code == 201
+
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                deleted = authenticated_client.delete(f"/api/v1/things/{created.data['code']}/")
+
+        assert deleted.status_code == 204
+        destroy.assert_not_called()
+        theirs.refresh_from_db()
+        assert theirs.thumbnail == self.BORROWED
+
+    @pytest.mark.parametrize(
+        "holder",
+        [
+            lambda u: Thing.objects.create(
+                owner=u, headline="x", type="GIFT_THING", thumbnail="oiueei/things/shared"
+            ),
+            lambda u: Thing.objects.create(
+                owner=u,
+                headline="x",
+                type="GIFT_THING",
+                gallery=["oiueei/things/other", "oiueei/things/shared"],
+            ),
+            lambda u: setattr(u, "photo", "oiueei/things/shared") or u.save(),
+            lambda u: Collection.objects.create(
+                owner=u, headline="x", thumbnail="oiueei/things/shared"
+            ),
+            lambda u: Collection.objects.create(
+                owner=u, headline="x", welcome_doc="oiueei/things/shared"
+            ),
+        ],
+        ids=["thing-thumbnail", "thing-gallery", "user-photo", "cover", "welcome-doc"],
+    )
+    def test_any_column_that_still_holds_the_key_keeps_it(
+        self, holder, django_capture_on_commit_callbacks
+    ):
+        holder(User.objects.create(email="holder@example.com"))
+        deleting = Thing.objects.create(
+            owner=User.objects.create(email="deleter@example.com"),
+            headline="Going",
+            type="GIFT_THING",
+            thumbnail="oiueei/things/shared",
+            gallery=["oiueei/things/only-mine"],
+        )
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                deleting.delete()
+
+        # Its own, unshared key still goes: the check spares keys, not records.
+        assert [c.args[0] for c in destroy.call_args_list] == ["oiueei/things/only-mine"]
+
+    def test_a_key_that_only_contains_the_deleted_key_does_not_save_it(
+        self, django_capture_on_commit_callbacks
+    ):
+        # The gallery check matches text first; a longer key with this one as its
+        # prefix is a different object and must not keep it alive.
+        owner = User.objects.create(email="prefix@example.com")
+        Thing.objects.create(
+            owner=owner, headline="x", type="GIFT_THING", gallery=["oiueei/things/pic-2"]
+        )
+        deleting = Thing.objects.create(
+            owner=owner, headline="y", type="GIFT_THING", gallery=["oiueei/things/pic"]
+        )
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                deleting.delete()
+
+        assert [c.args[0] for c in destroy.call_args_list] == ["oiueei/things/pic"]
+
+    def test_once_the_last_holder_goes_the_key_goes_too(self, django_capture_on_commit_callbacks):
+        first = Thing.objects.create(
+            owner=User.objects.create(email="first@example.com"),
+            headline="a",
+            type="GIFT_THING",
+            thumbnail="oiueei/things/shared",
+        )
+        second = Thing.objects.create(
+            owner=User.objects.create(email="second@example.com"),
+            headline="b",
+            type="GIFT_THING",
+            thumbnail="oiueei/things/shared",
+        )
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                first.delete()
+            destroy.assert_not_called()
+            with django_capture_on_commit_callbacks(execute=True):
+                second.delete()
+
+        assert [c.args[0] for c in destroy.call_args_list] == ["oiueei/things/shared"]

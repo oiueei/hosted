@@ -373,6 +373,12 @@ Frees the stored objects a record owns when the record itself is deleted, so rem
 | `Collection` | `thumbnail`, `welcome_doc` (the welcome PDF — also `resource_type=image`, so the default destroy kwargs are right) |
 | `User` | `photo` |
 
+#### A key another record still holds is never destroyed (2026-10-02)
+
+A row does not own its keys. A key is the path of its photo's public URL, and `ImageIdField` binds it to a **folder**, not to an uploader — so anyone who can see a photo can save its key on a thing of their own. Until 2026-10-02, deleting that thing deleted the photo for its real owner too. `_destroy` now asks **`is_referenced(key)`** first, at destroy time (after the commit, so the row being deleted no longer counts), and keeps a key any row still holds. The gallery is a JSON list and SQLite has no JSON containment lookup, so the check matches the list's text (`icontains`) on every backend and confirms on the decoded list — a longer key that merely starts with this one does not count.
+
+**One table of key-holding columns, `ASSET_FIELDS`** (`Thing`: thumbnail, gallery · `Collection`: thumbnail, welcome_doc · `User`: photo). The delete handler, `is_referenced` and the orphan sweep (`cleanup_orphan_images`, via `referenced_keys()`) all read it: a column missing from one hand-written copy is a live photo deleted.
+
 #### The seed pool is never destroyed
 
 Keys under **`storage.SEED_PREFIX`** (`oiueei/seed/`) are skipped outright. The demo's fixtures are a *shared, static pool*: every database that has ever run `seed_demo` points at the same objects, so they don't belong to the rows that reference them and one delete must not take them from every other environment.
