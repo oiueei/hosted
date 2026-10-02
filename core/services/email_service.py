@@ -1612,8 +1612,15 @@ def send_invite_rejected_email(invitee_name, collection_headline, owner_email, c
     )
 
 
-def send_booking_confirmation_email(requester, thing, booking, collection=None):
+def send_booking_confirmation_email(requester, thing, booking, collection=None, informed=None):
     """Send booking confirmation email to the requester.
+
+    ``informed`` is how many people the request told: the thing's managers bar the
+    requester, which is what ``send_booking_request_notifications`` fans out to and
+    passes in. The email says "the curator" for one and "the curators" for more,
+    and no longer names the owner (CA, 2026-10-02: with a team the request reaches
+    everyone who runs the thing, so naming one person was untrue). Without it, the
+    count is worked out here the same way.
 
     ``collection`` is the collection the request was made through
     (``booking_service.resolve_request_collection``) and feeds exactly one
@@ -1623,7 +1630,13 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
     """
     user, lang = _recipient(requester.email)
     T, L = _texts(lang), _local(lang)
-    owner_name = _member_name(thing.owner.name, lang)
+    if informed is None:
+        informed = len([m for m in thing.managers() if m.code != requester.code])
+    # One person, or more than one: the sentence is a whole phrase per number, not a
+    # word swapped in, because Spanish and Catalan change the verb too ("responderá"
+    # / "responderán"). Nobody told cannot happen (the owner is always a manager and
+    # a requester is never the owner); it is read as one rather than as "curators".
+    outro = T("confirmation_outro_one" if informed <= 1 else "confirmation_outro_other")
     thing_url = _thing_url(thing, reader=user, collection=collection)
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
@@ -1634,12 +1647,12 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
             action=action,
             thing=headline,
             when=_when_phrase(booking, T),
-            owner=owner_name,
+            outro=outro,
             url=thing_url,
         )
     else:
         plain = T("confirmation_plain").format(
-            action=action, thing=headline, owner=owner_name, url=thing_url
+            action=action, thing=headline, outro=outro, url=thing_url
         )
 
     note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
@@ -1651,7 +1664,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
         [
             _para(T("confirmation_intro").format(action=action)),
             *_booking_detail_blocks(booking, lang),
-            _para(T("confirmation_outro").format(owner=owner_name)),
+            _para(outro),
             _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
             *note_blocks,
         ],

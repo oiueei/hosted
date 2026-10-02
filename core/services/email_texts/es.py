@@ -182,16 +182,16 @@ TEXTS = {
     # Booking confirmation (to requester)
     "confirmation_subject": "Solicitud de {action} enviada",
     "confirmation_plain_dated": (
-        "Tu solicitud de {action} para '{thing}' {when} se ha enviado. "
-        "Hemos avisado a {owner} — te responderá pronto. "
-        "Ver la cosa: {url}"
+        "Tu solicitud de {action} para '{thing}' {when} se ha enviado. {outro} Ver la cosa: {url}"
     ),
     "confirmation_plain": (
-        "Tu solicitud de {action} para '{thing}' se ha enviado. "
-        "Hemos avisado a {owner} — te responderá pronto. Ver la cosa: {url}"
+        "Tu solicitud de {action} para '{thing}' se ha enviado. {outro} Ver la cosa: {url}"
     ),
     "confirmation_intro": "Tu solicitud de {action} se ha enviado:",
-    "confirmation_outro": "Hemos avisado a {owner} — te responderá pronto.",
+    # Who was told: one person who runs the thing, or more than one (a team) — the
+    # person's name is not in it any more (CA, 2026-10-02).
+    "confirmation_outro_one": "Hemos avisado al dinamizador — te responderá pronto.",
+    "confirmation_outro_other": "Hemos avisado a los dinamizadores — te responderán pronto.",
     # FAQ question (to owner)
     "faq_question_subject": "Hay una pregunta por responder",
     "faq_question_plain": (

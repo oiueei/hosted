@@ -191,15 +191,17 @@ TEXTS = {
     "confirmation_subject": "Sol·licitud {action} enviada",
     "confirmation_plain_dated": (
         "La teva sol·licitud {action} per a '{thing}' {when} s'ha enviat. "
-        "Hem avisat {owner} — et respondrà aviat. "
+        "{outro} "
         "Veure la cosa: {url}"
     ),
     "confirmation_plain": (
-        "La teva sol·licitud {action} per a '{thing}' s'ha enviat. "
-        "Hem avisat {owner} — et respondrà aviat. Veure la cosa: {url}"
+        "La teva sol·licitud {action} per a '{thing}' s'ha enviat. {outro} Veure la cosa: {url}"
     ),
     "confirmation_intro": "La teva sol·licitud {action} s'ha enviat:",
-    "confirmation_outro": "Hem avisat {owner} — et respondrà aviat.",
+    # Who was told: one person who runs the thing, or more than one (a team) — the
+    # person's name is not in it any more (CA, 2026-10-02).
+    "confirmation_outro_one": "Hem avisat el dinamitzador — aviat et respondrà.",
+    "confirmation_outro_other": "Hem avisat els dinamitzadors — aviat et respondran.",
     # FAQ question (to owner)
     "faq_question_subject": "Hi ha una pregunta per respondre",
     "faq_question_plain": (
