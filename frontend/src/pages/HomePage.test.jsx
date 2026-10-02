@@ -97,6 +97,42 @@ describe('HomePage — which section leads', () => {
 });
 
 /**
+ * A co-curator is always on the group's invite list too, so the group they help
+ * run came back from both reads and showed twice — under "My collections" and
+ * under "Shared with me" (CA, 2026-10-02). It is theirs to run: it belongs to the
+ * first section only, and a group they are a plain member of stays in the second.
+ */
+describe('HomePage — a group you help run shows once', () => {
+  test('it is listed under My collections and not again under Shared with me', async () => {
+    const coCurated = { ...GROUP, code: 'COL050', headline: 'Team workshop', is_curator: true };
+    const memberOf = { ...GROUP, is_curator: false };
+    mockDashboard({ mine: [coCurated], invited: [coCurated, memberOf] });
+    renderHome();
+
+    await screen.findByText('Bibliocoses');
+    expect(screen.getAllByText('Team workshop')).toHaveLength(1);
+    const shared = screen.getByRole('heading', { level: 2, name: 'Shared with me' });
+    const mineHeading = screen.getByRole('heading', { level: 2, name: 'My collections' });
+    const following = (heading, text) =>
+      heading.compareDocumentPosition(screen.getByText(text)) & Node.DOCUMENT_POSITION_FOLLOWING;
+    // "My collections" leads (the account runs one), so the team's group sits
+    // between the two headings and the member's group after "Shared with me".
+    expect(following(mineHeading, 'Team workshop')).toBeTruthy();
+    expect(following(shared, 'Team workshop')).toBeFalsy();
+    expect(following(shared, 'Bibliocoses')).toBeTruthy();
+  });
+
+  test('with only a co-curated group there is nothing shared to list', async () => {
+    const coCurated = { ...GROUP, code: 'COL050', headline: 'Team workshop', is_curator: true };
+    mockDashboard({ mine: [coCurated], invited: [coCurated] });
+    renderHome();
+
+    await screen.findByText('No one has shared a collection with you yet.');
+    expect(screen.getAllByText('Team workshop')).toHaveLength(1);
+  });
+});
+
+/**
  * The hero used to repeat the account menu: "My profile", "My requests" and, for
  * some accounts, "Requests to me", each a full-width button, so a phone showed up
  * to four of them stacked before the inbox and the groups. It keeps the one thing
