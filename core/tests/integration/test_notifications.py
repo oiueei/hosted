@@ -477,6 +477,49 @@ def test_the_team_sees_a_co_curators_decision(two_users, thing_with_collection):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("who", ["named", "unnamed"])
+def test_the_request_and_its_decision_call_the_requester_the_same_thing(
+    two_users, thing_with_collection, who
+):
+    """CA, 2026-10-02: "New request" showed the requester's email and "Request
+    confirmed" called the same person "a member" — the request used their display
+    name (name, else email) and the decision the bare name. Both readers manage the
+    thing and the request already showed them the address, so the decision names
+    them the way the request did."""
+    owner, requester = two_users
+    thing, collection = thing_with_collection
+    if who == "unnamed":
+        requester.name = ""
+        requester.save(update_fields=["name"])
+    co_curator = User.objects.create(code="COC004", email="co4@test.com", name="Co-Curator")
+    collection.invites.add(co_curator)
+    collection.co_owners.add(co_curator)
+
+    with (
+        patch("core.services.email_service.send_booking_request_email"),
+        patch("core.services.email_service.send_booking_confirmation_email"),
+    ):
+        resp = _make_client(requester).post(
+            f"/api/v1/things/{thing.code}/request/", {}, format="json"
+        )
+    assert resp.status_code == status.HTTP_201_CREATED
+    asked = InAppNotification.objects.get(
+        user=owner, type=InAppNotification.Type.BOOKING_REQUESTED
+    ).payload["requester_name"]
+    booking = BookingPeriod.objects.get(thing_code=thing, requester_code=requester)
+
+    with patch("core.services.email_service.send_booking_decision_email"):
+        resp = _make_client(co_curator).post(f"/api/v1/bookings/{booking.code}/accept/")
+    assert resp.status_code == status.HTTP_200_OK
+    decided = InAppNotification.objects.get(
+        user=owner, type=InAppNotification.Type.BOOKING_DECIDED
+    ).payload["requester_name"]
+
+    assert decided == asked
+    assert decided == (requester.email if who == "unnamed" else requester.name)
+
+
+@pytest.mark.django_db
 def test_a_manager_who_asked_gets_no_team_trail_about_their_own_request(
     two_users, thing_with_collection
 ):

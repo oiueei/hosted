@@ -446,9 +446,14 @@ def _notify_team_of_decision(booking, thing, collection, decider, accepted):
     for manager in audience.values():
         payload = {
             "thing_headline": thing.headline,
-            # Bare names (L2): every reader here is a co-member of the decider
-            # and the requester alike.
-            "requester_name": booking.requester_code.name,
+            # The requester is named the way the request that asked about them
+            # named them (`send_booking_request_notifications`): the name, or their
+            # email when they set none. Every reader here manages the thing, and the
+            # request already showed them that address — a bare name here made the
+            # same person "a member" in one card and an email in the next (CA,
+            # 2026-10-02). The decider is a co-member, so theirs stays the bare name
+            # (L2).
+            "requester_name": booking.requester_code.display_name,
             "decider_name": decider.name,
             "accepted": accepted,
             "booking_code": booking.code,
