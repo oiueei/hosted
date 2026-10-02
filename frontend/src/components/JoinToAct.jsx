@@ -102,7 +102,7 @@ export default function JoinToAct({
           </p>
         )}
         <div style={{ marginTop: 'var(--spacing-s)' }}>
-          <Button type="submit" disabled={loading} style={btnStyle}>
+          <Button type="submit" fullWidth disabled={loading} style={btnStyle}>
             {loading ? t('joinToAct.joining') : t('joinToAct.join')}
           </Button>
         </div>
