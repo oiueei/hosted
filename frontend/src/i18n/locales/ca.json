@@ -415,7 +415,7 @@
     "dateOverlap": "La data coincideix amb una altra sol·licitud o reserva.",
     "dateRange": "La data ha d'estar entre avui i 90 dies a partir d'avui.",
     "successLabel": "Tot llest!",
-    "successMessage": "Ja hem avisat al propietari — aviat et respondrà.",
+    "successMessage": "Ja hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
     "backTo": "Tornar a {{label}}",
     "errorSending": "Error en enviar la sol·licitud."
   },
@@ -1014,7 +1014,7 @@
     "projectNoteLabel": "Per a què ho necessites? (opcional)",
     "projectNoteHelper": "Queden {{remaining}} caràcters",
     "successLabel": "Reservat",
-    "successMessage": "La teva reserva està confirmada; n'hem avisat el propietari.",
+    "successMessage": "La teva reserva està confirmada; n'hem avisat qui la gestiona.",
     "joinedLabel": "T'has unit al grup",
     "joinedGroup": "Per reservar aquí t'has unit a {{group}}. Pots sortir-ne des del teu perfil.",
     "dateSummary": "Reservat del {{start}} al {{end}}.",

@@ -160,15 +160,15 @@ TEXTS = {
     "booking_request_subject": "You have a pending {action} request",
     "booking_request_plain_dated": (
         "{requester} has sent a {action} request for '{thing}' {when}. "
-        "Confirm hold: {accept} | Cancel hold: {reject}"
+        "Confirm hold: {accept} | Decline hold: {reject}"
     ),
     "booking_request_plain": (
         "{requester} has sent a {action} request for '{thing}'. "
-        "Confirm hold: {accept} | Cancel hold: {reject}"
+        "Confirm hold: {accept} | Decline hold: {reject}"
     ),
     "booking_request_intro": "{requester} has sent a {action} request:",
     "hold_confirm_cta": "Confirm hold",
-    "hold_cancel_cta": "Cancel hold",
+    "hold_cancel_cta": "Decline hold",
     # Booking decision (to requester)
     "decision_subject_confirmed": "Your request is confirmed",
     "decision_subject_cancelled": "Your request didn't go through",

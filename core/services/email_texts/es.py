@@ -154,15 +154,15 @@ TEXTS = {
     "booking_request_plain_dated": (
         "{requester} te ha enviado una solicitud de {action} para '{thing}' "
         "{when}. "
-        "Confirmar la reserva: {accept} | Cancelar la reserva: {reject}"
+        "Confirmar la solicitud: {accept} | Rechazar la solicitud: {reject}"
     ),
     "booking_request_plain": (
         "{requester} te ha enviado una solicitud de {action} para '{thing}'. "
-        "Confirmar la reserva: {accept} | Cancelar la reserva: {reject}"
+        "Confirmar la solicitud: {accept} | Rechazar la solicitud: {reject}"
     ),
     "booking_request_intro": "{requester} te ha enviado una solicitud de {action}:",
-    "hold_confirm_cta": "Confirmar la reserva",
-    "hold_cancel_cta": "Cancelar la reserva",
+    "hold_confirm_cta": "Confirmar la solicitud",
+    "hold_cancel_cta": "Rechazar la solicitud",
     # Booking decision (to requester)
     "decision_subject_confirmed": "Tu solicitud está confirmada",
     "decision_subject_cancelled": "Tu solicitud no ha salido adelante",

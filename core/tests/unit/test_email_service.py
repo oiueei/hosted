@@ -422,7 +422,7 @@ def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, use
     assert primary in html
     assert secondary in html
     assert ">Confirm hold</a>" in html
-    assert ">Cancel hold</a>" in html
+    assert ">Decline hold</a>" in html
     assert html.index(primary) < html.index(secondary)
     # The old equal-weight row is gone.
     assert f'<a href="{HOLD_ACCEPT}">Confirm hold</a>' not in html
@@ -441,7 +441,7 @@ def test_the_hold_request_spells_both_links_out_under_the_buttons(user, user2, t
     reject_text = f">{HOLD_REJECT}</a>"
     assert accept_text in html
     assert reject_text in html
-    assert html.index("Cancel hold</a>") < html.index("copy and paste these links")
+    assert html.index("Decline hold</a>") < html.index("copy and paste these links")
     assert html.index(accept_text) < html.index(reject_text)
     assert HOLD_ACCEPT in msg.body
     assert HOLD_REJECT in msg.body
@@ -451,8 +451,8 @@ def test_the_hold_request_spells_both_links_out_under_the_buttons(user, user2, t
 @pytest.mark.parametrize(
     "lang, label, phrase",
     [
-        ("es", "Confirmar la reserva", "copia y pega estos enlaces"),
-        ("ca", "Cancel·lar la reserva", "copia i enganxa aquests enllaços"),
+        ("es", "Confirmar la solicitud", "copia y pega estos enlaces"),
+        ("ca", "Rebutjar la sol·licitud", "copia i enganxa aquests enllaços"),
     ],
 )
 def test_the_hold_request_buttons_and_fallback_are_translated(
@@ -463,6 +463,35 @@ def test_the_hold_request_buttons_and_fallback_are_translated(
 
     assert f">{label}</a>" in html
     assert phrase in html
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "lang, confirm, decline, never",
+    [
+        ("es", "Confirmar la solicitud", "Rechazar la solicitud", "reserva"),
+        ("ca", "Confirmar la sol·licitud", "Rebutjar la sol·licitud", "reserva"),
+        ("en", "Confirm hold", "Decline hold", "Cancel"),
+    ],
+)
+def test_the_hold_request_buttons_say_request_and_decline_never_reservation_or_cancel(
+    user, user2, thing, lang, confirm, decline, never
+):
+    """A hold on a loan is a **request** (D2: "reservation" is only RESERVE_THING, which
+    confirms itself and never comes through here), and the second button *declines* it:
+    it cancels nothing. The email said "Confirmar la reserva / Cancelar la reserva"
+    (CA, 2026-10-02), where the app's own button had said "Reject request" since the
+    R round. The buttons and the plain-text line that repeats them say the same."""
+    with override_settings(EMAIL_LANGUAGE=lang):
+        msg = _hold_request(user, user2, thing)
+    html = msg.alternatives[0][0]
+
+    assert f">{confirm}</a>" in html
+    assert f">{decline}</a>" in html
+    assert f"{confirm}: {HOLD_ACCEPT}" in msg.body
+    assert f"{decline}: {HOLD_REJECT}" in msg.body
+    for text in (html, msg.body):
+        assert never not in text.replace(thing.headline, "")
 
 
 # --- The house rule for action buttons (CA, 2026-09-21) ------------------------
