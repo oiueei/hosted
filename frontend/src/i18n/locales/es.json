@@ -59,7 +59,15 @@
   "joinToAct": {
     "heading": "Únete para participar",
     "body": "Únete para pedir, reservar, preguntar o añadir tus propias cosas. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
-    "bodyNamed": "Únete para pedir, reservar, preguntar o añadir tus propias cosas a {{collection}}. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
+    "bodyActions": "Únete para {{actions}} en {{collection}}. Escribe tu correo y te enviaremos un enlace mágico: sin contraseña ni formularios de registro.",
+    "verb": {
+      "GIFT_THING": "pedir",
+      "SELL_THING": "comprar",
+      "LEND_THING": "tomar prestado",
+      "RENT_THING": "alquilar",
+      "RESERVE_THING": "reservar",
+      "addOwn": "añadir tus propias cosas"
+    },
     "emailLabel": "Correo electrónico",
     "emailPlaceholder": "tu@ejemplo.com",
     "join": "Envíame un enlace mágico",

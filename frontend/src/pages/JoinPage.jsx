@@ -41,6 +41,10 @@ export default function JoinPage() {
   // keep the generic copy rather than inventing a name.
   const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
   const [collectionLanguage, setCollectionLanguage] = useState('');
+  // What a member can do there — the door's first line names exactly that. The
+  // API gives both to an anonymous reader of a PUBLIC collection.
+  const [mode, setMode] = useState('');
+  const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   // The raw headline, per-language map and all, for the hook to read.
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
@@ -57,6 +61,8 @@ export default function JoinPage() {
       .then((data) => {
         if (data?.headline) setHeadline(L(data.headline));
         setCollectionLanguage(data?.language || '');
+        setMode(data?.mode || '');
+        setAllowedThingTypes(data?.allowed_thing_types || []);
         setOwnerHeadline(data?.headline || '');
       })
       .catch(() => {});
@@ -93,7 +99,13 @@ export default function JoinPage() {
         />
       </div>
       <div className="page-container">
-        <JoinToAct collectionCode={code} collectionHeadline={headline} thingCode={thingCode} />
+        <JoinToAct
+          collectionCode={code}
+          collectionHeadline={headline}
+          thingCode={thingCode}
+          mode={mode}
+          allowedThingTypes={allowedThingTypes}
+        />
       </div>
     </div>
   );

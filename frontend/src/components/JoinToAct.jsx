@@ -4,6 +4,7 @@ import { TextInput, Button, Notification } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
 import { loginPathFor } from '../utils/nextPath';
+import { joinActions } from '../utils/joinActions';
 
 /**
  * "Log in to act" body rendered by JoinPage for an anonymous visitor on a PUBLIC
@@ -14,11 +15,21 @@ import { loginPathFor } from '../utils/nextPath';
  * is needed — and the code only ever joins a PUBLIC collection (the backend
  * silently ignores it otherwise).
  *
+ * The first line promises what a member of THIS collection can do — its own
+ * verbs, from the thing types it allows and its mode (`utils/joinActions.js`) —
+ * and falls back to the generic sentence until the collection has loaded.
+ *
  * The request itself lives in `useJoin`, shared with `MagicLinkJoinPage`
  * (`/share/:token`, and whatever door a deployment adds); only the presentation differs.
  */
-export default function JoinToAct({ collectionCode, collectionHeadline, thingCode }) {
-  const { t } = useTranslation();
+export default function JoinToAct({
+  collectionCode,
+  collectionHeadline,
+  thingCode,
+  mode,
+  allowedThingTypes,
+}) {
+  const { t, i18n } = useTranslation();
   const { btnStyle } = useTheeeme();
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: 'joinToAct.sentBody',
@@ -34,6 +45,13 @@ export default function JoinToAct({ collectionCode, collectionHeadline, thingCod
   const returnPath = thingCode
     ? `/collections/${collectionCode}/things/${thingCode}`
     : `/collections/${collectionCode}`;
+
+  // No mode means the collection has not loaded (or a caller that never asks for
+  // it): the generic sentence, not a guess at what is allowed.
+  const actions =
+    collectionHeadline && mode
+      ? joinActions({ allowedThingTypes, mode, t, locale: i18n.language })
+      : '';
 
   if (status === 'success') {
     return (
@@ -59,8 +77,8 @@ export default function JoinToAct({ collectionCode, collectionHeadline, thingCod
           enter the heading outline. No `measure` here — this wrapper already
           sets the column, and the form below shares its width. */}
       <p className="login-pitch">
-        {collectionHeadline
-          ? t('joinToAct.bodyNamed', { collection: collectionHeadline })
+        {actions
+          ? t('joinToAct.bodyActions', { actions, collection: collectionHeadline })
           : t('joinToAct.body')}
       </p>
       <form onSubmit={submit} style={{ marginTop: 'var(--spacing-m)' }}>

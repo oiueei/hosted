@@ -59,7 +59,15 @@
   "joinToAct": {
     "heading": "Uneix-t'hi per participar",
     "body": "Uneix-te per demanar, reservar, preguntar o afegir les teves coses. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
-    "bodyNamed": "Uneix-te per demanar, reservar, preguntar o afegir les teves coses a {{collection}}. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
+    "bodyActions": "Uneix-te per {{actions}} a {{collection}}. Escriu el teu correu i t'enviarem un enllaç màgic: sense contrasenya ni formularis de registre.",
+    "verb": {
+      "GIFT_THING": "demanar",
+      "SELL_THING": "comprar",
+      "LEND_THING": "demanar prestat",
+      "RENT_THING": "llogar",
+      "RESERVE_THING": "reservar",
+      "addOwn": "afegir les teves coses"
+    },
     "emailLabel": "Correu electrònic",
     "emailPlaceholder": "tu@exemple.com",
     "join": "Envia'm un enllaç màgic",

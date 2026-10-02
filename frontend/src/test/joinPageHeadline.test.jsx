@@ -35,13 +35,21 @@ describe('JoinPage — the collection is named', () => {
   test('names the collection when arriving cold, with no navigation state', async () => {
     apiFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ code: 'PUB001', headline: 'Tool Library' }),
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline: 'Tool Library',
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+        }),
     });
 
     renderJoin(undefined);
 
-    // The named variant of the body copy — the sentence that asks for the email.
-    expect(await screen.findByText(/things to Tool Library/)).toBeInTheDocument();
+    // The named variant of the body copy — the sentence that asks for the email —
+    // with the verbs the collection endpoint gave: a lending library says "borrow",
+    // not the four verbs every collection used to promise.
+    expect(await screen.findByText(/^Join to borrow in Tool Library\./)).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/PUB001/', expect.anything());
   });
 
@@ -52,17 +60,15 @@ describe('JoinPage — the collection is named', () => {
         Promise.resolve({
           code: 'PUB001',
           headline: JSON.stringify({ en: 'Tool Library', es: 'Biblioteca de herramientas' }),
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
         }),
     });
 
     renderJoin(undefined);
 
     // The test i18n runs in English, so the raw map must never reach the screen.
-    expect(
-      await screen.findByText(
-        /Join to request, reserve, ask a question or add your own things to Tool Library/
-      )
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^Join to borrow in Tool Library\./)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\{"en"/);
   });
 

@@ -65,7 +65,15 @@
   "joinToAct": {
     "heading": "Join to take part",
     "body": "Join to request, reserve, ask a question or add your own things. Enter your email and we'll send you a magic link — no password, no sign-up form.",
-    "bodyNamed": "Join to request, reserve, ask a question or add your own things to {{collection}}. Enter your email and we'll send you a magic link — no password, no sign-up form.",
+    "bodyActions": "Join to {{actions}} in {{collection}}. Enter your email and we'll send you a magic link — no password, no sign-up form.",
+    "verb": {
+      "GIFT_THING": "claim",
+      "SELL_THING": "buy",
+      "LEND_THING": "borrow",
+      "RENT_THING": "rent",
+      "RESERVE_THING": "reserve",
+      "addOwn": "add your own things"
+    },
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "join": "Send me a magic link",
