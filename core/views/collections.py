@@ -63,6 +63,7 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
+from core.services.team import drop_team_notices_of
 from core.utils import redact_email
 from core.validators import SafeHeadlineField
 from core.views._helpers import (
@@ -479,12 +480,17 @@ class CollectionInviteView(APIView):
             invited_user = None
 
         if invited_user:
+            was_co_owner = collection.co_owners.filter(code=invited_user.code).exists()
             collection.invites.remove(invited_user)
             # co_owners is a subset of invites by construction (promotion, never
             # a separate door in) — losing membership must never leave a stale
             # co-owner row behind. Unconditional and idempotent: a no-op for
             # anyone who was never promoted.
             collection.co_owners.remove(invited_user)
+            if was_co_owner:
+                # They stopped running the group: the requests and reservations it
+                # sent them to decide are no longer theirs (same as a demotion).
+                drop_team_notices_of(invited_user, collection)
             Event.log(Event.Kind.MEMBER_LEFT, actor=invited_user, collection=collection)
 
             # Notify the removed user — invited_user is already in hand (fetched
@@ -663,6 +669,10 @@ class CollectionCoOwnerView(APIView):
                     "collection_code": collection.code,
                 },
             )
+            # After the DEMOTED notice, so the one that tells them what happened is
+            # never in the way: what goes is the team's requests and reservations of
+            # this group, which they can no longer decide.
+            drop_team_notices_of(member, collection)
 
         return Response(
             {"message": "Demoted to member", "user_code": member.code},

@@ -508,7 +508,7 @@ Promote or demote a co-curator, **in either mode** (2026-09, co-curators in PROP
 
 **`DELETE` behaviour:**
 - Same membership validation as POST, **except no `co_owners_denial` check** — the gate is on bringing co-curator status into existence, never on living in it (the same grandfathering `creator_policy` already applies to a mode or a verb). A curator must always be able to demote, even on a deployment that has since disabled the feature.
-- Removes from `co_owners` (idempotent, a harmless no-op on a plain member) and, if they were actually a co-owner, creates a `DEMOTED_CO_OWNER` notification. The member stays in `invites` — demotion removes the admin tier, not the membership.
+- Removes from `co_owners` (idempotent, a harmless no-op on a plain member) and, if they were actually a co-owner, creates a `DEMOTED_CO_OWNER` notification **and then takes out of their inbox the team notices of this collection** (`drop_team_notices_of`, 2026-10-02 — see `services/CLAUDE.md` § The team). The member stays in `invites` — demotion removes the admin tier, not the membership. Removing a co-curator from the group (`CollectionInviteView.delete`) ends the role too and does the same; removing a plain member does not.
 
 **Request body:**
 ```json

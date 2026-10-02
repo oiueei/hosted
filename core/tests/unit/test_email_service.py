@@ -906,6 +906,155 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "2026-03-05" not in body and "2026-03-05" not in html
 
 
+# --- "We've let the curator(s) know" (CA, 2026-10-02) ---------------------------
+#
+# The "Your request was sent" email named the thing's owner ("Hemos avisado a Carlos
+# Alberto"), but with a team the request reaches everyone who runs the thing. It now
+# says who was told by number — the curator, or the curators — and the verb follows
+# ("responderá" / "responderán"), in the HTML paragraph and in both plain-text
+# sentences. How many were told is the request's fan-out: the thing's managers bar
+# the requester.
+
+TOLD = {
+    "es": (
+        "Hemos avisado al dinamizador — te responderá pronto.",
+        "Hemos avisado a los dinamizadores — te responderán pronto.",
+    ),
+    "ca": (
+        "Hem avisat el dinamitzador — aviat et respondrà.",
+        "Hem avisat els dinamitzadors — aviat et respondran.",
+    ),
+    "en": (
+        "We've let the curator know — they'll get back to you soon.",
+        "We've let the curators know — they'll get back to you soon.",
+    ),
+}
+
+
+def _told_by(user, user2, thing, lang, informed, dates):
+    from datetime import date
+
+    user2.language = lang
+    user2.save(update_fields=["language"])
+    if dates:
+        booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    else:
+        booking = _loan(user, user2, thing, None, None)
+    mail.outbox.clear()
+    email_service.send_booking_confirmation_email(user2, thing, booking, informed=informed)
+    return mail.outbox[0]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("dates", [True, False], ids=["dated", "undated"])
+@pytest.mark.parametrize("informed, which", [(1, 0), (2, 1), (5, 1)])
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_the_confirmation_says_the_curator_or_the_curators_by_how_many_were_told(
+    user, user2, thing, lang, informed, which, dates
+):
+    msg = _told_by(user, user2, thing, lang, informed, dates)
+
+    from django.utils.html import escape
+
+    said, other = TOLD[lang][which], TOLD[lang][1 - which]
+    html = msg.alternatives[0][0]
+    # The whole sentence, in the HTML paragraph (escaped, as the email escapes it)
+    # and in the plain-text body…
+    assert escape(said) in html
+    assert said in msg.body
+    # …never the other number's, and never the owner's name.
+    assert escape(other) not in html
+    assert other not in msg.body
+    assert user.name not in html
+    assert user.name not in msg.body
+
+
+@pytest.mark.django_db
+def test_without_being_told_how_many_the_confirmation_counts_them_itself(
+    user, user2, thing, collection
+):
+    """The request's fan-out passes the number; called without it (the sample
+    command, an older caller) the email works it out the same way: the thing's
+    managers, bar the requester."""
+    from datetime import date
+
+    from core.models import Collection, User
+
+    co_curator = User.objects.create(code="CURA01", email="cura@test.com", name="Cura")
+    collection.mode = Collection.Mode.PROPRIETARY
+    collection.save(update_fields=["mode"])
+    collection.invites.add(co_curator, user2)
+    collection.co_owners.add(co_curator)
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    email_service.send_booking_confirmation_email(user2, thing, booking)
+    assert TOLD["en"][1] in mail.outbox[0].body  # the founder and the co-curator
+
+    # Now the one asking is the co-curator: only the founder is left to warn.
+    booking_by_curator = _loan(user, co_curator, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+    email_service.send_booking_confirmation_email(co_curator, thing, booking_by_curator)
+    assert TOLD["en"][0] in mail.outbox[0].body
+
+
+# --- A declined request is "declined", not "cancelled" (CA, 2026-10-02) ----------
+#
+# The manager presses "Decline request" and the requester's app says "Request
+# declined — X declined your request", but their email said the request "has been
+# cancelled", which reads as though they had cancelled it themselves. The word is
+# one catalogue value interpolated into the intro and into both plain-text
+# sentences, so it has to be right in all of them. The subject ("didn't go
+# through") never named it.
+
+DECLINED = {
+    "en": ("declined", "cancelled", "Your request didn't go through"),
+    "es": ("rechazada", "cancelada", "Tu solicitud no ha salido adelante"),
+    "ca": ("rebutjada", "cancel·lada", "La teva sol·licitud no ha tirat endavant"),
+}
+CONFIRMED = {"en": "confirmed", "es": "confirmada", "ca": "confirmada"}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_declined_request_email_says_declined_never_cancelled(user, user2, thing, lang):
+    from datetime import date
+
+    user2.language = lang
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    email_service.send_booking_decision_email(booking, thing, accepted=False)
+
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+    word, old_word, subject = DECLINED[lang]
+    assert msg.subject == subject  # the subject did not change
+    # The plain-text sentence and the HTML introduction both carry the word.
+    assert word in msg.body
+    assert word in html
+    assert old_word not in msg.body.lower()
+    assert old_word not in html.lower()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_confirmed_request_email_still_says_confirmed(user, user2, thing, lang):
+    from datetime import date
+
+    user2.language = lang
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+
+    msg = mail.outbox[0]
+    assert CONFIRMED[lang] in msg.body
+    assert DECLINED[lang][0] not in msg.body
+
+
 # --- A booking for a single day says the day once (CA, 2026-10-02) ---------------
 #
 # "Tu solicitud está confirmada — Fechas: 13/10/2026 - 13/10/2026": a loan or a
