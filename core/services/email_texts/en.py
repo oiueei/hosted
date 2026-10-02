@@ -173,7 +173,7 @@ TEXTS = {
     "decision_subject_confirmed": "Your request is confirmed",
     "decision_subject_cancelled": "Your request didn't go through",
     "decision_confirmed": "confirmed",
-    "decision_cancelled": "cancelled",
+    "decision_cancelled": "declined",
     "decision_plain_dated": (
         "Your {action} request for '{thing}' {when} has been {decision}. View thing: {url}"
     ),

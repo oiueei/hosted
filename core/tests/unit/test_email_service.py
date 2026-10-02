@@ -906,6 +906,63 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "2026-03-05" not in body and "2026-03-05" not in html
 
 
+# --- A declined request is "declined", not "cancelled" (CA, 2026-10-02) ----------
+#
+# The manager presses "Decline request" and the requester's app says "Request
+# declined — X declined your request", but their email said the request "has been
+# cancelled", which reads as though they had cancelled it themselves. The word is
+# one catalogue value interpolated into the intro and into both plain-text
+# sentences, so it has to be right in all of them. The subject ("didn't go
+# through") never named it.
+
+DECLINED = {
+    "en": ("declined", "cancelled", "Your request didn't go through"),
+    "es": ("rechazada", "cancelada", "Tu solicitud no ha salido adelante"),
+    "ca": ("rebutjada", "cancel·lada", "La teva sol·licitud no ha tirat endavant"),
+}
+CONFIRMED = {"en": "confirmed", "es": "confirmada", "ca": "confirmada"}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_declined_request_email_says_declined_never_cancelled(user, user2, thing, lang):
+    from datetime import date
+
+    user2.language = lang
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    email_service.send_booking_decision_email(booking, thing, accepted=False)
+
+    msg = mail.outbox[0]
+    html = msg.alternatives[0][0]
+    word, old_word, subject = DECLINED[lang]
+    assert msg.subject == subject  # the subject did not change
+    # The plain-text sentence and the HTML introduction both carry the word.
+    assert word in msg.body
+    assert word in html
+    assert old_word not in msg.body.lower()
+    assert old_word not in html.lower()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_confirmed_request_email_still_says_confirmed(user, user2, thing, lang):
+    from datetime import date
+
+    user2.language = lang
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+
+    msg = mail.outbox[0]
+    assert CONFIRMED[lang] in msg.body
+    assert DECLINED[lang][0] not in msg.body
+
+
 # --- A booking for a single day says the day once (CA, 2026-10-02) ---------------
 #
 # "Tu solicitud está confirmada — Fechas: 13/10/2026 - 13/10/2026": a loan or a

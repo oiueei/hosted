@@ -174,7 +174,7 @@ TEXTS = {
     "decision_subject_confirmed": "La teva sol·licitud està confirmada",
     "decision_subject_cancelled": "La teva sol·licitud no ha tirat endavant",
     "decision_confirmed": "confirmada",
-    "decision_cancelled": "cancel·lada",
+    "decision_cancelled": "rebutjada",
     "decision_plain_dated": (
         "La teva sol·licitud {action} de '{thing}' {when} ha estat {decision}. "
         "Veure la publicació: {url}"

@@ -167,7 +167,7 @@ TEXTS = {
     "decision_subject_confirmed": "Tu solicitud está confirmada",
     "decision_subject_cancelled": "Tu solicitud no ha salido adelante",
     "decision_confirmed": "confirmada",
-    "decision_cancelled": "cancelada",
+    "decision_cancelled": "rechazada",
     "decision_plain_dated": (
         "Tu solicitud de {action} de '{thing}' {when} ha sido {decision}. Ver la publicación: {url}"
     ),

@@ -112,7 +112,10 @@ class TestEmailLanguage:
 
         email_service.send_booking_decision_email(FakeBooking(), FakeThing(), accepted=False)
         assert mail.outbox[0].subject == "Tu solicitud no ha salido adelante"
-        assert "ha sido cancelada" in mail.outbox[0].body
+        # "rechazada", not "cancelada": the manager declined it, nobody cancelled it
+        # (CA, 2026-10-02).
+        assert "ha sido rechazada" in mail.outbox[0].body
+        assert "cancelada" not in mail.outbox[0].body
 
     def _send_sell_confirmation(self):
         """Send a SELL confirmation and return the resulting mailbox message."""
