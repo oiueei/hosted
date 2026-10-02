@@ -9,6 +9,7 @@ class CoreConfig(AppConfig):
         # `checks` registers the deploy-time checks for the two settings a
         # deployment points at its own code (both resolve lazily at runtime, so
         # without them a typo in either config var reaches a booted dyno);
-        # `asset_cleanup` registers the post_delete signal handlers.
+        # `asset_cleanup` registers the signal handlers that destroy a stored
+        # file when its row is deleted or a save drops its key.
         from core import checks  # noqa: F401
         from core.services import asset_cleanup  # noqa: F401

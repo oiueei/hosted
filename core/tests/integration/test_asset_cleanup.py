@@ -353,3 +353,197 @@ class TestAKeyAnotherRecordHoldsIsKept:
                 second.delete()
 
         assert [c.args[0] for c in destroy.call_args_list] == ["oiueei/things/shared"]
+
+
+def _destroyed(destroy):
+    return [call.args[0] for call in destroy.call_args_list]
+
+
+@pytest.mark.django_db
+class TestASaveThatDropsAPhotoDestroysIt:
+    """Removing or replacing a photo takes the old object out of the bucket.
+
+    Until 2026-10-02 only deleting the whole record did. A removed profile
+    photo, a swapped cover or a photo taken out of a gallery stayed in the
+    bucket, unreachable, until someone ran the orphan sweep by hand inside its
+    30-day window — and past it, for good, against the ``/legal`` promise that
+    a photo goes when you remove it.
+    """
+
+    def test_removing_your_profile_photo_destroys_it(
+        self, authenticated_client, user, django_capture_on_commit_callbacks
+    ):
+        user.photo = "oiueei/users/me-old"
+        user.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                res = authenticated_client.put(
+                    f"/api/v1/users/{user.code}/", {"photo": ""}, format="json"
+                )
+        assert res.status_code == 200
+        assert _destroyed(destroy) == ["oiueei/users/me-old"]
+
+    def test_replacing_your_profile_photo_destroys_only_the_old_one(
+        self, authenticated_client, user, django_capture_on_commit_callbacks
+    ):
+        user.photo = "oiueei/users/me-old"
+        user.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                res = authenticated_client.put(
+                    f"/api/v1/users/{user.code}/", {"photo": "oiueei/users/me-new"}, format="json"
+                )
+        assert res.status_code == 200
+        assert _destroyed(destroy) == ["oiueei/users/me-old"]
+
+    def test_a_photo_taken_out_of_a_gallery_goes_and_the_rest_stay(
+        self, authenticated_client, thing, django_capture_on_commit_callbacks
+    ):
+        thing.gallery = ["oiueei/things/g1", "oiueei/things/g2", "oiueei/things/g3"]
+        thing.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                res = authenticated_client.patch(
+                    f"/api/v1/things/{thing.code}/",
+                    {"gallery": ["oiueei/things/g3", "oiueei/things/g1"]},
+                    format="json",
+                )
+        assert res.status_code == 200
+        assert _destroyed(destroy) == ["oiueei/things/g2"]
+
+    def test_a_gallery_edited_in_place_still_reads_as_a_change(
+        self, thing, django_capture_on_commit_callbacks
+    ):
+        # Code that mutates the stored list rather than assigning a new one must
+        # not slip past: the remembered keys are a copy, not the list itself.
+        thing.gallery = ["oiueei/things/g1", "oiueei/things/g2"]
+        thing.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                thing.gallery.remove("oiueei/things/g1")
+                thing.save()
+        assert _destroyed(destroy) == ["oiueei/things/g1"]
+
+    def test_reordering_a_gallery_destroys_nothing(
+        self, authenticated_client, thing, django_capture_on_commit_callbacks
+    ):
+        thing.gallery = ["oiueei/things/g1", "oiueei/things/g2"]
+        thing.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                authenticated_client.patch(
+                    f"/api/v1/things/{thing.code}/",
+                    {"gallery": ["oiueei/things/g2", "oiueei/things/g1"]},
+                    format="json",
+                )
+        destroy.assert_not_called()
+
+    def test_a_new_cover_on_a_thing_destroys_the_old_one(
+        self, authenticated_client, thing, django_capture_on_commit_callbacks
+    ):
+        thing.thumbnail = "oiueei/things/cover-old"
+        thing.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                res = authenticated_client.patch(
+                    f"/api/v1/things/{thing.code}/",
+                    {"thumbnail": "oiueei/things/cover-new"},
+                    format="json",
+                )
+        assert res.status_code == 200
+        assert _destroyed(destroy) == ["oiueei/things/cover-old"]
+
+    def test_a_collection_drops_its_cover_and_its_welcome_pdf(
+        self, authenticated_client, collection, django_capture_on_commit_callbacks
+    ):
+        collection.thumbnail = "oiueei/collections/cover-old"
+        collection.welcome_doc = "oiueei/documents/rules-old"
+        collection.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                res = authenticated_client.patch(
+                    f"/api/v1/collections/{collection.code}/",
+                    {"thumbnail": "oiueei/collections/cover-new", "welcome_doc": ""},
+                    format="json",
+                )
+        assert res.status_code == 200
+        assert set(_destroyed(destroy)) == {
+            "oiueei/collections/cover-old",
+            "oiueei/documents/rules-old",
+        }
+
+    def test_a_save_that_rolls_back_destroys_nothing(self, user):
+        user.photo = "oiueei/users/kept"
+        user.save()
+        with patch("core.services.storage.delete") as destroy:
+            with pytest.raises(RuntimeError):
+                with transaction.atomic():
+                    user.photo = ""
+                    user.save()
+                    raise RuntimeError("the request failed after the save")
+        destroy.assert_not_called()
+
+    def test_a_column_left_out_of_update_fields_drops_nothing(
+        self, user, django_capture_on_commit_callbacks
+    ):
+        user.photo = "oiueei/users/stored"
+        user.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                user.photo = "oiueei/users/never-written"
+                user.save(update_fields=["name"])
+            destroy.assert_not_called()
+            # The row still holds the stored key, so that is what a real write drops.
+            with django_capture_on_commit_callbacks(execute=True):
+                user.save()
+        assert _destroyed(destroy) == ["oiueei/users/stored"]
+
+    def test_a_seed_photo_is_never_destroyed_by_a_save(
+        self, thing, django_capture_on_commit_callbacks
+    ):
+        thing.thumbnail = "oiueei/seed/lala-cup"
+        thing.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                thing.thumbnail = "oiueei/things/mine"
+                thing.save()
+        destroy.assert_not_called()
+
+    def test_a_dropped_key_another_record_holds_is_kept(
+        self, thing, user2, django_capture_on_commit_callbacks
+    ):
+        thing.thumbnail = "oiueei/things/shared"
+        thing.save()
+        Thing.objects.create(
+            owner=user2, headline="x", type="GIFT_THING", thumbnail="oiueei/things/shared"
+        )
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                thing.thumbnail = ""
+                thing.save()
+        destroy.assert_not_called()
+
+    def test_suspended_blocks_a_save_too(self, user, django_capture_on_commit_callbacks):
+        user.photo = "oiueei/users/keep"
+        user.save()
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                with asset_cleanup.suspended():
+                    user.photo = ""
+                    user.save()
+        destroy.assert_not_called()
+
+    def test_a_deferred_photo_column_is_never_read_nor_destroyed(
+        self, user, django_assert_num_queries, django_capture_on_commit_callbacks
+    ):
+        user.photo = "oiueei/users/deferred"
+        user.save()
+        # Remembering the stored keys must not load a column the query deferred:
+        # one query for the row, not one more per deferred photo.
+        with django_assert_num_queries(1):
+            loaded = User.objects.only("code", "name").get(code=user.code)
+        with patch("core.services.storage.delete") as destroy:
+            with django_capture_on_commit_callbacks(execute=True):
+                loaded.name = "Renamed"
+                loaded.save(update_fields=["name"])
+        destroy.assert_not_called()

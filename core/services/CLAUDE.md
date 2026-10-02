@@ -356,9 +356,9 @@ A curator downloads their collection's upcoming **date-based** reservations (LEN
 
 ---
 
-### `asset_cleanup.py` — Delete Stored Files on Delete
+### `asset_cleanup.py` — Delete Stored Files on Delete, and When a Save Drops One
 
-Frees the stored objects a record owns when the record itself is deleted, so removing a thing / collection / user doesn't leave orphaned files piling up (storage cost + clutter). The bucket has no notion of a foreign key, so nothing else would ever notice they had become unreachable.
+Frees the stored objects a record owns when the record itself is deleted, **and the object a save drops** (a removed profile photo, a swapped cover, a photo taken out of a gallery, a replaced welcome PDF), so neither leaves orphaned files piling up (storage cost + clutter, and the `/legal` promise that a photo goes when you remove it). The bucket has no notion of a foreign key, so nothing else would ever notice they had become unreachable.
 
 #### How it's wired
 
@@ -372,6 +372,16 @@ Frees the stored objects a record owns when the record itself is deleted, so rem
 | `Thing` | `thumbnail` and every `gallery` id |
 | `Collection` | `thumbnail`, `welcome_doc` (the welcome PDF — also `resource_type=image`, so the default destroy kwargs are right) |
 | `User` | `photo` |
+
+#### A save that drops a key destroys it (2026-10-02)
+
+Until 2026-10-02 only a delete freed anything: a replaced or removed photo stayed in the bucket until someone ran `cleanup_orphan_images` by hand inside its 30-day window, and past that window, for good. Now a **`post_init`** handler notes the keys each row was loaded with (`instance._stored_assets`) and a **`post_save`** handler destroys the ones the save dropped — on commit, under the same rules as a delete (seed keys spared, a key another row holds kept, never raises, `suspended()` honoured). Three details carry the weight:
+
+- **A deferred column is never read.** `.only()` / `.defer()` leave a column out of `instance.__dict__`, and remembering it would cost a query per row; a column the handler never saw is simply one it cannot say a save replaced. Pinned with `django_assert_num_queries`.
+- **`update_fields` is honoured.** A column left out of it was not written, so it neither drops a key nor becomes the new baseline — the next real write drops the key the row actually held.
+- **The remembered keys are a copy**, so `thing.gallery.remove(k); thing.save()` still reads as a change.
+
+Anything that bypasses `save()` (`QuerySet.update`, `bulk_update`) bypasses this too — none writes an asset column today. What it misses is left for the orphan sweep, which is the net, not the mechanism.
 
 #### A key another record still holds is never destroyed (2026-10-02)
 

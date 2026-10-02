@@ -3,9 +3,10 @@ Management command to delete orphaned images from object storage (#9).
 
 An "orphan" is an image that was uploaded (a ticketed direct-to-bucket upload
 from a form) but whose form was never submitted, so no DB row ever referenced
-its key. Deleting on record-delete is already handled by
-``core.services.asset_cleanup``; this command catches the *other* leak —
-uploads that never became a record at all.
+its key. Deleting on record-delete — and, since 2026-10-02, on a save that
+replaces or removes a key — is handled by ``core.services.asset_cleanup``; this
+command catches the *other* leak — uploads that never became a record at all,
+and anything that changed a row without going through ``save()``.
 
 **Dry-run is the default.** It only lists what it *would* delete; pass
 ``--commit`` to actually delete. Safe to run on Heroku:

@@ -1,4 +1,4 @@
-"""Delete a record's stored assets when the record itself is deleted.
+"""Delete a record's stored assets when the record is deleted, or when a save drops one.
 
 Wired as ``post_delete`` signal handlers on Thing, Collection and User (see
 ``core.apps.CoreConfig.ready``) so it covers direct deletes, the collection
@@ -6,6 +6,15 @@ view's orphan-thing sweep, and user-account cascades alike — anywhere a row
 actually disappears. The destroy runs on ``transaction.on_commit`` (a
 rolled-back delete keeps its images) and never raises: an orphaned asset is a
 smaller problem than a delete that blows up.
+
+**A save that replaces or removes a key destroys the old object too**
+(2026-10-02). Until then only a delete did: a removed profile photo, a swapped
+cover, a photo taken out of a thing's gallery or a replaced welcome PDF stayed
+in the bucket, unreachable, until somebody ran ``cleanup_orphan_images`` by
+hand inside its 30-day window — and past that window, for good. That broke the
+``/legal`` promise that a photo goes when you remove it. ``post_init`` notes
+the keys a row was loaded with and ``post_save`` destroys the ones the save
+dropped, on commit, under the same rules as a delete.
 
 Keys under ``storage.SEED_PREFIX`` are **never** destroyed. The demo's fixtures
 are a shared pool: every database that has ever seeded points at the same
@@ -28,7 +37,7 @@ import logging
 from contextlib import contextmanager
 
 from django.db import transaction
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_init, post_save
 from django.dispatch import receiver
 
 from core.models import Collection, Thing, User
@@ -36,9 +45,10 @@ from core.services import storage
 
 logger = logging.getLogger(__name__)
 
-# Every column that holds a storage key. The delete handler, the in-use check
-# and the orphan sweep (``cleanup_orphan_images``) all read this one table: a
-# field missing from one copy of a hand-written list is a live photo deleted.
+# Every column that holds a storage key. The delete and save handlers, the
+# in-use check and the orphan sweep (``cleanup_orphan_images``) all read this one
+# table: a field missing from one copy of a hand-written list is a live photo
+# deleted, or a dropped one kept forever.
 ASSET_FIELDS = {
     Thing: ("thumbnail", "gallery"),
     # The welcome PDF is an object like any other — no special case left. It
@@ -54,7 +64,7 @@ _suspended = False
 
 @contextmanager
 def suspended():
-    """Disable asset cleanup for any delete performed inside the block."""
+    """Disable asset cleanup for any delete or save performed inside the block."""
     global _suspended
     previous = _suspended
     _suspended = True
@@ -77,6 +87,21 @@ def _assets(instance):
         if isinstance(instance, model):
             for field in fields:
                 yield from _keys(field, getattr(instance, field))
+
+
+def _loaded(instance):
+    """The keys ``instance`` holds per key-holding column, for the columns it has loaded.
+
+    A deferred column (``.only()`` / ``.defer()``) is left out rather than read:
+    reading it would cost a query per row on every list that defers it, and a
+    column this code never saw is one it cannot say a save replaced. A tuple, not
+    the list itself, so an in-place ``gallery.remove()`` still reads as a change.
+    """
+    values = instance.__dict__
+    for model, fields in ASSET_FIELDS.items():
+        if isinstance(instance, model):
+            return {f: tuple(_keys(f, values[f])) for f in fields if f in values}
+    return {}
 
 
 def referenced_keys():
@@ -126,3 +151,34 @@ def _cleanup_assets_on_delete(sender, instance, **kwargs):
     assets = [key for key in _assets(instance) if not key.startswith(storage.SEED_PREFIX)]
     if assets:
         transaction.on_commit(lambda: [_destroy(key) for key in assets])
+
+
+@receiver(post_init, sender=Thing)
+@receiver(post_init, sender=Collection)
+@receiver(post_init, sender=User)
+def _remember_stored_assets(sender, instance, **kwargs):
+    instance._stored_assets = _loaded(instance)
+
+
+@receiver(post_save, sender=Thing)
+@receiver(post_save, sender=Collection)
+@receiver(post_save, sender=User)
+def _cleanup_assets_a_save_dropped(sender, instance, created, update_fields, **kwargs):
+    before = getattr(instance, "_stored_assets", {})
+    saved = _loaded(instance)
+    if update_fields is not None:
+        # A column left out of update_fields was not written: whatever it holds
+        # in memory is not what the row holds, so it neither drops a key nor
+        # becomes the new baseline.
+        saved = {field: keys for field, keys in saved.items() if field in update_fields}
+    instance._stored_assets = {**before, **saved}
+    if created or _suspended:
+        return
+    dropped = [
+        key
+        for field, keys in saved.items()
+        for key in before.get(field, ())
+        if key not in keys and not key.startswith(storage.SEED_PREFIX)
+    ]
+    if dropped:
+        transaction.on_commit(lambda: [_destroy(key) for key in dropped])
