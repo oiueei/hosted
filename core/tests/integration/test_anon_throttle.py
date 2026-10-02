@@ -105,17 +105,36 @@ class TestAnonymousCeiling:
         assert responses[-1]["Retry-After"] == "50"
         assert next_minute.status_code == 200
 
+    @pytest.mark.parametrize(
+        ("rate", "expected"),
+        [
+            # The restart is a real count: the visitor gets one more read out of it
+            # (the lost one forgot a request) and is then refused as usual.
+            ("3/m", [200, 200, 200, 200, 429]),
+            # And it restarts at ONE, not at two: with a ceiling of one the request
+            # that lost its count is let through, the next one is not.
+            ("1/m", [200, 200, 429]),
+        ],
+    )
     def test_a_count_lost_between_its_two_steps_starts_again_at_one(
-        self, api_client, collection_url, monkeypatch
+        self, api_client, collection_url, settings, monkeypatch, rate, expected
     ):
         # The key was there for `add` and gone for `incr` (culled, or expired on the
-        # boundary). The count restarts rather than failing the read.
-        def vanished(*args, **kwargs):
-            raise ValueError("Key not found")
+        # boundary) — gone here for the second request only, so what the first
+        # restart *stored* is what the later requests count on.
+        settings.ANON_API_RATE = rate
+        real_incr = throttles._counters.incr
+        lost = []
 
-        monkeypatch.setattr(throttles._counters, "incr", vanished)
+        def incr_after_the_key_vanished(key, *args, **kwargs):
+            if not lost:
+                lost.append(key)
+                throttles._counters.delete(key)
+            return real_incr(key, *args, **kwargs)  # the cache's own ValueError
 
-        assert set(statuses(api_client, collection_url, 5)) == {200}
+        monkeypatch.setattr(throttles._counters, "incr", incr_after_the_key_vanished)
+
+        assert statuses(api_client, collection_url, len(expected)) == expected
 
 
 @pytest.mark.django_db
