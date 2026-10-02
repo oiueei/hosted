@@ -231,7 +231,7 @@ describe('InboxNotifications — every type says something', () => {
         payload: { collection_headline: 'Toy library', collection_code: 'COL001' },
         created: '2026-08-06T10:00:00Z',
       },
-      says: [/co-curator now/i, /Toy library/, /founder can delete/i],
+      says: [/you help run this group now/i, /Toy library/, /founder can delete/i],
       links: '/collections/COL001',
     },
     {
@@ -242,7 +242,7 @@ describe('InboxNotifications — every type says something', () => {
         payload: { collection_headline: 'Toy library', collection_code: 'COL001' },
         created: '2026-08-06T10:00:00Z',
       },
-      says: [/no longer a co-curator/i, /regular member/i, /Toy library/],
+      says: [/you no longer help run this group/i, /regular member/i, /Toy library/],
       links: '/collections/COL001',
     },
     {

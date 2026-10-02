@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import ManageInvitesPage from './ManageInvitesPage';
@@ -314,6 +314,11 @@ describe('ManageInvitesPage — co-owners', () => {
     co_owners: [{ code: 'GST002', name: 'Bea' }],
   };
 
+  // The row's toggle and the dialog's confirm both say "Add to the team" now, so the
+  // confirm is the one inside the dialog (the row sits behind the modal).
+  const confirmButton = async () =>
+    within(await screen.findByRole('dialog')).getByRole('button', { name: 'Add to the team' });
+
   function mockCoOwnerRoutes({ collection = TWO_MEMBERS, coOwner = { status: 200 } } = {}) {
     globalThis.fetch = vi.fn((url) => {
       const respond = (status, body) =>
@@ -334,8 +339,8 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
 
     await screen.findByText(/Ana/);
-    expect(screen.getByRole('button', { name: 'Make co-curator' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove co-curator status' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to the team' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove from the team' })).toBeInTheDocument();
   });
 
   test('promoting confirms first, then posts to /co-owners/ with the member’s code', async () => {
@@ -344,17 +349,17 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Ana/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
 
     // The star opens a confirm — promotion hands over the member list (emails
     // included) and the power to appoint more curators, so it is not one click.
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent(/everything you can except delete the group/i);
+    expect(dialog).toHaveTextContent(/everything you can except delete the collection/i);
     expect(globalThis.fetch.mock.calls.some(([u]) => u.endsWith('/co-owners/'))).toBe(false);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make them a co-curator' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add to the team' }));
 
-    await screen.findByText('Promoted to co-curator.');
+    await screen.findByText('Added to the team.');
     const [url, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/co-owners/'));
     expect(url).toBe('/api/v1/collections/COL001/co-owners/');
     expect(options.method).toBe('POST');
@@ -367,7 +372,7 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Ana/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
     await screen.findByRole('dialog');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
@@ -381,9 +386,9 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Bea/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove co-curator status' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from the team' }));
 
-    await screen.findByText('Removed as co-curator.');
+    await screen.findByText('Removed from the team.');
     const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/co-owners/'));
     expect(options.method).toBe('DELETE');
     expect(JSON.parse(options.body)).toEqual({ user_code: 'GST002' });
@@ -403,11 +408,13 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Ana/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Make them a co-curator' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
+    fireEvent.click(await confirmButton());
 
     expect(
-      await screen.findByText('This group already has 5 co-curators — the most it allows.')
+      await screen.findByText(
+        "This group's team already has 5 people besides the founder — the most it allows."
+      )
     ).toBeInTheDocument();
     expect(screen.queryByText(/maximum of 5 co-curators/)).not.toBeInTheDocument();
   });
@@ -422,11 +429,17 @@ describe('ManageInvitesPage — co-owners', () => {
     await screen.findByText(/Ana/);
 
     // The UI follows the collection's language once its first response lands.
-    fireEvent.click(await screen.findByRole('button', { name: 'Nombrar co-curador' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Nombrarle co-curador' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sumar a la dinamización' }));
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'Sumar a la dinamización',
+      })
+    );
 
     expect(
-      await screen.findByText('Este grupo ya tiene 5 co-curadores: es el máximo que permite.')
+      await screen.findByText(
+        'La dinamización de este grupo ya suma 5 personas además de quien lo creó: es el máximo que permite.'
+      )
     ).toBeInTheDocument();
     expect(screen.queryByText(/maximum of 5 co-curators/)).not.toBeInTheDocument();
   });
@@ -439,8 +452,8 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Ana/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Make them a co-curator' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
+    fireEvent.click(await confirmButton());
 
     expect(await screen.findByText('Only an existing member can be promoted')).toBeInTheDocument();
   });
@@ -451,8 +464,8 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Ana/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make co-curator' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Make them a co-curator' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
+    fireEvent.click(await confirmButton());
 
     expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
     expect(screen.queryByText('Request was throttled.')).not.toBeInTheDocument();
@@ -464,7 +477,7 @@ describe('ManageInvitesPage — co-owners', () => {
     renderPage();
     await screen.findByText(/Bea/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove co-curator status' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from the team' }));
 
     expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
     expect(screen.queryByText('Request was throttled.')).not.toBeInTheDocument();
@@ -477,7 +490,7 @@ describe('ManageInvitesPage — co-owners', () => {
     await screen.findByText(/Ana/);
 
     expect(screen.getByLabelText('Guest email')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Make co-curator' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to the team' })).toBeInTheDocument();
   });
 
   test('the roster names Bea as a co-curator', async () => {
@@ -485,7 +498,10 @@ describe('ManageInvitesPage — co-owners', () => {
     mockCoOwnerRoutes();
     renderPage();
 
-    await screen.findByText(/Bea/);
-    expect(screen.getAllByText('Co-curator').length).toBeGreaterThan(0);
+    // On Bea's own row, and only there: Ana is a plain member.
+    const beaRow = (await screen.findByText(/Bea/)).closest('tr');
+    const anaRow = screen.getByText(/Ana/).closest('tr');
+    expect(within(beaRow).getByText('Team')).toBeInTheDocument();
+    expect(within(anaRow).queryByText('Team')).not.toBeInTheDocument();
   });
 });

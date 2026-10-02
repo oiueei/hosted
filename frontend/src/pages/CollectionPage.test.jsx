@@ -1332,7 +1332,7 @@ describe('CollectionPage as a co-owner', () => {
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  test('the hero names the whole team on one "Co-curators:" line, founder first', async () => {
+  test('the hero names the whole team on one "Run by:" line, founder first', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1357,19 +1357,20 @@ describe('CollectionPage as a co-owner', () => {
       </MemoryRouter>
     );
 
-    const line = (await screen.findByText(/Co-curators:/)).closest('p');
+    const line = (await screen.findByText(/Run by:/)).closest('p');
     // founder first, then each co-curator, all linked
-    expect(line).toHaveTextContent('Co-curators: The Founder, Me, Nil');
+    expect(line).toHaveTextContent('Run by: The Founder, Me, Nil');
     expect(within(line).getByRole('link', { name: 'The Founder' })).toHaveAttribute(
       'href',
       '/OTHER1'
     );
     expect(within(line).getByRole('link', { name: 'Nil' })).toHaveAttribute('href', '/XYZ999');
-    // the separate single-owner line is gone
-    expect(screen.queryByText('Curator:')).not.toBeInTheDocument();
+    // The team and the founder share one label now, so "no separate founder
+    // line" is: the label is on the page once.
+    expect(screen.getAllByText('Run by:')).toHaveLength(1);
   });
 
-  test('with no co-curators the hero shows the single "Curator:" line (non-owner viewer)', async () => {
+  test('with no co-curators the hero shows the single "Run by:" line (non-owner viewer)', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1388,9 +1389,67 @@ describe('CollectionPage as a co-owner', () => {
       </MemoryRouter>
     );
 
-    const line = (await screen.findByText(/Curator:/)).closest('p');
-    expect(line).toHaveTextContent('Curator: The Founder');
-    expect(screen.queryByText(/Co-curators:/)).not.toBeInTheDocument();
+    const line = (await screen.findByText(/Run by:/)).closest('p');
+    // Exact: the label is the same one with a team, so only the names tell the
+    // two lines apart and nobody else may follow the founder here.
+    expect(line).toHaveTextContent(/^Run by: The Founder$/);
+    expect(screen.getAllByText('Run by:')).toHaveLength(1);
+  });
+
+  // The label is one noun, "Dinamización:" — like a credit line, no gender, no
+  // number — for a team of one and a team of three (CA, 2026-10-02), so it is
+  // the same word in both lines. Nothing but these pins the Spanish and Catalan
+  // wording of the hero.
+  describe.each([
+    ['es', 'Dinamización:'],
+    ['ca', 'Dinamització:'],
+  ])('in a %s group', (language, label) => {
+    afterEach(async () => {
+      // `useCollectionLanguage` moves the whole UI to the collection's language;
+      // put it back so the next test starts in English.
+      const { default: i18n } = await import('../i18n');
+      await i18n.changeLanguage('en');
+      localStorage.removeItem('i18nextLng');
+    });
+
+    const renderHero = (overrides) => {
+      const respond = (body) => Promise.resolve({ ok: true, status: 200, json: async () => body });
+      apiFetch.mockImplementation((url) => {
+        if (url.startsWith('/api/v1/inbox/')) return respond([]);
+        // A signed-in reader with no language saved on their profile, which is
+        // what lets the collection's own language reach the page's chrome.
+        if (url.endsWith('/auth/me/')) return respond({ code: 'ABC123', language: '' });
+        return respond({ ...CO_OWNED, language, owner_name: 'El Fundador', ...overrides });
+      });
+      render(
+        <MemoryRouter initialEntries={['/collections/COL001']}>
+          <Routes>
+            <Route path="/collections/:code" element={<CollectionPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    };
+
+    test(`the founder and two co-curators come on one "${label}" line`, async () => {
+      renderHero({
+        co_owners: [
+          { code: 'ABC123', name: 'Yo' },
+          { code: 'XYZ999', name: 'Nil' },
+        ],
+      });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(`${label} El Fundador, Yo, Nil`);
+      expect(screen.getAllByText(label)).toHaveLength(1);
+    });
+
+    test(`with no co-curators the founder alone follows "${label}" (non-owner viewer)`, async () => {
+      renderHero({ co_owners: [], is_curator: false, is_member: true });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador$`));
+      expect(screen.getAllByText(label)).toHaveLength(1);
+    });
   });
 });
 
