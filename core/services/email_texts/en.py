@@ -11,6 +11,10 @@ TEXTS = {
     # Art. 14 GDPR: every email — mandatory ones included — links to the
     # legal page, since this is a disclosure duty and not a preference.
     "footer_legal": "Legal & privacy",
+    # How a booking's dates read inside a sentence: a range, or one day said once
+    # ("from the 13th to the 13th" was a loan for a single day, 2026-10-02).
+    "when_range": "from {start} to {end}",
+    "when_day": "on {start}",
     "dates_label": "Dates",
     # What a person is called when they never set a name, wherever the reader is
     # someone who is not entitled to their address. `User.display_name` falls
@@ -155,7 +159,7 @@ TEXTS = {
     # Booking request (to owner)
     "booking_request_subject": "You have a pending {action} request",
     "booking_request_plain_dated": (
-        "{requester} has sent a {action} request for '{thing}' from {start} to {end}. "
+        "{requester} has sent a {action} request for '{thing}' {when}. "
         "Confirm hold: {accept} | Cancel hold: {reject}"
     ),
     "booking_request_plain": (
@@ -171,8 +175,7 @@ TEXTS = {
     "decision_confirmed": "confirmed",
     "decision_cancelled": "cancelled",
     "decision_plain_dated": (
-        "Your {action} request for '{thing}' from {start} to {end} has been {decision}. "
-        "View thing: {url}"
+        "Your {action} request for '{thing}' {when} has been {decision}. View thing: {url}"
     ),
     "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
     "decision_intro": "Your {action} request has been {decision}:",
@@ -183,7 +186,7 @@ TEXTS = {
     # Booking confirmation (to requester)
     "confirmation_subject": "Your {action} request was sent",
     "confirmation_plain_dated": (
-        "Your {action} request for '{thing}' from {start} to {end} has been sent. "
+        "Your {action} request for '{thing}' {when} has been sent. "
         "We've let {owner} know — they'll get back to you soon. "
         "View thing: {url}"
     ),

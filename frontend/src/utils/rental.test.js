@@ -325,6 +325,15 @@ describe('formatBookingWhen', () => {
     ).toBe('05/10/2026 — 07/10/2026');
   });
 
+  test('a loan or rental for a single day lists that day once', () => {
+    // 'Requested dates: 13/10/2026 — 13/10/2026' was the screenshot (CA, 2026-10-02).
+    for (const thing_type of ['LEND_THING', 'RENT_THING']) {
+      expect(
+        formatBookingWhen({ thing_type, start_date: '2026-10-13', end_date: '2026-10-13' })
+      ).toBe('13/10/2026');
+    }
+  });
+
   test('a loan still lists pickup to return — its end date is a real day', () => {
     expect(
       formatBookingWhen({
@@ -363,6 +372,12 @@ describe('formatRequestedWhen', () => {
   test('a loan or rental reads pickup to return, as sent', () => {
     expect(formatRequestedWhen({ start_date: '2026-10-05', end_date: '2026-10-12' })).toBe(
       '05/10/2026 — 12/10/2026'
+    );
+  });
+
+  test('a loan or rental that starts and ends the same day is that day once', () => {
+    expect(formatRequestedWhen({ start_date: '2026-10-13', end_date: '2026-10-13' })).toBe(
+      '13/10/2026'
     );
   });
 

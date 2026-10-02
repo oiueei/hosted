@@ -744,7 +744,9 @@ describe('InboxNotifications — a request or reservation notice says when', () 
     expect(
       await screen.findByText(`Registered: ${localStamp('2026-09-29T06:38:00Z')}`)
     ).toBeInTheDocument();
-    expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+    expect(screen.getByText('Requested dates: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+    // A loan is not a reservation (D2): the reservation wording is for RESERVE_THING.
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 
   test('an accepted loan shows both lines, the slot pickup to return', async () => {
@@ -768,7 +770,40 @@ describe('InboxNotifications — a request or reservation notice says when', () 
     expect(
       await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
     ).toBeInTheDocument();
-    expect(screen.getByText('Reserved for: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+    expect(screen.getByText('Requested dates: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
+    // A loan is not a reservation (D2): the reservation wording is for RESERVE_THING.
+    expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+  });
+
+  test('a loan for a single day shows that day once, in any notice about it', async () => {
+    // "Fecha y horario de reserva: 13/10/2026 — 13/10/2026" on a loan (CA, 2026-10-02).
+    const loanFor = (type, extra = {}) => ({
+      code: `NOT-${type}`,
+      type,
+      payload: {
+        requester_name: 'Lulu',
+        owner_name: 'Lala',
+        decider_name: 'Lele',
+        accepted: true,
+        thing_headline: `A mitre saw ${type}`,
+        booking_code: 'BKG020',
+        thing_code: 'THG020',
+        collection_code: 'COL001',
+        start_date: '2026-10-13',
+        end_date: '2026-10-13',
+        ...extra,
+      },
+      created: '2026-10-02T11:00:00Z',
+    });
+    renderInbox([
+      loanFor('BOOKING_REQUESTED'),
+      loanFor('BOOKING_ACCEPTED'),
+      loanFor('BOOKING_DECIDED'),
+    ]);
+
+    await screen.findAllByText('Requested dates: 13/10/2026');
+    expect(screen.getAllByText('Requested dates: 13/10/2026')).toHaveLength(3);
+    expect(screen.queryByText(/13\/10\/2026 — 13\/10\/2026/)).not.toBeInTheDocument();
   });
 
   test('a rejected gift shows the registration line but nothing to schedule', async () => {
@@ -791,6 +826,7 @@ describe('InboxNotifications — a request or reservation notice says when', () 
       await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Requested dates: /)).not.toBeInTheDocument();
   });
 
   test('a request without dates (a gift, or one from before) shows only the registration line', async () => {

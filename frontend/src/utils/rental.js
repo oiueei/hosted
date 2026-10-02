@@ -128,7 +128,9 @@ export const formatBookingWhen = (booking, thingType = booking?.thing_type) => {
     const lastDay = formatDate(addDays(booking.end_date.slice(0, 10), -1));
     return lastDay === date ? date : `${date} — ${lastDay}`;
   }
-  return `${date} — ${formatDate(booking.end_date)}`;
+  // A loan or rental for a single day: that day once, not "13/10/2026 — 13/10/2026".
+  const returnDate = formatDate(booking.end_date);
+  return returnDate === date ? date : `${date} — ${returnDate}`;
 };
 
 // What a request page is about to book (or just booked), read off the POST
@@ -147,7 +149,10 @@ export const formatRequestedWhen = (body) => {
     if (days <= 1) return start;
     return `${start} — ${isoToDisplay(derivedReturnDate(body.start_date, days - 1))}`;
   }
-  if (body.end_date) return `${start} — ${isoToDisplay(body.end_date)}`;
+  if (body.end_date) {
+    const end = isoToDisplay(body.end_date);
+    return end === start ? start : `${start} — ${end}`;
+  }
   return start;
 };
 

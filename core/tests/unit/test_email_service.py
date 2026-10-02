@@ -877,6 +877,119 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "2026-03-05" not in body and "2026-03-05" not in html
 
 
+# --- A booking for a single day says the day once (CA, 2026-10-02) ---------------
+#
+# "Tu solicitud está confirmada — Fechas: 13/10/2026 - 13/10/2026": a loan or a
+# rental that starts and ends the same day printed it twice, in the "Dates" line
+# and again in the plain-text sentence ("from the 13th to the 13th"). The same
+# rule as the inbox: one day, one date; a longer booking is still a range.
+
+# What each language says for "one day" and for a range, in the plain text.
+ONE_DAY = {"en": "on 13/10/2026", "es": "el 13/10/2026", "ca": "el 13/10/2026"}
+A_RANGE = {
+    "en": "from 13/10/2026 to 15/10/2026",
+    "es": "del 13/10/2026 al 15/10/2026",
+    "ca": "del 13/10/2026 al 15/10/2026",
+}
+
+
+def _loan(user, user2, thing, start, end):
+    from core.models import BookingPeriod
+
+    thing.type = "LEND_THING"
+    thing.save(update_fields=["type"])
+    return BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=start,
+        end_date=end,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+
+def _send_each_booking_email(user, user2, thing, booking):
+    """The three emails that carry a booking's dates: the request to the owner, the
+    answer to the requester, and the requester's own confirmation."""
+    email_service.send_booking_request_email(
+        user2, thing, booking, user.email, "http://x/a", "http://x/r"
+    )
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    email_service.send_booking_confirmation_email(user2, thing, booking)
+    return {m.subject: m for m in mail.outbox}.values()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_single_day_loan_says_its_date_once_in_every_booking_email(user, user2, thing, lang):
+    from datetime import date
+
+    user.language = user2.language = lang
+    user.save(update_fields=["language"])
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 13))
+    mail.outbox.clear()
+
+    emails = list(_send_each_booking_email(user, user2, thing, booking))
+
+    assert len(emails) == 3
+    for msg in emails:
+        html = msg.alternatives[0][0]
+        # The "Dates" line carries the day once…
+        assert html.count("13/10/2026") == 1, msg.subject
+        assert "13/10/2026 - 13/10/2026" not in html
+        # …and so does the sentence, said as one day and not as a range.
+        assert ONE_DAY[lang] in msg.body, msg.subject
+        assert msg.body.count("13/10/2026") == 1, msg.subject
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_loan_over_several_days_is_still_a_range_in_every_booking_email(user, user2, thing, lang):
+    from datetime import date
+
+    user.language = user2.language = lang
+    user.save(update_fields=["language"])
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    for msg in _send_each_booking_email(user, user2, thing, booking):
+        assert "13/10/2026 - 15/10/2026" in msg.alternatives[0][0], msg.subject
+        assert A_RANGE[lang] in msg.body, msg.subject
+
+
+@pytest.mark.django_db
+def test_a_one_day_reservation_says_its_day_once_in_the_dates_line(user, user2, thing):
+    """A whole-day reservation prints its last day inclusive, so a one-day one has
+    the same start and end — the same single date as the loan above."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 10, 13),
+        end_date=date(2026, 10, 14),  # the day the space is free again
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+    mail.outbox.clear()
+
+    email_service.send_reservation_notice_email(user.email, user2, thing, booking, None)
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert html.count("13/10/2026") == 1
+    assert "13/10/2026 - 13/10/2026" not in html
+
+
 # --- Every email names one parent, as its <h1> (CA, 2026-09-22) -------------
 #
 # A thing's own headline for thing-scoped mail (people recognise the drill,

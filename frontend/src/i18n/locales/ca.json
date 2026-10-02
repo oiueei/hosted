@@ -274,6 +274,7 @@
     "reservationCancelledByYouOtherBody": "Has cancel·lat la reserva de {{member_name}} de {{thing_headline}}.",
     "reservationRegisteredAt": "Data i hora de registre: {{when}}",
     "reservationScheduledFor": "Data i horari de reserva: {{when}}",
+    "requestedDates": "Dates sol·licitades: {{when}}",
     "promotedLabel": "Ara formes part de la dinamització",
     "promotedBody": "Ara pots ajudar a gestionar “{{collection_headline}}”: convidar i treure membres, editar-la, escriure al grup i ocupar-te de les seves preguntes, sol·licituds i reserves. El teu nom apareix ara a la pàgina de la col·lecció, a «Dinamització»; només qui la va crear pot esborrar-la.",
     "demotedLabel": "Ja no formes part de la dinamització",

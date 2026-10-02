@@ -274,6 +274,7 @@
     "reservationCancelledByYouOtherBody": "Has cancelado la reserva de {{member_name}} de {{thing_headline}}.",
     "reservationRegisteredAt": "Fecha y hora de registro: {{when}}",
     "reservationScheduledFor": "Fecha y horario de reserva: {{when}}",
+    "requestedDates": "Fechas solicitadas: {{when}}",
     "promotedLabel": "Ahora formas parte de la dinamización",
     "promotedBody": "Ahora puedes ayudar a gestionar “{{collection_headline}}”: invitar y quitar miembros, editarla, escribir al grupo y ocuparte de sus preguntas, solicitudes y reservas. Tu nombre aparece ahora en la página de la colección, en «Dinamización»; solo quien la creó puede borrarla.",
     "demotedLabel": "Ya no formas parte de la dinamización",

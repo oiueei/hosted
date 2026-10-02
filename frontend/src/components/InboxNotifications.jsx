@@ -480,7 +480,12 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
               )}
               {scheduledFor && (
                 <p style={META_LINE_STYLE}>
-                  {t('home.reservationScheduledFor', { when: scheduledFor })}
+                  {/* A reservation is "reserved for"; a loan or a rental is a request
+                      for dates until it is settled, and "reserved" is not the word for
+                      it (D2). */}
+                  {RESERVATION_TYPES.has(n.type)
+                    ? t('home.reservationScheduledFor', { when: scheduledFor })
+                    : t('home.requestedDates', { when: scheduledFor })}
                 </p>
               )}
             </Notification>
