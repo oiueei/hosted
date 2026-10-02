@@ -277,6 +277,25 @@ class TestAuthorityIsCheckedAtTheClick:
         assert booking.status == BookingPeriod.Status.PENDING
         assert _press(_link(booking, owner)).status_code == 200
 
+    def test_a_refused_decision_is_logged_with_who_which_booking_and_from_where(
+        self, catalogue, member, co_curator, security_log
+    ):
+        # The only trace the operator has that a stale link was used — told apart
+        # from a probe by who held it, for which request and from which address.
+        # The three facts, not the sentence around them.
+        booking = _ask(member, catalogue["gift"])
+        accept = _link(booking, co_curator)
+        catalogue["collection"].co_owners.remove(co_curator)
+        security_log.clear()
+
+        res = APIClient().post(f"/api/v1/auth/verify/{accept.token}/", REMOTE_ADDR="203.0.113.7")
+
+        assert res.status_code == 403
+        refusals = [r.getMessage() for r in security_log.records if r.name == "security"]
+        assert len(refusals) == 1
+        for fact in (co_curator.code, booking.code, "203.0.113.7"):
+            assert fact in refusals[0]
+
     def test_a_curator_of_a_collection_turned_community_cannot_decide(
         self, catalogue, member, owner, co_curator
     ):
