@@ -839,7 +839,7 @@ describe('sending a message to the whole group', () => {
 
   async function openComposer() {
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to members' }));
     return screen.getByLabelText(/Message/);
   }
 
@@ -880,7 +880,7 @@ describe('sending a message to the whole group', () => {
     fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
 
-    expect(await screen.findByText('Broadcast sent to 12 guests.')).toBeInTheDocument();
+    expect(await screen.findByText('Broadcast sent to 12 members.')).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith(
       '/api/v1/collections/COL001/broadcast/',
       expect.objectContaining({
@@ -929,7 +929,7 @@ describe('sending a message to the whole group', () => {
     expect(broadcastPosts()).toHaveLength(1);
 
     deliver();
-    expect(await screen.findByText('Broadcast sent to 1 guests.')).toBeInTheDocument();
+    expect(await screen.findByText('Broadcast sent to 1 members.')).toBeInTheDocument();
   });
 });
 
@@ -974,7 +974,7 @@ describe('a broadcast the server turns down', () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to members' }));
     fireEvent.change(screen.getByLabelText(/Message/), {
       target: { value: 'The library is closed on Monday' },
     });
@@ -1328,11 +1328,11 @@ describe('CollectionPage as a co-owner', () => {
     );
 
     expect(await screen.findByRole('link', { name: 'Edit collection' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage guests' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage members' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  test('the hero names the whole team on one "Co-curators:" line, founder first', async () => {
+  test('the hero names the whole team on one "Run by:" line, founder first', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1357,19 +1357,20 @@ describe('CollectionPage as a co-owner', () => {
       </MemoryRouter>
     );
 
-    const line = (await screen.findByText(/Co-curators:/)).closest('p');
+    const line = (await screen.findByText(/Run by:/)).closest('p');
     // founder first, then each co-curator, all linked
-    expect(line).toHaveTextContent('Co-curators: The Founder, Me, Nil');
+    expect(line).toHaveTextContent('Run by: The Founder, Me, Nil');
     expect(within(line).getByRole('link', { name: 'The Founder' })).toHaveAttribute(
       'href',
       '/OTHER1'
     );
     expect(within(line).getByRole('link', { name: 'Nil' })).toHaveAttribute('href', '/XYZ999');
-    // the separate single-owner line is gone
-    expect(screen.queryByText('Curator:')).not.toBeInTheDocument();
+    // The team and the founder share one label now, so "no separate founder
+    // line" is: the label is on the page once.
+    expect(screen.getAllByText('Run by:')).toHaveLength(1);
   });
 
-  test('with no co-curators the hero shows the single "Curator:" line (non-owner viewer)', async () => {
+  test('with no co-curators the hero shows the single "Run by:" line (non-owner viewer)', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1388,9 +1389,132 @@ describe('CollectionPage as a co-owner', () => {
       </MemoryRouter>
     );
 
-    const line = (await screen.findByText(/Curator:/)).closest('p');
-    expect(line).toHaveTextContent('Curator: The Founder');
-    expect(screen.queryByText(/Co-curators:/)).not.toBeInTheDocument();
+    const line = (await screen.findByText(/Run by:/)).closest('p');
+    // Exact: the label is the same one with a team, so only the names tell the
+    // two lines apart and nobody else may follow the founder here.
+    expect(line).toHaveTextContent(/^Run by: The Founder$/);
+    expect(screen.getAllByText('Run by:')).toHaveLength(1);
+  });
+
+  // The hero's team line as a signed-in non-founder sees it, in the collection's
+  // own language: the profile has none saved, which is what lets the collection's
+  // reach the page's chrome.
+  const renderTeamHero = (language, overrides) => {
+    const respond = (body) => Promise.resolve({ ok: true, status: 200, json: async () => body });
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return respond([]);
+      if (url.endsWith('/auth/me/')) return respond({ code: 'ABC123', language: '' });
+      return respond({ ...CO_OWNED, language, ...overrides });
+    });
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  // The API sends a co-curator's bare `name` — never the email in its place (L2) —
+  // so one who set none arrives as ''. Joined with commas that left "Oriol, ," on
+  // the page; whoever has no name is counted after the names instead (CA, 2026-10-02).
+  describe('a co-curator with no name is counted at the end, not listed', () => {
+    const nameless = (code) => ({ code, name: '' });
+    const linked = (line) =>
+      within(line)
+        .getAllByRole('link')
+        .map((a) => a.textContent);
+
+    test('two without a name leave "and 2 more people" and no gaps', async () => {
+      renderTeamHero('en', { co_owners: [nameless('XYZ001'), nameless('XYZ002')] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder and 2 more people$/);
+      // Only who has a name is linked: a profile with no name has nothing to show.
+      expect(linked(line)).toEqual(['The Founder']);
+    });
+
+    test('one without a name is "1 more person"', async () => {
+      renderTeamHero('en', { co_owners: [nameless('XYZ001')] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder and 1 more person$/);
+    });
+
+    test('named and unnamed together: the names with commas, then the count', async () => {
+      renderTeamHero('en', { co_owners: [{ code: 'XYZ999', name: 'Nil' }, nameless('XYZ001')] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder, Nil and 1 more person$/);
+      expect(linked(line)).toEqual(['The Founder', 'Nil']);
+    });
+
+    test('a founder with no name is one of the people counted', async () => {
+      renderTeamHero('en', { owner_name: '', co_owners: [{ code: 'XYZ999', name: 'Nil' }] });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: Nil and 1 more person$/);
+    });
+
+    test('with nobody named there is no line at all', async () => {
+      renderTeamHero('en', { owner_name: '', co_owners: [nameless('XYZ001'), nameless('XYZ002')] });
+
+      await screen.findByText('Kitchen Collection');
+      expect(screen.queryByText('Run by:')).not.toBeInTheDocument();
+    });
+  });
+
+  // The label is one noun, "Dinamización:" — like a credit line, no gender, no
+  // number — for a team of one and a team of three (CA, 2026-10-02), so it is
+  // the same word in both lines. Nothing but these pins the Spanish and Catalan
+  // wording of the hero.
+  describe.each([
+    ['es', 'Dinamización:', 'y 2 personas más'],
+    ['ca', 'Dinamització:', 'i 2 persones més'],
+  ])('in a %s group', (language, label, twoMore) => {
+    afterEach(async () => {
+      // `useCollectionLanguage` moves the whole UI to the collection's language;
+      // put it back so the next test starts in English.
+      const { default: i18n } = await import('../i18n');
+      await i18n.changeLanguage('en');
+      localStorage.removeItem('i18nextLng');
+    });
+
+    const renderHero = (overrides) =>
+      renderTeamHero(language, { owner_name: 'El Fundador', ...overrides });
+
+    test(`the founder and two co-curators come on one "${label}" line`, async () => {
+      renderHero({
+        co_owners: [
+          { code: 'ABC123', name: 'Yo' },
+          { code: 'XYZ999', name: 'Nil' },
+        ],
+      });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(`${label} El Fundador, Yo, Nil`);
+      expect(screen.getAllByText(label)).toHaveLength(1);
+    });
+
+    test(`with no co-curators the founder alone follows "${label}" (non-owner viewer)`, async () => {
+      renderHero({ co_owners: [], is_curator: false, is_member: true });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador$`));
+      expect(screen.getAllByText(label)).toHaveLength(1);
+    });
+
+    test(`co-curators with no name are counted after the names: "${twoMore}"`, async () => {
+      renderHero({
+        co_owners: [
+          { code: 'XYZ001', name: '' },
+          { code: 'XYZ002', name: '' },
+        ],
+      });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${twoMore}$`));
+    });
   });
 });
 

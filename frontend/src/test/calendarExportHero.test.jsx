@@ -132,7 +132,7 @@ beforeEach(() => {
 /**
  * The calendar download, offered where a curator already manages the group
  * (CA, 2026-09-28): the hero's curator button row, next to Edit / Add /
- * Manage guests. It is the same control the edit page offers at its foot —
+ * Manage members. It is the same control the edit page offers at its foot —
  * the request, the filename rule and the "every upcoming reservation" .ics
  * shape live in `CalendarExportButton`, so these tests pin the hero's two own
  * decisions:

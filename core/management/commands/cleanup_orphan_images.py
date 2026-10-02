@@ -3,9 +3,10 @@ Management command to delete orphaned images from object storage (#9).
 
 An "orphan" is an image that was uploaded (a ticketed direct-to-bucket upload
 from a form) but whose form was never submitted, so no DB row ever referenced
-its key. Deleting on record-delete is already handled by
-``core.services.asset_cleanup``; this command catches the *other* leak —
-uploads that never became a record at all.
+its key. Deleting on record-delete — and, since 2026-10-02, on a save that
+replaces or removes a key — is handled by ``core.services.asset_cleanup``; this
+command catches the *other* leak — uploads that never became a record at all,
+and anything that changed a row without going through ``save()``.
 
 **Dry-run is the default.** It only lists what it *would* delete; pass
 ``--commit`` to actually delete. Safe to run on Heroku:
@@ -34,12 +35,13 @@ Safety rails:
   a ``--prefix`` that does not fall inside an upload folder is refused with a
   ``CommandError`` before anything is listed.
 - Cross-references **every** DB asset field — Thing.thumbnail + Thing.gallery,
-  User.photo, Collection.thumbnail and Collection.welcome_doc — so anything in use
-  is kept. The welcome PDF matters here: it is an object in the same tree as the
-  photos, so it turns up in this sweep like any of them, and a missing
-  cross-reference would delete a live document. Welcome docs live in
-  ``oiueei/documents/`` (S4), one of the upload folders, so they are swept
-  alongside every other folder and cross-referenced the same way.
+  User.photo, Collection.thumbnail and Collection.welcome_doc, the one table in
+  ``asset_cleanup.ASSET_FIELDS`` — so anything in use is kept. The welcome PDF
+  matters here: it is an object in the same tree as the photos, so it turns up
+  in this sweep like any of them, and a missing cross-reference would delete a
+  live document. Welcome docs live in ``oiueei/documents/`` (S4), one of the
+  upload folders, so they are swept alongside every other folder and
+  cross-referenced the same way.
 - Never touches the ``oiueei/seed/`` folder (the demo's shared image pool) —
   structurally now, since the seed folder is not an upload folder and is never
   listed; the explicit prefix check stays as a second lock.
@@ -66,8 +68,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone as dj_timezone
 
-from core.models import Collection, Thing, User
-from core.services import storage
+from core.services import asset_cleanup, storage
 
 SEED_PREFIX = storage.SEED_PREFIX
 DELETE_BATCH = 100
@@ -211,23 +212,14 @@ class Command(BaseCommand):
         return [prefix]
 
     def _referenced_keys(self):
-        """Every storage key referenced by any DB record."""
-        referenced = set()
-        for thumbnail, gallery in Thing.objects.values_list("thumbnail", "gallery"):
-            if thumbnail:
-                referenced.add(thumbnail)
-            for key in gallery or []:
-                if key:
-                    referenced.add(key)
-        referenced.update(p for p in User.objects.values_list("photo", flat=True) if p)
-        for thumbnail, welcome_doc in Collection.objects.values_list("thumbnail", "welcome_doc"):
-            # welcome_doc is a PDF, and it lives in the same tree as the photos,
-            # so this sweep sees it — it has to be protected like any other asset.
-            if thumbnail:
-                referenced.add(thumbnail)
-            if welcome_doc:
-                referenced.add(welcome_doc)
-        return referenced
+        """Every storage key referenced by any DB record.
+
+        Read from ``asset_cleanup.ASSET_FIELDS``, the one table of key-holding
+        columns that the delete handlers use too. The welcome PDF is in it: it
+        lives in the same tree as the photos, so this sweep sees it, and it has to
+        be protected like any other asset.
+        """
+        return asset_cleanup.referenced_keys()
 
     def _iter_objects(self, prefixes):
         """Yield every stored object under each prefix, paginated.

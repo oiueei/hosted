@@ -153,7 +153,7 @@ describe('UserPage — another member’s profile', () => {
     expect(screen.queryByRole('link', { name: /edit profile/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /log ?out/i })).not.toBeInTheDocument();
     // ...and the "you share nothing" line must not appear next to a list of what they share.
-    expect(screen.queryByText(/don't share any collections/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/don't share any groups/i)).not.toBeInTheDocument();
   });
 
   test('a profile with nothing in common says so by name', async () => {
@@ -161,9 +161,7 @@ describe('UserPage — another member’s profile', () => {
 
     renderAt('/OTH001');
 
-    expect(
-      await screen.findByText("You and Lili don't share any collections yet.")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("You and Lili don't share any groups yet.")).toBeInTheDocument();
   });
 
   test('a profile with an About text does not add the empty-state line', async () => {
@@ -175,7 +173,7 @@ describe('UserPage — another member’s profile', () => {
       await screen.findByRole('heading', { name: en.userPage.aboutHeading })
     ).toBeInTheDocument();
     expect(screen.getByText('bikes').tagName).toBe('STRONG');
-    expect(screen.queryByText(/don't share any collections/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/don't share any groups/i)).not.toBeInTheDocument();
   });
 });
 

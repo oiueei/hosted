@@ -35,13 +35,21 @@ describe('JoinPage — the collection is named', () => {
   test('names the collection when arriving cold, with no navigation state', async () => {
     apiFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ code: 'PUB001', headline: 'Tool Library' }),
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline: 'Tool Library',
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+        }),
     });
 
     renderJoin(undefined);
 
-    // The named variant of the body copy — the sentence that asks for the email.
-    expect(await screen.findByText(/things to Tool Library/)).toBeInTheDocument();
+    // The named variant of the body copy — the sentence that asks for the email —
+    // with the verbs the collection endpoint gave: a lending library says "borrow",
+    // not the four verbs every collection used to promise.
+    expect(await screen.findByText(/^Join to borrow in Tool Library\./)).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/PUB001/', expect.anything());
   });
 
@@ -52,17 +60,15 @@ describe('JoinPage — the collection is named', () => {
         Promise.resolve({
           code: 'PUB001',
           headline: JSON.stringify({ en: 'Tool Library', es: 'Biblioteca de herramientas' }),
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
         }),
     });
 
     renderJoin(undefined);
 
     // The test i18n runs in English, so the raw map must never reach the screen.
-    expect(
-      await screen.findByText(
-        /Join to request, reserve, ask a question or add your own things to Tool Library/
-      )
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^Join to borrow in Tool Library\./)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\{"en"/);
   });
 
@@ -120,5 +126,59 @@ describe('JoinPage — the collection is named', () => {
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     const body = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
     expect(body).not.toHaveProperty('thing_code');
+  });
+});
+
+/**
+ * The door looks like the page it leads to (CA, 2026-10-02): a collection with a
+ * photo paints it in the hero with the same composition its own page uses
+ * (`HeroPhoto`), where `/join` used to be a plain hero in the same colours. The
+ * photo comes from the collection endpoint the page already calls, which gives
+ * `thumbnail_url` to an anonymous reader of a PUBLIC collection.
+ */
+describe('JoinPage — the hero carries the collection’s photo', () => {
+  const PHOTO = 'https://bucket.example.com/oiueei/collections/cover.jpg';
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const collectionWith = (thumbnail_url) =>
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline: 'Tool Library',
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+          thumbnail_url,
+        }),
+    });
+
+  test('with a photo, the hero shows it and takes the photo layout', async () => {
+    collectionWith(PHOTO);
+
+    const { container } = renderJoin(undefined);
+
+    const photo = await screen.findByRole('img', { name: 'Tool Library' });
+    expect(photo).toHaveAttribute('src', PHOTO);
+    expect(container.querySelector('.form-hero')).toHaveClass('form-hero--photo');
+    // The words are still in the hero, above the photo's wedge.
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Join to take part' })
+    ).toBeInTheDocument();
+  });
+
+  test('without one, the hero is the plain one: no image, no photo layout', async () => {
+    collectionWith('');
+
+    const { container } = renderJoin(undefined);
+
+    await screen.findByText(/^Join to borrow in Tool Library\./);
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('.form-hero')).not.toHaveClass('form-hero--photo');
   });
 });
