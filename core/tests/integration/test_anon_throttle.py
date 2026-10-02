@@ -164,6 +164,19 @@ def test_the_layer_wide_switch_turns_the_ceiling_off_with_the_rest(
     assert set(statuses(api_client, collection_url, 10)) == {200}
 
 
+@pytest.mark.django_db
+def test_a_deployment_that_never_defines_the_layer_switch_has_the_ceiling_on(
+    api_client, collection_url, settings
+):
+    # Only development.py defines `RATELIMIT_ENABLE` (as False); production never
+    # writes it down, so "on" is not a setting there but the default of the read.
+    # Every test above sets the switch, and would stay green if that default flipped
+    # and silently took the public side's only ceiling off.
+    del settings.RATELIMIT_ENABLE
+
+    assert statuses(api_client, collection_url, 4) == [200, 200, 200, 429]
+
+
 @pytest.mark.parametrize(
     ("rate", "parsed"),
     [
