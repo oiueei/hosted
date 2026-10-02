@@ -25,7 +25,7 @@ export default function CollectionForm({
   mode = 'PROPRIETARY',
   visibility = 'PRIVATE',
   setVisibility = () => {},
-  allowProposals = true,
+  allowProposals = false,
   setAllowProposals = () => {},
   errors,
   theeemeColor01,

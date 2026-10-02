@@ -1,0 +1,219 @@
+{
+  "_about": "Shared by core/tests/integration/test_inbox_group_dismiss.py and frontend/src/utils/inboxGroups.test.js. Which in-app notices the inbox folds into its one 'requests and reservations' card, and which DELETE /inbox/?group=bookings dismisses: the ones that are for whoever MANAGES a request or reservation (core.models.InAppNotification.team_booking_notices on the server, utils/inboxGroups.js in the browser). A copy for the person who asked or held the reservation is not in the set — the card links to the team's page, not theirs. Every payload is the shape its producer in core/services/booking_service.py writes today; a row's `grouped` is the answer both sides must give.",
+  "rows": [
+    {
+      "what": "a loan request, dated",
+      "type": "BOOKING_REQUESTED",
+      "payload": {
+        "thing_headline": "Drill",
+        "requester_name": "Lili",
+        "booking_code": "BKG001",
+        "thing_code": "THG001",
+        "collection_code": "COL001",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-13"
+      },
+      "grouped": true
+    },
+    {
+      "what": "a gift request, no dates",
+      "type": "BOOKING_REQUESTED",
+      "payload": {
+        "thing_headline": "Books",
+        "requester_name": "Lili",
+        "booking_code": "BKG002",
+        "thing_code": "THG002",
+        "collection_code": "COL001"
+      },
+      "grouped": true
+    },
+    {
+      "what": "a decision a teammate made",
+      "type": "BOOKING_DECIDED",
+      "payload": {
+        "thing_headline": "Drill",
+        "requester_name": "Lili",
+        "decider_name": "Lele",
+        "accepted": true,
+        "by_you": false,
+        "booking_code": "BKG001",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": true
+    },
+    {
+      "what": "a decision the reader made themselves",
+      "type": "BOOKING_DECIDED",
+      "payload": {
+        "thing_headline": "Drill",
+        "requester_name": "Lili",
+        "decider_name": "Lala",
+        "accepted": false,
+        "by_you": true,
+        "booking_code": "BKG001",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": true
+    },
+    {
+      "what": "a confirmed reservation",
+      "type": "RESERVATION_MADE",
+      "payload": {
+        "thing_headline": "Sala",
+        "requester_name": "Lili",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-14",
+        "start_time": null,
+        "end_time": null,
+        "booking_code": "BKG003",
+        "thing_code": "THG003",
+        "collection_code": "COL002"
+      },
+      "grouped": true
+    },
+    {
+      "what": "a cancellation told to a manager who did not cancel",
+      "type": "RESERVATION_CANCELLED",
+      "payload": {
+        "thing_headline": "Sala",
+        "other_name": "Lili",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-14",
+        "start_time": null,
+        "end_time": null,
+        "thing_code": "THG003",
+        "cancelled_by_owner": false
+      },
+      "grouped": true
+    },
+    {
+      "what": "a manager's own record of cancelling somebody else's reservation",
+      "type": "RESERVATION_CANCELLED",
+      "payload": {
+        "thing_headline": "Sala",
+        "other_name": "Lala",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-14",
+        "start_time": null,
+        "end_time": null,
+        "thing_code": "THG003",
+        "by_you": true,
+        "member_name": "Lili"
+      },
+      "grouped": true
+    },
+    {
+      "what": "the same, the member having set no name (the key is there, empty)",
+      "type": "RESERVATION_CANCELLED",
+      "payload": {
+        "thing_headline": "Sala",
+        "other_name": "Lala",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-14",
+        "start_time": null,
+        "end_time": null,
+        "thing_code": "THG003",
+        "by_you": true,
+        "member_name": ""
+      },
+      "grouped": true
+    },
+    {
+      "what": "a cancellation told to the member whose reservation a manager cancelled",
+      "type": "RESERVATION_CANCELLED",
+      "payload": {
+        "thing_headline": "Sala",
+        "other_name": "Lala",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-14",
+        "start_time": null,
+        "end_time": null,
+        "thing_code": "THG003",
+        "cancelled_by_owner": true
+      },
+      "grouped": false
+    },
+    {
+      "what": "a member's own record of cancelling their own reservation",
+      "type": "RESERVATION_CANCELLED",
+      "payload": {
+        "thing_headline": "Sala",
+        "other_name": "Lili",
+        "start_date": "2026-10-13",
+        "end_date": "2026-10-14",
+        "start_time": null,
+        "end_time": null,
+        "thing_code": "THG003",
+        "by_you": true
+      },
+      "grouped": false
+    },
+    {
+      "what": "a cancellation written before the payload said who it was for",
+      "type": "RESERVATION_CANCELLED",
+      "payload": {
+        "thing_headline": "Sala",
+        "other_name": "Lili",
+        "thing_code": "THG003"
+      },
+      "grouped": false
+    },
+    {
+      "what": "the requester's own 'confirmed' notice",
+      "type": "BOOKING_ACCEPTED",
+      "payload": {
+        "thing_headline": "Drill",
+        "owner_name": "Lala",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": false
+    },
+    {
+      "what": "the requester's own 'declined' notice",
+      "type": "BOOKING_REJECTED",
+      "payload": {
+        "thing_headline": "Drill",
+        "owner_name": "Lala",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": false
+    },
+    {
+      "what": "a question asked on a thing",
+      "type": "FAQ_QUESTION",
+      "payload": {
+        "thing_headline": "Drill",
+        "questioner_name": "Lili",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": false
+    },
+    {
+      "what": "a message to the group",
+      "type": "BROADCAST",
+      "payload": {
+        "collection_headline": "Tools",
+        "owner_name": "Lala",
+        "message": "Hello",
+        "collection_code": "COL001"
+      },
+      "grouped": false
+    },
+    {
+      "what": "a recommendation waiting for an answer",
+      "type": "INVITE_PROPOSED",
+      "payload": {
+        "collection_headline": "Tools",
+        "proposer_name": "Lili",
+        "email": "friend@test.com",
+        "collection_code": "COL001"
+      },
+      "grouped": false
+    }
+  ]
+}

@@ -50,7 +50,11 @@ def member(db):
 @pytest.fixture
 def group(db, member):
     owner = User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
-    collection = Collection.objects.create(code="GRP001", owner=owner, headline="The street")
+    # Proposals are off for a new collection since 2026-10-02; this group is the
+    # one where its owner turned them on, which is what every test here is about.
+    collection = Collection.objects.create(
+        code="GRP001", owner=owner, headline="The street", allow_member_proposals=True
+    )
     collection.invites.add(member)
     return collection
 
@@ -727,3 +731,45 @@ def test_a_resend_clears_only_the_invitation_pair_it_is_replacing(group):
             RSVP.objects.filter(user_code=invitee, target_code=group.code, action=action).count()
             == 1
         )
+
+
+@pytest.mark.django_db
+class TestANewCollectionAsksItsOwnerNothing:
+    """CA, 2026-10-02: ``allow_member_proposals`` is off for a new collection. Being
+    asked to approve strangers is something the person who runs a group chooses,
+    not something every group is handed. Collections that already existed kept the
+    value they had; only the default for new ones changed."""
+
+    def test_one_created_without_mentioning_it_has_proposals_off(self, authenticated_client):
+        res = authenticated_client.post(
+            "/api/v1/collections/", {"headline": "A new street"}, format="json"
+        )
+
+        assert res.status_code == 201, res.data
+        assert res.data["allow_member_proposals"] is False
+        assert Collection.objects.get(code=res.data["code"]).allow_member_proposals is False
+
+    def test_the_owner_who_turns_it_on_at_creation_gets_it_on(self, authenticated_client):
+        res = authenticated_client.post(
+            "/api/v1/collections/",
+            {"headline": "A new street", "allow_member_proposals": True},
+            format="json",
+        )
+
+        assert res.status_code == 201, res.data
+        assert Collection.objects.get(code=res.data["code"]).allow_member_proposals is True
+
+    def test_a_member_of_such_a_collection_is_not_offered_the_suggestion(
+        self, authenticated_client, user2
+    ):
+        code = authenticated_client.post(
+            "/api/v1/collections/", {"headline": "A new street"}, format="json"
+        ).data["code"]
+        Collection.objects.get(code=code).invites.add(user2)
+
+        resp = client_for(user2).post(
+            PROPOSE_URL.format(code=code), {"email": "friend@test.com"}, format="json"
+        )
+
+        assert resp.status_code == 403
+        assert InvitationProposal.objects.count() == 0

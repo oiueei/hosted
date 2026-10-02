@@ -974,6 +974,24 @@ def _fmt_date(value):
     return str(value)
 
 
+def _fmt_dates(start, end):
+    """The value of the "Dates" line: ``start - end``, or the day **once** when
+    they are the same one. A loan or a rental for a single day read
+    "13/10/2026 - 13/10/2026" (CA, 2026-10-02, seen in a confirmation email).
+    Takes the strings the caller already formatted, so an HOUR-unit reservation's
+    "05/10/2026 10:00" and "13:00" stay a range."""
+    return start if start == end else f"{start} - {end}"
+
+
+def _when_phrase(booking, T):
+    """The dates of a booking as a phrase inside a sentence, in the reader's
+    language: "from the 5th to the 8th", or "on the 5th" for a single day."""
+    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    if start == end:
+        return T("when_day").format(start=start)
+    return T("when_range").format(start=start, end=end)
+
+
 def _fmt_when(booking):
     """``(start, end)`` strings for the four RESERVE_THING emails' ``{start}``/
     ``{end}`` and ``dates_label`` field — every template already reads
@@ -1003,7 +1021,7 @@ def _fmt_when(booking):
 def _booking_detail_blocks(booking, lang=None):
     """Date/quantity detail blocks shared by the three booking emails."""
     if booking.start_date and booking.end_date:
-        dates = f"{_fmt_date(booking.start_date)} - {_fmt_date(booking.end_date)}"
+        dates = _fmt_dates(_fmt_date(booking.start_date), _fmt_date(booking.end_date))
         return [_field(T("dates_label", lang), dates)]
     return []
 
@@ -1474,8 +1492,7 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
             requester=requester_name,
             action=action,
             thing=headline,
-            start=_fmt_date(booking.start_date),
-            end=_fmt_date(booking.end_date),
+            when=_when_phrase(booking, T),
             accept=accept_link,
             reject=reject_link,
         )
@@ -1537,8 +1554,7 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
         plain = T("decision_plain_dated").format(
             action=action,
             thing=headline,
-            start=_fmt_date(booking.start_date),
-            end=_fmt_date(booking.end_date),
+            when=_when_phrase(booking, T),
             decision=decision_word,
             url=thing_url,
         )
@@ -1617,8 +1633,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None):
         plain = T("confirmation_plain_dated").format(
             action=action,
             thing=headline,
-            start=_fmt_date(booking.start_date),
-            end=_fmt_date(booking.end_date),
+            when=_when_phrase(booking, T),
             owner=owner_name,
             url=thing_url,
         )
@@ -2006,7 +2021,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     )
     blocks = [
         _para(T("reservation_confirmed_intro")),
-        _field(T("dates_label"), f"{start} - {end}"),
+        _field(T("dates_label"), _fmt_dates(start, end)),
     ]
     if thing.fee:
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
@@ -2062,7 +2077,7 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     blocks = [
         _para(T("reservation_notice_intro").format(requester=requester_name)),
         _field(T("reservation_requester_email_label"), requester.email, email=True),
-        _field(T("dates_label"), f"{start} - {end}"),
+        _field(T("dates_label"), _fmt_dates(start, end)),
     ]
     if booking.project_note:
         plain += "\n\n" + T("reservation_note_label") + ": " + booking.project_note
@@ -2094,7 +2109,7 @@ def send_reservation_cancelled_email(
     html = _render_email(
         [
             _para(T(f"reservation_cancelled_{side}_intro").format(other=other)),
-            _field(T("dates_label"), f"{start} - {end}"),
+            _field(T("dates_label"), _fmt_dates(start, end)),
         ],
         lang=lang,
         header=header,
@@ -2148,7 +2163,7 @@ def send_reservation_cancel_confirmation_email(
     html = _render_email(
         [
             _para(intro),
-            _field(T("dates_label"), f"{start} - {end}"),
+            _field(T("dates_label"), _fmt_dates(start, end)),
         ],
         lang=lang,
         header=header,
@@ -2187,7 +2202,7 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     )
     blocks = [
         _para(T("reservation_reminder_intro")),
-        _field(T("dates_label"), f"{start} - {end}"),
+        _field(T("dates_label"), _fmt_dates(start, end)),
     ]
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))

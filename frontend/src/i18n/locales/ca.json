@@ -190,6 +190,7 @@
     "holdConfirmed": "La sol·licitud ha estat confirmada!",
     "holdRejected": "La sol·licitud ha estat rebutjada.",
     "invalidOrExpired": "Enllaç no vàlid o caducat.",
+    "noLongerManages": "Ja no gestiones aquesta cosa, així que aquest enllaç ja no serveix per decidir la sol·licitud.",
     "expiredHelp": "Si el teu enllaç ha caducat, demana a qui t'ha convidat que t'en enviï un de nou, o sol·licita un nou enllaç màgic.",
     "refusalHelp": "No s'ha decidit res i aquest enllaç continua funcionant: torna-ho a provar més tard.",
     "goToHomepage": "Anar a l'inici",
@@ -202,6 +203,18 @@
     "accountDeletedBody": "El teu compte i les teves dades s'han esborrat. Gràcies per haver format part d'OIUEEI.",
     "proposalApproved": "Invitació enviada a {{email}}. L'hi hem dit al membre que la va recomanar.",
     "proposalDeclined": "No s'ha enviat cap invitació. L'hi hem dit al membre, sense dir per què; i amb la persona que va proposar no hi hem contactat en cap moment."
+  },
+  "inbox": {
+    "summary": {
+      "label": "Sol·licituds i reserves",
+      "pending_one": "1 sol·licitud pendent",
+      "pending_other": "{{count}} sol·licituds pendents",
+      "upcoming_one": "1 reserva propera",
+      "upcoming_other": "{{count}} reserves properes",
+      "body": "Tens {{items}}.",
+      "nothing": "No tens res pendent.",
+      "link": "Veure-les totes"
+    }
   },
   "home": {
     "greeting": "Hola, {{name}}",
@@ -262,6 +275,7 @@
     "reservationCancelledByYouOtherBody": "Has cancel·lat la reserva de {{member_name}} de {{thing_headline}}.",
     "reservationRegisteredAt": "Data i hora de registre: {{when}}",
     "reservationScheduledFor": "Data i horari de reserva: {{when}}",
+    "requestedDates": "Dates sol·licitades: {{when}}",
     "promotedLabel": "Ara formes part de la dinamització",
     "promotedBody": "Ara pots ajudar a gestionar “{{collection_headline}}”: convidar i treure membres, editar-la, escriure al grup i ocupar-te de les seves preguntes, sol·licituds i reserves. El teu nom apareix ara a la pàgina de la col·lecció, a «Dinamització»; només qui la va crear pot esborrar-la.",
     "demotedLabel": "Ja no formes part de la dinamització",
@@ -278,7 +292,7 @@
     "inactiveThings": "Coses inactives",
     "inactiveNotice": "Aquesta col·lecció està inactiva. No és visible per als membres.",
     "noThings": "Aquesta col·lecció encara no té coses.",
-    "addOne": "Afegir-ne un",
+    "addOne": "Afegir-ne una",
     "addManyCsv": "Afegir-ne uns quants alhora (CSV)",
     "allTags": "Tots",
     "noThingsForTag": "No hi ha coses amb aquesta etiqueta.",
@@ -335,6 +349,7 @@
     "errorReactivatingThing": "Error en reactivar la cosa.",
     "holdConfirmed": "Sol·licitud confirmada.",
     "holdCancelled": "Sol·licitud rebutjada.",
+    "noLongerDecides": "Ja no pots decidir aquesta sol·licitud. Hem tornat a carregar la pàgina perquè vegis com està.",
     "errorConfirmingHold": "Error en confirmar la sol·licitud.",
     "errorCancellingHold": "Error en rebutjar la sol·licitud.",
     "questionSent": "Pregunta enviada.",
@@ -402,7 +417,7 @@
     "dateOverlap": "La data coincideix amb una altra sol·licitud o reserva.",
     "dateRange": "La data ha d'estar entre avui i 90 dies a partir d'avui.",
     "successLabel": "Tot llest!",
-    "successMessage": "Ja hem avisat al propietari — aviat et respondrà.",
+    "successMessage": "Ja hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
     "backTo": "Tornar a {{label}}",
     "errorSending": "Error en enviar la sol·licitud."
   },
@@ -1001,7 +1016,7 @@
     "projectNoteLabel": "Per a què ho necessites? (opcional)",
     "projectNoteHelper": "Queden {{remaining}} caràcters",
     "successLabel": "Reservat",
-    "successMessage": "La teva reserva està confirmada; n'hem avisat el propietari.",
+    "successMessage": "La teva reserva està confirmada; n'hem avisat qui la gestiona.",
     "joinedLabel": "T'has unit al grup",
     "joinedGroup": "Per reservar aquí t'has unit a {{group}}. Pots sortir-ne des del teu perfil.",
     "dateSummary": "Reservat del {{start}} al {{end}}.",

@@ -27,7 +27,7 @@ from core.models.event import Event
 from core.models.notification import InAppNotification
 from core.serializers import RequestLinkSerializer, UserSerializer
 from core.services.account_service import delete_account
-from core.services.booking_service import finalize_booking_decision
+from core.services.booking_service import finalize_booking_decision, receives_booking_requests
 from core.services.creator_policy import capabilities_for
 from core.services.email_service import (
     resolve_email_language,
@@ -696,8 +696,11 @@ class VerifyLinkView(APIView):
                 f"no longer manages the thing, from IP {ip}"
             )
             rsvp.delete()
+            # The code lets the page say why in the reader's language ("you no longer
+            # run this thing"), where a bare 403 read as an expired invitation; the
+            # English sentence stays the same for a client that does not know it.
             return Response(
-                {"error": "Not authorized"},
+                {"error": "Not authorized", "code": "no_longer_manages"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -1054,6 +1057,10 @@ class MeView(APIView):
         # `capabilities()` the create endpoints refuse with, so the UI can only
         # offer what the API would accept.
         data["capabilities"] = capabilities_for(user).as_dict()
+        # Whether "Requests to me" has anything to show this person (something of
+        # theirs can be asked for). The account menu reads it when it opens, so the
+        # browser keeps nothing new about it.
+        data["receives_requests"] = receives_booking_requests(user)
         return Response(data)
 
 

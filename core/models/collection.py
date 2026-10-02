@@ -106,11 +106,14 @@ class Collection(models.Model):
     # process may not want the question raised, and saying so once beats
     # declining the same suggestion over and over.
     #
-    # Default ON: the proposal reaches nobody but the owner, who can decline it
-    # in one click and turn this off just as easily, so the cost of being asked
-    # is small and the cost of the feature never being discovered is the whole
-    # point of building it.
-    allow_member_proposals = models.BooleanField(default=True)
+    # Default OFF (CA, 2026-10-02; it was ON): a new collection does not ask its
+    # owner anything until the owner says so. The suggestion reaches only the
+    # owner, but being asked is still something the person who runs a group
+    # should choose rather than be handed, and a feature offered to everybody by
+    # default is one most groups never meant to have. Collections that already
+    # existed kept the value they had — there was no data migration, only the
+    # default for new rows changed.
+    allow_member_proposals = models.BooleanField(default=False)
     is_onboarding = models.BooleanField(default=False)
     # Rental rules for LEND/RENT things in this collection (#7).
     # rental_durations: allowed rental lengths in DAYS (weeks are normalised to

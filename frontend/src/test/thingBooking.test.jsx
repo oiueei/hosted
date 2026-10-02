@@ -333,6 +333,53 @@ describe('ThingPage — owner button matrix', () => {
   });
 });
 
+describe('ThingPage — a co-curator demoted since the page loaded', () => {
+  test('pressing Confirm hold says why, reloads the thing, and the controls that are no longer theirs go', async () => {
+    localStorage.setItem('userCode', 'CURATOR1');
+    // A loan, not a gift: accepting a gift asks to confirm the handover first.
+    const asCurator = makeThing({
+      type: 'LEND_THING',
+      status: 'ACTIVE',
+      owner: 'OWNER1',
+      can_manage: true,
+    });
+    const demoted = { ...asCurator, can_manage: false };
+    let reads = 0;
+    apiFetch.mockImplementation((url) => {
+      if (/\/things\/[^/]+\/calendar\//.test(url)) {
+        return Promise.resolve(
+          mockResponse([{ code: 'BK1', status: 'PENDING', end_date: '2099-12-31' }])
+        );
+      }
+      if (/\/bookings\/[^/]+\/accept\//.test(url)) {
+        return Promise.resolve(mockResponse({}, false, 403));
+      }
+      if (/\/things\/[^/]+\/(faq|transfers|responses)\//.test(url)) {
+        return Promise.resolve(mockResponse({ results: [], transfers: [], total_transfers: 0 }));
+      }
+      if (/\/things\/THG001\/(\?.*)?$/.test(url)) {
+        reads += 1;
+        return Promise.resolve(mockResponse(reads === 1 ? asCurator : demoted));
+      }
+      return Promise.resolve(mockResponse({}));
+    });
+    renderThingPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+
+    expect(
+      await screen.findByText(
+        "You can no longer decide this request. We've reloaded it so you can see where it stands."
+      )
+    ).toBeInTheDocument();
+    expect(reads).toBe(2);
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Confirm hold' })).not.toBeInTheDocument()
+    );
+    expect(screen.queryByRole('button', { name: 'Decline hold' })).not.toBeInTheDocument();
+  });
+});
+
 // ════════════════════════════════════════════════════════════════════════
 // ThingPage — anonymous visitor (login-to-act, JoinPage pattern)
 // An anonymous visitor on a PUBLIC collection sees the action buttons (like
@@ -576,6 +623,71 @@ describe('useThingBooking — the owner decides a hold', () => {
       expect(onUpdateThing).not.toHaveBeenCalled();
     }
   );
+
+  // CA, 2026-10-02: a co-curator demoted in another tab kept the card's "Confirm
+  // hold / Decline hold" on screen; pressing one, the server refused (correctly)
+  // and the page said only "Error confirming hold." — no why, no way forward.
+  // A 403 now says why and reloads the thing, so what is no longer theirs goes.
+  const NO_LONGER =
+    "You can no longer decide this request. We've reloaded it so you can see where it stands.";
+
+  test.each([
+    ['confirm', 'Confirm hold'],
+    ['decline', 'Decline hold'],
+  ])('a refused %s (403) says why and reloads the thing', async (_n, label) => {
+    const demoted = makeThing({ type: 'GIFT_THING', status: 'TAKEN', can_manage: false });
+    const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {
+      thing: demoted,
+      booking: () => Promise.resolve(mockResponse({}, false, 403)),
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: label }));
+
+    expect(await screen.findByText(NO_LONGER)).toBeInTheDocument();
+    expect(screen.queryByText(/^Error (confirming|declining) hold\.$/)).not.toBeInTheDocument();
+    // The thing was asked for again, and what came back replaces the card's copy.
+    expect(apiFetch).toHaveBeenCalledWith('/api/v1/things/THG001/');
+    expect(onUpdateThing).toHaveBeenCalledWith('THG001', demoted);
+  });
+
+  test('any other refusal keeps the generic message and does not reload', async () => {
+    const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {
+      booking: () => Promise.resolve(mockResponse({}, false, 500)),
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+
+    expect(await screen.findByText('Error confirming hold.')).toBeInTheDocument();
+    expect(screen.queryByText(NO_LONGER)).not.toBeInTheDocument();
+    expect(apiFetch).not.toHaveBeenCalledWith('/api/v1/things/THG001/');
+    expect(onUpdateThing).not.toHaveBeenCalled();
+  });
+
+  test('if the thing cannot be reloaded the generic message stands: "reloaded" would be untrue', async () => {
+    const onUpdateThing = vi.fn();
+    apiFetch.mockImplementation((url) => {
+      if (/\/things\/[^/]+\/calendar\//.test(url)) {
+        return Promise.resolve(
+          mockResponse([{ code: 'BK1', status: 'PENDING', end_date: '2099-12-31' }])
+        );
+      }
+      if (/\/bookings\/[^/]+\/accept\//.test(url)) {
+        return Promise.resolve(mockResponse({}, false, 403));
+      }
+      return Promise.resolve(mockResponse({}, false, 500));
+    });
+    renderLinkbox({
+      thing: makeThing({ type: 'GIFT_THING', status: 'TAKEN' }),
+      userCode: 'OWNER1',
+      onUpdateThing,
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+
+    expect(await screen.findByText('Error confirming hold.')).toBeInTheDocument();
+    expect(screen.queryByText(NO_LONGER)).not.toBeInTheDocument();
+    expect(onUpdateThing).not.toHaveBeenCalled();
+  });
 
   test('a dropped connection while deciding is reported', async () => {
     renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {

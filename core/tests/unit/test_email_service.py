@@ -422,7 +422,7 @@ def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, use
     assert primary in html
     assert secondary in html
     assert ">Confirm hold</a>" in html
-    assert ">Cancel hold</a>" in html
+    assert ">Decline hold</a>" in html
     assert html.index(primary) < html.index(secondary)
     # The old equal-weight row is gone.
     assert f'<a href="{HOLD_ACCEPT}">Confirm hold</a>' not in html
@@ -441,7 +441,7 @@ def test_the_hold_request_spells_both_links_out_under_the_buttons(user, user2, t
     reject_text = f">{HOLD_REJECT}</a>"
     assert accept_text in html
     assert reject_text in html
-    assert html.index("Cancel hold</a>") < html.index("copy and paste these links")
+    assert html.index("Decline hold</a>") < html.index("copy and paste these links")
     assert html.index(accept_text) < html.index(reject_text)
     assert HOLD_ACCEPT in msg.body
     assert HOLD_REJECT in msg.body
@@ -451,8 +451,8 @@ def test_the_hold_request_spells_both_links_out_under_the_buttons(user, user2, t
 @pytest.mark.parametrize(
     "lang, label, phrase",
     [
-        ("es", "Confirmar la reserva", "copia y pega estos enlaces"),
-        ("ca", "Cancel·lar la reserva", "copia i enganxa aquests enllaços"),
+        ("es", "Confirmar la solicitud", "copia y pega estos enlaces"),
+        ("ca", "Rebutjar la sol·licitud", "copia i enganxa aquests enllaços"),
     ],
 )
 def test_the_hold_request_buttons_and_fallback_are_translated(
@@ -463,6 +463,35 @@ def test_the_hold_request_buttons_and_fallback_are_translated(
 
     assert f">{label}</a>" in html
     assert phrase in html
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "lang, confirm, decline, never",
+    [
+        ("es", "Confirmar la solicitud", "Rechazar la solicitud", "reserva"),
+        ("ca", "Confirmar la sol·licitud", "Rebutjar la sol·licitud", "reserva"),
+        ("en", "Confirm hold", "Decline hold", "Cancel"),
+    ],
+)
+def test_the_hold_request_buttons_say_request_and_decline_never_reservation_or_cancel(
+    user, user2, thing, lang, confirm, decline, never
+):
+    """A hold on a loan is a **request** (D2: "reservation" is only RESERVE_THING, which
+    confirms itself and never comes through here), and the second button *declines* it:
+    it cancels nothing. The email said "Confirmar la reserva / Cancelar la reserva"
+    (CA, 2026-10-02), where the app's own button had said "Reject request" since the
+    R round. The buttons and the plain-text line that repeats them say the same."""
+    with override_settings(EMAIL_LANGUAGE=lang):
+        msg = _hold_request(user, user2, thing)
+    html = msg.alternatives[0][0]
+
+    assert f">{confirm}</a>" in html
+    assert f">{decline}</a>" in html
+    assert f"{confirm}: {HOLD_ACCEPT}" in msg.body
+    assert f"{decline}: {HOLD_REJECT}" in msg.body
+    for text in (html, msg.body):
+        assert never not in text.replace(thing.headline, "")
 
 
 # --- The house rule for action buttons (CA, 2026-09-21) ------------------------
@@ -875,6 +904,119 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "05/03/2026" in body and "12/03/2026" in body
     assert "05/03/2026" in html
     assert "2026-03-05" not in body and "2026-03-05" not in html
+
+
+# --- A booking for a single day says the day once (CA, 2026-10-02) ---------------
+#
+# "Tu solicitud está confirmada — Fechas: 13/10/2026 - 13/10/2026": a loan or a
+# rental that starts and ends the same day printed it twice, in the "Dates" line
+# and again in the plain-text sentence ("from the 13th to the 13th"). The same
+# rule as the inbox: one day, one date; a longer booking is still a range.
+
+# What each language says for "one day" and for a range, in the plain text.
+ONE_DAY = {"en": "on 13/10/2026", "es": "el 13/10/2026", "ca": "el 13/10/2026"}
+A_RANGE = {
+    "en": "from 13/10/2026 to 15/10/2026",
+    "es": "del 13/10/2026 al 15/10/2026",
+    "ca": "del 13/10/2026 al 15/10/2026",
+}
+
+
+def _loan(user, user2, thing, start, end):
+    from core.models import BookingPeriod
+
+    thing.type = "LEND_THING"
+    thing.save(update_fields=["type"])
+    return BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=start,
+        end_date=end,
+        status=BookingPeriod.Status.PENDING,
+    )
+
+
+def _send_each_booking_email(user, user2, thing, booking):
+    """The three emails that carry a booking's dates: the request to the owner, the
+    answer to the requester, and the requester's own confirmation."""
+    email_service.send_booking_request_email(
+        user2, thing, booking, user.email, "http://x/a", "http://x/r"
+    )
+    email_service.send_booking_decision_email(booking, thing, accepted=True)
+    email_service.send_booking_confirmation_email(user2, thing, booking)
+    return {m.subject: m for m in mail.outbox}.values()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_single_day_loan_says_its_date_once_in_every_booking_email(user, user2, thing, lang):
+    from datetime import date
+
+    user.language = user2.language = lang
+    user.save(update_fields=["language"])
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 13))
+    mail.outbox.clear()
+
+    emails = list(_send_each_booking_email(user, user2, thing, booking))
+
+    assert len(emails) == 3
+    for msg in emails:
+        html = msg.alternatives[0][0]
+        # The "Dates" line carries the day once…
+        assert html.count("13/10/2026") == 1, msg.subject
+        assert "13/10/2026 - 13/10/2026" not in html
+        # …and so does the sentence, said as one day and not as a range.
+        assert ONE_DAY[lang] in msg.body, msg.subject
+        assert msg.body.count("13/10/2026") == 1, msg.subject
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("lang", ["en", "es", "ca"])
+def test_a_loan_over_several_days_is_still_a_range_in_every_booking_email(user, user2, thing, lang):
+    from datetime import date
+
+    user.language = user2.language = lang
+    user.save(update_fields=["language"])
+    user2.save(update_fields=["language"])
+    booking = _loan(user, user2, thing, date(2026, 10, 13), date(2026, 10, 15))
+    mail.outbox.clear()
+
+    for msg in _send_each_booking_email(user, user2, thing, booking):
+        assert "13/10/2026 - 15/10/2026" in msg.alternatives[0][0], msg.subject
+        assert A_RANGE[lang] in msg.body, msg.subject
+
+
+@pytest.mark.django_db
+def test_a_one_day_reservation_says_its_day_once_in_the_dates_line(user, user2, thing):
+    """A whole-day reservation prints its last day inclusive, so a one-day one has
+    the same start and end — the same single date as the loan above."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+    booking = BookingPeriod.objects.create(
+        thing_code=thing,
+        thing_type=thing.type,
+        requester_code=user2,
+        requester_email=user2.email,
+        owner_code=user,
+        start_date=date(2026, 10, 13),
+        end_date=date(2026, 10, 14),  # the day the space is free again
+        status=BookingPeriod.Status.ACCEPTED,
+    )
+    mail.outbox.clear()
+
+    email_service.send_reservation_notice_email(user.email, user2, thing, booking, None)
+
+    html = mail.outbox[0].alternatives[0][0]
+    assert html.count("13/10/2026") == 1
+    assert "13/10/2026 - 13/10/2026" not in html
 
 
 # --- Every email names one parent, as its <h1> (CA, 2026-09-22) -------------
