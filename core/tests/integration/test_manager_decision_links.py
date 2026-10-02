@@ -299,7 +299,9 @@ class TestAuthorityIsCheckedAtTheClick:
         res = _press(accept)
 
         assert res.status_code == 403
-        assert res.data == {"error": "Not authorized"}
+        # The sentence is what it always was, for a client that knows nothing more;
+        # the code is what lets the verify page say why (H9b).
+        assert res.data == {"error": "Not authorized", "code": "no_longer_manages"}
         booking.refresh_from_db()
         assert booking.status == BookingPeriod.Status.PENDING
         assert not RSVP.objects.filter(pk=accept.pk).exists()

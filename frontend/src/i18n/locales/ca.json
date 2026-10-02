@@ -190,6 +190,7 @@
     "holdConfirmed": "La sol·licitud ha estat confirmada!",
     "holdRejected": "La sol·licitud ha estat rebutjada.",
     "invalidOrExpired": "Enllaç no vàlid o caducat.",
+    "noLongerManages": "Ja no gestiones aquesta cosa, així que aquest enllaç ja no serveix per decidir la sol·licitud.",
     "expiredHelp": "Si el teu enllaç ha caducat, demana a qui t'ha convidat que t'en enviï un de nou, o sol·licita un nou enllaç màgic.",
     "refusalHelp": "No s'ha decidit res i aquest enllaç continua funcionant: torna-ho a provar més tard.",
     "goToHomepage": "Anar a l'inici",

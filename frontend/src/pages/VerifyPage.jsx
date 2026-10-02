@@ -58,6 +58,10 @@ export default function VerifyPage() {
   // (`retryable`): the link still works, so the error screen owes a different
   // way out than "ask whoever invited you for a new one".
   const [linkAlive, setLinkAlive] = useState(false);
+  // Set when the refusal is the server saying this reader no longer runs the thing
+  // the link decides (`no_longer_manages`): the link is not expired and nobody
+  // invited them, so the invitation-flavoured help line has nothing to say.
+  const [noLongerManages, setNoLongerManages] = useState(false);
   const [success, setSuccess] = useState('');
   const [title, setTitle] = useState('');
   // ACCOUNT_DELETE preview data — unlike a booking decision, account deletion
@@ -117,6 +121,12 @@ export default function VerifyPage() {
             } else if (commit.ok && done.action === 'PROPOSAL_REJECT') {
               setTitle(t('verify.declined'));
               setSuccess(t('verify.proposalDeclined'));
+            } else if (done.code === 'no_longer_manages') {
+              // A co-curator demoted after the email: the server was right to
+              // refuse, and "invalid or expired — ask whoever invited you" would
+              // send them looking for an invitation that is not the problem.
+              setNoLongerManages(true);
+              setError(t('verify.noLongerManages'));
             } else if (done.retryable) {
               // "Not now", not "never". An approval the deployment's daily
               // invitation cap or the group's member ceiling refuses leaves the
@@ -257,7 +267,9 @@ export default function VerifyPage() {
         <Notification label={t('common.error')} type="error">
           {error}
         </Notification>
-        <p className="section-mt">{t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}</p>
+        {!noLongerManages && (
+          <p className="section-mt">{t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}</p>
+        )}
       </VerifyScreen>
     );
   }

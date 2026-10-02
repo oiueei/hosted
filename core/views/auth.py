@@ -696,8 +696,11 @@ class VerifyLinkView(APIView):
                 f"no longer manages the thing, from IP {ip}"
             )
             rsvp.delete()
+            # The code lets the page say why in the reader's language ("you no longer
+            # run this thing"), where a bare 403 read as an expired invitation; the
+            # English sentence stays the same for a client that does not know it.
             return Response(
-                {"error": "Not authorized"},
+                {"error": "Not authorized", "code": "no_longer_manages"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

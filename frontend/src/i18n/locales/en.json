@@ -196,6 +196,7 @@
     "holdConfirmed": "The hold has been confirmed!",
     "holdRejected": "The hold has been rejected.",
     "invalidOrExpired": "Invalid or expired link.",
+    "noLongerManages": "You no longer run this thing, so this link can no longer decide the request.",
     "expiredHelp": "If your link has expired, ask the person who invited you to send a new one, or request a new magic link.",
     "refusalHelp": "Nothing has been decided, and this link still works — try it again later.",
     "goToHomepage": "Go to homepage",

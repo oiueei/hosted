@@ -199,6 +199,80 @@ describe('a refusal the link survives', () => {
 });
 
 /**
+ * A co-curator demoted after the email pressed "Confirm" on the old link (CA, 2026-10-02).
+ * The server refuses it, correctly, burns the link and leaves the request
+ * pending — with a 403 that now carries `no_longer_manages`. The page used to say
+ * "Invalid or expired link. If your link has expired, ask the person who invited
+ * you…", which talks about invitations and is no use to a manager who just lost
+ * the role. With the code it says why, and has no invitation help line to add.
+ */
+describe('a decision link its holder no longer manages', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(async () => {
+    const { default: i18n } = await import('../i18n');
+    await i18n.changeLanguage('en');
+    localStorage.removeItem('i18nextLng');
+  });
+
+  function mockRefusal(body) {
+    globalThis.fetch = vi.fn((url, opts = {}) =>
+      opts.method === 'POST'
+        ? Promise.resolve(mockResponse(body, false, 403))
+        : Promise.resolve(mockResponse({ requires_confirmation: true }))
+    );
+  }
+
+  test('says they no longer run the thing, with no invitation advice', async () => {
+    mockRefusal({ error: 'Not authorized', code: 'no_longer_manages' });
+
+    renderVerify();
+
+    expect(
+      await screen.findByText(
+        'You no longer run this thing, so this link can no longer decide the request.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Invalid or expired link.')).toBeNull();
+    expect(screen.queryByText(/ask the person who invited you/i)).toBeNull();
+    expect(screen.queryByText(/this link still works/i)).toBeNull();
+  });
+
+  test('without the code a 403 is as it was: an invalid or expired link', async () => {
+    // A server that does not send the code yet, or a 403 for another reason.
+    mockRefusal({ error: 'Not authorized' });
+
+    renderVerify();
+
+    expect(await screen.findByText('Invalid or expired link.')).toBeInTheDocument();
+    expect(screen.getByText(/ask the person who invited you/i)).toBeInTheDocument();
+  });
+
+  test.each([
+    [
+      'es',
+      'Ya no gestionas esta cosa, así que este enlace ya no sirve para decidir la solicitud.',
+      /pide a quien te invitó/i,
+    ],
+    [
+      'ca',
+      'Ja no gestiones aquesta cosa, així que aquest enllaç ja no serveix per decidir la sol·licitud.',
+      /demana a qui t'ha convidat/i,
+    ],
+  ])('says it in %s, again with no invitation advice', async (language, sentence, advice) => {
+    const { default: i18n } = await import('../i18n');
+    await i18n.changeLanguage(language);
+    mockRefusal({ error: 'Not authorized', code: 'no_longer_manages' });
+
+    renderVerify();
+
+    expect(await screen.findByText(sentence)).toBeInTheDocument();
+    expect(screen.queryByText(advice)).toBeNull();
+  });
+});
+
+/**
  * Approving a suggestion is the third irreversible act on this page, and the
  * only one whose consequence lands on somebody who does not yet know they were
  * suggested: it mails a stranger an invitation. It rides the same auto-commit
