@@ -140,10 +140,12 @@ describe('HomePage — a group you help run shows once', () => {
  */
 describe('HomePage — the hero holds one button', () => {
   // The accounts the old row judged differently: a plain member, someone who owns
-  // a thing (a Community contribution), a curator of a Proprietary collection.
+  // a thing (a Community contribution), a curator of a Proprietary collection. Each
+  // has a collection of their own here, which is when the hero has the button (an
+  // account with none gets the invitation under "My collections" instead).
   const ACCOUNTS = [
-    ['a member', { invited: [GROUP] }],
-    ['someone who owns a thing', { user: { ...USER, things: [{ code: 'THG001' }] } }],
+    ['a member', { mine: [MINE], invited: [GROUP] }],
+    ['someone who owns a thing', { mine: [MINE], user: { ...USER, things: [{ code: 'THG001' }] } }],
     [
       'a curator of a Proprietary collection',
       { mine: [{ ...MINE, mode: 'PROPRIETARY', is_curator: true }] },
@@ -185,6 +187,97 @@ describe('HomePage — the hero holds one button', () => {
       'href',
       '/owner-bookings'
     );
+  });
+});
+
+/**
+ * "Create collection" in one place (CA, 2026-10-02): a new account saw the hero's
+ * button and, under "My collections", "Create your first collection" — two buttons
+ * for the same thing. With any collection of their own the button is in the hero
+ * and the list below is only the list; with none at all it is the invitation
+ * below and the hero has none; while the read is in flight there is none yet, and
+ * if it fails the hero's is the one that shows.
+ */
+describe('HomePage — one create button, in one place', () => {
+  const INACTIVE = { ...MINE, code: 'COL002', headline: 'Old workshop', status: 'INACTIVE' };
+  const heroButton = (container) =>
+    container.querySelector('.form-hero')?.querySelector('a[href="/collections/new"]');
+  const createLinks = () => document.querySelectorAll('a[href="/collections/new"]');
+
+  test('with no collection at all the hero has none and the invitation is below', async () => {
+    mockDashboard({ mine: [], invited: [] });
+    const { container } = renderHome();
+
+    await screen.findByRole('link', { name: 'Create your first collection' });
+    expect(heroButton(container)).toBeNull();
+    expect(createLinks()).toHaveLength(1);
+  });
+
+  test('with an active collection the button is in the hero and nowhere else', async () => {
+    mockDashboard({ mine: [MINE] });
+    const { container } = renderHome();
+
+    await screen.findByText('My workshop');
+    expect(heroButton(container)).toHaveTextContent('Create collection');
+    expect(createLinks()).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: 'Create your first collection' })).toBeNull();
+    expect(screen.queryByText('You have no active collections yet.')).toBeNull();
+  });
+
+  test('with only inactive ones: the hero button, the sentence, the list — and no second button', async () => {
+    mockDashboard({ mine: [INACTIVE] });
+    const { container } = renderHome();
+
+    await screen.findByText('Old workshop');
+    expect(heroButton(container)).toHaveTextContent('Create collection');
+    expect(screen.getByText('You have no active collections yet.')).toBeInTheDocument();
+    expect(createLinks()).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: 'Create your first collection' })).toBeNull();
+    expect(screen.queryByText(/A collection is a shareable list/)).toBeNull();
+  });
+
+  test('while the read is in flight there is no button, then the right one', async () => {
+    let release;
+    const held = new Promise((resolve) => {
+      release = resolve;
+    });
+    const routes = dashboardRoutes({ mine: [MINE] });
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/collections/') ? held : routes(url)
+    );
+    const { container } = renderHome();
+
+    await screen.findByText(/Lulu/);
+    expect(screen.getByText('Loading collections...')).toBeInTheDocument();
+    expect(createLinks()).toHaveLength(0);
+
+    release({ ok: true, status: 200, json: () => Promise.resolve({ results: [MINE] }) });
+    await screen.findByText('My workshop');
+    expect(heroButton(container)).toBeInTheDocument();
+  });
+
+  test('if the read fails over a working connection the hero keeps its button', async () => {
+    const routes = dashboardRoutes({});
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/collections/') ? refused() : routes(url)
+    );
+    const { container } = renderHome();
+
+    await screen.findByText(/Lulu/);
+    await screen.findByText(/couldn.t load/i);
+    expect(heroButton(container)).toBeInTheDocument();
+    expect(createLinks()).toHaveLength(1);
+  });
+
+  test('if the connection drops on that read the hero keeps its button too', async () => {
+    const routes = dashboardRoutes({});
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/collections/') ? dropped() : routes(url)
+    );
+    const { container } = renderHome();
+
+    await screen.findByText(/Lulu/);
+    await waitFor(() => expect(heroButton(container)).toBeInTheDocument());
   });
 });
 

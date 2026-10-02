@@ -203,6 +203,17 @@ export default function HomePage() {
   // come first and the invitation to create sits under them.
   const groupsFirst = myCollections?.length === 0 && invitedCollections?.length > 0;
 
+  // One "Create collection" button, in one place (CA, 2026-10-02: a new account saw
+  // two buttons for the same thing). With any collection of their own — active or
+  // not — it is in the hero and the list below is only the list. With none at all
+  // it is the invitation under "My collections" instead, and the hero has none.
+  // While the read is in flight there is no button yet (one that appears and then
+  // disappears is worse than none); if the read fails, the hero's is the one that
+  // is there, since the page cannot say which of the two this account is.
+  const myCollectionsFailed = myCollectionsError || (myCollections === null && offline);
+  const heroCreateButton =
+    myCollectionsFailed || (myCollections !== null && myCollections.length > 0);
+
   const myCollectionsSection = (
     <>
       <h2>{t('userPage.myCollections')}</h2>
@@ -211,7 +222,12 @@ export default function HomePage() {
         sectionError
       ) : myCollections === null ? (
         <p className="text-muted">{t('userPage.loadingCollections')}</p>
-      ) : myCollections.filter((c) => c.status === 'ACTIVE').length === 0 ? (
+      ) : myCollections.length > 0 &&
+        myCollections.filter((c) => c.status === 'ACTIVE').length === 0 ? (
+        // Collections, none of them active: the hero has the button, and the
+        // inactive ones are listed below. Nothing here to invite them to create.
+        <p>{t('userPage.noCollections')}</p>
+      ) : myCollections.length === 0 ? (
         <div>
           <p>{t('userPage.noCollections')}</p>
           <p className="text-muted">{t('userPage.collectionExplainer')}</p>
@@ -323,12 +339,16 @@ export default function HomePage() {
               to four full-width buttons stacked on a phone before the inbox and
               the groups — the crowding the groups-first round wanted gone. It
               also judged "Requests to me" differently from the menu (hidden from
-              whoever cannot receive requests, where the menu always shows it). */}
-          <div className="button-row-wide">
-            <ButtonLink to="/collections/new" style={btnStyle}>
-              {t('home.createCollection')}
-            </ButtonLink>
-          </div>
+              whoever cannot receive requests, where the menu always shows it).
+              And only once there is something to create *another* of: an account
+              with no collection gets the invitation under "My collections". */}
+          {heroCreateButton && (
+            <div className="button-row-wide">
+              <ButtonLink to="/collections/new" style={btnStyle}>
+                {t('home.createCollection')}
+              </ButtonLink>
+            </div>
+          )}
         </div>
         <Koros
           className="form-hero-koros"
