@@ -8,6 +8,7 @@ Uses transaction.atomic to ensure BookingPeriod and Thing updates are consistent
 from datetime import date, timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from core.models import RSVP, Collection, Thing
@@ -373,6 +374,27 @@ def _delete_booking_rsvps(booking_code):
         target_code=booking_code,
         action__in=[RSVP.Action.BOOKING_ACCEPT, RSVP.Action.BOOKING_REJECT],
     ).delete()
+
+
+def receives_booking_requests(user):
+    """Whether anything of this person's can be asked for, so that "Requests to
+    me" has something to show them.
+
+    True when they **own a thing** — a member of a COMMUNITY collection who has
+    contributed one gets requests on it — or when they **run a PROPRIETARY
+    collection**, as its founder or a co-curator, whose curators answer for every
+    thing in it. It is the reach of ``OwnerBookingsView`` read as a yes/no, and it
+    is asked of the server because the browser cannot know it: someone who only
+    joined a group has nothing to receive, and the account menu used to offer the
+    page to everybody. Two ``EXISTS`` queries, nothing loaded.
+    """
+    if Thing.objects.filter(owner=user).exists():
+        return True
+    return (
+        Collection.objects.filter(mode=Collection.Mode.PROPRIETARY)
+        .filter(Q(owner=user) | Q(co_owners=user))
+        .exists()
+    )
 
 
 def _clear_request_notifications(booking):

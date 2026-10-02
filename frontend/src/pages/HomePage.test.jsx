@@ -171,7 +171,9 @@ describe('HomePage — the hero holds one button', () => {
   });
 
   test('the account menu still reaches My profile, My requests and Requests to me', async () => {
-    mockDashboard({ invited: [GROUP] });
+    // "Requests to me" is for an account that can receive requests, which the
+    // server says (`receives_requests`) when the menu opens.
+    mockDashboard({ invited: [GROUP], user: { ...USER, receives_requests: true } });
     renderHome();
     await screen.findByText(/Lulu/);
 
@@ -183,7 +185,7 @@ describe('HomePage — the hero holds one button', () => {
       'href',
       '/my-bookings'
     );
-    expect(within(menu).getByRole('link', { name: 'Requests to me' })).toHaveAttribute(
+    expect(await within(menu).findByRole('link', { name: 'Requests to me' })).toHaveAttribute(
       'href',
       '/owner-bookings'
     );

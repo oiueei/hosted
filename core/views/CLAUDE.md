@@ -223,6 +223,8 @@ Returns the current authenticated user's full profile via `UserSerializer`. Upda
 
 The standalone answers with everything and a null `request_url` (see [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment)). It is **not** a `UserSerializer` field: what someone may create belongs to the deployment, not to the person, and that serializer is also what `/users/{code}/` returns about somebody else. It rides here because the SPA calls this endpoint on every app load, and it comes from the **same `capabilities()` call the create endpoints refuse with** — that is what stops the UI offering a control the API would 403. `request_url` is where to ask for what was withheld; null means there is nowhere, which is the difference between "this deployment does not do that" and "ask here".
 
+**Plus `receives_requests`** (2026-10-02) — whether "Requests to me" has anything to show this person: `receives_booking_requests(user)` in `booking_service.py`, true when they **own a thing** (a COMMUNITY member who contributed one gets requests on it) or **founded or co-curate a PROPRIETARY collection**; two `EXISTS` queries. The account menu reads it when it opens, so the browser keeps nothing about it.
+
 ---
 
 ### LogoutView
