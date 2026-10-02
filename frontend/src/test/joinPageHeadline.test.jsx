@@ -128,3 +128,57 @@ describe('JoinPage — the collection is named', () => {
     expect(body).not.toHaveProperty('thing_code');
   });
 });
+
+/**
+ * The door looks like the page it leads to (CA, 2026-10-02): a collection with a
+ * photo paints it in the hero with the same composition its own page uses
+ * (`HeroPhoto`), where `/join` used to be a plain hero in the same colours. The
+ * photo comes from the collection endpoint the page already calls, which gives
+ * `thumbnail_url` to an anonymous reader of a PUBLIC collection.
+ */
+describe('JoinPage — the hero carries the collection’s photo', () => {
+  const PHOTO = 'https://bucket.example.com/oiueei/collections/cover.jpg';
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const collectionWith = (thumbnail_url) =>
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline: 'Tool Library',
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+          thumbnail_url,
+        }),
+    });
+
+  test('with a photo, the hero shows it and takes the photo layout', async () => {
+    collectionWith(PHOTO);
+
+    const { container } = renderJoin(undefined);
+
+    const photo = await screen.findByRole('img', { name: 'Tool Library' });
+    expect(photo).toHaveAttribute('src', PHOTO);
+    expect(container.querySelector('.form-hero')).toHaveClass('form-hero--photo');
+    // The words are still in the hero, above the photo's wedge.
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Join to take part' })
+    ).toBeInTheDocument();
+  });
+
+  test('without one, the hero is the plain one: no image, no photo layout', async () => {
+    collectionWith('');
+
+    const { container } = renderJoin(undefined);
+
+    await screen.findByText(/^Join to borrow in Tool Library\./);
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('.form-hero')).not.toHaveClass('form-hero--photo');
+  });
+});
