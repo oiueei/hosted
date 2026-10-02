@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from core.utils import generate_id
@@ -62,3 +63,38 @@ class InAppNotification(models.Model):
     class Meta:
         db_table = "in_app_notifications"
         ordering = ["-created"]
+
+    @classmethod
+    def team_booking_notices(cls, queryset=None):
+        """The request and reservation notices that reach whoever **manages** them.
+
+        These are the ones the inbox folds into a single summary card once there
+        are many of them (``GET /inbox/`` lists them all; ``DELETE
+        /inbox/?group=bookings`` dismisses exactly this set). The rule is by
+        *who the copy is for*, read from what each producer writes:
+
+        - ``BOOKING_REQUESTED``, ``BOOKING_DECIDED`` and ``RESERVATION_MADE`` only
+          ever go to managers of the thing — the requester is excluded from all
+          three on purpose;
+        - ``RESERVATION_CANCELLED`` goes three ways: to each manager who didn't
+          cancel (``cancelled_by_owner`` is ``False``) — the team's; to the
+          member whose reservation a manager cancelled (``cancelled_by_owner``
+          is ``True``) — theirs, and it links to their own page, not the team's;
+          and a record for whoever cancelled (``by_you``), which names the
+          member (``member_name``) when a manager cancelled somebody else's —
+          the team's — and has none when the member cancelled their own — theirs.
+
+        A copy that is for the person who *had* the reservation is not in this
+        set: the summary card links to the team's bookings page, which is not
+        theirs. ``frontend/src/utils/inboxGroups.js`` mirrors this rule, and
+        ``frontend/src/test/inboxGroupParity.json`` holds the two together.
+        """
+        types = cls.Type
+        team_types = Q(
+            type__in=[types.BOOKING_REQUESTED, types.BOOKING_DECIDED, types.RESERVATION_MADE]
+        )
+        managers_copy = Q(payload__cancelled_by_owner=False)
+        managers_own_trace = Q(payload__by_you=True, payload__has_key="member_name")
+        cancelled = Q(type=types.RESERVATION_CANCELLED) & (managers_copy | managers_own_trace)
+        base = cls.objects.all() if queryset is None else queryset
+        return base.filter(team_types | cancelled)
