@@ -770,7 +770,7 @@ def send_booking_request_notifications(requester, thing, booking, collection_cod
     # with several collections on one thing, the one the member was browsing is
     # the one whose note the request page showed them.
     collection = resolve_request_collection(thing, collection_code, requester)
-    send_booking_confirmation_email(requester, thing, booking, collection)
+    send_booking_confirmation_email(requester, thing, booking, collection, informed=len(managers))
     payload = {
         "thing_headline": thing.headline,
         "requester_name": requester.display_name,

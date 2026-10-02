@@ -112,15 +112,13 @@ class TestEmailLanguage:
 
         email_service.send_booking_decision_email(FakeBooking(), FakeThing(), accepted=False)
         assert mail.outbox[0].subject == "Tu solicitud no ha salido adelante"
-        assert "ha sido cancelada" in mail.outbox[0].body
+        # "rechazada", not "cancelada": the manager declined it, nobody cancelled it
+        # (CA, 2026-10-02).
+        assert "ha sido rechazada" in mail.outbox[0].body
+        assert "cancelada" not in mail.outbox[0].body
 
     def _send_sell_confirmation(self):
         """Send a SELL confirmation and return the resulting mailbox message."""
-
-        class FakeOwner:
-            # `name`, not `display_name`: the confirmation goes to the requester,
-            # a co-member, so the sender reads the bare name (L2).
-            name = "Lala"
 
         class FakeCollections:
             def first(self):
@@ -133,7 +131,6 @@ class TestEmailLanguage:
             headline = "Drill"
             code = "THG123"
             type = "SELL_THING"
-            owner = FakeOwner()
             collections = FakeCollections()
 
         class FakeBooking:
@@ -144,7 +141,11 @@ class TestEmailLanguage:
             email = "r@example.com"
 
         mail.outbox.clear()
-        email_service.send_booking_confirmation_email(FakeRequester(), FakeThing(), FakeBooking())
+        # `informed` is what the request's fan-out tells the email (how many people it
+        # warned); the email no longer names the owner, so the fakes need no owner.
+        email_service.send_booking_confirmation_email(
+            FakeRequester(), FakeThing(), FakeBooking(), informed=1
+        )
         return mail.outbox[0]
 
     def test_confirmation_carries_per_type_action_noun(self):

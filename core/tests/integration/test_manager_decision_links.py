@@ -138,6 +138,66 @@ class TestEveryManagerGetsTheirOwnEmail:
         assert holders == {contributor.code}
 
 
+class TestTheRequesterIsToldHowManyWereWarned:
+    """The "request sent" email says who was warned by number — "the curator", or
+    "the curators" — and that number is the request's own fan-out: the thing's
+    managers bar the requester (CA, 2026-10-02: it used to name the owner, which
+    was untrue once a team runs the thing)."""
+
+    ONE = "We've let the curator know"
+    MANY = "We've let the curators know"
+
+    def _told(self, who):
+        sent = [m for m in mail.outbox if m.to == [who.email]]
+        assert len(sent) == 1
+        return sent[0].body
+
+    def test_a_thing_with_one_manager_says_the_curator(self, db, owner, member):
+        solo = Collection.objects.create(
+            code="SOLO01", owner=owner, headline="Mine", mode=Collection.Mode.PROPRIETARY
+        )
+        solo.invites.add(member)
+        drill = Thing.objects.create(
+            code="SOLT01", type=Thing.Type.GIFT_THING, owner=owner, headline="Books"
+        )
+        solo.things.add(drill)
+        mail.outbox.clear()
+
+        _ask(member, drill)
+
+        body = self._told(member)
+        assert self.ONE in body and self.MANY not in body
+
+    def test_a_thing_run_by_a_team_says_the_curators(self, catalogue, member):
+        mail.outbox.clear()
+
+        _ask(member, catalogue["lend"])
+
+        body = self._told(member)
+        assert self.MANY in body and self.ONE not in body
+
+    def test_it_says_so_in_the_requesters_language(self, catalogue, member):
+        member.language = "es"
+        member.save(update_fields=["language"])
+        mail.outbox.clear()
+
+        _ask(member, catalogue["lend"])
+
+        assert "Hemos avisado a los dinamizadores — te responderán pronto." in self._told(member)
+
+    def test_a_curator_who_asks_is_not_counted_among_those_warned(
+        self, catalogue, owner, co_curator
+    ):
+        # Two people run the thing, but one of them is the one asking: only the
+        # founder is warned, so it is "the curator", not "the curators".
+        mail.outbox.clear()
+
+        _ask(co_curator, catalogue["gift"])
+
+        body = self._told(co_curator)
+        assert self.ONE in body and self.MANY not in body
+
+
 class TestAManagerOfBothCollectionsHearsARequestOnce:
     """A thing may sit in two PROPRIETARY collections with the same people
     running both — the drill listed under "Tools" and under "Neighbours".

@@ -173,7 +173,7 @@ TEXTS = {
     "decision_subject_confirmed": "Your request is confirmed",
     "decision_subject_cancelled": "Your request didn't go through",
     "decision_confirmed": "confirmed",
-    "decision_cancelled": "cancelled",
+    "decision_cancelled": "declined",
     "decision_plain_dated": (
         "Your {action} request for '{thing}' {when} has been {decision}. View thing: {url}"
     ),
@@ -186,16 +186,16 @@ TEXTS = {
     # Booking confirmation (to requester)
     "confirmation_subject": "Your {action} request was sent",
     "confirmation_plain_dated": (
-        "Your {action} request for '{thing}' {when} has been sent. "
-        "We've let {owner} know — they'll get back to you soon. "
-        "View thing: {url}"
+        "Your {action} request for '{thing}' {when} has been sent. {outro} View thing: {url}"
     ),
     "confirmation_plain": (
-        "Your {action} request for '{thing}' has been sent. "
-        "We've let {owner} know — they'll get back to you soon. View thing: {url}"
+        "Your {action} request for '{thing}' has been sent. {outro} View thing: {url}"
     ),
     "confirmation_intro": "Your {action} request has been sent:",
-    "confirmation_outro": "We've let {owner} know — they'll get back to you soon.",
+    # Who was told: one person who runs the thing, or more than one (a team) — the
+    # person's name is not in it any more (CA, 2026-10-02).
+    "confirmation_outro_one": "We've let the curator know — they'll get back to you soon.",
+    "confirmation_outro_other": "We've let the curators know — they'll get back to you soon.",
     # FAQ question (to owner)
     "faq_question_subject": "There is a question to be answered",
     "faq_question_plain": "{questioner} has asked about '{thing}': {question} View thing: {url}",

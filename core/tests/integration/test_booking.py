@@ -1150,7 +1150,9 @@ class TestDateBasedThingCompleteFlow:
         assert len(mail.outbox) == 1
         requester_email = mail.outbox[0]
         assert user2.email in requester_email.to
-        assert "cancelled" in requester_email.body.lower()
+        # Declined, not cancelled: the owner said no, nobody cancelled anything.
+        assert "declined" in requester_email.body.lower()
+        assert "cancelled" not in requester_email.body.lower()
 
         # Verify thing stays ACTIVE
         lend_thing.refresh_from_db()
