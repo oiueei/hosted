@@ -9,6 +9,10 @@ TEXTS = {
     # Art. 14 RGPD: tot correu -- també els obligatoris -- enllaça a la
     # pàgina legal: és una obligació d'informació, no una preferència.
     "footer_legal": "Legal i privacitat",
+    # How a booking's dates read inside a sentence: a range, or one day said once
+    # ("from the 13th to the 13th" was a loan for a single day, 2026-10-02).
+    "when_range": "del {start} al {end}",
+    "when_day": "el {start}",
     "dates_label": "Dates",
     # Com s'anomena algú que mai no ha posat nom, allà on qui llegeix no té dret
     # a la seva adreça. Vegeu "a_member" a en.py i `_member_name`.
@@ -156,23 +160,23 @@ TEXTS = {
     "booking_request_subject": "Tens una sol·licitud {action} pendent",
     "booking_request_plain_dated": (
         "{requester} t'ha enviat una sol·licitud {action} per a '{thing}' "
-        "del {start} al {end}. "
-        "Confirmar la reserva: {accept} | Cancel·lar la reserva: {reject}"
+        "{when}. "
+        "Confirmar la sol·licitud: {accept} | Rebutjar la sol·licitud: {reject}"
     ),
     "booking_request_plain": (
         "{requester} t'ha enviat una sol·licitud {action} per a '{thing}'. "
-        "Confirmar la reserva: {accept} | Cancel·lar la reserva: {reject}"
+        "Confirmar la sol·licitud: {accept} | Rebutjar la sol·licitud: {reject}"
     ),
     "booking_request_intro": "{requester} t'ha enviat una sol·licitud {action}:",
-    "hold_confirm_cta": "Confirmar la reserva",
-    "hold_cancel_cta": "Cancel·lar la reserva",
+    "hold_confirm_cta": "Confirmar la sol·licitud",
+    "hold_cancel_cta": "Rebutjar la sol·licitud",
     # Booking decision (to requester)
     "decision_subject_confirmed": "La teva sol·licitud està confirmada",
     "decision_subject_cancelled": "La teva sol·licitud no ha tirat endavant",
     "decision_confirmed": "confirmada",
     "decision_cancelled": "cancel·lada",
     "decision_plain_dated": (
-        "La teva sol·licitud {action} de '{thing}' del {start} al {end} ha estat {decision}. "
+        "La teva sol·licitud {action} de '{thing}' {when} ha estat {decision}. "
         "Veure la publicació: {url}"
     ),
     "decision_plain": (
@@ -186,7 +190,7 @@ TEXTS = {
     # Booking confirmation (to requester)
     "confirmation_subject": "Sol·licitud {action} enviada",
     "confirmation_plain_dated": (
-        "La teva sol·licitud {action} per a '{thing}' del {start} al {end} s'ha enviat. "
+        "La teva sol·licitud {action} per a '{thing}' {when} s'ha enviat. "
         "Hem avisat {owner} — et respondrà aviat. "
         "Veure la cosa: {url}"
     ),

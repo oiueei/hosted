@@ -8,6 +8,7 @@ Uses transaction.atomic to ensure BookingPeriod and Thing updates are consistent
 from datetime import date, timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from core.models import RSVP, Collection, Thing
@@ -375,6 +376,27 @@ def _delete_booking_rsvps(booking_code):
     ).delete()
 
 
+def receives_booking_requests(user):
+    """Whether anything of this person's can be asked for, so that "Requests to
+    me" has something to show them.
+
+    True when they **own a thing** — a member of a COMMUNITY collection who has
+    contributed one gets requests on it — or when they **run a PROPRIETARY
+    collection**, as its founder or a co-curator, whose curators answer for every
+    thing in it. It is the reach of ``OwnerBookingsView`` read as a yes/no, and it
+    is asked of the server because the browser cannot know it: someone who only
+    joined a group has nothing to receive, and the account menu used to offer the
+    page to everybody. Two ``EXISTS`` queries, nothing loaded.
+    """
+    if Thing.objects.filter(owner=user).exists():
+        return True
+    return (
+        Collection.objects.filter(mode=Collection.Mode.PROPRIETARY)
+        .filter(Q(owner=user) | Q(co_owners=user))
+        .exists()
+    )
+
+
 def _clear_request_notifications(booking):
     """Drop every copy of the "someone asked for this" notification once the request is settled.
 
@@ -396,36 +418,44 @@ def _clear_request_notifications(booking):
 
 
 def _notify_team_of_decision(booking, thing, collection, decider, accepted):
-    """Leave a BOOKING_DECIDED record with everyone who runs the thing.
+    """Leave a BOOKING_DECIDED record with the rest of the team that runs the thing.
 
     A hold request is a question put to the whole team that manages it, so its
     answer has to reach them all: every manager (``thing.managers()`` — the
-    thing's owner plus a PROPRIETARY collection's curators), plus whoever
-    decided if they are not a manager already, **except the requester** — they
-    get their own BOOKING_ACCEPTED/REJECTED, and a "so-and-so decided" line
-    about their own request would be noise in their inbox. Without this, a
-    co-curator's inbox kept a request the founder had already settled, and
-    whoever decided had no trace of their own call (CA, 2026-09-29).
+    thing's owner plus a PROPRIETARY collection's curators) **except the requester
+    and whoever decided**. The requester gets their own BOOKING_ACCEPTED/REJECTED,
+    and a "so-and-so decided" line about their own request would be noise in their
+    inbox. The decider just did it: a card telling them "You confirmed the request"
+    was the reader being told what they had pressed a moment ago (CA, 2026-10-02 —
+    three of five cards in a screenshot). Without this record at all, a
+    co-curator's inbox kept a request the founder had already settled (CA,
+    2026-09-29); with it, that co-curator hears the decision once.
 
     Runs after ``_clear_request_notifications``, which is type-scoped to
     BOOKING_REQUESTED: the decision record carries the same ``booking_code``
-    but a different type, so the clear leaves it standing.
+    but a different type, so the clear leaves it standing. Records written
+    before 2026-10-02 may carry ``by_you: true`` (the decider's own); the inbox
+    still reads them, nothing writes new ones.
     """
     audience = {}
-    for manager in [*thing.managers(), decider]:
-        if manager.code == booking.requester_code_id:
+    for manager in thing.managers():
+        if manager.code in (booking.requester_code_id, decider.code):
             continue
         audience.setdefault(manager.code, manager)
 
-    for code, manager in audience.items():
+    for manager in audience.values():
         payload = {
             "thing_headline": thing.headline,
-            # Bare names (L2): every reader here is a co-member of the decider
-            # and the requester alike.
-            "requester_name": booking.requester_code.name,
+            # The requester is named the way the request that asked about them
+            # named them (`send_booking_request_notifications`): the name, or their
+            # email when they set none. Every reader here manages the thing, and the
+            # request already showed them that address — a bare name here made the
+            # same person "a member" in one card and an email in the next (CA,
+            # 2026-10-02). The decider is a co-member, so theirs stays the bare name
+            # (L2).
+            "requester_name": booking.requester_code.display_name,
             "decider_name": decider.name,
             "accepted": accepted,
-            "by_you": code == decider.code,
             "booking_code": booking.code,
             "thing_code": thing.code,
             "collection_code": collection.code if collection else "",

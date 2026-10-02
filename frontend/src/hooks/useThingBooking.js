@@ -187,6 +187,19 @@ export default function useThingBooking(
     }
   };
 
+  // The thing as the server sees it for this reader now, or `null` if it cannot be
+  // had. Read through the collection the reader is browsing, like `ThingPage`'s own
+  // fetch, so `can_manage` is computed against it.
+  const reloadThing = async () => {
+    try {
+      const query = collectionCode ? `?collection=${encodeURIComponent(collectionCode)}` : '';
+      const res = await apiFetch(`/api/v1/things/${code}/${query}`);
+      return res.ok ? await res.json() : null;
+    } catch {
+      return null;
+    }
+  };
+
   const handleBookingAction = async (action, bookingCode) => {
     if (bookingLockRef.current) return;
     bookingLockRef.current = true;
@@ -225,13 +238,24 @@ export default function useThingBooking(
             action === 'accept' ? t('thingPage.holdConfirmed') : t('thingPage.holdCancelled'),
         });
       } else {
-        setToast({
-          type: 'error',
-          message:
-            action === 'accept'
-              ? t('thingPage.errorConfirmingHold')
-              : t('thingPage.errorCancellingHold'),
-        });
+        // A 403 here is the server saying this reader no longer runs the thing —
+        // a co-curator demoted since the page was loaded, whose buttons are still
+        // on screen. Say why and reload the thing, so the controls that are no
+        // longer theirs disappear; if the thing cannot be reloaded the sentence
+        // would be untrue, so the generic error stands.
+        const fresh = res.status === 403 ? await reloadThing() : null;
+        if (fresh) {
+          onThingChange(fresh);
+          setToast({ type: 'error', message: t('thingPage.noLongerDecides') });
+        } else {
+          setToast({
+            type: 'error',
+            message:
+              action === 'accept'
+                ? t('thingPage.errorConfirmingHold')
+                : t('thingPage.errorCancellingHold'),
+          });
+        }
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });

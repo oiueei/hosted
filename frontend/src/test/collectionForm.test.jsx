@@ -230,25 +230,27 @@ describe('CreateCollectionPage', () => {
   });
 
   // The toggle that decides whether members may recommend people at all: the
-  // owner's answer to "am I willing to be asked", which a group with a waiting
-  // list or an admission process may not be. It has to reach the POST.
+  // owner's answer to "am I willing to be asked". It has to reach the POST.
   test('the recommend-a-guest setting reaches the create request', async () => {
     const { container } = renderCreate();
-    await fillTheRequiredFields(container, 'Closed group');
+    await fillTheRequiredFields(container, 'Open group');
 
     fireEvent.click(container.querySelector('#create-collection-allow-proposals'));
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(false));
+    await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(true));
   });
 
-  test('left alone, a group is willing to be asked', async () => {
+  // CA, 2026-10-02: a new collection asks its owner nothing until the owner says
+  // so (it used to start ticked). What the owner was shown is what ships.
+  test('left alone, a new group does not ask to be asked: it starts off and ships off', async () => {
     const { container } = renderCreate();
-    await fillTheRequiredFields(container, 'Open group');
+    await fillTheRequiredFields(container, 'Quiet group');
 
+    expect(container.querySelector('#create-collection-allow-proposals')).not.toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(true));
+    await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(false));
   });
 
   test('the home-page URL, folded into "More options", reaches the create request', async () => {

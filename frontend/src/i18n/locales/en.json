@@ -196,6 +196,7 @@
     "holdConfirmed": "The hold has been confirmed!",
     "holdRejected": "The hold has been rejected.",
     "invalidOrExpired": "Invalid or expired link.",
+    "noLongerManages": "You no longer run this thing, so this link can no longer decide the request.",
     "expiredHelp": "If your link has expired, ask the person who invited you to send a new one, or request a new magic link.",
     "refusalHelp": "Nothing has been decided, and this link still works — try it again later.",
     "goToHomepage": "Go to homepage",
@@ -208,6 +209,18 @@
     "accountDeletedBody": "Your account and your data have been deleted. Thank you for having been part of OIUEEI.",
     "proposalApproved": "Invitation sent to {{email}}. We've told the member who recommended them.",
     "proposalDeclined": "No invitation was sent. We've let the member know, without saying why — and the person they suggested was never contacted."
+  },
+  "inbox": {
+    "summary": {
+      "label": "Requests and reservations",
+      "pending_one": "1 pending request",
+      "pending_other": "{{count}} pending requests",
+      "upcoming_one": "1 upcoming reservation",
+      "upcoming_other": "{{count}} upcoming reservations",
+      "body": "You have {{items}}.",
+      "nothing": "You have nothing pending.",
+      "link": "See them all"
+    }
   },
   "home": {
     "greeting": "Hello, {{name}}",
@@ -268,6 +281,7 @@
     "reservationCancelledByYouOtherBody": "You cancelled {{member_name}}'s reservation of {{thing_headline}}.",
     "reservationRegisteredAt": "Registered: {{when}}",
     "reservationScheduledFor": "Reserved for: {{when}}",
+    "requestedDates": "Requested dates: {{when}}",
     "promotedLabel": "You help run this group now",
     "promotedBody": "You can help run “{{collection_headline}}” now: invite and remove members, edit it, message the group, and handle its questions and bookings. Your name now shows on the collection's page, under \"Run by\"; only the founder can delete the collection.",
     "demotedLabel": "You no longer help run this group",
@@ -341,6 +355,7 @@
     "errorReactivatingThing": "Error reactivating thing.",
     "holdConfirmed": "Hold confirmed.",
     "holdCancelled": "Hold declined.",
+    "noLongerDecides": "You can no longer decide this request. We've reloaded it so you can see where it stands.",
     "errorConfirmingHold": "Error confirming hold.",
     "errorCancellingHold": "Error declining hold.",
     "questionSent": "Question sent.",
@@ -408,7 +423,7 @@
     "dateOverlap": "Date overlaps with another booking.",
     "dateRange": "Date must be between today and 90 days from today.",
     "successLabel": "You're all set!",
-    "successMessage": "We've let the owner know — they'll get back to you soon.",
+    "successMessage": "We've let the people who run it know — they'll get back to you soon.",
     "backTo": "Back to {{label}}",
     "errorSending": "Error sending request."
   },
@@ -1001,7 +1016,7 @@
     "projectNoteLabel": "What do you need it for? (optional)",
     "projectNoteHelper": "{{remaining}} characters left",
     "successLabel": "Reserved",
-    "successMessage": "Your reservation is confirmed — the owner has been told.",
+    "successMessage": "Your reservation is confirmed — the people who run it have been told.",
     "joinedLabel": "You've joined the group",
     "joinedGroup": "To reserve here you've joined {{group}}. You can leave it from your profile.",
     "dateSummary": "Reserved from {{start}} to {{end}}.",

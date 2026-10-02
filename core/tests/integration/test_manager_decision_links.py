@@ -207,13 +207,13 @@ class TestTheDecisionIsSignedByWhoeverPressed:
             user=member, type=InAppNotification.Type.BOOKING_ACCEPTED
         )
         assert told.payload["owner_name"] == co_curator.name
-        # …the co-curator keeps their own record of the call, the founder gets one too.
+        # …the founder, who did not decide, gets the record of the call; the
+        # co-curator who pressed the link gets none (they just did it).
         decided = {
             n.user_id: n.payload
             for n in InAppNotification.objects.filter(type=InAppNotification.Type.BOOKING_DECIDED)
         }
-        assert decided[co_curator.code]["by_you"] is True
-        assert decided[owner.code]["by_you"] is False
+        assert set(decided) == {owner.code}
         assert decided[owner.code]["decider_name"] == co_curator.name
 
     def test_the_founders_link_still_works_as_before(self, catalogue, member, owner, co_curator):
@@ -299,7 +299,9 @@ class TestAuthorityIsCheckedAtTheClick:
         res = _press(accept)
 
         assert res.status_code == 403
-        assert res.data == {"error": "Not authorized"}
+        # The sentence is what it always was, for a client that knows nothing more;
+        # the code is what lets the verify page say why (H9b).
+        assert res.data == {"error": "Not authorized", "code": "no_longer_manages"}
         booking.refresh_from_db()
         assert booking.status == BookingPeriod.Status.PENDING
         assert not RSVP.objects.filter(pk=accept.pk).exists()

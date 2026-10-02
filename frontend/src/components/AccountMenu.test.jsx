@@ -1,30 +1,44 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
+
+import { apiFetch } from '../services/api';
 import AccountMenu from './AccountMenu';
 
 expect.extend(toHaveNoViolations);
 
 /**
- * The seven routes one click away from every hero (2026-09-28) — see the
+ * The routes one click away from every hero (2026-09-28) — see the
  * component's own docstring for why this is a plain disclosure, not
  * ShareCollectionMenu's HDS-Select trick. Every scenario here mirrors a line
  * from that plan: the trigger's accessible name, aria-expanded toggling,
  * the link set and its order, Escape returning focus, a click outside
  * closing it, no session meaning no render, and an axe pass with the panel
  * open.
+ *
+ * Since 2026-10-02 the menu is Home, My profile, My requests, "Requests to me" —
+ * only for an account that can receive requests, which the server says — and Log
+ * out. "Edit profile" is reached from My profile and "Create collection" from Home.
  */
 
-const LINKS_IN_ORDER = [
+const ALWAYS = [
   { name: /home/i, href: '/' },
   { name: /my profile/i, href: '/me' },
-  { name: /edit profile/i, href: '/me/edit' },
-  { name: /create collection/i, href: '/collections/new' },
   { name: /my requests/i, href: '/my-bookings' },
-  { name: /requests to me/i, href: '/owner-bookings' },
-  { name: /log out/i, href: '/logout' },
 ];
+const REQUESTS_TO_ME = { name: /requests to me/i, href: '/owner-bookings' };
+const LOG_OUT = { name: /log out/i, href: '/logout' };
+
+// What GET /auth/me/ answers, as far as the menu reads it.
+const meSays = (receivesRequests) =>
+  apiFetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({ code: 'ABC123', receives_requests: receivesRequests }),
+  });
 
 function renderMenu() {
   return render(
@@ -37,6 +51,8 @@ function renderMenu() {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
+  vi.clearAllMocks();
+  meSays(false);
 });
 
 describe('AccountMenu — signed in', () => {
@@ -62,7 +78,16 @@ describe('AccountMenu — signed in', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('a click opens it: aria-expanded flips and every link is there, in order', () => {
+  const expectLinks = (expectedLinks) => {
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(expectedLinks.length);
+    expectedLinks.forEach((expected, i) => {
+      expect(links[i]).toHaveAccessibleName(expected.name);
+      expect(links[i]).toHaveAttribute('href', expected.href);
+    });
+  };
+
+  test('a click opens it: aria-expanded flips and the account’s links are there, in order', async () => {
     renderMenu();
 
     fireEvent.click(screen.getByRole('button', { name: /your account/i }));
@@ -71,12 +96,71 @@ describe('AccountMenu — signed in', () => {
       'aria-expanded',
       'true'
     );
-    const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(LINKS_IN_ORDER.length);
-    LINKS_IN_ORDER.forEach((expected, i) => {
-      expect(links[i]).toHaveAccessibleName(expected.name);
-      expect(links[i]).toHaveAttribute('href', expected.href);
-    });
+    // An account that cannot receive requests: four links, and no Edit profile or
+    // Create collection (the first is under My profile, the second on Home).
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expectLinks([...ALWAYS, LOG_OUT]);
+    expect(screen.queryByRole('link', { name: /edit profile/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /create collection/i })).toBeNull();
+  });
+
+  test('an account that can receive requests also gets "Requests to me", after My requests', async () => {
+    meSays(true);
+    renderMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    await screen.findByRole('link', { name: /requests to me/i });
+    expectLinks([...ALWAYS, REQUESTS_TO_ME, LOG_OUT]);
+  });
+
+  test('it asks the server when it opens, not before, and again each time', async () => {
+    renderMenu();
+    expect(apiFetch).not.toHaveBeenCalled();
+    const trigger = screen.getByRole('button', { name: /your account/i });
+
+    fireEvent.click(trigger);
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
+    expect(apiFetch).toHaveBeenCalledWith('/api/v1/auth/me/', expect.anything());
+    fireEvent.click(trigger);
+    fireEvent.click(trigger);
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
+  });
+
+  test('if the answer cannot be had the link is left out rather than guessed', async () => {
+    apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    renderMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expectLinks([...ALWAYS, LOG_OUT]);
+  });
+
+  test('an error status is no answer either', async () => {
+    apiFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
+    renderMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expectLinks([...ALWAYS, LOG_OUT]);
+  });
+
+  test('it writes nothing to the browser: the /legal names every key the app stores', async () => {
+    meSays(true);
+    const wroteLocal = vi.spyOn(localStorage, 'setItem');
+    const wroteSession = vi.spyOn(Storage.prototype, 'setItem');
+    renderMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    await screen.findByRole('link', { name: /requests to me/i });
+    expect(wroteLocal).not.toHaveBeenCalled();
+    expect(wroteSession).not.toHaveBeenCalled();
+    wroteLocal.mockRestore();
+    wroteSession.mockRestore();
   });
 
   test('a second click closes it again', () => {

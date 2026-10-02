@@ -341,6 +341,8 @@ heroku config:set \
 
 The app relies on six management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice), each guarded so that one failure does not cancel the rest:
 
+A seventh, `cleanup_orphan_images`, is **its own second job** — see the end of this section.
+
 ```
 rc=0; python manage.py expire_bookings || rc=1; python manage.py cleanup_rsvps || rc=1; python manage.py close_transfers || rc=1; python manage.py send_reminders || rc=1; python manage.py send_digests || rc=1; python manage.py purge_expired_data --commit || rc=1; exit $rc
 ```
@@ -367,12 +369,28 @@ Heroku Scheduler config lives in the dashboard and nowhere else, so keep the das
 | `python manage.py send_reminders` | daily (chained) | Return reminders for loans and rentals that end tomorrow (to the owner and the borrower), and arrival reminders for on-site reservations that start tomorrow (to the member who booked). |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
 | `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email (at most 200 warnings per run — see `--max-warnings`). **Dry-run without `--commit`** — read the warning above before arming it. |
+| `python manage.py cleanup_orphan_images --bucket <bucket> --commit` | daily (its own job, after the chain) | Deletes uploads that never became a record (a form opened, a photo uploaded, never submitted) from the bucket, between 24 hours and 30 days old. **Not chained**, and **dry-run without `--commit`** — see the end of this section. |
 
 The daily commands are safe to run every day — each checks the current state and no-ops when there's nothing to do, so a repeated run costs a few seconds and changes nothing.
 
 If you want a periodic report on your own numbers, the `Event` log and `DailyActivity` are there to be queried and a command of your own can ride the same chain — this repository ships the instrumentation, not the report.
 
-**Not in the daily chain:** `cleanup_orphan_images` (delete orphaned uploads from the bucket) is a separate, manual command — dry-run by default, `--commit` to actually delete. It's destructive and gated behind Heroku shell access, so it isn't auto-scheduled; run it by hand roughly weekly. The sweep only ever lists the **upload folders** (`oiueei/things`, `/collections`, `/users`, `/documents`) — anything else in the bucket is out by construction, not by exception: the 2026-09-28 dry-run over the whole `oiueei/` tree listed the build's own Curiosa font (`oiueei/assets/`, downloaded by `heroku-postbuild`, not in git), and deleting it would have broken every deploy after it. A `--prefix` outside the upload folders is refused before anything is listed. With `--commit` the command also insists on `--bucket` naming the very bucket the app has configured (`OBJECT_STORAGE_BUCKET`), and refuses a mismatched name even on a dry-run — a `--commit` that doesn't say which bucket it means never runs, so a wrong environment can't turn the sweep into a deletion from another deployment's storage. Quote the inner command so the Heroku CLI doesn't eat the flags: `heroku run --app <app> "python manage.py cleanup_orphan_images --bucket <bucket> --commit"`.
+**A job of its own, not in the chain:** `cleanup_orphan_images` (delete orphaned uploads from the bucket) runs **daily, as a second Scheduler job** a little after the chain (05:30 UTC is a good choice):
+
+```
+python manage.py cleanup_orphan_images --bucket <bucket> --commit
+```
+
+`<bucket>` is the **real name of your bucket**, the value of `OBJECT_STORAGE_BUCKET`, not the placeholder: the command refuses to run with `--commit` unless `--bucket` names the very bucket the app has configured, and refuses a mismatched name even on a dry-run, so a wrong name is a refusal and never a deletion from another deployment's storage. It is a job of its own because it is the one command here that deletes from the **bucket** rather than from the database: if it fails (a storage hiccup) it must not cancel the chain behind it, and a failing chain must not hide it — each job reports its own status. (Quote the inner command if you run it by hand, or the Heroku CLI eats the flags: `heroku run --app <app> "python manage.py cleanup_orphan_images --bucket <bucket> --commit"`.)
+
+**Why it is safe to schedule now.** It was run by hand until 2026-10-02, when the work it used to share moved to the moment it happens: a photo that a save replaces or removes is deleted from the bucket by that very save, and a key another row still holds is never deleted (`core/services/asset_cleanup.py`). What is left for the sweep is only the uploads whose form was never submitted. And it keeps its own rails:
+
+- **A window, not the whole bucket.** It only considers objects between `--min-age-hours` (24 by default, so an upload in the middle of a form is never mistaken for an orphan) and `--max-age-days` (30 by default). A daily run catches each orphan well inside it.
+- **Only the upload folders** (`oiueei/things`, `/collections`, `/users`, `/documents`) — anything else in the bucket is out by construction, not by exception: the 2026-09-28 dry-run over the whole `oiueei/` tree listed the build's own Curiosa font (`oiueei/assets/`, downloaded by `heroku-postbuild`, not in git), and deleting it would have broken every deploy after it. A `--prefix` outside the upload folders is refused before anything is listed.
+- **Keys in use are kept.** Every asset field in the database (thing photos and galleries, profile photos, collection covers and welcome documents) is cross-referenced before anything is deleted.
+- **`--bucket` is mandatory** with `--commit`, as above.
+
+Before you arm it, run it **once by hand without `--commit`** and read what it says it would delete — it only lists, so that is safe at any time: `heroku run --app <app> "python manage.py cleanup_orphan_images"`.
 
 ## Backups & the restore drill
 

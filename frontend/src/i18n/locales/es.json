@@ -190,6 +190,7 @@
     "holdConfirmed": "¡La solicitud ha sido confirmada!",
     "holdRejected": "La solicitud ha sido rechazada.",
     "invalidOrExpired": "Enlace inválido o caducado.",
+    "noLongerManages": "Ya no gestionas esta cosa, así que este enlace ya no sirve para decidir la solicitud.",
     "expiredHelp": "Si tu enlace ha caducado, pide a quien te invitó que te envíe uno nuevo, o solicita un nuevo enlace mágico.",
     "refusalHelp": "No se ha decidido nada y este enlace sigue funcionando: inténtalo de nuevo más tarde.",
     "goToHomepage": "Ir al inicio",
@@ -202,6 +203,18 @@
     "accountDeletedBody": "Tu cuenta y tus datos se han borrado. Gracias por haber formado parte de OIUEEI.",
     "proposalApproved": "Invitación enviada a {{email}}. Se lo hemos dicho al miembro que la recomendó.",
     "proposalDeclined": "No se ha enviado ninguna invitación. Se lo hemos dicho al miembro, sin decir por qué; y con la persona que propuso no hemos contactado en ningún momento."
+  },
+  "inbox": {
+    "summary": {
+      "label": "Solicitudes y reservas",
+      "pending_one": "1 solicitud pendiente",
+      "pending_other": "{{count}} solicitudes pendientes",
+      "upcoming_one": "1 reserva próxima",
+      "upcoming_other": "{{count}} reservas próximas",
+      "body": "Tienes {{items}}.",
+      "nothing": "No tienes nada pendiente.",
+      "link": "Ver todas"
+    }
   },
   "home": {
     "greeting": "Hola, {{name}}",
@@ -262,6 +275,7 @@
     "reservationCancelledByYouOtherBody": "Has cancelado la reserva de {{member_name}} de {{thing_headline}}.",
     "reservationRegisteredAt": "Fecha y hora de registro: {{when}}",
     "reservationScheduledFor": "Fecha y horario de reserva: {{when}}",
+    "requestedDates": "Fechas solicitadas: {{when}}",
     "promotedLabel": "Ahora formas parte de la dinamización",
     "promotedBody": "Ahora puedes ayudar a gestionar “{{collection_headline}}”: invitar y quitar miembros, editarla, escribir al grupo y ocuparte de sus preguntas, solicitudes y reservas. Tu nombre aparece ahora en la página de la colección, en «Dinamización»; solo quien la creó puede borrarla.",
     "demotedLabel": "Ya no formas parte de la dinamización",
@@ -278,7 +292,7 @@
     "inactiveThings": "Cosas inactivas",
     "inactiveNotice": "Esta colección está inactiva. No es visible para los miembros.",
     "noThings": "Esta colección todavía no tiene cosas.",
-    "addOne": "Añadir uno",
+    "addOne": "Añadir una",
     "addManyCsv": "Añadir varios a la vez (CSV)",
     "allTags": "Todos",
     "noThingsForTag": "No hay cosas con este tag.",
@@ -335,6 +349,7 @@
     "errorReactivatingThing": "Error al reactivar la cosa.",
     "holdConfirmed": "Solicitud confirmada.",
     "holdCancelled": "Solicitud rechazada.",
+    "noLongerDecides": "Ya no puedes decidir esta solicitud. Hemos recargado la página para que veas cómo está.",
     "errorConfirmingHold": "Error al confirmar la solicitud.",
     "errorCancellingHold": "Error al rechazar la solicitud.",
     "questionSent": "Pregunta enviada.",
@@ -402,7 +417,7 @@
     "dateOverlap": "La fecha coincide con otra solicitud o reserva.",
     "dateRange": "La fecha debe estar entre hoy y 90 días a partir de hoy.",
     "successLabel": "¡Todo listo!",
-    "successMessage": "Ya hemos avisado al propietario — te responderá pronto.",
+    "successMessage": "Ya hemos avisado a quien gestiona esta cosa — te responderá pronto.",
     "backTo": "Volver a {{label}}",
     "errorSending": "Error al enviar la solicitud."
   },
@@ -1001,7 +1016,7 @@
     "projectNoteLabel": "¿Para qué lo necesitas? (opcional)",
     "projectNoteHelper": "Quedan {{remaining}} caracteres",
     "successLabel": "Reservado",
-    "successMessage": "Tu reserva está confirmada; hemos avisado al propietario.",
+    "successMessage": "Tu reserva está confirmada; hemos avisado a quien la gestiona.",
     "joinedLabel": "Te has unido al grupo",
     "joinedGroup": "Para reservar aquí te has unido a {{group}}. Puedes salir desde tu perfil.",
     "dateSummary": "Reservado del {{start}} al {{end}}.",
