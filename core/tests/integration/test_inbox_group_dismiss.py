@@ -229,9 +229,10 @@ class TestAgainstWhatTheServiceReallyWrites:
         booking_code = res.data["booking_code"]
         res = client_for(lele).post(f"/api/v1/bookings/{booking_code}/accept/")
         assert res.status_code == 200, res.data
-        # Lala: the decision record (the request was cleared when it was settled).
+        # Lala hears Lele's decision (the request was cleared when it was settled);
+        # Lele, who pressed accept, gets no record of it.
         assert inbox_of(lala) == ["BOOKING_DECIDED"]
-        assert inbox_of(lele) == ["BOOKING_DECIDED"]
+        assert inbox_of(lele) == []
         assert inbox_of(member) == ["BOOKING_ACCEPTED"]
 
         for who in (lala, lele, member):

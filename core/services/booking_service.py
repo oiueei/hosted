@@ -418,28 +418,32 @@ def _clear_request_notifications(booking):
 
 
 def _notify_team_of_decision(booking, thing, collection, decider, accepted):
-    """Leave a BOOKING_DECIDED record with everyone who runs the thing.
+    """Leave a BOOKING_DECIDED record with the rest of the team that runs the thing.
 
     A hold request is a question put to the whole team that manages it, so its
     answer has to reach them all: every manager (``thing.managers()`` — the
-    thing's owner plus a PROPRIETARY collection's curators), plus whoever
-    decided if they are not a manager already, **except the requester** — they
-    get their own BOOKING_ACCEPTED/REJECTED, and a "so-and-so decided" line
-    about their own request would be noise in their inbox. Without this, a
-    co-curator's inbox kept a request the founder had already settled, and
-    whoever decided had no trace of their own call (CA, 2026-09-29).
+    thing's owner plus a PROPRIETARY collection's curators) **except the requester
+    and whoever decided**. The requester gets their own BOOKING_ACCEPTED/REJECTED,
+    and a "so-and-so decided" line about their own request would be noise in their
+    inbox. The decider just did it: a card telling them "You confirmed the request"
+    was the reader being told what they had pressed a moment ago (CA, 2026-10-02 —
+    three of five cards in a screenshot). Without this record at all, a
+    co-curator's inbox kept a request the founder had already settled (CA,
+    2026-09-29); with it, that co-curator hears the decision once.
 
     Runs after ``_clear_request_notifications``, which is type-scoped to
     BOOKING_REQUESTED: the decision record carries the same ``booking_code``
-    but a different type, so the clear leaves it standing.
+    but a different type, so the clear leaves it standing. Records written
+    before 2026-10-02 may carry ``by_you: true`` (the decider's own); the inbox
+    still reads them, nothing writes new ones.
     """
     audience = {}
-    for manager in [*thing.managers(), decider]:
-        if manager.code == booking.requester_code_id:
+    for manager in thing.managers():
+        if manager.code in (booking.requester_code_id, decider.code):
             continue
         audience.setdefault(manager.code, manager)
 
-    for code, manager in audience.items():
+    for manager in audience.values():
         payload = {
             "thing_headline": thing.headline,
             # Bare names (L2): every reader here is a co-member of the decider
@@ -447,7 +451,6 @@ def _notify_team_of_decision(booking, thing, collection, decider, accepted):
             "requester_name": booking.requester_code.name,
             "decider_name": decider.name,
             "accepted": accepted,
-            "by_you": code == decider.code,
             "booking_code": booking.code,
             "thing_code": thing.code,
             "collection_code": collection.code if collection else "",

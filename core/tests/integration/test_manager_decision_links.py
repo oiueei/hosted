@@ -207,13 +207,13 @@ class TestTheDecisionIsSignedByWhoeverPressed:
             user=member, type=InAppNotification.Type.BOOKING_ACCEPTED
         )
         assert told.payload["owner_name"] == co_curator.name
-        # …the co-curator keeps their own record of the call, the founder gets one too.
+        # …the founder, who did not decide, gets the record of the call; the
+        # co-curator who pressed the link gets none (they just did it).
         decided = {
             n.user_id: n.payload
             for n in InAppNotification.objects.filter(type=InAppNotification.Type.BOOKING_DECIDED)
         }
-        assert decided[co_curator.code]["by_you"] is True
-        assert decided[owner.code]["by_you"] is False
+        assert set(decided) == {owner.code}
         assert decided[owner.code]["decider_name"] == co_curator.name
 
     def test_the_founders_link_still_works_as_before(self, catalogue, member, owner, co_curator):

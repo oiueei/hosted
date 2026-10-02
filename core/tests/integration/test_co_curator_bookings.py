@@ -586,11 +586,13 @@ class TestAHoldRequestWarnsTheWholeTeam:
         assert res.status_code == 200
 
         assert self._holders(booking) == set()
-        # The decision record is a different type and stays (for the founder too).
+        # The decision record is a different type and stays — for the founder, who
+        # did not decide. Whoever did gets none: they pressed the button themselves
+        # (CA, 2026-10-02).
         decided = InAppNotification.objects.filter(
             type=InAppNotification.Type.BOOKING_DECIDED, payload__booking_code=booking.code
         )
-        assert {n.user_id for n in decided} == {owner.code, co_curator.code}
+        assert {n.user_id for n in decided} == {owner.code}
 
     def test_the_requester_withdrawing_leaves_no_copy_for_anyone(
         self, catalogue, member, owner, co_curator
@@ -654,7 +656,7 @@ class TestACuratorDecidingTheirOwnRequest:
             type=InAppNotification.Type.BOOKING_DECIDED, payload__booking_code=booking.code
         )
         assert {n.user_id for n in decided} == {owner.code}
-        assert decided.get().payload["by_you"] is False
+        assert "by_you" not in decided.get().payload
         assert decided.get().payload["decider_name"] == "Lele"
         # ...and the curator, as the requester, gets their own BOOKING_ACCEPTED —
         # never a "so-and-so decided" line about their own request.
