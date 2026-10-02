@@ -354,6 +354,7 @@
     "errorReactivatingThing": "Error reactivating thing.",
     "holdConfirmed": "Hold confirmed.",
     "holdCancelled": "Hold declined.",
+    "noLongerDecides": "You can no longer decide this request. We've reloaded it so you can see where it stands.",
     "errorConfirmingHold": "Error confirming hold.",
     "errorCancellingHold": "Error declining hold.",
     "questionSent": "Question sent.",

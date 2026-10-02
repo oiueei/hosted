@@ -348,6 +348,7 @@
     "errorReactivatingThing": "Error en reactivar la cosa.",
     "holdConfirmed": "Sol·licitud confirmada.",
     "holdCancelled": "Sol·licitud rebutjada.",
+    "noLongerDecides": "Ja no pots decidir aquesta sol·licitud. Hem tornat a carregar la pàgina perquè vegis com està.",
     "errorConfirmingHold": "Error en confirmar la sol·licitud.",
     "errorCancellingHold": "Error en rebutjar la sol·licitud.",
     "questionSent": "Pregunta enviada.",
