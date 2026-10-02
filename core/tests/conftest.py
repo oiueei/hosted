@@ -2,6 +2,8 @@
 Pytest fixtures for OIUEEI tests.
 """
 
+import logging
+
 import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -195,3 +197,21 @@ def faq(db, user2, thing):
         question="Is this available?",
     )
     return f
+
+
+@pytest.fixture
+def security_log(caplog):
+    """Capture the ``security`` logger, which deliberately does not propagate.
+
+    ``config/settings`` gives it its own handler and ``propagate: False``, so
+    caplog's root handler never sees a single record from it — plain ``caplog``
+    reads empty here no matter what the code does. That is worse than useless
+    for any test that reads it: every negative assertion ("this must NOT be logged")
+    would pass vacuously and certify nothing. Attach caplog's own handler to the
+    logger instead, and take it off again afterwards.
+    """
+    logger = logging.getLogger("security")
+    logger.addHandler(caplog.handler)
+    caplog.set_level(logging.WARNING, logger="security")
+    yield caplog
+    logger.removeHandler(caplog.handler)
