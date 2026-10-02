@@ -177,7 +177,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     const { container } = renderCollection();
     await screen.findByText('Test Thing');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send a message to members' }));
     await waitFor(() => expect(container.querySelector('#broadcast-message')).toBeTruthy());
 
     expect(await axe(container, NO_REGION)).toHaveNoViolations();

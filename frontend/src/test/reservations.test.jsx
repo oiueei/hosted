@@ -925,7 +925,7 @@ describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
 
     expect(
       await screen.findByText(
-        'You already have 2 active reservations here — the most this group allows.'
+        'You already have 2 active reservations here — the most this collection allows.'
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/maximum number of active reservations/)).toBeNull();

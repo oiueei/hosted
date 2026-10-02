@@ -100,7 +100,7 @@ describe('ManageInvitesPage (the guest list)', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('table', { name: 'Guests of this collection' })
+      await screen.findByRole('table', { name: 'Members of this collection' })
     ).toBeInTheDocument();
   });
 
@@ -227,7 +227,7 @@ describe('ManageInvitesPage (the guest list)', () => {
 
     expect(screen.queryByLabelText('Guest email')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Remove guest from this collection' })
+      screen.queryByRole('button', { name: 'Remove from this collection' })
     ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(globalThis.fetch.mock.calls.some(([u]) => u.endsWith('/invite/'))).toBe(false);
@@ -271,7 +271,7 @@ describe('ManageInvitesPage load failures', () => {
     renderPage();
 
     expect(
-      await screen.findByText(/do not have access to this collection's guests/i)
+      await screen.findByText(/do not have access to this collection's members/i)
     ).toBeInTheDocument();
   });
 

@@ -839,7 +839,7 @@ describe('sending a message to the whole group', () => {
 
   async function openComposer() {
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to members' }));
     return screen.getByLabelText(/Message/);
   }
 
@@ -880,7 +880,7 @@ describe('sending a message to the whole group', () => {
     fireEvent.change(message, { target: { value: 'The library is closed on Monday' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send broadcast' }));
 
-    expect(await screen.findByText('Broadcast sent to 12 guests.')).toBeInTheDocument();
+    expect(await screen.findByText('Broadcast sent to 12 members.')).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith(
       '/api/v1/collections/COL001/broadcast/',
       expect.objectContaining({
@@ -929,7 +929,7 @@ describe('sending a message to the whole group', () => {
     expect(broadcastPosts()).toHaveLength(1);
 
     deliver();
-    expect(await screen.findByText('Broadcast sent to 1 guests.')).toBeInTheDocument();
+    expect(await screen.findByText('Broadcast sent to 1 members.')).toBeInTheDocument();
   });
 });
 
@@ -974,7 +974,7 @@ describe('a broadcast the server turns down', () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to guests' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a message to members' }));
     fireEvent.change(screen.getByLabelText(/Message/), {
       target: { value: 'The library is closed on Monday' },
     });
@@ -1328,7 +1328,7 @@ describe('CollectionPage as a co-owner', () => {
     );
 
     expect(await screen.findByRole('link', { name: 'Edit collection' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage guests' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage members' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 

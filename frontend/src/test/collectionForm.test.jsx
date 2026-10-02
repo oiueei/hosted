@@ -99,9 +99,7 @@ describe('CreateCollectionPage', () => {
     expect(
       screen.getByText('Only its curators add things — you, to start with.')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Everyone you invite can add their own things too.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Every member can add their own things too.')).toBeInTheDocument();
   });
 
   // The mode radio does not decide who can read the group — only the switch does
@@ -231,7 +229,7 @@ describe('CreateCollectionPage', () => {
     await waitFor(() => expect(createBody()?.digest_frequency).toBe('NONE'));
   });
 
-  // The toggle that decides whether members may recommend guests at all: the
+  // The toggle that decides whether members may recommend people at all: the
   // owner's answer to "am I willing to be asked", which a group with a waiting
   // list or an admission process may not be. It has to reach the POST.
   test('the recommend-a-guest setting reaches the create request', async () => {
