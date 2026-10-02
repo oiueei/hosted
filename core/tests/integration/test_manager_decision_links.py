@@ -247,6 +247,43 @@ class TestTheDecisionIsSignedByWhoeverPressed:
         assert booking.status == BookingPeriod.Status.ACCEPTED
 
 
+class TestALinkThatLosesARace:
+    def test_it_decides_nothing_and_says_the_booking_is_already_processed(
+        self, catalogue, member, owner, co_curator, monkeypatch
+    ):
+        # Two managers press at once: both pass the link's validity check, and only
+        # one wins the locked transition. One thread cannot interleave them, so the
+        # winner commits from inside the loser's call and the loser then runs the
+        # real service, which finds the booking decided and does nothing.
+        from core.views import auth as auth_views
+
+        booking = _ask(member, catalogue["gift"])
+        losing_link = _link(booking, co_curator, RSVP.Action.BOOKING_REJECT)
+        real = auth_views.finalize_booking_decision
+
+        def the_owner_decides_first(pending, **kwargs):
+            real(BookingPeriod.objects.get(pk=pending.pk), accepted=True, decided_by=owner)
+            return real(pending, **kwargs)
+
+        monkeypatch.setattr(auth_views, "finalize_booking_decision", the_owner_decides_first)
+
+        res = _press(losing_link)
+
+        assert res.status_code == 400
+        assert res.data == {"error": "Booking expired or already processed"}
+        # The winner's call stands, and the requester heard one answer, not two.
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.ACCEPTED
+        told = InAppNotification.objects.filter(
+            user=member,
+            type__in=[
+                InAppNotification.Type.BOOKING_ACCEPTED,
+                InAppNotification.Type.BOOKING_REJECTED,
+            ],
+        )
+        assert [n.type for n in told] == [InAppNotification.Type.BOOKING_ACCEPTED]
+
+
 class TestAuthorityIsCheckedAtTheClick:
     """The link outlives the role that earned it — 72 hours, in the mailbox of
     someone who may since have been demoted or removed."""
