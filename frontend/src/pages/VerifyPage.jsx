@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import i18n, { SUPPORTED_LANGUAGES } from '../i18n';
 import { Button, Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
@@ -151,6 +152,19 @@ export default function VerifyPage() {
           if (data.user?.theeeme_colors)
             localStorage.setItem('theeemeColors', JSON.stringify(data.user.theeeme_colors));
           if (data.user?.koro) localStorage.setItem('koro', data.user.koro);
+          // The account's saved language, the same way the theme and the koro are
+          // taken from here: the app-wide effect that applies it (`App.jsx`) runs
+          // once, when the app mounts, and opening a magic link mounts it *before*
+          // there is a session — its `/auth/me/` answers 401 — so until a reload a
+          // person with a saved language saw the browser's (CA, 2026-10-02: "English"
+          // saved, link opened on a phone, app in Spanish). A real preference, so a
+          // proper `changeLanguage` that persists like the profile's own Select;
+          // empty ("Automatic") or unknown leaves things alone. Awaited, so the page
+          // they land on is painted in it, and never allowed to fail the login.
+          const saved = data.user?.language;
+          if (saved && SUPPORTED_LANGUAGES.some((l) => l.code === saved)) {
+            await i18n.changeLanguage(saved).catch(() => {});
+          }
           // The backend decides where to land (`landing`): the collection the
           // link was for, the deployment's "what this is" page for a genuinely
           // new visitor, else home (or their single collection).
@@ -188,7 +202,16 @@ export default function VerifyPage() {
     };
     verify();
     return () => clearTimeout(timer);
-  }, [code, navigate, t]);
+    // `t` is not a dependency, on purpose: a language change gives `useTranslation`
+    // a new `t`, and this effect redeeming the link must not run again for it. A
+    // magic link is single-use, so a second run would find it spent and show an
+    // error to someone who has just signed in — and the sign-in itself now changes
+    // the language (the account's saved one), and so does `App.jsx`'s own effect on
+    // a visitor who already had a session. Nothing here is translated after a
+    // language could have changed except the failure messages, which read `t` as
+    // it was when the link was opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, navigate]);
 
   const koro = localStorage.getItem('koro') || 'basic';
   // Both the success and error heroes offer the same way out.

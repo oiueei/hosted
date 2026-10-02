@@ -1,8 +1,9 @@
 import { render, screen, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import VerifyPage from '../pages/VerifyPage';
+import i18n from '../i18n';
 
 // VerifyPage talks to the backend via raw `fetch` (not the apiFetch wrapper), so
 // we drive both legs of the auto-commit (GET preview, POST commit) from here.
@@ -195,6 +196,118 @@ describe('a refusal the link survives', () => {
     expect(await screen.findByText('Invalid or expired link.')).toBeInTheDocument();
     expect(screen.getByText(/ask the person who invited you/i)).toBeInTheDocument();
     expect(screen.queryByText(/this link still works/i)).toBeNull();
+  });
+});
+
+/**
+ * The account's saved language is applied on sign-in, the way its theme and koro
+ * already are (CA, 2026-10-02). The one effect that applies it (`App.jsx`) runs
+ * once, when the app mounts — and opening a magic link mounts the app *before*
+ * there is a session, so its `/auth/me/` is a 401 and applies nothing. A person with
+ * "English" saved, opening the link on a phone, got the app in the browser's
+ * Spanish and kept it until a reload.
+ */
+describe('a magic link applies the saved language of the account', () => {
+  const USER = { code: 'USR003', name: 'Lulu', email: 'lulu@test.com' };
+
+  // What language the page the person lands on is first painted in.
+  const seen = { language: undefined };
+  function Landing() {
+    useEffect(() => {
+      seen.language = i18n.language;
+    }, []);
+    return <p>landed</p>;
+  }
+
+  function renderMagicLink(language) {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve(
+        mockResponse({ action: 'MAGIC_LINK', landing: 'home', user: { ...USER, language } })
+      )
+    );
+    return render(
+      <MemoryRouter initialEntries={[`/verify/${CODE}`]}>
+        <Routes>
+          <Route path="/verify/:code" element={<VerifyPage />} />
+          <Route path="*" element={<Landing />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  beforeEach(async () => {
+    localStorage.clear();
+    seen.language = undefined;
+    await i18n.changeLanguage('es');
+    localStorage.clear();
+  });
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+    localStorage.removeItem('i18nextLng');
+  });
+
+  test('a saved language is in force before the person lands, and persists like the profile’s', async () => {
+    renderMagicLink('ca');
+
+    await screen.findByText('landed');
+    expect(seen.language).toBe('ca');
+    expect(i18n.language).toBe('ca');
+    // Kept for the next visit exactly as the profile page's own Select keeps it.
+    expect(localStorage.getItem('i18nextLng')).toBe('ca');
+  });
+
+  test.each([
+    ['empty ("Automatic")', ''],
+    ['one this app does not speak', 'fr'],
+    ['absent', undefined],
+  ])('%s leaves the language alone', async (_what, language) => {
+    renderMagicLink(language);
+
+    await screen.findByText('landed');
+    expect(seen.language).toBe('es');
+    expect(i18n.language).toBe('es');
+  });
+
+  test('the single-use link is redeemed once, even though signing in changes the language', async () => {
+    // Changing the language gives `useTranslation` a new `t`; when the effect that
+    // redeems the link depended on `t` it ran again, found the link spent and
+    // showed an error to someone who had just signed in (and, with a server that
+    // keeps saying yes, would never stop). The second call is answered as the
+    // real server would: spent.
+    let calls = 0;
+    globalThis.fetch = vi.fn(() => {
+      calls += 1;
+      return Promise.resolve(
+        calls === 1
+          ? mockResponse({
+              action: 'MAGIC_LINK',
+              landing: 'home',
+              user: { ...USER, language: 'ca' },
+            })
+          : mockResponse({ error: 'Invalid or expired link' }, false, 400)
+      );
+    });
+    render(
+      <MemoryRouter initialEntries={[`/verify/${CODE}`]}>
+        <Routes>
+          <Route path="/verify/:code" element={<VerifyPage />} />
+          <Route path="*" element={<Landing />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('landed');
+    expect(getCalls(globalThis.fetch)).toHaveLength(1);
+    expect(screen.queryByText('Invalid or expired link.')).toBeNull();
+  });
+
+  test('a language that cannot be loaded does not fail the sign-in', async () => {
+    const change = vi.spyOn(i18n, 'changeLanguage').mockRejectedValueOnce(new Error('chunk 404'));
+    renderMagicLink('ca');
+
+    await screen.findByText('landed');
+    expect(localStorage.getItem('userCode')).toBe('USR003');
+    change.mockRestore();
   });
 });
 
