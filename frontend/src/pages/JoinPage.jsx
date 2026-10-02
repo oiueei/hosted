@@ -7,6 +7,7 @@ import JoinToAct from '../components/JoinToAct';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
+import HeroPhoto from '../components/HeroPhoto';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
@@ -16,7 +17,9 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
  * clicks an action button (reserve / order / respond …) on a public collection
  * lands here: they enter their email, the backend (pop-in) joins them to that
  * collection and emails a magic link, and following it drops them back on the
- * collection — now a member who can act. Standard `form-hero` + `Koros` layout.
+ * collection — now a member who can act. Standard `form-hero` + `Koros` layout,
+ * with the collection's own photo (`HeroPhoto`, the same composition as its page)
+ * when it has one.
  */
 export default function JoinPage() {
   const { code } = useParams();
@@ -41,6 +44,12 @@ export default function JoinPage() {
   // keep the generic copy rather than inventing a name.
   const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
   const [collectionLanguage, setCollectionLanguage] = useState('');
+  // What a member can do there — the door's first line names exactly that. The
+  // API gives both to an anonymous reader of a PUBLIC collection.
+  const [mode, setMode] = useState('');
+  const [allowedThingTypes, setAllowedThingTypes] = useState([]);
+  // The collection's own photo, so the door looks like the page it leads to.
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   // The raw headline, per-language map and all, for the hook to read.
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
@@ -57,6 +66,9 @@ export default function JoinPage() {
       .then((data) => {
         if (data?.headline) setHeadline(L(data.headline));
         setCollectionLanguage(data?.language || '');
+        setMode(data?.mode || '');
+        setAllowedThingTypes(data?.allowed_thing_types || []);
+        setThumbnailUrl(data?.thumbnail_url || '');
         setOwnerHeadline(data?.headline || '');
       })
       .catch(() => {});
@@ -72,20 +84,25 @@ export default function JoinPage() {
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
       <div
-        className="form-hero"
+        className={`form-hero${thumbnailUrl ? ' form-hero--photo' : ''}`}
         style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
-        <div
-          className="form-hero-content"
-          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
-        >
-          <span className="hero-corners">
-            <AccountMenu />
-            <ContactCorner />
-          </span>
-          <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
-          <h1 className="form-hero-title">{t('joinToAct.heading')}</h1>
+        <div className="form-hero-split">
+          <div
+            className="form-hero-content"
+            style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+          >
+            <span className="hero-corners">
+              <AccountMenu />
+              <ContactCorner />
+            </span>
+            <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
+            <h1 className="form-hero-title">{t('joinToAct.heading')}</h1>
+          </div>
         </div>
+        {thumbnailUrl && (
+          <HeroPhoto photoUrl={thumbnailUrl} alt={headline} koroType={koro} color03={tc.color_03} />
+        )}
         <Koros
           className="form-hero-koros"
           type={koro}
@@ -93,7 +110,13 @@ export default function JoinPage() {
         />
       </div>
       <div className="page-container">
-        <JoinToAct collectionCode={code} collectionHeadline={headline} thingCode={thingCode} />
+        <JoinToAct
+          collectionCode={code}
+          collectionHeadline={headline}
+          thingCode={thingCode}
+          mode={mode}
+          allowedThingTypes={allowedThingTypes}
+        />
       </div>
     </div>
   );

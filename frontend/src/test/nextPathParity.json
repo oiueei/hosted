@@ -17,6 +17,7 @@
     "javascript:alert(1)",
     "/login",
     "/login?next=/x",
+    "/login?a=1?b=2",
     "/login/",
     "/LOGIN",
     "/%6Cogin",

@@ -84,7 +84,13 @@ export default function HomePage() {
         if (res.ok) {
           const data = await res.json();
           if (!signal?.aborted) {
-            setInvitedCollections(data);
+            // A co-curator is always on the invite list too, so the group they
+            // help run came back here as well and showed twice, under "My
+            // collections" and under "Shared with me" (CA, 2026-10-02). It is
+            // theirs to run: it stays under "My collections" only. Filtered here,
+            // not in the endpoint, because the profile's "My groups" reads the
+            // same list and must keep it.
+            setInvitedCollections(data.filter((c) => !c.is_curator));
             setInvitedError(false);
           }
         } else if (!signal?.aborted) {

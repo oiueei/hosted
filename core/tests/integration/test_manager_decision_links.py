@@ -247,6 +247,43 @@ class TestTheDecisionIsSignedByWhoeverPressed:
         assert booking.status == BookingPeriod.Status.ACCEPTED
 
 
+class TestALinkThatLosesARace:
+    def test_it_decides_nothing_and_says_the_booking_is_already_processed(
+        self, catalogue, member, owner, co_curator, monkeypatch
+    ):
+        # Two managers press at once: both pass the link's validity check, and only
+        # one wins the locked transition. One thread cannot interleave them, so the
+        # winner commits from inside the loser's call and the loser then runs the
+        # real service, which finds the booking decided and does nothing.
+        from core.views import auth as auth_views
+
+        booking = _ask(member, catalogue["gift"])
+        losing_link = _link(booking, co_curator, RSVP.Action.BOOKING_REJECT)
+        real = auth_views.finalize_booking_decision
+
+        def the_owner_decides_first(pending, **kwargs):
+            real(BookingPeriod.objects.get(pk=pending.pk), accepted=True, decided_by=owner)
+            return real(pending, **kwargs)
+
+        monkeypatch.setattr(auth_views, "finalize_booking_decision", the_owner_decides_first)
+
+        res = _press(losing_link)
+
+        assert res.status_code == 400
+        assert res.data == {"error": "Booking expired or already processed"}
+        # The winner's call stands, and the requester heard one answer, not two.
+        booking.refresh_from_db()
+        assert booking.status == BookingPeriod.Status.ACCEPTED
+        told = InAppNotification.objects.filter(
+            user=member,
+            type__in=[
+                InAppNotification.Type.BOOKING_ACCEPTED,
+                InAppNotification.Type.BOOKING_REJECTED,
+            ],
+        )
+        assert [n.type for n in told] == [InAppNotification.Type.BOOKING_ACCEPTED]
+
+
 class TestAuthorityIsCheckedAtTheClick:
     """The link outlives the role that earned it — 72 hours, in the mailbox of
     someone who may since have been demoted or removed."""
@@ -276,6 +313,25 @@ class TestAuthorityIsCheckedAtTheClick:
         booking.refresh_from_db()
         assert booking.status == BookingPeriod.Status.PENDING
         assert _press(_link(booking, owner)).status_code == 200
+
+    def test_a_refused_decision_is_logged_with_who_which_booking_and_from_where(
+        self, catalogue, member, co_curator, security_log
+    ):
+        # The only trace the operator has that a stale link was used — told apart
+        # from a probe by who held it, for which request and from which address.
+        # The three facts, not the sentence around them.
+        booking = _ask(member, catalogue["gift"])
+        accept = _link(booking, co_curator)
+        catalogue["collection"].co_owners.remove(co_curator)
+        security_log.clear()
+
+        res = APIClient().post(f"/api/v1/auth/verify/{accept.token}/", REMOTE_ADDR="203.0.113.7")
+
+        assert res.status_code == 403
+        refusals = [r.getMessage() for r in security_log.records if r.name == "security"]
+        assert len(refusals) == 1
+        for fact in (co_curator.code, booking.code, "203.0.113.7"):
+            assert fact in refusals[0]
 
     def test_a_curator_of_a_collection_turned_community_cannot_decide(
         self, catalogue, member, owner, co_curator

@@ -285,10 +285,10 @@ describe('extractApiError — a coded refusal is said in the reader’s language
       params: { max },
     });
     expect(await extractApiError(body(refusal(1)))).toBe(
-      'You already have 1 active reservation here — the most this group allows.'
+      'You already have 1 active reservation here — the most this collection allows.'
     );
     expect(await extractApiError(body(refusal(3)))).toBe(
-      'You already have 3 active reservations here — the most this group allows.'
+      'You already have 3 active reservations here — the most this collection allows.'
     );
   });
 

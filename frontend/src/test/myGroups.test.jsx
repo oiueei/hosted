@@ -122,7 +122,7 @@ describe('UserPage — My groups', () => {
     renderOther();
 
     // Their profile, rendered — the assertion is about what is absent from it.
-    await screen.findByText(/don't share any collections/i);
+    await screen.findByText(/don't share any groups/i);
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Private business')).not.toBeInTheDocument();
   });

@@ -194,6 +194,16 @@ export default function CollectionPage() {
   // server-computed field that also admits a co-owner.
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
+  // The team the hero names, founder first. The API sends a co-curator's bare
+  // `name` — never an email standing in for it (L2) — so one who set none is
+  // counted at the end instead of listed: comma-joined, an empty name left
+  // "Oriol, ," on the page.
+  const team = [
+    { code: collection.owner, name: collection.owner_name },
+    ...(collection.co_owners ?? []),
+  ];
+  const namedTeam = team.filter((member) => member.name);
+  const unnamedTeamCount = team.length - namedTeam.length;
   const isAuthenticated = !!userCode;
   // The Community/visibility tags in the H1 are purely informational — no
   // click, no delete, so no hover/focus state to design for — so they follow
@@ -331,16 +341,15 @@ export default function CollectionPage() {
             )}
             {/* Attribution. With co-curators, one line names the whole team,
                 founder first, everyone at the same level and shown to everyone
-                (2026-09). Without, the single founder line, and only to
-                non-owners — the owner knows who they are. */}
+                (2026-09); whoever has no name is counted at the end, not
+                linked, and with nobody named there is no line. Without, the
+                single founder line, and only to non-owners — the owner knows
+                who they are. */}
             {collection.co_owners?.length > 0
-              ? collection.owner_name && (
+              ? namedTeam.length > 0 && (
                   <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
                     <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
-                    {[
-                      { code: collection.owner, name: collection.owner_name },
-                      ...collection.co_owners,
-                    ].map((c, i) => (
+                    {namedTeam.map((c, i) => (
                       <span key={c.code}>
                         {i > 0 && ', '}
                         <Link to={`/${c.code}`} className="owner-link">
@@ -348,6 +357,8 @@ export default function CollectionPage() {
                         </Link>
                       </span>
                     ))}
+                    {unnamedTeamCount > 0 &&
+                      ` ${t('collectionPage.curatorsMore', { count: unnamedTeamCount })}`}
                   </p>
                 )
               : !isOwner &&
