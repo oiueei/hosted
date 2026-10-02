@@ -203,6 +203,18 @@
     "proposalApproved": "Invitació enviada a {{email}}. L'hi hem dit al membre que la va recomanar.",
     "proposalDeclined": "No s'ha enviat cap invitació. L'hi hem dit al membre, sense dir per què; i amb la persona que va proposar no hi hem contactat en cap moment."
   },
+  "inbox": {
+    "summary": {
+      "label": "Sol·licituds i reserves",
+      "pending_one": "1 sol·licitud pendent",
+      "pending_other": "{{count}} sol·licituds pendents",
+      "upcoming_one": "1 reserva propera",
+      "upcoming_other": "{{count}} reserves properes",
+      "body": "Tens {{items}}.",
+      "nothing": "No tens res pendent.",
+      "link": "Veure-les totes"
+    }
+  },
   "home": {
     "greeting": "Hola, {{name}}",
     "createCollection": "Crear col·lecció",

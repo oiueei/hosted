@@ -5,6 +5,17 @@ import { Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
 import { formatBookingWhen, formatDateTime } from '../utils/rental';
+import {
+  GROUP_THRESHOLD,
+  isTeamBookingNotice,
+  localToday,
+  summarizeOwnerBookings,
+} from '../utils/inboxGroups';
+
+// The figures on the summary card come from the owner-bookings list, which the API
+// pages (100 at most). A group with more history than this many pages says nothing
+// rather than a number that undercounts: the card still links to the full list.
+const OWNER_BOOKINGS_PAGE_CAP = 10;
 
 const ALERT_TYPES = new Set([
   'COLLECTION_DELETED',
@@ -64,15 +75,26 @@ const notificationType = (type) => {
  * page (`collection` — the owner sees a hold request where the thing actually lives,
  * not only on Home). Strings keep the `home.*` namespace they were born in.
  *
+ * Past three notices about requests and reservations — the ones that go to whoever
+ * *manages* them (`utils/inboxGroups.js`) — they are replaced by a single card with
+ * the real figures (requests waiting for an answer, reservations still to come),
+ * read from `GET /api/v1/owner-bookings/` only when there is something to fold, and
+ * its X dismisses them all at once. Not a count of notices: "you have 5 pending"
+ * would be false with four of them already confirmed.
+ *
  * Props: `collection` (optional code to filter by), `reloadKey` (bump to re-fetch —
  * Home does it when connectivity returns), `onNetworkError` (a stable callback; Home
  * turns it into its offline banner).
  */
 export default function InboxNotifications({ collection, reloadKey = 0, onNetworkError }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Owner content in a payload (headlines) may carry one text per language.
   const L = useLocalized();
   const [notifications, setNotifications] = useState([]);
+  // The summary card's figures: `null` while they load, `false` if they could not
+  // be read (the card then says no number rather than an invented one).
+  const [figures, setFigures] = useState(null);
+  const folded = notifications.filter(isTeamBookingNotice).length > GROUP_THRESHOLD;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -97,6 +119,50 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     fetchInbox();
     return () => controller.abort();
   }, [collection, reloadKey, onNetworkError]);
+
+  // Asked for only when there is something to fold. Follows the API's `next` links
+  // (an absolute DRF URL, so the origin is stripped, as `OwnerBookingsPage` does).
+  useEffect(() => {
+    if (!folded) return undefined;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const loadFigures = async () => {
+      try {
+        const rows = [];
+        let path = '/api/v1/owner-bookings/?page_size=100';
+        for (let page = 0; path; page += 1) {
+          if (page === OWNER_BOOKINGS_PAGE_CAP) throw new Error('too many pages to count');
+          const res = await apiFetch(path, { signal });
+          if (!res.ok) throw new Error('owner-bookings failed');
+          const data = await res.json();
+          rows.push(...(data.results || []));
+          path = data.next ? data.next.replace(/^https?:\/\/[^/]+/, '') : null;
+        }
+        if (!signal.aborted) {
+          setFigures(summarizeOwnerBookings(rows, { collection, today: localToday() }));
+        }
+      } catch {
+        if (!signal.aborted) setFigures(false);
+      }
+    };
+    loadFigures();
+    return () => {
+      controller.abort();
+      setFigures(null);
+    };
+  }, [folded, collection, reloadKey]);
+
+  // The summary card's X: every notice it stands for goes in one call, scoped like
+  // the list was.
+  const dismissGroup = async () => {
+    setNotifications((prev) => prev.filter((n) => !isTeamBookingNotice(n)));
+    try {
+      const scope = collection ? `&collection=${encodeURIComponent(collection)}` : '';
+      await apiFetch(`/api/v1/inbox/?group=bookings${scope}`, { method: 'DELETE' });
+    } catch (err) {
+      onNetworkError?.(err);
+    }
+  };
 
   const dismiss = async (code) => {
     setNotifications((prev) => prev.filter((n) => n.code !== code));
@@ -344,54 +410,82 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
 
   if (notifications.length === 0) return null;
 
+  // The words on the summary card: the figures that are not zero, joined with the
+  // language's own conjunction; both at zero says so; unread says nothing at all.
+  const summaryBody = (() => {
+    if (!figures) return '';
+    const parts = [];
+    if (figures.pending > 0) parts.push(t('inbox.summary.pending', { count: figures.pending }));
+    if (figures.upcoming > 0) parts.push(t('inbox.summary.upcoming', { count: figures.upcoming }));
+    if (parts.length === 0) return t('inbox.summary.nothing');
+    const items = new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(parts);
+    return t('inbox.summary.body', { items });
+  })();
+
   return (
     <>
-      {notifications.map((n) => {
-        const link = notificationLink(n);
-        // Every request- and reservation-notice says when, under its body:
-        // when the event the notice records happened (`created` — for a
-        // cancellation that is the cancellation's own stamp, which is the fact
-        // being reported) and, when the payload carries dates, when the
-        // booking runs — read by the same formatter the booking tables use, so
-        // the two never disagree about what '29/09/2026, 10:00–12:00' means. A
-        // loan or rental reads pickup — return. Either line with nothing to
-        // say (an unparseable stamp, a payload without dates) stays out.
-        const registeredAt = BOOKING_NOTICE_TYPES.has(n.type) ? formatDateTime(n.created) : '';
-        const scheduledFor = n.payload?.start_date
-          ? RESERVATION_TYPES.has(n.type)
-            ? formatBookingWhen(n.payload, 'RESERVE_THING')
-            : formatBookingWhen(n.payload)
-          : '';
-        return (
-          <Notification
-            key={n.code}
-            type={notificationType(n.type)}
-            label={notificationLabel(n)}
-            dismissible
-            closeButtonLabelText={t('home.dismiss')}
-            onClose={() => dismiss(n.code)}
-            style={{ marginBottom: 'var(--spacing-s)' }}
-          >
-            {notificationBody(n)}
-            {link && (
-              <>
-                {' '}
-                <Link to={link.to}>{link.label}</Link>
-              </>
-            )}
-            {registeredAt && (
-              <p style={META_LINE_STYLE}>
-                {t('home.reservationRegisteredAt', { when: registeredAt })}
-              </p>
-            )}
-            {scheduledFor && (
-              <p style={META_LINE_STYLE}>
-                {t('home.reservationScheduledFor', { when: scheduledFor })}
-              </p>
-            )}
-          </Notification>
-        );
-      })}
+      {folded && (
+        <Notification
+          type="info"
+          label={t('inbox.summary.label')}
+          dismissible
+          closeButtonLabelText={t('home.dismiss')}
+          onClose={dismissGroup}
+          style={{ marginBottom: 'var(--spacing-s)' }}
+        >
+          {summaryBody}
+          {summaryBody && ' '}
+          <Link to="/owner-bookings">{t('inbox.summary.link')}</Link>
+        </Notification>
+      )}
+      {notifications
+        .filter((n) => !folded || !isTeamBookingNotice(n))
+        .map((n) => {
+          const link = notificationLink(n);
+          // Every request- and reservation-notice says when, under its body:
+          // when the event the notice records happened (`created` — for a
+          // cancellation that is the cancellation's own stamp, which is the fact
+          // being reported) and, when the payload carries dates, when the
+          // booking runs — read by the same formatter the booking tables use, so
+          // the two never disagree about what '29/09/2026, 10:00–12:00' means. A
+          // loan or rental reads pickup — return. Either line with nothing to
+          // say (an unparseable stamp, a payload without dates) stays out.
+          const registeredAt = BOOKING_NOTICE_TYPES.has(n.type) ? formatDateTime(n.created) : '';
+          const scheduledFor = n.payload?.start_date
+            ? RESERVATION_TYPES.has(n.type)
+              ? formatBookingWhen(n.payload, 'RESERVE_THING')
+              : formatBookingWhen(n.payload)
+            : '';
+          return (
+            <Notification
+              key={n.code}
+              type={notificationType(n.type)}
+              label={notificationLabel(n)}
+              dismissible
+              closeButtonLabelText={t('home.dismiss')}
+              onClose={() => dismiss(n.code)}
+              style={{ marginBottom: 'var(--spacing-s)' }}
+            >
+              {notificationBody(n)}
+              {link && (
+                <>
+                  {' '}
+                  <Link to={link.to}>{link.label}</Link>
+                </>
+              )}
+              {registeredAt && (
+                <p style={META_LINE_STYLE}>
+                  {t('home.reservationRegisteredAt', { when: registeredAt })}
+                </p>
+              )}
+              {scheduledFor && (
+                <p style={META_LINE_STYLE}>
+                  {t('home.reservationScheduledFor', { when: scheduledFor })}
+                </p>
+              )}
+            </Notification>
+          );
+        })}
       <div className="spacer-m" />
     </>
   );

@@ -203,6 +203,18 @@
     "proposalApproved": "Invitación enviada a {{email}}. Se lo hemos dicho al miembro que la recomendó.",
     "proposalDeclined": "No se ha enviado ninguna invitación. Se lo hemos dicho al miembro, sin decir por qué; y con la persona que propuso no hemos contactado en ningún momento."
   },
+  "inbox": {
+    "summary": {
+      "label": "Solicitudes y reservas",
+      "pending_one": "1 solicitud pendiente",
+      "pending_other": "{{count}} solicitudes pendientes",
+      "upcoming_one": "1 reserva próxima",
+      "upcoming_other": "{{count}} reservas próximas",
+      "body": "Tienes {{items}}.",
+      "nothing": "No tienes nada pendiente.",
+      "link": "Ver todas"
+    }
+  },
   "home": {
     "greeting": "Hola, {{name}}",
     "createCollection": "Crear colección",

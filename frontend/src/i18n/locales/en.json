@@ -209,6 +209,18 @@
     "proposalApproved": "Invitation sent to {{email}}. We've told the member who recommended them.",
     "proposalDeclined": "No invitation was sent. We've let the member know, without saying why — and the person they suggested was never contacted."
   },
+  "inbox": {
+    "summary": {
+      "label": "Requests and reservations",
+      "pending_one": "1 pending request",
+      "pending_other": "{{count}} pending requests",
+      "upcoming_one": "1 upcoming reservation",
+      "upcoming_other": "{{count}} upcoming reservations",
+      "body": "You have {{items}}.",
+      "nothing": "You have nothing pending.",
+      "link": "See them all"
+    }
+  },
   "home": {
     "greeting": "Hello, {{name}}",
     "createCollection": "Create collection",
