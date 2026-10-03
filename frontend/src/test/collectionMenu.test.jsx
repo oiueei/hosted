@@ -344,6 +344,43 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     expect(downloadBlob).toHaveBeenCalledTimes(1);
   });
 
+  test.each([
+    ['429', 'Too many attempts — please wait a moment and try again.'],
+    ['500', "Couldn't build the calendar file. Please try again in a moment."],
+  ])(
+    'a calendar export refused with %s says its own message and downloads nothing',
+    async (status, message) => {
+      renderCollection(COLLECTION, {
+        calendar: { ok: false, status: Number(status), headers: new Map() },
+      });
+      await openMenu();
+
+      fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(downloadBlob).not.toHaveBeenCalled();
+    }
+  );
+
+  test('a calendar export request that never arrives says the connection one', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url.includes('/inbox/')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      }
+      if (url === '/api/v1/collections/COL001/calendar-export/') {
+        return Promise.reject(new TypeError('Failed to fetch'));
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(COLLECTION) });
+    });
+    renderPage();
+    await openMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(downloadBlob).not.toHaveBeenCalled();
+  });
+
   test('the stats entry GETs the CSV and names the file after the collection', async () => {
     renderCollection(COLLECTION, { stats: statsResponse() });
     await openMenu();

@@ -6,13 +6,10 @@
   "collectionExport": {
     "downloadButton": "Descargar la colección entera (JSON)",
     "downloading": "Preparando el fichero…",
-    "notice": "La colección entera — cada cosa, el correo de cada miembro, el historial completo. No es el resumen de arriba: lleva datos de otras personas, guárdalo en un sitio seguro y no lo reenvíes.",
     "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
   },
   "calendarExport": {
     "downloadButton": "Descargar el calendario (ICS)",
-    "downloading": "Preparando el fichero…",
-    "notice": "Todos los préstamos, alquileres y reservas próximos, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada, y una reserva cancelada desde entonces va marcada como cancelada.",
     "done": "{{count}} evento(s) — mira tus descargas.",
     "alsoCancelled": "Incluye {{count}} reserva(s) cancelada(s), marcadas para que tu calendario pueda quitarlas.",
     "doneOnlyCancelled": "No hay nada próximo, pero sí {{count}} reserva(s) cancelada(s): importa el fichero para que tu calendario pueda quitarlas.",

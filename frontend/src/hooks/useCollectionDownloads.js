@@ -2,15 +2,15 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
-import { useCalendarExport } from '../components/CalendarExportButton';
+import useCalendarExport from './useCalendarExport';
 
 /**
  * The three downloads a curator takes from the collection's own page (the
  * collection menu, 2026-10-03): the calendar .ics, the stats CSV and the
  * whole-collection JSON. `CollectionPage` calls this once and hands the
  * result to the menu and to the status zone under the "Edit collection"
- * row — the one-call-two-halves shape `useCalendarExport` +
- * `CalendarExportStatus` set when the calendar was the only one.
+ * row: one call, two halves, so the menu that starts a download and the zone
+ * that reports it can never disagree about which one is running.
  *
  * The calendar half is `useCalendarExport` untouched: the POST, the
  * `X-Calendar-Events` count gate and the server-set filename stay where

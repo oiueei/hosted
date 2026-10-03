@@ -90,7 +90,10 @@ class CollectionDataExportView(APIView):
     things would bloat every personal download, this button belongs next to the
     stats CSV, and keeping them apart lets the account copy stay honestly framed
     as *your* data while this one is what it is — an operational copy of a group,
-    carrying other people's details, which the page says out loud.
+    carrying other people's details. The settings page used to say that out loud
+    beside the button; since 2026-10-03 the download sits in the collection menu
+    and no page says it — a rights-and-obligations page for whoever runs a group,
+    which does not exist yet, is where it will be explained.
     """
 
     permission_classes = [IsAuthenticated]
