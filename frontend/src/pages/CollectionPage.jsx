@@ -494,6 +494,7 @@ export default function CollectionPage() {
                     id={RECOMMEND_BOX_ID}
                     collectionCode={code}
                     ownerName={collection.owner_name}
+                    coOwnerCount={collection.co_owners?.length ?? 0}
                     onClose={() => {
                       setRecommendOpen(false);
                       recommendButtonRef.current?.focus();

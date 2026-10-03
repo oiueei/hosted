@@ -28,9 +28,27 @@ import StatusRegion from './StatusRegion';
  * so closing it also drops a half-typed draft and a stale confirmation) and
  * passes `onClose` for the form's own "Close", which hands the focus back to
  * that button. `id` is what the button's `aria-controls` names.
+ *
+ * **Who decides, in four sentences.** With no co-curators the founder is the
+ * only one who decides and the copy names them (`{owner}`). With any, it is the
+ * team — any of them can approve the recommendation and all of them read the
+ * note — so the four sentences that named the founder have `_team` twins that
+ * name the curators instead (CA, 2026-10-03; the same case as the "we have told
+ * the curators" wording of the request emails). They promise only what is true
+ * today: the server still notifies the founder alone (`create_proposal`, a
+ * decision pending in `CA_TASKS.md`), so none of them says the curators were
+ * told or that anything was sent to them. `coOwnerCount` is how many
+ * co-curators the page knows of (`collection.co_owners`, which members get).
  */
-export default function RecommendGuest({ id, collectionCode, ownerName, onClose }) {
+export default function RecommendGuest({
+  id,
+  collectionCode,
+  ownerName,
+  coOwnerCount = 0,
+  onClose,
+}) {
   const { t } = useTranslation();
+  const team = coOwnerCount > 0;
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
@@ -47,7 +65,10 @@ export default function RecommendGuest({ id, collectionCode, ownerName, onClose 
         body: JSON.stringify({ email, note }),
       });
       if (res.ok) {
-        setResult({ type: 'success', message: t('recommend.sent', { owner: ownerName }) });
+        setResult({
+          type: 'success',
+          message: team ? t('recommend.sent_team') : t('recommend.sent', { owner: ownerName }),
+        });
         setEmail('');
         setNote('');
       } else if (res.status === 429) {
@@ -63,7 +84,9 @@ export default function RecommendGuest({ id, collectionCode, ownerName, onClose 
 
   return (
     <div id={id} className="recommend-box">
-      <p className="recommend-intro">{t('recommend.intro', { owner: ownerName })}</p>
+      <p className="recommend-intro">
+        {team ? t('recommend.intro_team') : t('recommend.intro', { owner: ownerName })}
+      </p>
       <StatusRegion>
         {result && (
           <Notification
@@ -87,8 +110,12 @@ export default function RecommendGuest({ id, collectionCode, ownerName, onClose 
         />
         <TextArea
           id="recommend-note"
-          label={t('recommend.noteLabel', { owner: ownerName })}
-          helperText={t('recommend.noteHelper', { owner: ownerName })}
+          label={
+            team ? t('recommend.noteLabel_team') : t('recommend.noteLabel', { owner: ownerName })
+          }
+          helperText={
+            team ? t('recommend.noteHelper_team') : t('recommend.noteHelper', { owner: ownerName })
+          }
           value={note}
           onChange={(e) => setNote(e.target.value)}
           maxLength={256}

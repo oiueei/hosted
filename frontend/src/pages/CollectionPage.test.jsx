@@ -582,6 +582,24 @@ describe('CollectionPage — the member row: "Invite someone" and "Add thing"', 
     expect(container.querySelector('.button-row-wide')).toBeNull();
   });
 
+  test('a member of a group run by a team reads the curators in the form, not the founder', async () => {
+    renderAs({ ...MEMBER, co_owners: [{ code: 'CO0001', name: 'Co Curator' }] });
+    await screen.findByRole('button', { name: 'Invite someone' });
+    fireEvent.click(invite());
+
+    expect(screen.getByText(/The curators decide/)).toBeInTheDocument();
+    expect(screen.queryByText(/Test User decides/)).toBeNull();
+  });
+
+  test('a member of a group with no co-curators reads the founder by name', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+    fireEvent.click(invite());
+
+    expect(screen.getByText(/Test User decides/)).toBeInTheDocument();
+    expect(screen.queryByText(/The curators decide/)).toBeNull();
+  });
+
   test('whoever runs the group sees neither here — theirs are in the collection menu', async () => {
     renderAs({
       ...MEMBER,
