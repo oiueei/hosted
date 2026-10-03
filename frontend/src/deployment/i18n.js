@@ -75,7 +75,6 @@ export const deploymentI18n = {
       personaLoloLink1: "Lolo's Leafy Lounge",
       personaLalaLink2: "Lala's sabbatical sale",
       enterCta: 'Enter and see how it works',
-      legalLink: 'Legal notice & privacy →',
       faqLink: 'Frequently asked questions →',
     },
     login: {
@@ -155,7 +154,6 @@ export const deploymentI18n = {
       personaLoloLink1: 'El salón verde de Lolo',
       personaLalaLink2: 'La venta del sabático de Lala',
       enterCta: 'Entrar y ver cómo funciona',
-      legalLink: 'Aviso legal y privacidad →',
       faqLink: 'Preguntas frecuentes →',
     },
     login: {
@@ -235,7 +233,6 @@ export const deploymentI18n = {
       personaLoloLink1: "El saló verd d'en Lolo",
       personaLalaLink2: 'La venda del sabàtic de la Lala',
       enterCta: 'Entra i mira com funciona',
-      legalLink: 'Avís legal i privadesa →',
       faqLink: 'Preguntes freqüents →',
     },
     login: {

@@ -178,14 +178,10 @@ export default function WelcomePage() {
           />
         </p>
         <div className="spacer-s" />
-        <p>
-          <Link to="/legal" style={{ textDecoration: 'underline' }}>
-            {t('welcome.legalLink')}
-          </Link>
-        </p>
-        {/* Beside the legal link rather than at the foot of the page: this is
-            the moment somebody is already inside and has real questions, and
-            the two links answer the same impulse at different depths. */}
+        {/* The FAQ sits right after the commitment: this is the moment somebody
+            has just read what is promised and has real questions. The legal
+            notice is not repeated here (CA, 2026-10-03) — the site footer, on
+            this page like every other, already links /legal. */}
         <p>
           <Link to="/faq" style={{ textDecoration: 'underline' }}>
             {t('welcome.faqLink')}

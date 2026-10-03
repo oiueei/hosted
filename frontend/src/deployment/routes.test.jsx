@@ -66,6 +66,20 @@ describe('the app serves them', () => {
     expect(document.querySelector('a[href="/popin"]')).not.toBeNull();
   });
 
+  test('/welcome links /legal exactly once, from the site footer', async () => {
+    // The page used to repeat the footer's "Legal notice & privacy" link in the
+    // commitment section (CA took it out, 2026-10-03). Rendered whole — App, so
+    // the footer is there — because the page alone cannot say how many a
+    // visitor sees.
+    window.history.pushState({}, '', '/welcome');
+    render(<App />);
+    await screen.findByRole('heading', { level: 1, name: /Welcome to OIUEEI/i });
+
+    const links = document.querySelectorAll('a[href="/legal"]');
+    expect(links).toHaveLength(1);
+    expect(links[0].closest('footer')).not.toBeNull();
+  });
+
   test('/login\'s "new here?" button leads to /welcome, not straight to /popin', async () => {
     // CA, 2026-10-03: someone new reads what this is before being asked for an
     // email. The path is the deployment's `popInPath`, which LoginPage reads
