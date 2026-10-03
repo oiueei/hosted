@@ -391,7 +391,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         One query per request, cached on the shared serializer context: the
         collection fields below ask this for every thing in a list, and going
         through ``Collection.can_view()`` instead would fire ``is_invited()``
-        once per thing per collection — an N+1 on ``/invited-things/``.
+        once per thing per collection — an N+1 on any list of things (``/things/``,
+        the owner's own, is the one that remains).
         """
         if "_viewer_collection_codes" not in self.context:
             from django.db.models import Q
@@ -418,8 +419,9 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         DB handed back first, viewable or not. So a drill shared with both a
         private family group and a public neighbourhood one told every reader of
         the public one the name and code of the private one: `/shared` printed it
-        on the card, `/things/{code}` used it as the back label for anonymous
-        visitors, and following it landed on a 403. `Thing.can_view()` let the
+        on the card (that page was retired on 2026-10-03), `/things/{code}` used
+        it as the back label for anonymous visitors, and following it landed on a
+        403. `Thing.can_view()` let the
         *thing* through on the strength of the public collection; nothing then
         re-asked the question about the collection it named.
 

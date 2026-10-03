@@ -217,15 +217,23 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
     expect(notice.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  test('the way to reach a human sits at the foot, next to the legal link', () => {
-    // CA, 2026-09-21. Both are looked for deliberately; neither belongs
-    // between a returning member and the field they came for.
+  test('the way to reach a human is the last link on the page, below the reading', () => {
+    // CA, 2026-09-21: looked for deliberately, so it belongs at the foot and not
+    // between a returning member and the field they came for. It is the last of
+    // them since 2026-10-03, when the page's own "Legal notice & privacy" link
+    // went: the site footer, on every page, is where /legal is reached from.
     renderLogin();
     const help = screen.getByRole('link', { name: /Trouble signing in/i });
-    const legal = screen.getByRole('link', { name: 'Legal notice & privacy' });
-    expect(help.compareDocumentPosition(legal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const links = [...document.querySelectorAll('a')];
+    expect(links.at(-1)).toBe(help);
     const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
     expect(licence.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('the page itself does not link to /legal — the footer does, once', () => {
+    renderLogin();
+    expect(document.querySelector('a[href="/legal"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: /legal notice|privacy/i })).toBeNull();
   });
 });
 

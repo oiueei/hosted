@@ -141,31 +141,85 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
   });
 });
 
-describe('MagicLinkJoinPage privacy information (art. 13 at the point of collection)', () => {
-  test('links to /legal on the form itself, not only from /login', () => {
-    // This door mints a real account from the typed email. The privacy
-    // information has to be one click away *here*, at the moment the data is
-    // collected — a visitor arriving on a share link never passes /login.
-    renderShareVariant();
-    expect(screen.getByRole('link', { name: 'Legal notice & privacy' })).toHaveAttribute(
-      'href',
-      '/legal'
-    );
+describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
+  // The door used to carry its own "Legal notice & privacy" link, under the form
+  // and again after it was sent (art. 13 at the point of collection). CA took it
+  // out: the site footer is on every page, this one included, and already links
+  // /legal — so the information is still on the page where the address is typed,
+  // once. These pin that the component does not bring a second copy back.
+  test('the form does not link to /legal', () => {
+    const { container } = renderShareVariant();
+
+    expect(container.querySelector('a[href="/legal"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: /legal notice|privacy/i })).toBeNull();
   });
 
-  test('the link survives the form being replaced by the success notification', () => {
-    // The address is already stored by then, so the information must not
-    // disappear along with the form that collected it.
+  test('nor does the success notification that replaces it', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ message: 'Magic link sent' }),
     });
-    renderShareVariant();
+    const { container } = renderShareVariant();
 
     submitEmail();
+    await screen.findByText(/Magic link sent! Check your inbox/);
 
-    expect(screen.getByRole('link', { name: 'Legal notice & privacy' })).toBeInTheDocument();
+    expect(container.querySelector('a[href="/legal"]')).toBeNull();
+  });
+});
+
+describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in button out)', () => {
+  // `/share/:token` keeps "Already have an account? Sign in →"; the hosted
+  // `/popin` (CA, 2026-10-03) already leads people to /login another way and
+  // drops it. The component is core's and identical in both branches, so what
+  // turns it off is a prop that no core caller passes.
+  function renderDoor(props = {}) {
+    return render(
+      <MemoryRouter>
+        <MagicLinkJoinPage
+          ns="share"
+          docTitleKey="titles.share"
+          titleKey="share.pageTitle"
+          descriptionKey="share.pageDescription"
+          {...props}
+        >
+          <a href="/faq">A deployment link</a>
+        </MagicLinkJoinPage>
+      </MemoryRouter>
+    );
+  }
+
+  test('by default the sign-in button to /login is there', () => {
+    const { container } = renderDoor();
+
+    expect(container.querySelector('a[href="/login"]')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Already have an account? Sign in →' })).toBeVisible();
+  });
+
+  test('with offerSignIn={false} no link leads to /login, and the rest of the page is untouched', () => {
+    const { container } = renderDoor({ offerSignIn: false });
+
+    expect(container.querySelector('a[href="/login"]')).toBeNull();
+    expect(screen.queryByText(/Already have an account/)).toBeNull();
+    // The form and the deployment's own children stay exactly where they were.
+    expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'A deployment link' })).toHaveAttribute('href', '/faq');
+  });
+
+  test('and still none once the form has been sent', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    const { container } = renderDoor({ offerSignIn: false });
+
+    submitEmail();
+    await screen.findByText(/Magic link sent! Check your inbox/);
+
+    expect(container.querySelector('a[href="/login"]')).toBeNull();
   });
 });
 

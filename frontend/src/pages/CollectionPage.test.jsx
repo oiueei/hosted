@@ -196,13 +196,13 @@ describe('CollectionPage with a collection thumbnail', () => {
 
 describe('CollectionPage hero corners', () => {
   /**
-   * The three icon-only controls that can share the hero's top-right corner
-   * (2026-09-28): the account menu (any signed-in visitor), the share menu
-   * (curators only) and the contact link (everyone). They sit together in
-   * one `.hero-corners` flex row now instead of each computing its own
-   * absolute offset — this pins that a curator gets all three and a plain
-   * member gets the two that apply to them, not a gap where the share menu
-   * used to reserve its slot.
+   * The icon-only controls that can share the hero's top-right corner: the
+   * account menu (any signed-in visitor), the collection menu (curators
+   * only, 2026-10-03), the share menu and the contact link (everyone). They
+   * sit together in one `.hero-corners` flex row now instead of each
+   * computing its own absolute offset — this pins that a curator gets all
+   * four and a plain member gets the ones that apply to them, not a gap
+   * where the share menu used to reserve its slot.
    */
   function renderCollection(collection) {
     apiFetch.mockImplementation(() =>
@@ -217,11 +217,12 @@ describe('CollectionPage hero corners', () => {
     );
   }
 
-  test('a curator gets the account menu, the share menu and the contact link', async () => {
+  test('a curator gets the account menu, the collection menu, the share menu and the contact link', async () => {
     renderCollection(COLLECTION_WITH_PHOTO); // is_curator: true
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /collection options/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
   });
@@ -472,11 +473,144 @@ describe('CollectionPage member hero', () => {
     const { container } = renderCollection();
     // A member-only hero control that stayed — so this is a page where the
     // leave link *would* render, not one where the member section is missing.
-    await screen.findByRole('button', { name: /Recommend them/ });
+    await screen.findByRole('button', { name: 'Invite someone' });
 
     expect(container.querySelector('a[href="/collections/COL001/leave"]')).toBeNull();
     expect(screen.queryByRole('link', { name: /leave the group/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /leave the group/i })).toBeNull();
+  });
+});
+
+/**
+ * A member's two hero controls, in one row (CA, 2026-10-03): "Invite someone"
+ * first, primary, and "Add thing" after it, secondary — each on its own
+ * condition, no row when neither applies. "Invite someone" opens the recommend
+ * form *below* the row and stays on screen while it is open, so the same button
+ * closes it. The form itself still says "Recommend" and that whoever runs the
+ * group decides (`recommendGuest.test.jsx`): the button outside promises less
+ * than the word on it, and the form is what keeps the promise honest.
+ */
+describe('CollectionPage — the member row: "Invite someone" and "Add thing"', () => {
+  const MEMBER = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    owner: 'OTHER1',
+    is_member: true,
+    is_curator: false,
+    mode: 'PROPRIETARY',
+    allow_member_proposals: true,
+  };
+
+  function renderAs(collection) {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  const invite = () => screen.getByRole('button', { name: 'Invite someone' });
+  const rowOf = (el) => [...el.closest('.button-row-wide').querySelectorAll('a, button')];
+
+  test('the button opens the form below the row, stays there, and closes it again', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+    expect(invite()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+
+    fireEvent.click(invite());
+
+    // Still on the page — the form did not replace it — and now says what it controls.
+    expect(invite()).toHaveAttribute('aria-expanded', 'true');
+    const form = document.getElementById(invite().getAttribute('aria-controls'));
+    expect(form).toContainElement(screen.getByLabelText(/Their email/i));
+    // Below the row, not inside it.
+    expect(invite().closest('.button-row-wide')).not.toContainElement(form);
+
+    fireEvent.click(invite());
+
+    expect(invite()).toHaveAttribute('aria-expanded', 'false');
+    expect(invite()).not.toHaveAttribute('aria-controls');
+    expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+  });
+
+  test('"Close" inside the form closes it and leaves the focus on the button', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+    fireEvent.click(invite());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+    expect(invite()).toHaveFocus();
+  });
+
+  test('a COMMUNITY group with recommendations: "Invite someone" before "Add thing", in one row', async () => {
+    renderAs({ ...MEMBER, mode: 'COMMUNITY' });
+    await screen.findByRole('button', { name: 'Invite someone' });
+
+    const row = rowOf(invite());
+    expect(row.map((el) => el.textContent.trim())).toEqual(['Invite someone', 'Add thing']);
+    expect(row[1]).toHaveAttribute('href', '/collections/COL001/add');
+  });
+
+  test('a PROPRIETARY group with recommendations: only "Invite someone"', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+
+    expect(rowOf(invite()).map((el) => el.textContent.trim())).toEqual(['Invite someone']);
+    expect(screen.queryByRole('link', { name: 'Add thing' })).toBeNull();
+  });
+
+  test('a COMMUNITY group without recommendations: only "Add thing"', async () => {
+    renderAs({ ...MEMBER, mode: 'COMMUNITY', allow_member_proposals: false });
+    const add = await screen.findByRole('link', { name: 'Add thing' });
+
+    expect(rowOf(add).map((el) => el.textContent.trim())).toEqual(['Add thing']);
+    expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
+  });
+
+  test('a PROPRIETARY group without recommendations: no row at all', async () => {
+    const { container } = renderAs({ ...MEMBER, allow_member_proposals: false });
+    await screen.findByText('Things from the kitchen');
+
+    expect(container.querySelector('.button-row-wide')).toBeNull();
+  });
+
+  test('a member of a group run by a team reads the curators in the form, not the founder', async () => {
+    renderAs({ ...MEMBER, co_owners: [{ code: 'CO0001', name: 'Co Curator' }] });
+    await screen.findByRole('button', { name: 'Invite someone' });
+    fireEvent.click(invite());
+
+    expect(screen.getByText(/The curators decide/)).toBeInTheDocument();
+    expect(screen.queryByText(/Test User decides/)).toBeNull();
+  });
+
+  test('a member of a group with no co-curators reads the founder by name', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+    fireEvent.click(invite());
+
+    expect(screen.getByText(/Test User decides/)).toBeInTheDocument();
+    expect(screen.queryByText(/The curators decide/)).toBeNull();
+  });
+
+  test('whoever runs the group sees neither here — theirs are in the collection menu', async () => {
+    renderAs({
+      ...MEMBER,
+      mode: 'COMMUNITY',
+      is_curator: true,
+      is_member: false,
+    });
+    await screen.findByRole('link', { name: 'Edit collection' });
+
+    expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Add thing' })).toBeNull();
   });
 });
 
@@ -1328,8 +1462,38 @@ describe('CollectionPage as a co-owner', () => {
     );
 
     expect(await screen.findByRole('link', { name: 'Edit collection' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage members' })).toBeInTheDocument();
+    // "Manage members" lives in the collection menu now (2026-10-03): open it.
+    fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
+    expect(await screen.findByRole('link', { name: 'Manage members' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Add thing' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  // The hero row holds "Edit collection" alone (CA, 2026-10-03): the rest of
+  // the curator's controls are in the collection menu, one click further, so
+  // the row that used to hold four buttons reads as one thing — the group's
+  // settings — instead of a toolbar.
+  test('the curator hero row holds "Edit collection" alone', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
+    );
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('link', { name: 'Edit collection' });
+    const row = container.querySelector('.button-row-wide');
+    expect(row).not.toBeNull();
+    const inRow = [...row.querySelectorAll('a, button')];
+    expect(inRow).toHaveLength(1);
+    expect(inRow[0]).toHaveAccessibleName('Edit collection');
   });
 
   test('the hero names the whole team on one "Run by:" line, founder first', async () => {

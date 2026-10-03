@@ -60,7 +60,6 @@ from .views.report import ThingReportView
 from .views.reservations import ThingRequestView
 from .views.theeemes import TheeemeListView
 from .views.things import (
-    InvitedThingsView,
     ThingBulkCreateView,
     ThingViewSet,
 )
@@ -270,7 +269,6 @@ urlpatterns = [
     # Theeemes
     path("theeemes/", TheeemeListView.as_view(), name="theeeme-list"),
     # Things (non-viewset)
-    path("invited-things/", InvitedThingsView.as_view(), name="invited-things"),
     path("things/<str:thing_code>/request/", ThingRequestView.as_view(), name="thing-request"),
     path(
         "things/<str:thing_code>/calendar/",

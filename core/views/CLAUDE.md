@@ -402,16 +402,6 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 
 **`destroy` action (`_can_delete()`):** Permanent deletion (the thing and all related data). Three cases grant permission: (1) the user owns any collection containing the thing (a collection owner can always delete, any mode); (2) the user is a **co-curator of a PROPRIETARY** collection it sits in (2026-09 — that catalogue is the curators' collectively); (3) the user is the current thing owner AND no `ThingTransfer` records exist (thing has never changed hands). Returns 403 otherwise. Frontend shows the Delete button for a curator regardless of thing status; the thing owner sees it when the thing has never changed hands.
 
-### InvitedThingsView
-
-| | |
-|---|---|
-| **Endpoint** | `GET /api/v1/invited-things/` |
-| **Permission** | `IsAuthenticated` |
-| **Pagination** | `StandardResultsPagination` |
-
-Lists things from collections where the current user is invited. Only returns ACTIVE or TAKEN things (excludes INACTIVE). Only returns things from ACTIVE collections. Uses `.distinct()` to avoid duplicates.
-
 ### ThingBulkCreateView
 
 | | |

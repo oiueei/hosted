@@ -40,7 +40,6 @@ const RemoveGuestPage = lazy(() => import('./pages/RemoveGuestPage'));
 const LeaveCollectionPage = lazy(() => import('./pages/LeaveCollectionPage'));
 const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'));
 const OwnerBookingsPage = lazy(() => import('./pages/OwnerBookingsPage'));
-const SharedThingsPage = lazy(() => import('./pages/SharedThingsPage'));
 const SharePage = lazy(() => import('./pages/SharePage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -185,7 +184,6 @@ function App() {
               <Route path="/things/:thingCode/delete" element={<DeleteThingPage />} />
               <Route path="/my-bookings" element={<MyBookingsPage />} />
               <Route path="/owner-bookings" element={<OwnerBookingsPage />} />
-              <Route path="/shared" element={<SharedThingsPage />} />
               <Route path="/:userCode" element={<UserPage />} />
             </Route>
 

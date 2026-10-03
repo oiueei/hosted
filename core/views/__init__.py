@@ -8,7 +8,7 @@ from .collections import (
 )
 from .faq import FAQAnswerView, FAQDetailView, FAQVisibilityView, ThingFAQListView
 from .theeemes import TheeemeListView
-from .things import InvitedThingsView, ThingViewSet
+from .things import ThingViewSet
 from .transfers import ThingTransferView
 from .users import UserDetailView
 
@@ -22,7 +22,6 @@ __all__ = [
     "CollectionInviteView",
     "InvitedCollectionsView",
     "ThingViewSet",
-    "InvitedThingsView",
     "ThingFAQListView",
     "FAQDetailView",
     "FAQAnswerView",

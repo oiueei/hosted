@@ -100,7 +100,6 @@ vi.mock('../services/api', () => ({
     if (url.includes('/my-bookings/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.includes('/my-invitations/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.includes('/invited-collections/')) return Promise.resolve(mockResponse([]));
-    if (url.includes('/invited-things/')) return Promise.resolve(mockResponse({ results: [] }));
     if (url.match(/\/things\/[^/]+\/faq\//)) return Promise.resolve(mockResponse({ results: [] }));
     if (url.match(/\/things\/[^/]+\/calendar\//))
       return Promise.resolve(mockResponse({ results: [] }));

@@ -194,6 +194,56 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     await waitFor(() => expect(document.querySelector('.share-qr-code')).toBeTruthy());
     expect(await axe(document.body, NO_REGION)).toHaveNoViolations();
   });
+
+  // The collection menu's panel mixes links with the three download buttons,
+  // so unlike the account menu's <nav> it is a plain <div> — exactly the kind
+  // of shape axe has opinions about (an unnamed labelled div, buttons without
+  // visible text). Opened, not shut, is the state that only exists after a
+  // click; the smoke suite renders collections empty and never opens it.
+  test('the opened collection menu has no axe violations', async () => {
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
+    // GIFT-only fixture: no calendar entry, so the stats button is the
+    // panel's mark of being open.
+    await screen.findByRole('button', { name: /Download the stats/ });
+
+    expect(await axe(container, NO_REGION)).toHaveNoViolations();
+  });
+
+  // A member's row: the primary "Invite someone" toggle beside "Add thing", and
+  // the recommend form it opens underneath. The form only exists after a click
+  // and the toggle carries `aria-expanded` / `aria-controls`, which is what axe
+  // checks the pair for; the smoke suite renders neither.
+  test('the opened recommend form, with its member row, has no axe violations', async () => {
+    const original = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation((url, opts) =>
+      /\/collections\/[^/]+\//.test(url)
+        ? Promise.resolve(
+            mockResponse({
+              ...MOCK_COLLECTION,
+              owner: 'OTHER1',
+              is_curator: false,
+              is_member: true,
+              mode: 'COMMUNITY',
+              allow_member_proposals: true,
+            })
+          )
+        : original(url, opts)
+    );
+    try {
+      const { container } = renderCollection();
+      await screen.findByText('Test Thing');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Invite someone' }));
+      await screen.findByLabelText(/Their email/i);
+
+      expect(await axe(container, NO_REGION)).toHaveNoViolations();
+    } finally {
+      apiFetch.mockImplementation(original);
+    }
+  });
 });
 
 /**

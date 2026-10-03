@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { TextInput, TextArea, Select, Button, Notification, Accordion } from 'hds-react';
+import { TextInput, TextArea, Select, Button, Accordion } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
-import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
@@ -23,12 +22,7 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
-import StatusRegion from '../components/StatusRegion';
 import EmailNoteTest from '../components/EmailNoteTest';
-import CalendarExportButton, {
-  CalendarExportStatus,
-  useCalendarExport,
-} from '../components/CalendarExportButton';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -105,18 +99,12 @@ export default function EditCollectionPage() {
   // The one control on this page still stricter than "the server enforces
   // it": deleting the collection is deliberately not a co-owner power, and
   // the button isn't worth showing to someone the server would refuse.
-  // Everything else here (save, pause, stats, export) already carries no
-  // client-side gate at all — a co-owner reaching this page saves exactly
-  // as the founder would, no change needed.
+  // Everything else here (save, pause) already carries no client-side gate at
+  // all — a co-owner reaching this page saves exactly as the founder would, no
+  // change needed.
   const [ownerCode, setOwnerCode] = useState(null);
   const isOwner = userCode === ownerCode;
   const [pauseSubmitting, setPauseSubmitting] = useState(false);
-  const [statsError, setStatsError] = useState(false);
-  const [collectionExportError, setCollectionExportError] = useState(null);
-  const [collectionExportDownloading, setCollectionExportDownloading] = useState(false);
-  // The calendar .ics's request, label and outcome messages live in the shared
-  // CalendarExportButton — the same control also sits in the collection hero.
-  const calendarExport = useCalendarExport(code);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -348,36 +336,6 @@ export default function EditCollectionPage() {
       setToast({ type: 'error', message: t('common.connectionError') });
     } finally {
       setPauseSubmitting(false);
-    }
-  };
-
-  const handleDownloadStats = async () => {
-    setStatsError(false);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${code}/stats/`);
-      if (!res.ok) throw new Error('stats');
-      downloadBlob(await res.blob(), `${code}-stats.csv`);
-    } catch {
-      setStatsError(true);
-    }
-  };
-
-  const handleDownloadCollectionExport = async () => {
-    setCollectionExportError(null);
-    setCollectionExportDownloading(true);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${code}/export/`);
-      if (res.ok) {
-        downloadBlob(await res.blob(), filenameFromResponse(res, `${code}.json`));
-      } else if (res.status === 429) {
-        setCollectionExportError(t('common.tooManyAttempts'));
-      } else {
-        setCollectionExportError(t('collectionExport.error'));
-      }
-    } catch {
-      setCollectionExportError(t('common.connectionError'));
-    } finally {
-      setCollectionExportDownloading(false);
     }
   };
 
@@ -663,79 +621,6 @@ export default function EditCollectionPage() {
                 ? t('pause.resumeButton')
                 : t('pause.pauseButton')}
           </Button>
-        </div>
-      </div>
-      <div
-        style={{
-          marginTop: 'var(--spacing-xl)',
-          borderTop: '1px solid var(--color-black-20)',
-          paddingTop: 'var(--spacing-m)',
-        }}
-      >
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={handleDownloadStats}
-          style={btnSecondaryStyle}
-        >
-          {t('stats.downloadStats')}
-        </Button>
-        <StatusRegion>
-          {statsError && (
-            <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
-              {t('stats.downloadStatsError')}
-            </Notification>
-          )}
-        </StatusRegion>
-        {/* The whole group, not the summary above — a different download, so the
-            label and the copy beside it have to say so: it carries other
-            members' data, and whoever downloads it is who answers for it. */}
-        <div style={{ marginTop: 'var(--spacing-s)' }}>
-          <Button
-            variant="secondary"
-            fullWidth
-            disabled={collectionExportDownloading}
-            onClick={handleDownloadCollectionExport}
-            style={btnSecondaryStyle}
-          >
-            {collectionExportDownloading
-              ? t('collectionExport.downloading')
-              : t('collectionExport.downloadButton')}
-          </Button>
-          <p
-            style={{
-              marginTop: 'var(--spacing-2-xs)',
-              fontSize: 'var(--fontsize-body-s)',
-              color: 'var(--color-black-60)',
-            }}
-          >
-            {t('collectionExport.notice')}
-          </p>
-          <StatusRegion>
-            {collectionExportError && (
-              <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-xs)' }}>
-                {collectionExportError}
-              </Notification>
-            )}
-          </StatusRegion>
-        </div>
-        {/* The calendar .ics — every upcoming date-based reservation (loans,
-            rentals, on-site reservations), every download; a stable per-
-            booking UID is what keeps a re-import from doubling the calendar.
-            The control is the shared CalendarExportButton, the same one the
-            collection hero offers a curator. */}
-        <div style={{ marginTop: 'var(--spacing-s)' }}>
-          <CalendarExportButton calendar={calendarExport} fullWidth style={btnSecondaryStyle} />
-          <p
-            style={{
-              marginTop: 'var(--spacing-2-xs)',
-              fontSize: 'var(--fontsize-body-s)',
-              color: 'var(--color-black-60)',
-            }}
-          >
-            {t('calendarExport.notice')}
-          </p>
-          <CalendarExportStatus calendar={calendarExport} />
         </div>
       </div>
       <Toast toast={toast} onClose={() => setToast(null)} />

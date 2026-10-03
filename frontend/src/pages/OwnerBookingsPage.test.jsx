@@ -91,6 +91,73 @@ describe('OwnerBookingsPage listing', () => {
     expect(screen.getByRole('heading', { name: 'Past requests' })).toBeInTheDocument();
   });
 
+  test('the thing and its group are one column; who asked, when and the note are the next', async () => {
+    // CA, 2026-10-03: the first column used to hold six lines. "Thing" is the link
+    // and the group it is in; "Who and when" is who asked, the request date, the
+    // dates (or "No dates") and, for a reservation, the project note.
+    mockApi([
+      {
+        results: [
+          booking({
+            thing_type: 'RESERVE_THING',
+            collection_headline: 'Tool library',
+            collection_code: 'COL001',
+            project_note: 'Painting the hall',
+          }),
+        ],
+        next: null,
+      },
+    ]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const headers = within(screen.getAllByRole('table')[0])
+      .getAllByRole('columnheader')
+      .map((th) => th.textContent);
+    expect(headers).toEqual(['Thing', 'Who and when', 'Status', 'Actions']);
+
+    const [thing, whoWhen] = within(
+      screen.getByRole('link', { name: 'Cordless drill' }).closest('tr')
+    ).getAllByRole('cell');
+    expect(within(thing).getByRole('link', { name: 'Cordless drill' })).toBeInTheDocument();
+    expect(thing).toHaveTextContent('Tool library');
+    expect(thing).not.toHaveTextContent(/Asked by/);
+    expect(whoWhen).toHaveTextContent('Asked by Lele');
+    expect(whoWhen).toHaveTextContent(/Requested/);
+    expect(whoWhen).toHaveTextContent('01/09/2026');
+    // The project note is in this cell too, not in the first.
+    expect(whoWhen).toHaveTextContent('Painting the hall');
+    expect(thing).not.toHaveTextContent('Painting the hall');
+  });
+
+  test('the lines of a cell touch: they carry the shared class and no margin of their own', async () => {
+    mockApi([{ results: [booking({ collection_headline: 'Tool library' })], next: null }]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const cells = within(
+      screen.getByRole('link', { name: 'Cordless drill' }).closest('tr')
+    ).getAllByRole('cell');
+    for (const cell of cells.slice(0, 2)) {
+      expect(cell.querySelector('.table-cell-lines')).not.toBeNull();
+      for (const line of cell.querySelectorAll('p')) {
+        expect(line.getAttribute('style')).toBeNull();
+      }
+    }
+  });
+
+  test('the type and the state sit in a status cell that sizes each label to its word', async () => {
+    // Same cell, same class as /my-bookings (CA, 2026-10-03); the rule is pinned
+    // in `tableCellStyles.test.js`.
+    mockApi([{ results: [booking({ status: 'ACCEPTED' })], next: null }]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const cell = screen.getByText('Lend').closest('.table-status-cell');
+    expect(cell).not.toBeNull();
+    expect(within(cell).getByText('Confirmed')).toBeInTheDocument();
+  });
+
   test('each request names its group, and the thing link carries that group', async () => {
     mockApi([
       {

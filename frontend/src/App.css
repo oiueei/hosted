@@ -44,13 +44,13 @@ body {
 .form-hero-content {
   /* How much of the content column's right edge the icon corner (.hero-corners)
      can take: the widest it gets is a curator's hero on CollectionPage — account
-     menu, share menu, contact link — which is 3 controls of 44px (.contact-corner,
-     .account-menu-trigger and .share-corner all declare that) and the 2 gaps
-     between them (.hero-corners' `gap`). A hero with fewer icons reserves the same
-     width: the back link cannot know which ones its page will render. Pinned in
-     test/heroCornerLayout.test.jsx, which recomputes it from the DOM and these
-     rules. */
-  --hero-corners-width: calc(3 * 44px + 2 * var(--spacing-2-xs));
+     menu, collection menu, share menu, contact link — which is 4 controls of 44px
+     (.contact-corner, .account-menu-trigger, .collection-menu-trigger and
+     .share-corner all declare that) and the 3 gaps between them (.hero-corners'
+     `gap`). A hero with fewer icons reserves the same width: the back link cannot
+     know which ones its page will render. Pinned in test/heroCornerLayout.test.jsx,
+     which recomputes it from the DOM and these rules. */
+  --hero-corners-width: calc(4 * 44px + 3 * var(--spacing-2-xs));
   max-width: 1248px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-s) var(--spacing-xl);
@@ -89,21 +89,22 @@ body {
   height: 60px;
 }
 
-/* The hero's top-right icon row (i8, S9, and the account menu, 2026-09-28):
-   ContactCorner, and where they apply AccountMenu and ShareCollectionMenu,
-   sit as flex items in ONE anchored row instead of each computing its own
-   `right:` offset. That is what lets the row close its own gaps: a member's
-   hero (no ShareCollectionMenu) or an anonymous one (no AccountMenu either)
-   just has fewer children, and `gap` never reserves space for one that isn't
-   there — the old per-icon offsets had to know the exact set of icons any
-   other icon might share the corner with, which the account menu's own
-   session-gating would have broken (`.contact-corner`'s offset assumed
-   ShareCollectionMenu was the only possible neighbour). Anchored to the right
-   edge of the hero's CONTENT column, not the raw viewport edge (the
-   "(100% - min(100%, 1248px)) / 2" centring math every hero uses), and sized
-   to its content (`inline-flex`) so that anchor is the row's own right edge,
-   not the hero's full width. Visual order follows DOM order left-to-right:
-   account · share · contact, contact rightmost as it always was. */
+/* The hero's top-right icon row (i8, S9, the account menu 2026-09-28 and the
+   collection menu 2026-10-03): ContactCorner, and where they apply
+   AccountMenu, CollectionMenu and ShareCollectionMenu, sit as flex items in
+   ONE anchored row instead of each computing its own `right:` offset. That
+   is what lets the row close its own gaps: a member's hero (no collection or
+   share menu) or an anonymous one (no account menu either) just has fewer
+   children, and `gap` never reserves space for one that isn't there — the old
+   per-icon offsets had to know the exact set of icons any other icon might
+   share the corner with, which the account menu's own session-gating would
+   have broken (`.contact-corner`'s offset assumed ShareCollectionMenu was
+   the only possible neighbour). Anchored to the right edge of the hero's
+   CONTENT column, not the raw viewport edge (the "(100% - min(100%, 1248px))
+   / 2" centring math every hero uses), and sized to its content
+   (`inline-flex`) so that anchor is the row's own right edge, not the hero's
+   full width. Visual order follows DOM order left-to-right: account ·
+   collection · share · contact, contact rightmost as it always was. */
 .hero-corners {
   position: absolute;
   top: calc(var(--spacing-l) - 2px);
@@ -125,24 +126,25 @@ body {
   color: var(--hero-text-color, var(--color-black-90));
 }
 
-/* Account menu (2026-09-28): "My profile" / "Edit profile" / "Create
-   collection" / "My requests" / "Requests to me" / "Log out", one click away
-   from every hero a signed-in visitor sees — including a collection whose
-   owner set a `home_page`, where the hero's own "Home" link leaves OIUEEI
-   entirely and this was otherwise the only way back. A plain disclosure
-   (button + `<nav>`), not ShareCollectionMenu's HDS-Select trick — every
-   option here is a route, not an action.
+/* Account menu (2026-09-28): "My profile" / "My requests" / "Requests to me"
+   / "Log out", one click away from every hero a signed-in visitor sees —
+   including a collection whose owner set a `home_page`, where the hero's own
+   "Home" link leaves OIUEEI entirely and this was otherwise the only way
+   back. A plain disclosure (button + `<nav>`), not ShareCollectionMenu's
+   HDS-Select trick — every option here is a route, not an action.
 
-   `.account-menu` deliberately positions nothing. It used to be `position:
+   `.account-menu` — and `.collection-menu` beside it (2026-10-03) —
+   deliberately position nothing. `.account-menu` used to be `position:
    relative`, which anchored the panel to its own trigger — and for a curator
-   on CollectionPage that trigger is the FIRST of three, so at 320px its right
-   edge sits ~208px in while "Les meves sol·licituds" plus padding needs ~217px:
-   the panel ran off the left of the screen. With no positioned ancestor of its
-   own, the panel anchors to `.hero-corners` (absolutely positioned, above), so
-   `right: 0` is the edge of the content column whatever the row holds and the
-   `max-width` below always fits. */
+   on CollectionPage that trigger is the FIRST of the row, so at 320px its
+   right edge sits well in while "Les meves sol·licituds" plus padding needs
+   more: the panel ran off the left of the screen. With no positioned
+   ancestor of its own, the panel anchors to `.hero-corners` (absolutely
+   positioned, above), so `right: 0` is the edge of the content column
+   whatever the row holds and the `max-width` below always fits. */
 
-.account-menu-trigger {
+.account-menu-trigger,
+.collection-menu-trigger {
   width: 44px;
   height: 44px;
   display: flex;
@@ -155,7 +157,8 @@ body {
   cursor: pointer;
 }
 
-.account-menu-panel {
+.account-menu-panel,
+.collection-menu-panel {
   position: absolute;
   top: calc(100% + var(--spacing-2-xs));
   right: 0;
@@ -175,11 +178,37 @@ body {
   color: var(--color-black-90);
 }
 
-.account-menu-panel a {
+.account-menu-panel a,
+.collection-menu-panel a {
   display: block;
   padding: var(--spacing-2-xs) var(--spacing-s);
   color: inherit;
   text-decoration: none;
+}
+
+/* The collection menu's downloads are buttons next to the links; they take
+   the links' own look, which the `a` rules above do not reach. */
+.collection-menu-panel button {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-2-xs) var(--spacing-s);
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.collection-menu-panel button:hover {
+  background-color: var(--color-black-5);
+}
+
+/* A download in flight disables its own entry; it must not read as still
+   pressable. */
+.collection-menu-panel button[disabled] {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /* Hover only, deliberately no :focus-visible selector here: the global
@@ -187,11 +216,13 @@ body {
    focus, and paletteContrast.test.js finds that rule by the FIRST
    `:focus-visible` occurrence in this file — a second one earlier would
    shadow it there without changing anything visible. */
-.account-menu-panel a:hover {
+.account-menu-panel a:hover,
+.collection-menu-panel a:hover {
   background-color: var(--color-black-5);
 }
 
-.account-menu-divider {
+.account-menu-divider,
+.collection-menu-divider {
   border: none;
   border-top: 1px solid var(--color-black-20);
   margin: var(--spacing-2-xs) 0;
@@ -301,7 +332,8 @@ body {
   z-index: 2;
 }
 
-/* z0 — photo as a full-bleed background */
+/* z0 — photo as a background, full-bleed up to 1248px (past that it stops at the
+   content column — the ≥768px rule below) */
 .hero-photo-wrap {
   position: absolute;
   inset: 0 0 0 30%;
@@ -410,6 +442,21 @@ body {
   .form-hero--photo .markdown-text.form-hero-text {
     padding-right: 34%;
   }
+
+  /* The photo ends where the content column ends (CA, 2026-10-03). `.form-hero`
+     spans the whole window, but from 1248px up the column (`.form-hero-content`,
+     max-width 1248px) is centred and leaves margins, and the photo kept going to
+     the window's edge — seen on a collection at ~2000px, where it ran well past
+     the column the text, the icons and the page below are all aligned to. Pulling
+     its right edge in by the margin is the same centring sum `.hero-corners` uses
+     for its own `right`, without that rule's gutter: 0 up to 1248px, so from 768
+     to 1248px nothing moves. Below 768px the photo is a static block and the
+     phone's rule above decides. The left edge (`30%`) is untouched, and the
+     wedge (`.hero-photo-diag`) centres on the photo's own box, so it follows. Every
+     photo hero gets it: the collection's, a profile's and the join page's. */
+  .hero-photo-wrap {
+    right: calc((100% - min(100%, 1248px)) / 2);
+  }
 }
 
 .form-page {
@@ -442,6 +489,40 @@ body {
   line-height: 44px;
   padding: 0 var(--spacing-2-xs);
   color: inherit;
+}
+
+/* The separator between the doors and the colophon text (CA, 2026-10-03). It
+   exists for the one-line footer, so it is hidden here — on two lines it would
+   hang at the end of the first — and shown from 768px below. The padding is the
+   next link's own, which the separator between two links gets for free from
+   that link; `white-space: pre` keeps the spaces around the dot, which a flex
+   item would otherwise collapse. */
+.site-footer-sep {
+  display: none;
+  white-space: pre;
+  padding-right: var(--spacing-2-xs);
+}
+
+/* From 768px the colophon is ONE line: the doors, a dot, the text — centred, and
+   aligned on their middles because the links are 44px tall and the text is not.
+   Under 768px nothing here applies and it is the two lines it always was. The
+   nav loses its bottom margin (that was the gap between the two lines), and
+   `wrap` is only the way out of a language long enough not to fit. */
+@media (min-width: 768px) {
+  .site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .site-footer-links {
+    margin-bottom: 0;
+  }
+
+  .site-footer-sep {
+    display: inline;
+  }
 }
 
 .form-actions {
@@ -829,8 +910,8 @@ body :focus-visible {
 /* A <button> that acts rather than navigates, styled as the surrounding text so
    it reads as one sentence — the same quiet register as .invite-nudge. It was
    the member's per-collection digest switch (removed from the hero, CA,
-   2026-09-21); RecommendGuest's "recommend someone" opener is what still uses
-   it, hence the name that no longer says what it is. */
+   2026-09-21); SharePage's "use another email instead" is what still uses it,
+   hence the name that no longer says what it is. */
 .digest-pref-button {
   padding: 0;
   border: none;
@@ -846,9 +927,9 @@ body :focus-visible {
   opacity: 0.6;
 }
 
-/* Quiet "Report" action in the ThingPage footer — deliberately understated so
-   it doesn't compete with the primary actions above it. The confirm expands
-   inline below the button (no modal). */
+/* The "Report" action in the ThingPage footer: a secondary button like the app's
+   others (CA, 2026-10-03), centred under the page. The confirm expands inline
+   below it (no modal). */
 .thing-report-footer {
   display: flex;
   flex-direction: column;
@@ -1016,25 +1097,13 @@ body :focus-visible {
   margin-bottom: var(--spacing-2-xs);
 }
 
-/* The four things under the door — the licence, the no-cookie-banner claim,
-   the way to reach a human, the legal link — read as ONE block at ONE size
-   (CA, 2026-09-21). They had drifted into three sizes and two greys, so the
-   checkable claims looked like small print beside the slogan they replaced.
-   The override reaches `.legal-link` deliberately: its shared recipe still
-   sets body-s for the other two doors that use it (MagicLinkJoinPage,
-   JoinToAct), which are not this page and were not asked about. */
-.login-footnotes,
-.login-footnotes .legal-link {
+/* The three things under the door — the licence, the no-cookie-banner claim and
+   the way to reach a human — read as ONE block at ONE size (CA, 2026-09-21).
+   They had drifted into three sizes and two greys, so the checkable claims
+   looked like small print beside the slogan they replaced. (A fourth, the
+   legal link, left on 2026-10-03: the site footer carries it on every page.) */
+.login-footnotes {
   font-size: var(--fontsize-body-m);
-}
-
-/* The quiet "Legal notice & privacy" link that sits under each of those forms
-   (DESIGN §9 / art. 13 at the point of collection). Same three declarations in
-   LoginPage, MagicLinkJoinPage and JoinToAct — one recipe, one place. */
-.legal-link {
-  color: var(--color-black-60);
-  text-decoration: underline;
-  font-size: var(--fontsize-body-s);
 }
 
 .hero-image {
@@ -1591,6 +1660,61 @@ figure[class*='Highlight-module_highlight'] {
   overflow-x: auto;
 }
 
+/* The "Status" cell of /my-bookings and /owner-bookings: the thing's type (a Tag)
+   over its state (a StatusLabel), and the "expired" explanation where there is
+   one. In a bare `flex-direction: column` every child stretches to the column's
+   whole width, so both labels filled it — and since `Tag` centres its text and
+   `StatusLabel` does not, one read centred and the other left (CA's screenshot,
+   2026-10-03). `align-items: flex-start` sizes each to its own word, like the
+   hero's "Community" and "Private" tags. */
+.table-status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-2-xs);
+}
+
+/* The lines of a text cell in the request tables and in "My groups" (CA,
+   2026-10-03). They used to carry a margin between one line and the next, set
+   inline on every paragraph, and the first column held everything; CA's
+   screenshot, with the margins taken out by hand in the browser, is the look:
+   the lines of a cell touch, and each table has the same few kinds of line —
+   so the size and the greys live here, once, and the pages only name which
+   kind a line is. */
+.table-cell-lines p {
+  margin: 0;
+  font-size: var(--fontsize-body-s);
+}
+
+/* A name under the thing: its owner on /my-bookings, its group on
+   /owner-bookings. */
+.table-cell-line--muted {
+  color: var(--color-black-60);
+}
+
+/* "Requested on …": context, not the answer to the column's question. */
+.table-cell-line--faint {
+  color: var(--color-black-50);
+}
+
+/* "No dates" — a GIFT or a SELL has none, and the cell says so quietly. */
+.table-cell-line--none {
+  color: var(--color-black-40);
+}
+
+/* The requester's project note on a reservation. */
+.table-cell-line--note {
+  font-style: italic;
+  color: var(--color-black-70);
+}
+
+/* A quiet link in a cell: "Leave the group" in "My groups". The colour is the
+   link's own — an <a> does not inherit it from the paragraph around it. */
+.table-cell-link--muted {
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-60);
+}
+
 /* Pipe tables in Markdown bios: wide content scrolls inside its own wrapper so
    the page body never scrolls horizontally on mobile. */
 .markdown-text .markdown-table-wrap {
@@ -1837,20 +1961,20 @@ caption:has(> .sr-only:only-child) {
   overflow-x: auto;
 }
 
-/* Quiet alpha-feedback line (FeedbackLink) at the foot of Home. */
+/* Room above the "Ideas and bugs" button (FeedbackLink) at the foot of Home. It
+   was a quiet line and this was its text style; it is a button now (CA,
+   2026-10-03) and only the gap is left. The wrapper exists whether or not the
+   deployment has a feedback URL, so an empty one must not leave the gap. */
 .feedback-link {
   margin-top: var(--spacing-2-xl);
-  font-size: var(--fontsize-body-m);
-  color: var(--color-black-60);
 }
 
-.feedback-link a {
-  color: inherit;
-  text-decoration: underline;
+.feedback-link:empty {
+  display: none;
 }
 
 /* A deployment explaining why a list is shorter than the product's
-   (ApprovalNotice). Quiet like .feedback-link, and deliberately NOT an HDS
+   (ApprovalNotice). Quiet, and deliberately NOT an HDS
    Notification: nothing has gone wrong and nothing was refused — it is a
    footnote to a field, and an alert box would read as an error the reader
    caused. Never renders upstream, where nothing is withheld. */
@@ -1891,14 +2015,8 @@ caption:has(> .sr-only:only-child) {
   color: var(--color-black-70);
 }
 
-/* The member's own "recommend someone" affordance in the collection hero —
-   quiet by default, one line, expanding into the form only when used. */
-.recommend-open {
-  margin-top: var(--spacing-2-xs);
-  font-size: var(--fontsize-body-s);
-  color: var(--hero-text-color, var(--color-black-90));
-}
-
+/* The form a member's "Invite someone" button opens in the collection hero
+   (CA, 2026-10-03), under the button row. */
 .recommend-box {
   margin-top: var(--spacing-s);
   padding: var(--spacing-s) var(--spacing-m);
@@ -1911,29 +2029,4 @@ caption:has(> .sr-only:only-child) {
 .recommend-intro {
   margin: 0 0 var(--spacing-s);
   font-size: var(--fontsize-body-s);
-}
-
-/* "My groups" on the own profile: one row per membership, the group's name on
-   the left and the way out on the right. Leaving moved here from the collection
-   hero, where it was the third unlabelled text link in a stack. */
-.membership-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.membership-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-2-xs) var(--spacing-s);
-  min-height: 44px;
-  padding: var(--spacing-2-xs) 0;
-  border-bottom: 1px solid var(--color-black-20);
-}
-
-.membership-leave {
-  font-size: var(--fontsize-body-s);
-  color: var(--color-black-60);
 }
