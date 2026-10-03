@@ -332,7 +332,8 @@ body {
   z-index: 2;
 }
 
-/* z0 — photo as a full-bleed background */
+/* z0 — photo as a background, full-bleed up to 1248px (past that it stops at the
+   content column — the ≥768px rule below) */
 .hero-photo-wrap {
   position: absolute;
   inset: 0 0 0 30%;
@@ -440,6 +441,21 @@ body {
 @media (min-width: 768px) {
   .form-hero--photo .markdown-text.form-hero-text {
     padding-right: 34%;
+  }
+
+  /* The photo ends where the content column ends (CA, 2026-10-03). `.form-hero`
+     spans the whole window, but from 1248px up the column (`.form-hero-content`,
+     max-width 1248px) is centred and leaves margins, and the photo kept going to
+     the window's edge — seen on a collection at ~2000px, where it ran well past
+     the column the text, the icons and the page below are all aligned to. Pulling
+     its right edge in by the margin is the same centring sum `.hero-corners` uses
+     for its own `right`, without that rule's gutter: 0 up to 1248px, so from 768
+     to 1248px nothing moves. Below 768px the photo is a static block and the
+     phone's rule above decides. The left edge (`30%`) is untouched, and the
+     wedge (`.hero-photo-diag`) centres on the photo's own box, so it follows. Every
+     photo hero gets it: the collection's, a profile's and the join page's. */
+  .hero-photo-wrap {
+    right: calc((100% - min(100%, 1248px)) / 2);
   }
 }
 

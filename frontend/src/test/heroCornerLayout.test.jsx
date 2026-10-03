@@ -35,9 +35,9 @@ import CollectionPage from '../pages/CollectionPage';
 // ── App.css, as rules ──────────────────────────────────────────────────
 const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** The declaration blocks of every rule whose selector list names `selector`. */
-function rulesFor(selector) {
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+/** The declaration blocks of every rule in `source` whose selector list names `selector`. */
+function rulesIn(source, selector) {
+  return [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .filter(([, list]) =>
       list
         .split(',')
@@ -45,6 +45,27 @@ function rulesFor(selector) {
         .includes(selector)
     )
     .map(([, , body]) => body);
+}
+
+/** The same, over the whole stylesheet — rules inside a media query included. */
+const rulesFor = (selector) => rulesIn(css, selector);
+
+/** What sits between the braces of every `@media <query> {…}` block (braces balanced). */
+function mediaBlocks(query) {
+  const head = `@media ${query} {`;
+  const blocks = [];
+  for (let from = css.indexOf(head); from !== -1; from = css.indexOf(head, from)) {
+    let depth = 1;
+    let i = from + head.length;
+    while (depth > 0 && i < css.length) {
+      if (css[i] === '{') depth += 1;
+      else if (css[i] === '}') depth -= 1;
+      i += 1;
+    }
+    blocks.push(css.slice(from + head.length, i - 1));
+    from = i;
+  }
+  return blocks;
 }
 
 /** The value a block declares for `property`, or undefined. */
@@ -245,5 +266,46 @@ describe('the collection menu panel anchors to the corner row like the account m
     expect(declarations('.collection-menu-panel', 'max-width')).toEqual([
       'calc(100vw - 2 * var(--spacing-s))',
     ]);
+  });
+});
+
+/**
+ * The hero photo on a wide screen (CA, 2026-10-03). jsdom does no layout, so what
+ * is pinned is the contract of the rule: `.hero-photo-wrap` is a background that
+ * ran to the window's edge while the content column, centred from 1248px up, did
+ * not; its right edge now comes in by the same centring sum `.hero-corners` uses.
+ * It belongs inside `@media (min-width: 768px)` — below that the photo is a static
+ * block on the phone, and an `inset` there would move a box that has no edges.
+ */
+describe('the hero photo ends at the content column on a wide screen', () => {
+  const wide = '(min-width: 768px)';
+  const photoRightIn = (blocks) =>
+    blocks.flatMap((block) =>
+      rulesIn(block, '.hero-photo-wrap')
+        .map((body) => declared(body, 'right'))
+        .filter((value) => value !== undefined)
+    );
+
+  test('.hero-photo-wrap declares its right edge inside the ≥768px query, and only there', () => {
+    const inWide = photoRightIn(mediaBlocks(wide));
+
+    expect(inWide).toHaveLength(1);
+    // The one declaration in the whole stylesheet: a copy outside the query (or in
+    // the phone's) would take the phone's stacked photo along with it.
+    expect(declarations('.hero-photo-wrap', 'right')).toEqual(inWide);
+  });
+
+  test("it is the corner row's own centring sum, without the corner's gutter", () => {
+    const [corner] = declarations('.hero-corners', 'right');
+    expect(corner).toMatch(/ \+ var\(--spacing-s\)\)$/);
+
+    const [photo] = photoRightIn(mediaBlocks(wide));
+    expect(photo).toBe(corner.replace(/ \+ var\(--spacing-s\)\)$/, ')'));
+    // And it is the sum that is 0 up to the column's own width.
+    expect(photo).toBe('calc((100% - min(100%, 1248px)) / 2)');
+  });
+
+  test("the left edge (30%) is still the base rule's", () => {
+    expect(declarations('.hero-photo-wrap', 'inset')).toContain('0 0 0 30%');
   });
 });
