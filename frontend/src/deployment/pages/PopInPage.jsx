@@ -22,6 +22,15 @@ export default function PopInPage() {
       titleKey="popin.title"
       descriptionKey="popin.description"
       endpoint={POP_IN_ENDPOINT}
+      // No "Already have an account? Sign in →" under the form (CA, 2026-10-03):
+      // /welcome, where /login now sends strangers, already offers it in its
+      // hero. It is not a dead end for someone who has an account and lands here
+      // anyway: typing their address gets them a magic link all the same —
+      // `PopInView` does a `get_or_create` and answers byte for byte as it does
+      // for a new address — which also joins them to the demo collections, as it
+      // does anyone who pops in. `offerSignIn` is the prop `MagicLinkJoinPage`
+      // gained for this: the component is core's and identical on both branches.
+      offerSignIn={false}
     >
       {/* The fourth of the four FAQ links the August round asked for — the door
           with the most first-time traffic. `MagicLinkJoinPage`'s `children`

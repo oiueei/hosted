@@ -9,8 +9,8 @@ import '../testI18n';
 // shared component's own rendering — the `children` slot itself is tested in
 // `src/components/MagicLinkJoinPage.test.jsx`.
 vi.mock('../../components/MagicLinkJoinPage', () => ({
-  default: ({ ns, endpoint, children }) => (
-    <div data-ns={ns} data-endpoint={endpoint}>
+  default: ({ ns, endpoint, offerSignIn, children }) => (
+    <div data-ns={ns} data-endpoint={endpoint} data-offer-sign-in={String(offerSignIn)}>
       {children}
     </div>
   ),
@@ -29,6 +29,22 @@ describe('PopInPage', () => {
 
     const link = screen.getByRole('link', { name: /frequently asked questions/i });
     expect(link).toHaveAttribute('href', faqPath);
+  });
+
+  test('asks the shared join page not to offer "Already have an account?"', () => {
+    // CA, 2026-10-03: /welcome offers it; /popin does not repeat it. The shared
+    // component is core's, so what turns the button off is this prop — and the
+    // default (absent) would leave it on, which is why it is `false`, not unset.
+    render(
+      <MemoryRouter>
+        <PopInPage />
+      </MemoryRouter>
+    );
+
+    expect(document.querySelector('[data-ns="popin"]')).toHaveAttribute(
+      'data-offer-sign-in',
+      'false'
+    );
   });
 
   test('still posts to the hosted pop-in endpoint, not /auth/join/', () => {

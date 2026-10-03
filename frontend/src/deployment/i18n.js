@@ -20,7 +20,6 @@ export const deploymentI18n = {
       magicLinkSent: 'Magic link sent! Check your inbox and click the link to join.',
       closeThisTab: 'You can close this tab now — the link is on its way to your inbox.',
       errorSendingLink: 'Error sending link.',
-      alreadyHaveAccount: 'Already have an account? Sign in →',
       faqLink: 'Frequently asked questions →',
     },
     // The "you're looking at demo data" banner. The product (`DemoNotice`)
@@ -102,7 +101,6 @@ export const deploymentI18n = {
       magicLinkSent: '¡Enlace enviado! Revisa tu bandeja de entrada y pulsa el enlace para unirte.',
       closeThisTab:
         'Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.',
-      alreadyHaveAccount: '¿Ya tienes cuenta? Inicia sesión →',
       errorSendingLink: 'Error al enviar el enlace.',
       faqLink: 'Preguntas frecuentes →',
     },
@@ -181,7 +179,6 @@ export const deploymentI18n = {
       magicLinkSent: "Enllaç enviat! Revisa la safata d'entrada i fes clic a l'enllaç per unir-te.",
       closeThisTab:
         "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada.",
-      alreadyHaveAccount: 'Ja tens un compte? Inicia sessió →',
       errorSendingLink: "Error en enviar l'enllaç.",
       faqLink: 'Preguntes freqüents →',
     },

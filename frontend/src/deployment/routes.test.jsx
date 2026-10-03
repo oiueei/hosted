@@ -58,6 +58,17 @@ describe('the app serves them', () => {
     expect(await screen.findByRole('heading', { name: /come meet us/i })).toBeInTheDocument();
   });
 
+  test('/popin has no link to /login: "Already have an account?" is offered on /welcome', async () => {
+    // The whole page, not the mocked component: what the visitor sees is
+    // MagicLinkJoinPage honouring the prop PopInPage passes it.
+    window.history.pushState({}, '', '/popin');
+    render(<App />);
+    await screen.findByRole('heading', { name: /come meet us/i });
+
+    expect(document.querySelector('a[href="/login"]')).toBeNull();
+    expect(screen.queryByText(/already have an account/i)).toBeNull();
+  });
+
   test('/welcome renders the page that says what this is', async () => {
     window.history.pushState({}, '', '/welcome');
     render(<App />);
