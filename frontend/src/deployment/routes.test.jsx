@@ -91,6 +91,25 @@ describe('the app serves them', () => {
     expect(links[0].closest('footer')).not.toBeNull();
   });
 
+  test.each([
+    ['signed out', null],
+    ['signed in', 'USER01'],
+  ])(
+    '/welcome, %s: one link to /faq on the whole page, and no "Enter" button',
+    async (_who, userCode) => {
+      // The FAQ moved from a link in the commitment section to a button in the
+      // closing row (CA, 2026-10-03); rendered whole, so a stray second link
+      // anywhere in the App — hero, footer, a leftover — would be counted.
+      if (userCode) localStorage.setItem('userCode', userCode);
+      window.history.pushState({}, '', '/welcome');
+      render(<App />);
+      await screen.findByRole('heading', { level: 1, name: /Welcome to OIUEEI/i });
+
+      expect(document.querySelectorAll('a[href="/faq"]')).toHaveLength(1);
+      expect(screen.queryByText(/enter and see how it works/i)).toBeNull();
+    }
+  );
+
   test('/login\'s "new here?" button leads to /welcome, not straight to /popin', async () => {
     // CA, 2026-10-03: someone new reads what this is before being asked for an
     // email. The path is the deployment's `popInPath`, which LoginPage reads

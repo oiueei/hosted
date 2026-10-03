@@ -2,6 +2,15 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
+// `FeedbackLink` reads VITE_FEEDBACK_URL once, when its module loads, and this
+// file imports WelcomePage statically — so the variable is set here, hoisted
+// above the imports, for the "Ideas and bugs" button of the closing row. (With
+// no URL the button is simply absent, which `FeedbackLink.test.jsx` pins.)
+vi.hoisted(() => {
+  vi.stubEnv('VITE_FEEDBACK_URL', 'https://forms.example/feedback');
+});
+const FEEDBACK_URL = 'https://forms.example/feedback';
+
 vi.mock('../services/api', () => ({
   apiFetch: vi.fn(),
   getCsrfToken: () => 'tok',
@@ -122,5 +131,98 @@ describe('WelcomePage — readable without an account', () => {
     expect(hrefs).toContain('/collections/new');
     expect(hrefs).toContain('/me/edit');
     expect(hrefs).not.toContain('/popin');
+  });
+});
+
+/**
+ * The end of /welcome (CA, 2026-10-03): one row after the personas, the first
+ * button the primary one and the rest secondary. The FAQ used to be a link in
+ * the commitment section, "Ideas and bugs" a line under the row, and a signed-in
+ * visitor had an "Enter and see how it works" button that took them home.
+ */
+describe('WelcomePage — the closing row of buttons', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The row at the end of the page: the last `.button-row-wide` (the hero has the first).
+  const closingRow = (container) => [...container.querySelectorAll('.button-row-wide')].at(-1);
+  const linksOf = (row) => [...row.querySelectorAll('a')];
+  // The secondary buttons are white (`btnSecondaryStyle`); the primary is the theeeme's fill.
+  const isPrimary = (link) =>
+    link.style.getPropertyValue('--background-color') !== 'var(--color-white)';
+
+  async function renderSignedOut() {
+    apiFetch.mockResolvedValue({ ok: false, status: 401 });
+    const view = renderWelcome();
+    await screen.findByText(/Welcome to OIUEEI/i);
+    return view;
+  }
+
+  async function renderSignedIn() {
+    localStorage.setItem('userCode', 'USER01');
+    apiFetch.mockResolvedValue({ ok: false, status: 401 });
+    const view = renderWelcome();
+    await screen.findByText(/Welcome to OIUEEI/i);
+    return view;
+  }
+
+  test('signed out: "New here?" (primary), the FAQ and "Ideas and bugs" (secondary), in that order', async () => {
+    const { container } = await renderSignedOut();
+
+    const links = linksOf(closingRow(container));
+    expect(links).toHaveLength(3);
+    expect(links[0]).toHaveAccessibleName('New here?');
+    expect(links[1]).toHaveAccessibleName('Frequently asked questions');
+    expect(links[2]).toHaveAccessibleName(/^Ideas and bugs/);
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/popin', '/faq', FEEDBACK_URL]);
+    // The first is the only primary one.
+    expect(links.map(isPrimary)).toEqual([true, false, false]);
+  });
+
+  test('signed in: the FAQ is the primary button, "Ideas and bugs" the secondary — nothing else', async () => {
+    const { container } = await renderSignedIn();
+
+    const links = linksOf(closingRow(container));
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAccessibleName('Frequently asked questions');
+    expect(links[1]).toHaveAccessibleName(/^Ideas and bugs/);
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/faq', FEEDBACK_URL]);
+    expect(links.map(isPrimary)).toEqual([true, false]);
+  });
+
+  test.each([
+    ['signed out', renderSignedOut],
+    ['signed in', renderSignedIn],
+  ])('%s: one link to /faq on the whole page, and it says no arrow', async (_who, render) => {
+    const { container } = await render();
+
+    const faq = container.querySelectorAll('a[href="/faq"]');
+    expect(faq).toHaveLength(1);
+    // It is the closing row's button, not a link in the commitment section.
+    expect(closingRow(container).contains(faq[0])).toBe(true);
+    expect(faq[0]).toHaveTextContent(/^Frequently asked questions$/);
+  });
+
+  test.each([
+    ['signed out', renderSignedOut],
+    ['signed in', renderSignedIn],
+  ])('%s: there is no "Enter and see how it works" button any more', async (_who, render) => {
+    await render();
+
+    expect(screen.queryByText(/enter and see how it works/i)).toBeNull();
+    expect(screen.queryByRole('link', { name: /enter and see/i })).toBeNull();
+  });
+
+  test('the hero keeps its own "New here?" and the closing row repeats it in the same words', async () => {
+    const { container } = await renderSignedOut();
+
+    const popIn = [...container.querySelectorAll('a[href="/popin"]')];
+    expect(popIn).toHaveLength(2);
+    expect(popIn.map((a) => a.textContent)).toEqual(['New here?', 'New here?']);
   });
 });

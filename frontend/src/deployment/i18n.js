@@ -73,8 +73,7 @@ export const deploymentI18n = {
       personaLuluLink1: "Lulu's shared workshop",
       personaLoloLink1: "Lolo's Leafy Lounge",
       personaLalaLink2: "Lala's sabbatical sale",
-      enterCta: 'Enter and see how it works',
-      faqLink: 'Frequently asked questions →',
+      faqLink: 'Frequently asked questions',
     },
     login: {
       operator:
@@ -151,8 +150,7 @@ export const deploymentI18n = {
       personaLuluLink1: 'El taller compartido de Lulu',
       personaLoloLink1: 'El salón verde de Lolo',
       personaLalaLink2: 'La venta del sabático de Lala',
-      enterCta: 'Entrar y ver cómo funciona',
-      faqLink: 'Preguntas frecuentes →',
+      faqLink: 'Preguntas frecuentes',
     },
     login: {
       operator:
@@ -229,8 +227,7 @@ export const deploymentI18n = {
       personaLuluLink1: 'El taller compartit de la Lulu',
       personaLoloLink1: "El saló verd d'en Lolo",
       personaLalaLink2: 'La venda del sabàtic de la Lala',
-      enterCta: 'Entra i mira com funciona',
-      faqLink: 'Preguntes freqüents →',
+      faqLink: 'Preguntes freqüents',
     },
     login: {
       operator:

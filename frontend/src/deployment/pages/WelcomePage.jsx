@@ -8,6 +8,7 @@ import { apiFetch } from '../../services/api';
 import useTheeeme from '../../hooks/useTheeeme';
 import ContactCorner from '../../components/ContactCorner';
 import ButtonLink from '../../components/ButtonLink';
+import { faqPath } from '../index';
 
 // Every persona owns a demo collection since the 2026-08 seed round gave Lele and
 // Lulu one each — before that the two of them carried no link, and the comment
@@ -178,15 +179,6 @@ export default function WelcomePage() {
           />
         </p>
         <div className="spacer-s" />
-        {/* The FAQ sits right after the commitment: this is the moment somebody
-            has just read what is promised and has real questions. The legal
-            notice is not repeated here (CA, 2026-10-03) — the site footer, on
-            this page like every other, already links /legal. */}
-        <p>
-          <Link to="/faq" style={{ textDecoration: 'underline' }}>
-            {t('welcome.faqLink')}
-          </Link>
-        </p>
         <div className="spacer-xl" />
         <h2>{t('welcome.whoUsesTitle')}</h2>
         <div className="spacer-s" />
@@ -234,14 +226,28 @@ export default function WelcomePage() {
           </div>
         ))}
         <div className="spacer-xl" />
+        {/* One row at the end, after the personas (CA, 2026-10-03), the first
+            button the primary one and the rest secondary. Signed out: "New
+            here?" to the open door (the same words as the hero's), then the FAQ
+            and "Ideas and bugs". Signed in: the person is already inside, so no
+            "enter" button — the FAQ is the primary and "Ideas and bugs" follows.
+            The FAQ used to be a link in the commitment section and "Ideas and
+            bugs" a line under this row; both are buttons of the row now, and
+            `FeedbackLink` renders only its `<a>` for that, nothing at all where
+            the deployment sets no feedback URL. */}
         <div className="button-row-wide">
-          {/* Signed in: straight home. Signed out: the deployment's open door
-              if it has one, else /login — the door it does have. */}
-          <ButtonLink to={isAuthenticated ? '/' : '/popin'} style={btnStyle}>
-            {isAuthenticated ? t('welcome.enterCta') : t('login.popIn')}
-          </ButtonLink>
+          {!isAuthenticated && (
+            <ButtonLink to="/popin" style={btnStyle}>
+              {t('welcome.newHereCta')}
+            </ButtonLink>
+          )}
+          {faqPath && (
+            <ButtonLink to={faqPath} style={isAuthenticated ? btnStyle : btnSecondaryStyle}>
+              {t('welcome.faqLink')}
+            </ButtonLink>
+          )}
+          <FeedbackLink style={btnSecondaryStyle} />
         </div>
-        <FeedbackLink />
       </div>
     </div>
   );
