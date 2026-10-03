@@ -325,20 +325,25 @@ def test_anonymous_reader_is_not_told_the_private_collection_a_public_thing_shar
 def test_member_is_not_told_the_private_collection_a_shared_thing_sits_in(
     authenticated_client2, user, user2
 ):
-    """`/shared` (SharedThingsPage) prints collection_headline on every card, so
-    this is the field a member of one group would have read the other's name in."""
-    private, reachable, _thing_obj = _thing_in_two_collections(
+    """A thing lent to two groups, one of which this member is not in. The thing's
+    own page prints collection_headline, the code and the tags of the collection it
+    answers with, so those are the fields a member of one group would have read the
+    other's name in. (It was checked through `/invited-things/` until that endpoint
+    went with the `/shared` page, 2026-10-03; the test above is the anonymous
+    reader, this one is the member.)"""
+    private, reachable, thing = _thing_in_two_collections(
         user, second_visibility=Collection.Visibility.PRIVATE
     )
     reachable.invites.add(user2)
 
-    res = authenticated_client2.get("/api/v1/invited-things/")
+    res = authenticated_client2.get(f"/api/v1/things/{thing.code}/")
 
     assert res.status_code == 200
-    items = _items(res)
-    assert len(items) == 1
-    assert items[0]["collection_code"] == reachable.code
-    assert items[0]["collection_headline"] != private.headline
+    body = res.json()
+    assert body["collection_code"] == reachable.code
+    assert body["collection_headline"] != private.headline
+    assert private.code not in str(body)
+    assert "secreto" not in body["collection_tags"]
 
 
 def test_owner_still_sees_their_own_private_collection_on_their_thing(authenticated_client, user):
