@@ -169,6 +169,60 @@ describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
   });
 });
 
+describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in button out)', () => {
+  // `/share/:token` keeps "Already have an account? Sign in →"; the hosted
+  // `/popin` (CA, 2026-10-03) already leads people to /login another way and
+  // drops it. The component is core's and identical in both branches, so what
+  // turns it off is a prop that no core caller passes.
+  function renderDoor(props = {}) {
+    return render(
+      <MemoryRouter>
+        <MagicLinkJoinPage
+          ns="share"
+          docTitleKey="titles.share"
+          titleKey="share.pageTitle"
+          descriptionKey="share.pageDescription"
+          {...props}
+        >
+          <a href="/faq">A deployment link</a>
+        </MagicLinkJoinPage>
+      </MemoryRouter>
+    );
+  }
+
+  test('by default the sign-in button to /login is there', () => {
+    const { container } = renderDoor();
+
+    expect(container.querySelector('a[href="/login"]')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Already have an account? Sign in →' })).toBeVisible();
+  });
+
+  test('with offerSignIn={false} no link leads to /login, and the rest of the page is untouched', () => {
+    const { container } = renderDoor({ offerSignIn: false });
+
+    expect(container.querySelector('a[href="/login"]')).toBeNull();
+    expect(screen.queryByText(/Already have an account/)).toBeNull();
+    // The form and the deployment's own children stay exactly where they were.
+    expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'A deployment link' })).toHaveAttribute('href', '/faq');
+  });
+
+  test('and still none once the form has been sent', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    const { container } = renderDoor({ offerSignIn: false });
+
+    submitEmail();
+    await screen.findByText(/Magic link sent! Check your inbox/);
+
+    expect(container.querySelector('a[href="/login"]')).toBeNull();
+  });
+});
+
 describe('MagicLinkJoinPage footer children (a deployment door adds its own link)', () => {
   test('children render under the form; SharePage passes none and gets nothing extra', () => {
     // Upstream: no children.

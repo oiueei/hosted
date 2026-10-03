@@ -44,6 +44,14 @@ import MarkdownText from './MarkdownText';
  *   `SharePage` passes it to a reader who already has a session, so accepting the
  *   invitation is one button rather than email, inbox, link, back. Without it the
  *   page is exactly what it was, which is what a deployment's own door relies on.
+ * - `offerSignIn` (default `true`): whether the page ends with the secondary
+ *   "already have an account? sign in →" button to `/login`. `/share/:token`
+ *   keeps it, and so does any door that does not say otherwise. A deployment's
+ *   own door turns it off with `false` when it already sends the people it does
+ *   not want here to `/login` by another road (the hosted `/popin`, CA
+ *   2026-10-03): the component is core's and has to be identical in both
+ *   branches, so the switch is a prop rather than an edit. With `false` neither
+ *   the button nor its row renders; no caller in core passes it.
  */
 export default function MagicLinkJoinPage({
   ns,
@@ -58,6 +66,7 @@ export default function MagicLinkJoinPage({
   endpoint,
   children,
   signedInAction,
+  offerSignIn = true,
 }) {
   const { t } = useTranslation();
   const heroTitle = titleText || t(titleKey);
@@ -146,12 +155,15 @@ export default function MagicLinkJoinPage({
       )}
       {/* The mirror of the front door's "new here?" button: someone who already
           has an account is one secondary button away from /login — same shape
-          as the pop-in button there, so the two doors answer each other. */}
-      <div className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
-        <ButtonLink to="/login" fullWidth style={btnSecondaryStyle}>
-          {t(`${ns}.alreadyHaveAccount`)}
-        </ButtonLink>
-      </div>
+          as the pop-in button there, so the two doors answer each other. A door
+          that already leads people to /login another way turns it off. */}
+      {offerSignIn && (
+        <div className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+          <ButtonLink to="/login" fullWidth style={btnSecondaryStyle}>
+            {t(`${ns}.alreadyHaveAccount`)}
+          </ButtonLink>
+        </div>
+      )}
     </PageLayout>
   );
 }
