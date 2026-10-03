@@ -55,7 +55,7 @@ honesty note `SELF_HOSTING.md` makes about the extension points.
 | `policy.HostedCreatorPolicy` | The **narrowing**: giving and selling are open to everyone; COMMUNITY collections, lending, renting and on-site reservations wait for approval. |
 | `admin.py` | Where you answer, behind the admin's existing OTP. |
 | `management/commands/stats_summary.py` | The weekly **operator report**, with its demo/real partition. |
-| `../frontend/src/deployment/` | The SPA half: the `/popin` and `/welcome` pages, their copy in three languages, and the two paths (`popInPath`, `aboutPath`) that make the shared components behave like a hosted service. |
+| `../frontend/src/deployment/` | The SPA half: the `/popin` and `/welcome` pages, their copy in three languages, and the two paths (`popInPath`, `aboutPath`) that make the shared components behave like a hosted service. `popInPath` is `/welcome`, not `/popin`: the "new here?" button on `/login` takes a stranger to the page that says what this is, whose hero offers the open door (`/popin`) and the way back to `/login`. |
 
 ## What it needs
 

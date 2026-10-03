@@ -37,7 +37,9 @@ describe('this deployment declares its own pages', () => {
     // checkout, without any of them being edited. Each must name a route
     // declared above: upstream's rule is that a null means no link at all,
     // precisely so that no link ever points at a page that is not there.
-    expect(popInPath).toBe('/popin');
+    // The "new here?" button on /login goes to the page that says what this is,
+    // not straight to the open door: /welcome offers the door in its hero.
+    expect(popInPath).toBe('/welcome');
     expect(aboutPath).toBe('/welcome');
     expect(faqPath).toBe('/faq');
 
@@ -62,6 +64,18 @@ describe('the app serves them', () => {
 
     await waitFor(() => expect(document.title).toMatch(/welcome/i));
     expect(document.querySelector('a[href="/popin"]')).not.toBeNull();
+  });
+
+  test('/login\'s "new here?" button leads to /welcome, not straight to /popin', async () => {
+    // CA, 2026-10-03: someone new reads what this is before being asked for an
+    // email. The path is the deployment's `popInPath`, which LoginPage reads
+    // without being edited — so this is what pins it end to end, in the page.
+    window.history.pushState({}, '', '/login');
+    render(<App />);
+
+    const button = await screen.findByRole('link', { name: /new here/i });
+    expect(button).toHaveAttribute('href', '/welcome');
+    expect(document.querySelector('a[href="/popin"]')).toBeNull();
   });
 
   test('/login carries the claim only this deployment may make', async () => {
