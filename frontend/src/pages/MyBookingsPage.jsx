@@ -160,34 +160,24 @@ export default function MyBookingsPage() {
       key: '_thing',
       headerName: t('myBookings.colThing'),
       transform: (row) => (
-        <div>
+        <div className="table-cell-lines">
           <Link to={`/things/${row._thingCode}`}>{row._thingHeadline}</Link>
-          {row._ownerName && (
-            <p
-              style={{
-                margin: 'var(--spacing-2-xs) 0 0',
-                fontSize: 'var(--fontsize-body-s)',
-                color: 'var(--color-black-60)',
-              }}
-            >
-              {row._ownerName}
-            </p>
-          )}
-          <p
-            style={{
-              margin: 'var(--spacing-2-xs) 0 0',
-              fontSize: 'var(--fontsize-body-s)',
-              color: 'var(--color-black-50)',
-            }}
-          >
+          {row._ownerName && <p className="table-cell-line--muted">{row._ownerName}</p>}
+        </div>
+      ),
+    },
+    {
+      key: '_when',
+      headerName: t('myBookings.colWhen'),
+      transform: (row) => (
+        <div className="table-cell-lines">
+          <p className="table-cell-line--faint">
             {t('myBookings.requested', {
               date: formatDate(row._created),
             })}
           </p>
-          <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
-            {row._when || (
-              <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
-            )}
+          <p>
+            {row._when || <span className="table-cell-line--none">{t('myBookings.noDates')}</span>}
           </p>
         </div>
       ),
@@ -196,7 +186,7 @@ export default function MyBookingsPage() {
       key: '_status',
       headerName: t('myBookings.colStatus'),
       transform: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2-xs)' }}>
+        <div className="table-status-cell">
           <Tag>{t('types.' + row._type)}</Tag>
           <StatusLabel type={STATUS_TYPES[row._status] || 'neutral'}>
             {STATUS_LABELS[row._status] || row._status}

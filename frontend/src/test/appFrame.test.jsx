@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
@@ -169,5 +169,21 @@ describe('html[lang]', () => {
 
     await i18n.changeLanguage('en');
     await waitFor(() => expect(document.documentElement.lang).toBe('en'));
+  });
+});
+
+describe('the legal notice is reached from one place on the front door', () => {
+  test('/login links /legal exactly once, from the site footer', async () => {
+    // The door once carried its own "Legal notice & privacy" link as well as the
+    // footer's (CA took it out, 2026-10-03). Rendered whole — App, so the footer
+    // is there — because the page alone cannot say how many links the user sees.
+    const { default: App } = await import('../App');
+    render(<App />);
+    navigateTo('/login');
+    await screen.findByRole('button', { name: 'Sign in' });
+
+    const links = document.querySelectorAll('a[href="/legal"]');
+    expect(links).toHaveLength(1);
+    expect(links[0].closest('footer')).not.toBeNull();
   });
 });

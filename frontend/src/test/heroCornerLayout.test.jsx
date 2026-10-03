@@ -13,7 +13,7 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
  *
  *  1. The account menu's panel ran off the left of the screen. `.account-menu` was
  *     `position: relative`, which anchored the panel to its own trigger, and for a
- *     curator that trigger is the first of three icons. With no positioned ancestor of
+ *     curator that trigger is the first of four icons. With no positioned ancestor of
  *     its own the panel anchors to `.hero-corners`, whose right edge is the content
  *     column's.
  *  2. A long "← {collection name}" ran underneath the icons. `.hero-corners` is absolute
@@ -35,9 +35,9 @@ import CollectionPage from '../pages/CollectionPage';
 // ── App.css, as rules ──────────────────────────────────────────────────
 const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** The declaration blocks of every rule whose selector list names `selector`. */
-function rulesFor(selector) {
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+/** The declaration blocks of every rule in `source` whose selector list names `selector`. */
+function rulesIn(source, selector) {
+  return [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .filter(([, list]) =>
       list
         .split(',')
@@ -45,6 +45,27 @@ function rulesFor(selector) {
         .includes(selector)
     )
     .map(([, , body]) => body);
+}
+
+/** The same, over the whole stylesheet — rules inside a media query included. */
+const rulesFor = (selector) => rulesIn(css, selector);
+
+/** What sits between the braces of every `@media <query> {…}` block (braces balanced). */
+function mediaBlocks(query) {
+  const head = `@media ${query} {`;
+  const blocks = [];
+  for (let from = css.indexOf(head); from !== -1; from = css.indexOf(head, from)) {
+    let depth = 1;
+    let i = from + head.length;
+    while (depth > 0 && i < css.length) {
+      if (css[i] === '{') depth += 1;
+      else if (css[i] === '}') depth -= 1;
+      i += 1;
+    }
+    blocks.push(css.slice(from + head.length, i - 1));
+    from = i;
+  }
+  return blocks;
 }
 
 /** The value a block declares for `property`, or undefined. */
@@ -157,20 +178,134 @@ describe('the back link keeps out from under the corner icons', () => {
       </MemoryRouter>
     );
     await screen.findByRole('combobox'); // the share menu: a curator's hero is loaded
-    // A curator gets every control a hero can hold: account, share, contact.
+    // A curator gets every control a hero can hold: account, collection, share,
+    // contact.
     const controls = container.querySelector('.hero-corners').children.length;
-    expect(controls).toBe(3);
+    expect(controls).toBe(4);
 
     const [declaredWidth] = declarations('.form-hero-content', '--hero-corners-width');
     const [, count, size, gaps] =
       /^calc\((\d+) \* (\d+)px \+ (\d+) \* var\(--spacing-2-xs\)\)$/.exec(declaredWidth) ?? [];
-    // Three controls, each as wide as the CSS says an icon control is, and the gaps
+    // Four controls, each as wide as the CSS says an icon control is, and the gaps
     // between them (one fewer) at the row's own `gap`.
     expect(Number(count)).toBe(controls);
-    for (const selector of ['.contact-corner', '.account-menu-trigger', '.share-corner']) {
+    for (const selector of [
+      '.contact-corner',
+      '.account-menu-trigger',
+      '.collection-menu-trigger',
+      '.share-corner',
+    ]) {
       expect(declarations(selector, 'width'), selector).toEqual([`${size}px`]);
     }
     expect(Number(gaps)).toBe(controls - 1);
     expect(declarations('.hero-corners', 'gap')).toEqual(['var(--spacing-2-xs)']);
+  });
+});
+
+describe('the collection menu panel anchors to the corner row like the account menu', () => {
+  test('the corner row reads account · collection · share · contact, left to right', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => CURATED })
+    );
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('combobox'); // a curator's hero has loaded
+
+    // DOM order is visual order in a flex row: each control is the child that is,
+    // or holds, its own marker.
+    const markers = ['.account-menu', '.collection-menu', '.share-corner', '.contact-corner'];
+    const order = [...container.querySelector('.hero-corners').children].map((child) =>
+      markers.find((marker) => child.matches(marker) || child.querySelector(marker))
+    );
+    expect(order).toEqual(markers);
+  });
+
+  test('the panel sits in .collection-menu, which sits directly in .hero-corners', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => CURATED })
+    );
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /collection options/i }));
+
+    const panel = container.querySelector('.collection-menu-panel');
+    expect(panel).not.toBeNull();
+    expect(panel.parentElement).toHaveClass('collection-menu');
+    expect(panel.parentElement.parentElement).toHaveClass('hero-corners');
+  });
+
+  test('.collection-menu establishes no containing block of its own', () => {
+    // Same rule as .account-menu above: with one of its own, the panel would
+    // anchor to its trigger again and run off a narrow screen.
+    const containingBlockMakers = [
+      'position',
+      'transform',
+      'filter',
+      'perspective',
+      'contain',
+      'will-change',
+    ];
+    for (const property of containingBlockMakers) {
+      expect(declarations('.collection-menu', property), property).toEqual([]);
+    }
+  });
+
+  test("the panel is pinned to the row's right edge, never wider than the screen", () => {
+    expect(declarations('.collection-menu-panel', 'position')).toEqual(['absolute']);
+    expect(declarations('.collection-menu-panel', 'right')).toEqual(['0']);
+    expect(declarations('.collection-menu-panel', 'max-width')).toEqual([
+      'calc(100vw - 2 * var(--spacing-s))',
+    ]);
+  });
+});
+
+/**
+ * The hero photo on a wide screen (CA, 2026-10-03). jsdom does no layout, so what
+ * is pinned is the contract of the rule: `.hero-photo-wrap` is a background that
+ * ran to the window's edge while the content column, centred from 1248px up, did
+ * not; its right edge now comes in by the same centring sum `.hero-corners` uses.
+ * It belongs inside `@media (min-width: 768px)` — below that the photo is a static
+ * block on the phone, and an `inset` there would move a box that has no edges.
+ */
+describe('the hero photo ends at the content column on a wide screen', () => {
+  const wide = '(min-width: 768px)';
+  const photoRightIn = (blocks) =>
+    blocks.flatMap((block) =>
+      rulesIn(block, '.hero-photo-wrap')
+        .map((body) => declared(body, 'right'))
+        .filter((value) => value !== undefined)
+    );
+
+  test('.hero-photo-wrap declares its right edge inside the ≥768px query, and only there', () => {
+    const inWide = photoRightIn(mediaBlocks(wide));
+
+    expect(inWide).toHaveLength(1);
+    // The one declaration in the whole stylesheet: a copy outside the query (or in
+    // the phone's) would take the phone's stacked photo along with it.
+    expect(declarations('.hero-photo-wrap', 'right')).toEqual(inWide);
+  });
+
+  test("it is the corner row's own centring sum, without the corner's gutter", () => {
+    const [corner] = declarations('.hero-corners', 'right');
+    expect(corner).toMatch(/ \+ var\(--spacing-s\)\)$/);
+
+    const [photo] = photoRightIn(mediaBlocks(wide));
+    expect(photo).toBe(corner.replace(/ \+ var\(--spacing-s\)\)$/, ')'));
+    // And it is the sum that is 0 up to the column's own width.
+    expect(photo).toBe('calc((100% - min(100%, 1248px)) / 2)');
+  });
+
+  test("the left edge (30%) is still the base rule's", () => {
+    expect(declarations('.hero-photo-wrap', 'inset')).toContain('0 0 0 30%');
   });
 });

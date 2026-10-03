@@ -26,10 +26,11 @@ import EditCollectionPage from './EditCollectionPage';
 import { dropHdsStyles } from '../test/dropHdsStyles';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
-// visible, which fold into "More options", the pause section). These cover the
-// two owner tools hanging off the bottom of it, both of which fail in ways the
-// owner has to be able to read: a save the backend refuses because narrowing
-// the type list would orphan things, and the stats download.
+// visible, which fold into "More options", the pause section). These cover what
+// hangs off the save: a save the backend refuses because narrowing the type
+// list would orphan things, the notes, the hour rules. The downloads (calendar,
+// stats, the whole collection) live in the collection menu now
+// (`collectionMenu.test.jsx`); this page offers none.
 
 const COLLECTION = {
   code: 'COL001',
@@ -46,53 +47,13 @@ const COLLECTION = {
   is_paused: false,
 };
 
-function mockApi({
-  save = { ok: true },
-  stats = { ok: true },
-  collectionExport = { ok: true },
-  calendar = { ok: true, count: '1' },
-} = {}) {
+function mockApi({ save = { ok: true } } = {}) {
   apiFetch.mockImplementation((url, opts) => {
     if (opts?.method === 'PATCH') {
       return Promise.resolve({
         ok: save.ok,
         status: save.status ?? (save.ok ? 200 : 400),
         json: async () => save.body ?? {},
-      });
-    }
-    if (url.includes('/calendar-export/')) {
-      return Promise.resolve({
-        ok: calendar.ok,
-        status: calendar.status ?? (calendar.ok ? 200 : 500),
-        headers: {
-          get: (name) =>
-            name === 'X-Calendar-Events'
-              ? calendar.count
-              : name === 'Content-Disposition' && calendar.filename
-                ? `attachment; filename="${calendar.filename}"`
-                : null,
-        },
-        blob: async () => new Blob(['BEGIN:VCALENDAR\r\n'], { type: 'text/calendar' }),
-      });
-    }
-    if (url.includes('/stats/')) {
-      return Promise.resolve({
-        ok: stats.ok,
-        status: stats.ok ? 200 : 500,
-        blob: async () => new Blob(['metric,value\nmembers,3\n'], { type: 'text/csv' }),
-      });
-    }
-    if (url.includes('/export/')) {
-      return Promise.resolve({
-        ok: collectionExport.ok,
-        status: collectionExport.status ?? (collectionExport.ok ? 200 : 500),
-        headers: {
-          get: (name) =>
-            name === 'Content-Disposition'
-              ? 'attachment; filename="oiueei-COL001-2026-08-21.json"'
-              : null,
-        },
-        blob: async () => new Blob(['{}'], { type: 'application/json' }),
       });
     }
     return Promise.resolve({ ok: true, status: 200, json: async () => COLLECTION });
@@ -113,9 +74,6 @@ beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'USR001');
   vi.clearAllMocks();
-  // jsdom implements neither, and the download path calls both.
-  URL.createObjectURL = vi.fn(() => 'blob:fake');
-  URL.revokeObjectURL = vi.fn();
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -252,56 +210,20 @@ describe('EditCollectionPage — the delete button', () => {
   });
 });
 
-describe('EditCollectionPage — the stats download', () => {
-  test('downloading names the file after the collection', async () => {
+describe('EditCollectionPage — no downloads', () => {
+  // The calendar, the stats and the whole-collection export left the foot of
+  // this page for the collection menu (CA, 2026-10-03), with the two notes that
+  // went with them. A page that offered them again would be a second place to
+  // run the group's data from, which is what the move was for.
+  test('the page offers no download, and asks for no file', async () => {
     mockApi();
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
-
-    await waitFor(() => expect(click).toHaveBeenCalled());
-    expect(URL.createObjectURL).toHaveBeenCalled();
-    // Released again: an owner may download this repeatedly from one page load,
-    // and every un-revoked blob URL pins its data for the life of the document.
-    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake'));
-  });
-
-  test('a failed download says so instead of silently doing nothing', async () => {
-    // A click that produces no file and no message reads as a broken button.
-    mockApi({ stats: { ok: false } });
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
-
-    expect(await screen.findByText("Couldn't download the stats.")).toBeInTheDocument();
-  });
-
-  test('the error clears when a later download succeeds', async () => {
-    let failing = true;
-    apiFetch.mockImplementation((url) => {
-      if (url.includes('/stats/')) {
-        return Promise.resolve({
-          ok: !failing,
-          status: failing ? 500 : 200,
-          blob: async () => new Blob(['metric,value\n']),
-        });
-      }
-      return Promise.resolve({ ok: true, status: 200, json: async () => COLLECTION });
-    });
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
-    await screen.findByText("Couldn't download the stats.");
-
-    failing = false;
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
-
-    await waitFor(() => expect(screen.queryByText("Couldn't download the stats.")).toBeNull());
+    expect(screen.queryByRole('button', { name: /download/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /download/i })).not.toBeInTheDocument();
+    const asked = apiFetch.mock.calls.map(([url]) => url);
+    expect(asked.filter((url) => /\/(stats|export|calendar-export)\//.test(url))).toEqual([]);
   });
 });
 
@@ -509,133 +431,6 @@ describe('EditCollectionPage — the email note', () => {
 
     expect(screen.getByText('Maximum 512 characters per language.')).toBeInTheDocument();
     expect(field.getAttribute('aria-describedby')).toContain('edit-collection-email-note-error');
-  });
-});
-
-describe('EditCollectionPage — the collection export', () => {
-  test('downloading names the file after the one the server set, not a guess', async () => {
-    mockApi();
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
-
-    await waitFor(() => expect(click).toHaveBeenCalled());
-    const anchor = click.mock.contexts[0];
-    expect(anchor.download).toBe('oiueei-COL001-2026-08-21.json');
-    expect(URL.createObjectURL).toHaveBeenCalled();
-    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake'));
-  });
-
-  test("the warning that it carries other members' data is always on the page", async () => {
-    mockApi();
-    renderPage();
-
-    expect(await screen.findByText(/carries other people's data/i)).toBeInTheDocument();
-  });
-
-  test('a 429 says "too many attempts", the same message every rate-limited action uses', async () => {
-    mockApi({ collectionExport: { ok: false, status: 429 } });
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
-
-    expect(
-      await screen.findByText('Too many attempts — please wait a moment and try again.')
-    ).toBeInTheDocument();
-  });
-
-  test('any other failure says so instead of doing nothing', async () => {
-    mockApi({ collectionExport: { ok: false, status: 500 } });
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', { name: /download the whole collection/i }));
-
-    expect(
-      await screen.findByText("Couldn't build the export. Please try again in a moment.")
-    ).toBeInTheDocument();
-  });
-});
-
-describe('EditCollectionPage — the calendar export', () => {
-  const button = { name: /download the calendar/i };
-
-  test('it POSTs to the calendar-export endpoint and downloads the file', async () => {
-    mockApi({ calendar: { ok: true, count: '2' } });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', button));
-
-    await waitFor(() => expect(click).toHaveBeenCalled());
-    const call = apiFetch.mock.calls.find((c) => c[0].includes('/calendar-export/'));
-    expect(call[0]).toBe('/api/v1/collections/COL001/calendar-export/');
-    expect(call[1].method).toBe('POST');
-    expect(click.mock.contexts[0].download).toBe('COL001-calendar.ics');
-    expect(await screen.findByText('2 event(s) — check your downloads.')).toBeInTheDocument();
-  });
-
-  test('a filename the server sets wins over the local literal', async () => {
-    // `filenameFromResponse` exists so this download and the collection export
-    // cannot drift apart the day the server changes one of them (its own
-    // docstring says so). The mock serves a name no local literal produces, so
-    // this falls the moment the page goes back to naming the file itself.
-    mockApi({ calendar: { ok: true, count: '3', filename: 'sala-gran-2026-09.ics' } });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', button));
-
-    await waitFor(() => expect(click).toHaveBeenCalled());
-    expect(click.mock.contexts[0].download).toBe('sala-gran-2026-09.ics');
-  });
-
-  test('nothing new: no download, and it says so', async () => {
-    mockApi({ calendar: { ok: true, count: '0' } });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', button));
-
-    expect(await screen.findByText('Nothing coming up in the calendar.')).toBeInTheDocument();
-    expect(click).not.toHaveBeenCalled();
-  });
-
-  test('the "importing again adds nothing twice" promise is stated before any click', async () => {
-    mockApi();
-    renderPage();
-
-    expect(await screen.findByText(/importing it again adds nothing twice/i)).toBeInTheDocument();
-  });
-
-  test('a 429 says "too many attempts", like every other rate-limited action', async () => {
-    mockApi({ calendar: { ok: false, status: 429 } });
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', button));
-
-    expect(
-      await screen.findByText('Too many attempts — please wait a moment and try again.')
-    ).toBeInTheDocument();
-  });
-
-  test('any other failure is shown, not swallowed', async () => {
-    mockApi({ calendar: { ok: false, status: 500 } });
-    renderPage();
-    await screen.findByDisplayValue('Kitchen Collection');
-
-    fireEvent.click(screen.getByRole('button', button));
-
-    expect(
-      await screen.findByText("Couldn't build the calendar file. Please try again in a moment.")
-    ).toBeInTheDocument();
   });
 });
 

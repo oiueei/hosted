@@ -10,7 +10,6 @@ from django_ratelimit.decorators import ratelimit
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
-from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,7 +17,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from core.models import Collection, Thing
 from core.models.event import Event
-from core.pagination import StandardResultsPagination
 from core.permissions import IsThingManager
 from core.serializers import (
     ThingBulkRowSerializer,
@@ -453,28 +451,4 @@ class ThingBulkCreateView(APIView):
         return Response(
             {"created": len(created), "codes": [thing.code for thing in created]},
             status=status.HTTP_201_CREATED,
-        )
-
-
-class InvitedThingsView(ListAPIView):
-    """
-    GET /api/v1/invited-things/
-    List things from collections where the current user is invited.
-    """
-
-    permission_classes = [IsAuthenticated]
-    serializer_class = ThingSerializer
-    pagination_class = StandardResultsPagination
-
-    def get_queryset(self):
-        return (
-            optimise_thing_queryset(
-                Thing.objects.filter(
-                    collections__invites=self.request.user,
-                    collections__status=Collection.Status.ACTIVE,
-                ).exclude(status=Thing.Status.INACTIVE),
-                with_collections=True,
-            )
-            .distinct()
-            .order_by("-created")
         )

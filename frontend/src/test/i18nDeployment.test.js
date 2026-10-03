@@ -28,7 +28,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
  */
 
 const KEY = 'stats.downloadStats';
-const SPANISH = 'Descargar estadísticas (CSV)';
+const SPANISH = 'Descargar las estadísticas (CSV)';
 
 async function loadI18n(deploymentI18n = {}) {
   vi.resetModules();

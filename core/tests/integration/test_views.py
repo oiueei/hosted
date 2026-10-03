@@ -1280,25 +1280,6 @@ class TestSecurityRestrictions:
         response = client2.get(f"/api/v1/things/{thing.code}/")
         assert response.status_code == status.HTTP_200_OK
 
-    # Invited things endpoint tests
-
-    def test_invited_things_empty_when_no_invites(self, authenticated_client):
-        """Should return empty list when user has no invites."""
-        response = authenticated_client.get("/api/v1/invited-things/")
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["results"] == []
-
-    def test_invited_things_returns_invited(self, user, user2, thing, collection):
-        """Should return things from collections user is invited to."""
-        # Invite user2
-        collection.add_invite(user2.code)
-
-        client2 = self._get_client_for_user(user2)
-        response = client2.get("/api/v1/invited-things/")
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["results"]) == 1
-        assert response.data["results"][0]["code"] == thing.code
-
     # FAQ access tests
 
     def test_faq_list_denied_for_non_invited_user(self, user, user2, thing):
@@ -1670,29 +1651,6 @@ class TestThingStatusVisibility:
         client2 = self._get_client_for_user(user2)
         response = client2.get(f"/api/v1/things/{thing.code}/")
         assert response.status_code == status.HTTP_200_OK
-
-    def test_invited_things_excludes_inactive(self, user, user2, thing, collection):
-        """Invited things endpoint should exclude INACTIVE things."""
-        from core.models import Thing
-
-        collection.add_invite(user2.code)
-
-        inactive_thing = Thing.objects.create(
-            code="INACT1",
-            type="GIFT_THING",
-            owner=user,
-            headline="Inactive Thing",
-            status="INACTIVE",
-        )
-        collection.add_thing(inactive_thing.code)
-
-        client2 = self._get_client_for_user(user2)
-        response = client2.get("/api/v1/invited-things/")
-        assert response.status_code == status.HTTP_200_OK
-
-        thing_codes = [t["code"] for t in response.data["results"]]
-        assert thing.code in thing_codes
-        assert inactive_thing.code not in thing_codes
 
     def test_owner_sees_all_things_including_inactive(self, authenticated_client, user, collection):
         """Owner's thing list includes INACTIVE things."""

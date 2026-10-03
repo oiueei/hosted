@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, test, expect, vi, afterEach } from 'vitest';
+import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import ThingReportFooter from './ThingReportFooter';
 
 // The trigger carries aria-expanded; the confirm button inside the panel does
@@ -11,8 +11,40 @@ const confirmButton = () =>
   screen.getAllByRole('button', { name: 'Report' }).find((b) => !b.hasAttribute('aria-expanded'));
 
 describe('ThingReportFooter (the anonymous report flow)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  test('the trigger is an ordinary secondary button: theeeme tokens, normal size, no icon', () => {
+    // CA, 2026-10-03: it was a small supplementary button with an alert icon,
+    // which reads as neither link nor button. The tokens are the secondary set
+    // `useTheeeme` gives every other secondary — white fill, the theeeme's own
+    // border — and themedButtons.test.js only checks that *a* style is present.
+    localStorage.setItem(
+      'theeemeColors',
+      JSON.stringify({
+        color_01: 'bus',
+        color_02: 'suomenlinna-light',
+        color_03: 'copper',
+        color_04: 'black',
+        color_05: 'white',
+        color_06: 'white',
+      })
+    );
+    globalThis.fetch = vi.fn();
+    render(<ThingReportFooter thingCode="THG001" onToast={vi.fn()} />);
+
+    const trigger = screen.getByRole('button', { name: 'Report', expanded: false });
+
+    expect(trigger.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+    expect(trigger.style.getPropertyValue('--border-color')).toBe('var(--color-bus)');
+    // HDS's own variant and size classes (CSS-module names, hashed suffixes).
+    expect(trigger.className).toMatch(/Button-module_secondary/);
+    expect(trigger.className).not.toMatch(/supplementary|size-small/);
+    expect(trigger.querySelector('svg')).toBeNull();
   });
 
   test('opening the confirm states the anonymity promise and sends nothing yet', () => {

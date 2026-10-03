@@ -1,18 +1,15 @@
 {
   "stats": {
-    "downloadStats": "Descargar estadísticas (CSV)",
+    "downloadStats": "Descargar las estadísticas (CSV)",
     "downloadStatsError": "No se pudieron descargar las estadísticas."
   },
   "collectionExport": {
     "downloadButton": "Descargar la colección entera (JSON)",
     "downloading": "Preparando el fichero…",
-    "notice": "La colección entera — cada cosa, el correo de cada miembro, el historial completo. No es el resumen de arriba: lleva datos de otras personas, guárdalo en un sitio seguro y no lo reenvíes.",
     "error": "No hemos podido preparar la exportación. Prueba de nuevo en un momento."
   },
   "calendarExport": {
-    "downloadButton": "Descargar el calendario",
-    "downloading": "Preparando el fichero…",
-    "notice": "Todos los préstamos, alquileres y reservas próximos, en un fichero de calendario (.ics). Ábrelo o impórtalo en Google Calendar, Apple Calendar u Outlook; importarlo otra vez no duplica nada, y una reserva cancelada desde entonces va marcada como cancelada.",
+    "downloadButton": "Descargar el calendario (ICS)",
     "done": "{{count}} evento(s) — mira tus descargas.",
     "alsoCancelled": "Incluye {{count}} reserva(s) cancelada(s), marcadas para que tu calendario pueda quitarlas.",
     "doneOnlyCancelled": "No hay nada próximo, pero sí {{count}} reserva(s) cancelada(s): importa el fichero para que tu calendario pueda quitarlas.",
@@ -86,7 +83,11 @@
   "accountMenu": {
     "label": "Tu cuenta"
   },
+  "collectionMenu": {
+    "label": "Opciones de la colección"
+  },
   "common": {
+    "opensInNewTab": "Se abre en una pestaña nueva.",
     "skipToContent": "Saltar al contenido",
     "error": "Error",
     "done": "Hecho",
@@ -158,7 +159,6 @@
     "contact": "Contacto — OIUEEI",
     "collaborate": "Colabora — OIUEEI",
     "ownerBookings": "Solicitudes para mí — OIUEEI",
-    "sharedThings": "Compartido conmigo — OIUEEI",
     "dataExport": "Exportar datos — OIUEEI",
     "reserveThing": "Reservar: {{headline}} — OIUEEI"
   },
@@ -176,7 +176,6 @@
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
     "operator": "",
     "popIn": "¿Nuevo por aquí? Pásate →",
-    "legalLink": "Aviso legal y privacidad",
     "loginHelp": "¿Problemas para entrar? Cuéntanoslo e intentamos ayudarte lo antes posible →",
     "faqLink": "¿Dudas sobre este sitio? →"
   },
@@ -309,7 +308,6 @@
     "curatorsMore_other": "y {{count}} personas más",
     "showMoreThings_one": "Ver 1 cosa más",
     "showMoreThings_other": "Ver {{count}} cosas más",
-    "visitorIntro": "Estás viendo este grupo como visitante.",
     "visitorJoin": "Unirme al grupo",
     "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo.",
     "welcomeDoc": "Documento de bienvenida del grupo (PDF)"
@@ -560,6 +558,7 @@
   "myBookings": {
     "pageTitle": "Mis solicitudes",
     "colThing": "Cosa",
+    "colWhen": "Cuándo",
     "colStatus": "Estado",
     "noBookings": "Todavía no tienes solicitudes ni reservas.",
     "goHome": "Explorar colecciones",
@@ -589,7 +588,7 @@
     "waitingOnYou": "Esperando tu respuesta",
     "noPending": "Ahora mismo no hay nada esperándote.",
     "noBookings": "Todavía nadie te ha pedido nada.",
-    "colRequest": "Solicitud",
+    "colWhoWhen": "Quién y cuándo",
     "requestedBy": "La pide {{name}}",
     "acceptTooltip": "Confirmar esta solicitud",
     "rejectTooltip": "Rechazar esta solicitud",
@@ -634,14 +633,18 @@
     "caption": "Miembros de esta colección"
   },
   "recommend": {
-    "openLink": "¿Conoces a alguien que encaje? Recomiéndale →",
+    "openButton": "Invitar a alguien",
     "intro": "Decide {{owner}}: no se le envía nada hasta que diga que sí.",
+    "intro_team": "Deciden los dinamizadores: no se le envía nada hasta que uno de ellos diga que sí.",
     "emailLabel": "Su correo",
     "emailPlaceholder": "alguien@correo.com",
     "noteLabel": "¿Algo que {{owner}} deba saber? (opcional)",
+    "noteLabel_team": "¿Algo que los dinamizadores deban saber? (opcional)",
     "noteHelper": "Sólo lo ve {{owner}}. Le ayuda a decidir.",
+    "noteHelper_team": "Sólo lo ven los dinamizadores. Les ayuda a decidir.",
     "send": "Recomendar",
     "sent": "Enviado a {{owner}}. Si acepta, le invitaremos.",
+    "sent_team": "Hecho. Si uno de los dinamizadores acepta, le invitaremos.",
     "error": "No hemos podido enviarlo. Inténtalo de nuevo.",
     "ownerHeading": "Recomendaciones",
     "ownerIntro": "Tus miembros han propuesto a estas personas. No hemos contactado con nadie: sólo sabrán de nosotros si les invitas.",
@@ -690,7 +693,9 @@
     "aboutHeading": "Acerca de",
     "photoAlt": "Foto de {{name}}",
     "myGroups": "Mis grupos",
-    "myGroupsIntro": "Grupos en los que estás. Si dejas uno, pierdes el acceso."
+    "myGroupsIntro": "Grupos en los que estás. Si dejas uno, pierdes el acceso.",
+    "colGroup": "Grupo",
+    "colTeam": "Dinamización"
   },
   "koro": {
     "basic": "Básico",
@@ -899,8 +904,7 @@
     "returnBy": "Devolución el {{date}}"
   },
   "feedback": {
-    "prompt": "¿Algo raro? ¿Una idea?",
-    "cta": "Cuéntamelo"
+    "button": "Ideas y fallos"
   },
   "collectionLanguage": {
     "label": "Idioma de los mensajes del grupo",
@@ -960,14 +964,6 @@
     "navLabel": "Sobre OIUEEI",
     "about": "Qué es OIUEEI",
     "legal": "Privacidad y aviso legal"
-  },
-  "sharedThings": {
-    "pageTitle": "Compartido conmigo",
-    "intro": "Todo lo que ahora mismo comparten los grupos a los que perteneces, lo más nuevo primero.",
-    "homeLink": "Ver todo lo que hay en estos grupos →",
-    "empty": "Todavía no se ha compartido nada en tus grupos.",
-    "emptyCta": "Volver a mis grupos",
-    "errorLoading": "No hemos podido cargar lo que se ha compartido contigo."
   },
   "capabilities": {
     "needsApproval": "Algunas opciones necesitan aprobación en esta instalación: {{list}}.",

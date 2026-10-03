@@ -207,8 +207,8 @@ describe('the faq link follows faqPath', () => {
     // CA, 2026-09-21: the link used to float between the alpha warning and the
     // footnotes. Questions about the site belong with the other
     // deliberate-lookup links at the foot — first "questions about this site",
-    // then "trouble signing in", then the legal link — not in a group of their
-    // own above the reading.
+    // then "trouble signing in", which closes the page — not in a group of
+    // their own above the reading.
     vi.doMock('../deployment', () => ({
       deploymentRoutes: [],
       popInPath: null,
@@ -229,8 +229,9 @@ describe('the faq link follows faqPath', () => {
     const footnotes = document.querySelector('.login-footnotes');
     expect(faq.closest('.login-footnotes')).toBe(footnotes);
     expect(faq.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const legal = screen.getByRole('link', { name: 'Legal notice & privacy' });
-    expect(help.compareDocumentPosition(legal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And the trouble line is the last link of the page: there is no legal link
+    // after it any more (the site footer carries it).
+    expect([...footnotes.querySelectorAll('a')].at(-1)).toBe(help);
   });
 });
 

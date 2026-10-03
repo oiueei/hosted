@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { IconUser } from 'hds-react';
 import { apiFetch } from '../services/api';
+import useDismissable from '../hooks/useDismissable';
 
 const PANEL_ID = 'account-menu-panel';
 
@@ -30,9 +31,10 @@ const PANEL_ID = 'account-menu-panel';
  * navigation between actions; this is `Tab`-navigable links, so the native
  * semantics already say what it is.
  *
- * Rendered next to `ContactCorner` (and, on `CollectionPage`, `ShareCollectionMenu`)
- * inside the shared `.hero-corners` flex row — see `PageLayout` and the eight
- * manual-hero pages for where. **Session-gated, not page-gated**: it reads
+ * Rendered next to `ContactCorner` (and, on `CollectionPage`,
+ * `CollectionMenu` and `ShareCollectionMenu`) inside the shared
+ * `.hero-corners` flex row — see `PageLayout` and the eight manual-hero pages
+ * for where. **Session-gated, not page-gated**: it reads
  * `userCode` itself and renders nothing for a signed-out visitor, so it needs
  * no prop from any of its many call sites.
  */
@@ -63,30 +65,10 @@ export default function AccountMenu() {
     return () => controller.abort();
   }, [open]);
 
-  // Escape closes and returns focus to the trigger (WCAG 1.4.13's
-  // "dismissible", the same shape InfoPopover uses); a click outside the
-  // wrapper closes without moving focus at all. Both listeners live on
-  // `document` and only while the panel is open, and neither stops
-  // propagation, so an ancestor dialog still gets its own Escape.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (e) => {
-      if (e.key !== 'Escape') return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-    const onPointerDown = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('mousedown', onPointerDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('mousedown', onPointerDown);
-    };
-  }, [open]);
+  // The panel's dismissal contract — Escape refocuses the trigger, a click
+  // outside closes without moving focus — lives in `useDismissable`, shared
+  // with the collection menu that sits beside this one in the hero's corner.
+  useDismissable({ open, setOpen, wrapperRef, buttonRef });
 
   // Read directly, like every other per-viewer check in this app (ThingLinkbox,
   // CollectionPage, …) — no context, no prop, so every hero can render this

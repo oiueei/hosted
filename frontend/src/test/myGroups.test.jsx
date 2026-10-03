@@ -1,6 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+
+expect.extend(toHaveNoViolations);
 
 window.scrollTo = vi.fn();
 
@@ -64,6 +67,9 @@ const renderOther = () =>
  * rest of your account, beside the other memberships you might weigh it against.
  */
 describe('UserPage — My groups', () => {
+  // A row of the table, found by the group's name.
+  const rowOf = (name) => screen.getByRole('link', { name }).closest('tr');
+
   test('lists the groups I belong to, each with its own way out', async () => {
     setApi({
       memberships: [
@@ -82,6 +88,104 @@ describe('UserPage — My groups', () => {
     const leaveLinks = screen.getAllByRole('link', { name: /leave the group/i });
     expect(leaveLinks).toHaveLength(2);
     expect(leaveLinks[0]).toHaveAttribute('href', '/collections/COL001/leave');
+  });
+
+  test('is a table of three columns: the group, who runs it, and a nameless one for the way out', async () => {
+    // The same HDS Table as the request pages (CA, 2026-10-03). The last header
+    // is named for a screen reader only, so the column is not an empty <th>.
+    setApi({ memberships: [{ code: 'COL001', headline: 'Bibliocoses' }] });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((th) => th.textContent)
+    ).toEqual(['Group', 'Run by', 'Actions']);
+    const [group, , actions] = within(rowOf('Bibliocoses')).getAllByRole('cell');
+    expect(within(group).getByRole('link', { name: 'Bibliocoses' })).toBeInTheDocument();
+    expect(within(actions).getByRole('link', { name: /leave the group/i })).toHaveAttribute(
+      'href',
+      '/collections/COL001/leave'
+    );
+  });
+
+  test('the team column names the founder first, then the co-curators, as plain text', async () => {
+    setApi({
+      memberships: [
+        {
+          code: 'COL001',
+          headline: 'Bibliocoses',
+          owner: 'OWN001',
+          owner_name: 'Lili',
+          co_owners: [{ code: 'CO0001', name: 'Lolo' }],
+        },
+      ],
+    });
+
+    renderOwn();
+
+    await screen.findByRole('table', { name: 'My groups' });
+    const team = within(rowOf('Bibliocoses')).getAllByRole('cell')[1];
+    expect(team).toHaveTextContent(/^Lili, Lolo$/);
+    // The hero links each name; here it is text.
+    expect(within(team).queryByRole('link')).toBeNull();
+  });
+
+  test('someone with no name is counted after the names, never left as a gap', async () => {
+    setApi({
+      memberships: [
+        {
+          code: 'COL001',
+          headline: 'Bibliocoses',
+          owner: 'OWN001',
+          owner_name: 'Lili',
+          co_owners: [
+            { code: 'CO0001', name: '' },
+            { code: 'CO0002', name: 'Lolo' },
+          ],
+        },
+      ],
+    });
+
+    renderOwn();
+
+    await screen.findByRole('table', { name: 'My groups' });
+    const team = within(rowOf('Bibliocoses')).getAllByRole('cell')[1];
+    expect(team).toHaveTextContent(/^Lili, Lolo and 1 more person$/);
+  });
+
+  test('a group whose team has no names leaves the cell empty', async () => {
+    setApi({
+      memberships: [
+        { code: 'COL001', headline: 'Bibliocoses', owner: 'OWN001', owner_name: '', co_owners: [] },
+      ],
+    });
+
+    renderOwn();
+
+    await screen.findByRole('table', { name: 'My groups' });
+    expect(within(rowOf('Bibliocoses')).getAllByRole('cell')[1]).toHaveTextContent(/^$/);
+  });
+
+  test('the table has no axe violations', async () => {
+    setApi({
+      memberships: [
+        {
+          code: 'COL001',
+          headline: 'Bibliocoses',
+          owner: 'OWN001',
+          owner_name: 'Lili',
+          co_owners: [{ code: 'CO0001', name: 'Lolo' }],
+        },
+      ],
+    });
+
+    const { container } = renderOwn();
+    await screen.findByRole('table', { name: 'My groups' });
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   test('a localized group name is resolved, never raw JSON', async () => {

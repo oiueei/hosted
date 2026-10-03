@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Koros, Notification } from 'hds-react';
+import { Koros, Notification, Table } from 'hds-react';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import { apiFetch } from '../services/api';
@@ -10,6 +10,7 @@ import MarkdownText from '../components/MarkdownText';
 import CollectionLinkbox from '../components/CollectionLinkbox';
 import { useLocalized } from '../utils/localized';
 import { formatDate } from '../utils/rental';
+import { teamText } from '../utils/team';
 import HeroPhoto from '../components/HeroPhoto';
 import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
@@ -187,20 +188,64 @@ export default function UserPage() {
             <div className="spacer-s" />
             <p className="text-muted">{t('userPage.myGroupsIntro')}</p>
             <div className="spacer-m" />
-            <ul className="membership-list">
-              {memberships.map((c) => (
-                <li key={c.code} className="membership-row">
-                  <Link to={`/collections/${c.code}`}>{L(c.headline)}</Link>
-                  <Link
-                    to={`/collections/${c.code}/leave`}
-                    state={{ headline: L(c.headline) }}
-                    className="membership-leave"
-                  >
-                    {t('collectionPage.leaveGroup')}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {/* The same table as the request pages (CA, 2026-10-03): the group, who
+                runs it — the rule the collection's own hero follows, as plain
+                text — and the way out, on the right. */}
+            <div className="table-wrap">
+              <Table
+                cols={[
+                  {
+                    key: '_group',
+                    headerName: t('userPage.colGroup'),
+                    transform: (row) => (
+                      <Link to={`/collections/${row._code}`}>{row._headline}</Link>
+                    ),
+                  },
+                  {
+                    key: '_team',
+                    headerName: t('userPage.colTeam'),
+                    transform: (row) => (
+                      <div className="table-cell-lines">
+                        <p>{row._team}</p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: '_actions',
+                    // Named for a screen reader only, like the request tables: the
+                    // link says what it does, and an empty <th> leaves the column
+                    // nameless (axe empty-table-header).
+                    headerName: <span className="sr-only">{t('common.colActions')}</span>,
+                    transform: (row) => (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Link
+                          to={`/collections/${row._code}/leave`}
+                          state={{ headline: row._headline }}
+                          className="table-cell-link--muted"
+                        >
+                          {t('collectionPage.leaveGroup')}
+                        </Link>
+                      </div>
+                    ),
+                  },
+                ]}
+                caption={<span className="sr-only">{t('userPage.myGroups')}</span>}
+                rows={memberships.map((c) => ({
+                  _id: c.code,
+                  _code: c.code,
+                  _headline: L(c.headline),
+                  _team: teamText(c, t),
+                }))}
+                indexKey="_id"
+                renderIndexCol={false}
+                dense
+                theme={
+                  tc.color_03
+                    ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                    : undefined
+                }
+              />
+            </div>
             <div className="spacer-l" />
           </>
         )}

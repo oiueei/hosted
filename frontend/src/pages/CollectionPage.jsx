@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Notification, Tag, TextArea } from 'hds-react';
@@ -17,12 +17,11 @@ import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
+import { collectionTeam } from '../utils/team';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
-import CalendarExportButton, {
-  CalendarExportStatus,
-  useCalendarExport,
-} from '../components/CalendarExportButton';
+import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
+import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { DATE_TYPES } from '../constants/things';
 
@@ -42,6 +41,10 @@ import { DATE_TYPES } from '../constants/things';
  */
 const CARDS_PER_PAGE = 24;
 
+// What the member's "Invite someone" button controls (aria-controls) and the
+// form it opens sits under.
+const RECOMMEND_BOX_ID = 'recommend-box';
+
 export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -57,14 +60,17 @@ export default function CollectionPage() {
   const [shownCount, setShownCount] = useState(CARDS_PER_PAGE);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  const recommendButtonRef = useRef(null);
   // The owner may have written the collection's text once per language; every
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
   const headline = L(collection?.headline);
   useCollectionLanguage(collection?.language, [collection?.headline, collection?.description]);
-  // Called unconditionally (it is a hook): non-curators simply never fire it,
-  // the same way they never see the button.
-  const calendarExport = useCalendarExport(code);
+  // Called unconditionally (it is a hook): non-curators simply never see the
+  // menu that offers it. One call owns the calendar, stats and JSON
+  // downloads, and the page hands it to the menu and to the status zone.
+  const downloads = useCollectionDownloads(code);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })
@@ -194,16 +200,10 @@ export default function CollectionPage() {
   // server-computed field that also admits a co-owner.
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
-  // The team the hero names, founder first. The API sends a co-curator's bare
-  // `name` — never an email standing in for it (L2) — so one who set none is
-  // counted at the end instead of listed: comma-joined, an empty name left
-  // "Oriol, ," on the page.
-  const team = [
-    { code: collection.owner, name: collection.owner_name },
-    ...(collection.co_owners ?? []),
-  ];
-  const namedTeam = team.filter((member) => member.name);
-  const unnamedTeamCount = team.length - namedTeam.length;
+  // The team the hero names, founder first, whoever has no name counted at the
+  // end rather than listed — one rule (`utils/team.js`) shared with the "Run by"
+  // column of "My groups", so the two cannot disagree.
+  const { named: namedTeam, unnamedCount: unnamedTeamCount } = collectionTeam(collection);
   const isAuthenticated = !!userCode;
   // The Community/visibility tags in the H1 are purely informational — no
   // click, no delete, so no hover/focus state to design for — so they follow
@@ -303,6 +303,11 @@ export default function CollectionPage() {
           >
             <span className="hero-corners">
               <AccountMenu />
+              {/* The group's own options (CA, 2026-10-03): curators only,
+                  between the account menu and the share one. */}
+              {isCurator && (
+                <CollectionMenu code={code} hasDateThings={hasDateThings} downloads={downloads} />
+              )}
               {canShare && (
                 <ShareCollectionMenu
                   collectionCode={code}
@@ -402,8 +407,7 @@ export default function CollectionPage() {
               !collection.is_member &&
               collection.visibility === 'PUBLIC' && (
                 <div className="invite-nudge">
-                  <p style={{ margin: 0 }}>{t('collectionPage.visitorIntro')}</p>
-                  <div style={{ marginTop: 'var(--spacing-xs)' }}>
+                  <div>
                     <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
                       {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
                     </Button>
@@ -418,27 +422,16 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
+                {/* The row holds "Edit collection" alone (CA, 2026-10-03):
+                    "Add thing", "Manage members" and the three downloads live
+                    in the collection menu in the corner; the outcome of a
+                    download lands right under the row. */}
                 <div className="button-row-wide">
                   <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
                     {t('collectionPage.editCollection')}
                   </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
-                    {t('collectionPage.addThing')}
-                  </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
-                    {t('collectionPage.manageGuests')}
-                  </ButtonLink>
-                  {/* The group's schedule, taken where the group is managed
-                      (CA, 2026-09-28) — the same download the edit page
-                      offers at its foot. Curators only (members and passers-by
-                      have nothing to import), and only where a date-based
-                      thing exists to fill the file. The row holds buttons
-                      alone; the outcome message lands underneath it. */}
-                  {hasDateThings && (
-                    <CalendarExportButton calendar={calendarExport} style={btnSecondaryStyle} />
-                  )}
                 </div>
-                {hasDateThings && <CalendarExportStatus calendar={calendarExport} />}
+                <CollectionDownloadsStatus downloads={downloads} />
                 <div className="spacer-s"></div>
                 {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
                 showing but hasn't invited anyone — a quiet one-line pointer, no
@@ -461,20 +454,47 @@ export default function CollectionPage() {
             {isAuthenticated && !isOwner && collection.is_member && (
               <>
                 <div className="spacer-m"></div>
-                {/* Membership, not just mode: `Collection.can_add_thing` requires
-                an invite, so offering this to a signed-in non-member sent them
-                through the whole form — photos uploaded to the bucket and all —
-                to collect a 403 at the end. They get the join button above
-                instead, which is the thing that actually unlocks this. */}
-                {collection.mode === 'COMMUNITY' && collection.is_member && (
+                {/* One row, each button on its own condition (CA, 2026-10-03):
+                "Invite someone" first and primary — it opens the recommend form
+                below the row, and stays on screen while the form is open so the
+                same button closes it — then "Add thing", secondary. Neither:
+                no row. Membership, not just mode, for "Add thing":
+                `Collection.can_add_thing` requires an invite, so offering it to
+                a signed-in non-member sent them through the whole form — photos
+                uploaded to the bucket and all — to collect a 403 at the end.
+                They get the join button above instead, which is the thing that
+                actually unlocks it. */}
+                {(collection.allow_member_proposals || collection.mode === 'COMMUNITY') && (
                   <div className="button-row-wide">
-                    <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
-                      {t('collectionPage.addThing')}
-                    </ButtonLink>
+                    {collection.allow_member_proposals && (
+                      <Button
+                        ref={recommendButtonRef}
+                        style={btnStyle}
+                        aria-expanded={recommendOpen}
+                        aria-controls={recommendOpen ? RECOMMEND_BOX_ID : undefined}
+                        onClick={() => setRecommendOpen((open) => !open)}
+                      >
+                        {t('recommend.openButton')}
+                      </Button>
+                    )}
+                    {collection.mode === 'COMMUNITY' && (
+                      <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                        {t('collectionPage.addThing')}
+                      </ButtonLink>
+                    )}
                   </div>
                 )}
-                {collection.is_member && collection.allow_member_proposals && (
-                  <RecommendGuest collectionCode={code} ownerName={collection.owner_name} />
+                {collection.allow_member_proposals && recommendOpen && (
+                  <RecommendGuest
+                    id={RECOMMEND_BOX_ID}
+                    collectionCode={code}
+                    ownerName={collection.owner_name}
+                    coOwnerCount={collection.co_owners?.length ?? 0}
+                    onClose={() => {
+                      setRecommendOpen(false);
+                      recommendButtonRef.current?.focus();
+                    }}
+                  />
                 )}
                 {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only

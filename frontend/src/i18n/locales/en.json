@@ -1,18 +1,15 @@
 {
   "stats": {
-    "downloadStats": "Download stats (CSV)",
+    "downloadStats": "Download the stats (CSV)",
     "downloadStatsError": "Couldn't download the stats."
   },
   "collectionExport": {
     "downloadButton": "Download the whole collection (JSON)",
     "downloading": "Preparing the file…",
-    "notice": "The whole collection — every thing, every member's email, the full history. Not the summary above: it carries other people's data, so keep it somewhere safe and don't forward it.",
     "error": "Couldn't build the export. Please try again in a moment."
   },
   "calendarExport": {
-    "downloadButton": "Download the calendar",
-    "downloading": "Preparing the file…",
-    "notice": "Every upcoming loan, rental and reservation, in a calendar file (.ics). Open it or import it into Google Calendar, Apple Calendar or Outlook; importing it again adds nothing twice, and a reservation cancelled since goes in marked as cancelled.",
+    "downloadButton": "Download the calendar (ICS)",
     "done": "{{count}} event(s) — check your downloads.",
     "alsoCancelled": "It includes {{count}} cancelled reservation(s), marked so your calendar can drop them.",
     "doneOnlyCancelled": "Nothing coming up, but {{count}} cancelled reservation(s) — import the file so your calendar can drop them.",
@@ -92,7 +89,11 @@
   "accountMenu": {
     "label": "Your account"
   },
+  "collectionMenu": {
+    "label": "Collection options"
+  },
   "common": {
+    "opensInNewTab": "Opens in a new tab.",
     "skipToContent": "Skip to content",
     "error": "Error",
     "done": "Done",
@@ -164,7 +165,6 @@
     "contact": "Contact — OIUEEI",
     "collaborate": "Collaborate — OIUEEI",
     "ownerBookings": "Requests to me — OIUEEI",
-    "sharedThings": "Shared with me — OIUEEI",
     "dataExport": "Data export — OIUEEI",
     "reserveThing": "Reserve: {{headline}} — OIUEEI"
   },
@@ -182,7 +182,6 @@
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
     "popIn": "New here? Pop in →",
-    "legalLink": "Legal notice & privacy",
     "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →",
     "faqLink": "Questions about this site? →"
   },
@@ -315,7 +314,6 @@
     "curatorsMore_other": "and {{count}} more people",
     "showMoreThings_one": "Show 1 more thing",
     "showMoreThings_other": "Show {{count}} more things",
-    "visitorIntro": "You're browsing this group as a visitor.",
     "visitorJoin": "Join this group",
     "visitorJoinError": "We couldn't add you to the group. Please try again.",
     "welcomeDoc": "The group's welcome document (PDF)"
@@ -566,6 +564,7 @@
   "myBookings": {
     "pageTitle": "My requests",
     "colThing": "Thing",
+    "colWhen": "When",
     "colStatus": "Status",
     "noBookings": "You have no booking requests yet.",
     "goHome": "Browse collections",
@@ -595,7 +594,7 @@
     "waitingOnYou": "Waiting on you",
     "noPending": "Nothing waiting on you right now.",
     "noBookings": "Nobody has requested anything from you yet.",
-    "colRequest": "Request",
+    "colWhoWhen": "Who and when",
     "requestedBy": "Asked by {{name}}",
     "acceptTooltip": "Confirm this request",
     "rejectTooltip": "Decline this request",
@@ -640,14 +639,18 @@
     "caption": "Members of this collection"
   },
   "recommend": {
-    "openLink": "Know someone who'd fit? Recommend them →",
+    "openButton": "Invite someone",
     "intro": "{{owner}} decides — nothing is sent to them until they say yes.",
+    "intro_team": "The curators decide — nothing is sent to them until one of the curators says yes.",
     "emailLabel": "Their email",
     "emailPlaceholder": "them@email.com",
     "noteLabel": "Anything {{owner}} should know? (optional)",
+    "noteLabel_team": "Anything the curators should know? (optional)",
     "noteHelper": "Only {{owner}} sees this. It helps them decide.",
+    "noteHelper_team": "Only the curators see this. It helps them decide.",
     "send": "Recommend",
     "sent": "Sent to {{owner}}. If they agree, we'll invite them.",
+    "sent_team": "Done. If one of the curators agrees, we'll invite them.",
     "error": "We couldn't send that. Please try again.",
     "ownerHeading": "Recommendations",
     "ownerIntro": "Members have suggested these people. Nobody has been contacted — they'll only hear from us if you invite them.",
@@ -696,7 +699,9 @@
     "aboutHeading": "About",
     "photoAlt": "Photo of {{name}}",
     "myGroups": "My groups",
-    "myGroupsIntro": "Groups you're in. Leaving one removes your access to it."
+    "myGroupsIntro": "Groups you're in. Leaving one removes your access to it.",
+    "colGroup": "Group",
+    "colTeam": "Run by"
   },
   "koro": {
     "basic": "Basic",
@@ -899,8 +904,7 @@
     "returnBy": "Return by {{date}}"
   },
   "feedback": {
-    "prompt": "Something odd? An idea?",
-    "cta": "Tell me"
+    "button": "Ideas and bugs"
   },
   "collectionLanguage": {
     "label": "Language of the group messages",
@@ -960,14 +964,6 @@
     "navLabel": "About OIUEEI",
     "about": "What OIUEEI is",
     "legal": "Privacy & legal"
-  },
-  "sharedThings": {
-    "pageTitle": "Shared with me",
-    "intro": "Everything the groups you belong to are sharing right now, newest first.",
-    "homeLink": "See everything in these groups →",
-    "empty": "Nothing has been shared in your groups yet.",
-    "emptyCta": "Back to my groups",
-    "errorLoading": "Couldn't load what's been shared with you."
   },
   "capabilities": {
     "needsApproval": "Some options need approval on this deployment: {{list}}.",
