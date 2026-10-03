@@ -95,18 +95,46 @@ describe('SiteFooter — one line from 768px', () => {
     const { footer, nav, sep } = renderFooter();
 
     expect(nav.textContent).not.toMatch(/Zona Franca/);
-    expect(nav.querySelectorAll('a')).toHaveLength(1);
+    // Links, and the aria-hidden dot between two of them where the deployment has
+    // an about page — never a count: that is one link upstream and two on a
+    // deployment, and this file runs on both.
+    expect(nav.querySelectorAll('a').length).toBeGreaterThan(0);
+    for (const child of nav.children) {
+      expect(child.tagName === 'A' || child.getAttribute('aria-hidden') === 'true').toBe(true);
+    }
     expect(
       sep.compareDocumentPosition(footer.lastChild) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(footer.lastChild.textContent).toMatch(/Zona Franca/);
   });
 
-  test('upstream, with no about link, the line is the legal door then the text', () => {
-    const { footer } = renderFooter();
+  /* What the line reads depends on whether the deployment has an about page, so
+     both shapes mock the module rather than read it — the same reason as "offers
+     no about link" above: read for real, one of them would fail on the branch
+     that has the other shape. */
+  const lineWith = async (aboutPath) => {
+    vi.resetModules();
+    vi.doMock('../deployment', () => ({ aboutPath }));
+    try {
+      const { default: Footer } = await import('../components/SiteFooter');
+      const { container } = render(
+        <MemoryRouter>
+          <Footer />
+        </MemoryRouter>
+      );
+      return container.querySelector('footer').textContent.replace(/\s+/g, ' ').trim();
+    } finally {
+      vi.doUnmock('../deployment');
+    }
+  };
 
-    expect(footer.textContent.replace(/\s+/g, ' ').trim()).toMatch(
-      /^Privacy & legal · Made with .*Zona Franca/
+  test('upstream, with no about link, the line is the legal door then the text', async () => {
+    expect(await lineWith(null)).toMatch(/^Privacy & legal · Made with .*Zona Franca/);
+  });
+
+  test('a deployment with an about page puts it first, then the legal door, then the text', async () => {
+    expect(await lineWith('/about-us')).toMatch(
+      /^What OIUEEI is · Privacy & legal · Made with .*Zona Franca/
     );
   });
 
