@@ -13,7 +13,7 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
  *
  *  1. The account menu's panel ran off the left of the screen. `.account-menu` was
  *     `position: relative`, which anchored the panel to its own trigger, and for a
- *     curator that trigger is the first of three icons. With no positioned ancestor of
+ *     curator that trigger is the first of four icons. With no positioned ancestor of
  *     its own the panel anchors to `.hero-corners`, whose right edge is the content
  *     column's.
  *  2. A long "← {collection name}" ran underneath the icons. `.hero-corners` is absolute
@@ -182,6 +182,28 @@ describe('the back link keeps out from under the corner icons', () => {
 });
 
 describe('the collection menu panel anchors to the corner row like the account menu', () => {
+  test('the corner row reads account · collection · share · contact, left to right', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => CURATED })
+    );
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('combobox'); // a curator's hero has loaded
+
+    // DOM order is visual order in a flex row: each control is the child that is,
+    // or holds, its own marker.
+    const markers = ['.account-menu', '.collection-menu', '.share-corner', '.contact-corner'];
+    const order = [...container.querySelector('.hero-corners').children].map((child) =>
+      markers.find((marker) => child.matches(marker) || child.querySelector(marker))
+    );
+    expect(order).toEqual(markers);
+  });
+
   test('the panel sits in .collection-menu, which sits directly in .hero-corners', async () => {
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: async () => CURATED })

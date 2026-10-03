@@ -105,19 +105,31 @@ const exportResponse = ({
   blob: () => Promise.resolve(new Blob(['{}'], { type: 'application/json' })),
 });
 
+// What an endpoint answers: a response, or a function that returns one (or a
+// promise of one) at each call — which is how a test makes the same download
+// fail the first time and work the second, or hold it in flight.
+const answer = (given, fallback) =>
+  Promise.resolve(typeof given === 'function' ? given() : (given ?? fallback()));
+
+/** The first response for the first call, the next for the next… the last for every one after. */
+const sequence = (...responses) => {
+  let call = 0;
+  return () => responses[Math.min(call++, responses.length - 1)];
+};
+
 function setApi(collection, { calendar, stats, collectionExport } = {}) {
   apiFetch.mockImplementation((url) => {
     if (url.includes('/inbox/')) {
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
     }
     if (url === '/api/v1/collections/COL001/calendar-export/') {
-      return Promise.resolve(calendar ?? calendarResponse());
+      return answer(calendar, calendarResponse);
     }
     if (url === '/api/v1/collections/COL001/stats/') {
-      return Promise.resolve(stats ?? statsResponse());
+      return answer(stats, statsResponse);
     }
     if (url === '/api/v1/collections/COL001/export/') {
-      return Promise.resolve(collectionExport ?? exportResponse());
+      return answer(collectionExport, exportResponse);
     }
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(collection) });
   });
@@ -401,10 +413,19 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     expect(await screen.findByText('Connection error.')).toBeInTheDocument();
   });
 
-  test('starting a download drops the message of the previous one', async () => {
+  test('starting a download drops the message of the previous one, and it does not come back', async () => {
     // One message at a time: a finished "3 event(s)" beside a half-done stats
-    // file would read as both having completed.
-    renderCollection(COLLECTION);
+    // file would read as both having completed. The stats response is held in
+    // flight so the test sees both moments — the old message gone while the new
+    // download runs, and still gone once it lands (a status zone that merely
+    // hid the old message during the download would show it again at the end).
+    let release;
+    renderCollection(COLLECTION, {
+      stats: () =>
+        new Promise((resolve) => {
+          release = () => resolve(statsResponse());
+        }),
+    });
     await openMenu();
     fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
     expect(await screen.findByText('3 event(s) — check your downloads.')).toBeInTheDocument();
@@ -412,8 +433,57 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
+    expect(await screen.findByText('Preparing the file…')).toBeInTheDocument();
+    expect(screen.queryByText('3 event(s) — check your downloads.')).toBeNull();
+
+    release();
     await waitFor(() =>
-      expect(screen.queryByText('3 event(s) — check your downloads.')).toBeNull()
+      expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-stats.csv')
+    );
+    await waitFor(() => expect(screen.queryByText('Preparing the file…')).toBeNull());
+    expect(screen.queryByText('3 event(s) — check your downloads.')).toBeNull();
+  });
+
+  test('a stats error is gone once the next stats download succeeds', async () => {
+    renderCollection(COLLECTION, {
+      stats: sequence(
+        { ok: false, status: 500, blob: () => Promise.resolve(new Blob(['x'])) },
+        statsResponse()
+      ),
+    });
+    await openMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
+    expect(await screen.findByText("Couldn't download the stats.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
+
+    await waitFor(() =>
+      expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-stats.csv')
+    );
+    await waitFor(() => expect(screen.queryByText("Couldn't download the stats.")).toBeNull());
+  });
+
+  test('a JSON export error is gone once the next export succeeds', async () => {
+    renderCollection(COLLECTION, {
+      collectionExport: sequence(exportResponse({ ok: false, status: 500 }), exportResponse()),
+    });
+    await openMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Download the whole collection (JSON)' }));
+    expect(
+      await screen.findByText("Couldn't build the export. Please try again in a moment.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download the whole collection (JSON)' }));
+
+    await waitFor(() =>
+      expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'oiueei-COL001-2026-08-21.json')
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Couldn't build the export. Please try again in a moment.")
+      ).toBeNull()
     );
   });
 
@@ -467,6 +537,33 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     // …and the focus did not fall to <body> with the button that held it.
     expect(trigger).toHaveFocus();
   });
+
+  // A plain click on one of the links leaves the page, which unmounts the menu
+  // whether or not the link closes it — a test with a plain click would pass
+  // for the wrong reason. A modified click (a new tab) is the case that stays
+  // on the page, and the one where the panel would otherwise be left open.
+  test.each(['Add thing', 'Manage members'])(
+    'a click on "%s" that opens a new tab still closes the panel',
+    async (name) => {
+      renderCollection(COLLECTION);
+      await openMenu();
+      // jsdom would try to follow the anchor's href and say it cannot.
+      const noNavigation = (event) => event.preventDefault();
+      document.addEventListener('click', noNavigation);
+      try {
+        fireEvent.click(screen.getByRole('link', { name }), { ctrlKey: true });
+      } finally {
+        document.removeEventListener('click', noNavigation);
+      }
+
+      expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+      // Still on the collection's page, trigger folded.
+      expect(screen.getByRole('button', { name: TRIGGER })).toHaveAttribute(
+        'aria-expanded',
+        'false'
+      );
+    }
+  );
 
   test('opening the account menu closes the collection menu — it is a click outside', async () => {
     renderCollection(COLLECTION);
