@@ -558,6 +558,7 @@
   "myBookings": {
     "pageTitle": "Mis solicitudes",
     "colThing": "Cosa",
+    "colWhen": "Cuándo",
     "colStatus": "Estado",
     "noBookings": "Todavía no tienes solicitudes ni reservas.",
     "goHome": "Explorar colecciones",
@@ -587,7 +588,7 @@
     "waitingOnYou": "Esperando tu respuesta",
     "noPending": "Ahora mismo no hay nada esperándote.",
     "noBookings": "Todavía nadie te ha pedido nada.",
-    "colRequest": "Solicitud",
+    "colWhoWhen": "Quién y cuándo",
     "requestedBy": "La pide {{name}}",
     "acceptTooltip": "Confirmar esta solicitud",
     "rejectTooltip": "Rechazar esta solicitud",

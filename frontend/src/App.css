@@ -1640,6 +1640,40 @@ figure[class*='Highlight-module_highlight'] {
   gap: var(--spacing-2-xs);
 }
 
+/* The lines of a text cell in the request tables and in "My groups" (CA,
+   2026-10-03). They used to carry a margin between one line and the next, set
+   inline on every paragraph, and the first column held everything; CA's
+   screenshot, with the margins taken out by hand in the browser, is the look:
+   the lines of a cell touch, and each table has the same few kinds of line —
+   so the size and the greys live here, once, and the pages only name which
+   kind a line is. */
+.table-cell-lines p {
+  margin: 0;
+  font-size: var(--fontsize-body-s);
+}
+
+/* A name under the thing: its owner on /my-bookings, its group on
+   /owner-bookings. */
+.table-cell-line--muted {
+  color: var(--color-black-60);
+}
+
+/* "Requested on …": context, not the answer to the column's question. */
+.table-cell-line--faint {
+  color: var(--color-black-50);
+}
+
+/* "No dates" — a GIFT or a SELL has none, and the cell says so quietly. */
+.table-cell-line--none {
+  color: var(--color-black-40);
+}
+
+/* The requester's project note on a reservation. */
+.table-cell-line--note {
+  font-style: italic;
+  color: var(--color-black-70);
+}
+
 /* Pipe tables in Markdown bios: wide content scrolls inside its own wrapper so
    the page body never scrolls horizontally on mobile. */
 .markdown-text .markdown-table-wrap {

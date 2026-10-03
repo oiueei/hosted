@@ -46,3 +46,18 @@ describe('.table-status-cell', () => {
     expect(declarations('.table-status-cell', 'gap')).toEqual(['var(--spacing-2-xs)']);
   });
 });
+
+describe('.table-cell-lines', () => {
+  test('the lines of a cell touch, and are small', () => {
+    expect(declarations('.table-cell-lines p', 'margin')).toEqual(['0']);
+    expect(declarations('.table-cell-lines p', 'font-size')).toEqual(['var(--fontsize-body-s)']);
+  });
+
+  test('each kind of line has its grey, and the note its italic', () => {
+    expect(declarations('.table-cell-line--muted', 'color')).toEqual(['var(--color-black-60)']);
+    expect(declarations('.table-cell-line--faint', 'color')).toEqual(['var(--color-black-50)']);
+    expect(declarations('.table-cell-line--none', 'color')).toEqual(['var(--color-black-40)']);
+    expect(declarations('.table-cell-line--note', 'color')).toEqual(['var(--color-black-70)']);
+    expect(declarations('.table-cell-line--note', 'font-style')).toEqual(['italic']);
+  });
+});

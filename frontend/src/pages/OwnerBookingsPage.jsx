@@ -206,9 +206,9 @@ export default function OwnerBookingsPage() {
   const cols = [
     {
       key: '_thing',
-      headerName: t('ownerBookings.colRequest'),
+      headerName: t('myBookings.colThing'),
       transform: (row) => (
-        <div>
+        <div className="table-cell-lines">
           <Link
             to={
               row._collectionCode
@@ -222,50 +222,35 @@ export default function OwnerBookingsPage() {
               every PROPRIETARY collection the viewer curates, so a co-curator
               of more than one needs it to tell the rows apart. */}
           {row._collectionHeadline && (
-            <p
-              style={{
-                margin: 'var(--spacing-2-xs) 0 0',
-                fontSize: 'var(--fontsize-body-s)',
-                color: 'var(--color-black-50)',
-              }}
-            >
-              {row._collectionHeadline}
-            </p>
+            <p className="table-cell-line--muted">{row._collectionHeadline}</p>
           )}
+        </div>
+      ),
+    },
+    {
+      key: '_whoWhen',
+      headerName: t('ownerBookings.colWhoWhen'),
+      transform: (row) => (
+        <div className="table-cell-lines">
           {/* Always shown: a requester who never set a name arrives as '' from
               the serializer (the email fallback is withheld, L2), and dropping
               the line entirely loses "who asked". `common.aMember` is the same
               stand-in the inbox and the cards use. */}
-          <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
+          <p>
             {t('ownerBookings.requestedBy', {
               name: row._requesterName || t('common.aMember'),
             })}
           </p>
-          <p
-            style={{
-              margin: 'var(--spacing-2-xs) 0 0',
-              fontSize: 'var(--fontsize-body-s)',
-              color: 'var(--color-black-50)',
-            }}
-          >
+          <p className="table-cell-line--faint">
             {t('myBookings.requested', {
               date: formatDate(row._created),
             })}
           </p>
-          <p style={{ margin: 'var(--spacing-2-xs) 0 0', fontSize: 'var(--fontsize-body-s)' }}>
-            {row._when || (
-              <span style={{ color: 'var(--color-black-40)' }}>{t('myBookings.noDates')}</span>
-            )}
+          <p>
+            {row._when || <span className="table-cell-line--none">{t('myBookings.noDates')}</span>}
           </p>
           {row._projectNote && (
-            <p
-              style={{
-                margin: 'var(--spacing-2-xs) 0 0',
-                fontSize: 'var(--fontsize-body-s)',
-                fontStyle: 'italic',
-                color: 'var(--color-black-70)',
-              }}
-            >
+            <p className="table-cell-line--note">
               {t('reservation.noteFrom', { note: row._projectNote })}
             </p>
           )}

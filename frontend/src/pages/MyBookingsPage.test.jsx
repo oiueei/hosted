@@ -85,6 +85,63 @@ describe('MyBookingsPage listing', () => {
     expect(screen.queryByRole('columnheader', { name: '' })).not.toBeInTheDocument();
   });
 
+  test('the thing is one column, when it was asked and when it runs is the next', async () => {
+    // CA, 2026-10-03: the first column used to hold everything. Now "Thing" is the
+    // link and whose it is; "When" is the request date and the dates (or "No dates").
+    mockList([
+      booking({ owner_name: 'Lala' }),
+      booking({
+        code: 'BKG002',
+        status: 'ACCEPTED',
+        thing_type: 'GIFT_THING',
+        thing_headline: 'Tent',
+        start_date: null,
+        end_date: null,
+      }),
+    ]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const headers = within(screen.getAllByRole('table')[0])
+      .getAllByRole('columnheader')
+      .map((th) => th.textContent);
+    expect(headers).toEqual(['Thing', 'When', 'Status', 'Actions']);
+
+    const [thing, when] = within(
+      screen.getByRole('link', { name: 'Cordless drill' }).closest('tr')
+    ).getAllByRole('cell');
+    expect(within(thing).getByRole('link', { name: 'Cordless drill' })).toBeInTheDocument();
+    expect(thing).toHaveTextContent('Lala');
+    expect(thing).not.toHaveTextContent(/Requested/);
+    expect(when).toHaveTextContent(/Requested/);
+    expect(when).toHaveTextContent('01/09/2026');
+    expect(within(when).queryByRole('link')).toBeNull();
+
+    // A gift has no dates, and shows the dash (`myBookings.noDates`) in the same cell.
+    const [, giftWhen] = within(
+      screen.getByRole('link', { name: 'Tent' }).closest('tr')
+    ).getAllByRole('cell');
+    expect(giftWhen).toHaveTextContent('—');
+  });
+
+  test('the lines of a cell touch: they carry the shared class and no margin of their own', async () => {
+    // The look of CA's screenshot (2026-10-03) is `.table-cell-lines p { margin: 0 }`,
+    // pinned in `tableCellStyles.test.js`; an inline margin on a line would beat it.
+    mockList([booking({ owner_name: 'Lala' })]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const cells = within(
+      screen.getByRole('link', { name: 'Cordless drill' }).closest('tr')
+    ).getAllByRole('cell');
+    for (const cell of cells.slice(0, 2)) {
+      expect(cell.querySelector('.table-cell-lines')).not.toBeNull();
+      for (const line of cell.querySelectorAll('p')) {
+        expect(line.getAttribute('style')).toBeNull();
+      }
+    }
+  });
+
   test('the type and the state sit in a status cell that sizes each label to its word', async () => {
     // CA, 2026-10-03: both labels filled the column (a bare flex column stretches
     // its children), and since Tag centres and StatusLabel does not, one read

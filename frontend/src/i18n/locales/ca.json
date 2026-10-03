@@ -558,6 +558,7 @@
   "myBookings": {
     "pageTitle": "Les meves sol·licituds",
     "colThing": "Cosa",
+    "colWhen": "Quan",
     "colStatus": "Estat",
     "noBookings": "Encara no tens sol·licituds ni reserves.",
     "goHome": "Explorar col·leccions",
@@ -587,7 +588,7 @@
     "waitingOnYou": "Esperant la teva resposta",
     "noPending": "Ara mateix no hi ha res esperant-te.",
     "noBookings": "Encara ningú no t'ha demanat res.",
-    "colRequest": "Sol·licitud",
+    "colWhoWhen": "Qui i quan",
     "requestedBy": "La demana {{name}}",
     "acceptTooltip": "Confirmar aquesta sol·licitud",
     "rejectTooltip": "Rebutjar aquesta sol·licitud",
