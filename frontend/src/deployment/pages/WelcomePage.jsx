@@ -130,10 +130,10 @@ export default function WelcomePage() {
             ) : (
               <>
                 <ButtonLink to="/popin" style={btnStyle}>
-                  {t('login.popIn')}
+                  {t('welcome.newHereCta')}
                 </ButtonLink>
                 <ButtonLink to="/login" style={btnSecondaryStyle}>
-                  {t('login.signIn')}
+                  {t('welcome.haveAccountCta')}
                 </ButtonLink>
               </>
             )}

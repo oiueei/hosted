@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
@@ -67,6 +67,24 @@ describe('WelcomePage — readable without an account', () => {
     expect(hrefs).not.toContain('/collections/new');
     expect(hrefs).not.toContain('/me/edit');
     expect(hrefs).not.toContain('/');
+  });
+
+  test('the hero says "New here?" for the primary door and "Already have an account?" for the secondary', async () => {
+    // CA, 2026-10-03: the hero's two buttons for a stranger read as a question
+    // and its answer — new here, or already in — each to its own door.
+    apiFetch.mockResolvedValue({ ok: false, status: 401 });
+
+    const { container } = renderWelcome();
+    await screen.findByText(/Welcome to OIUEEI/i);
+
+    const hero = within(container.querySelector('.form-hero'));
+    const newHere = hero.getByRole('link', { name: 'New here?' });
+    const haveAccount = hero.getByRole('link', { name: 'Already have an account?' });
+    expect(newHere).toHaveAttribute('href', '/popin');
+    expect(haveAccount).toHaveAttribute('href', '/login');
+    // And which is which: the primary is the theeeme's fill, the secondary white.
+    expect(newHere.style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
+    expect(haveAccount.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
   });
 
   // This page is deployment-only, so the invariant wired into `smoke.test.jsx`

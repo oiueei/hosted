@@ -46,6 +46,10 @@ export const deploymentI18n = {
         'The code is public and you can read all of it; this commitment is <1>written into our design rules</1>. OIUEEI is in alpha — much is still unfinished — but this is not the fine print, it is the starting point.',
       createCollection: 'Create collection',
       editProfile: 'Edit profile',
+      // The two buttons of the hero for someone with no session (CA, 2026-10-03):
+      // the primary opens the door, the secondary goes back to /login.
+      newHereCta: 'New here?',
+      haveAccountCta: 'Already have an account?',
       whoUsesTitle: 'Who uses OIUEEI?',
       exampleIntro:
         "To show you how it works, we've shared a few example collections with you. Meet the people below and step into their collections — read on and you'll get the idea.",
@@ -123,6 +127,8 @@ export const deploymentI18n = {
         'El código es público y puedes leerlo todo; este compromiso está <1>escrito en nuestras reglas de diseño</1>. OIUEEI está en fase alfa —queda mucho por pulir— pero esto no es la letra pequeña: es el punto de partida.',
       createCollection: 'Crear colección',
       editProfile: 'Editar perfil',
+      newHereCta: '¿Nuevo por aquí?',
+      haveAccountCta: '¿Ya tienes cuenta?',
       whoUsesTitle: '¿Quién usa OIUEEI?',
       exampleIntro:
         'Para enseñarte cómo funciona, te hemos compartido algunas colecciones de ejemplo. Conoce a las personas de abajo y entra en sus colecciones — sigue leyendo y lo entenderás.',
@@ -201,6 +207,8 @@ export const deploymentI18n = {
         'El codi és públic i pots llegir-lo tot; aquest compromís està <1>escrit a les nostres regles de disseny</1>. OIUEEI és en fase alfa —queda molt per polir— però això no és la lletra petita: és el punt de partida.',
       createCollection: 'Crear col·lecció',
       editProfile: 'Editar perfil',
+      newHereCta: 'Nou per aquí?',
+      haveAccountCta: 'Ja tens un compte?',
       whoUsesTitle: 'Qui fa servir OIUEEI?',
       exampleIntro:
         "Per ensenyar-te com funciona, t'hem compartit algunes col·leccions d'exemple. Coneix les persones de sota i entra a les seves col·leccions — continua llegint i ho entendràs.",
