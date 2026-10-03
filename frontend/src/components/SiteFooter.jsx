@@ -4,8 +4,10 @@ import useTheeeme from '../hooks/useTheeeme';
 import { aboutPath } from '../deployment';
 
 /**
- * The one-line colophon under every page (i14): "Made with ♥︎ in Zona Franca,
- * Barcelona…". Global (mounted once in App), painted with the viewer's theeeme
+ * The colophon under every page (i14): "Made with ♥︎ in Zona Franca,
+ * Barcelona…" after the two doors below. From 768px it is **one line** — "What
+ * OIUEEI is · Privacy & legal · Made with ♥︎ in …" — and under 768px the two lines
+ * it always was, the doors over the text (CA, 2026-10-03). Global (mounted once in App), painted with the viewer's theeeme
  * `color_02` — the same token every `.form-page` uses as its background — so
  * there is no colour seam under the 100vh page. `useLocation()` re-renders it
  * on navigation, which re-reads the theeeme after a login/profile change (the
@@ -25,6 +27,13 @@ import { aboutPath } from '../deployment';
  * The about link is conditional because upstream there is no such page —
  * `/welcome` left with the demo, and what OIUEEI is gets told in the README.
  * A deployment that has one supplies it through `frontend/src/deployment/`.
+ *
+ * **The one line.** The `<nav>` keeps only the links (it is a landmark) and the
+ * text stays outside it; between them is a separator `·`, `aria-hidden` like the
+ * one between the links and spaced the same, that App.css shows only from 768px.
+ * Below that it is `display: none`, because on two lines it would hang at the end
+ * of the first one. Upstream, with no about link, the line is "Privacy & legal ·
+ * Made with ♥︎ in …".
  */
 export default function SiteFooter() {
   useLocation();
@@ -48,6 +57,9 @@ export default function SiteFooter() {
         )}
         <Link to="/legal">{t('footer.legal')}</Link>
       </nav>
+      <span className="site-footer-sep" aria-hidden="true">
+        {' · '}
+      </span>
       {t('footer.madeIn')}
     </footer>
   );

@@ -491,6 +491,40 @@ body {
   color: inherit;
 }
 
+/* The separator between the doors and the colophon text (CA, 2026-10-03). It
+   exists for the one-line footer, so it is hidden here — on two lines it would
+   hang at the end of the first — and shown from 768px below. The padding is the
+   next link's own, which the separator between two links gets for free from
+   that link; `white-space: pre` keeps the spaces around the dot, which a flex
+   item would otherwise collapse. */
+.site-footer-sep {
+  display: none;
+  white-space: pre;
+  padding-right: var(--spacing-2-xs);
+}
+
+/* From 768px the colophon is ONE line: the doors, a dot, the text — centred, and
+   aligned on their middles because the links are 44px tall and the text is not.
+   Under 768px nothing here applies and it is the two lines it always was. The
+   nav loses its bottom margin (that was the gap between the two lines), and
+   `wrap` is only the way out of a language long enough not to fit. */
+@media (min-width: 768px) {
+  .site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .site-footer-links {
+    margin-bottom: 0;
+  }
+
+  .site-footer-sep {
+    display: inline;
+  }
+}
+
 .form-actions {
   padding: var(--spacing-l) 0;
 }

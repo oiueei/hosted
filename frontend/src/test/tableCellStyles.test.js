@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { describe, test, expect } from 'vitest';
+import { declarations } from './cssRules';
 
 /**
  * The contract of the table-cell classes in App.css (CA, 2026-10-03). jsdom does no
@@ -11,28 +11,6 @@ import { describe, test, expect } from 'vitest';
  *    column every child stretched to the column's width, so both labels filled it
  *    and `Tag`'s centred text and `StatusLabel`'s left text disagreed on screen.
  */
-const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-
-/** The declaration blocks of every rule whose selector list names `selector`. */
-function rulesFor(selector) {
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-    .filter(([, list]) =>
-      list
-        .split(',')
-        .map((s) => s.trim())
-        .includes(selector)
-    )
-    .map(([, , body]) => body);
-}
-
-const declared = (body, property) =>
-  new RegExp(`(?:^|[;\\s])${property}\\s*:\\s*([^;]+)`).exec(body)?.[1]?.trim();
-
-const declarations = (selector, property) =>
-  rulesFor(selector)
-    .map((body) => declared(body, property))
-    .filter((value) => value !== undefined);
-
 describe('.table-status-cell', () => {
   test('stacks its labels in a column, each as wide as its own word', () => {
     expect(declarations('.table-status-cell', 'display')).toEqual(['flex']);
