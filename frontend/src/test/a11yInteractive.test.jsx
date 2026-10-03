@@ -211,6 +211,39 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
 
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
+
+  // A member's row: the primary "Invite someone" toggle beside "Add thing", and
+  // the recommend form it opens underneath. The form only exists after a click
+  // and the toggle carries `aria-expanded` / `aria-controls`, which is what axe
+  // checks the pair for; the smoke suite renders neither.
+  test('the opened recommend form, with its member row, has no axe violations', async () => {
+    const original = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation((url, opts) =>
+      /\/collections\/[^/]+\//.test(url)
+        ? Promise.resolve(
+            mockResponse({
+              ...MOCK_COLLECTION,
+              owner: 'OTHER1',
+              is_curator: false,
+              is_member: true,
+              mode: 'COMMUNITY',
+              allow_member_proposals: true,
+            })
+          )
+        : original(url, opts)
+    );
+    try {
+      const { container } = renderCollection();
+      await screen.findByText('Test Thing');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Invite someone' }));
+      await screen.findByLabelText(/Their email/i);
+
+      expect(await axe(container, NO_REGION)).toHaveNoViolations();
+    } finally {
+      apiFetch.mockImplementation(original);
+    }
+  });
 });
 
 /**

@@ -860,8 +860,8 @@ body :focus-visible {
 /* A <button> that acts rather than navigates, styled as the surrounding text so
    it reads as one sentence — the same quiet register as .invite-nudge. It was
    the member's per-collection digest switch (removed from the hero, CA,
-   2026-09-21); RecommendGuest's "recommend someone" opener is what still uses
-   it, hence the name that no longer says what it is. */
+   2026-09-21); SharePage's "use another email instead" is what still uses it,
+   hence the name that no longer says what it is. */
 .digest-pref-button {
   padding: 0;
   border: none;
@@ -1922,14 +1922,8 @@ caption:has(> .sr-only:only-child) {
   color: var(--color-black-70);
 }
 
-/* The member's own "recommend someone" affordance in the collection hero —
-   quiet by default, one line, expanding into the form only when used. */
-.recommend-open {
-  margin-top: var(--spacing-2-xs);
-  font-size: var(--fontsize-body-s);
-  color: var(--hero-text-color, var(--color-black-90));
-}
-
+/* The form a member's "Invite someone" button opens in the collection hero
+   (CA, 2026-10-03), under the button row. */
 .recommend-box {
   margin-top: var(--spacing-s);
   padding: var(--spacing-s) var(--spacing-m);

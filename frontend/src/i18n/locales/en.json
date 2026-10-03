@@ -639,7 +639,7 @@
     "caption": "Members of this collection"
   },
   "recommend": {
-    "openLink": "Know someone who'd fit? Recommend them →",
+    "openButton": "Invite someone",
     "intro": "{{owner}} decides — nothing is sent to them until they say yes.",
     "emailLabel": "Their email",
     "emailPlaceholder": "them@email.com",

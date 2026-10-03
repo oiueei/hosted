@@ -6,27 +6,32 @@ import useTheeeme from '../hooks/useTheeeme';
 import StatusRegion from './StatusRegion';
 
 /**
- * A member recommending someone to the collection's owner.
+ * The form a member fills in to recommend someone to the collection.
  *
- * Members could not bring anyone in at all: every new person cost an owner
+ * Members could not bring anyone in at all: every new person cost a curator
  * action, so a group grew only as fast as one person worked at it. This is the
- * other half — but the owner is not a bottleneck to route around. The group may
- * be closed, may run on subscriptions, papers or rules of admission, so the
- * owner still decides and **nothing reaches the recommended person until they
- * do**. The copy says so plainly: a member who thinks they just sent an
- * invitation would be misled.
+ * other half — but whoever runs the group is not a bottleneck to route around.
+ * The group may be closed, may run on subscriptions, papers or rules of
+ * admission, so the curators still decide and **nothing reaches the recommended
+ * person until they do**. The copy says so plainly: a member who thinks they
+ * just sent an invitation would be misled.
  *
- * "Recommend", not "invite" or "propose": the verb carries that you are putting
- * your name behind this person — which the invitation itself will say, if the
- * owner agrees.
+ * The button that opens this says "Invite someone" (CA, 2026-10-03) — it is the
+ * word a member looks for — while everything in here says "Recommend" and that
+ * the decision is not theirs, which is what keeps that promise honest: the verb
+ * carries that you are putting your name behind this person, which the
+ * invitation itself will say, if a curator agrees. "Recommend", not "propose".
  *
- * Collapsed behind its own button so a group that never uses it costs one quiet
- * line in the hero (DESIGN §3).
+ * It paints the form and nothing else. The toggle lives with `CollectionPage`'s
+ * member row, because it has to sit beside "Add thing" in a row this component
+ * cannot see: the page owns whether the form is open (and mounts it only then,
+ * so closing it also drops a half-typed draft and a stale confirmation) and
+ * passes `onClose` for the form's own "Close", which hands the focus back to
+ * that button. `id` is what the button's `aria-controls` names.
  */
-export default function RecommendGuest({ collectionCode, ownerName }) {
+export default function RecommendGuest({ id, collectionCode, ownerName, onClose }) {
   const { t } = useTranslation();
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
-  const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
@@ -56,18 +61,8 @@ export default function RecommendGuest({ collectionCode, ownerName }) {
     setSending(false);
   };
 
-  if (!open) {
-    return (
-      <p className="recommend-open">
-        <button type="button" className="digest-pref-button" onClick={() => setOpen(true)}>
-          {t('recommend.openLink')}
-        </button>
-      </p>
-    );
-  }
-
   return (
-    <div className="recommend-box">
+    <div id={id} className="recommend-box">
       <p className="recommend-intro">{t('recommend.intro', { owner: ownerName })}</p>
       <StatusRegion>
         {result && (
@@ -102,14 +97,7 @@ export default function RecommendGuest({ collectionCode, ownerName }) {
           <Button type="submit" disabled={sending || !email.trim()} style={btnStyle}>
             {sending ? t('common.sending') : t('recommend.send')}
           </Button>
-          <Button
-            variant="secondary"
-            style={btnSecondaryStyle}
-            onClick={() => {
-              setOpen(false);
-              setResult(null);
-            }}
-          >
+          <Button variant="secondary" style={btnSecondaryStyle} onClick={onClose}>
             {t('common.close')}
           </Button>
         </div>

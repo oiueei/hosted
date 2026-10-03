@@ -633,7 +633,7 @@
     "caption": "Membres d'aquesta col·lecció"
   },
   "recommend": {
-    "openLink": "Coneixes algú que hi encaixi? Recomana'l →",
+    "openButton": "Convidar algú",
     "intro": "Decideix {{owner}}: no se li envia res fins que digui que sí.",
     "emailLabel": "El seu correu",
     "emailPlaceholder": "algu@correu.com",

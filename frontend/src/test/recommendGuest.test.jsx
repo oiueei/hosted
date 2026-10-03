@@ -15,10 +15,17 @@ import RecommendGuest from '../components/RecommendGuest';
 // invited anybody. The owner decides, and until they do, the person named here
 // is not contacted and does not know they were suggested. A member who walked
 // away thinking an invitation had gone out would be misled by us.
-function renderRecommend() {
+// The component paints the form alone: the button that opens it is the page's
+// (`CollectionPage`'s member row, `collectionPage` tests), so here it is open.
+function renderRecommend(onClose = vi.fn()) {
   return render(
     <MemoryRouter>
-      <RecommendGuest collectionCode="COL001" ownerName="Lala" />
+      <RecommendGuest
+        id="recommend-box"
+        collectionCode="COL001"
+        ownerName="Lala"
+        onClose={onClose}
+      />
     </MemoryRouter>
   );
 }
@@ -32,7 +39,6 @@ describe('RecommendGuest', () => {
 
   test('the form says the owner decides before anything is sent', async () => {
     renderRecommend();
-    fireEvent.click(screen.getByRole('button', { name: /Recommend them/i }));
 
     expect(screen.getByText(/Lala decides/)).toBeInTheDocument();
     expect(screen.getByText(/nothing is sent to them until they say yes/i)).toBeInTheDocument();
@@ -43,7 +49,6 @@ describe('RecommendGuest', () => {
     // "Anything {{owner}} should know?" verbatim because the t() call was missing
     // the param that the helper text right beside it already passed.
     renderRecommend();
-    fireEvent.click(screen.getByRole('button', { name: /Recommend them/i }));
 
     const noteField = screen.getByLabelText(/Anything Lala should know/i);
     expect(noteField).toBeInTheDocument();
@@ -53,7 +58,6 @@ describe('RecommendGuest', () => {
   test('recommending posts the email and the note to the propose endpoint', async () => {
     apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     renderRecommend();
-    fireEvent.click(screen.getByRole('button', { name: /Recommend them/i }));
 
     fireEvent.change(screen.getByLabelText(/Their email/i), {
       target: { value: 'lili@example.com' },
@@ -75,7 +79,6 @@ describe('RecommendGuest', () => {
   test('the confirmation does not claim an invitation was sent', async () => {
     apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     renderRecommend();
-    fireEvent.click(screen.getByRole('button', { name: /Recommend them/i }));
     fireEvent.change(screen.getByLabelText(/Their email/i), {
       target: { value: 'lili@example.com' },
     });
@@ -88,10 +91,21 @@ describe('RecommendGuest', () => {
     expect(confirmation.textContent).toMatch(/if they agree/i);
   });
 
+  test('"Close" hands back to the page, and the form is the element the button controls', () => {
+    const onClose = vi.fn();
+    const { container } = renderRecommend(onClose);
+
+    expect(container.querySelector('#recommend-box')).toContainElement(
+      screen.getByLabelText(/Their email/i)
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   test('a refusal from the server is shown rather than swallowed', async () => {
     apiFetch.mockResolvedValue({ ok: false, status: 400, json: () => Promise.resolve({}) });
     renderRecommend();
-    fireEvent.click(screen.getByRole('button', { name: /Recommend them/i }));
     fireEvent.change(screen.getByLabelText(/Their email/i), {
       target: { value: 'lili@example.com' },
     });

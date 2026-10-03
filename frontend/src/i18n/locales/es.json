@@ -633,7 +633,7 @@
     "caption": "Miembros de esta colección"
   },
   "recommend": {
-    "openLink": "¿Conoces a alguien que encaje? Recomiéndale →",
+    "openButton": "Invitar a alguien",
     "intro": "Decide {{owner}}: no se le envía nada hasta que diga que sí.",
     "emailLabel": "Su correo",
     "emailPlaceholder": "alguien@correo.com",

@@ -473,11 +473,126 @@ describe('CollectionPage member hero', () => {
     const { container } = renderCollection();
     // A member-only hero control that stayed — so this is a page where the
     // leave link *would* render, not one where the member section is missing.
-    await screen.findByRole('button', { name: /Recommend them/ });
+    await screen.findByRole('button', { name: 'Invite someone' });
 
     expect(container.querySelector('a[href="/collections/COL001/leave"]')).toBeNull();
     expect(screen.queryByRole('link', { name: /leave the group/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /leave the group/i })).toBeNull();
+  });
+});
+
+/**
+ * A member's two hero controls, in one row (CA, 2026-10-03): "Invite someone"
+ * first, primary, and "Add thing" after it, secondary — each on its own
+ * condition, no row when neither applies. "Invite someone" opens the recommend
+ * form *below* the row and stays on screen while it is open, so the same button
+ * closes it. The form itself still says "Recommend" and that whoever runs the
+ * group decides (`recommendGuest.test.jsx`): the button outside promises less
+ * than the word on it, and the form is what keeps the promise honest.
+ */
+describe('CollectionPage — the member row: "Invite someone" and "Add thing"', () => {
+  const MEMBER = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    owner: 'OTHER1',
+    is_member: true,
+    is_curator: false,
+    mode: 'PROPRIETARY',
+    allow_member_proposals: true,
+  };
+
+  function renderAs(collection) {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  const invite = () => screen.getByRole('button', { name: 'Invite someone' });
+  const rowOf = (el) => [...el.closest('.button-row-wide').querySelectorAll('a, button')];
+
+  test('the button opens the form below the row, stays there, and closes it again', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+    expect(invite()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+
+    fireEvent.click(invite());
+
+    // Still on the page — the form did not replace it — and now says what it controls.
+    expect(invite()).toHaveAttribute('aria-expanded', 'true');
+    const form = document.getElementById(invite().getAttribute('aria-controls'));
+    expect(form).toContainElement(screen.getByLabelText(/Their email/i));
+    // Below the row, not inside it.
+    expect(invite().closest('.button-row-wide')).not.toContainElement(form);
+
+    fireEvent.click(invite());
+
+    expect(invite()).toHaveAttribute('aria-expanded', 'false');
+    expect(invite()).not.toHaveAttribute('aria-controls');
+    expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+  });
+
+  test('"Close" inside the form closes it and leaves the focus on the button', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+    fireEvent.click(invite());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+    expect(invite()).toHaveFocus();
+  });
+
+  test('a COMMUNITY group with recommendations: "Invite someone" before "Add thing", in one row', async () => {
+    renderAs({ ...MEMBER, mode: 'COMMUNITY' });
+    await screen.findByRole('button', { name: 'Invite someone' });
+
+    const row = rowOf(invite());
+    expect(row.map((el) => el.textContent.trim())).toEqual(['Invite someone', 'Add thing']);
+    expect(row[1]).toHaveAttribute('href', '/collections/COL001/add');
+  });
+
+  test('a PROPRIETARY group with recommendations: only "Invite someone"', async () => {
+    renderAs(MEMBER);
+    await screen.findByRole('button', { name: 'Invite someone' });
+
+    expect(rowOf(invite()).map((el) => el.textContent.trim())).toEqual(['Invite someone']);
+    expect(screen.queryByRole('link', { name: 'Add thing' })).toBeNull();
+  });
+
+  test('a COMMUNITY group without recommendations: only "Add thing"', async () => {
+    renderAs({ ...MEMBER, mode: 'COMMUNITY', allow_member_proposals: false });
+    const add = await screen.findByRole('link', { name: 'Add thing' });
+
+    expect(rowOf(add).map((el) => el.textContent.trim())).toEqual(['Add thing']);
+    expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
+  });
+
+  test('a PROPRIETARY group without recommendations: no row at all', async () => {
+    const { container } = renderAs({ ...MEMBER, allow_member_proposals: false });
+    await screen.findByText('Things from the kitchen');
+
+    expect(container.querySelector('.button-row-wide')).toBeNull();
+  });
+
+  test('whoever runs the group sees neither here — theirs are in the collection menu', async () => {
+    renderAs({
+      ...MEMBER,
+      mode: 'COMMUNITY',
+      is_curator: true,
+      is_member: false,
+    });
+    await screen.findByRole('link', { name: 'Edit collection' });
+
+    expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Add thing' })).toBeNull();
   });
 });
 
