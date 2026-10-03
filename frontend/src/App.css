@@ -927,9 +927,9 @@ body :focus-visible {
   opacity: 0.6;
 }
 
-/* Quiet "Report" action in the ThingPage footer — deliberately understated so
-   it doesn't compete with the primary actions above it. The confirm expands
-   inline below the button (no modal). */
+/* The "Report" action in the ThingPage footer: a secondary button like the app's
+   others (CA, 2026-10-03), centred under the page. The confirm expands inline
+   below it (no modal). */
 .thing-report-footer {
   display: flex;
   flex-direction: column;
