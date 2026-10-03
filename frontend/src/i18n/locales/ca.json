@@ -1,6 +1,6 @@
 {
   "stats": {
-    "downloadStats": "Baixar estadístiques (CSV)",
+    "downloadStats": "Descarregar les estadístiques (CSV)",
     "downloadStatsError": "No s'han pogut baixar les estadístiques."
   },
   "collectionExport": {
@@ -10,7 +10,7 @@
     "error": "No hem pogut preparar l'exportació. Torna-ho a provar d'aquí un moment."
   },
   "calendarExport": {
-    "downloadButton": "Descarregar el calendari",
+    "downloadButton": "Descarregar el calendari (ICS)",
     "downloading": "Preparant el fitxer…",
     "notice": "Tots els préstecs, lloguers i reserves pròxims, en un fitxer de calendari (.ics). Obre'l o importa'l a Google Calendar, Apple Calendar o Outlook; importar-lo un altre cop no duplica res, i una reserva cancel·lada des d'aleshores hi va marcada com a cancel·lada.",
     "done": "{{count}} esdeveniment(s) — mira les teves baixades.",
@@ -85,6 +85,9 @@
   },
   "accountMenu": {
     "label": "El teu compte"
+  },
+  "collectionMenu": {
+    "label": "Opcions de la col·lecció"
   },
   "common": {
     "skipToContent": "Vés al contingut",

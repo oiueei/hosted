@@ -259,7 +259,7 @@ describe('EditCollectionPage — the stats download', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     await waitFor(() => expect(click).toHaveBeenCalled());
     expect(URL.createObjectURL).toHaveBeenCalled();
@@ -274,7 +274,7 @@ describe('EditCollectionPage — the stats download', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     expect(await screen.findByText("Couldn't download the stats.")).toBeInTheDocument();
   });
@@ -295,11 +295,11 @@ describe('EditCollectionPage — the stats download', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
     await screen.findByText("Couldn't download the stats.");
 
     failing = false;
-    fireEvent.click(screen.getByRole('button', { name: 'Download stats (CSV)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     await waitFor(() => expect(screen.queryByText("Couldn't download the stats.")).toBeNull());
   });

@@ -31,9 +31,10 @@ const PANEL_ID = 'account-menu-panel';
  * navigation between actions; this is `Tab`-navigable links, so the native
  * semantics already say what it is.
  *
- * Rendered next to `ContactCorner` (and, on `CollectionPage`, `ShareCollectionMenu`)
- * inside the shared `.hero-corners` flex row — see `PageLayout` and the eight
- * manual-hero pages for where. **Session-gated, not page-gated**: it reads
+ * Rendered next to `ContactCorner` (and, on `CollectionPage`,
+ * `CollectionMenu` and `ShareCollectionMenu`) inside the shared
+ * `.hero-corners` flex row — see `PageLayout` and the eight manual-hero pages
+ * for where. **Session-gated, not page-gated**: it reads
  * `userCode` itself and renders nothing for a signed-out visitor, so it needs
  * no prop from any of its many call sites.
  */

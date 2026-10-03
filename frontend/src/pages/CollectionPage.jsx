@@ -19,10 +19,8 @@ import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
-import CalendarExportButton, {
-  CalendarExportStatus,
-  useCalendarExport,
-} from '../components/CalendarExportButton';
+import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
+import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { DATE_TYPES } from '../constants/things';
 
@@ -62,9 +60,10 @@ export default function CollectionPage() {
   const L = useLocalized();
   const headline = L(collection?.headline);
   useCollectionLanguage(collection?.language, [collection?.headline, collection?.description]);
-  // Called unconditionally (it is a hook): non-curators simply never fire it,
-  // the same way they never see the button.
-  const calendarExport = useCalendarExport(code);
+  // Called unconditionally (it is a hook): non-curators simply never see the
+  // menu that offers it. One call owns the calendar, stats and JSON
+  // downloads, and the page hands it to the menu and to the status zone.
+  const downloads = useCollectionDownloads(code);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })
@@ -303,6 +302,11 @@ export default function CollectionPage() {
           >
             <span className="hero-corners">
               <AccountMenu />
+              {/* The group's own options (CA, 2026-10-03): curators only,
+                  between the account menu and the share one. */}
+              {isCurator && (
+                <CollectionMenu code={code} hasDateThings={hasDateThings} downloads={downloads} />
+              )}
               {canShare && (
                 <ShareCollectionMenu
                   collectionCode={code}
@@ -418,27 +422,16 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
+                {/* The row holds "Edit collection" alone (CA, 2026-10-03):
+                    "Add thing", "Manage members" and the three downloads live
+                    in the collection menu in the corner; the outcome of a
+                    download lands right under the row. */}
                 <div className="button-row-wide">
                   <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
                     {t('collectionPage.editCollection')}
                   </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
-                    {t('collectionPage.addThing')}
-                  </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
-                    {t('collectionPage.manageGuests')}
-                  </ButtonLink>
-                  {/* The group's schedule, taken where the group is managed
-                      (CA, 2026-09-28) — the same download the edit page
-                      offers at its foot. Curators only (members and passers-by
-                      have nothing to import), and only where a date-based
-                      thing exists to fill the file. The row holds buttons
-                      alone; the outcome message lands underneath it. */}
-                  {hasDateThings && (
-                    <CalendarExportButton calendar={calendarExport} style={btnSecondaryStyle} />
-                  )}
                 </div>
-                {hasDateThings && <CalendarExportStatus calendar={calendarExport} />}
+                <CollectionDownloadsStatus downloads={downloads} />
                 <div className="spacer-s"></div>
                 {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
                 showing but hasn't invited anyone — a quiet one-line pointer, no

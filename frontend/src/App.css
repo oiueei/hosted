@@ -44,13 +44,13 @@ body {
 .form-hero-content {
   /* How much of the content column's right edge the icon corner (.hero-corners)
      can take: the widest it gets is a curator's hero on CollectionPage — account
-     menu, share menu, contact link — which is 3 controls of 44px (.contact-corner,
-     .account-menu-trigger and .share-corner all declare that) and the 2 gaps
-     between them (.hero-corners' `gap`). A hero with fewer icons reserves the same
-     width: the back link cannot know which ones its page will render. Pinned in
-     test/heroCornerLayout.test.jsx, which recomputes it from the DOM and these
-     rules. */
-  --hero-corners-width: calc(3 * 44px + 2 * var(--spacing-2-xs));
+     menu, collection menu, share menu, contact link — which is 4 controls of 44px
+     (.contact-corner, .account-menu-trigger, .collection-menu-trigger and
+     .share-corner all declare that) and the 3 gaps between them (.hero-corners'
+     `gap`). A hero with fewer icons reserves the same width: the back link cannot
+     know which ones its page will render. Pinned in test/heroCornerLayout.test.jsx,
+     which recomputes it from the DOM and these rules. */
+  --hero-corners-width: calc(4 * 44px + 3 * var(--spacing-2-xs));
   max-width: 1248px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-s) var(--spacing-xl);
@@ -89,21 +89,22 @@ body {
   height: 60px;
 }
 
-/* The hero's top-right icon row (i8, S9, and the account menu, 2026-09-28):
-   ContactCorner, and where they apply AccountMenu and ShareCollectionMenu,
-   sit as flex items in ONE anchored row instead of each computing its own
-   `right:` offset. That is what lets the row close its own gaps: a member's
-   hero (no ShareCollectionMenu) or an anonymous one (no AccountMenu either)
-   just has fewer children, and `gap` never reserves space for one that isn't
-   there — the old per-icon offsets had to know the exact set of icons any
-   other icon might share the corner with, which the account menu's own
-   session-gating would have broken (`.contact-corner`'s offset assumed
-   ShareCollectionMenu was the only possible neighbour). Anchored to the right
-   edge of the hero's CONTENT column, not the raw viewport edge (the
-   "(100% - min(100%, 1248px)) / 2" centring math every hero uses), and sized
-   to its content (`inline-flex`) so that anchor is the row's own right edge,
-   not the hero's full width. Visual order follows DOM order left-to-right:
-   account · share · contact, contact rightmost as it always was. */
+/* The hero's top-right icon row (i8, S9, the account menu 2026-09-28 and the
+   collection menu 2026-10-03): ContactCorner, and where they apply
+   AccountMenu, CollectionMenu and ShareCollectionMenu, sit as flex items in
+   ONE anchored row instead of each computing its own `right:` offset. That
+   is what lets the row close its own gaps: a member's hero (no collection or
+   share menu) or an anonymous one (no account menu either) just has fewer
+   children, and `gap` never reserves space for one that isn't there — the old
+   per-icon offsets had to know the exact set of icons any other icon might
+   share the corner with, which the account menu's own session-gating would
+   have broken (`.contact-corner`'s offset assumed ShareCollectionMenu was
+   the only possible neighbour). Anchored to the right edge of the hero's
+   CONTENT column, not the raw viewport edge (the "(100% - min(100%, 1248px))
+   / 2" centring math every hero uses), and sized to its content
+   (`inline-flex`) so that anchor is the row's own right edge, not the hero's
+   full width. Visual order follows DOM order left-to-right: account ·
+   collection · share · contact, contact rightmost as it always was. */
 .hero-corners {
   position: absolute;
   top: calc(var(--spacing-l) - 2px);
@@ -125,24 +126,25 @@ body {
   color: var(--hero-text-color, var(--color-black-90));
 }
 
-/* Account menu (2026-09-28): "My profile" / "Edit profile" / "Create
-   collection" / "My requests" / "Requests to me" / "Log out", one click away
-   from every hero a signed-in visitor sees — including a collection whose
-   owner set a `home_page`, where the hero's own "Home" link leaves OIUEEI
-   entirely and this was otherwise the only way back. A plain disclosure
-   (button + `<nav>`), not ShareCollectionMenu's HDS-Select trick — every
-   option here is a route, not an action.
+/* Account menu (2026-09-28): "My profile" / "My requests" / "Requests to me"
+   / "Log out", one click away from every hero a signed-in visitor sees —
+   including a collection whose owner set a `home_page`, where the hero's own
+   "Home" link leaves OIUEEI entirely and this was otherwise the only way
+   back. A plain disclosure (button + `<nav>`), not ShareCollectionMenu's
+   HDS-Select trick — every option here is a route, not an action.
 
-   `.account-menu` deliberately positions nothing. It used to be `position:
+   `.account-menu` — and `.collection-menu` beside it (2026-10-03) —
+   deliberately position nothing. `.account-menu` used to be `position:
    relative`, which anchored the panel to its own trigger — and for a curator
-   on CollectionPage that trigger is the FIRST of three, so at 320px its right
-   edge sits ~208px in while "Les meves sol·licituds" plus padding needs ~217px:
-   the panel ran off the left of the screen. With no positioned ancestor of its
-   own, the panel anchors to `.hero-corners` (absolutely positioned, above), so
-   `right: 0` is the edge of the content column whatever the row holds and the
-   `max-width` below always fits. */
+   on CollectionPage that trigger is the FIRST of the row, so at 320px its
+   right edge sits well in while "Les meves sol·licituds" plus padding needs
+   more: the panel ran off the left of the screen. With no positioned
+   ancestor of its own, the panel anchors to `.hero-corners` (absolutely
+   positioned, above), so `right: 0` is the edge of the content column
+   whatever the row holds and the `max-width` below always fits. */
 
-.account-menu-trigger {
+.account-menu-trigger,
+.collection-menu-trigger {
   width: 44px;
   height: 44px;
   display: flex;
@@ -155,7 +157,8 @@ body {
   cursor: pointer;
 }
 
-.account-menu-panel {
+.account-menu-panel,
+.collection-menu-panel {
   position: absolute;
   top: calc(100% + var(--spacing-2-xs));
   right: 0;
@@ -175,11 +178,37 @@ body {
   color: var(--color-black-90);
 }
 
-.account-menu-panel a {
+.account-menu-panel a,
+.collection-menu-panel a {
   display: block;
   padding: var(--spacing-2-xs) var(--spacing-s);
   color: inherit;
   text-decoration: none;
+}
+
+/* The collection menu's downloads are buttons next to the links; they take
+   the links' own look, which the `a` rules above do not reach. */
+.collection-menu-panel button {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-2-xs) var(--spacing-s);
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.collection-menu-panel button:hover {
+  background-color: var(--color-black-5);
+}
+
+/* A download in flight disables its own entry; it must not read as still
+   pressable. */
+.collection-menu-panel button[disabled] {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /* Hover only, deliberately no :focus-visible selector here: the global
@@ -187,11 +216,13 @@ body {
    focus, and paletteContrast.test.js finds that rule by the FIRST
    `:focus-visible` occurrence in this file — a second one earlier would
    shadow it there without changing anything visible. */
-.account-menu-panel a:hover {
+.account-menu-panel a:hover,
+.collection-menu-panel a:hover {
   background-color: var(--color-black-5);
 }
 
-.account-menu-divider {
+.account-menu-divider,
+.collection-menu-divider {
   border: none;
   border-top: 1px solid var(--color-black-20);
   margin: var(--spacing-2-xs) 0;

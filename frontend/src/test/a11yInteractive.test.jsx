@@ -194,6 +194,23 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     await waitFor(() => expect(document.querySelector('.share-qr-code')).toBeTruthy());
     expect(await axe(document.body, NO_REGION)).toHaveNoViolations();
   });
+
+  // The collection menu's panel mixes links with the three download buttons,
+  // so unlike the account menu's <nav> it is a plain <div> — exactly the kind
+  // of shape axe has opinions about (an unnamed labelled div, buttons without
+  // visible text). Opened, not shut, is the state that only exists after a
+  // click; the smoke suite renders collections empty and never opens it.
+  test('the opened collection menu has no axe violations', async () => {
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
+    // GIFT-only fixture: no calendar entry, so the stats button is the
+    // panel's mark of being open.
+    await screen.findByRole('button', { name: /Download the stats/ });
+
+    expect(await axe(container, NO_REGION)).toHaveNoViolations();
+  });
 });
 
 /**

@@ -1,6 +1,6 @@
 {
   "stats": {
-    "downloadStats": "Download stats (CSV)",
+    "downloadStats": "Download the stats (CSV)",
     "downloadStatsError": "Couldn't download the stats."
   },
   "collectionExport": {
@@ -10,7 +10,7 @@
     "error": "Couldn't build the export. Please try again in a moment."
   },
   "calendarExport": {
-    "downloadButton": "Download the calendar",
+    "downloadButton": "Download the calendar (ICS)",
     "downloading": "Preparing the file…",
     "notice": "Every upcoming loan, rental and reservation, in a calendar file (.ics). Open it or import it into Google Calendar, Apple Calendar or Outlook; importing it again adds nothing twice, and a reservation cancelled since goes in marked as cancelled.",
     "done": "{{count}} event(s) — check your downloads.",
@@ -91,6 +91,9 @@
   },
   "accountMenu": {
     "label": "Your account"
+  },
+  "collectionMenu": {
+    "label": "Collection options"
   },
   "common": {
     "skipToContent": "Skip to content",

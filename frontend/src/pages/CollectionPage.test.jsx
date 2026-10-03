@@ -196,13 +196,13 @@ describe('CollectionPage with a collection thumbnail', () => {
 
 describe('CollectionPage hero corners', () => {
   /**
-   * The three icon-only controls that can share the hero's top-right corner
-   * (2026-09-28): the account menu (any signed-in visitor), the share menu
-   * (curators only) and the contact link (everyone). They sit together in
-   * one `.hero-corners` flex row now instead of each computing its own
-   * absolute offset — this pins that a curator gets all three and a plain
-   * member gets the two that apply to them, not a gap where the share menu
-   * used to reserve its slot.
+   * The icon-only controls that can share the hero's top-right corner: the
+   * account menu (any signed-in visitor), the collection menu (curators
+   * only, 2026-10-03), the share menu and the contact link (everyone). They
+   * sit together in one `.hero-corners` flex row now instead of each
+   * computing its own absolute offset — this pins that a curator gets all
+   * four and a plain member gets the ones that apply to them, not a gap
+   * where the share menu used to reserve its slot.
    */
   function renderCollection(collection) {
     apiFetch.mockImplementation(() =>
@@ -217,11 +217,12 @@ describe('CollectionPage hero corners', () => {
     );
   }
 
-  test('a curator gets the account menu, the share menu and the contact link', async () => {
+  test('a curator gets the account menu, the collection menu, the share menu and the contact link', async () => {
     renderCollection(COLLECTION_WITH_PHOTO); // is_curator: true
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /collection options/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
   });
@@ -1328,8 +1329,38 @@ describe('CollectionPage as a co-owner', () => {
     );
 
     expect(await screen.findByRole('link', { name: 'Edit collection' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage members' })).toBeInTheDocument();
+    // "Manage members" lives in the collection menu now (2026-10-03): open it.
+    fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
+    expect(await screen.findByRole('link', { name: 'Manage members' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Add thing' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
+  });
+
+  // The hero row holds "Edit collection" alone (CA, 2026-10-03): the rest of
+  // the curator's controls are in the collection menu, one click further, so
+  // the row that used to hold four buttons reads as one thing — the group's
+  // settings — instead of a toolbar.
+  test('the curator hero row holds "Edit collection" alone', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => CO_OWNED })
+    );
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('link', { name: 'Edit collection' });
+    const row = container.querySelector('.button-row-wide');
+    expect(row).not.toBeNull();
+    const inRow = [...row.querySelectorAll('a, button')];
+    expect(inRow).toHaveLength(1);
+    expect(inRow[0]).toHaveAccessibleName('Edit collection');
   });
 
   test('the hero names the whole team on one "Run by:" line, founder first', async () => {
