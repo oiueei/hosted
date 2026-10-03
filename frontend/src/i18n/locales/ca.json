@@ -309,7 +309,6 @@
     "curatorsMore_other": "i {{count}} persones més",
     "showMoreThings_one": "Veure 1 cosa més",
     "showMoreThings_other": "Veure {{count}} coses més",
-    "visitorIntro": "Estàs veient aquest grup com a visitant.",
     "visitorJoin": "Unir-me al grup",
     "visitorJoinError": "No hem pogut afegir-te al grup. Torna-ho a provar.",
     "welcomeDoc": "Document de benvinguda del grup (PDF)"

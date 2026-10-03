@@ -406,8 +406,7 @@ export default function CollectionPage() {
               !collection.is_member &&
               collection.visibility === 'PUBLIC' && (
                 <div className="invite-nudge">
-                  <p style={{ margin: 0 }}>{t('collectionPage.visitorIntro')}</p>
-                  <div style={{ marginTop: 'var(--spacing-xs)' }}>
+                  <div>
                     <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
                       {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
                     </Button>
