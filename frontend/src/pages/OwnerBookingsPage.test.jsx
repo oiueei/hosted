@@ -91,6 +91,18 @@ describe('OwnerBookingsPage listing', () => {
     expect(screen.getByRole('heading', { name: 'Past requests' })).toBeInTheDocument();
   });
 
+  test('the type and the state sit in a status cell that sizes each label to its word', async () => {
+    // Same cell, same class as /my-bookings (CA, 2026-10-03); the rule is pinned
+    // in `tableCellStyles.test.js`.
+    mockApi([{ results: [booking({ status: 'ACCEPTED' })], next: null }]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const cell = screen.getByText('Lend').closest('.table-status-cell');
+    expect(cell).not.toBeNull();
+    expect(within(cell).getByText('Confirmed')).toBeInTheDocument();
+  });
+
   test('each request names its group, and the thing link carries that group', async () => {
     mockApi([
       {

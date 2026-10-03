@@ -1626,6 +1626,20 @@ figure[class*='Highlight-module_highlight'] {
   overflow-x: auto;
 }
 
+/* The "Status" cell of /my-bookings and /owner-bookings: the thing's type (a Tag)
+   over its state (a StatusLabel), and the "expired" explanation where there is
+   one. In a bare `flex-direction: column` every child stretches to the column's
+   whole width, so both labels filled it — and since `Tag` centres its text and
+   `StatusLabel` does not, one read centred and the other left (CA's screenshot,
+   2026-10-03). `align-items: flex-start` sizes each to its own word, like the
+   hero's "Community" and "Private" tags. */
+.table-status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-2-xs);
+}
+
 /* Pipe tables in Markdown bios: wide content scrolls inside its own wrapper so
    the page body never scrolls horizontally on mobile. */
 .markdown-text .markdown-table-wrap {

@@ -196,7 +196,7 @@ export default function MyBookingsPage() {
       key: '_status',
       headerName: t('myBookings.colStatus'),
       transform: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2-xs)' }}>
+        <div className="table-status-cell">
           <Tag>{t('types.' + row._type)}</Tag>
           <StatusLabel type={STATUS_TYPES[row._status] || 'neutral'}>
             {STATUS_LABELS[row._status] || row._status}

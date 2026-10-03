@@ -85,6 +85,22 @@ describe('MyBookingsPage listing', () => {
     expect(screen.queryByRole('columnheader', { name: '' })).not.toBeInTheDocument();
   });
 
+  test('the type and the state sit in a status cell that sizes each label to its word', async () => {
+    // CA, 2026-10-03: both labels filled the column (a bare flex column stretches
+    // its children), and since Tag centres and StatusLabel does not, one read
+    // centred and the other left. The layout is the class; its rule is pinned in
+    // `tableCellStyles.test.js`.
+    mockList([booking({ status: 'EXPIRED' })]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    const cell = screen.getByText('Lend').closest('.table-status-cell');
+    expect(cell).not.toBeNull();
+    // The type, the state and the "expired" explanation all live inside it.
+    expect(within(cell).getByText('Expired')).toBeInTheDocument();
+    expect(within(cell).getByText(/expired/i, { selector: 'p' })).toBeInTheDocument();
+  });
+
   test('with nothing pending, the section says so instead of vanishing', async () => {
     // An empty pending table would read as "the page is broken", not "you have
     // no open requests".
