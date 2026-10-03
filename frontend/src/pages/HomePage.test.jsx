@@ -63,6 +63,24 @@ beforeEach(() => {
 });
 
 /**
+ * The cross-group page, `/shared`, left the app (CA, 2026-10-03: "it has to be
+ * simpler"). Home used to end the list of groups with a quiet line that led to it.
+ */
+describe('HomePage — no way to a page that no longer exists', () => {
+  test('a member of several groups is not offered /shared under them', async () => {
+    mockDashboard({
+      mine: [],
+      invited: [GROUP, { ...GROUP, code: 'COL010', headline: 'Tool bank' }],
+    });
+    const { container } = renderHome();
+
+    await screen.findByText('Tool bank');
+    expect(container.querySelector('a[href="/shared"]')).toBeNull();
+    expect(screen.queryByText(/See everything in these groups/i)).toBeNull();
+  });
+});
+
+/**
  * Most accounts are members: they arrive through somebody else's group and may
  * never start one. Home used to lead with "My collections" for everyone — an
  * empty state and "Create your first collection" above the one thing a member

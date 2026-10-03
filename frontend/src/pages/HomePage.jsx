@@ -294,15 +294,6 @@ export default function HomePage() {
               <CollectionLinkbox key={c.code} collection={c} showInfo />
             ))}
           </div>
-          {/* The cross-group view. A quiet line rather than a fifth hero
-              button: it belongs beside the groups it summarises, and the
-              question it answers ("what's in all of these?") only exists once
-              you're in more than one. */}
-          <p className="invite-nudge">
-            <Link to="/shared" className="owner-link">
-              {t('sharedThings.homeLink')}
-            </Link>
-          </p>
         </>
       )}
     </>

@@ -159,7 +159,6 @@
     "contact": "Contacte — OIUEEI",
     "collaborate": "Col·labora — OIUEEI",
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
-    "sharedThings": "Compartit amb mi — OIUEEI",
     "dataExport": "Exportar dades — OIUEEI",
     "reserveThing": "Reservar: {{headline}} — OIUEEI"
   },
@@ -962,14 +961,6 @@
     "navLabel": "Sobre OIUEEI",
     "about": "Què és OIUEEI",
     "legal": "Privacitat i avís legal"
-  },
-  "sharedThings": {
-    "pageTitle": "Compartit amb mi",
-    "intro": "Tot el que ara mateix comparteixen els grups a què pertanys, el més nou primer.",
-    "homeLink": "Veure tot el que hi ha en aquests grups →",
-    "empty": "Encara no s'ha compartit res als teus grups.",
-    "emptyCta": "Tornar als meus grups",
-    "errorLoading": "No hem pogut carregar el que s'ha compartit amb tu."
   },
   "capabilities": {
     "needsApproval": "Algunes opcions necessiten aprovació en aquesta instal·lació: {{list}}.",
