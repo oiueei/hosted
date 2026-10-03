@@ -87,6 +87,7 @@
     "label": "Opcions de la col·lecció"
   },
   "common": {
+    "opensInNewTab": "S'obre en una pestanya nova.",
     "skipToContent": "Vés al contingut",
     "error": "Error",
     "done": "Fet",
@@ -901,8 +902,7 @@
     "returnBy": "Devolució el {{date}}"
   },
   "feedback": {
-    "prompt": "Alguna cosa estranya? Una idea?",
-    "cta": "Explica-m'ho"
+    "button": "Idees i errors"
   },
   "collectionLanguage": {
     "label": "Llengua dels missatges del grup",

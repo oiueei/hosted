@@ -1872,20 +1872,20 @@ caption:has(> .sr-only:only-child) {
   overflow-x: auto;
 }
 
-/* Quiet alpha-feedback line (FeedbackLink) at the foot of Home. */
+/* Room above the "Ideas and bugs" button (FeedbackLink) at the foot of Home. It
+   was a quiet line and this was its text style; it is a button now (CA,
+   2026-10-03) and only the gap is left. The wrapper exists whether or not the
+   deployment has a feedback URL, so an empty one must not leave the gap. */
 .feedback-link {
   margin-top: var(--spacing-2-xl);
-  font-size: var(--fontsize-body-m);
-  color: var(--color-black-60);
 }
 
-.feedback-link a {
-  color: inherit;
-  text-decoration: underline;
+.feedback-link:empty {
+  display: none;
 }
 
 /* A deployment explaining why a list is shorter than the product's
-   (ApprovalNotice). Quiet like .feedback-link, and deliberately NOT an HDS
+   (ApprovalNotice). Quiet, and deliberately NOT an HDS
    Notification: nothing has gone wrong and nothing was refused — it is a
    footnote to a field, and an alert box would read as an error the reader
    caused. Never renders upstream, where nothing is withheld. */

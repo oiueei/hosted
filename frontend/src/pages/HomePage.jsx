@@ -398,7 +398,11 @@ export default function HomePage() {
         <div className="spacer-xl" />
         {groupsFirst ? myCollectionsSection : sharedSection}
 
-        <FeedbackLink />
+        {/* Alone, and secondary (CA, 2026-10-03). The wrapper is empty when the
+            deployment has no feedback URL, and App.css hides an empty one. */}
+        <div className="feedback-link">
+          <FeedbackLink style={btnSecondaryStyle} />
+        </div>
       </div>
     </div>
   );

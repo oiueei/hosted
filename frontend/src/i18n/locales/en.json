@@ -93,6 +93,7 @@
     "label": "Collection options"
   },
   "common": {
+    "opensInNewTab": "Opens in a new tab.",
     "skipToContent": "Skip to content",
     "error": "Error",
     "done": "Done",
@@ -901,8 +902,7 @@
     "returnBy": "Return by {{date}}"
   },
   "feedback": {
-    "prompt": "Something odd? An idea?",
-    "cta": "Tell me"
+    "button": "Ideas and bugs"
   },
   "collectionLanguage": {
     "label": "Language of the group messages",

@@ -87,6 +87,7 @@
     "label": "Opciones de la colección"
   },
   "common": {
+    "opensInNewTab": "Se abre en una pestaña nueva.",
     "skipToContent": "Saltar al contenido",
     "error": "Error",
     "done": "Hecho",
@@ -901,8 +902,7 @@
     "returnBy": "Devolución el {{date}}"
   },
   "feedback": {
-    "prompt": "¿Algo raro? ¿Una idea?",
-    "cta": "Cuéntamelo"
+    "button": "Ideas y fallos"
   },
   "collectionLanguage": {
     "label": "Idioma de los mensajes del grupo",

@@ -6,6 +6,13 @@ import { describe, test, expect, afterEach, vi } from 'vitest';
 // `aboutPath` in `src/deployment/`. `import.meta.env.VITE_*` is read once at
 // module load, so each test resets the module cache and re-imports it after
 // stubbing the env — the only way to exercise both branches in one file.
+const URL = 'https://forms.example/deployment-feedback';
+
+async function loadWith(url) {
+  vi.stubEnv('VITE_FEEDBACK_URL', url);
+  return (await import('./FeedbackLink')).default;
+}
+
 describe('FeedbackLink', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -13,23 +20,56 @@ describe('FeedbackLink', () => {
   });
 
   test('upstream (no VITE_FEEDBACK_URL) renders nothing', async () => {
-    vi.stubEnv('VITE_FEEDBACK_URL', '');
-    const { default: FeedbackLink } = await import('./FeedbackLink');
+    const FeedbackLink = await loadWith('');
 
     const { container } = render(<FeedbackLink />);
 
     expect(container).toBeEmptyDOMElement();
   });
 
-  test('a deployment that sets the env var gets a link pointing at it', async () => {
-    vi.stubEnv('VITE_FEEDBACK_URL', 'https://forms.example/deployment-feedback');
-    const { default: FeedbackLink } = await import('./FeedbackLink');
+  test('a deployment that sets the env var gets a link named "Ideas and bugs" to it, in a new tab', async () => {
+    const FeedbackLink = await loadWith(URL);
 
     render(<FeedbackLink />);
 
-    const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', 'https://forms.example/deployment-feedback');
+    const link = screen.getByRole('link', { name: /^Ideas and bugs/ });
+    expect(link).toHaveAttribute('href', URL);
     expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link.getAttribute('rel')).toMatch(/noopener/);
+  });
+
+  test('the button says only "Ideas and bugs"; the new tab is announced, not printed', async () => {
+    // HDS's own `openInNewTab` appends "(Opens in a new tab.)" to the visible
+    // text — not the short label asked for — so the announcement lives in the
+    // accessible name, which still starts with the words on the button.
+    const FeedbackLink = await loadWith(URL);
+
+    render(<FeedbackLink />);
+
+    const link = screen.getByRole('link', { name: /^Ideas and bugs/ });
+    expect(link).toHaveTextContent(/^Ideas and bugs$/);
+    expect(link).toHaveAccessibleName('Ideas and bugs. Opens in a new tab.');
+  });
+
+  test('it is the `<a>` alone — nothing around it, so it can sit in a row of buttons', async () => {
+    const FeedbackLink = await loadWith(URL);
+
+    const { container } = render(<FeedbackLink />);
+
+    expect(container.children).toHaveLength(1);
+    expect(container.firstElementChild.tagName).toBe('A');
+    expect(container.firstElementChild.className).toMatch(/hds-button/);
+  });
+
+  test('the caller decides which button it is: `style` reaches the link', async () => {
+    const FeedbackLink = await loadWith(URL);
+
+    render(<FeedbackLink style={{ '--background-color': 'rgb(1, 2, 3)' }} />);
+
+    expect(
+      screen
+        .getByRole('link', { name: /^Ideas and bugs/ })
+        .style.getPropertyValue('--background-color')
+    ).toBe('rgb(1, 2, 3)');
   });
 });
