@@ -693,7 +693,9 @@
     "aboutHeading": "Sobre",
     "photoAlt": "Foto de {{name}}",
     "myGroups": "Els meus grups",
-    "myGroupsIntro": "Grups on ets. Si en deixes un, en perds l'accés."
+    "myGroupsIntro": "Grups on ets. Si en deixes un, en perds l'accés.",
+    "colGroup": "Grup",
+    "colTeam": "Dinamització"
   },
   "koro": {
     "basic": "Bàsic",

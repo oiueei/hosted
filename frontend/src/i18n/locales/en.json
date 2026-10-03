@@ -699,7 +699,9 @@
     "aboutHeading": "About",
     "photoAlt": "Photo of {{name}}",
     "myGroups": "My groups",
-    "myGroupsIntro": "Groups you're in. Leaving one removes your access to it."
+    "myGroupsIntro": "Groups you're in. Leaving one removes your access to it.",
+    "colGroup": "Group",
+    "colTeam": "Run by"
   },
   "koro": {
     "basic": "Basic",

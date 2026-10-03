@@ -693,7 +693,9 @@
     "aboutHeading": "Acerca de",
     "photoAlt": "Foto de {{name}}",
     "myGroups": "Mis grupos",
-    "myGroupsIntro": "Grupos en los que estás. Si dejas uno, pierdes el acceso."
+    "myGroupsIntro": "Grupos en los que estás. Si dejas uno, pierdes el acceso.",
+    "colGroup": "Grupo",
+    "colTeam": "Dinamización"
   },
   "koro": {
     "basic": "Básico",

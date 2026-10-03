@@ -1674,6 +1674,13 @@ figure[class*='Highlight-module_highlight'] {
   color: var(--color-black-70);
 }
 
+/* A quiet link in a cell: "Leave the group" in "My groups". The colour is the
+   link's own — an <a> does not inherit it from the paragraph around it. */
+.table-cell-link--muted {
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-60);
+}
+
 /* Pipe tables in Markdown bios: wide content scrolls inside its own wrapper so
    the page body never scrolls horizontally on mobile. */
 .markdown-text .markdown-table-wrap {
@@ -1988,29 +1995,4 @@ caption:has(> .sr-only:only-child) {
 .recommend-intro {
   margin: 0 0 var(--spacing-s);
   font-size: var(--fontsize-body-s);
-}
-
-/* "My groups" on the own profile: one row per membership, the group's name on
-   the left and the way out on the right. Leaving moved here from the collection
-   hero, where it was the third unlabelled text link in a stack. */
-.membership-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.membership-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-2-xs) var(--spacing-s);
-  min-height: 44px;
-  padding: var(--spacing-2-xs) 0;
-  border-bottom: 1px solid var(--color-black-20);
-}
-
-.membership-leave {
-  font-size: var(--fontsize-body-s);
-  color: var(--color-black-60);
 }

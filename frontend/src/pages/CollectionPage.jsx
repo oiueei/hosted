@@ -17,6 +17,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
+import { collectionTeam } from '../utils/team';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
 import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
@@ -199,16 +200,10 @@ export default function CollectionPage() {
   // server-computed field that also admits a co-owner.
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
-  // The team the hero names, founder first. The API sends a co-curator's bare
-  // `name` — never an email standing in for it (L2) — so one who set none is
-  // counted at the end instead of listed: comma-joined, an empty name left
-  // "Oriol, ," on the page.
-  const team = [
-    { code: collection.owner, name: collection.owner_name },
-    ...(collection.co_owners ?? []),
-  ];
-  const namedTeam = team.filter((member) => member.name);
-  const unnamedTeamCount = team.length - namedTeam.length;
+  // The team the hero names, founder first, whoever has no name counted at the
+  // end rather than listed — one rule (`utils/team.js`) shared with the "Run by"
+  // column of "My groups", so the two cannot disagree.
+  const { named: namedTeam, unnamedCount: unnamedTeamCount } = collectionTeam(collection);
   const isAuthenticated = !!userCode;
   // The Community/visibility tags in the H1 are purely informational — no
   // click, no delete, so no hover/focus state to design for — so they follow
