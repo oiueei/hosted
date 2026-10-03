@@ -1063,25 +1063,13 @@ body :focus-visible {
   margin-bottom: var(--spacing-2-xs);
 }
 
-/* The four things under the door — the licence, the no-cookie-banner claim,
-   the way to reach a human, the legal link — read as ONE block at ONE size
-   (CA, 2026-09-21). They had drifted into three sizes and two greys, so the
-   checkable claims looked like small print beside the slogan they replaced.
-   The override reaches `.legal-link` deliberately: its shared recipe still
-   sets body-s for the other two doors that use it (MagicLinkJoinPage,
-   JoinToAct), which are not this page and were not asked about. */
-.login-footnotes,
-.login-footnotes .legal-link {
+/* The three things under the door — the licence, the no-cookie-banner claim and
+   the way to reach a human — read as ONE block at ONE size (CA, 2026-09-21).
+   They had drifted into three sizes and two greys, so the checkable claims
+   looked like small print beside the slogan they replaced. (A fourth, the
+   legal link, left on 2026-10-03: the site footer carries it on every page.) */
+.login-footnotes {
   font-size: var(--fontsize-body-m);
-}
-
-/* The quiet "Legal notice & privacy" link that sits under each of those forms
-   (DESIGN §9 / art. 13 at the point of collection). Same three declarations in
-   LoginPage, MagicLinkJoinPage and JoinToAct — one recipe, one place. */
-.legal-link {
-  color: var(--color-black-60);
-  text-decoration: underline;
-  font-size: var(--fontsize-body-s);
 }
 
 .hero-image {

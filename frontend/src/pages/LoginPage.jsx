@@ -230,22 +230,20 @@ export default function LoginPage() {
             </p>
           )}
           {/* The locked-out user's lifeline, heading the deliberate-lookup
-              group at the foot of the page (the FAQ link above when this
-              deployment has one, the legal link below): all are things you go
-              looking for deliberately, and none belongs between someone and the
-              field they came for. Upstream — no FAQ link — it keeps the wider
-              gap itself, so the standalone page's rhythm is unchanged. */}
+              group at the foot of the page (the FAQ link above it when this
+              deployment has one): both are things you go looking for
+              deliberately, and neither belongs between someone and the field
+              they came for. Upstream — no FAQ link — it keeps the wider gap
+              itself, so the standalone page's rhythm is unchanged. The legal
+              notice is not repeated here: the site footer (`SiteFooter`, on
+              every page) already links /legal, and it sits on this same page,
+              which is where the art. 13 information has to be (CA, 2026-10-03). */}
           <p
             className="measure"
             style={{ marginTop: faqPath ? 'var(--spacing-2-xs)' : 'var(--spacing-m)' }}
           >
             <Link to="/contact" style={{ textDecoration: 'underline' }}>
               {t('login.loginHelp')}
-            </Link>
-          </p>
-          <p className="measure" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-            <Link to="/legal" className="legal-link">
-              {t('login.legalLink')}
             </Link>
           </p>
         </div>

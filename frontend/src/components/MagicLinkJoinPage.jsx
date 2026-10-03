@@ -35,12 +35,12 @@ import MarkdownText from './MarkdownText';
  * - `endpoint`: which URL the form POSTs to (see `useJoin`) — every upstream
  *   caller leaves this at the default `/auth/join/`; a deployment's own open
  *   door passes its own.
- * - `children`: rendered just under the form, above the `/legal` and `/login`
- *   links. Upstream `SharePage` passes none; a deployment's door uses it for
+ * - `children`: rendered just under the form, above the "already have an
+ *   account?" button. Upstream `SharePage` passes none; a deployment's door uses it for
  *   its own footer link (the hosted `/popin` points it at its `/faq`).
  * - `signedInAction`: optional. When set it takes the place of everything below
  *   the hero — the intro (which asks for an email), the form, and the rows that
- *   only make sense with one (the privacy link, "already have an account?").
+ *   only make sense with one ("already have an account?").
  *   `SharePage` passes it to a reader who already has a session, so accepting the
  *   invitation is one button rather than email, inbox, link, back. Without it the
  *   page is exactly what it was, which is what a deployment's own door relies on.
@@ -144,16 +144,6 @@ export default function MagicLinkJoinPage({
           {children}
         </div>
       )}
-      {/* Every door this component serves (/share/:token, plus any a deployment
-          adds) creates a real
-          account from the typed email, so the privacy information has to be
-          reachable *here* — at the moment data is collected — not only on
-          /login. Reuses login.legalLink: same destination, same words. */}
-      <p className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
-        <Link to="/legal" className="legal-link">
-          {t('login.legalLink')}
-        </Link>
-      </p>
       {/* The mirror of the front door's "new here?" button: someone who already
           has an account is one secondary button away from /login — same shape
           as the pop-in button there, so the two doors answer each other. */}

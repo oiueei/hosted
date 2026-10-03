@@ -62,6 +62,15 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   // Somebody from another group who pressed "Request" on a public group, chose
   // "already have an account" and ended up on Home: the same failure as a session
   // that ran out, in small. Sign-in now brings them back to what they came for.
+  test('the door does not link to /legal itself — the site footer does (CA, 2026-10-03)', () => {
+    // It used to repeat the footer's "Legal notice & privacy" link under the
+    // form. The page this renders in already carries the footer.
+    const { container } = renderJoin();
+
+    expect(container.querySelector('a[href="/legal"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: /legal notice|privacy/i })).toBeNull();
+  });
+
   test('"already have an account" returns to the thing they were looking at', () => {
     renderJoin({ thingCode: 'THG001' });
 
