@@ -203,12 +203,13 @@ describe('the faq link follows faqPath', () => {
     });
   });
 
-  test('sits at the foot, directly above the sign-in trouble line', async () => {
+  test('sits at the foot of the page, after the reading, with nothing after it', async () => {
     // CA, 2026-09-21: the link used to float between the alpha warning and the
     // footnotes. Questions about the site belong with the other
-    // deliberate-lookup links at the foot — first "questions about this site",
-    // then "trouble signing in", which closes the page — not in a group of
-    // their own above the reading.
+    // deliberate-lookup links at the foot — not in a group of their own above
+    // the reading. "Trouble signing in?" followed it until 2026-10-04, when it
+    // went (the site footer's "Contact us" is the way out now), so it closes
+    // the page.
     vi.doMock('../deployment', () => ({
       deploymentRoutes: [],
       popInPath: null,
@@ -225,13 +226,14 @@ describe('the faq link follows faqPath', () => {
     );
 
     const faq = await screen.findByRole('link', { name: /questions about this site/i });
-    const help = screen.getByRole('link', { name: /Trouble signing in/i });
     const footnotes = document.querySelector('.login-footnotes');
     expect(faq.closest('.login-footnotes')).toBe(footnotes);
-    expect(faq.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // And the trouble line is the last link of the page: there is no legal link
-    // after it any more (the site footer carries it).
-    expect([...footnotes.querySelectorAll('a')].at(-1)).toBe(help);
+    // The licence and the no-banner claim come first; the help link is below them.
+    const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
+    expect(licence.compareDocumentPosition(faq) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And it is the last link of the page: nothing is left after it.
+    expect([...footnotes.querySelectorAll('a')].at(-1)).toBe(faq);
+    expect(screen.queryByRole('link', { name: /Trouble signing in/i })).toBeNull();
   });
 });
 

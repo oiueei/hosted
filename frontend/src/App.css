@@ -1118,11 +1118,12 @@ body :focus-visible {
   margin-bottom: var(--spacing-2-xs);
 }
 
-/* The three things under the door — the licence, the no-cookie-banner claim and
-   the way to reach a human — read as ONE block at ONE size (CA, 2026-09-21).
-   They had drifted into three sizes and two greys, so the checkable claims
-   looked like small print beside the slogan they replaced. (A fourth, the
-   legal link, left on 2026-10-03: the site footer carries it on every page.) */
+/* The things under the door — the licence and the no-cookie-banner claim, and
+   where the deployment has one the link to its help page — read as ONE block at
+   ONE size (CA, 2026-09-21). They had drifted into three sizes and two greys, so
+   the checkable claims looked like small print beside the slogan they replaced.
+   Two more left: the legal link (2026-10-03) and "Trouble signing in? Tell us…"
+   (2026-10-04) — the site footer carries /legal and "Contact us" on every page. */
 .login-footnotes {
   font-size: var(--fontsize-body-m);
 }

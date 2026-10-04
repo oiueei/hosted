@@ -219,10 +219,16 @@ export default function LoginPage() {
           ) : null}
           {/* The deployment's help page (frontend/src/deployment), when it has
               one — upstream there is no FAQ content to link to, and a link to a
-              404 is worse than one link fewer. It sits with the other
-              deliberate-lookup links at the foot, directly above the sign-in
-              trouble line: first questions about the site, then problems
-              getting in (CA, 2026-09-21). */}
+              404 is worse than one link fewer. It is a thing you go looking
+              for deliberately, so it sits at the foot with nothing after it,
+              and not between someone and the field they came for (CA,
+              2026-09-21). Two lines used to follow it that no longer do: the
+              legal notice (CA, 2026-10-03: the site footer, on this same page,
+              already links /legal, which is where the art. 13 information has
+              to be) and the locked-out user's lifeline, "Trouble signing in?
+              Tell us…", a link to /contact (CA, 2026-10-04: simpler). That way
+              out is not gone, it moved: "Contact us" is the third door of the
+              site footer, on every page and so on this one. */}
           {faqPath && (
             <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
               <Link to={faqPath} style={{ textDecoration: 'underline' }}>
@@ -230,23 +236,6 @@ export default function LoginPage() {
               </Link>
             </p>
           )}
-          {/* The locked-out user's lifeline, heading the deliberate-lookup
-              group at the foot of the page (the FAQ link above it when this
-              deployment has one): both are things you go looking for
-              deliberately, and neither belongs between someone and the field
-              they came for. Upstream — no FAQ link — it keeps the wider gap
-              itself, so the standalone page's rhythm is unchanged. The legal
-              notice is not repeated here: the site footer (`SiteFooter`, on
-              every page) already links /legal, and it sits on this same page,
-              which is where the art. 13 information has to be (CA, 2026-10-03). */}
-          <p
-            className="measure"
-            style={{ marginTop: faqPath ? 'var(--spacing-2-xs)' : 'var(--spacing-m)' }}
-          >
-            <Link to="/contact" style={{ textDecoration: 'underline' }}>
-              {t('login.loginHelp')}
-            </Link>
-          </p>
         </div>
       </div>
     </div>

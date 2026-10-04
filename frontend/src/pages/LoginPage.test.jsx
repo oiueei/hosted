@@ -239,17 +239,27 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
     expect(notice.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  test('the way to reach a human is the last link on the page, below the reading', () => {
-    // CA, 2026-09-21: looked for deliberately, so it belongs at the foot and not
-    // between a returning member and the field they came for. It is the last of
-    // them since 2026-10-03, when the page's own "Legal notice & privacy" link
-    // went: the site footer, on every page, is where /legal is reached from.
+  test('the page ends with its reading: the last link is the no-banner claim’s, below the licence', () => {
+    // CA, 2026-09-21: the things you look for deliberately belong at the foot and
+    // not between a returning member and the field they came for. The page's own
+    // "Legal notice & privacy" link went on 2026-10-03 and the "Trouble signing in?"
+    // line on 2026-10-04, so what is left to close it is the reading itself.
     renderLogin();
-    const help = screen.getByRole('link', { name: /Trouble signing in/i });
     const links = [...document.querySelectorAll('a')];
-    expect(links.at(-1)).toBe(help);
+    const last = links.at(-1);
+    expect(last).toHaveAttribute('href', 'https://github.com/oiueei/standalone#privacy');
     const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
-    expect(licence.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(licence.compareDocumentPosition(last) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('the page has no "Trouble signing in?" line, and nothing in its content links /contact', () => {
+    // It was the locked-out user's way to a human (CA, 2026-09-21) and went on
+    // 2026-10-04: that way out is the site footer's "Contact us", on every page.
+    // The page alone has no footer, so a link to /contact here would be its own.
+    const { container } = renderLogin();
+
+    expect(screen.queryByRole('link', { name: /Trouble signing in/i })).toBeNull();
+    expect(container.querySelector('a[href="/contact"]')).toBeNull();
   });
 
   test('the page itself does not link to /legal — the footer does, once', () => {
