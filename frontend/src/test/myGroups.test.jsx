@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 expect.extend(toHaveNoViolations);
 
@@ -14,6 +14,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import UserPage from '../pages/UserPage';
+import { mockMatchMedia, PHONE } from './matchMedia';
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
@@ -277,5 +278,76 @@ describe('UserPage — the hero action buttons carry the full theeeme', () => {
       );
       expect(btn.style.getPropertyValue('--outline-color-focus')).toBe('var(--color-black)');
     }
+  });
+});
+
+/**
+ * On a phone each group is a card instead of a row (`ResponsiveTable`, CA,
+ * 2026-10-04): in a table, "Leave the group" broke word by word down a 100px
+ * column. The same cells, in the same order, with "Run by:" in front of the team
+ * (the table has it as a header) and the way out on the right.
+ */
+describe('My groups on a phone', () => {
+  let media;
+  beforeEach(() => {
+    media = mockMatchMedia({ [PHONE]: true });
+  });
+  afterEach(() => media.restore());
+
+  const group = {
+    code: 'COL001',
+    headline: 'Bibliocoses',
+    owner: 'OWN001',
+    owner_name: 'Lili',
+    co_owners: [{ code: 'CO0001', name: 'Lolo' }],
+  };
+
+  test('a group is a card: its name, "Run by:" and who, and the way out', async () => {
+    setApi({ memberships: [group] });
+    renderOwn();
+
+    const list = await screen.findByRole('list', { name: 'My groups' });
+    expect(screen.queryByRole('table')).toBeNull();
+    const [card] = within(list).getAllByRole('listitem');
+    expect(within(card).getByRole('link', { name: 'Bibliocoses' })).toHaveAttribute(
+      'href',
+      '/collections/COL001'
+    );
+    expect(within(card).getByText('Run by:')).toBeInTheDocument();
+    expect(within(card).getByText('Lili, Lolo')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /leave the group/i })).toHaveAttribute(
+      'href',
+      '/collections/COL001/leave'
+    );
+  });
+
+  test('the name comes first and the way out last, on the right', async () => {
+    setApi({ memberships: [group] });
+    renderOwn();
+
+    const [card] = within(await screen.findByRole('list', { name: 'My groups' })).getAllByRole(
+      'listitem'
+    );
+    const [first, , last] = [...card.children];
+    expect(within(first).getByRole('link', { name: 'Bibliocoses' })).toBeInTheDocument();
+    expect(within(last).getByRole('link', { name: /leave the group/i })).toBeInTheDocument();
+    expect(last.firstElementChild).toHaveStyle({ justifyContent: 'flex-end' });
+  });
+
+  test('a group whose team has no names has no empty "Run by:" line', async () => {
+    setApi({ memberships: [{ ...group, owner_name: '', co_owners: [] }] });
+    renderOwn();
+
+    const list = await screen.findByRole('list', { name: 'My groups' });
+    expect(within(list).queryByText('Run by:')).toBeNull();
+    expect(within(list).getByRole('link', { name: /leave the group/i })).toBeInTheDocument();
+  });
+
+  test('the cards have no axe violations', async () => {
+    setApi({ memberships: [group, { ...group, code: 'COL002', headline: 'Otra' }] });
+    const { container } = renderOwn();
+    await screen.findByRole('list', { name: 'My groups' });
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

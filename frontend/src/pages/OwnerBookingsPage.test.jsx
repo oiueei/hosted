@@ -10,6 +10,10 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import OwnerBookingsPage from './OwnerBookingsPage';
+import { axe, toHaveNoViolations } from 'jest-axe';
+import { mockMatchMedia, PHONE } from '../test/matchMedia';
+
+expect.extend(toHaveNoViolations);
 
 // The owner's mirror of /my-bookings, and the page that closed a real asymmetry:
 // a requester has always had a list, while an owner had only the email, an inbox
@@ -419,5 +423,116 @@ describe('OwnerBookingsPage pagination', () => {
     expect(await screen.findByText(/couldn't load more/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cordless drill' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load more' })).toBeEnabled();
+  });
+});
+
+/**
+ * On a phone each request is a card instead of a row (`ResponsiveTable`, CA,
+ * 2026-10-04): in a table every column was ~100px wide, the status labels were cut
+ * off and the ✓ ⊗ buttons sat off the screen. The decisions are buttons with their
+ * words on them now, and they must do exactly what the icons do — so these tests
+ * press them and read the same requests the table's tests read.
+ */
+describe('OwnerBookingsPage on a phone', () => {
+  let media;
+  beforeEach(() => {
+    media = mockMatchMedia({ [PHONE]: true });
+  });
+  afterEach(() => media.restore());
+
+  test('a request is a card holding the thing, who asked, when, both labels and both decisions', async () => {
+    mockApi([{ results: [booking({ requester_name: 'Lele' })], next: null }]);
+    renderPage();
+
+    const list = await screen.findByRole('list', { name: 'Requests waiting for your answer' });
+    expect(screen.queryByRole('table')).toBeNull();
+    const [card] = within(list).getAllByRole('listitem');
+    expect(within(card).getByRole('link', { name: 'Cordless drill' })).toHaveAttribute(
+      'href',
+      '/things/THG001'
+    );
+    expect(within(card).getByText('Asked by Lele')).toBeInTheDocument();
+    expect(within(card).getByText('Requested 01/08/2026')).toBeInTheDocument();
+    expect(within(card).getByText('01/09/2026 — 08/09/2026')).toBeInTheDocument();
+    expect(within(card).getByText('Lend')).toBeInTheDocument();
+    expect(within(card).getByText('Pending')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Confirm this request' })).toBeVisible();
+    expect(within(card).getByRole('button', { name: 'Decline this request' })).toBeVisible();
+  });
+
+  test('both decisions sit in a wide row, so each is the width of the screen', async () => {
+    mockApi([{ results: [booking()], next: null }]);
+    renderPage();
+
+    const confirm = await screen.findByRole('button', { name: 'Confirm this request' });
+    expect(confirm.parentElement).toHaveClass('button-row-wide');
+    expect(screen.getByRole('button', { name: 'Decline this request' }).parentElement).toBe(
+      confirm.parentElement
+    );
+  });
+
+  test('confirming a loan sends the same request the tick sends, and the card settles', async () => {
+    mockApi([{ results: [booking()], next: null }]);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm this request' }));
+
+    await waitFor(() => expect(postUrls()).toEqual(['/api/v1/bookings/BKG001/accept/']));
+    expect(await screen.findByText('Confirmed')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm this request' })).toBeNull();
+  });
+
+  test('declining sends the same request the cross sends', async () => {
+    mockApi([{ results: [booking()], next: null }]);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline this request' }));
+
+    await waitFor(() => expect(postUrls()).toEqual(['/api/v1/bookings/BKG001/reject/']));
+    expect(await screen.findByText('Rejected')).toBeInTheDocument();
+  });
+
+  test('a settled request is still a card, with no decisions', async () => {
+    mockApi([{ results: [booking({ status: 'ACCEPTED' })], next: null }]);
+    renderPage();
+
+    const list = await screen.findByRole('list', { name: 'Requests you have already answered' });
+    expect(within(list).getByRole('link', { name: 'Cordless drill' })).toBeInTheDocument();
+    expect(within(list).queryByRole('button')).toBeNull();
+  });
+
+  test('a coming reservation offers to cancel, and asks first, as the table does', async () => {
+    mockApi([
+      {
+        results: [
+          booking({
+            thing_type: 'RESERVE_THING',
+            thing_headline: 'Laser cutter',
+            status: 'ACCEPTED',
+            start_date: '2099-01-10',
+            end_date: '2099-01-11',
+            start_time: '10:00:00',
+            end_time: '11:30:00',
+          }),
+        ],
+        next: null,
+      },
+    ]);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(postUrls()).toEqual([]);
+  });
+
+  test('the cards have no axe violations', async () => {
+    mockApi([
+      { results: [booking(), booking({ code: 'BKG002', status: 'REJECTED' })], next: null },
+    ]);
+    const { container } = renderPage();
+    await screen.findByRole('list', { name: 'Requests waiting for your answer' });
+
+    expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });
 });

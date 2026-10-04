@@ -1660,6 +1660,50 @@ figure[class*='Highlight-module_highlight'] {
   overflow-x: auto;
 }
 
+/* On a phone each row of the request tables and of "My groups" is a card
+   (`ResponsiveTable`, CA, 2026-10-04): the component paints this list *instead of*
+   the table, so there is no media query here — it only exists below 768px. White
+   with a thin border, as the hero's other quiet boxes. */
+.table-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-s);
+}
+
+.table-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  background: var(--color-white);
+  border: 1px solid var(--color-black-20);
+  border-radius: 4px;
+  padding: var(--spacing-s);
+}
+
+/* The thing's type and its state side by side, wrapping when there is no room:
+   in the table they are a column, because a column cell is narrow. */
+.table-card .table-status-cell {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* A column that asked for its header in front ("Run by: …"). */
+.table-card-field--labelled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-2-xs);
+}
+
+.table-card-label {
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-60);
+}
+
 /* The "Status" cell of /my-bookings and /owner-bookings: the thing's type (a Tag)
    over its state (a StatusLabel), and the "expired" explanation where there is
    one. In a bare `flex-direction: column` every child stretches to the column's

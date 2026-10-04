@@ -7,7 +7,6 @@ import {
   Notification,
   StatusLabel,
   Tag,
-  Table,
   IconCheck,
   IconCrossCircle,
 } from 'hds-react';
@@ -22,6 +21,7 @@ import { useLocalized } from '../utils/localized';
 import { formatDate, formatBookingWhen } from '../utils/rental';
 import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
+import ResponsiveTable from '../components/ResponsiveTable';
 
 /**
  * The owner's side of MyBookingsPage: every request made on their things, in one
@@ -37,6 +37,13 @@ import CancelReservationDialog from '../components/CancelReservationDialog';
  * same pager) so the two sides of a booking read the same way; the differences
  * are the column showing who asked rather than who owns, and the actions being
  * accept/reject rather than cancel.
+ *
+ * On a phone each row is a card (`ResponsiveTable`, CA, 2026-10-04) and the
+ * decisions are buttons with their words on them, where the table has the ✓ and ⊗
+ * icons that name themselves in a tooltip. Both faces call the same handlers
+ * (`acceptRow`, `rejectRow`, `setCancelRow`), so the transfer-of-ownership
+ * dialog and the reservation-cancel dialog stand in front of a card exactly as
+ * they stand in front of the icon.
  */
 const STATUS_TYPES = {
   PENDING: 'alert',
@@ -203,6 +210,12 @@ export default function OwnerBookingsPage() {
   const isFutureReservation = (row) =>
     row._type === 'RESERVE_THING' && row._status === 'ACCEPTED' && row._startDate >= todayIso;
 
+  // What accepting and declining do, once, for the table's icons and the card's
+  // buttons alike. Accepting a hand-over asks first (`transferRow`).
+  const acceptRow = (row) =>
+    row._transfersOwnership ? setTransferRow(row) : handleAction(row._code, 'accept');
+  const rejectRow = (row) => handleAction(row._code, 'reject');
+
   const cols = [
     {
       key: '_thing',
@@ -277,16 +290,14 @@ export default function OwnerBookingsPage() {
           <div style={{ display: 'flex', gap: 'var(--spacing-xs)', justifyContent: 'flex-end' }}>
             <TooltipButton
               tooltip={t('ownerBookings.acceptTooltip')}
-              onClick={() =>
-                row._transfersOwnership ? setTransferRow(row) : handleAction(row._code, 'accept')
-              }
+              onClick={() => acceptRow(row)}
               disabled={acting === row._code}
             >
               <IconCheck aria-hidden />
             </TooltipButton>
             <TooltipButton
               tooltip={t('ownerBookings.rejectTooltip')}
-              onClick={() => handleAction(row._code, 'reject')}
+              onClick={() => rejectRow(row)}
               disabled={acting === row._code}
             >
               <IconCrossCircle aria-hidden />
@@ -301,6 +312,34 @@ export default function OwnerBookingsPage() {
               onClick={() => setCancelRow(row)}
               disabled={acting === row._code}
               style={btnSecondaryStyle}
+            >
+              {t('ownerBookings.cancelReservation')}
+            </Button>
+          </div>
+        ) : null,
+      // The card's face: the same decisions as buttons that say what they do.
+      cardTransform: (row) =>
+        row._status === 'PENDING' ? (
+          <div className="button-row-wide">
+            <Button style={btnStyle} onClick={() => acceptRow(row)} disabled={acting === row._code}>
+              {t('ownerBookings.acceptTooltip')}
+            </Button>
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => rejectRow(row)}
+              disabled={acting === row._code}
+            >
+              {t('ownerBookings.rejectTooltip')}
+            </Button>
+          </div>
+        ) : isFutureReservation(row) ? (
+          <div className="button-row-wide">
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => setCancelRow(row)}
+              disabled={acting === row._code}
             >
               {t('ownerBookings.cancelReservation')}
             </Button>
@@ -337,34 +376,30 @@ export default function OwnerBookingsPage() {
           {pendingRows.length === 0 ? (
             <p className="text-muted">{t('ownerBookings.noPending')}</p>
           ) : (
-            <div className="table-wrap">
-              <Table
-                cols={cols}
-                caption={<span className="sr-only">{t('ownerBookings.captionPending')}</span>}
-                rows={pendingRows}
-                indexKey="_id"
-                renderIndexCol={false}
-                dense
-                theme={tableTheme}
-              />
-            </div>
+            <ResponsiveTable
+              cols={cols}
+              caption={<span className="sr-only">{t('ownerBookings.captionPending')}</span>}
+              rows={pendingRows}
+              indexKey="_id"
+              renderIndexCol={false}
+              dense
+              theme={tableTheme}
+            />
           )}
           {otherRows.length > 0 && (
             <>
               <div className="spacer-xl" />
               <h2>{t('myBookings.pastRequests')}</h2>
               <div className="spacer-s" />
-              <div className="table-wrap">
-                <Table
-                  cols={cols}
-                  caption={<span className="sr-only">{t('ownerBookings.captionPast')}</span>}
-                  rows={otherRows}
-                  indexKey="_id"
-                  renderIndexCol={false}
-                  dense
-                  theme={tableTheme}
-                />
-              </div>
+              <ResponsiveTable
+                cols={cols}
+                caption={<span className="sr-only">{t('ownerBookings.captionPast')}</span>}
+                rows={otherRows}
+                indexKey="_id"
+                renderIndexCol={false}
+                dense
+                theme={tableTheme}
+              />
             </>
           )}
         </>
