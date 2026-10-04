@@ -6,7 +6,6 @@ import { Button, Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import ContactCorner from '../components/ContactCorner';
-import { aboutPath } from '../deployment';
 import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 
@@ -166,12 +165,11 @@ export default function VerifyPage() {
             await i18n.changeLanguage(saved).catch(() => {});
           }
           // The backend decides where to land (`landing`): the collection the
-          // link was for, the deployment's "what this is" page for a genuinely
-          // new visitor, else home (or their single collection).
-          //
-          // `landing: "welcome"` only reaches a deployment that produces it (one
-          // with an open door of its own); upstream nothing does, and without an
-          // aboutPath it falls through to home rather than to a 404.
+          // link was for (or the one real group they have), the page they were
+          // heading for, else home. There is no "welcome" landing any more (CA,
+          // 2026-10-04): someone who comes in by an open door is answered like
+          // anyone else, from the groups they actually have, so a landing this
+          // page does not know falls through to home.
           const target = data.collection || data.invited_collection;
           if (data.landing === 'collection' && target) {
             // `data.thing` is set when the join came from a "Reserve" click on a
@@ -179,8 +177,6 @@ export default function VerifyPage() {
             navigate(
               data.thing ? `/collections/${target}/things/${data.thing}` : `/collections/${target}`
             );
-          } else if (data.landing === 'welcome' && aboutPath) {
-            navigate(aboutPath);
           } else if (data.landing === 'path' && safeNextPath(data.path)) {
             // The page the reader was heading for when their session ran out
             // (`next` on the login). The server already validated it; checked

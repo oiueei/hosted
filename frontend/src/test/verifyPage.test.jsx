@@ -586,12 +586,10 @@ describe('where a magic link lands', () => {
     }
   );
 
-  /* A `landing: "welcome"` case belongs in `deployment.test.jsx`, not here: where
-     it lands depends on `aboutPath`, which is null upstream and a real page on a
-     deployment that replaces `src/deployment/`. Asserting this checkout's value
-     writes one branch's configuration into a test the other branch then has to
-     edit — a merge conflict every release, which is the trap that file opens by
-     naming. Both answers are pinned there, with the module mocked. */
+  /* There is no `landing: "welcome"` case: the server stopped answering it
+     (CA, 2026-10-04) — someone who comes in by an open door lands where anyone
+     with the same groups would — and a landing this page does not know goes home
+     through the same `else` as `home`. */
 });
 
 describe('a stalled network', () => {
