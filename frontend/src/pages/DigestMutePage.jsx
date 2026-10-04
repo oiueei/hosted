@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
-import ContactCorner from '../components/ContactCorner';
 import { useLocalized } from '../utils/localized';
 import StatusRegion from '../components/StatusRegion';
 
@@ -69,7 +68,6 @@ export default function DigestMutePage() {
         >
           <span className="hero-corners">
             <AccountMenu />
-            <ContactCorner />
           </span>
           <h1 className="form-hero-title">{t('digestMute.title')}</h1>
         </div>

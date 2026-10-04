@@ -950,14 +950,14 @@
     "messageLabel": "Mensaje",
     "sentLabel": "¡Recibido!",
     "sentBody": "Hemos recibido tu mensaje — te contestaremos lo antes posible.",
-    "error": "No hemos podido enviar tu mensaje. Inténtalo de nuevo.",
-    "linkLabel": "¿Problemas, sugerencias, comentarios? Contáctanos"
+    "error": "No hemos podido enviar tu mensaje. Inténtalo de nuevo."
   },
   "footer": {
     "madeIn": "Hecho con ♥︎ desde la Zona Franca, Barcelona, Cataluña, España, UE",
     "navLabel": "Sobre OIUEEI",
     "about": "Qué es OIUEEI",
-    "legal": "Privacidad y aviso legal"
+    "legal": "Privacidad y aviso legal",
+    "contact": "Contáctanos"
   },
   "capabilities": {
     "needsApproval": "Algunas opciones necesitan aprobación en esta instalación: {{list}}.",

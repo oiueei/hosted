@@ -13,7 +13,6 @@ import { formatDate } from '../utils/rental';
 import { teamText } from '../utils/team';
 import HeroPhoto from '../components/HeroPhoto';
 import AccountMenu from '../components/AccountMenu';
-import ContactCorner from '../components/ContactCorner';
 import ButtonLink from '../components/ButtonLink';
 import ResponsiveTable from '../components/ResponsiveTable';
 import useTheeeme from '../hooks/useTheeeme';
@@ -112,7 +111,6 @@ export default function UserPage() {
     >
       <span className="hero-corners">
         <AccountMenu />
-        <ContactCorner />
       </span>
       <BackLink to="/" label={t('common.home')} />
       <div className="spacer-m" />

@@ -950,14 +950,14 @@
     "messageLabel": "Message",
     "sentLabel": "Received!",
     "sentBody": "We've got your message — we'll reply as soon as we can.",
-    "error": "We couldn't send your message. Please try again.",
-    "linkLabel": "Problems, suggestions, comments? Contact us"
+    "error": "We couldn't send your message. Please try again."
   },
   "footer": {
     "madeIn": "Made with ♥︎ in Zona Franca, Barcelona, Catalonia, Spain, EU",
     "navLabel": "About OIUEEI",
     "about": "What OIUEEI is",
-    "legal": "Privacy & legal"
+    "legal": "Privacy & legal",
+    "contact": "Contact us"
   },
   "capabilities": {
     "needsApproval": "Some options need approval on this deployment: {{list}}.",

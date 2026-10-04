@@ -198,12 +198,15 @@ describe('CollectionPage hero corners', () => {
   /**
    * The icon-only controls that can share the hero's top-right corner: the
    * account menu (any signed-in visitor), the collection menu (curators
-   * only, 2026-10-03), the share menu and the contact link (everyone). They
-   * sit together in one `.hero-corners` flex row now instead of each
-   * computing its own absolute offset — this pins that a curator gets all
-   * four and a plain member gets the ones that apply to them, not a gap
-   * where the share menu used to reserve its slot.
+   * only, 2026-10-03) and the share menu. They sit together in one
+   * `.hero-corners` flex row instead of each computing its own absolute
+   * offset — this pins that a curator gets all three and a plain member gets
+   * the ones that apply to them, not a gap where the share menu used to
+   * reserve its slot. The contact icon that was a fourth went to the site
+   * footer on 2026-10-04: no hero links `/contact` from its corner.
    */
+  const contactInCorner = () => document.querySelector('.hero-corners a[href="/contact"]');
+
   function renderCollection(collection) {
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: async () => collection })
@@ -217,14 +220,15 @@ describe('CollectionPage hero corners', () => {
     );
   }
 
-  test('a curator gets the account menu, the collection menu, the share menu and the contact link', async () => {
+  test('a curator gets the account menu, the collection menu and the share menu — and no contact link', async () => {
     renderCollection(COLLECTION_WITH_PHOTO); // is_curator: true
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /collection options/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
-    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+    expect(contactInCorner()).toBeNull();
+    expect(screen.queryByRole('link', { name: /contact us/i })).toBeNull();
   });
 
   const MEMBER_VIEW = {
@@ -234,25 +238,25 @@ describe('CollectionPage hero corners', () => {
     is_member: true,
   };
 
-  test('a member of a PRIVATE group gets the account menu and the contact link, never the share menu', async () => {
+  test('a member of a PRIVATE group gets the account menu, never the share menu', async () => {
     // There the link is the curators' credential; the member has "Recommend".
     renderCollection({ ...MEMBER_VIEW, visibility: 'PRIVATE' });
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+    expect(contactInCorner()).toBeNull();
   });
 
   // CA, 2026-09-29: a PUBLIC group is shared by its own address, so a member can
   // bring people in without holding anything a curator would have to pull back.
-  test('a member of a PUBLIC group gets the share menu too — all three controls, in the corner', async () => {
+  test('a member of a PUBLIC group gets the share menu too — both controls, in the corner', async () => {
     renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
-    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+    expect(contactInCorner()).toBeNull();
   });
 
   test("a member's share menu has no Rotate or Stop sharing, and shares without calling share-link", async () => {
@@ -278,7 +282,7 @@ describe('CollectionPage hero corners', () => {
     await screen.findByText('Things from the kitchen');
 
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();
+    expect(contactInCorner()).toBeNull();
   });
 
   test('a signed-in reader who is not in a PUBLIC group gets no share menu either', async () => {

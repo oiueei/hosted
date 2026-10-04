@@ -5,7 +5,6 @@ import i18n, { SUPPORTED_LANGUAGES } from '../i18n';
 import { Button, Notification, Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
-import ContactCorner from '../components/ContactCorner';
 import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 
@@ -30,7 +29,6 @@ function VerifyScreen({ tc, koro, title, action, children }) {
         >
           <span className="hero-corners">
             <AccountMenu />
-            <ContactCorner />
           </span>
           <h1 className="form-hero-title">{title}</h1>
           {action}

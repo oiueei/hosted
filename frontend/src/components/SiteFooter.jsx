@@ -5,9 +5,9 @@ import { aboutPath } from '../deployment';
 
 /**
  * The colophon under every page (i14): "Made with ♥︎ in Zona Franca,
- * Barcelona…" after the two doors below. From 768px it is **one line** — "What
- * OIUEEI is · Privacy & legal · Made with ♥︎ in …" — and under 768px the two lines
- * it always was, the doors over the text (CA, 2026-10-03). Global (mounted once in App), painted with the viewer's theeeme
+ * Barcelona…" after the doors below. From 768px it is **one line** — "What
+ * OIUEEI is · Privacy & legal · Contact us · Made with ♥︎ in …" — and under 768px
+ * the two lines it always was, the doors over the text (CA, 2026-10-03). Global (mounted once in App), painted with the viewer's theeeme
  * `color_02` — the same token every `.form-page` uses as its background — so
  * there is no colour seam under the 100vh page. `useLocation()` re-renders it
  * on navigation, which re-reads the theeeme after a login/profile change (the
@@ -24,6 +24,17 @@ import { aboutPath } from '../deployment';
  * text links: this is still a colophon, not the HDS `Footer` site-map OIUEEI
  * has no content for (DESIGN §3).
  *
+ * **"Contact us" is the third door** (CA, 2026-10-04): it was a speech-bubble icon
+ * in the corner of every hero ("too many icons up there"); it is `/contact` here,
+ * on every page, in the reader's language. `/login` keeps its own "trouble signing
+ * in?" line, which is a different link, in the content.
+ *
+ * **Aligned to the content column, not centred** (CA, 2026-10-04): the footer's own
+ * background is the full width of the page, and `.site-footer-inner` inside it has
+ * the column of the page (1248px, the same side padding as `.page-container`) with
+ * `text-align: left`, so the first letter falls on the vertical of the headings and
+ * the text above it. The first link loses its left padding for that.
+ *
  * The about link is conditional because upstream there is no such page —
  * `/welcome` left with the demo, and what OIUEEI is gets told in the README.
  * A deployment that has one supplies it through `frontend/src/deployment/`.
@@ -33,7 +44,7 @@ import { aboutPath } from '../deployment';
  * one between the links and spaced the same, that App.css shows only from 768px.
  * Below that it is `display: none`, because on two lines it would hang at the end
  * of the first one. Upstream, with no about link, the line is "Privacy & legal ·
- * Made with ♥︎ in …".
+ * Contact us · Made with ♥︎ in …".
  */
 export default function SiteFooter() {
   useLocation();
@@ -44,23 +55,27 @@ export default function SiteFooter() {
       className="site-footer"
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
-      <nav className="site-footer-links" aria-label={t('footer.navLabel')}>
-        {/* Only where this deployment has a page saying what it is. Upstream
-            there is none, and a footer link to a route that 404s is worse than
-            one link fewer. /legal always exists — it is the page the privacy
-            claims tell you to go and check. */}
-        {aboutPath && (
-          <>
-            <Link to={aboutPath}>{t('footer.about')}</Link>
-            <span aria-hidden="true"> · </span>
-          </>
-        )}
-        <Link to="/legal">{t('footer.legal')}</Link>
-      </nav>
-      <span className="site-footer-sep" aria-hidden="true">
-        {' · '}
-      </span>
-      {t('footer.madeIn')}
+      <div className="site-footer-inner">
+        <nav className="site-footer-links" aria-label={t('footer.navLabel')}>
+          {/* Only where this deployment has a page saying what it is. Upstream
+              there is none, and a footer link to a route that 404s is worse than
+              one link fewer. /legal always exists — it is the page the privacy
+              claims tell you to go and check — and so does /contact. */}
+          {aboutPath && (
+            <>
+              <Link to={aboutPath}>{t('footer.about')}</Link>
+              <span aria-hidden="true"> · </span>
+            </>
+          )}
+          <Link to="/legal">{t('footer.legal')}</Link>
+          <span aria-hidden="true"> · </span>
+          <Link to="/contact">{t('footer.contact')}</Link>
+        </nav>
+        <span className="site-footer-sep" aria-hidden="true">
+          {' · '}
+        </span>
+        {t('footer.madeIn')}
+      </div>
     </footer>
   );
 }

@@ -44,13 +44,14 @@ body {
 .form-hero-content {
   /* How much of the content column's right edge the icon corner (.hero-corners)
      can take: the widest it gets is a curator's hero on CollectionPage — account
-     menu, collection menu, share menu, contact link — which is 4 controls of 44px
-     (.contact-corner, .account-menu-trigger, .collection-menu-trigger and
-     .share-corner all declare that) and the 3 gaps between them (.hero-corners'
-     `gap`). A hero with fewer icons reserves the same width: the back link cannot
-     know which ones its page will render. Pinned in test/heroCornerLayout.test.jsx,
-     which recomputes it from the DOM and these rules. */
-  --hero-corners-width: calc(4 * 44px + 3 * var(--spacing-2-xs));
+     menu, collection menu, share menu — which is 3 controls of 44px
+     (.account-menu-trigger, .collection-menu-trigger and .share-corner all
+     declare that) and the 2 gaps between them (.hero-corners' `gap`). It was 4
+     and 3 until the contact icon went to the footer (2026-10-04). A hero with
+     fewer icons reserves the same width: the back link cannot know which ones its
+     page will render. Pinned in test/heroCornerLayout.test.jsx, which recomputes
+     it from the DOM and these rules. */
+  --hero-corners-width: calc(3 * 44px + 2 * var(--spacing-2-xs));
   max-width: 1248px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-s) var(--spacing-xl);
@@ -90,21 +91,22 @@ body {
 }
 
 /* The hero's top-right icon row (i8, S9, the account menu 2026-09-28 and the
-   collection menu 2026-10-03): ContactCorner, and where they apply
-   AccountMenu, CollectionMenu and ShareCollectionMenu, sit as flex items in
+   collection menu 2026-10-03): AccountMenu, CollectionMenu and
+   ShareCollectionMenu, where each applies, sit as flex items in
    ONE anchored row instead of each computing its own `right:` offset. That
    is what lets the row close its own gaps: a member's hero (no collection or
    share menu) or an anonymous one (no account menu either) just has fewer
    children, and `gap` never reserves space for one that isn't there — the old
    per-icon offsets had to know the exact set of icons any other icon might
    share the corner with, which the account menu's own session-gating would
-   have broken (`.contact-corner`'s offset assumed ShareCollectionMenu was
-   the only possible neighbour). Anchored to the right edge of the hero's
+   have broken (the contact icon's offset, while there was one, assumed
+   ShareCollectionMenu was the only possible neighbour). Anchored to the right edge of the hero's
    CONTENT column, not the raw viewport edge (the "(100% - min(100%, 1248px))
    / 2" centring math every hero uses), and sized to its content
    (`inline-flex`) so that anchor is the row's own right edge, not the hero's
    full width. Visual order follows DOM order left-to-right: account ·
-   collection · share · contact, contact rightmost as it always was. */
+   collection · share. The contact icon that closed the row went to the site
+   footer on 2026-10-04 ("Contact us") — too many icons up here. */
 .hero-corners {
   position: absolute;
   top: calc(var(--spacing-l) - 2px);
@@ -113,17 +115,6 @@ body {
   align-items: center;
   gap: var(--spacing-2-xs);
   z-index: 1;
-}
-
-/* Support channel (i8): quiet speech-bubble link, 44px target. Sizing only —
-   `.hero-corners` above owns the positioning now. */
-.contact-corner {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--hero-text-color, var(--color-black-90));
 }
 
 /* Account menu (2026-09-28): "My profile" / "My requests" / "Requests to me"
@@ -464,21 +455,31 @@ body {
   background-color: var(--color-black-5);
 }
 
-/* The global colophon (i14): quiet, centred, painted with the viewer's theeeme
-   color_02 (inline, from SiteFooter) so it continues the page background with
-   no seam — this is only the fallback. Icons-black rule (§11): the ♥︎ is a text
-   glyph inheriting the text colour. */
+/* The global colophon (i14): quiet, painted with the viewer's theeeme color_02
+   (inline, from SiteFooter) so it continues the page background with no seam —
+   this is only the fallback. Icons-black rule (§11): the ♥︎ is a text glyph
+   inheriting the text colour. Aligned to the left of the content column, not
+   centred (CA, 2026-10-04): the background is the whole width and
+   `.site-footer-inner` has the page's own column, so the first letter falls on the
+   vertical of the headings and the text above. */
 .site-footer {
-  text-align: center;
+  text-align: left;
   font-size: var(--fontsize-body-s);
   color: var(--color-black-90);
   background-color: var(--color-black-5);
+}
+
+/* The same column as `.page-container`: 1248px, centred, and the same side padding,
+   plus the footer's own vertical room. */
+.site-footer-inner {
+  max-width: 1248px;
+  margin: 0 auto;
   padding: var(--spacing-m) var(--spacing-s) var(--spacing-l);
 }
 
-/* The colophon's two doors (what OIUEEI is, and the page the privacy claims
-   point at). 44px targets, because for a signed-out reader of a public
-   collection these are the only two links on the page. */
+/* The colophon's doors (what OIUEEI is, the page the privacy claims point at, and
+   "Contact us"). 44px targets, because for a signed-out reader of a public
+   collection these are the only links on the page. */
 .site-footer-links {
   margin-bottom: var(--spacing-2-xs);
 }
@@ -489,6 +490,12 @@ body {
   line-height: 44px;
   padding: 0 var(--spacing-2-xs);
   color: inherit;
+}
+
+/* The first link has no padding on its left, so its first letter falls on the
+   vertical of the column (and of the headings and text above it). */
+.site-footer-links a:first-child {
+  padding-left: 0;
 }
 
 /* The separator between the doors and the colophon text (CA, 2026-10-03). It
@@ -503,16 +510,17 @@ body {
   padding-right: var(--spacing-2-xs);
 }
 
-/* From 768px the colophon is ONE line: the doors, a dot, the text — centred, and
-   aligned on their middles because the links are 44px tall and the text is not.
-   Under 768px nothing here applies and it is the two lines it always was. The
-   nav loses its bottom margin (that was the gap between the two lines), and
-   `wrap` is only the way out of a language long enough not to fit. */
+/* From 768px the colophon is ONE line: the doors, a dot, the text — from the left
+   of the column, and aligned on their middles because the links are 44px tall and
+   the text is not. Under 768px nothing here applies and it is the two lines it
+   always was, left-aligned. The nav loses its bottom margin (that was the gap
+   between the two lines), and `wrap` is only the way out of a language long
+   enough not to fit. */
 @media (min-width: 768px) {
-  .site-footer {
+  .site-footer-inner {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
   }
 

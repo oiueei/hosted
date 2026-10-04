@@ -14,7 +14,6 @@ import InboxNotifications from '../components/InboxNotifications';
 import DemoNotice from '../components/DemoNotice';
 import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
-import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import { collectionTeam } from '../utils/team';
@@ -367,7 +366,6 @@ export default function CollectionPage() {
                   isPublic={collection.visibility === 'PUBLIC'}
                 />
               )}
-              <ContactCorner />
             </span>
             {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
                 `home_page` when it has one, the app's home otherwise. It used to be

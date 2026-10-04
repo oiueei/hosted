@@ -12,10 +12,11 @@ const PANEL_ID = 'collection-menu-panel';
  * "Add thing" and "Manage members" used to crowd the hero beside "Edit
  * collection", and the two data downloads lived at the foot of the settings
  * page — so a curator ran the group from three places at once. The hero row
- * keeps "Edit collection" alone; everything else is this menu, a fourth
- * icon in the hero's corner (`AccountMenu` · this · `ShareCollectionMenu` ·
- * `ContactCorner`), shown to curators only (owner or co-owner, `is_curator`
- * — the server's own word, the same gate the row uses). Its icon is
+ * holds "Edit collection" and "Add thing" (the latter since 2026-10-04, and it
+ * stays here too); everything else is this menu, the second of the corner's
+ * icons (`AccountMenu` · this · `ShareCollectionMenu`; the contact icon that was
+ * a fourth left on 2026-10-04), shown to curators only (owner or co-owner,
+ * `is_curator` — the server's own word, the same gate the row uses). Its icon is
  * `IconDocumentGroup` (CA, 2026-10-04): the menu holds the group's things and
  * files, which a bare ⋯ (what it was drawn as at first) did not say.
  *
