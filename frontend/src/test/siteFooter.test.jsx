@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi } from 'vitest';
 
 import SiteFooter from '../components/SiteFooter';
-import { declarations, declarationsInMedia } from './cssRules';
+import { declarations, declarationsInMedia, rulesFor, declared } from './cssRules';
 
 /**
  * The colophon carries the public doors a signed-out reader has.
@@ -61,10 +61,45 @@ describe('SiteFooter', () => {
 });
 
 /**
- * One line from 768px (CA, 2026-10-03): "Privacy & legal · Made with ♥︎ in …", the
- * doors and the colophon text side by side; under 768px the two lines it always
- * was. jsdom does no layout, so this pins what the component puts in the DOM and
- * what App.css declares and where — the rendering is for a browser.
+ * "Contact us" is the third door (CA, 2026-10-04): it was a speech-bubble icon in
+ * the corner of every hero, and CA found too many icons up there. It sits in the
+ * `<nav>` after the legal link, on every page and for everybody, signed in or not.
+ */
+describe('SiteFooter — "Contact us"', () => {
+  const links = () => {
+    const { container } = render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
+    return [...container.querySelectorAll('footer nav a')];
+  };
+
+  test('is a link to /contact inside the nav', () => {
+    const contact = links().find((link) => link.textContent === 'Contact us');
+
+    expect(contact).toHaveAttribute('href', '/contact');
+  });
+
+  test('comes after the legal link', () => {
+    const hrefs = links().map((link) => link.getAttribute('href'));
+
+    expect(hrefs.indexOf('/contact')).toBeGreaterThan(hrefs.indexOf('/legal'));
+    expect(hrefs.indexOf('/legal')).not.toBe(-1);
+  });
+
+  test('is the last door of the nav: the colophon text follows it', () => {
+    const all = links();
+
+    expect(all[all.length - 1]).toHaveAttribute('href', '/contact');
+  });
+});
+
+/**
+ * One line from 768px (CA, 2026-10-03): "Privacy & legal · Contact us · Made with ♥︎
+ * in …", the doors and the colophon text side by side; under 768px the two lines it
+ * always was. jsdom does no layout, so this pins what the component puts in the DOM
+ * and what App.css declares and where — the rendering is for a browser.
  */
 describe('SiteFooter — one line from 768px', () => {
   const renderFooter = () => {
@@ -76,23 +111,25 @@ describe('SiteFooter — one line from 768px', () => {
     const footer = container.querySelector('footer');
     return {
       footer,
+      // The page's own column, inside the footer's full-width background.
+      inner: footer.querySelector('.site-footer-inner'),
       nav: footer.querySelector('nav'),
       sep: footer.querySelector('.site-footer-sep'),
     };
   };
 
-  test('the separator is decoration: aria-hidden, a child of the footer, outside the nav', () => {
-    const { footer, nav, sep } = renderFooter();
+  test('the separator is decoration: aria-hidden, in the column, outside the nav', () => {
+    const { inner, nav, sep } = renderFooter();
 
     expect(sep).not.toBeNull();
     expect(sep).toHaveAttribute('aria-hidden', 'true');
-    expect(sep.parentElement).toBe(footer);
+    expect(sep.parentElement).toBe(inner);
     expect(nav.contains(sep)).toBe(false);
     expect(sep.textContent.trim()).toBe('·');
   });
 
   test('the text stays outside the nav, after the separator; the nav holds only links', () => {
-    const { footer, nav, sep } = renderFooter();
+    const { inner, nav, sep } = renderFooter();
 
     expect(nav.textContent).not.toMatch(/Zona Franca/);
     // Links, and the aria-hidden dot between two of them where the deployment has
@@ -103,9 +140,9 @@ describe('SiteFooter — one line from 768px', () => {
       expect(child.tagName === 'A' || child.getAttribute('aria-hidden') === 'true').toBe(true);
     }
     expect(
-      sep.compareDocumentPosition(footer.lastChild) & Node.DOCUMENT_POSITION_FOLLOWING
+      sep.compareDocumentPosition(inner.lastChild) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(footer.lastChild.textContent).toMatch(/Zona Franca/);
+    expect(inner.lastChild.textContent).toMatch(/Zona Franca/);
   });
 
   /* What the line reads depends on whether the deployment has an about page, so
@@ -128,28 +165,57 @@ describe('SiteFooter — one line from 768px', () => {
     }
   };
 
-  test('upstream, with no about link, the line is the legal door then the text', async () => {
-    expect(await lineWith(null)).toMatch(/^Privacy & legal · Made with .*Zona Franca/);
+  test('upstream, with no about link, the line is the legal door, contact, then the text', async () => {
+    expect(await lineWith(null)).toMatch(/^Privacy & legal · Contact us · Made with .*Zona Franca/);
   });
 
-  test('a deployment with an about page puts it first, then the legal door, then the text', async () => {
+  test('a deployment with an about page puts it first, then legal, contact and the text', async () => {
     expect(await lineWith('/about-us')).toMatch(
-      /^What OIUEEI is · Privacy & legal · Made with .*Zona Franca/
+      /^What OIUEEI is · Privacy & legal · Contact us · Made with .*Zona Franca/
     );
   });
 
-  test('from 768px the footer is a centred flex row, aligned on the middles of its items', () => {
+  test('from 768px the column is a flex row from the left, aligned on the middles of its items', () => {
     // The links are 44px tall and the text is not: without align-items the text
     // would sit on the baseline of the row, off the links' middle.
-    expect(declarationsInMedia('(min-width: 768px)', '.site-footer', 'display')).toEqual(['flex']);
-    expect(declarationsInMedia('(min-width: 768px)', '.site-footer', 'align-items')).toEqual([
-      'center',
+    const inner = '.site-footer-inner';
+    expect(declarationsInMedia('(min-width: 768px)', inner, 'display')).toEqual(['flex']);
+    expect(declarationsInMedia('(min-width: 768px)', inner, 'align-items')).toEqual(['center']);
+    // From the left of the column — not centred any more (CA, 2026-10-04).
+    expect(declarationsInMedia('(min-width: 768px)', inner, 'justify-content')).toEqual([
+      'flex-start',
     ]);
-    expect(declarationsInMedia('(min-width: 768px)', '.site-footer', 'justify-content')).toEqual([
-      'center',
-    ]);
-    // And outside the query it is not one: two lines, as before.
-    expect(declarations('.site-footer', 'display')).toEqual(['flex']);
+    // And outside the query it is not a flex row: two lines, as before.
+    expect(declarations(inner, 'display')).toEqual(['flex']);
+  });
+
+  test('the footer is aligned to the left of the column, not centred', () => {
+    expect(declarations('.site-footer', 'text-align')).toEqual(['left']);
+  });
+
+  test('its column is the page’s: the same width, centring and side padding as .page-container', () => {
+    const [maxWidth] = declarations('.site-footer-inner', 'max-width');
+    const [margin] = declarations('.site-footer-inner', 'margin');
+    const [padding] = declarations('.site-footer-inner', 'padding');
+
+    expect(maxWidth).toBe(declarations('.page-container', 'max-width')[0]);
+    expect(margin).toBe(declarations('.page-container', 'margin')[0]);
+    expect(maxWidth).toBe('1248px');
+    // `padding: top sides bottom`: the sides must be the page container's own.
+    const sides = padding.split(/\s+/)[1];
+    expect(sides).toBe(declarations('.page-container', 'padding')[0]);
+  });
+
+  test('the first link has no padding on its left, so its first letter is on the column’s vertical', () => {
+    const [rule] = rulesFor('.site-footer-links a:first-child');
+
+    expect(declared(rule, 'padding-left')).toBe('0');
+    // The others keep the 2xs on both sides, which is what spaces them from the dot.
+    expect(declarations('.site-footer-links a', 'padding')).toEqual(['0 var(--spacing-2-xs)']);
+  });
+
+  test('the links stay 44px tall', () => {
+    expect(declarations('.site-footer-links a', 'min-height')).toEqual(['44px']);
   });
 
   test('the separator is hidden below 768px and shown from there', () => {

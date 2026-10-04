@@ -31,10 +31,10 @@ const PANEL_ID = 'account-menu-panel';
  * navigation between actions; this is `Tab`-navigable links, so the native
  * semantics already say what it is.
  *
- * Rendered next to `ContactCorner` (and, on `CollectionPage`,
- * `CollectionMenu` and `ShareCollectionMenu`) inside the shared
- * `.hero-corners` flex row — see `PageLayout` and the eight manual-hero pages
- * for where. **Session-gated, not page-gated**: it reads
+ * Rendered first in the shared `.hero-corners` flex row (and, on `CollectionPage`,
+ * followed by `CollectionMenu` and `ShareCollectionMenu`) — see `PageLayout` and
+ * the manual-hero pages for where. The contact icon that used to close the row
+ * went to the site footer on 2026-10-04 ("Contact us"): too many icons up here. **Session-gated, not page-gated**: it reads
  * `userCode` itself and renders nothing for a signed-out visitor, so it needs
  * no prop from any of its many call sites.
  */

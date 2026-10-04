@@ -46,7 +46,6 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const DigestMutePage = lazy(() => import('./pages/DigestMutePage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
-const CollaboratePage = lazy(() => import('./pages/CollaboratePage'));
 
 /**
  * On every route change (but not the initial mount), move focus to the main
@@ -145,7 +144,6 @@ function App() {
             {/* The digest footer's one-click unsubscribe — public by necessity. */}
             <Route path="/digest/mute/:token" element={<DigestMutePage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/collaborate" element={<CollaboratePage />} />
             <Route path="/share/:token" element={<SharePage />} />
 
             {/* Public read of PUBLIC collections/things — anonymous visitors can

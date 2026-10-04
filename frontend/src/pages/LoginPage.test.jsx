@@ -48,6 +48,28 @@ describe('LoginPage magic-link request (the front door)', () => {
     expect(screen.getByRole('button', { name: 'Try another email' })).toBeInTheDocument();
   });
 
+  test('"Try another email" is as wide as the Sign in button it replaces', async () => {
+    // CA, 2026-10-04: after sending, the page's two buttons — this one and, on a
+    // deployment with an open door, "New here?" — were two widths, because this one
+    // hugged its own text. It takes the column and the full width the form had.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderLogin();
+    // HDS marks full width with a hashed CSS-modules class: read its stable part.
+    const fullWidth = (el) => [...el.classList].filter((name) => /fullWidth/i.test(name));
+    const reference = fullWidth(screen.getByRole('button', { name: 'Sign in' }));
+    expect(reference).not.toEqual([]);
+
+    submitEmail();
+
+    const tryAnother = await screen.findByRole('button', { name: 'Try another email' });
+    expect(fullWidth(tryAnother)).toEqual(reference);
+    expect(tryAnother.closest('.measure')).not.toBeNull();
+  });
+
   test('a login that came from a page carries where it was going, so the link can return there', async () => {
     // `?next=` is put on /login by apiFetch / RequireAuth when a session runs
     // out. It goes to the server, not into browser storage, because the magic
@@ -217,17 +239,38 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
     expect(notice.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  test('the way to reach a human is the last link on the page, below the reading', () => {
-    // CA, 2026-09-21: looked for deliberately, so it belongs at the foot and not
-    // between a returning member and the field they came for. It is the last of
-    // them since 2026-10-03, when the page's own "Legal notice & privacy" link
-    // went: the site footer, on every page, is where /legal is reached from.
+  test('the no-banner claim’s link comes after the licence, below the door, whatever else the deployment adds', () => {
+    // CA, 2026-09-21: the things you look for deliberately belong at the foot and
+    // not between a returning member and the field they came for. The page's own
+    // "Legal notice & privacy" link went on 2026-10-03 and the "Trouble signing in?"
+    // line on 2026-10-04, so what is left is the reading itself.
+    //
+    // It does not say which link is *last*: that depends on `deployment/` — upstream
+    // the reading is the end of the page, and a deployment with a help page
+    // (`faqPath`) puts that link after it (`deployment.test.jsx` pins that, with the
+    // module mocked). A core test cannot assume what `deployment/` holds.
     renderLogin();
-    const help = screen.getByRole('link', { name: /Trouble signing in/i });
-    const links = [...document.querySelectorAll('a')];
-    expect(links.at(-1)).toBe(help);
+    const signIn = screen.getByRole('button', { name: 'Sign in' });
     const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
-    expect(licence.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const noBanner = document.querySelector(
+      'a[href="https://github.com/oiueei/standalone#privacy"]'
+    );
+
+    expect(noBanner).not.toBeNull();
+    expect(signIn.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      licence.compareDocumentPosition(noBanner) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  test('the page has no "Trouble signing in?" line, and nothing in its content links /contact', () => {
+    // It was the locked-out user's way to a human (CA, 2026-09-21) and went on
+    // 2026-10-04: that way out is the site footer's "Contact us", on every page.
+    // The page alone has no footer, so a link to /contact here would be its own.
+    const { container } = renderLogin();
+
+    expect(screen.queryByRole('link', { name: /Trouble signing in/i })).toBeNull();
+    expect(container.querySelector('a[href="/contact"]')).toBeNull();
   });
 
   test('the page itself does not link to /legal — the footer does, once', () => {

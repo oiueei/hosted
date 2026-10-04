@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate, useLocation, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Notification, Tag, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';
@@ -14,7 +14,6 @@ import InboxNotifications from '../components/InboxNotifications';
 import DemoNotice from '../components/DemoNotice';
 import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
-import ContactCorner from '../components/ContactCorner';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import { collectionTeam } from '../utils/team';
@@ -23,6 +22,8 @@ import StatusRegion from '../components/StatusRegion';
 import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import useMediaQuery from '../hooks/useMediaQuery';
+import Toast from '../components/Toast';
 import { DATE_TYPES } from '../constants/things';
 
 /**
@@ -45,9 +46,13 @@ const CARDS_PER_PAGE = 24;
 // form it opens sits under.
 const RECOMMEND_BOX_ID = 'recommend-box';
 
+// How long the card of a thing just uploaded stays marked (V6).
+const JUST_ADDED_MS = 2000;
+
 export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
@@ -71,6 +76,52 @@ export default function CollectionPage() {
   // menu that offers it. One call owns the calendar, stats and JSON
   // downloads, and the page hands it to the menu and to the status zone.
   const downloads = useCollectionDownloads(code);
+
+  // Arriving from "Add thing" with the new thing's code (V6, CA 2026-10-04). On a
+  // desktop the new card is the first of the grid and in plain sight; on a phone
+  // the hero fills the screen and nothing of the upload shows, which reads as if
+  // nothing happened. So, below 768px only: a green notice, the page brought down
+  // to the card if it is not already in view, the focus on its link and the card
+  // marked for a moment. On a desktop nothing — but the state is cleared either
+  // way, so a reload or the back button never repeats it.
+  const isPhone = useMediaQuery('(max-width: 767px)');
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const addedThing = location.state?.addedThing;
+  // The notice is read off the state this page was *opened* with: the effect below
+  // clears the state, and a notice that lives on it would go with it.
+  const [arrivedWith] = useState(addedThing ?? null);
+  const [uploadedClosed, setUploadedClosed] = useState(false);
+  // Once per code, whatever re-runs the effect (StrictMode, a language change).
+  const handledAddedThing = useRef(null);
+  const justAddedTimer = useRef(null);
+  useEffect(() => () => clearTimeout(justAddedTimer.current), []);
+  useEffect(() => {
+    // Wait for the cards: they are painted in the commit that stored the collection.
+    if (!addedThing || !collection || handledAddedThing.current === addedThing) return;
+    handledAddedThing.current = addedThing;
+    navigate(location.pathname, { replace: true, state: null });
+    if (!isPhone) return;
+    // Not in the list — a tag filter, past the first page — is the notice alone.
+    const card = document.querySelector(`[data-thing-code="${addedThing}"]`);
+    if (!card) return;
+    const { top, bottom } = card.getBoundingClientRect();
+    if (top < 0 || bottom > window.innerHeight) {
+      card.scrollIntoView?.({ block: 'center', behavior: reducedMotion ? 'auto' : 'smooth' });
+    }
+    // The link, for a keyboard and a screen reader; the scroll above is already
+    // asked for, so the focus must not scroll again.
+    card.querySelector('a.thing-card-link')?.focus({ preventScroll: true });
+    // The mark goes straight on the element, like the scroll and the focus: this
+    // effect is already speaking to the DOM, and a card is a memoised component
+    // that would re-render for a flag it only needs for two seconds.
+    if (tc.color_01) card.style.setProperty('--just-added-color', `var(--color-${tc.color_01})`);
+    card.classList.add('thing-card--just-added');
+    clearTimeout(justAddedTimer.current);
+    justAddedTimer.current = setTimeout(
+      () => card.classList.remove('thing-card--just-added'),
+      JUST_ADDED_MS
+    );
+  }, [addedThing, collection, isPhone, reducedMotion, tc.color_01, location.pathname, navigate]);
   useEffect(() => {
     document.title = collection
       ? t('titles.collection', { headline })
@@ -315,7 +366,6 @@ export default function CollectionPage() {
                   isPublic={collection.visibility === 'PUBLIC'}
                 />
               )}
-              <ContactCorner />
             </span>
             {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
                 `home_page` when it has one, the app's home otherwise. It used to be
@@ -407,7 +457,7 @@ export default function CollectionPage() {
               !collection.is_member &&
               collection.visibility === 'PUBLIC' && (
                 <div className="invite-nudge">
-                  <div>
+                  <div className="button-row-wide">
                     <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
                       {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
                     </Button>
@@ -422,13 +472,20 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
-                {/* The row holds "Edit collection" alone (CA, 2026-10-03):
-                    "Add thing", "Manage members" and the three downloads live
-                    in the collection menu in the corner; the outcome of a
-                    download lands right under the row. */}
+                {/* "Edit collection" and "Add thing" (CA, 2026-10-04), always — with
+                    things or without. The row held "Edit collection" alone from
+                    2026-10-03, with "Add thing" in the collection menu; an empty
+                    group then had no other way in than its own phrase, and CA wants
+                    the button where the eye lands. It stays in the menu too (CA
+                    chose that knowing it repeats). "Manage members" and the
+                    downloads live only in the menu; the outcome of a download
+                    lands right under the row. */}
                 <div className="button-row-wide">
                   <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
                     {t('collectionPage.editCollection')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                    {t('collectionPage.addThing')}
                   </ButtonLink>
                 </div>
                 <CollectionDownloadsStatus downloads={downloads} />
@@ -601,25 +658,14 @@ export default function CollectionPage() {
           </div>
         )}
         {visibleThings.length === 0 ? (
-          <>
-            <p>
-              {t('collectionPage.noThings')}
-              {canAddThing && (
-                <>
-                  {' '}
-                  <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.
-                </>
-              )}
-            </p>
-            <div className="spacer-xxs" />
-            {canAddThing && (
-              <p>
-                <Link to={`/collections/${code}/add#bulk-add`}>
-                  {t('collectionPage.addManyCsv')}
-                </Link>
-              </p>
-            )}
-          </>
+          // Whoever can add a thing (a curator, or a member of a COMMUNITY group)
+          // already has "Add thing" in the hero, so an empty group says nothing to
+          // them (CA, 2026-10-04): the phrase, "Add one" and the CSV link are gone,
+          // the CSV one into the collection menu. Whoever cannot — a member of a
+          // PROPRIETARY group, a reader with no session — is told, with no link.
+          canAddThing ? null : (
+            <p>{t('collectionPage.noThings')}</p>
+          )
         ) : shownThings.length === 0 ? (
           <p>{t('collectionPage.noThingsForTag')}</p>
         ) : (
@@ -645,19 +691,24 @@ export default function CollectionPage() {
             {remainingThings > 0 && (
               <>
                 <div className="spacer-m" />
-                <Button
-                  variant="secondary"
-                  style={btnSecondaryStyle}
-                  onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
-                >
-                  {t('collectionPage.showMoreThings', { count: remainingThings })}
-                </Button>
+                {/* A pager is a loose action button like any other: in a wide row,
+                    so on a phone it is the width of the screen (CA, 2026-10-04). */}
+                <div className="button-row-wide">
+                  <Button
+                    variant="secondary"
+                    style={btnSecondaryStyle}
+                    onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
+                  >
+                    {t('collectionPage.showMoreThings', { count: remainingThings })}
+                  </Button>
+                </div>
               </>
             )}
           </>
         )}
         {/* A way in for a signed-out reader where no button leads there (see
-            `anonJoinKey`): under "No things in this collection yet." in an empty
+            `anonJoinKey`): under "No things in this collection yet." (which a
+            signed-out reader is always shown, as they cannot add) in an empty
             group, and under the grid — after "Show more" — of a COMMUNITY one.
             Not in the hero (CA removed that line on 2026-09-21), and it goes to
             the group's join page with no ?thing=: there is no thing in it. */}
@@ -673,13 +724,15 @@ export default function CollectionPage() {
             <h2>{t('broadcast.heading')}</h2>
             <div className="spacer-m" />
             {!broadcastOpen ? (
-              <Button
-                variant="secondary"
-                style={btnSecondaryStyle}
-                onClick={() => setBroadcastOpen(true)}
-              >
-                {t('broadcast.openButton')}
-              </Button>
+              <div className="button-row-wide">
+                <Button
+                  variant="secondary"
+                  style={btnSecondaryStyle}
+                  onClick={() => setBroadcastOpen(true)}
+                >
+                  {t('broadcast.openButton')}
+                </Button>
+              </div>
             ) : (
               <div className="form-grid">
                 {/* The one place in the product where a member learns an address
@@ -775,6 +828,16 @@ export default function CollectionPage() {
             </div>
           </>
         )}
+        {/* A key, not text: Toast translates where it paints, and this opens just as
+            `useCollectionLanguage` is changing the language. */}
+        <Toast
+          toast={
+            isPhone && arrivedWith && !uploadedClosed
+              ? { type: 'success', messageKey: 'addThing.uploaded' }
+              : null
+          }
+          onClose={() => setUploadedClosed(true)}
+        />
       </div>
     </div>
   );

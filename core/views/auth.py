@@ -311,7 +311,6 @@ class VerifyLinkView(APIView):
     # Where the SPA sends the user after a successful login (``landing`` in the
     # response). Server-decided, so it survives a cleared localStorage.
     LANDING_COLLECTION = "collection"
-    LANDING_WELCOME = "welcome"
     LANDING_HOME = "home"
     LANDING_PATH = "path"
 
@@ -434,13 +433,23 @@ class VerifyLinkView(APIView):
         return user, refresh, user_data
 
     def _solo_collection_code(self, user):
-        """The user's single ACTIVE collection (owned or invited), or None.
+        """The code of the user's one real ACTIVE collection, or None.
+
+        "Real" leaves out the demonstration collections (``is_onboarding``,
+        the ones an open door joins people to): somebody who peeked at the demo
+        and then founded or joined a group of their own belongs in that group,
+        not on Home, and somebody who only has the demo has no group to be
+        taken to (CA, 2026-10-04). Owned, invited and co-curated all count — a
+        co-curator is always in ``invites`` too. A collection that is not ACTIVE
+        does not count.
 
         Two rows are enough to answer "exactly one?", so the query stops there.
         """
         codes = list(
             Collection.objects.filter(
-                Q(owner=user) | Q(invites=user), status=Collection.Status.ACTIVE
+                Q(owner=user) | Q(invites=user),
+                status=Collection.Status.ACTIVE,
+                is_onboarding=False,
             )
             .distinct()
             .values_list("code", flat=True)[:2]
@@ -457,18 +466,23 @@ class VerifyLinkView(APIView):
 
         1. The link carries a collection (``target_code``: a share-token or
            public-collection join) → that collection. They joined it to get there.
-        2. Otherwise a link born at an open door with no target → ``"welcome"``.
-           A genuinely new visitor with nothing else to see. **Nothing in this
-           repository produces that RSVP**: every join here carries a collection.
-           It is kept for a deployment that adds an open door of its own, since
-           this file is one it must never have to edit; the SPA resolves the
-           landing against its own ``aboutPath`` and falls through to home.
-        3. Otherwise a ``/login`` link (or a legacy one with no origin) that
-           remembers where the person was going (``context["next"]``, stamped by
-           ``RequestLinkView``) → that path (``"path"``). It outranks the
-           single-collection rule: the email they came from named a page.
-        4. Otherwise → their single ACTIVE collection when they have exactly one,
-           else home.
+        2. Otherwise a link that remembers where the person was going
+           (``context["next"]``, stamped by ``RequestLinkView``) → that path
+           (``"path"``). It outranks the single-collection rule: the email they
+           came from named a page. A link born at an open door (``origin ==
+           POPIN``) never follows one: whoever walks in through it has no session
+           that ran out on a page, and a ``next`` written there by another route
+           must not steer them.
+        3. Otherwise → their one real ACTIVE collection when they have exactly
+           one (owned, invited or co-curated, **not** a demonstration
+           collection), else home. That holds for a link from an open door too:
+           somebody who only peeked at the demo goes to Home, and somebody who
+           also has a group of their own goes to it.
+
+        There is no ``"welcome"`` landing any more (CA, 2026-10-04): an open
+        door's visitor used to be sent to the deployment's ``aboutPath`` page,
+        and now gets the same answer as anyone else, from what they actually
+        belong to.
         """
         ip = get_client_ip(request)
 
@@ -481,8 +495,8 @@ class VerifyLinkView(APIView):
         # (``target_code``, stamped by JoinView). Drop them straight onto it
         # after login — they were already added to its invites (private share)
         # or it is PUBLIC (login-to-act). If the collection went INACTIVE
-        # between the join and the click, this simply doesn't match — the origin
-        # rules below take over naturally instead of landing the user on a page
+        # between the join and the click, this simply doesn't match — the rules
+        # below take over naturally instead of landing the user on a page
         # that 403s.
         invited_collection = None
         if (
@@ -525,9 +539,7 @@ class VerifyLinkView(APIView):
                 .exists()
             ):
                 response_data["thing"] = context_thing
-        elif origin == RSVP.Origin.POPIN:
-            response_data["landing"] = self.LANDING_WELCOME
-        elif next_path:
+        elif next_path and origin != RSVP.Origin.POPIN:
             response_data["landing"] = self.LANDING_PATH
             response_data["path"] = next_path
         else:

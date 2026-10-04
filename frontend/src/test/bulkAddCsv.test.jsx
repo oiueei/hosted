@@ -41,6 +41,15 @@ beforeEach(() => {
 });
 
 describe('BulkAddCsv — plain CSV', () => {
+  test('the import button sits in a wide row, so on a phone it is the width of the screen', async () => {
+    const { container } = renderBulkAdd();
+
+    pick(container, csvFile('headline,type,fee\nCazo de acero,RENT_THING,1\nSartén,SELL_THING,3'));
+
+    const importButton = await screen.findByRole('button', { name: 'Add 2 items' });
+    expect(importButton.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('parses, previews, and imports the mapped rows', async () => {
     apiFetch.mockResolvedValue(jsonResponse({ created: 2 }));
     const { container, onImported } = renderBulkAdd();

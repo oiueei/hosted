@@ -7,26 +7,21 @@ import useTheeeme from '../hooks/useTheeeme';
 import StatusRegion from './StatusRegion';
 
 /**
- * The shared operator-message form, rendered by `ContactPage` (support,
- * `kind="support"`) and `CollaboratePage` (`kind="collab"`) with their own
- * copy — the same pattern as `MagicLinkJoinPage` for the join doors. Public on
+ * The shared operator-message form, rendered by `ContactPage` with its own copy
+ * — the same pattern as `MagicLinkJoinPage` for the join doors. Public on
  * purpose: the person who most needs the support form is the one who can't
  * sign in. Name (optional), a reply address and the message; the backend
- * forwards it to the operator with Reply-To set and a per-kind subject.
+ * forwards it to the operator with Reply-To set.
+ *
+ * It sends no `kind`: the server's default, `support`, is the only kind a page
+ * here asks for. (`collab`, the collaborate page's, is still accepted there with
+ * a subject of its own; no front-end page has sent it since 2026-10-04.)
  *
  * Props: `docTitleKey` / `titleKey` / `introKey` (full i18n keys — the copy
- * differs per page), `kind` (`support` | `collab`), `idPrefix` (input ids),
- * `children` (optional extra content under the form, e.g. ContactPage's link
- * to the collaborate page).
+ * differs per page), `idPrefix` (input ids), `children` (optional extra content
+ * under the form).
  */
-export default function ContactFormPage({
-  docTitleKey,
-  titleKey,
-  introKey,
-  kind,
-  idPrefix,
-  children,
-}) {
+export default function ContactFormPage({ docTitleKey, titleKey, introKey, idPrefix, children }) {
   const { t } = useTranslation();
   useEffect(() => {
     document.title = t(docTitleKey);
@@ -47,7 +42,7 @@ export default function ContactFormPage({
     try {
       const res = await apiFetch('/api/v1/contact/', {
         method: 'POST',
-        body: JSON.stringify({ name, email, message, kind }),
+        body: JSON.stringify({ name, email, message }),
       });
       if (res.ok) {
         setSent(true);
@@ -107,7 +102,7 @@ export default function ContactFormPage({
                 </Notification>
               )}
             </StatusRegion>
-            <div>
+            <div className="button-row-wide">
               <Button type="submit" disabled={sending || !message.trim()} style={btnStyle}>
                 {sending ? t('common.sending') : t('common.send')}
               </Button>

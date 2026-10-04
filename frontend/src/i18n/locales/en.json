@@ -163,7 +163,6 @@
     "deleteAccount": "Delete account — OIUEEI",
     "legal": "Legal & privacy — OIUEEI",
     "contact": "Contact — OIUEEI",
-    "collaborate": "Collaborate — OIUEEI",
     "ownerBookings": "Requests to me — OIUEEI",
     "dataExport": "Data export — OIUEEI",
     "reserveThing": "Reserve: {{headline}} — OIUEEI"
@@ -182,7 +181,6 @@
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
     "popIn": "New here? Pop in →",
-    "loginHelp": "Trouble signing in? Tell us and we'll try to help as soon as we can →",
     "faqLink": "Questions about this site? →"
   },
   "verify": {
@@ -297,7 +295,6 @@
     "inactiveThings": "Inactive things",
     "inactiveNotice": "This collection is inactive. It is not visible to members.",
     "noThings": "No things in this collection yet.",
-    "addOne": "Add one",
     "addManyCsv": "Add several at once (CSV)",
     "allTags": "All",
     "noThingsForTag": "No things with this tag.",
@@ -461,6 +458,7 @@
     "maxHeadline": "Maximum 64 characters per language.",
     "priceRequired": "Price is required for this type.",
     "maxLocation": "Maximum 64 characters.",
+    "uploaded": "Thing uploaded!",
     "errorCreating": "Error creating thing.",
     "tagsLabel": "Tags",
     "tagsPlaceholder": "Select tags",
@@ -951,19 +949,14 @@
     "messageLabel": "Message",
     "sentLabel": "Received!",
     "sentBody": "We've got your message — we'll reply as soon as we can.",
-    "error": "We couldn't send your message. Please try again.",
-    "linkLabel": "Problems, suggestions, comments? Contact us"
-  },
-  "collaborate": {
-    "pageTitle": "Collaborate with OIUEEI",
-    "intro": "Design, product, development and beta-testing collaborations: if you're into open source or the social and solidarity economy, you're more than welcome. Tell us who you are and what you'd like to bring — we'll reply as soon as we can.",
-    "linkFromContact": "Design, product, code or beta-testing? Collaborations →"
+    "error": "We couldn't send your message. Please try again."
   },
   "footer": {
     "madeIn": "Made with ♥︎ in Zona Franca, Barcelona, Catalonia, Spain, EU",
     "navLabel": "About OIUEEI",
     "about": "What OIUEEI is",
-    "legal": "Privacy & legal"
+    "legal": "Privacy & legal",
+    "contact": "Contact us"
   },
   "capabilities": {
     "needsApproval": "Some options need approval on this deployment: {{list}}.",

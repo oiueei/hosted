@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import MyBookingsPage from './MyBookingsPage';
+import { mockMatchMedia, PHONE } from '../test/matchMedia';
 
 expect.extend(toHaveNoViolations);
 
@@ -258,6 +259,14 @@ describe('MyBookingsPage listing', () => {
     expect(screen.getByRole('link', { name: 'Browse collections' })).toHaveAttribute('href', '/');
   });
 
+  test('that way out sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockList([]);
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'Browse collections' });
+    expect(link.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('a failed load says so instead of spinning forever', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -400,6 +409,14 @@ describe('MyBookingsPage cancelling a confirmed reservation', () => {
 });
 
 describe('MyBookingsPage pagination', () => {
+  test('the pager sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockList([booking()], 'http://testserver/api/v1/my-bookings/?page=2');
+    renderPage();
+
+    const more = await screen.findByRole('button', { name: 'Load more' });
+    expect(more.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('"Load more" appends the next page and keeps the request same-origin', async () => {
     // DRF returns an absolute `next`; sending it verbatim would leave the Vite
     // proxy in dev and drop the auth cookies with it.
@@ -465,5 +482,100 @@ describe('MyBookingsPage pagination', () => {
 
     await screen.findByText('Cordless drill');
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * On a phone each of my requests is a card instead of a row (`ResponsiveTable`,
+ * CA, 2026-10-04). Withdrawing one is a button with its words on it, and it must do
+ * what the icon in the table does: one press for a pending request, a question
+ * first for a reservation that is coming up.
+ */
+describe('MyBookingsPage on a phone', () => {
+  let media;
+  const posts = () => globalThis.fetch.mock.calls.filter(([, o]) => o?.method === 'POST');
+  const mockBookings = (...results) => {
+    globalThis.fetch = vi.fn((url, opts) =>
+      Promise.resolve(
+        opts?.method === 'POST'
+          ? { ok: true, status: 200, json: async () => ({}) }
+          : { ok: true, status: 200, json: async () => ({ results, next: null }) }
+      )
+    );
+  };
+
+  beforeEach(() => {
+    media = mockMatchMedia({ [PHONE]: true });
+  });
+  afterEach(() => media.restore());
+
+  test('a request is a card holding the thing, its owner, when, both labels and the cancel', async () => {
+    mockBookings(booking());
+    renderPage();
+
+    const list = await screen.findByRole('list', { name: 'Requests waiting for an answer' });
+    expect(screen.queryByRole('table')).toBeNull();
+    const [card] = within(list).getAllByRole('listitem');
+    expect(within(card).getByRole('link', { name: 'Cordless drill' })).toHaveAttribute(
+      'href',
+      '/things/THG001'
+    );
+    expect(within(card).getByText('Lala')).toBeInTheDocument();
+    expect(within(card).getByText('Requested 01/08/2026')).toBeInTheDocument();
+    expect(within(card).getByText('01/09/2026 — 08/09/2026')).toBeInTheDocument();
+    expect(within(card).getByText('Lend')).toBeInTheDocument();
+    expect(within(card).getByText('Pending')).toBeInTheDocument();
+    const cancel = within(card).getByRole('button', { name: 'Cancel this booking request' });
+    expect(cancel.parentElement).toHaveClass('button-row-wide');
+  });
+
+  test('cancelling a pending request sends what the icon sends, and the card settles', async () => {
+    mockBookings(booking());
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel this booking request' }));
+
+    await waitFor(() =>
+      expect(posts().map(([u]) => u)).toEqual(['/api/v1/bookings/BKG001/cancel/'])
+    );
+    expect(await screen.findByText('Cancelled')).toBeInTheDocument();
+  });
+
+  test('a settled request is still a card, with no cancel', async () => {
+    mockBookings(booking({ status: 'REJECTED' }));
+    renderPage();
+
+    const list = await screen.findByRole('list', { name: 'Requests already closed' });
+    expect(within(list).getByRole('link', { name: 'Cordless drill' })).toBeInTheDocument();
+    expect(within(list).queryByRole('button')).toBeNull();
+  });
+
+  test('a coming reservation asks first, naming what would go, as the table does', async () => {
+    mockBookings(
+      booking({
+        thing_type: 'RESERVE_THING',
+        thing_headline: 'Laser cutter',
+        status: 'ACCEPTED',
+        start_date: '2099-01-10',
+        end_date: '2099-01-11',
+        start_time: '10:00:00',
+        end_time: '11:30:00',
+      })
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel reservation' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cancel this reservation?' });
+    expect(dialog).toHaveTextContent('Laser cutter');
+    expect(posts()).toHaveLength(0);
+  });
+
+  test('the cards have no axe violations', async () => {
+    mockBookings(booking(), booking({ code: 'BKG002', status: 'REJECTED' }));
+    const { container } = renderPage();
+    await screen.findByRole('list', { name: 'Requests waiting for an answer' });
+
+    expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });
 });

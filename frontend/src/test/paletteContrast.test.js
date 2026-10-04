@@ -285,6 +285,44 @@ describe('the /login alpha warning stays readable', () => {
   });
 });
 
+// ── The lines of a table cell ──────────────────────────────────────────
+// The request tables and "My groups" sit on HDS's white cell, whatever the
+// theeeme, and their lines are Body S — normal text, owing 4.5:1. "Requested
+// on …" and "No dates" were black-50 and black-40 there (3.9:1 and 2.8:1) until
+// CA had them turned black (2026-10-04). Every rule in App.css whose selector
+// names a `.table-cell-line…` or `.table-cell-link…` class and sets a colour is
+// read out and judged, so a grey added later is judged too.
+function tableCellColours() {
+  const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const found = [];
+  for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/\.table-cell-(line|link)/.test(selector)) continue;
+    const colour = /(?:^|[;\s])color:\s*([^;]+)/.exec(body);
+    if (colour)
+      found.push({ selector: selector.trim(), token: tokenNameFrom(colour[1], selector) });
+  }
+  return found;
+}
+
+describe('the lines of a table cell stay readable', () => {
+  const tokens = loadTokenHexMap();
+  const rules = tableCellColours();
+
+  test('there are line classes to judge', () => {
+    // Against the empty sweep: a selector that quietly stopped matching would
+    // otherwise pass forever having judged nothing.
+    expect(rules.length).toBeGreaterThan(0);
+  });
+
+  test.each(rules)('$selector meets AA on the white cell', ({ selector, token }) => {
+    const ratio = contrastRatio(tokens[token], tokens.white);
+    expect(
+      ratio,
+      `${selector}: ${token} on white is ${ratio.toFixed(2)}:1, owes ${AA_NORMAL}:1`
+    ).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+});
+
 describe('keyboard focus ring', () => {
   const tokens = loadTokenHexMap();
   const bands = ringBands();

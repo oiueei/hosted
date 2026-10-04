@@ -195,13 +195,11 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
               </li>
             ))}
           </ol>
-          <Button
-            style={{ ...btnStyle, marginTop: 'var(--spacing-s)' }}
-            disabled={sending}
-            onClick={handleSend}
-          >
-            {sending ? t('common.sending') : t('bulkInvite.send', { count: rows.length })}
-          </Button>
+          <div className="button-row-wide" style={{ marginTop: 'var(--spacing-s)' }}>
+            <Button style={btnStyle} disabled={sending} onClick={handleSend}>
+              {sending ? t('common.sending') : t('bulkInvite.send', { count: rows.length })}
+            </Button>
+          </div>
         </>
       )}
     </div>

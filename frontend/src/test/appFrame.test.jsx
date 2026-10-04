@@ -172,6 +172,25 @@ describe('html[lang]', () => {
   });
 });
 
+describe('the way to a human is reached from one place on the front door', () => {
+  test('/login has no link to /contact in its content; the site footer has the one', async () => {
+    // "Trouble signing in? Tell us…" closed the page until CA took it out
+    // (2026-10-04): "Contact us" is the footer's third door on every page. Rendered
+    // whole — App, so the footer is there — because the page alone cannot say how
+    // many links the user sees.
+    const { default: App } = await import('../App');
+    render(<App />);
+    navigateTo('/login');
+    await screen.findByRole('button', { name: 'Sign in' });
+
+    const links = [...document.querySelectorAll('a[href="/contact"]')];
+    expect(links).toHaveLength(1);
+    expect(links[0].closest('footer')).not.toBeNull();
+    expect(links[0]).toHaveTextContent('Contact us');
+    expect(screen.queryByRole('link', { name: /Trouble signing in/i })).toBeNull();
+  });
+});
+
 describe('the legal notice is reached from one place on the front door', () => {
   test('/login links /legal exactly once, from the site footer', async () => {
     // The door once carried its own "Legal notice & privacy" link as well as the

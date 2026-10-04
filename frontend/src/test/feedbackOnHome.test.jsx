@@ -57,6 +57,15 @@ describe('Home and the feedback button', () => {
     expect(container.querySelectorAll('.feedback-link')).toHaveLength(1);
   });
 
+  test('it sits in a wide row, so on a phone it is the width of the screen', async () => {
+    // Alone, and still in a `.button-row-wide`: the row is what takes a loose
+    // action button to 100% under 768px (CA, 2026-10-04).
+    await renderHome('https://forms.example/feedback');
+
+    const link = await screen.findByRole('link', { name: /^Ideas and bugs/ });
+    expect(link.parentElement).toHaveClass('button-row-wide');
+  });
+
   test("it is the secondary button: white background, not the theeeme's primary fill", async () => {
     await renderHome('https://forms.example/feedback');
 

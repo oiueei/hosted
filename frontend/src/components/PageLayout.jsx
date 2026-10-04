@@ -1,7 +1,6 @@
 import { Koros } from 'hds-react';
 import AccountMenu from './AccountMenu';
 import BackLink from './BackLink';
-import ContactCorner from './ContactCorner';
 import useTheeeme from '../hooks/useTheeeme';
 
 /**
@@ -43,7 +42,6 @@ export default function PageLayout({ title, backTo, backLabel, description, chil
         >
           <span className="hero-corners">
             <AccountMenu />
-            <ContactCorner />
           </span>
           {backTo && <BackLink to={backTo} label={backLabel} />}
           {title && <h1 className="form-hero-title">{title}</h1>}

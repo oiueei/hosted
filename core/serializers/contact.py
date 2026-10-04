@@ -16,6 +16,9 @@ class ContactSerializer(serializers.Serializer):
 
     ``kind`` labels the operator's inbox: ``support`` (default — the contact
     page) or ``collab`` (the collaborate page). Same pipe, different subject.
+    No front-end page sends ``collab`` since 2026-10-04 (the page left the app,
+    to be rethought); it is still accepted so that door can reopen without a
+    change here.
     """
 
     name = SafeHeadlineField(max_length=32, required=False, allow_blank=True, default="")

@@ -6,7 +6,6 @@ import BackLink from '../components/BackLink';
 import JoinToAct from '../components/JoinToAct';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
-import ContactCorner from '../components/ContactCorner';
 import HeroPhoto from '../components/HeroPhoto';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
@@ -94,7 +93,6 @@ export default function JoinPage() {
           >
             <span className="hero-corners">
               <AccountMenu />
-              <ContactCorner />
             </span>
             <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
             <h1 className="form-hero-title">{t('joinToAct.heading')}</h1>

@@ -520,7 +520,7 @@ export default function RequestThingPage() {
       {notMemberError && (
         <div className="invite-nudge" role="alert">
           <p style={{ margin: 0 }}>{notMemberError}</p>
-          <div style={{ marginTop: 'var(--spacing-xs)' }}>
+          <div className="button-row-wide" style={{ marginTop: 'var(--spacing-xs)' }}>
             <Button style={btnStyle} disabled={joining} onClick={handleJoinGroup}>
               {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
             </Button>
