@@ -6,7 +6,6 @@ import BackLink from '../../components/BackLink';
 import FeedbackLink from '../../components/FeedbackLink';
 import { apiFetch } from '../../services/api';
 import useTheeeme from '../../hooks/useTheeeme';
-import ContactCorner from '../../components/ContactCorner';
 import ButtonLink from '../../components/ButtonLink';
 import { faqPath } from '../index';
 
@@ -87,7 +86,6 @@ export default function WelcomePage() {
           className="form-hero-content"
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
-          <ContactCorner />
           {isAuthenticated && <BackLink to="/" label={t('common.home')} />}
           <div className="spacer-m" />
           {userName && (

@@ -96,6 +96,29 @@ describe('WelcomePage — readable without an account', () => {
     expect(haveAccount.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
   });
 
+  // CA, 2026-10-04: the speech-bubble icon left every hero ("too many icons up
+  // there") and "Contact us" is the third door of the site footer, on every
+  // page. This hero is deployment-only, so core's sweep over the hero corners
+  // (`heroCornerLayout.test.jsx`) never reaches it — it imported the deleted
+  // component, and the page stopped building, before anyone read what it drew.
+  test.each([
+    ['an anonymous visitor', null],
+    ['a signed-in member', 'USER01'],
+  ])('the hero of %s links nothing to /contact', async (_who, userCode) => {
+    if (userCode) localStorage.setItem('userCode', userCode);
+    apiFetch.mockResolvedValue({ ok: false, status: 401 });
+
+    const { container } = renderWelcome();
+    await screen.findByText(/Welcome to OIUEEI/i);
+
+    const hero = container.querySelector('.form-hero');
+    // The hero is there and holds its own doors: a hero that failed to render
+    // would pass the "no /contact" line below for the wrong reason.
+    expect(hero.querySelector('h1')).toHaveTextContent(/Welcome to OIUEEI/i);
+    expect(hero.querySelectorAll('a').length).toBeGreaterThan(0);
+    expect(hero.querySelector('a[href="/contact"]')).toBeNull();
+  });
+
   // This page is deployment-only, so the invariant wired into `smoke.test.jsx`
   // and `a11yInteractive.test.jsx` upstream never reaches it — and it is the page
   // most first-time visitors land on. It carried five `<Link><Button>` pairs of
