@@ -194,10 +194,11 @@ be worse than none.
 If you want an open door, `is_onboarding` is still on `Collection` and
 `seed_demo` still sets it: a view of your own, mounted through
 `DEPLOYMENT_URLCONFS`, can create the account and join it to every collection
-carrying that flag. The column, the flag and the landing contract
-(`landing: "welcome"` on a targetless magic link) are all still here, working,
-waiting for a door you write — and the `demoNotice.*` strings above put an
-honest banner on the seed collections your visitors land in.
+carrying that flag. The column, the flag and the landing rule (a link from
+your door goes to the one real group its visitor has, and to Home when they have
+none or several — the demonstration collections are not counted) are all still
+here, working, waiting for a door you write — and the `demoNotice.*` strings
+above put an honest banner on the seed collections your visitors land in.
 
 ## Licence, and the honest version of "auditable"
 

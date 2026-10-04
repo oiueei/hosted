@@ -159,14 +159,16 @@ class TestPublicAutoJoin:
         assert resp.data["landing"] == "collection"
         assert resp.data["collection"] == "JPUB01"
 
-    def test_a_targetless_join_still_lands_on_welcome(self, join_setup, user):
-        """The landing contract a deployment with an open door depends on.
+    def test_a_targetless_join_with_no_group_lands_on_home(self, join_setup, user):
+        """The landing a deployment with an open door gets: the general rule.
 
         Nothing in the standalone produces this RSVP any more — every join here
         carries a collection — so it is built directly rather than through the
         endpoint. It is kept, and kept tested, because a deployment that adds
         its own open door (`DEPLOYMENT_URLCONFS`) stamps exactly this shape, and
-        `VerifyLinkView` is a shared file it must never have to edit.
+        `VerifyLinkView` is a shared file it must never have to edit. It used to
+        be a "welcome" landing of that deployment's own; the visitor now goes
+        where anyone else with the same groups would — here, with none, Home.
         """
         rsvp = RSVP.objects.create(
             user_code=user,
@@ -179,7 +181,7 @@ class TestPublicAutoJoin:
 
         assert resp.status_code == 200
         assert "invited_collection" not in resp.data
-        assert resp.data["landing"] == "welcome"
+        assert resp.data["landing"] == "home"
 
     def test_public_code_magic_link_subject_names_collection(self, join_setup):
         # Joining a PUBLIC collection by code names it in the magic-link subject.

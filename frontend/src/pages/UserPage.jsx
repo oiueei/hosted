@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Koros, Notification, Table } from 'hds-react';
+import { Koros, Notification } from 'hds-react';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import { apiFetch } from '../services/api';
@@ -13,8 +13,8 @@ import { formatDate } from '../utils/rental';
 import { teamText } from '../utils/team';
 import HeroPhoto from '../components/HeroPhoto';
 import AccountMenu from '../components/AccountMenu';
-import ContactCorner from '../components/ContactCorner';
 import ButtonLink from '../components/ButtonLink';
+import ResponsiveTable from '../components/ResponsiveTable';
 import useTheeeme from '../hooks/useTheeeme';
 
 export default function UserPage() {
@@ -111,7 +111,6 @@ export default function UserPage() {
     >
       <span className="hero-corners">
         <AccountMenu />
-        <ContactCorner />
       </span>
       <BackLink to="/" label={t('common.home')} />
       <div className="spacer-m" />
@@ -190,62 +189,65 @@ export default function UserPage() {
             <div className="spacer-m" />
             {/* The same table as the request pages (CA, 2026-10-03): the group, who
                 runs it — the rule the collection's own hero follows, as plain
-                text — and the way out, on the right. */}
-            <div className="table-wrap">
-              <Table
-                cols={[
-                  {
-                    key: '_group',
-                    headerName: t('userPage.colGroup'),
-                    transform: (row) => (
-                      <Link to={`/collections/${row._code}`}>{row._headline}</Link>
-                    ),
-                  },
-                  {
-                    key: '_team',
-                    headerName: t('userPage.colTeam'),
-                    transform: (row) => (
+                text — and the way out, on the right. On a phone each group is a
+                card (CA, 2026-10-04): the name on top, "Run by: …" under it and
+                the way out on the right, the same cells in the same order. */}
+            <ResponsiveTable
+              cols={[
+                {
+                  key: '_group',
+                  headerName: t('userPage.colGroup'),
+                  transform: (row) => <Link to={`/collections/${row._code}`}>{row._headline}</Link>,
+                },
+                {
+                  key: '_team',
+                  headerName: t('userPage.colTeam'),
+                  // "Run by: …" in a card, where the other columns need no label.
+                  // Nothing when no one is named: the table's cell stays empty and
+                  // the card leaves out the whole line, label included.
+                  cardLabel: true,
+                  transform: (row) =>
+                    row._team ? (
                       <div className="table-cell-lines">
                         <p>{row._team}</p>
                       </div>
-                    ),
-                  },
-                  {
-                    key: '_actions',
-                    // Named for a screen reader only, like the request tables: the
-                    // link says what it does, and an empty <th> leaves the column
-                    // nameless (axe empty-table-header).
-                    headerName: <span className="sr-only">{t('common.colActions')}</span>,
-                    transform: (row) => (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Link
-                          to={`/collections/${row._code}/leave`}
-                          state={{ headline: row._headline }}
-                          className="table-cell-link--muted"
-                        >
-                          {t('collectionPage.leaveGroup')}
-                        </Link>
-                      </div>
-                    ),
-                  },
-                ]}
-                caption={<span className="sr-only">{t('userPage.myGroups')}</span>}
-                rows={memberships.map((c) => ({
-                  _id: c.code,
-                  _code: c.code,
-                  _headline: L(c.headline),
-                  _team: teamText(c, t),
-                }))}
-                indexKey="_id"
-                renderIndexCol={false}
-                dense
-                theme={
-                  tc.color_03
-                    ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                    : undefined
-                }
-              />
-            </div>
+                    ) : null,
+                },
+                {
+                  key: '_actions',
+                  // Named for a screen reader only, like the request tables: the
+                  // link says what it does, and an empty <th> leaves the column
+                  // nameless (axe empty-table-header).
+                  headerName: <span className="sr-only">{t('common.colActions')}</span>,
+                  transform: (row) => (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Link
+                        to={`/collections/${row._code}/leave`}
+                        state={{ headline: row._headline }}
+                        className="table-cell-link--muted"
+                      >
+                        {t('collectionPage.leaveGroup')}
+                      </Link>
+                    </div>
+                  ),
+                },
+              ]}
+              caption={<span className="sr-only">{t('userPage.myGroups')}</span>}
+              rows={memberships.map((c) => ({
+                _id: c.code,
+                _code: c.code,
+                _headline: L(c.headline),
+                _team: teamText(c, t),
+              }))}
+              indexKey="_id"
+              renderIndexCol={false}
+              dense
+              theme={
+                tc.color_03
+                  ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                  : undefined
+              }
+            />
             <div className="spacer-l" />
           </>
         )}

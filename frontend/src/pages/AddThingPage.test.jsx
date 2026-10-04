@@ -158,7 +158,39 @@ describe('AddThingPage — what the form sends', () => {
         collection_code: 'COL001',
       })
     );
-    expect(navigate).toHaveBeenCalledWith('/collections/COL001');
+    await waitFor(() => expect(navigate).toHaveBeenCalled());
+    expect(navigate.mock.calls[0][0]).toBe('/collections/COL001');
+  });
+
+  // On a phone the collection page tells the person it worked and takes them to the
+  // new card (V6, CA 2026-10-04); for that it needs to know which card. The code
+  // comes from the response of the POST, nowhere else.
+  test('the new thing’s code, from the response, travels to the collection page', async () => {
+    mockApi({ post: { ok: true, body: { code: 'NEW123', headline: 'Blue armchair' } } });
+    renderPage();
+    await openTypePicker();
+    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
+    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/collections/COL001', {
+        state: { addedThing: 'NEW123' },
+      })
+    );
+  });
+
+  test('a response with no code still goes to the collection, with no state to act on', async () => {
+    mockApi({ post: { ok: true, body: {} } });
+    renderPage();
+    await openTypePicker();
+    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
+    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/collections/COL001', undefined));
   });
 
   test('a title of only spaces is not a title', async () => {

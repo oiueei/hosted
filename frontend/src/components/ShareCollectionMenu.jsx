@@ -30,8 +30,8 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QR
  * *sender's* mail client, which already says who is writing, so the same text is
  * right for the founder, a co-curator and a member.
  *
- * Presents as a single discreet `IconShare` in the hero's top-right, beside
- * `ContactCorner` — the `.share-corner` rule in App.css restyles the Select's
+ * Presents as a single discreet `IconShare` in the hero's top-right, the last of
+ * the corner's controls — the `.share-corner` rule in App.css restyles the Select's
  * own trigger (its `icon` prop renders inside the one `<button role="combobox">`)
  * to a 44px icon-only control, hiding the placeholder text and the arrow, while
  * every bit of HDS's open/close/Escape/outside-click/keyboard behaviour and the
@@ -198,7 +198,7 @@ export default function ShareCollectionMenu({ collectionCode, collectionHeadline
 
   return (
     <>
-      {/* One discreet icon in the hero's top-right, beside ContactCorner. The
+      {/* One discreet icon in the hero's top-right, in the corner row. The
           Select's own trigger is restyled to a 44px icon-only button in
           `.share-corner` (App.css) — HDS keeps all the open/close/keyboard
           logic and composes the button's accessible name from `texts.label`. */}

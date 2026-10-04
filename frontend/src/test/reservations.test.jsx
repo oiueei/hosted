@@ -284,6 +284,10 @@ describe('RequestThingPage — RESERVE_THING', () => {
       await screen.findByText('You need to be a member of this group to reserve.')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+    // In a wide row, so on a phone it is the width of the screen.
+    expect(screen.getByRole('button', { name: 'Join this group' }).parentElement).toHaveClass(
+      'button-row-wide'
+    );
     expect(screen.queryByText(/Your reservation is confirmed/)).not.toBeInTheDocument();
   });
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Notification, StatusLabel, Tag, Table, IconCrossCircle } from 'hds-react';
+import { Button, Notification, StatusLabel, Tag, IconCrossCircle } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -12,6 +12,7 @@ import { useLocalized } from '../utils/localized';
 import { formatDate, formatBookingWhen } from '../utils/rental';
 import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
+import ResponsiveTable from '../components/ResponsiveTable';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
 // green/red hex). The thing *type* stays a plain Tag (it's a category, not a state).
@@ -155,6 +156,14 @@ export default function MyBookingsPage() {
   const isFutureReservation = (row) =>
     row._type === 'RESERVE_THING' && row._status === 'ACCEPTED' && row._startDate >= todayIso;
 
+  // What cancelling does, once, for the table's icon and the card's button alike:
+  // a reservation that is coming up asks first, a pending request goes at once.
+  const cancelAction = (row) =>
+    isFutureReservation(row) ? setCancelRow(row) : handleCancel(row._code);
+  const cancelLabel = (row) =>
+    isFutureReservation(row) ? t('myBookings.cancelReservation') : t('myBookings.cancelTooltip');
+  const canCancel = (row) => row._status === 'PENDING' || isFutureReservation(row);
+
   const cols = [
     {
       key: '_thing',
@@ -171,14 +180,12 @@ export default function MyBookingsPage() {
       headerName: t('myBookings.colWhen'),
       transform: (row) => (
         <div className="table-cell-lines">
-          <p className="table-cell-line--faint">
+          <p>
             {t('myBookings.requested', {
               date: formatDate(row._created),
             })}
           </p>
-          <p>
-            {row._when || <span className="table-cell-line--none">{t('myBookings.noDates')}</span>}
-          </p>
+          <p>{row._when || t('myBookings.noDates')}</p>
         </div>
       ),
     },
@@ -211,18 +218,28 @@ export default function MyBookingsPage() {
       // and an empty <th> leaves the column nameless (axe empty-table-header).
       headerName: <span className="sr-only">{t('common.colActions')}</span>,
       transform: (row) =>
-        row._status === 'PENDING' || isFutureReservation(row) ? (
+        canCancel(row) ? (
           <TooltipButton
-            tooltip={
-              isFutureReservation(row)
-                ? t('myBookings.cancelReservation')
-                : t('myBookings.cancelTooltip')
-            }
-            onClick={() => (isFutureReservation(row) ? setCancelRow(row) : handleCancel(row._code))}
+            tooltip={cancelLabel(row)}
+            onClick={() => cancelAction(row)}
             disabled={cancelling === row._code}
           >
             <IconCrossCircle aria-hidden />
           </TooltipButton>
+        ) : null,
+      // The card's face: the same cancel as a button that says what it does.
+      cardTransform: (row) =>
+        canCancel(row) ? (
+          <div className="button-row-wide">
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => cancelAction(row)}
+              disabled={cancelling === row._code}
+            >
+              {cancelLabel(row)}
+            </Button>
+          </div>
         ) : null,
     },
   ];
@@ -233,9 +250,11 @@ export default function MyBookingsPage() {
         <div>
           <p>{t('myBookings.noBookings')}</p>
           <div className="spacer-m" />
-          <ButtonLink to="/" style={btnStyle}>
-            {t('myBookings.goHome')}
-          </ButtonLink>
+          <div className="button-row-wide">
+            <ButtonLink to="/" style={btnStyle}>
+              {t('myBookings.goHome')}
+            </ButtonLink>
+          </div>
         </div>
       ) : (
         <>
@@ -256,11 +275,29 @@ export default function MyBookingsPage() {
                 {pendingRows.length === 0 ? (
                   <p className="text-muted">{t('myBookings.noPending')}</p>
                 ) : (
-                  <div className="table-wrap">
-                    <Table
+                  <ResponsiveTable
+                    cols={cols}
+                    caption={<span className="sr-only">{t('myBookings.captionPending')}</span>}
+                    rows={pendingRows}
+                    indexKey="_id"
+                    renderIndexCol={false}
+                    dense
+                    theme={
+                      tc.color_03
+                        ? { '--header-background-color': `var(--color-${tc.color_03})` }
+                        : undefined
+                    }
+                  />
+                )}
+                {otherRows.length > 0 && (
+                  <>
+                    <div className="spacer-xl" />
+                    <h2>{t('myBookings.pastRequests')}</h2>
+                    <div className="spacer-s" />
+                    <ResponsiveTable
                       cols={cols}
-                      caption={<span className="sr-only">{t('myBookings.captionPending')}</span>}
-                      rows={pendingRows}
+                      caption={<span className="sr-only">{t('myBookings.captionPast')}</span>}
+                      rows={otherRows}
                       indexKey="_id"
                       renderIndexCol={false}
                       dense
@@ -270,28 +307,6 @@ export default function MyBookingsPage() {
                           : undefined
                       }
                     />
-                  </div>
-                )}
-                {otherRows.length > 0 && (
-                  <>
-                    <div className="spacer-xl" />
-                    <h2>{t('myBookings.pastRequests')}</h2>
-                    <div className="spacer-s" />
-                    <div className="table-wrap">
-                      <Table
-                        cols={cols}
-                        caption={<span className="sr-only">{t('myBookings.captionPast')}</span>}
-                        rows={otherRows}
-                        indexKey="_id"
-                        renderIndexCol={false}
-                        dense
-                        theme={
-                          tc.color_03
-                            ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                            : undefined
-                        }
-                      />
-                    </div>
                   </>
                 )}
               </>
@@ -303,14 +318,18 @@ export default function MyBookingsPage() {
       {next && (
         <>
           <div className="spacer-s" />
-          <Button
-            variant="secondary"
-            onClick={loadMore}
-            disabled={loadingMore}
-            style={btnSecondaryStyle}
-          >
-            {t('common.loadMore')}
-          </Button>
+          {/* A pager is a loose action button like any other: in a wide row, so on a
+              phone it is the width of the screen (CA, 2026-10-04). */}
+          <div className="button-row-wide">
+            <Button
+              variant="secondary"
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={btnSecondaryStyle}
+            >
+              {t('common.loadMore')}
+            </Button>
+          </div>
         </>
       )}
 

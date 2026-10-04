@@ -27,6 +27,15 @@ beforeEach(() => {
 });
 
 describe('BulkInviteCsv', () => {
+  test('the send button sits in a wide row, so on a phone it is the width of the screen', async () => {
+    const { container } = renderBulkInvite();
+
+    pick(container, csvFile('email,name\nlala@mail.com,\nlele@mail.com,LeLe'));
+
+    const send = await screen.findByRole('button', { name: 'Send 2 invitations' });
+    expect(send.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('previews the addresses and sends them', async () => {
     apiFetch.mockResolvedValue(jsonResponse({ invited: 2, skipped: [] }));
     const { container, onInvited } = renderBulkInvite();

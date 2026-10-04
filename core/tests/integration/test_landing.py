@@ -3,8 +3,10 @@ Post-login landing (O3): where VerifyLinkView sends the user after a magic link.
 
 The destination used to be a client-side ``seenWelcome`` localStorage heuristic —
 and since logout clears that key, every re-login looked like a first visit and
-dumped returning users on the new-visitor page. It is now decided server-side from the RSVP's
-origin and the user's collections.
+dumped returning users on the new-visitor page. It is now decided server-side from
+the RSVP's target, the page they were heading for and the user's collections —
+leaving out the demonstration ones (CA, 2026-10-04: one real group → that group,
+anything else → Home, whichever door the link came in by).
 """
 
 import pytest
@@ -33,15 +35,18 @@ def _verify(rsvp):
 
 @pytest.mark.django_db
 class TestMagicLinkLanding:
-    def test_a_targetless_join_link_lands_on_welcome(self, user):
-        """The landing a deployment with its own open door depends on.
+    def test_a_targetless_join_link_with_no_group_lands_on_home(self, user2):
+        """A deployment with its own open door stamps POPIN with no collection.
 
         Built directly: nothing here stamps POPIN without a collection any more.
+        It used to be sent to a "welcome" page of the deployment's own; it now
+        gets the same answer as anyone else, and with no group that is Home.
         """
-        res = _verify(_magic_link(user, origin=RSVP.Origin.POPIN))
+        res = _verify(_magic_link(user2, origin=RSVP.Origin.POPIN))
 
         assert res.status_code == 200
-        assert res.data["landing"] == "welcome"
+        assert res.data["landing"] == "home"
+        assert "collection" not in res.data
 
     def test_link_carrying_a_collection_lands_on_it(self, user, collection):
         # A share-token / public-collection join: they joined that collection to
@@ -54,12 +59,13 @@ class TestMagicLinkLanding:
 
     def test_link_carrying_an_inactive_collection_falls_back(self, user, collection):
         # The collection went INACTIVE between the join and the click — landing
-        # there would 403. The origin rule takes over instead (POPIN -> welcome).
+        # there would 403. The general rule takes over instead, and an INACTIVE
+        # group does not count, so it is Home.
         collection.status = Collection.Status.INACTIVE
         collection.save()
         res = _verify(_magic_link(user, origin=RSVP.Origin.POPIN, target_code=collection.code))
 
-        assert res.data["landing"] == "welcome"
+        assert res.data["landing"] == "home"
         assert "collection" not in res.data
         assert "invited_collection" not in res.data
 
@@ -106,6 +112,117 @@ class TestMagicLinkLanding:
 
         assert res.data["landing"] == "collection"
         assert res.data["collection"] == collection.code
+
+
+def _group(code, owner, **fields):
+    """A collection, ACTIVE unless told otherwise."""
+    return Collection.objects.create(code=code, owner=owner, headline=f"Group {code}", **fields)
+
+
+def _demo(owner, count=1):
+    """The demonstration collections an open door joins people to."""
+    return [_group(f"DEMO{n:02d}", owner, is_onboarding=True) for n in range(count)]
+
+
+@pytest.mark.django_db
+class TestOnlyRealGroupsDecideTheLanding:
+    """One real group → that group; none, or several → Home (CA, 2026-10-04).
+
+    "Real" leaves out the demonstration collections (``is_onboarding``). The
+    answer is the same whichever door the link came in by, so each case that is
+    about the groups runs for both a ``/login`` link and a ``/popin`` one.
+    """
+
+    ORIGINS = [RSVP.Origin.LOGIN, RSVP.Origin.POPIN]
+
+    @pytest.fixture
+    def founder(self, user2):
+        """Somebody else, who owns the demo and the groups the others belong to."""
+        return user2
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_one_real_group_among_demos_lands_on_the_real_one(self, user, founder, origin):
+        real = _group("REAL01", founder)
+        real.invites.add(user)
+        for demo in _demo(founder, count=3):
+            demo.invites.add(user)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == real.code
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_two_real_groups_land_on_home_whatever_the_demos(self, user, founder, origin):
+        for code in ("REAL01", "REAL02"):
+            _group(code, founder).invites.add(user)
+        for demo in _demo(founder, count=2):
+            demo.invites.add(user)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "home"
+        assert "collection" not in res.data
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_only_demonstration_groups_land_on_home(self, user, founder, origin):
+        # Even a single demo: it is not a group of theirs to be taken to.
+        for demo in _demo(founder):
+            demo.invites.add(user)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "home"
+        assert "collection" not in res.data
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_a_demonstration_group_they_own_is_not_counted_either(self, user, origin):
+        _demo(user)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "home"
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_a_co_curator_of_one_real_group_lands_on_it(self, user, founder, origin):
+        real = _group("REAL01", founder)
+        real.invites.add(user)
+        real.co_owners.add(user)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == real.code
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_the_owner_of_one_real_group_lands_on_it(self, user, origin):
+        real = _group("REAL01", user)
+        _demo(user, count=2)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == real.code
+
+    @pytest.mark.parametrize("origin", ORIGINS)
+    def test_an_inactive_group_does_not_count_so_the_other_one_is_the_only_one(self, user, origin):
+        active = _group("REAL01", user)
+        _group("REAL02", user, status=Collection.Status.INACTIVE)
+
+        res = _verify(_magic_link(user, origin=origin))
+
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == active.code
+
+    def test_a_group_that_is_both_owned_and_invited_counts_once(self, user):
+        # The owner can also sit in `invites`; the join must not double the row.
+        real = _group("REAL01", user)
+        real.invites.add(user)
+
+        res = _verify(_magic_link(user))
+
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == real.code
 
 
 def _request_link(email, **body):
@@ -192,12 +309,32 @@ class TestLoginReturnsToWhereTheyWereGoing:
         assert res.data["landing"] == "path"
         assert res.data["path"] == "/my-bookings"
 
-    def test_a_join_link_is_never_redirected_by_a_next(self, user):
-        # POPIN is the open-door rule (welcome), which outranks a stray next.
+    def test_a_join_link_is_never_redirected_by_a_next(self, user2):
+        # Whoever walks in by an open door has no session that ran out on a page,
+        # so a stray next is not followed: they get the general rule — here, with
+        # no group, Home.
+        res = _verify(
+            _magic_link(user2, origin=RSVP.Origin.POPIN, context={"next": "/my-bookings"})
+        )
+
+        assert res.data["landing"] == "home"
+        assert "path" not in res.data
+
+    def test_a_join_link_with_a_next_still_goes_to_its_one_real_group(self, user, collection):
+        # `collection` is this user's only real group. The next is ignored on a
+        # POPIN link, and the group rule is what answers.
         res = _verify(_magic_link(user, origin=RSVP.Origin.POPIN, context={"next": "/my-bookings"}))
 
-        assert res.data["landing"] == "welcome"
+        assert res.data["landing"] == "collection"
+        assert res.data["collection"] == collection.code
         assert "path" not in res.data
+
+    def test_a_login_link_with_a_next_follows_it_over_a_real_group(self, user, collection):
+        # The mirror of the two above: the same next, on a /login link, wins.
+        res = _verify(_magic_link(user, context={"next": "/my-bookings"}))
+
+        assert res.data["landing"] == "path"
+        assert res.data["path"] == "/my-bookings"
 
 
 @pytest.mark.django_db

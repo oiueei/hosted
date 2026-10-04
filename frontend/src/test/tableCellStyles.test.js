@@ -32,9 +32,10 @@ describe('.table-cell-lines', () => {
   });
 
   test('each kind of line has its grey, and the note its italic', () => {
+    // "Requested on …" and "No dates" have none: the cell's own black (CA,
+    // 2026-10-04) — their greys were under AA, which paletteContrast.test.js
+    // now holds every line class to.
     expect(declarations('.table-cell-line--muted', 'color')).toEqual(['var(--color-black-60)']);
-    expect(declarations('.table-cell-line--faint', 'color')).toEqual(['var(--color-black-50)']);
-    expect(declarations('.table-cell-line--none', 'color')).toEqual(['var(--color-black-40)']);
     expect(declarations('.table-cell-line--note', 'color')).toEqual(['var(--color-black-70)']);
     expect(declarations('.table-cell-line--note', 'font-style')).toEqual(['italic']);
   });

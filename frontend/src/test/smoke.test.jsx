@@ -151,7 +151,6 @@ import DataExportPage from '../pages/DataExportPage';
 import LegalPage from '../pages/LegalPage';
 import ContactPage from '../pages/ContactPage';
 import DigestMutePage from '../pages/DigestMutePage';
-import CollaboratePage from '../pages/CollaboratePage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ManageInvitesPage from '../pages/ManageInvitesPage';
 import HomePage from '../pages/HomePage';
@@ -238,7 +237,6 @@ smokeAndAxe('DataExportPage', DataExportPage);
 smokeAndAxe('LegalPage', LegalPage);
 smokeAndAxe('ContactPage', ContactPage);
 smokeAndAxe('DigestMutePage', DigestMutePage);
-smokeAndAxe('CollaboratePage', CollaboratePage);
 smokeAndAxe('NotificationsPage', NotificationsPage);
 
 // ── Pages with route params ────────────────────────────────────────────

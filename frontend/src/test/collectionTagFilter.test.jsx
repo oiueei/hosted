@@ -137,6 +137,17 @@ describe('CollectionPage card cap', () => {
   });
 
   test(
+    'the "Show more" pager sits in a wide row, so on a phone it is the width of the screen',
+    { timeout: 40000 },
+    async () => {
+      renderBig();
+
+      const more = await screen.findByRole('button', { name: /show 3 more things/i });
+      expect(more.parentElement).toHaveClass('button-row-wide');
+    }
+  );
+
+  test(
     'Show more appends the rest without reshuffling what was already there',
     { timeout: 40000 },
     async () => {

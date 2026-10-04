@@ -107,9 +107,11 @@ export default function DataExportPage() {
             </Notification>
           )}
         </StatusRegion>
-        <Button disabled={downloading} onClick={handleDownload} style={btnStyle}>
-          {downloading ? t('dataExport.downloading') : t('dataExport.downloadButton')}
-        </Button>
+        <div className="button-row-wide">
+          <Button disabled={downloading} onClick={handleDownload} style={btnStyle}>
+            {downloading ? t('dataExport.downloading') : t('dataExport.downloadButton')}
+          </Button>
+        </div>
       </div>
     </PageLayout>
   );

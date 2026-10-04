@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 /**
@@ -178,23 +178,18 @@ describe('the back link keeps out from under the corner icons', () => {
       </MemoryRouter>
     );
     await screen.findByRole('combobox'); // the share menu: a curator's hero is loaded
-    // A curator gets every control a hero can hold: account, collection, share,
-    // contact.
+    // A curator gets every control a hero can hold: account, collection, share.
+    // The contact icon that was a fourth left for the footer on 2026-10-04.
     const controls = container.querySelector('.hero-corners').children.length;
-    expect(controls).toBe(4);
+    expect(controls).toBe(3);
 
     const [declaredWidth] = declarations('.form-hero-content', '--hero-corners-width');
     const [, count, size, gaps] =
       /^calc\((\d+) \* (\d+)px \+ (\d+) \* var\(--spacing-2-xs\)\)$/.exec(declaredWidth) ?? [];
-    // Four controls, each as wide as the CSS says an icon control is, and the gaps
+    // Three controls, each as wide as the CSS says an icon control is, and the gaps
     // between them (one fewer) at the row's own `gap`.
     expect(Number(count)).toBe(controls);
-    for (const selector of [
-      '.contact-corner',
-      '.account-menu-trigger',
-      '.collection-menu-trigger',
-      '.share-corner',
-    ]) {
+    for (const selector of ['.account-menu-trigger', '.collection-menu-trigger', '.share-corner']) {
       expect(declarations(selector, 'width'), selector).toEqual([`${size}px`]);
     }
     expect(Number(gaps)).toBe(controls - 1);
@@ -203,7 +198,7 @@ describe('the back link keeps out from under the corner icons', () => {
 });
 
 describe('the collection menu panel anchors to the corner row like the account menu', () => {
-  test('the corner row reads account · collection · share · contact, left to right', async () => {
+  test('the corner row reads account · collection · share, left to right', async () => {
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: async () => CURATED })
     );
@@ -218,7 +213,7 @@ describe('the collection menu panel anchors to the corner row like the account m
 
     // DOM order is visual order in a flex row: each control is the child that is,
     // or holds, its own marker.
-    const markers = ['.account-menu', '.collection-menu', '.share-corner', '.contact-corner'];
+    const markers = ['.account-menu', '.collection-menu', '.share-corner'];
     const order = [...container.querySelector('.hero-corners').children].map((child) =>
       markers.find((marker) => child.matches(marker) || child.querySelector(marker))
     );
@@ -307,5 +302,61 @@ describe('the hero photo ends at the content column on a wide screen', () => {
 
   test("the left edge (30%) is still the base rule's", () => {
     expect(declarations('.hero-photo-wrap', 'inset')).toContain('0 0 0 30%');
+  });
+});
+
+/**
+ * The contact icon is not in any hero (CA, 2026-10-04: "there are too many icons up
+ * there"): "Contact us" is the site footer's third door. Pinned on the two heroes
+ * that paint the corner for everybody — `PageLayout` and a curator's collection,
+ * the fullest one — by what is inside `.hero-corners` and by what a hero links at
+ * all, and by the source: nothing in `src/` names the old component.
+ */
+describe('no hero carries the contact icon', () => {
+  const contactLinks = (root) => root.querySelectorAll('a[href="/contact"]');
+
+  test('PageLayout’s hero links nowhere to /contact', () => {
+    const { container } = renderHero();
+
+    expect(container.querySelector('.hero-corners')).not.toBeNull();
+    expect(contactLinks(container.querySelector('.form-hero'))).toHaveLength(0);
+  });
+
+  test('a curator’s collection hero, with every corner control, links nowhere to /contact', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => CURATED })
+    );
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('combobox');
+
+    expect(container.querySelector('.hero-corners').children).toHaveLength(3);
+    expect(contactLinks(container.querySelector('.form-hero'))).toHaveLength(0);
+  });
+
+  test('nothing in the sources names the component or its rule any more', () => {
+    const files = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(path);
+        else if (/\.(jsx?|css)$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(path);
+      }
+    };
+    walk('src');
+
+    const offenders = files.filter((file) =>
+      /ContactCorner|contact-corner/.test(
+        readFileSync(file, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/^\s*(\/\/|\*).*$/gm, '')
+      )
+    );
+    expect(offenders).toEqual([]);
   });
 });

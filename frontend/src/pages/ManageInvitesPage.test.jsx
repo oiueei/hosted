@@ -266,6 +266,14 @@ describe('ManageInvitesPage load failures', () => {
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
+  test('Retry sits in a wide row, so on a phone it is the width of the screen', async () => {
+    failWith(500);
+    renderPage();
+
+    const retry = await screen.findByRole('button', { name: /retry/i });
+    expect(retry.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('a 403 says it is a permission problem, not a generic failure', async () => {
     failWith(403);
     renderPage();

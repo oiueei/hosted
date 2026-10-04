@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
@@ -11,6 +11,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import OwnerBookingsPage from '../pages/OwnerBookingsPage';
 import ThingPage from '../pages/ThingPage';
+import { mockMatchMedia, PHONE } from './matchMedia';
 
 // Accepting a GIFT or SELL that isn't endless hands the thing over for good:
 // `accept_booking` flips it INACTIVE, adds the requester to `deal` and writes a
@@ -211,5 +212,40 @@ describe('ThingPage — the confirm that was never shown', () => {
 
     await waitFor(() => expect(postCalls()).toEqual(['/api/v1/bookings/BKG001/accept/']));
     expect(screen.queryByText(/transfers the item/i)).toBeNull();
+  });
+});
+
+describe('Accepting a hand-over from a card on a phone', () => {
+  let media;
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('userCode', 'USR001');
+    vi.clearAllMocks();
+    media = mockMatchMedia({ [PHONE]: true });
+  });
+  afterEach(() => {
+    media.restore();
+    vi.restoreAllMocks();
+  });
+
+  test('the card’s button asks before a gift changes hands, like the tick does', async () => {
+    renderPage([booking()]);
+    await screen.findByText('Blue armchair');
+
+    fireEvent.click(acceptButton());
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(postCalls()).toEqual([]); // nothing committed on the first click
+  });
+
+  test('confirming in the dialog is what accepts it', async () => {
+    renderPage([booking()]);
+    await screen.findByText('Blue armchair');
+    fireEvent.click(acceptButton());
+    const dialog = await screen.findByRole('dialog');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }));
+
+    await waitFor(() => expect(postCalls()).toEqual(['/api/v1/bookings/BKG001/accept/']));
   });
 });

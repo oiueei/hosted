@@ -157,7 +157,6 @@
     "deleteAccount": "Esborrar el compte — OIUEEI",
     "legal": "Legal i privadesa — OIUEEI",
     "contact": "Contacte — OIUEEI",
-    "collaborate": "Col·labora — OIUEEI",
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
     "dataExport": "Exportar dades — OIUEEI",
     "reserveThing": "Reservar: {{headline}} — OIUEEI"
@@ -176,7 +175,6 @@
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
     "popIn": "Nou per aquí? Passa →",
-    "loginHelp": "Problemes per entrar? Explica'ns-ho i intentem ajudar-te tan aviat com puguem →",
     "faqLink": "Dubtes sobre aquest lloc? →"
   },
   "verify": {
@@ -291,7 +289,6 @@
     "inactiveThings": "Coses inactives",
     "inactiveNotice": "Aquesta col·lecció està inactiva. No és visible per als membres.",
     "noThings": "Aquesta col·lecció encara no té coses.",
-    "addOne": "Afegir-ne una",
     "addManyCsv": "Afegir-ne uns quants alhora (CSV)",
     "allTags": "Tots",
     "noThingsForTag": "No hi ha coses amb aquesta etiqueta.",
@@ -455,6 +452,7 @@
     "maxHeadline": "Màxim 64 caràcters per idioma.",
     "priceRequired": "El preu és obligatori per a aquest tipus.",
     "maxLocation": "Màxim 64 caràcters.",
+    "uploaded": "Cosa pujada amb èxit!",
     "errorCreating": "Error en crear la cosa.",
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "Selecciona etiquetes",
@@ -951,19 +949,14 @@
     "messageLabel": "Missatge",
     "sentLabel": "Rebut!",
     "sentBody": "Hem rebut el teu missatge — et contestarem tan aviat com puguem.",
-    "error": "No hem pogut enviar el teu missatge. Torna-ho a provar.",
-    "linkLabel": "Problemes, suggeriments, comentaris? Contacta'ns"
-  },
-  "collaborate": {
-    "pageTitle": "Col·labora amb OIUEEI",
-    "intro": "Col·laboracions de disseny, producte, desenvolupament i beta-testing: si estàs ficat al món de l'open source o de l'economia social i solidària, ets més que benvingut. Explica'ns qui ets i què et ve de gust aportar — contestem tan aviat com puguem.",
-    "linkFromContact": "Disseny, producte, codi o beta-testing? Col·laboracions →"
+    "error": "No hem pogut enviar el teu missatge. Torna-ho a provar."
   },
   "footer": {
     "madeIn": "Fet amb ♥︎ des de la Zona Franca, Barcelona, Catalunya, Espanya, UE",
     "navLabel": "Sobre OIUEEI",
     "about": "Què és OIUEEI",
-    "legal": "Privacitat i avís legal"
+    "legal": "Privacitat i avís legal",
+    "contact": "Contacta'ns"
   },
   "capabilities": {
     "needsApproval": "Algunes opcions necessiten aprovació en aquesta instal·lació: {{list}}.",

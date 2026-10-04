@@ -157,7 +157,6 @@
     "deleteAccount": "Borrar cuenta — OIUEEI",
     "legal": "Legal y privacidad — OIUEEI",
     "contact": "Contacto — OIUEEI",
-    "collaborate": "Colabora — OIUEEI",
     "ownerBookings": "Solicitudes para mí — OIUEEI",
     "dataExport": "Exportar datos — OIUEEI",
     "reserveThing": "Reservar: {{headline}} — OIUEEI"
@@ -176,7 +175,6 @@
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
     "operator": "",
     "popIn": "¿Nuevo por aquí? Pásate →",
-    "loginHelp": "¿Problemas para entrar? Cuéntanoslo e intentamos ayudarte lo antes posible →",
     "faqLink": "¿Dudas sobre este sitio? →"
   },
   "verify": {
@@ -291,7 +289,6 @@
     "inactiveThings": "Cosas inactivas",
     "inactiveNotice": "Esta colección está inactiva. No es visible para los miembros.",
     "noThings": "Esta colección todavía no tiene cosas.",
-    "addOne": "Añadir una",
     "addManyCsv": "Añadir varios a la vez (CSV)",
     "allTags": "Todos",
     "noThingsForTag": "No hay cosas con este tag.",
@@ -455,6 +452,7 @@
     "maxHeadline": "Máximo 64 caracteres por idioma.",
     "priceRequired": "El precio es obligatorio para este tipo.",
     "maxLocation": "Máximo 64 caracteres.",
+    "uploaded": "¡Cosa subida con éxito!",
     "errorCreating": "Error al crear la cosa.",
     "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "Selecciona etiquetas",
@@ -951,19 +949,14 @@
     "messageLabel": "Mensaje",
     "sentLabel": "¡Recibido!",
     "sentBody": "Hemos recibido tu mensaje — te contestaremos lo antes posible.",
-    "error": "No hemos podido enviar tu mensaje. Inténtalo de nuevo.",
-    "linkLabel": "¿Problemas, sugerencias, comentarios? Contáctanos"
-  },
-  "collaborate": {
-    "pageTitle": "Colabora con OIUEEI",
-    "intro": "Colaboraciones de diseño, producto, desarrollo y beta-testing: si andas metido en el mundillo del open source o de la economía social y solidaria, eres más que bienvenido. Cuéntanos quién eres y qué te apetece aportar — contestamos lo antes posible.",
-    "linkFromContact": "¿Diseño, producto, código o beta-testing? Colaboraciones →"
+    "error": "No hemos podido enviar tu mensaje. Inténtalo de nuevo."
   },
   "footer": {
     "madeIn": "Hecho con ♥︎ desde la Zona Franca, Barcelona, Cataluña, España, UE",
     "navLabel": "Sobre OIUEEI",
     "about": "Qué es OIUEEI",
-    "legal": "Privacidad y aviso legal"
+    "legal": "Privacidad y aviso legal",
+    "contact": "Contáctanos"
   },
   "capabilities": {
     "needsApproval": "Algunas opciones necesitan aprobación en esta instalación: {{list}}.",

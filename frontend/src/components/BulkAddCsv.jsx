@@ -275,13 +275,11 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
               </li>
             ))}
           </ol>
-          <Button
-            style={{ ...btnStyle, marginTop: 'var(--spacing-s)' }}
-            disabled={importing}
-            onClick={handleImport}
-          >
-            {importLabel}
-          </Button>
+          <div className="button-row-wide" style={{ marginTop: 'var(--spacing-s)' }}>
+            <Button style={btnStyle} disabled={importing} onClick={handleImport}>
+              {importLabel}
+            </Button>
+          </div>
         </>
       )}
     </div>

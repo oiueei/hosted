@@ -73,6 +73,18 @@ describe('DataExportPage', () => {
     expect(button.style.getPropertyValue('--color')).toBe('var(--color-white)');
   });
 
+  test('the download button sits in a wide row, so on a phone it is the width of the screen', () => {
+    render(
+      <MemoryRouter>
+        <DataExportPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: 'Download my data' }).parentElement).toHaveClass(
+      'button-row-wide'
+    );
+  });
+
   test('a successful click hands the response to downloadBlob under the server-set name', async () => {
     apiFetchMock.mockResolvedValue(
       jsonResponse({ ok: true, status: 200, filename: 'oiueei-ABC123-2026-08-21.json' })

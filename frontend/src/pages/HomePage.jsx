@@ -9,7 +9,6 @@ import CollectionLinkbox from '../components/CollectionLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
-import ContactCorner from '../components/ContactCorner';
 import { aboutPath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
@@ -318,7 +317,6 @@ export default function HomePage() {
         >
           <span className="hero-corners">
             <AccountMenu />
-            <ContactCorner />
           </span>
           <h1 className="form-hero-title" style={{ paddingTop: 'var(--spacing-xl)' }}>
             {t('home.greeting', { name: user.name || user.email })}
@@ -389,9 +387,12 @@ export default function HomePage() {
         <div className="spacer-xl" />
         {groupsFirst ? myCollectionsSection : sharedSection}
 
-        {/* Alone, and secondary (CA, 2026-10-03). The wrapper is empty when the
-            deployment has no feedback URL, and App.css hides an empty one. */}
-        <div className="feedback-link">
+        {/* Alone, and secondary (CA, 2026-10-03). A loose action button goes in a
+            `.button-row-wide` even when it is the only one, so on a phone it is the
+            width of the screen (CA, 2026-10-04); `.feedback-link` on the same
+            element keeps the gap above it. The row is empty when the deployment
+            has no feedback URL, and App.css hides an empty `.feedback-link`. */}
+        <div className="button-row-wide feedback-link">
           <FeedbackLink style={btnSecondaryStyle} />
         </div>
       </div>
