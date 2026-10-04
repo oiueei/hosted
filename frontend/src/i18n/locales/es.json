@@ -84,7 +84,12 @@
     "label": "Tu cuenta"
   },
   "collectionMenu": {
-    "label": "Opciones de la colección"
+    "label": "Opciones de la colección",
+    "muteDigest": "Silenciar el resumen",
+    "unmuteDigest": "Volver a recibir el resumen",
+    "digestMuted": "Hecho: ya no recibirás el resumen de este grupo.",
+    "digestUnmuted": "Hecho: volverás a recibir el resumen de este grupo.",
+    "digestError": "No hemos podido cambiarlo. Inténtalo de nuevo."
   },
   "common": {
     "opensInNewTab": "Se abre en una pestaña nueva.",

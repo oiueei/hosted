@@ -20,8 +20,12 @@ import { collectionTeam } from '../utils/team';
 import { loginPathFor } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
-import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
+import CollectionMenu, {
+  CollectionDigestStatus,
+  CollectionDownloadsStatus,
+} from '../components/CollectionMenu';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
+import useDigestPreference from '../hooks/useDigestPreference';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useMediaQuery from '../hooks/useMediaQuery';
 import Toast from '../components/Toast';
@@ -77,6 +81,17 @@ export default function CollectionPage() {
   // menu that offers it. One call owns the calendar, stats and JSON
   // downloads, and the page hands it to the menu and to the status zone.
   const downloads = useCollectionDownloads(code);
+  // A member's own switch for this group's summary email (X2, CA 2026-10-04), in the
+  // collection menu. Called unconditionally too; the page learns the answer, so the
+  // menu's wording is the server's word.
+  const digestPref = useDigestPreference({
+    code,
+    muted: !!collection?.is_digest_muted,
+    onChange: useCallback(
+      (muted) => setCollection((prev) => (prev ? { ...prev, is_digest_muted: muted } : prev)),
+      []
+    ),
+  });
 
   // Arriving from "Add thing" with the new thing's code (V6, CA 2026-10-04). On a
   // desktop the new card is the first of the grid and in plain sight; on a phone
@@ -297,6 +312,12 @@ export default function CollectionPage() {
   // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
   // the link is the curators' credential, and the member has "Recommend" instead.
   const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
+  // A rank-and-file member: signed in, `is_member` (false for a co-owner by design,
+  // who is a curator and has the curator's menu). They get a menu of their own in
+  // the corner (X2, CA 2026-10-04) — the welcome document, the summary switch when
+  // the group sends one, and "Leave the group".
+  const isMember = isAuthenticated && !!collection.is_member && !isCurator;
+  const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
   // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
   // this group" and "Sign in" — whatever the mode and whether it holds things or not
   // (CA, 2026-10-04). It used to be a line in the content that only a COMMUNITY or an
@@ -340,10 +361,20 @@ export default function CollectionPage() {
           >
             <span className="hero-corners">
               <AccountMenu />
-              {/* The group's own options (CA, 2026-10-03): curators only,
-                  between the account menu and the share one. */}
-              {isCurator && (
-                <CollectionMenu code={code} hasDateThings={hasDateThings} downloads={downloads} />
+              {/* The group's own options (CA, 2026-10-03), between the account menu
+                  and the share one: a curator's, and since X2 (2026-10-04) a
+                  member's, with what is theirs. Nothing for a reader who is
+                  neither. */}
+              {(isCurator || isMember) && (
+                <CollectionMenu
+                  code={code}
+                  headline={headline}
+                  isCurator={isCurator}
+                  hasDateThings={hasDateThings}
+                  downloads={downloads}
+                  welcomeDocUrl={collection.welcome_doc_url || ''}
+                  digest={isMember && sendsDigest ? digestPref : null}
+                />
               )}
               {canShare && (
                 <ShareCollectionMenu
@@ -411,22 +442,9 @@ export default function CollectionPage() {
                     </Link>
                   </p>
                 )}
-            {/* The group's welcome PDF used to exist only in the one email a
-                member gets on joining: delete that, and it was gone. The API
-                serves its URL to curators and members only, so its presence is
-                the whole condition. */}
-            {collection.welcome_doc_url && (
-              <p className="invite-nudge">
-                <a
-                  href={collection.welcome_doc_url}
-                  className="owner-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('collectionPage.welcomeDoc')}
-                </a>
-              </p>
-            )}
+            {/* The group's welcome PDF is an entry of the collection menu (X2,
+                2026-10-04), first, for members and curators — the API serves its
+                URL to those two only. It was a loose link here. */}
             {/* The hero's "join" is back for a signed-out reader (CA, 2026-10-04),
               with its pair. Its first form — "This group shares its things on
               OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
@@ -560,13 +578,19 @@ export default function CollectionPage() {
                     }}
                   />
                 )}
+                {/* The outcome of "Mute the summary" / "Get the summary again" from the
+                collection menu: a short message in a live region, as the downloads'.
+                Only a member has the switch. */}
+                <CollectionDigestStatus digest={digestPref} />
                 {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only
                 destructive one of the three. It moved to the own profile's "My
                 groups" list (design round): leaving is something you do to your
                 own membership, so it belongs with the rest of your account, next
-                to the other memberships you might weigh it against. The route
-                (/collections/:code/leave) is unchanged. */}
+                to the other memberships you might weigh it against. Since X2
+                (2026-10-04) it is also the last entry of the member's collection
+                menu, under a divider; the route (/collections/:code/leave) is
+                unchanged. */}
               </>
             )}
           </div>

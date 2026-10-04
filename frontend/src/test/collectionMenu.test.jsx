@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 window.scrollTo = vi.fn();
@@ -289,13 +289,15 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     expect(screen.getByRole('button', { name: 'Download the stats (CSV)' })).toBeInTheDocument();
   });
 
-  test('a member who is not a curator gets no menu at all, even with date-based things', async () => {
+  test('a signed-in reader who is neither a curator nor a member gets no menu, even with date-based things', async () => {
+    // A PUBLIC group is readable by anyone: being signed in is not being in it. The
+    // member's menu (X2, below) is theirs only because it holds what is theirs.
     renderCollection({
       ...COLLECTION,
       owner: 'OTHER1',
       owner_name: 'Owner',
       is_curator: false,
-      is_member: true,
+      is_member: false,
       mode: 'COMMUNITY',
       visibility: 'PUBLIC',
     });
@@ -660,5 +662,258 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     expect(panel()).toBeNull();
     expect(screen.getByRole('link', { name: 'My profile' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * The same menu for a member (X2, CA 2026-10-04): the corner icon in the same
+ * place, with what is theirs — the group's welcome document (a link that opens in
+ * a new tab, first), "Mute the summary" / "Get the summary again" (only where the
+ * group sends one) and, under a divider, "Leave the group". The three things were
+ * scattered: leaving only in "My groups" on the profile, the summary switch only
+ * in the footer of the email, the document a loose link in the hero.
+ */
+describe('the collection menu for a member', () => {
+  const DOC = 'https://bucket.example.com/oiueei/documents/welcome.pdf';
+  const MEMBER = {
+    ...COLLECTION,
+    owner: 'OTHER1',
+    owner_name: 'Owner',
+    is_curator: false,
+    is_member: true,
+    digest_frequency: 'WEEKLY',
+    is_digest_muted: false,
+    welcome_doc_url: DOC,
+  };
+  const DIGEST_URL = '/api/v1/collections/COL001/digest/';
+  const MUTE = 'Mute the summary';
+  const UNMUTE = 'Get the summary again';
+  const LEAVE = 'Leave the group';
+  const DOC_NAME = /welcome document \(PDF\)/;
+
+  /** Records where the leave link went, and what it handed over. */
+  function LeaveProbe() {
+    const { state } = useLocation();
+    return <div data-testid="leave-page">{state?.headline}</div>;
+  }
+
+  // The collection endpoint as `setApi` answers it, with the digest POST decided
+  // by the test: a response (or a function returning one) — by default it does what
+  // the server does and answers `{muted}` for what it was sent.
+  function renderMember(collection, { digest } = {}) {
+    setApi(collection);
+    const base = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation((url, options) =>
+      url === DIGEST_URL
+        ? answer(digest, () => ({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ muted: JSON.parse(options.body).muted }),
+          }))
+        : base(url, options)
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+          <Route path="/collections/:code/leave" element={<LeaveProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+  const digestPosts = () =>
+    apiFetch.mock.calls.filter(([url, o]) => url === DIGEST_URL && o?.method === 'POST');
+  const entries = () => [...panel().querySelectorAll('a, button')].map((e) => e.textContent.trim());
+
+  test('a member gets the trigger, and the panel holds the document, the summary switch and leaving — nothing of a curator’s', async () => {
+    renderMember(MEMBER);
+    await openMenu();
+
+    expect(entries()).toEqual(["The group's welcome document (PDF)", MUTE, LEAVE]);
+    // A divider sits between what the group gives them and leaving it.
+    const divider = panel().querySelector('.collection-menu-divider');
+    expect(divider).not.toBeNull();
+    expect(
+      divider.compareDocumentPosition(within(panel()).getByRole('link', { name: LEAVE }))
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    for (const curators of ['Add thing', 'Add several at once (CSV)', 'Manage members']) {
+      expect(within(panel()).queryByRole('link', { name: curators })).toBeNull();
+    }
+    expect(within(panel()).queryByRole('button', { name: /Download/ })).toBeNull();
+  });
+
+  test('the document opens in a new tab and says so to a screen reader', async () => {
+    renderMember(MEMBER);
+    await openMenu();
+
+    const link = within(panel()).getByRole('link', { name: DOC_NAME });
+    expect(link).toHaveAttribute('href', DOC);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    // The visible words first, then the sentence — the way "Ideas and bugs" says it.
+    expect(link).toHaveAccessibleName("The group's welcome document (PDF). Opens in a new tab.");
+  });
+
+  test('the hero no longer carries the document: it is in the menu only', async () => {
+    const { container } = renderMember(MEMBER);
+    await screen.findByText('Drill');
+
+    // Closed: no link to it anywhere on the page…
+    expect(container.querySelector(`a[href="${DOC}"]`)).toBeNull();
+    await openMenu();
+    // …open: one, inside the panel.
+    const links = container.querySelectorAll(`a[href="${DOC}"]`);
+    expect(links).toHaveLength(1);
+    expect(panel()).toContainElement(links[0]);
+    expect(container.querySelector('.form-hero .invite-nudge')).toBeNull();
+  });
+
+  test('without a document there is no entry for it', async () => {
+    renderMember({ ...MEMBER, welcome_doc_url: '' });
+    await openMenu();
+
+    expect(entries()).toEqual([MUTE, LEAVE]);
+  });
+
+  test('a group that sends no summary offers nothing to mute', async () => {
+    renderMember({ ...MEMBER, digest_frequency: 'NONE' });
+    await openMenu();
+
+    expect(entries()).toEqual(["The group's welcome document (PDF)", LEAVE]);
+  });
+
+  test('with neither, "Leave the group" is the only entry and there is no divider above it', async () => {
+    renderMember({ ...MEMBER, welcome_doc_url: '', digest_frequency: 'NONE' });
+    await openMenu();
+
+    expect(entries()).toEqual([LEAVE]);
+    expect(panel().querySelector('.collection-menu-divider')).toBeNull();
+  });
+
+  test('muting POSTs { muted: true }, says so, and the entry now offers to turn it back on', async () => {
+    renderMember(MEMBER);
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    expect(
+      await screen.findByText("Done: you won't get this group's summary any more.")
+    ).toBeInTheDocument();
+    expect(digestPosts()).toHaveLength(1);
+    expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: true });
+    // It closed the panel and left the focus on the trigger, like a download.
+    expect(panel()).toBeNull();
+    expect(screen.getByRole('button', { name: TRIGGER })).toHaveFocus();
+
+    await openMenu();
+    expect(within(panel()).getByRole('button', { name: UNMUTE })).toBeInTheDocument();
+    expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();
+  });
+
+  test('turning it back on POSTs { muted: false } and says so', async () => {
+    renderMember({ ...MEMBER, is_digest_muted: true });
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: UNMUTE }));
+
+    expect(
+      await screen.findByText("Done: you'll get this group's summary again.")
+    ).toBeInTheDocument();
+    expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: false });
+    await openMenu();
+    expect(within(panel()).getByRole('button', { name: MUTE })).toBeInTheDocument();
+  });
+
+  test.each([
+    [
+      'the server refuses',
+      () => ({ ok: false, status: 500, json: () => Promise.resolve({}) }),
+      "We couldn't change that. Please try again.",
+    ],
+    [
+      'the hourly limit is hit',
+      () => ({ ok: false, status: 429, json: () => Promise.resolve({}) }),
+      'Too many attempts — please wait a moment and try again.',
+    ],
+    [
+      'the request never arrives',
+      () => Promise.reject(new TypeError('Failed to fetch')),
+      'Connection error.',
+    ],
+  ])('when %s it says so and the entry stays as it was', async (_what, digest, message) => {
+    renderMember(MEMBER, { digest });
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    await openMenu();
+    expect(within(panel()).getByRole('button', { name: MUTE })).toBeInTheDocument();
+    expect(within(panel()).queryByRole('button', { name: UNMUTE })).toBeNull();
+  });
+
+  test('no POST happens until it is pressed', async () => {
+    renderMember(MEMBER);
+    await openMenu();
+
+    expect(digestPosts()).toHaveLength(0);
+  });
+
+  test('"Leave the group" goes to the leave page with the group’s name', async () => {
+    renderMember(MEMBER);
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('link', { name: LEAVE }));
+
+    expect(await screen.findByTestId('leave-page')).toHaveTextContent('Tool library');
+  });
+
+  test('a curator keeps their own menu, with the document first when there is one — and no member entries', async () => {
+    renderCollection({ ...COLLECTION, welcome_doc_url: DOC, digest_frequency: 'WEEKLY' });
+    await openMenu();
+
+    expect(entries().slice(0, 4)).toEqual([
+      "The group's welcome document (PDF)",
+      'Add thing',
+      'Add several at once (CSV)',
+      'Manage members',
+    ]);
+    expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();
+    expect(within(panel()).queryByRole('link', { name: LEAVE })).toBeNull();
+  });
+
+  test('a curator without a document has the menu it always had', async () => {
+    renderCollection({ ...COLLECTION, welcome_doc_url: '' });
+    await openMenu();
+
+    expect(entries()[0]).toBe('Add thing');
+    expect(within(panel()).queryByRole('link', { name: DOC_NAME })).toBeNull();
+  });
+
+  test('in a public group the corner reads account · collection menu · share, for a member too', async () => {
+    const { container } = renderMember({ ...MEMBER, visibility: 'PUBLIC' });
+    await screen.findByText('Drill');
+
+    const account = screen.getByRole('button', { name: 'Your account' });
+    const menu = screen.getByRole('button', { name: TRIGGER });
+    const share = container.querySelector('.hero-corners .share-corner');
+    expect(share).not.toBeNull();
+    expect(account.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(menu.compareDocumentPosition(share)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  test('no member of that group, no menu: a reader who is signed in but outside gets none', async () => {
+    renderMember({ ...MEMBER, is_member: false, visibility: 'PUBLIC' });
+
+    await screen.findByText('Drill');
+    expect(screen.queryByRole('button', { name: TRIGGER })).not.toBeInTheDocument();
+  });
+
+  test('a reader with no session gets none either, whatever the payload says', async () => {
+    localStorage.removeItem('userCode');
+    renderMember({ ...MEMBER, visibility: 'PUBLIC' });
+
+    await screen.findByText('Drill');
+    expect(screen.queryByRole('button', { name: TRIGGER })).not.toBeInTheDocument();
   });
 });

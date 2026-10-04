@@ -90,7 +90,12 @@
     "label": "Your account"
   },
   "collectionMenu": {
-    "label": "Collection options"
+    "label": "Collection options",
+    "muteDigest": "Mute the summary",
+    "unmuteDigest": "Get the summary again",
+    "digestMuted": "Done: you won't get this group's summary any more.",
+    "digestUnmuted": "Done: you'll get this group's summary again.",
+    "digestError": "We couldn't change that. Please try again."
   },
   "common": {
     "opensInNewTab": "Opens in a new tab.",

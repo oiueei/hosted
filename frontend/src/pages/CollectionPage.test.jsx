@@ -440,7 +440,10 @@ describe('CollectionPage member hero', () => {
    * left the hero (CA, 2026-09-21): a sentence about email, in the one place a
    * member comes to look at things. Muting a group is still one click from the
    * footer of every digest (`DigestMutePage`), and the endpoint behind the old
-   * switch is untouched, so this is only about what the page offers.
+   * switch is untouched, so this is only about what the page offers. Since X2
+   * (2026-10-04) a member has the switch again, as an entry of the collection menu
+   * (`collectionMenu.test.jsx`): the hero still has none, and nothing is sent
+   * until it is pressed.
    *
    * Asserted three ways, because each alone can be fooled: the class the block
    * carried, the raw i18n key (the strings were deleted with the block, so a
@@ -1961,6 +1964,8 @@ describe('CollectionPage — the welcome document', () => {
       welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
     });
 
+    // In the collection menu since X2 (2026-10-04): it was a loose link in the hero.
+    fireEvent.click(await screen.findByRole('button', { name: 'Collection options' }));
     const link = await screen.findByRole('link', { name: /welcome document \(PDF\)/ });
     expect(link).toHaveAttribute('href', 'https://bucket.example.com/oiueei/documents/welcome.pdf');
     expect(link).toHaveAttribute('target', '_blank');
@@ -1968,9 +1973,21 @@ describe('CollectionPage — the welcome document', () => {
   });
 
   test('no document, or none served to this reader, means no link', async () => {
-    renderWith({ ...PUBLIC_COMMUNITY, welcome_doc_url: '' });
+    renderWith({ ...PUBLIC_COMMUNITY, is_member: true, welcome_doc_url: '' });
 
-    await screen.findByRole('heading', { level: 1 });
+    fireEvent.click(await screen.findByRole('button', { name: 'Collection options' }));
+    expect(screen.queryByRole('link', { name: /welcome document/ })).not.toBeInTheDocument();
+  });
+
+  test('the hero holds no link to it, whoever reads: it is the menu’s first entry', async () => {
+    const { container } = renderWith({
+      ...PUBLIC_COMMUNITY,
+      is_member: true,
+      welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
+    });
+
+    await screen.findByRole('button', { name: 'Collection options' });
+    expect(container.querySelector('.form-hero a[href$="welcome.pdf"]')).toBeNull();
     expect(screen.queryByRole('link', { name: /welcome document/ })).not.toBeInTheDocument();
   });
 });
