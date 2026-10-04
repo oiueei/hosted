@@ -183,8 +183,54 @@ export default function ThingPage() {
   const holderLabel = (name) =>
     name || t(isAuthenticated ? 'common.formerMember' : 'common.aMember');
 
+  // Whoever runs the thing decides a request from the hero (CA, 2026-10-04): with
+  // one waiting, "Confirm hold" (primary) and "Decline hold" (secondary) are the
+  // first thing under the way back, and Edit / Delete stay in the content where
+  // they were. A member's "Reserve" is not here on purpose — they read the whole
+  // page before they ask. Two cases, as in the content they came from: a loan or
+  // rental with a pending booking (ACTIVE: nothing changes hands for good, so no
+  // transfer confirm — `acceptTransfersOwnership` is its inverse), and a taken
+  // gift or sale (TAKEN: the transfer confirm opens right under the row).
+  // Same handlers, same `disabled`, as ever; and no `fullWidth`: the row makes a
+  // phone's buttons the width of the screen and leaves them their own above it.
+  const decidesHere =
+    canManage &&
+    (thing.status === 'TAKEN' || (thing.status === 'ACTIVE' && needsPage && !!activePendingCode));
+  const decisionActions = decidesHere ? (
+    <>
+      {thing.status === 'TAKEN' && acceptTransfersOwnership ? (
+        <InlineConfirm
+          triggerLabel={acceptLabel}
+          triggerProps={{ disabled: !!bookingAction, style: btnStyle }}
+          title={t('thingCard.transferConfirmTitle')}
+          body={t('thingCard.transferConfirmBody')}
+          confirmLabel={t('thingCard.transferConfirm')}
+          onConfirm={() => handleBookingAction('accept')}
+          confirming={!!bookingAction}
+          confirmProps={{ style: btnStyle }}
+        />
+      ) : (
+        <Button
+          disabled={!!bookingAction}
+          onClick={() => handleBookingAction('accept')}
+          style={btnStyle}
+        >
+          {acceptLabel}
+        </Button>
+      )}
+      <Button
+        variant="secondary"
+        disabled={!!bookingAction}
+        onClick={() => handleBookingAction('reject')}
+        style={btnSecondaryStyle}
+      >
+        {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
+      </Button>
+    </>
+  ) : null;
+
   return (
-    <PageLayout backTo={backPath} backLabel={backLabel}>
+    <PageLayout backTo={backPath} backLabel={backLabel} heroActions={decisionActions}>
       <div className="form-grid">
         {thing.collection_is_onboarding && <DemoNotice />}
         {(() => {
@@ -232,38 +278,10 @@ export default function ThingPage() {
           thingType={thing.type}
         />
 
-        {/* Owner actions */}
+        {/* Owner actions. With a request waiting, "Confirm hold" and "Decline hold"
+            are in the hero (see `decisionActions`); Edit and Delete stay here. */}
         {canManage && thing.status === 'ACTIVE' && (
           <div className="button-col">
-            {needsPage && activePendingCode && (
-              <>
-                {/* No transfer confirm here, by construction: this branch is
-                    `needsPage` (LEND/RENT) and `acceptTransfersOwnership` is its
-                    inverse, so the confirm could never render. A loan or rental
-                    comes back — nothing changes hands for good. The TAKEN block
-                    below is where a GIFT/SELL is accepted, and where the confirm
-                    belongs. */}
-                <Button
-                  fullWidth
-                  disabled={!!bookingAction}
-                  onClick={() => handleBookingAction('accept')}
-                  style={btnStyle}
-                >
-                  {acceptLabel}
-                </Button>
-                <Button
-                  fullWidth
-                  variant="secondary"
-                  disabled={!!bookingAction}
-                  onClick={() => handleBookingAction('reject')}
-                  style={btnSecondaryStyle}
-                >
-                  {bookingActionVerb === 'reject'
-                    ? t('thingCard.cancelling')
-                    : t('thingCard.cancelHold')}
-                </Button>
-              </>
-            )}
             <ButtonLink
               to={editPath}
               fullWidth
@@ -284,40 +302,9 @@ export default function ThingPage() {
           </div>
         )}
 
+        {/* A taken thing's "Confirm hold" and "Decline hold" are in the hero. */}
         {canManage && thing.status === 'TAKEN' && (
           <div className="button-col">
-            {acceptTransfersOwnership ? (
-              <InlineConfirm
-                triggerLabel={acceptLabel}
-                triggerProps={{ fullWidth: true, disabled: !!bookingAction, style: btnStyle }}
-                title={t('thingCard.transferConfirmTitle')}
-                body={t('thingCard.transferConfirmBody')}
-                confirmLabel={t('thingCard.transferConfirm')}
-                onConfirm={() => handleBookingAction('accept')}
-                confirming={!!bookingAction}
-                confirmProps={{ style: btnStyle }}
-              />
-            ) : (
-              <Button
-                fullWidth
-                disabled={!!bookingAction}
-                onClick={() => handleBookingAction('accept')}
-                style={btnStyle}
-              >
-                {acceptLabel}
-              </Button>
-            )}
-            <Button
-              fullWidth
-              variant="secondary"
-              disabled={!!bookingAction}
-              onClick={() => handleBookingAction('reject')}
-              style={btnSecondaryStyle}
-            >
-              {bookingActionVerb === 'reject'
-                ? t('thingCard.cancelling')
-                : t('thingCard.cancelHold')}
-            </Button>
             <ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>
               {t('common.edit')}
             </ButtonLink>

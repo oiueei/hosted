@@ -962,6 +962,9 @@ body :focus-visible {
   margin-top: var(--spacing-xs);
   padding: var(--spacing-s) var(--spacing-m);
   max-width: 32rem;
+  /* Its own text colour: the panel is a light surface wherever it opens, a hero
+     on a dark theeeme included, and must not borrow the colour of what surrounds it. */
+  color: var(--color-black-90);
   border: 1px solid var(--color-black-20);
   border-radius: 4px;
   background: var(--color-black-5);
@@ -1039,6 +1042,30 @@ body :focus-visible {
 .button-row-wide {
   display: flex;
   gap: var(--spacing-s);
+}
+
+/* The buttons a page puts in its hero (PageLayout's `heroActions`, 2026-10-04):
+   the row of `.button-row-wide`, a little under the back link, that wraps — and
+   the panel an InlineConfirm opens (`.thing-report-confirm`, a sibling of its
+   trigger) leaves the row of buttons and takes a line of its own under it: last in
+   the order, the width of the row from 768px (a flex-basis only means "the whole
+   line" in a row; in the column of a phone `align-self` gives it the width). */
+.hero-actions {
+  margin-top: var(--spacing-m);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.hero-actions > .thing-report-confirm {
+  order: 1;
+  align-self: stretch;
+  margin-top: 0;
+}
+
+@media (min-width: 768px) {
+  .hero-actions > .thing-report-confirm {
+    flex: 1 1 100%;
+  }
 }
 
 @media (max-width: 767px) {

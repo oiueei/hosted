@@ -23,9 +23,25 @@ import useTheeeme from '../hooks/useTheeeme';
  *   contain; the class name (`form-hero-text`) is what styling and tests key
  *   on, so this is a same-look, same-selector change for every plain-string
  *   caller.
+ * - `heroActions`: optional buttons for the hero, after the title and the
+ *   description (CA, 2026-10-04: the decision about a request sits in the hero
+ *   of a thing's page). Rendered in a `.button-row-wide.hero-actions` — on a phone
+ *   each one the width of the screen, above it the width of its own text — so
+ *   the caller passes the buttons and nothing around them. One primary at most:
+ *   CA's rule for any hero is two or three buttons, one of them primary. A
+ *   panel the buttons open (an `InlineConfirm`) goes on a line of its own under
+ *   the row (`.hero-actions > .thing-report-confirm`). No page but a thing's
+ *   uses it yet.
  * - `children`: page-container content.
  */
-export default function PageLayout({ title, backTo, backLabel, description, children }) {
+export default function PageLayout({
+  title,
+  backTo,
+  backLabel,
+  description,
+  heroActions,
+  children,
+}) {
   const { tc, koro } = useTheeeme();
   return (
     <div
@@ -46,6 +62,7 @@ export default function PageLayout({ title, backTo, backLabel, description, chil
           {backTo && <BackLink to={backTo} label={backLabel} />}
           {title && <h1 className="form-hero-title">{title}</h1>}
           {description && <div className="form-hero-text">{description}</div>}
+          {heroActions && <div className="button-row-wide hero-actions">{heroActions}</div>}
         </div>
         <Koros
           className="form-hero-koros"
