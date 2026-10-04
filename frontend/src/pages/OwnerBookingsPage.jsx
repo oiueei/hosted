@@ -241,14 +241,12 @@ export default function OwnerBookingsPage() {
               name: row._requesterName || t('common.aMember'),
             })}
           </p>
-          <p className="table-cell-line--faint">
+          <p>
             {t('myBookings.requested', {
               date: formatDate(row._created),
             })}
           </p>
-          <p>
-            {row._when || <span className="table-cell-line--none">{t('myBookings.noDates')}</span>}
-          </p>
+          <p>{row._when || t('myBookings.noDates')}</p>
           {row._projectNote && (
             <p className="table-cell-line--note">
               {t('reservation.noteFrom', { note: row._projectNote })}

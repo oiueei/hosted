@@ -171,14 +171,12 @@ export default function MyBookingsPage() {
       headerName: t('myBookings.colWhen'),
       transform: (row) => (
         <div className="table-cell-lines">
-          <p className="table-cell-line--faint">
+          <p>
             {t('myBookings.requested', {
               date: formatDate(row._created),
             })}
           </p>
-          <p>
-            {row._when || <span className="table-cell-line--none">{t('myBookings.noDates')}</span>}
-          </p>
+          <p>{row._when || t('myBookings.noDates')}</p>
         </div>
       ),
     },
