@@ -107,7 +107,7 @@ export default function ContactFormPage({
                 </Notification>
               )}
             </StatusRegion>
-            <div>
+            <div className="button-row-wide">
               <Button type="submit" disabled={sending || !message.trim()} style={btnStyle}>
                 {sending ? t('common.sending') : t('common.send')}
               </Button>

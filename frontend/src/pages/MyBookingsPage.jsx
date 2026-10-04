@@ -231,9 +231,11 @@ export default function MyBookingsPage() {
         <div>
           <p>{t('myBookings.noBookings')}</p>
           <div className="spacer-m" />
-          <ButtonLink to="/" style={btnStyle}>
-            {t('myBookings.goHome')}
-          </ButtonLink>
+          <div className="button-row-wide">
+            <ButtonLink to="/" style={btnStyle}>
+              {t('myBookings.goHome')}
+            </ButtonLink>
+          </div>
         </div>
       ) : (
         <>

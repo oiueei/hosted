@@ -324,9 +324,11 @@ export default function OwnerBookingsPage() {
           {/* Its own copy, not the requester page's "Browse collections": an
               owner with no requests wants to get their things in front of
               somebody, not to go shopping. */}
-          <ButtonLink to="/" style={btnStyle}>
-            {t('ownerBookings.emptyCta')}
-          </ButtonLink>
+          <div className="button-row-wide">
+            <ButtonLink to="/" style={btnStyle}>
+              {t('ownerBookings.emptyCta')}
+            </ButtonLink>
+          </div>
         </div>
       ) : (
         <>

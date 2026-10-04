@@ -407,7 +407,7 @@ export default function CollectionPage() {
               !collection.is_member &&
               collection.visibility === 'PUBLIC' && (
                 <div className="invite-nudge">
-                  <div>
+                  <div className="button-row-wide">
                     <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
                       {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
                     </Button>
@@ -673,13 +673,15 @@ export default function CollectionPage() {
             <h2>{t('broadcast.heading')}</h2>
             <div className="spacer-m" />
             {!broadcastOpen ? (
-              <Button
-                variant="secondary"
-                style={btnSecondaryStyle}
-                onClick={() => setBroadcastOpen(true)}
-              >
-                {t('broadcast.openButton')}
-              </Button>
+              <div className="button-row-wide">
+                <Button
+                  variant="secondary"
+                  style={btnSecondaryStyle}
+                  onClick={() => setBroadcastOpen(true)}
+                >
+                  {t('broadcast.openButton')}
+                </Button>
+              </div>
             ) : (
               <div className="form-grid">
                 {/* The one place in the product where a member learns an address

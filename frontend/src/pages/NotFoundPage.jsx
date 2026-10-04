@@ -34,7 +34,7 @@ export default function NotFoundPage() {
             <ContactCorner />
           </span>
           <h1 className="form-hero-title">{t('notFound.title')}</h1>
-          <div>
+          <div className="button-row-wide">
             <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
               {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
             </ButtonLink>

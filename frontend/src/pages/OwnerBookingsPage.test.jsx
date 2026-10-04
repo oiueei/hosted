@@ -225,6 +225,14 @@ describe('OwnerBookingsPage listing', () => {
     expect(screen.queryByRole('heading', { name: 'Waiting on you' })).toBeNull();
   });
 
+  test('that way out sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockApi([{ results: [], next: null }]);
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'Share a collection' });
+    expect(link.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('a failed load says so instead of spinning forever', async () => {
     apiFetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
     renderPage();

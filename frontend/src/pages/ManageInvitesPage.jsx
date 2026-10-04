@@ -232,16 +232,18 @@ export default function ManageInvitesPage() {
           {t(loadError)}
         </Notification>
         <div className="spacer-m" />
-        <Button
-          variant="secondary"
-          style={btnSecondaryStyle}
-          onClick={() => {
-            setLoading(true);
-            fetchCollection();
-          }}
-        >
-          {t('common.retry')}
-        </Button>
+        <div className="button-row-wide">
+          <Button
+            variant="secondary"
+            style={btnSecondaryStyle}
+            onClick={() => {
+              setLoading(true);
+              fetchCollection();
+            }}
+          >
+            {t('common.retry')}
+          </Button>
+        </div>
       </PageLayout>
     );
   }

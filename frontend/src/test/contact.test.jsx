@@ -43,6 +43,14 @@ describe('ContactPage', () => {
     });
   });
 
+  test('the send button sits in a wide row, so on a phone it is the width of the screen', () => {
+    renderPage();
+
+    expect(screen.getByRole('button', { name: 'Send' }).parentElement).toHaveClass(
+      'button-row-wide'
+    );
+  });
+
   test('the collaborate page shares the form but posts the collab kind', async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({ message: 'ok' })));
     render(

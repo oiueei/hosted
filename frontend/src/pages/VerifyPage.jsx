@@ -212,7 +212,7 @@ export default function VerifyPage() {
   const koro = localStorage.getItem('koro') || 'basic';
   // Both the success and error heroes offer the same way out.
   const exitAction = (
-    <div>
+    <div className="button-row-wide">
       <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
         {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
       </ButtonLink>

@@ -258,6 +258,14 @@ describe('MyBookingsPage listing', () => {
     expect(screen.getByRole('link', { name: 'Browse collections' })).toHaveAttribute('href', '/');
   });
 
+  test('that way out sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockList([]);
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'Browse collections' });
+    expect(link.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('a failed load says so instead of spinning forever', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,

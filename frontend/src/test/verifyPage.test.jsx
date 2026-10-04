@@ -83,6 +83,15 @@ describe('VerifyPage auto-commit', () => {
     expect(postCalls(globalThis.fetch)).toHaveLength(1);
   });
 
+  test('the way out of a failed link sits in a wide row, so on a phone it is the width of the screen', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({ error: 'expired' }, false, 400)));
+
+    renderVerify();
+
+    const exit = await screen.findByRole('link', { name: 'Go to login' });
+    expect(exit.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('never commits when the GET preview is non-OK (expired link)', async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({ error: 'expired' }, false, 400)));
 

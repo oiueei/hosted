@@ -737,6 +737,17 @@ describe('A signed-in visitor on a public group', () => {
     expect(screen.queryByText('Add thing')).not.toBeInTheDocument();
   });
 
+  test('the join button sits in a wide row, so on a phone it is the width of the screen', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(PUBLIC_COMMUNITY) })
+    );
+
+    renderPage();
+
+    const join = await screen.findByRole('button', { name: 'Join this group' });
+    expect(join.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('joining unlocks the member controls', async () => {
     apiFetch.mockImplementation((url, options) => {
       if (options?.method === 'POST') {
@@ -976,6 +987,14 @@ describe('sending a message to the whole group', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Send a message to members' }));
     return screen.getByLabelText(/Message/);
   }
+
+  test('the button that opens it sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockPost(() => ok({}));
+    renderPage();
+
+    const open = await screen.findByRole('button', { name: 'Send a message to members' });
+    expect(open.parentElement).toHaveClass('button-row-wide');
+  });
 
   test('opening it and writing sends nothing, and names the cost first', async () => {
     mockPost(() => ok({}));
