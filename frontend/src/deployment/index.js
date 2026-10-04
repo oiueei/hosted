@@ -41,9 +41,8 @@ export const deploymentRoutes = [
 // '/popin' any more, though that route is still declared and still reached.
 export const popInPath = '/welcome';
 
-// The footer's "what OIUEEI is" link, the first-time box on a freshly joined
-// collection, and where `landing: "welcome"` sends a brand-new visitor — the
-// three places upstream leaves to the deployment.
+// The footer's "what OIUEEI is" link and the first-time box on a freshly joined
+// collection — the two places upstream leaves to the deployment.
 export const aboutPath = '/welcome';
 
 // The help/FAQ link under "trouble signing in?" on /login. Upstream added this

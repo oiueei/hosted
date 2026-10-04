@@ -47,12 +47,19 @@ class TestTheOpenDoor:
         assert onboarding.invites.filter(code=visitor.code).exists()
         assert len(mail.outbox) == 1
 
-    def test_the_magic_link_carries_no_target_so_they_land_on_welcome(self, api_client, onboarding):
+    def test_the_magic_link_carries_no_target_so_the_general_landing_rule_applies(
+        self, api_client, onboarding
+    ):
         """They came to look around, not to reach one group.
 
-        An empty `target_code` plus `origin=POPIN` is what makes VerifyLinkView
-        answer `landing: "welcome"` — the contract upstream keeps for exactly
-        this app (see `core/views/auth.py`).
+        An empty `target_code` plus `origin=POPIN` is how VerifyLinkView knows
+        there is no collection in hand, and then the general rule answers, the
+        same one a `/login` link gets: their one real ACTIVE collection when
+        they have exactly one, else Home. The demonstration groups they were
+        just put in do not count, and there is no `landing: "welcome"` any more
+        (CA, 2026-10-04). The rule itself is core's, pinned in `test_landing.py`;
+        what is this app's to hold is what it stamps on the link: the origin,
+        and no target.
         """
         api_client.post(POP_IN_URL, {"email": "curious@test.com"}, format="json")
 
