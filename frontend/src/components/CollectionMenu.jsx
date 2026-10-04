@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { IconMenuDots, Notification } from 'hds-react';
+import { IconDocumentGroup, Notification } from 'hds-react';
 import useDismissable from '../hooks/useDismissable';
 import StatusRegion from './StatusRegion';
 
@@ -15,7 +15,9 @@ const PANEL_ID = 'collection-menu-panel';
  * keeps "Edit collection" alone; everything else is this menu, a fourth
  * icon in the hero's corner (`AccountMenu` · this · `ShareCollectionMenu` ·
  * `ContactCorner`), shown to curators only (owner or co-owner, `is_curator`
- * — the server's own word, the same gate the row uses).
+ * — the server's own word, the same gate the row uses). Its icon is
+ * `IconDocumentGroup` (CA, 2026-10-04): the menu holds the group's things and
+ * files, which a bare ⋯ (what it was drawn as at first) did not say.
  *
  * The panel mixes links with the three download buttons, so it is a plain
  * `<div>` — not the account menu's `<nav>` (this is not all navigation)
@@ -65,7 +67,7 @@ export default function CollectionMenu({ code, hasDateThings, downloads }) {
         aria-controls={open ? PANEL_ID : undefined}
         onClick={() => setOpen((v) => !v)}
       >
-        <IconMenuDots aria-hidden="true" />
+        <IconDocumentGroup aria-hidden="true" />
       </button>
       {open && (
         <div id={PANEL_ID} className="collection-menu-panel">

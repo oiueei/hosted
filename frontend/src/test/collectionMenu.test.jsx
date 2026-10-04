@@ -215,6 +215,22 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     ).toBeInTheDocument();
   });
 
+  test('the trigger draws the document-group icon, hidden from assistive tech', async () => {
+    renderCollection(COLLECTION);
+    const trigger = await screen.findByRole('button', { name: TRIGGER });
+
+    // HDS names each icon's <svg> after itself (`document-group`, `menu-dots`)
+    // even when `aria-hidden` keeps it out of the accessibility tree, so that
+    // label is how a test tells one icon from another in jsdom.
+    const icon = trigger.querySelector('svg');
+    expect(icon).toHaveAttribute('aria-label', 'document-group');
+    // HDS hides a bare icon by default, so this pins the outcome (the glyph is
+    // never read out beside the button's own name), not the explicit prop.
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    // The button's own name is still the one `aria-label`, not the icon's.
+    expect(trigger).toHaveAccessibleName(TRIGGER);
+  });
+
   test('a co-curator (not the founder) gets it too', async () => {
     renderCollection({
       ...COLLECTION,
