@@ -121,6 +121,33 @@ describe('PageLayout — collectionMenu', () => {
   });
 });
 
+/**
+ * `offerSignIn` (Y1, CA 2026-10-04): whether a reader with no session gets the corner's
+ * "Sign in" icon. `MagicLinkJoinPage` passes its own through, so a door that leaves out
+ * "already have an account?" leaves out the icon too. Nothing changes with a session.
+ */
+describe('PageLayout — offerSignIn', () => {
+  test('by default a reader with no session has the "Sign in" icon in the corner', () => {
+    const { container } = renderLayout({});
+
+    expect(container.querySelector('.hero-corners a[href="/login"]')).not.toBeNull();
+  });
+
+  test('with offerSignIn={false} the corner is empty for a reader with no session', () => {
+    const { container } = renderLayout({ offerSignIn: false });
+
+    expect(container.querySelector('.hero-corners')).toBeEmptyDOMElement();
+    expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
+  });
+
+  test('with a session the account menu is there whatever it says', () => {
+    localStorage.setItem('userCode', 'ABC123');
+    renderLayout({ offerSignIn: false });
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+  });
+});
+
 describe('the hero actions stylesheet', () => {
   const DESKTOP = '(min-width: 768px)';
 
