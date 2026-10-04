@@ -85,8 +85,8 @@
   },
   "collectionMenu": {
     "label": "Opcions de la col·lecció",
-    "muteDigest": "Silencia el resum",
-    "unmuteDigest": "Torna a rebre el resum",
+    "muteDigest": "Silenciar el resum",
+    "unmuteDigest": "Tornar a rebre el resum",
     "digestMuted": "Fet: ja no rebràs el resum d'aquest grup.",
     "digestUnmuted": "Fet: tornaràs a rebre el resum d'aquest grup.",
     "digestError": "No hem pogut canviar-ho. Torna-ho a provar."

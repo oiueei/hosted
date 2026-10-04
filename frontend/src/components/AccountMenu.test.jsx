@@ -356,6 +356,35 @@ describe('AccountMenu — signed out', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  test('with offerSignIn={false} it paints nothing at all, on any page', () => {
+    // Y1 (CA, 2026-10-04): a door that does not want to send people to /login — the
+    // hosted /popin — says so, and PageLayout hands it down.
+    localStorage.removeItem('userCode');
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <AccountMenu offerSignIn={false} />
+      </MemoryRouter>
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  test('without the prop, or with true, the icon is there — the default is to offer it', () => {
+    renderAt('/collections/COL001');
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  test('offerSignIn={false} changes nothing for a reader with a session', () => {
+    render(
+      <MemoryRouter>
+        <AccountMenu offerSignIn={false} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+  });
+
   test('it asks the server nothing: the only request the signed-in menu makes is when it opens', () => {
     renderAt('/collections/COL001');
 

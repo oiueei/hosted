@@ -37,6 +37,11 @@ import useTheeeme from '../hooks/useTheeeme';
  *   a collection, passes the collection's menu (X4, CA 2026-10-04). When it is
  *   there the account menu stops offering "Requests to me", which the collection
  *   menu carries as its first entry.
+ * - `offerSignIn` (default `true`): whether a reader with no session gets the
+ *   corner's "Sign in" icon (the signed-out `AccountMenu`). `MagicLinkJoinPage` passes
+ *   its own `offerSignIn` through (Y1, CA 2026-10-04), so a door that leaves the
+ *   "already have an account?" button out leaves the icon out too. Nothing changes for
+ *   a signed-in reader.
  * - `children`: page-container content.
  */
 export default function PageLayout({
@@ -46,6 +51,7 @@ export default function PageLayout({
   description,
   heroActions,
   collectionMenu,
+  offerSignIn = true,
   children,
 }) {
   const { tc, koro } = useTheeeme();
@@ -63,7 +69,7 @@ export default function PageLayout({
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
           <span className="hero-corners">
-            <AccountMenu requestsInCollectionMenu={!!collectionMenu} />
+            <AccountMenu requestsInCollectionMenu={!!collectionMenu} offerSignIn={offerSignIn} />
             {collectionMenu}
           </span>
           {backTo && <BackLink to={backTo} label={backLabel} />}

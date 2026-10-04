@@ -55,8 +55,14 @@ const PANEL_ID = 'account-menu-panel';
  * lead to itself), `/logout` or `/verify/…` and its aliases, where it still paints
  * nothing — `isDoorPath`, the same list a login never returns to. On a public
  * collection it sits beside the hero's own "Sign in" button (W3): CA accepted both.
+ * **`offerSignIn={false}` paints nothing signed out either** (Y1, CA 2026-10-04): a
+ * door that does not want to send people to `/login` — the hosted `/popin`, which
+ * dropped "Already have an account?" on purpose — says so through
+ * `MagicLinkJoinPage`'s `offerSignIn`, which `PageLayout` hands down. It changes
+ * nothing for a signed-in reader, and where nobody passes it (`/share`, `/join`, the
+ * 404…) the icon stays.
  */
-export default function AccountMenu({ requestsInCollectionMenu = false }) {
+export default function AccountMenu({ requestsInCollectionMenu = false, offerSignIn = true }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
@@ -76,7 +82,7 @@ export default function AccountMenu({ requestsInCollectionMenu = false }) {
   // unconditionally and let it decide for itself.
   const userCode = localStorage.getItem('userCode');
   if (!userCode) {
-    if (isDoorPath(location.pathname)) return null;
+    if (!offerSignIn || isDoorPath(location.pathname)) return null;
     return (
       <span className="account-menu">
         <Link
