@@ -22,10 +22,11 @@
  *   ways in are an invitation and a share link.
  * @property {?string} aboutPath
  *   Where a page explaining what this deployment *is* lives, or `null` for
- *   none. The site footer links it and the collection page offers it to
- *   someone who has just accepted an invitation. Upstream there is no such
- *   page: what OIUEEI is belongs in the README, and a deployment's own answer
- *   belongs to the deployment.
+ *   none. Two places read it: the site footer links it, and so does the second
+ *   button of Home's empty state ("See how it works"), the first screen a
+ *   brand-new account sees. Upstream there is no such page: what OIUEEI is
+ *   belongs in the README, and a deployment's own answer belongs to the
+ *   deployment.
  * @property {?string} faqPath
  *   Where this deployment's help/FAQ page lives, or `null` for none. Linked
  *   from `/login`, the door with the most traffic — upstream has nowhere to
