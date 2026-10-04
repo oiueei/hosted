@@ -296,14 +296,15 @@ describe('CollectionPage hero corners', () => {
 describe('CollectionPage signed-out reader', () => {
   /**
    * The hero's "This group shares its things on OIUEEI. Join to take part →"
-   * line was removed (CA, 2026-09-21). A signed-out reader still reaches
-   * /collections/:code/join from the action button on any card (login-to-act,
-   * pinned in `thingBooking.test.jsx`); what is gone is the standing invitation
-   * in the hero.
+   * line was removed (CA, 2026-09-21), a line in the content stood in for it from
+   * 2026-09-29, and CA brought the hero's join back on 2026-10-04 — with a pair:
+   * `[Join this group]` primary and `[Sign in]` secondary, in a row, as on
+   * /welcome. The tests of every shape of group are further down (`the two doors
+   * of a signed-out reader`); this one is the hero of a plain public group.
    *
-   * Asserted through the link's target and the raw i18n key — the strings went
-   * with the line, so a resurrected `t('collectionPage.anonIntro')` renders its
-   * own key and an English-text query would pass for the wrong reason.
+   * Asserted through the links' targets and the raw i18n key — the old line's
+   * strings went with it, so a resurrected `t('collectionPage.anonIntro')`
+   * renders its own key and an English-text query would pass for the wrong reason.
    */
   const PUBLIC_VIEW = {
     ...COLLECTION_WITH_PHOTO,
@@ -314,7 +315,7 @@ describe('CollectionPage signed-out reader', () => {
     is_member: false,
   };
 
-  test('is offered no join line in the hero', async () => {
+  test('is offered "Join this group" and "Sign in" in the hero, and no standing line', async () => {
     localStorage.clear();
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: async () => PUBLIC_VIEW })
@@ -330,9 +331,12 @@ describe('CollectionPage signed-out reader', () => {
     await waitFor(() => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
-    // Nothing in the hero (CA removed the line on 2026-09-21 and reopened the
-    // question only for the content, 2026-09-29 — see the tests of the door below).
-    expect(container.querySelector('.form-hero a[href="/collections/COL001/join"]')).toBeNull();
+    const doors = [...container.querySelectorAll('.form-hero .button-row-wide a')];
+    expect(doors.map((a) => a.textContent)).toEqual(['Join this group', 'Sign in']);
+    expect(doors.map((a) => a.getAttribute('href'))).toEqual([
+      '/collections/COL001/join',
+      '/login?next=%2Fcollections%2FCOL001',
+    ]);
     expect(container.textContent).not.toMatch(/collectionPage\.anonIntro/);
   });
 });
@@ -814,14 +818,16 @@ describe('A signed-in visitor on a public group', () => {
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
   });
 
-  // A signed-out reader of a PUBLIC group has a button to press on every card; the
-  // hero's standing "join" line went on 2026-09-21. It left two places with no
-  // door at all — an empty group, whose curator's own share menu points here, and
-  // the bottom of a COMMUNITY group, where to contribute you would have to press
-  // "Request" on somebody else's thing — and CA reopened it for exactly those two
-  // on 2026-09-29. In the content, not the hero; to the group's join page, with no
-  // ?thing= (there is no thing in it). Asserted by target as well as by words.
-  describe('a signed-out reader is given a door where no button leads to one', () => {
+  // A signed-out reader of a PUBLIC group has a button to press on every card, and
+  // since CA's call of 2026-10-04 also a pair of doors in the hero: "Join this group"
+  // (primary, to the group's join page, no ?thing= — there is no thing in it) and
+  // "Sign in" (secondary, to /login, which brings them back here). In every public
+  // group, COMMUNITY or PROPRIETARY, empty or not. The line in the content that stood
+  // for them from 2026-09-29 — only in a COMMUNITY or an empty group — is gone.
+  // Asserted by target as well as by words, and by the raw i18n key: the old
+  // strings left the locales, so a resurrected `t('collectionPage.anonJoin…')`
+  // renders its own key, which an English-text query would never catch.
+  describe('the two doors of a signed-out reader', () => {
     const anThing = (n) => ({
       code: `THG${String(n).padStart(3, '0')}`,
       headline: `Thing ${n}`,
@@ -842,80 +848,107 @@ describe('A signed-in visitor on a public group', () => {
       return renderPage();
     };
     const joinLinks = () => [...document.querySelectorAll('a[href$="/join"]')];
+    const heroDoors = () => [...document.querySelectorAll('.form-hero .button-row-wide a')];
+    // The primary button is the theeeme's fill; the secondary is white.
+    const isPrimary = (link) =>
+      link.style.getPropertyValue('--background-color') !== 'var(--color-white)';
 
-    test('an empty COMMUNITY group offers the join page, under "No things yet", and no form', async () => {
-      show(PUBLIC_COMMUNITY);
+    const expectTheTwoDoors = () => {
+      const doors = heroDoors();
+      expect(doors.map((a) => a.textContent)).toEqual([
+        en.collectionPage.visitorJoin,
+        en.login.signIn,
+      ]);
+      expect(doors.map((a) => a.getAttribute('href'))).toEqual([
+        '/collections/COL001/join',
+        '/login?next=%2Fcollections%2FCOL001',
+      ]);
+      expect(doors.map(isPrimary)).toEqual([true, false]);
+    };
 
-      const noThings = await screen.findByText(/No things in this collection yet/);
-      expect(document.querySelector('a[href$="/add"]')).toBeNull();
-      expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
-      expect(joinLinks()).toHaveLength(1);
-      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinCommunity);
-      expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
-      expect(noThings.compareDocumentPosition(joinLinks()[0])).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING
-      );
-    });
+    test.each([
+      ['an empty COMMUNITY group', PUBLIC_COMMUNITY, /No things in this collection yet/],
+      [
+        'an empty PROPRIETARY group that sends a digest',
+        { ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: 'WEEKLY' },
+        /No things in this collection yet/,
+      ],
+      [
+        'an empty PROPRIETARY group that sends none',
+        { ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: 'NONE' },
+        /No things in this collection yet/,
+      ],
+      ['a COMMUNITY group with things', { ...PUBLIC_COMMUNITY, things: [anThing(1)] }, /Thing 1/],
+      [
+        'a PROPRIETARY group with things — the case that had no door but each card’s button',
+        { ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', things: [anThing(1)] },
+        /Thing 1/,
+      ],
+    ])(
+      '%s: both doors, in the hero, in that order, the first primary',
+      async (_what, group, ready) => {
+        show(group);
 
-    test.each(['WEEKLY', 'MONTHLY'])(
-      'an empty PROPRIETARY group with a %s digest offers it with its own words: the summary of what arrives',
-      async (digest) => {
-        show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: digest });
+        await screen.findByText(ready);
 
-        await screen.findByText(/No things in this collection yet/);
+        expectTheTwoDoors();
+        // The only link to the join page is the hero's: no second line in the content.
         expect(joinLinks()).toHaveLength(1);
-        expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinEmpty);
-        expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
+        expect(document.body.textContent).not.toMatch(/anonJoin/);
       }
     );
 
-    // "…to hear when something arrives" is a promise the digest keeps. A group
-    // whose curator set it to "None" sends nobody anything, so the same door
-    // must not make it: it only says "Join the group".
-    test('an empty PROPRIETARY group that sends no digest promises no summary', async () => {
-      show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', digest_frequency: 'NONE' });
-
-      await screen.findByText(/No things in this collection yet/);
-      expect(joinLinks()).toHaveLength(1);
-      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinPlain);
-      expect(joinLinks()[0]).not.toHaveTextContent(en.collectionPage.anonJoinEmpty);
-      expect(joinLinks()[0]).toHaveAttribute('href', '/collections/COL001/join');
-    });
-
-    test('a COMMUNITY group with things offers it under the grid, after "Show more"', async () => {
+    test('a COMMUNITY group with a second page of things has no line under the grid either', async () => {
       // 25 cards: one past the page size, so the "Show 1 more" button is there too.
       const things = Array.from({ length: 25 }, (_, i) => anThing(i + 1));
       show({ ...PUBLIC_COMMUNITY, things });
 
-      const more = await screen.findByRole('button', { name: /Show 1 more/ });
+      await screen.findByRole('button', { name: /Show 1 more/ });
+
+      expectTheTwoDoors();
       expect(joinLinks()).toHaveLength(1);
-      expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinCommunity);
-      expect(more.compareDocumentPosition(joinLinks()[0])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(document.querySelector('.things-grid').compareDocumentPosition(joinLinks()[0])).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING
-      );
+      expect(document.body.textContent).not.toMatch(/anonJoin/);
     });
 
-    test("a PROPRIETARY group with things offers nothing: its door is each thing's own button", async () => {
-      show({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', things: [anThing(1)] });
+    test('"Sign in" brings the reader back to this group: its href carries the page as `next`', async () => {
+      show(PUBLIC_COMMUNITY);
 
-      await screen.findByText('Thing 1');
-      expect(joinLinks()).toHaveLength(0);
+      await screen.findByText(/No things in this collection yet/);
+
+      const signIn = screen.getByRole('link', { name: en.login.signIn });
+      const next = new URL(signIn.getAttribute('href'), 'https://oiueei.test').searchParams.get(
+        'next'
+      );
+      expect(next).toBe('/collections/COL001');
     });
 
     test('a PRIVATE group is not reachable signed out, so it offers nothing either', async () => {
-      // Whatever the API sent for it, the door is for the PUBLIC ones.
+      // Whatever the API sent for it, the doors are for the PUBLIC ones.
       show({ ...PUBLIC_COMMUNITY, visibility: 'PRIVATE' });
 
       await screen.findByText(/No things in this collection yet/);
+      expect(heroDoors()).toHaveLength(0);
       expect(joinLinks()).toHaveLength(0);
     });
 
-    test('a signed-in reader has the "Join this group" button instead, and no such line', async () => {
+    test('a signed-in reader has the "Join this group" button instead, and no pair of links', async () => {
       show(PUBLIC_COMMUNITY, { signedIn: true });
 
       expect(await screen.findByRole('button', { name: 'Join this group' })).toBeInTheDocument();
       expect(joinLinks()).toHaveLength(0);
+      expect(screen.queryByRole('link', { name: en.login.signIn })).not.toBeInTheDocument();
+    });
+
+    test.each([
+      ['a member', { is_member: true }],
+      ['a curator', { is_curator: true, owner: 'VISITOR1' }],
+    ])('%s of the group is offered neither door', async (_who, over) => {
+      show({ ...PUBLIC_COMMUNITY, things: [anThing(1)], ...over }, { signedIn: true });
+
+      await screen.findByText(/Thing 1/);
+      expect(joinLinks()).toHaveLength(0);
+      expect(screen.queryByRole('link', { name: en.login.signIn })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
     });
   });
 

@@ -17,6 +17,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import { collectionTeam } from '../utils/team';
+import { loginPathFor } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
 import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
@@ -296,27 +297,12 @@ export default function CollectionPage() {
   // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
   // the link is the curators' credential, and the member has "Recommend" instead.
   const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
-  // A signed-out reader of a PUBLIC group has no card to click in two places: an
-  // empty group, and the bottom of a COMMUNITY one, where to *contribute* they
-  // would have to press "Request" on somebody else's thing. CA reopened the
-  // hero's removed join line for exactly these two cases (2026-09-29) — but in
-  // the content, not the hero, and only where there is no button to press. A
-  // PROPRIETARY group with things needs nothing: its door is each thing's button.
-  // Which line: a COMMUNITY group asks for what the reader could add; a
-  // PROPRIETARY one that is empty promises the one thing a member does get — the
-  // summary of what arrives — but only when the group sends one. With its digest
-  // set to "None" nobody hears anything, so the line just says "Join the group".
-  const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
-  const anonJoinKey =
-    !isAuthenticated && collection.visibility === 'PUBLIC'
-      ? collection.mode === 'COMMUNITY'
-        ? 'collectionPage.anonJoinCommunity'
-        : visibleThings.length === 0
-          ? sendsDigest
-            ? 'collectionPage.anonJoinEmpty'
-            : 'collectionPage.anonJoinPlain'
-          : null
-      : null;
+  // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
+  // this group" and "Sign in" — whatever the mode and whether it holds things or not
+  // (CA, 2026-10-04). It used to be a line in the content that only a COMMUNITY or an
+  // empty group showed, and a member without a session (the weekly digest's link is an
+  // ordinary one) had no way in from here at all.
+  const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -441,11 +427,32 @@ export default function CollectionPage() {
                 </a>
               </p>
             )}
-            {/* A signed-out reader used to get a one-line "This group shares its
-              things on OIUEEI. Join to take part →" here; it was removed (CA,
-              2026-09-21). They still reach /collections/:code/join from the
-              action button on any card (login-to-act) — but not from an empty
-              group, which has no card to click. */}
+            {/* The hero's "join" is back for a signed-out reader (CA, 2026-10-04),
+              with its pair. Its first form — "This group shares its things on
+              OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
+              the content stood in for it from 2026-09-29, only where no card
+              had a button to press, and that line is gone in turn. Now a row, as
+              on /welcome: "Join this group" first and primary, to the join page
+              (no ?thing=: there is no thing in it), and "Sign in" secondary, to
+              /login, which brings them back here — for the member who has no
+              session and for anyone who already has an account. In every PUBLIC
+              group, COMMUNITY or PROPRIETARY, empty or not; the action button on
+              each card (login-to-act) is still there for whoever has one. */}
+            {showsSignedOutDoors && (
+              <div className="invite-nudge">
+                <div className="button-row-wide">
+                  <ButtonLink to={`/collections/${code}/join`} style={btnStyle}>
+                    {t('collectionPage.visitorJoin')}
+                  </ButtonLink>
+                  <ButtonLink
+                    to={loginPathFor({ pathname: `/collections/${code}` })}
+                    style={btnSecondaryStyle}
+                  >
+                    {t('login.signIn')}
+                  </ButtonLink>
+                </div>
+              </div>
+            )}
             {/* An invitation for a reader who is already signed in. They
               cannot be sent down the anonymous funnel — it asks for an email and
               answers with a magic link — so they get the action itself. Only on
@@ -706,18 +713,6 @@ export default function CollectionPage() {
             )}
           </>
         )}
-        {/* A way in for a signed-out reader where no button leads there (see
-            `anonJoinKey`): under "No things in this collection yet." (which a
-            signed-out reader is always shown, as they cannot add) in an empty
-            group, and under the grid — after "Show more" — of a COMMUNITY one.
-            Not in the hero (CA removed that line on 2026-09-21), and it goes to
-            the group's join page with no ?thing=: there is no thing in it. */}
-        {anonJoinKey && (
-          <p className="invite-nudge">
-            <Link to={`/collections/${code}/join`}>{t(anonJoinKey)}</Link>
-          </p>
-        )}
-
         {isCurator && collection.invites.length > 0 && (
           <>
             <div className="spacer-l" />
