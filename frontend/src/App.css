@@ -542,6 +542,19 @@ div[class*='Linkbox-module_linkbox'] {
   flex-direction: column;
 }
 
+/* The card of the thing just uploaded, marked for a couple of seconds on a phone
+   (CollectionPage, V6): a ring in the theeeme's own colour. The fade out is a
+   transition on the card, only for a reader who has not asked for less motion. */
+.thing-card--just-added {
+  box-shadow: 0 0 0 3px var(--just-added-color, var(--color-black-90));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .thing-card {
+    transition: box-shadow 0.6s ease;
+  }
+}
+
 .thing-card-image {
   display: block;
   width: calc(100% - 2 * var(--spacing-s));

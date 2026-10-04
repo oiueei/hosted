@@ -454,6 +454,7 @@
     "maxHeadline": "Màxim 64 caràcters per idioma.",
     "priceRequired": "El preu és obligatori per a aquest tipus.",
     "maxLocation": "Màxim 64 caràcters.",
+    "uploaded": "Cosa pujada amb èxit!",
     "errorCreating": "Error en crear la cosa.",
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "Selecciona etiquetes",

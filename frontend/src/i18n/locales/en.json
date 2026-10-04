@@ -460,6 +460,7 @@
     "maxHeadline": "Maximum 64 characters per language.",
     "priceRequired": "Price is required for this type.",
     "maxLocation": "Maximum 64 characters.",
+    "uploaded": "Thing uploaded!",
     "errorCreating": "Error creating thing.",
     "tagsLabel": "Tags",
     "tagsPlaceholder": "Select tags",

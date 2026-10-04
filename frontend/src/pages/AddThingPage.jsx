@@ -146,7 +146,16 @@ export default function AddThingPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        navigate(`/collections/${code}`);
+        // The new thing's code rides along in the navigation state: on a phone the
+        // collection page tells the person it worked and takes them to the card
+        // (V6, CA 2026-10-04) — the hero fills the screen and nothing of the upload
+        // is in sight. The page ignores it on a desktop. A response without a code
+        // simply sends no state.
+        const created = await res.json().catch(() => null);
+        navigate(
+          `/collections/${code}`,
+          created?.code ? { state: { addedThing: created.code } } : undefined
+        );
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {

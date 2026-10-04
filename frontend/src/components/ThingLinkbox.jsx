@@ -111,7 +111,9 @@ function ThingLinkbox({
     : `/things/${thing.code}/request`;
 
   return (
-    <div className="thing-card">
+    // `data-thing-code` is how the collection page finds this card: it scrolls to
+    // the one just uploaded, and marks it.
+    <div className="thing-card" data-thing-code={thing.code}>
       {(() => {
         const images = [thing.thumbnail_url, ...(thing.gallery_urls || [])].filter(Boolean);
         if (images.length === 0) return null;
