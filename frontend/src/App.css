@@ -2078,9 +2078,9 @@ caption:has(> .sr-only:only-child) {
   color: var(--color-black-60);
 }
 
-.approval-notice a {
-  color: inherit;
-  text-decoration: underline;
+/* The button under the sentence (X8, 2026-10-04): a little air above it. */
+.approval-notice + .button-row-wide {
+  margin-top: var(--spacing-xs);
 }
 
 /* A member's recommendation awaiting the owner's answer (ManageInvitesPage).

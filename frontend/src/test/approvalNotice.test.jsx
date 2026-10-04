@@ -81,18 +81,76 @@ describe('a deployment that withholds something', () => {
     expect(screen.queryByText(/COMMUNITY/)).not.toBeInTheDocument();
   });
 
-  test('links to where access is requested', async () => {
-    mockCapabilities({
-      collection_modes: ['PROPRIETARY'],
-      thing_types: [],
-      request_url: 'https://example.test/ask/',
+  // "Request access" is a primary button (X8, CA 2026-10-04), not a text link ending
+  // in an arrow. It is built as `FeedbackLink` is: the real button CSS on one `<a>`.
+  describe('where to ask is a primary button', () => {
+    const withRequestUrl = () =>
+      mockCapabilities({
+        collection_modes: ['PROPRIETARY'],
+        thing_types: [],
+        request_url: 'https://example.test/ask/',
+      });
+    const renderNotice = () => render(<ApprovalNotice kind="collection_modes" catalogue={MODES} />);
+
+    test('a link made to look like a button, named "Request access", to where access is requested', async () => {
+      withRequestUrl();
+      renderNotice();
+
+      const button = await screen.findByRole('link', { name: /^Request access/ });
+      expect(button).toHaveAttribute('href', 'https://example.test/ask/');
+      expect(button).toHaveAttribute('target', '_blank');
+      expect(button).toHaveAttribute('rel', expect.stringContaining('noopener'));
+      // The words on the button are only the words: no arrow, and no "(opens in a
+      // new tab)" printed — the new tab is announced, not shown.
+      expect(button).toHaveTextContent(/^Request access$/);
+      expect(button).toHaveAccessibleName('Request access. Opens in a new tab.');
+      // The real button CSS on the one `<a>` (HDS's `useButtonStyles`): a link with a
+      // button's tokens and no button class would only look like one by accident.
+      expect(button.className).toMatch(/hds-button/);
     });
 
-    render(<ApprovalNotice kind="collection_modes" catalogue={MODES} />);
+    test('it wears the theeeme’s primary tokens', async () => {
+      localStorage.setItem(
+        'theeemeColors',
+        JSON.stringify({
+          color_01: 'bus',
+          color_02: 'suomenlinna-light',
+          color_03: 'copper',
+          color_04: 'black',
+          color_05: 'white',
+          color_06: 'white',
+        })
+      );
+      withRequestUrl();
+      renderNotice();
 
-    const link = await screen.findByRole('link');
-    expect(link).toHaveAttribute('href', 'https://example.test/ask/');
-    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+      const button = await screen.findByRole('link', { name: /^Request access/ });
+      // Primary: the theeeme's fill — the secondary's background is white.
+      expect(button.style.getPropertyValue('--background-color')).toBe('var(--color-bus)');
+      expect(button.style.getPropertyValue('--border-color')).toBe('var(--color-bus)');
+    });
+
+    test('it sits in a wide row under the sentence, which keeps its words and loses its arrow', async () => {
+      withRequestUrl();
+      const { container } = renderNotice();
+
+      const button = await screen.findByRole('link', { name: /^Request access/ });
+      expect(button.parentElement).toHaveClass('button-row-wide');
+      const sentence = container.querySelector('p.approval-notice');
+      expect(sentence).toHaveTextContent(/Shared/);
+      expect(sentence.textContent).not.toMatch(/→|Request access/);
+      // Under the sentence, not inside it.
+      expect(sentence).not.toContainElement(button);
+      expect(sentence.compareDocumentPosition(button)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    test('it is the only link in the notice', async () => {
+      withRequestUrl();
+      renderNotice();
+
+      await screen.findByRole('link', { name: /^Request access/ });
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    });
   });
 
   test('with nowhere to ask, says so instead of inviting a request', async () => {
@@ -105,6 +163,8 @@ describe('a deployment that withholds something', () => {
     // was meant to explain.
     expect(await screen.findByText(/not available/i)).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    // No button, and no row waiting for one.
+    expect(document.querySelector('.button-row-wide')).toBeNull();
   });
 });
 
