@@ -246,7 +246,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | DELETE | `/api/v1/inbox/{code}/` | Dismiss an in-app notification |
 | POST | `/api/v1/upload/ticket/` | Get a short-lived ticket to upload one file straight to object storage (rate limited: 30/h) |
 | GET | `/api/v1/theeemes/` | List all available theeemes |
-| POST | `/api/v1/contact/` | Support/contact form (anonymous on purpose — a locked-out user is the main case; rate limited: 5/h per IP). Forwards the message to the operator with the sender as Reply-To; `kind: support\|collab` labels the subject (the `/contact` and `/collaborate` pages) |
+| POST | `/api/v1/contact/` | Support/contact form (anonymous on purpose — a locked-out user is the main case; rate limited: 5/h per IP). Forwards the message to the operator with the sender as Reply-To; `kind: support\|collab` labels the subject (the `/contact` page sends none, which is `support`; no page sends `collab` since 2026-10-04) |
 | GET | `/api/v1/health/` | Health check: verifies app **and** database (`SELECT 1`) — 200 ok / 503 degraded. Point your uptime monitor here (rate limited: 60/min per IP, GET and HEAD — far above any real monitor's cadence) |
 | - | `/oiueei-admin/` | Django Admin (requires password) |
 

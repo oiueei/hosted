@@ -276,7 +276,7 @@ Rotates auth tokens. Reads the `refresh_token` from the HttpOnly cookie, validat
 | **Permission** | `AllowAny` — anonymous on purpose: the person who most needs the support channel is the one who can't log in |
 | **Rate limit** | 5 requests/hour per IP |
 
-Forwards a support/feedback message to the operator's mailbox (`CONTACT_EMAIL` env var, defaulting to `DEFAULT_FROM_EMAIL`) via `send_contact_email`, with the sender's address as `Reply-To` so answering is one click. Body: `{name?, email, message, kind?}` (`ContactSerializer` — SafeHeadline name ≤32, EmailField, SafeText message ≤2000, so HTML/injection is rejected at the boundary; `kind` is `support` (default, the contact page) or `collab` (the collaborate page) and only changes the operator's subject line). Fixed recipient: the form can annoy exactly one mailbox, never relay spam to third parties. Returns `200 {"message": "Message received"}`.
+Forwards a support/feedback message to the operator's mailbox (`CONTACT_EMAIL` env var, defaulting to `DEFAULT_FROM_EMAIL`) via `send_contact_email`, with the sender's address as `Reply-To` so answering is one click. Body: `{name?, email, message, kind?}` (`ContactSerializer` — SafeHeadline name ≤32, EmailField, SafeText message ≤2000, so HTML/injection is rejected at the boundary; `kind` is `support` (default, the contact page, and what every page sends — the front end sends no `kind` at all) or `collab` (the collaborate page, which left the front end on 2026-10-04: no page sends it, but it is still accepted) and only changes the operator's subject line). Fixed recipient: the form can annoy exactly one mailbox, never relay spam to third parties. Returns `200 {"message": "Message received"}`.
 
 ---
 

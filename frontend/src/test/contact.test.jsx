@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import ContactPage from '../pages/ContactPage';
-import CollaboratePage from '../pages/CollaboratePage';
 
 // The support channel: public (a locked-out user is the main case), posts to
 // /api/v1/contact/ and confirms receipt.
@@ -36,10 +35,11 @@ describe('ContactPage', () => {
     ).toBeInTheDocument();
     const post = globalThis.fetch.mock.calls.find(([, o]) => o?.method === 'POST');
     expect(post[0]).toBe('/api/v1/contact/');
-    expect(JSON.parse(post[1].body)).toMatchObject({
+    // No `kind`: the server's default, support, is the only kind a page asks for.
+    expect(JSON.parse(post[1].body)).toEqual({
+      name: '',
       email: 'me@example.com',
       message: 'Help!',
-      kind: 'support',
     });
   });
 
@@ -51,25 +51,11 @@ describe('ContactPage', () => {
     );
   });
 
-  test('the collaborate page shares the form but posts the collab kind', async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({ message: 'ok' })));
-    render(
-      <MemoryRouter initialEntries={['/collaborate']}>
-        <Routes>
-          <Route path="/collaborate" element={<CollaboratePage />} />
-          <Route path="*" element={<div data-testid="navigated" />} />
-        </Routes>
-      </MemoryRouter>
-    );
-    expect(screen.getByText('Collaborate with OIUEEI')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'dev@example.com' } });
-    fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'I design.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    expect(
-      await screen.findByText("We've got your message — we'll reply as soon as we can.")
-    ).toBeInTheDocument();
-    const post = globalThis.fetch.mock.calls.find(([, o]) => o?.method === 'POST');
-    expect(JSON.parse(post[1].body)).toMatchObject({ kind: 'collab' });
+  test('links nowhere to /collaborate: the page left the front end (CA, 2026-10-04)', () => {
+    const { container } = renderPage();
+
+    expect(container.querySelector('a[href="/collaborate"]')).toBeNull();
+    expect(screen.queryByText(/Collaborations/)).toBeNull();
   });
 
   test('a rate limit shows the too-many-attempts message and keeps the form', async () => {

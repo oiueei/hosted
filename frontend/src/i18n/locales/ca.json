@@ -157,7 +157,6 @@
     "deleteAccount": "Esborrar el compte — OIUEEI",
     "legal": "Legal i privadesa — OIUEEI",
     "contact": "Contacte — OIUEEI",
-    "collaborate": "Col·labora — OIUEEI",
     "ownerBookings": "Sol·licituds per a mi — OIUEEI",
     "dataExport": "Exportar dades — OIUEEI",
     "reserveThing": "Reservar: {{headline}} — OIUEEI"
@@ -953,11 +952,6 @@
     "sentBody": "Hem rebut el teu missatge — et contestarem tan aviat com puguem.",
     "error": "No hem pogut enviar el teu missatge. Torna-ho a provar.",
     "linkLabel": "Problemes, suggeriments, comentaris? Contacta'ns"
-  },
-  "collaborate": {
-    "pageTitle": "Col·labora amb OIUEEI",
-    "intro": "Col·laboracions de disseny, producte, desenvolupament i beta-testing: si estàs ficat al món de l'open source o de l'economia social i solidària, ets més que benvingut. Explica'ns qui ets i què et ve de gust aportar — contestem tan aviat com puguem.",
-    "linkFromContact": "Disseny, producte, codi o beta-testing? Col·laboracions →"
   },
   "footer": {
     "madeIn": "Fet amb ♥︎ des de la Zona Franca, Barcelona, Catalunya, Espanya, UE",
