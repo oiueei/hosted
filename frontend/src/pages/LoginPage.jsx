@@ -113,9 +113,12 @@ export default function LoginPage() {
             >
               {message}
             </Notification>
-            <div style={{ marginTop: 'var(--spacing-s)' }}>
+            {/* The column and the full width of the form it replaces, so it is as wide as
+                "New here?" under it (CA, 2026-10-04: it used to hug its own text). */}
+            <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
               <Button
                 variant="secondary"
+                fullWidth
                 style={btnSecondaryStyle}
                 onClick={() => {
                   setStatus(null);

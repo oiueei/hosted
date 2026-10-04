@@ -48,6 +48,28 @@ describe('LoginPage magic-link request (the front door)', () => {
     expect(screen.getByRole('button', { name: 'Try another email' })).toBeInTheDocument();
   });
 
+  test('"Try another email" is as wide as the Sign in button it replaces', async () => {
+    // CA, 2026-10-04: after sending, the page's two buttons — this one and, on a
+    // deployment with an open door, "New here?" — were two widths, because this one
+    // hugged its own text. It takes the column and the full width the form had.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'Magic link sent' }),
+    });
+    renderLogin();
+    // HDS marks full width with a hashed CSS-modules class: read its stable part.
+    const fullWidth = (el) => [...el.classList].filter((name) => /fullWidth/i.test(name));
+    const reference = fullWidth(screen.getByRole('button', { name: 'Sign in' }));
+    expect(reference).not.toEqual([]);
+
+    submitEmail();
+
+    const tryAnother = await screen.findByRole('button', { name: 'Try another email' });
+    expect(fullWidth(tryAnother)).toEqual(reference);
+    expect(tryAnother.closest('.measure')).not.toBeNull();
+  });
+
   test('a login that came from a page carries where it was going, so the link can return there', async () => {
     // `?next=` is put on /login by apiFetch / RequireAuth when a session runs
     // out. It goes to the server, not into browser storage, because the magic
