@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { IconUser } from 'hds-react';
 import { apiFetch } from '../services/api';
 import useDismissable from '../hooks/useDismissable';
+import { isDoorPath, loginPathFor } from '../utils/nextPath';
 
 const PANEL_ID = 'account-menu-panel';
 
@@ -34,15 +35,24 @@ const PANEL_ID = 'account-menu-panel';
  * Rendered first in the shared `.hero-corners` flex row (and, on `CollectionPage`,
  * followed by `CollectionMenu` and `ShareCollectionMenu`) — see `PageLayout` and
  * the manual-hero pages for where. The contact icon that used to close the row
- * went to the site footer on 2026-10-04 ("Contact us"): too many icons up here. **Session-gated, not page-gated**: it reads
- * `userCode` itself and renders nothing for a signed-out visitor, so it needs
- * no prop from any of its many call sites.
+ * went to the site footer on 2026-10-04 ("Contact us"): too many icons up here.
+ * **Session-gated, not page-gated**: it reads `userCode` itself, so it needs no
+ * prop from any of its many call sites.
+ *
+ * **Signed out, the same icon in the same place is a link to sign in** (X3, CA
+ * 2026-10-04): not a panel but a plain `<Link>` to `/login` that comes back to the
+ * page the reader is on (`loginPathFor(location)`), named "Sign in". It was nothing
+ * at all, so a visitor with no session had no corner. Not on `/login` (it would
+ * lead to itself), `/logout` or `/verify/…` and its aliases, where it still paints
+ * nothing — `isDoorPath`, the same list a login never returns to. On a public
+ * collection it sits beside the hero's own "Sign in" button (W3): CA accepted both.
  */
 export default function AccountMenu() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
   const buttonRef = useRef(null);
+  const location = useLocation();
   const [receivesRequests, setReceivesRequests] = useState(false);
 
   // Asked each time the panel opens, so an account that has just got its first
@@ -74,7 +84,20 @@ export default function AccountMenu() {
   // CollectionPage, …) — no context, no prop, so every hero can render this
   // unconditionally and let it decide for itself.
   const userCode = localStorage.getItem('userCode');
-  if (!userCode) return null;
+  if (!userCode) {
+    if (isDoorPath(location.pathname)) return null;
+    return (
+      <span className="account-menu">
+        <Link
+          to={loginPathFor(location)}
+          className="account-menu-trigger"
+          aria-label={t('login.signIn')}
+        >
+          <IconUser aria-hidden="true" />
+        </Link>
+      </span>
+    );
+  }
 
   const label = t('accountMenu.label');
   // Following any link closes the panel: one to the page already on screen

@@ -918,7 +918,8 @@ describe('A signed-in visitor on a public group', () => {
 
       await screen.findByText(/No things in this collection yet/);
 
-      const signIn = screen.getByRole('link', { name: en.login.signIn });
+      // The hero's button; the corner icon (X3) carries the same words and the same way back.
+      const signIn = heroDoors()[1];
       const next = new URL(signIn.getAttribute('href'), 'https://oiueei.test').searchParams.get(
         'next'
       );

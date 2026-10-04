@@ -148,6 +148,12 @@ body {
   cursor: pointer;
 }
 
+/* Signed out, the trigger is a link (X3, 2026-10-04): the same size and colour,
+   and no underline. */
+a.account-menu-trigger {
+  text-decoration: none;
+}
+
 .account-menu-panel,
 .collection-menu-panel {
   position: absolute;

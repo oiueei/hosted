@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import parity from '../test/nextPathParity.json';
-import { safeNextPath, loginPathFor } from './nextPath';
+import { safeNextPath, loginPathFor, isDoorPath } from './nextPath';
 
 // The tables live in src/test/nextPathParity.json, read by this suite and by
 // core/tests/unit/test_safe_next_path.py (one of the two shared fixtures
@@ -55,5 +55,49 @@ describe('loginPathFor', () => {
     expect(loginPathFor({ pathname: '/login', search: '?next=%2Fme' })).toBe('/login');
     expect(loginPathFor({})).toBe('/login');
     expect(loginPathFor()).toBe('/login');
+  });
+});
+
+// The doors of the SPA (X3, 2026-10-04): the places a login never returns to and a
+// "Sign in" link would only lead back to. It is the list `safeNextPath` refuses, so
+// the two cannot disagree about what a door is.
+describe('isDoorPath', () => {
+  test.each([
+    '/login',
+    '/login?next=%2Fcollections%2FCOL001',
+    '/logout',
+    '/verify/abc123',
+    '/rsvp/abc123',
+    '/magic-link/abc123',
+    '/LOGIN',
+    '/Verify/abc',
+    '/%76erify/abc',
+  ])('%s is a door', (path) => {
+    expect(isDoorPath(path)).toBe(true);
+  });
+
+  test.each([
+    '/',
+    '',
+    '/me',
+    '/legal',
+    '/collections/COL001',
+    '/collections/login',
+    '/loginx',
+    '/things/verify',
+  ])('%s is not', (path) => {
+    expect(isDoorPath(path)).toBe(false);
+  });
+
+  test('no argument is not a door, and a lone percent sign does not throw', () => {
+    expect(isDoorPath()).toBe(false);
+    expect(isDoorPath('/%')).toBe(false);
+  });
+
+  test('what it calls a door, safeNextPath refuses — and nothing else it refuses by name', () => {
+    for (const path of ['/login', '/logout', '/verify/x', '/rsvp/x', '/magic-link/x']) {
+      expect(isDoorPath(path)).toBe(true);
+      expect(safeNextPath(path)).toBe('');
+    }
   });
 });

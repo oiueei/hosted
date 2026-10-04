@@ -225,13 +225,96 @@ describe('AccountMenu — signed in', () => {
   });
 });
 
+/**
+ * Signed out, the same icon in the same place is a link to sign in (X3, CA
+ * 2026-10-04): a plain `<Link>` to `/login` that comes back to the page the reader
+ * is on, named "Sign in" — not a panel. It was nothing at all. It is not painted on
+ * the doors a login never returns to: `/login` itself, `/logout`, `/verify/…`.
+ */
 describe('AccountMenu — signed out', () => {
-  test('renders nothing at all', () => {
+  const renderAt = (path) => {
     localStorage.removeItem('userCode');
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <AccountMenu />
+      </MemoryRouter>
+    );
+  };
 
-    const { container } = renderMenu();
+  test('on a public collection it is a "Sign in" link back to that collection, in the trigger’s place', () => {
+    const { container } = renderAt('/collections/COL001');
+
+    const link = screen.getByRole('link', { name: 'Sign in' });
+    expect(link).toHaveAttribute('href', '/login?next=%2Fcollections%2FCOL001');
+    // The trigger's own class — size, colour and place come from it — inside the
+    // same wrapper, and an icon the screen reader does not read twice.
+    expect(link).toHaveClass('account-menu-trigger');
+    expect(container.querySelector('.account-menu')).toContainElement(link);
+    expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    // Not the signed-in menu: no button, no panel.
+    expect(screen.queryByRole('button', { name: /your account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  test('on /legal the way back is /legal itself', () => {
+    renderAt('/legal');
+
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Flegal'
+    );
+  });
+
+  test('the query string comes along: it is part of the page they were on', () => {
+    renderAt('/collections/COL001/things/THG001?x=1');
+
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Fcollections%2FCOL001%2Fthings%2FTHG001%3Fx%3D1'
+    );
+  });
+
+  test('where there is nothing to come back to it is a plain /login', () => {
+    renderAt('/');
+
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
+
+  test.each([
+    '/login',
+    '/login?next=%2Fcollections%2FCOL001',
+    '/logout',
+    '/verify/abc123',
+    '/rsvp/abc123',
+    '/magic-link/abc123',
+    '/LOGIN',
+    '/%76erify/abc123',
+  ])('on %s it paints nothing at all', (path) => {
+    const { container } = renderAt(path);
 
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByRole('button', { name: /your account/i })).not.toBeInTheDocument();
+  });
+
+  test('it asks the server nothing: the only request the signed-in menu makes is when it opens', () => {
+    renderAt('/collections/COL001');
+
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('signed in, the link is not there and the menu is the one it always was', () => {
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <AccountMenu />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+  });
+
+  test('has no axe violations', async () => {
+    const { container } = renderAt('/collections/COL001');
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });
