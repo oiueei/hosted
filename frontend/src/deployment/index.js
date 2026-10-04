@@ -45,9 +45,11 @@ export const popInPath = '/welcome';
 // ("See how it works") — the two places upstream leaves to the deployment.
 export const aboutPath = '/welcome';
 
-// The help/FAQ link under "trouble signing in?" on /login. Upstream added this
-// fourth slot in the August round (S4) for exactly the content this deployment
-// has: what it costs, who runs it, what state it is in.
+// The help/FAQ link at the foot of /login, the last thing in the page's content
+// (the "trouble signing in?" line that used to sit above it is gone: "Contact us"
+// is in the site footer now). Upstream added this fourth slot in the August round
+// (S4) for exactly the content this deployment has: what it costs, who runs it,
+// what state it is in.
 //
 // Pointed at the page above now that it answers in all three languages. It was
 // deliberately `null` while only Spanish existed: /login is where a stranger
