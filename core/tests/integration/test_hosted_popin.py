@@ -17,8 +17,10 @@ quietly become invite-only and nobody would notice until the sign-ups stopped.
 
 **The door does not weaken the product.** Someone arriving with a real
 collection in hand must be handled by the product's own view, unchanged: same
-membership, same `target_code`, same landing. The service layer wraps OIUEEI;
-it must not fork it.
+membership — made when the magic link is pressed, not when the address is typed
+(W1, 2026-10-04) —, same `target_code`, same landing. The service layer wraps
+OIUEEI; it must not fork it. The open door itself, with no collection, is this
+deployment's own and still joins the demonstration groups on submit.
 """
 
 import pytest
@@ -128,9 +130,17 @@ class TestTheOpenDoor:
 class TestItDoesNotForkTheProduct:
     """A visitor pointed at a real collection is the product's business."""
 
-    def test_a_public_collection_code_joins_that_collection_instead(
+    def test_a_public_collection_code_joins_that_collection_when_the_link_is_pressed(
         self, api_client, public_collection, onboarding
     ):
+        """The product's join, not the open door: the click joins, the typing does not.
+
+        Since W1 (2026-10-04) `JoinView` joins nobody when the address is typed — it
+        may be somebody else's — and writes into the magic-link RSVP what the click
+        needs: the collection, and `join_source`. This door delegates to it for a
+        collection in hand, so it follows: nothing at all until the link is pressed,
+        then the collection they came for, and still not the demo.
+        """
         response = api_client.post(
             POP_IN_URL,
             {"email": "visitor@test.com", "collection_code": public_collection.code},
@@ -139,6 +149,19 @@ class TestItDoesNotForkTheProduct:
 
         assert response.status_code == 200
         visitor = User.objects.get(email="visitor@test.com")
+        # Typed, not pressed: in neither the group they came for nor the demo.
+        assert not public_collection.invites.filter(code=visitor.code).exists()
+        assert not onboarding.invites.filter(code=visitor.code).exists()
+        # What the click needs is on the link.
+        rsvp = RSVP.objects.get(user_email="visitor@test.com")
+        assert rsvp.target_code == public_collection.code
+        assert rsvp.context["join_source"] == Event.Source.PUBLIC
+
+        pressed = api_client.get(f"/api/v1/auth/verify/{rsvp.token}/")
+
+        assert pressed.status_code == 200
+        assert pressed.data["landing"] == "collection"
+        assert pressed.data["collection"] == public_collection.code
         assert public_collection.invites.filter(code=visitor.code).exists()
         # Not also dropped into the demo: they came somewhere specific.
         assert not onboarding.invites.filter(code=visitor.code).exists()
