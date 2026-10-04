@@ -109,6 +109,24 @@ const CURATED = {
   co_owners: [],
 };
 
+describe('the corner of a reader with no session (X3)', () => {
+  test('holds one control — the "Sign in" link, with the icon trigger’s own class, so the same 44px', () => {
+    localStorage.removeItem('userCode');
+    const { container } = renderHero();
+
+    const corners = container.querySelector('.hero-corners');
+    expect(corners.children).toHaveLength(1);
+    const link = corners.querySelector('.account-menu > a');
+    expect(link).toHaveAccessibleName('Sign in');
+    // The size is declared on the class both the button and the link wear.
+    expect(link).toHaveClass('account-menu-trigger');
+    expect(declarations('.account-menu-trigger', 'width')).toEqual(['44px']);
+    expect(declarations('.account-menu-trigger', 'height')).toEqual(['44px']);
+    // …and it is a link, so it needs no underline of its own.
+    expect(declarations('a.account-menu-trigger', 'text-decoration')).toEqual(['none']);
+  });
+});
+
 describe('the account menu panel anchors to the corner row', () => {
   test('the panel sits in .account-menu, which sits directly in .hero-corners', () => {
     const { container } = renderHero();

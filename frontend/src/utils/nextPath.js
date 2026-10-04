@@ -39,6 +39,18 @@ export function safeNextPath(value) {
 }
 
 /**
+ * Whether `pathname` is one of the SPA's own doors — signing in, signing out, a
+ * magic link (`/verify/…` and its aliases `/rsvp/…` and `/magic-link/…`): the
+ * places a login never returns to (`safeNextPath` refuses them) and where a "Sign
+ * in" link would lead to itself or to nothing. Compared decoded and case-folded,
+ * like the rule above, because the router does both.
+ */
+export function isDoorPath(pathname = '') {
+  const path = percentDecode(pathname).split('?')[0];
+  return BLOCKED_ROOTS.has((path.split('/')[1] ?? '').toLowerCase());
+}
+
+/**
  * The `/login` URL that remembers `{ pathname, search }` (a router or window
  * location), or plain `/login` when that is not somewhere a login can return to.
  */

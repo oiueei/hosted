@@ -154,7 +154,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | POST | `/api/v1/auth/request-link/` | Request magic link (rate limited: 5/min); optional `next`: a same-site path the magic link returns to (a bad one is dropped, the response never changes) |
-| POST | `/api/v1/auth/join/` | Join a collection you were pointed at — by `share_token` (an owner's `/share/{token}` link) or by the `collection_code` of a PUBLIC one — and get a magic link. **Creates nothing without a valid target**, and answers identically either way (rate limited: 5/min per IP, 5/h per email) |
+| POST | `/api/v1/auth/join/` | Ask to join a collection you were pointed at — by `share_token` (an owner's `/share/{token}` link) or by the `collection_code` of a PUBLIC one — and get a magic link. **Nothing is joined until the link is pressed** (an address typed may be somebody else's), and then only if the invitation is still in force. **Creates nothing without a valid target**, and answers identically either way (rate limited: 5/min per IP, 5/h per email) |
 | GET / POST | `/api/v1/auth/verify/{rsvp_code}/` | Verify magic link / process an RSVP action (rate limited: 10/min). Booking accept/reject only **preview** on GET and require a **POST** to commit, so an email link-scanner or prefetch can't auto-decide a hold; login/invite actions resolve on GET |
 | GET / POST | `/api/v1/rsvp/{rsvp_code}/` | Alias for verify endpoint |
 | POST | `/api/v1/auth/refresh/` | Rotate access/refresh tokens via HttpOnly cookies |
@@ -434,7 +434,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 **There is no public self-registration.** An account exists because somebody chose to admit a specific person, and there are two ways that happens:
 
 - **An owner invites you.** By email (the account is created when you accept), or through a public `/share/{token}` link — optionally as a QR — that the owner can rotate or revoke at any time. Either way you join **that one collection**.
-- **You act on a PUBLIC collection.** Anyone can read a collection its owner made public; pressing an action button asks for your email, joins you to that collection and sends the magic link (`POST /auth/join/` with its code). It is login-to-act: reading needs nothing, acting needs an account.
+- **You act on a PUBLIC collection.** Anyone can read a collection its owner made public; pressing an action button asks for your email and sends a magic link (`POST /auth/join/` with its code); pressing that link is what joins you to the collection, like accepting an invitation by email. It is login-to-act: reading needs nothing, acting needs an account.
 
 `/login` (`POST /auth/request-link/`) is for people who already have an account. It always answers `200` — it never reveals whether an address is registered — and never creates users. `/auth/join/` likewise **creates nothing** unless the request carries a valid share token or public collection code, and answers identically whether or not it did.
 

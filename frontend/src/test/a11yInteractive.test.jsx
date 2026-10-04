@@ -212,6 +212,34 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 
+  // The member's collection menu (X2): a link that opens in a new tab, a button
+  // and a divider before the last link. Opened is the state that only exists
+  // after a click.
+  test('the opened collection menu of a member has no axe violations', async () => {
+    apiFetch.mockImplementation((url) =>
+      /\/collections\/[^/]+\//.test(url)
+        ? Promise.resolve(
+            mockResponse({
+              ...MOCK_COLLECTION,
+              owner: 'OTHER1',
+              is_curator: false,
+              is_member: true,
+              digest_frequency: 'WEEKLY',
+              is_digest_muted: false,
+              welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
+            })
+          )
+        : Promise.resolve(mockResponse([]))
+    );
+    const { container } = renderCollection();
+    await screen.findByText('Test Thing');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
+    await screen.findByRole('button', { name: 'Mute the summary' });
+
+    expect(await axe(container, NO_REGION)).toHaveNoViolations();
+  });
+
   // A member's row: the primary "Invite someone" toggle beside "Add thing", and
   // the recommend form it opens underneath. The form only exists after a click
   // and the toggle carries `aria-expanded` / `aria-controls`, which is what axe

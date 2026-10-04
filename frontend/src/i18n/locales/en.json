@@ -90,7 +90,12 @@
     "label": "Your account"
   },
   "collectionMenu": {
-    "label": "Collection options"
+    "label": "Collection options",
+    "muteDigest": "Mute the summary",
+    "unmuteDigest": "Get the summary again",
+    "digestMuted": "Done: you won't get this group's summary any more.",
+    "digestUnmuted": "Done: you'll get this group's summary again.",
+    "digestError": "We couldn't change that. Please try again."
   },
   "common": {
     "opensInNewTab": "Opens in a new tab.",
@@ -135,6 +140,7 @@
     "verify": "Verifying — OIUEEI",
     "myBookings": "My requests — OIUEEI",
     "addThing": "Add thing — OIUEEI",
+    "importThings": "Add several at once (CSV) — OIUEEI",
     "editThing": "Edit {{headline}} — OIUEEI",
     "editThingDefault": "Edit thing — OIUEEI",
     "deleteThing": "Delete {{headline}} — OIUEEI",
@@ -288,8 +294,7 @@
     "editCollection": "Edit collection",
     "addThing": "Add thing",
     "manageGuests": "Manage members",
-    "inviteNudge": "Your collection is taking shape.",
-    "inviteNudgeLink": "Now invite your circle →",
+    "inviteYourPeople": "Invite your people",
     "leaveGroup": "Leave the group",
     "things": "Things",
     "inactiveThings": "Inactive things",
@@ -298,9 +303,6 @@
     "addManyCsv": "Add several at once (CSV)",
     "allTags": "All",
     "noThingsForTag": "No things with this tag.",
-    "anonJoinCommunity": "Have something to add? Join the group →",
-    "anonJoinEmpty": "Join the group to hear when something arrives →",
-    "anonJoinPlain": "Join the group →",
     "communityTag": "Community",
     "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask the owner.",
     "notFound": "Collection not found.",
@@ -847,7 +849,6 @@
     "revoked": "Sharing stopped — the link no longer works."
   },
   "bulkAdd": {
-    "heading": "Add many at once (CSV)",
     "help": "Add multiple things from a CSV — or a ZIP with the photos included.",
     "formatTitle": "CSV/ZIP format",
     "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column.",

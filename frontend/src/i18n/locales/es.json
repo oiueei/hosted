@@ -84,7 +84,12 @@
     "label": "Tu cuenta"
   },
   "collectionMenu": {
-    "label": "Opciones de la colección"
+    "label": "Opciones de la colección",
+    "muteDigest": "Silenciar el resumen",
+    "unmuteDigest": "Volver a recibir el resumen",
+    "digestMuted": "Hecho: ya no recibirás el resumen de este grupo.",
+    "digestUnmuted": "Hecho: volverás a recibir el resumen de este grupo.",
+    "digestError": "No hemos podido cambiarlo. Inténtalo de nuevo."
   },
   "common": {
     "opensInNewTab": "Se abre en una pestaña nueva.",
@@ -129,6 +134,7 @@
     "verify": "Verificando — OIUEEI",
     "myBookings": "Mis solicitudes — OIUEEI",
     "addThing": "Añadir cosa — OIUEEI",
+    "importThings": "Añadir varios a la vez (CSV) — OIUEEI",
     "editThing": "Editar {{headline}} — OIUEEI",
     "editThingDefault": "Editar cosa — OIUEEI",
     "deleteThing": "Eliminar {{headline}} — OIUEEI",
@@ -282,8 +288,7 @@
     "editCollection": "Editar colección",
     "addThing": "Añadir cosa",
     "manageGuests": "Gestionar miembros",
-    "inviteNudge": "Tu colección va tomando forma.",
-    "inviteNudgeLink": "Ahora invita a tu gente →",
+    "inviteYourPeople": "Invita a tu gente",
     "leaveGroup": "Salir del grupo",
     "things": "Cosas",
     "inactiveThings": "Cosas inactivas",
@@ -292,9 +297,6 @@
     "addManyCsv": "Añadir varios a la vez (CSV)",
     "allTags": "Todos",
     "noThingsForTag": "No hay cosas con este tag.",
-    "anonJoinCommunity": "¿Tienes algo que aportar? Únete al grupo →",
-    "anonJoinEmpty": "Únete al grupo para enterarte cuando llegue algo →",
-    "anonJoinPlain": "Únete al grupo →",
     "communityTag": "Comunitaria",
     "noPermission": "No tienes acceso a esta colección. Puede estar inactiva, o tu acceso puede haber cambiado — revisa tus invitaciones, o contacta con el dueño.",
     "notFound": "Colección no encontrada.",
@@ -841,7 +843,6 @@
     "revoked": "Has dejado de compartir: el enlace ya no funciona."
   },
   "bulkAdd": {
-    "heading": "Añadir varios a la vez (CSV)",
     "help": "Añade varias cosas desde un CSV — o un ZIP con las fotos incluidas.",
     "formatTitle": "Formato del CSV/ZIP",
     "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo LEND/RENT). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\".",
@@ -952,7 +953,7 @@
     "error": "No hemos podido enviar tu mensaje. Inténtalo de nuevo."
   },
   "footer": {
-    "madeIn": "Hecho con ♥︎ desde la Zona Franca, Barcelona, Cataluña, España, UE",
+    "madeIn": "Hecho con ♥︎ en la Zona Franca, Barcelona, Cataluña, España, UE",
     "navLabel": "Sobre OIUEEI",
     "about": "Qué es OIUEEI",
     "legal": "Privacidad y aviso legal",

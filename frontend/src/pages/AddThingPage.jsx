@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import {
@@ -12,7 +12,6 @@ import {
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
-import BulkAddCsv from '../components/BulkAddCsv';
 import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
@@ -26,19 +25,11 @@ export default function AddThingPage() {
   const L = useLocalized();
   const { code } = useParams();
   const navigate = useNavigate();
-  const routerLocation = useLocation();
 
   const userCode = localStorage.getItem('userCode');
   useEffect(() => {
     document.title = t('titles.addThing');
   }, [t]);
-
-  // Deep-link from the collection empty state: /add#bulk-add scrolls to the CSV importer.
-  useEffect(() => {
-    if (routerLocation.hash === '#bulk-add') {
-      document.getElementById('bulk-add')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [routerLocation.hash]);
 
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const [type, setType] = useState('GIFT_THING');
@@ -263,11 +254,6 @@ export default function AddThingPage() {
           {submitting ? t('common.creating') : t('common.create')}
         </Button>
       </div>
-
-      <section id="bulk-add" className="bulk-add-section">
-        <h2>{t('bulkAdd.heading')}</h2>
-        <BulkAddCsv collectionCode={code} onImported={() => navigate(`/collections/${code}`)} />
-      </section>
 
       <Toast toast={toast} onClose={() => setToast(null)} />
     </PageLayout>

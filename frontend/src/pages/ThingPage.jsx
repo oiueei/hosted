@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
+import CollectionMenu, {
+  CollectionDigestStatus,
+  CollectionDownloadsStatus,
+} from '../components/CollectionMenu';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InlineConfirm from '../components/InlineConfirm';
 import ThingTags from '../components/ThingTags';
@@ -22,6 +26,8 @@ import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ButtonLink from '../components/ButtonLink';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import useCollectionDownloads from '../hooks/useCollectionDownloads';
+import useDigestPreference from '../hooks/useDigestPreference';
 
 export default function ThingPage() {
   const { code, thingCode } = useParams();
@@ -41,6 +47,26 @@ export default function ThingPage() {
   useEffect(() => {
     document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
   }, [thing, headline, t]);
+
+  // The collection menu of the corner, when this page is read through a collection
+  // (X4, CA 2026-10-04): the same one the collection's own page has — a curator's
+  // (Add thing, CSV, Manage members, downloads) or a member's (document, summary,
+  // leave) — plus "Requests to me". Both hooks are called here, unconditionally, and
+  // only used when the server sent `collection_menu` (see ThingSerializer).
+  const downloads = useCollectionDownloads(code);
+  const digestPref = useDigestPreference({
+    code,
+    muted: !!thing?.collection_menu?.is_digest_muted,
+    onChange: useCallback(
+      (muted) =>
+        setThing((prev) =>
+          prev?.collection_menu
+            ? { ...prev, collection_menu: { ...prev.collection_menu, is_digest_muted: muted } }
+            : prev
+        ),
+      []
+    ),
+  });
 
   // Anonymous visitor on a PUBLIC collection: like ThingLinkbox's login-to-act
   // mode, show the action buttons but route each click to the collection's join
@@ -183,8 +209,83 @@ export default function ThingPage() {
   const holderLabel = (name) =>
     name || t(isAuthenticated ? 'common.formerMember' : 'common.aMember');
 
+  // Whoever runs the thing decides a request from the hero (CA, 2026-10-04): with
+  // one waiting, "Confirm hold" (primary) and "Decline hold" (secondary) are the
+  // first thing under the way back, and Edit / Delete stay in the content where
+  // they were. A member's "Reserve" is not here on purpose — they read the whole
+  // page before they ask. Two cases, as in the content they came from: a loan or
+  // rental with a pending booking (ACTIVE: nothing changes hands for good, so no
+  // transfer confirm — `acceptTransfersOwnership` is its inverse), and a taken
+  // gift or sale (TAKEN: the transfer confirm opens right under the row).
+  // Same handlers, same `disabled`, as ever; and no `fullWidth`: the row makes a
+  // phone's buttons the width of the screen and leaves them their own above it.
+  const decidesHere =
+    canManage &&
+    (thing.status === 'TAKEN' || (thing.status === 'ACTIVE' && needsPage && !!activePendingCode));
+  const decisionActions = decidesHere ? (
+    <>
+      {thing.status === 'TAKEN' && acceptTransfersOwnership ? (
+        <InlineConfirm
+          triggerLabel={acceptLabel}
+          triggerProps={{ disabled: !!bookingAction, style: btnStyle }}
+          title={t('thingCard.transferConfirmTitle')}
+          body={t('thingCard.transferConfirmBody')}
+          confirmLabel={t('thingCard.transferConfirm')}
+          onConfirm={() => handleBookingAction('accept')}
+          confirming={!!bookingAction}
+          confirmProps={{ style: btnStyle }}
+        />
+      ) : (
+        <Button
+          disabled={!!bookingAction}
+          onClick={() => handleBookingAction('accept')}
+          style={btnStyle}
+        >
+          {acceptLabel}
+        </Button>
+      )}
+      <Button
+        variant="secondary"
+        disabled={!!bookingAction}
+        onClick={() => handleBookingAction('reject')}
+        style={btnSecondaryStyle}
+      >
+        {bookingActionVerb === 'reject' ? t('thingCard.cancelling') : t('thingCard.cancelHold')}
+      </Button>
+    </>
+  ) : null;
+
+  // `collection_menu` is there only for a curator or a member of the collection the
+  // page is read through, and only on a collection-context URL.
+  // The server sends it to nobody else; the page does not take its word for who is signed in.
+  const menu = code && isAuthenticated ? thing.collection_menu : null;
+  const collectionMenu = menu ? (
+    <CollectionMenu
+      code={code}
+      headline={L(thing.collection_headline)}
+      isCurator={menu.is_curator}
+      hasDateThings={menu.has_date_things}
+      downloads={downloads}
+      welcomeDocUrl={menu.welcome_doc_url || ''}
+      digest={menu.is_member && menu.digest_frequency !== 'NONE' ? digestPref : null}
+    />
+  ) : undefined;
+
   return (
-    <PageLayout backTo={backPath} backLabel={backLabel}>
+    <PageLayout
+      backTo={backPath}
+      backLabel={backLabel}
+      heroActions={decisionActions}
+      collectionMenu={collectionMenu}
+    >
+      {/* The outcome of a download (a curator's) or of the summary switch (a member's)
+          from the corner menu: a live region right under the hero. */}
+      {menu &&
+        (menu.is_curator ? (
+          <CollectionDownloadsStatus downloads={downloads} />
+        ) : (
+          <CollectionDigestStatus digest={digestPref} />
+        ))}
       <div className="form-grid">
         {thing.collection_is_onboarding && <DemoNotice />}
         {(() => {
@@ -232,38 +333,10 @@ export default function ThingPage() {
           thingType={thing.type}
         />
 
-        {/* Owner actions */}
+        {/* Owner actions. With a request waiting, "Confirm hold" and "Decline hold"
+            are in the hero (see `decisionActions`); Edit and Delete stay here. */}
         {canManage && thing.status === 'ACTIVE' && (
           <div className="button-col">
-            {needsPage && activePendingCode && (
-              <>
-                {/* No transfer confirm here, by construction: this branch is
-                    `needsPage` (LEND/RENT) and `acceptTransfersOwnership` is its
-                    inverse, so the confirm could never render. A loan or rental
-                    comes back — nothing changes hands for good. The TAKEN block
-                    below is where a GIFT/SELL is accepted, and where the confirm
-                    belongs. */}
-                <Button
-                  fullWidth
-                  disabled={!!bookingAction}
-                  onClick={() => handleBookingAction('accept')}
-                  style={btnStyle}
-                >
-                  {acceptLabel}
-                </Button>
-                <Button
-                  fullWidth
-                  variant="secondary"
-                  disabled={!!bookingAction}
-                  onClick={() => handleBookingAction('reject')}
-                  style={btnSecondaryStyle}
-                >
-                  {bookingActionVerb === 'reject'
-                    ? t('thingCard.cancelling')
-                    : t('thingCard.cancelHold')}
-                </Button>
-              </>
-            )}
             <ButtonLink
               to={editPath}
               fullWidth
@@ -284,40 +357,9 @@ export default function ThingPage() {
           </div>
         )}
 
+        {/* A taken thing's "Confirm hold" and "Decline hold" are in the hero. */}
         {canManage && thing.status === 'TAKEN' && (
           <div className="button-col">
-            {acceptTransfersOwnership ? (
-              <InlineConfirm
-                triggerLabel={acceptLabel}
-                triggerProps={{ fullWidth: true, disabled: !!bookingAction, style: btnStyle }}
-                title={t('thingCard.transferConfirmTitle')}
-                body={t('thingCard.transferConfirmBody')}
-                confirmLabel={t('thingCard.transferConfirm')}
-                onConfirm={() => handleBookingAction('accept')}
-                confirming={!!bookingAction}
-                confirmProps={{ style: btnStyle }}
-              />
-            ) : (
-              <Button
-                fullWidth
-                disabled={!!bookingAction}
-                onClick={() => handleBookingAction('accept')}
-                style={btnStyle}
-              >
-                {acceptLabel}
-              </Button>
-            )}
-            <Button
-              fullWidth
-              variant="secondary"
-              disabled={!!bookingAction}
-              onClick={() => handleBookingAction('reject')}
-              style={btnSecondaryStyle}
-            >
-              {bookingActionVerb === 'reject'
-                ? t('thingCard.cancelling')
-                : t('thingCard.cancelHold')}
-            </Button>
             <ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>
               {t('common.edit')}
             </ButtonLink>

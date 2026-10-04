@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { IconUser } from 'hds-react';
-import { apiFetch } from '../services/api';
 import useDismissable from '../hooks/useDismissable';
+import useReceivesRequests from '../hooks/useReceivesRequests';
+import { isDoorPath, loginPathFor } from '../utils/nextPath';
 
 const PANEL_ID = 'account-menu-panel';
 
@@ -19,9 +20,18 @@ const PANEL_ID = 'account-menu-panel';
  * is reached from "My profile", the second from Home. And "Requests to me" is
  * shown only to someone who can receive requests — owns a thing, or runs a
  * PROPRIETARY collection — which only the server knows, so the menu asks
- * `GET /auth/me/` (`receives_requests`) when it opens. Nothing is kept in the
- * browser for it (a new storage key is one more line in the `/legal`), and while
- * the answer is not there, or if it cannot be had, the link is left out.
+ * `GET /auth/me/` (`receives_requests`) when it opens (`useReceivesRequests`,
+ * shared with the collection menu). Nothing is kept in the browser for it (a new
+ * storage key is one more line in the `/legal`), and while the answer is not there,
+ * or if it cannot be had, the link is left out.
+ *
+ * **On a page that has a collection menu, "Requests to me" is that menu's first
+ * entry, not this one's** (X4, CA 2026-10-04): `requestsInCollectionMenu` says so,
+ * and the menu then neither shows the link nor asks the server. That is a
+ * collection's page and a thing's read through a collection, for whoever has the
+ * collection menu there; everywhere else (Home, `/me`…) the link stays here — and
+ * so it does for a reader who has no collection menu on such a page, so the link is
+ * never in neither.
  *
  * A plain navigation disclosure — a button that shows/hides a `<nav>` of
  * `Link`s — not `ShareCollectionMenu`'s HDS-`Select`-as-menu trick: every
@@ -34,36 +44,27 @@ const PANEL_ID = 'account-menu-panel';
  * Rendered first in the shared `.hero-corners` flex row (and, on `CollectionPage`,
  * followed by `CollectionMenu` and `ShareCollectionMenu`) — see `PageLayout` and
  * the manual-hero pages for where. The contact icon that used to close the row
- * went to the site footer on 2026-10-04 ("Contact us"): too many icons up here. **Session-gated, not page-gated**: it reads
- * `userCode` itself and renders nothing for a signed-out visitor, so it needs
- * no prop from any of its many call sites.
+ * went to the site footer on 2026-10-04 ("Contact us"): too many icons up here.
+ * **Session-gated, not page-gated**: it reads `userCode` itself, so it needs no
+ * prop from any of its many call sites.
+ *
+ * **Signed out, the same icon in the same place is a link to sign in** (X3, CA
+ * 2026-10-04): not a panel but a plain `<Link>` to `/login` that comes back to the
+ * page the reader is on (`loginPathFor(location)`), named "Sign in". It was nothing
+ * at all, so a visitor with no session had no corner. Not on `/login` (it would
+ * lead to itself), `/logout` or `/verify/…` and its aliases, where it still paints
+ * nothing — `isDoorPath`, the same list a login never returns to. On a public
+ * collection it sits beside the hero's own "Sign in" button (W3): CA accepted both.
  */
-export default function AccountMenu() {
+export default function AccountMenu({ requestsInCollectionMenu = false }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
   const buttonRef = useRef(null);
-  const [receivesRequests, setReceivesRequests] = useState(false);
-
-  // Asked each time the panel opens, so an account that has just got its first
-  // thing, or been made a curator, sees the link without a reload.
-  useEffect(() => {
-    if (!open) return undefined;
-    const controller = new AbortController();
-    const { signal } = controller;
-    const ask = async () => {
-      try {
-        const res = await apiFetch('/api/v1/auth/me/', { signal });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!signal.aborted) setReceivesRequests(data.receives_requests === true);
-      } catch {
-        // No answer, no link: guessing would put a dead page back in the menu.
-      }
-    };
-    ask();
-    return () => controller.abort();
-  }, [open]);
+  const location = useLocation();
+  // Asked each time the panel opens (`useReceivesRequests`) — and not at all where
+  // the collection menu beside this one carries the link instead.
+  const receivesRequests = useReceivesRequests(open && !requestsInCollectionMenu);
 
   // The panel's dismissal contract — Escape refocuses the trigger, a click
   // outside closes without moving focus — lives in `useDismissable`, shared
@@ -74,7 +75,20 @@ export default function AccountMenu() {
   // CollectionPage, …) — no context, no prop, so every hero can render this
   // unconditionally and let it decide for itself.
   const userCode = localStorage.getItem('userCode');
-  if (!userCode) return null;
+  if (!userCode) {
+    if (isDoorPath(location.pathname)) return null;
+    return (
+      <span className="account-menu">
+        <Link
+          to={loginPathFor(location)}
+          className="account-menu-trigger"
+          aria-label={t('login.signIn')}
+        >
+          <IconUser aria-hidden="true" />
+        </Link>
+      </span>
+    );
+  }
 
   const label = t('accountMenu.label');
   // Following any link closes the panel: one to the page already on screen
@@ -106,7 +120,7 @@ export default function AccountMenu() {
           <Link to="/my-bookings" onClick={close}>
             {t('home.myRequests')}
           </Link>
-          {receivesRequests && (
+          {receivesRequests && !requestsInCollectionMenu && (
             <Link to="/owner-bookings" onClick={close}>
               {t('home.requestsToMe')}
             </Link>

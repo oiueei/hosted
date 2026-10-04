@@ -239,8 +239,7 @@ export default function HomePage() {
                 Upstream there is none — /welcome left with the demo — and this
                 sits on the first screen a brand-new account sees, so a second
                 button that 404s is worse here than anywhere else in the app.
-                Same rule as the footer's about link and the collection's
-                welcome box: no page, no link. */}
+                Same rule as the footer's about link: no page, no link. */}
             {aboutPath && (
               <ButtonLink to={aboutPath} style={btnSecondaryStyle}>
                 {t('userPage.learnHow')}

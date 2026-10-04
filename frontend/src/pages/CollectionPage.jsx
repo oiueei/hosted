@@ -17,10 +17,15 @@ import useTheeeme from '../hooks/useTheeeme';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
 import { collectionTeam } from '../utils/team';
+import { loginPathFor } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
-import CollectionMenu, { CollectionDownloadsStatus } from '../components/CollectionMenu';
+import CollectionMenu, {
+  CollectionDigestStatus,
+  CollectionDownloadsStatus,
+} from '../components/CollectionMenu';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
+import useDigestPreference from '../hooks/useDigestPreference';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useMediaQuery from '../hooks/useMediaQuery';
 import Toast from '../components/Toast';
@@ -76,6 +81,17 @@ export default function CollectionPage() {
   // menu that offers it. One call owns the calendar, stats and JSON
   // downloads, and the page hands it to the menu and to the status zone.
   const downloads = useCollectionDownloads(code);
+  // A member's own switch for this group's summary email (X2, CA 2026-10-04), in the
+  // collection menu. Called unconditionally too; the page learns the answer, so the
+  // menu's wording is the server's word.
+  const digestPref = useDigestPreference({
+    code,
+    muted: !!collection?.is_digest_muted,
+    onChange: useCallback(
+      (muted) => setCollection((prev) => (prev ? { ...prev, is_digest_muted: muted } : prev)),
+      []
+    ),
+  });
 
   // Arriving from "Add thing" with the new thing's code (V6, CA 2026-10-04). On a
   // desktop the new card is the first of the grid and in plain sight; on a phone
@@ -296,27 +312,18 @@ export default function CollectionPage() {
   // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
   // the link is the curators' credential, and the member has "Recommend" instead.
   const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
-  // A signed-out reader of a PUBLIC group has no card to click in two places: an
-  // empty group, and the bottom of a COMMUNITY one, where to *contribute* they
-  // would have to press "Request" on somebody else's thing. CA reopened the
-  // hero's removed join line for exactly these two cases (2026-09-29) — but in
-  // the content, not the hero, and only where there is no button to press. A
-  // PROPRIETARY group with things needs nothing: its door is each thing's button.
-  // Which line: a COMMUNITY group asks for what the reader could add; a
-  // PROPRIETARY one that is empty promises the one thing a member does get — the
-  // summary of what arrives — but only when the group sends one. With its digest
-  // set to "None" nobody hears anything, so the line just says "Join the group".
+  // A rank-and-file member: signed in, `is_member` (false for a co-owner by design,
+  // who is a curator and has the curator's menu). They get a menu of their own in
+  // the corner (X2, CA 2026-10-04) — the welcome document, the summary switch when
+  // the group sends one, and "Leave the group".
+  const isMember = isAuthenticated && !!collection.is_member && !isCurator;
   const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
-  const anonJoinKey =
-    !isAuthenticated && collection.visibility === 'PUBLIC'
-      ? collection.mode === 'COMMUNITY'
-        ? 'collectionPage.anonJoinCommunity'
-        : visibleThings.length === 0
-          ? sendsDigest
-            ? 'collectionPage.anonJoinEmpty'
-            : 'collectionPage.anonJoinPlain'
-          : null
-      : null;
+  // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
+  // this group" and "Sign in" — whatever the mode and whether it holds things or not
+  // (CA, 2026-10-04). It used to be a line in the content that only a COMMUNITY or an
+  // empty group showed, and a member without a session (the weekly digest's link is an
+  // ordinary one) had no way in from here at all.
+  const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
   // A collection locked to one thing type makes the per-card "Type = X" row
   // redundant — hide it (an allowlist of one).
   const singleType = (collection.allowed_thing_types || []).length === 1;
@@ -353,11 +360,23 @@ export default function CollectionPage() {
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
             <span className="hero-corners">
-              <AccountMenu />
-              {/* The group's own options (CA, 2026-10-03): curators only,
-                  between the account menu and the share one. */}
-              {isCurator && (
-                <CollectionMenu code={code} hasDateThings={hasDateThings} downloads={downloads} />
+              {/* "Requests to me" is the collection menu's first entry where this page
+                  has one (X4, CA 2026-10-04): the account menu then leaves it out. */}
+              <AccountMenu requestsInCollectionMenu={isCurator || isMember} />
+              {/* The group's own options (CA, 2026-10-03), between the account menu
+                  and the share one: a curator's, and since X2 (2026-10-04) a
+                  member's, with what is theirs. Nothing for a reader who is
+                  neither. */}
+              {(isCurator || isMember) && (
+                <CollectionMenu
+                  code={code}
+                  headline={headline}
+                  isCurator={isCurator}
+                  hasDateThings={hasDateThings}
+                  downloads={downloads}
+                  welcomeDocUrl={collection.welcome_doc_url || ''}
+                  digest={isMember && sendsDigest ? digestPref : null}
+                />
               )}
               {canShare && (
                 <ShareCollectionMenu
@@ -425,27 +444,35 @@ export default function CollectionPage() {
                     </Link>
                   </p>
                 )}
-            {/* The group's welcome PDF used to exist only in the one email a
-                member gets on joining: delete that, and it was gone. The API
-                serves its URL to curators and members only, so its presence is
-                the whole condition. */}
-            {collection.welcome_doc_url && (
-              <p className="invite-nudge">
-                <a
-                  href={collection.welcome_doc_url}
-                  className="owner-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('collectionPage.welcomeDoc')}
-                </a>
-              </p>
+            {/* The group's welcome PDF is an entry of the collection menu (X2,
+                2026-10-04), first, for members and curators — the API serves its
+                URL to those two only. It was a loose link here. */}
+            {/* The hero's "join" is back for a signed-out reader (CA, 2026-10-04),
+              with its pair. Its first form — "This group shares its things on
+              OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
+              the content stood in for it from 2026-09-29, only where no card
+              had a button to press, and that line is gone in turn. Now a row, as
+              on /welcome: "Join this group" first and primary, to the join page
+              (no ?thing=: there is no thing in it), and "Sign in" secondary, to
+              /login, which brings them back here — for the member who has no
+              session and for anyone who already has an account. In every PUBLIC
+              group, COMMUNITY or PROPRIETARY, empty or not; the action button on
+              each card (login-to-act) is still there for whoever has one. */}
+            {showsSignedOutDoors && (
+              <div className="invite-nudge">
+                <div className="button-row-wide">
+                  <ButtonLink to={`/collections/${code}/join`} style={btnStyle}>
+                    {t('collectionPage.visitorJoin')}
+                  </ButtonLink>
+                  <ButtonLink
+                    to={loginPathFor({ pathname: `/collections/${code}` })}
+                    style={btnSecondaryStyle}
+                  >
+                    {t('login.signIn')}
+                  </ButtonLink>
+                </div>
+              </div>
             )}
-            {/* A signed-out reader used to get a one-line "This group shares its
-              things on OIUEEI. Join to take part →" here; it was removed (CA,
-              2026-09-21). They still reach /collections/:code/join from the
-              action button on any card (login-to-act) — but not from an empty
-              group, which has no card to click. */}
             {/* An invitation for a reader who is already signed in. They
               cannot be sent down the anonymous funnel — it asks for an email and
               answers with a magic link — so they get the action itself. Only on
@@ -487,20 +514,20 @@ export default function CollectionPage() {
                   <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
                     {t('collectionPage.addThing')}
                   </ButtonLink>
+                  {/* Cold start (DESIGN §2/§6), a third button since X6 (CA, 2026-10-04)
+                      — it was a quiet line under the row ("Your collection is taking
+                      shape. Now invite your circle →"). The owner has something worth
+                      showing but has not invited anyone: secondary, like "Add thing",
+                      so the row keeps its one primary. It goes once the first guest
+                      joins, or while there is nothing to show. */}
+                  {collection.invites.length === 0 && visibleThings.length > 0 && (
+                    <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
+                      {t('collectionPage.inviteYourPeople')}
+                    </ButtonLink>
+                  )}
                 </div>
                 <CollectionDownloadsStatus downloads={downloads} />
                 <div className="spacer-s"></div>
-                {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
-                showing but hasn't invited anyone — a quiet one-line pointer, no
-                banner or pressure. It disappears once the first guest joins. */}
-                {collection.invites.length === 0 && visibleThings.length > 0 && (
-                  <p className="invite-nudge">
-                    {t('collectionPage.inviteNudge')}{' '}
-                    <Link to={`/collections/${code}/invites`} className="owner-link">
-                      {t('collectionPage.inviteNudgeLink')}
-                    </Link>
-                  </p>
-                )}
               </>
             )}
             {/* Everything in here is a rank-and-file member's control —
@@ -553,13 +580,19 @@ export default function CollectionPage() {
                     }}
                   />
                 )}
+                {/* The outcome of "Mute the summary" / "Get the summary again" from the
+                collection menu: a short message in a live region, as the downloads'.
+                Only a member has the switch. */}
+                <CollectionDigestStatus digest={digestPref} />
                 {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only
                 destructive one of the three. It moved to the own profile's "My
                 groups" list (design round): leaving is something you do to your
                 own membership, so it belongs with the rest of your account, next
-                to the other memberships you might weigh it against. The route
-                (/collections/:code/leave) is unchanged. */}
+                to the other memberships you might weigh it against. Since X2
+                (2026-10-04) it is also the last entry of the member's collection
+                menu, under a divider; the route (/collections/:code/leave) is
+                unchanged. */}
               </>
             )}
           </div>
@@ -706,18 +739,6 @@ export default function CollectionPage() {
             )}
           </>
         )}
-        {/* A way in for a signed-out reader where no button leads there (see
-            `anonJoinKey`): under "No things in this collection yet." (which a
-            signed-out reader is always shown, as they cannot add) in an empty
-            group, and under the grid — after "Show more" — of a COMMUNITY one.
-            Not in the hero (CA removed that line on 2026-09-21), and it goes to
-            the group's join page with no ?thing=: there is no thing in it. */}
-        {anonJoinKey && (
-          <p className="invite-nudge">
-            <Link to={`/collections/${code}/join`}>{t(anonJoinKey)}</Link>
-          </p>
-        )}
-
         {isCurator && collection.invites.length > 0 && (
           <>
             <div className="spacer-l" />

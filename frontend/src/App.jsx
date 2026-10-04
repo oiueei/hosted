@@ -22,6 +22,7 @@ const VerifyPage = lazy(() => import('./pages/VerifyPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const AddThingPage = lazy(() => import('./pages/AddThingPage'));
+const ImportThingsPage = lazy(() => import('./pages/ImportThingsPage'));
 const EditThingPage = lazy(() => import('./pages/EditThingPage'));
 const ThingPage = lazy(() => import('./pages/ThingPage'));
 const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
@@ -167,6 +168,7 @@ function App() {
               <Route path="/collections/:code/invites" element={<ManageInvitesPage />} />
               <Route path="/collections/:code/leave" element={<LeaveCollectionPage />} />
               <Route path="/collections/:code/add" element={<AddThingPage />} />
+              <Route path="/collections/:code/import" element={<ImportThingsPage />} />
               <Route path="/collections/:code/things/:thingCode/edit" element={<EditThingPage />} />
               <Route
                 path="/collections/:code/things/:thingCode/request"
