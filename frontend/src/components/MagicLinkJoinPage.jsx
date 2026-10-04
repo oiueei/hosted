@@ -44,14 +44,17 @@ import MarkdownText from './MarkdownText';
  *   `SharePage` passes it to a reader who already has a session, so accepting the
  *   invitation is one button rather than email, inbox, link, back. Without it the
  *   page is exactly what it was, which is what a deployment's own door relies on.
- * - `offerSignIn` (default `true`): whether the page ends with the secondary
- *   "already have an account? sign in →" button to `/login`. `/share/:token`
- *   keeps it, and so does any door that does not say otherwise. A deployment's
- *   own door turns it off with `false` when it already sends the people it does
- *   not want here to `/login` by another road (the hosted `/popin`, CA
- *   2026-10-03): the component is core's and has to be identical in both
- *   branches, so the switch is a prop rather than an edit. With `false` neither
- *   the button nor its row renders; no caller in core passes it.
+ * - `offerSignIn` (default `true`): whether the page offers a way to `/login` at
+ *   all — **two things**: the secondary "already have an account? sign in →"
+ *   button that ends the page, and (Y1, CA 2026-10-04) the "Sign in" icon of the
+ *   hero's corner that a reader with no session otherwise gets on every page
+ *   (`PageLayout` hands the prop to `AccountMenu`). `/share/:token` keeps both, and
+ *   so does any door that does not say otherwise. A deployment's own door turns
+ *   them off with `false` when it already sends the people it does not want here
+ *   to `/login` by another road (the hosted `/popin`, CA 2026-10-03): the
+ *   component is core's and has to be identical in both branches, so the switch is
+ *   a prop rather than an edit. With `false` neither the button nor its row nor
+ *   the corner icon renders; no caller in core passes it.
  */
 export default function MagicLinkJoinPage({
   ns,
@@ -91,6 +94,7 @@ export default function MagicLinkJoinPage({
       <PageLayout
         title={heroTitle}
         description={collectionDescription && <MarkdownText text={collectionDescription} />}
+        offerSignIn={offerSignIn}
       >
         {signedInAction}
       </PageLayout>
@@ -104,6 +108,7 @@ export default function MagicLinkJoinPage({
     <PageLayout
       title={heroTitle}
       description={collectionDescription && <MarkdownText text={collectionDescription} />}
+      offerSignIn={offerSignIn}
     >
       {/* The door's first line of words, at the same size and weight as the
           front door's pitch (.login-pitch, Body XL bold). A <p> here, not the

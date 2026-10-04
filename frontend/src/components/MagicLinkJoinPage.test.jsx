@@ -169,11 +169,13 @@ describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
   });
 });
 
-describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in button out)', () => {
+describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way to /login out)', () => {
   // `/share/:token` keeps "Already have an account? Sign in →"; the hosted
   // `/popin` (CA, 2026-10-03) already leads people to /login another way and
-  // drops it. The component is core's and identical in both branches, so what
-  // turns it off is a prop that no core caller passes.
+  // drops it. Since Y1 (CA, 2026-10-04) the same prop also leaves out the corner's
+  // own "Sign in" icon (X3), which every signed-out page otherwise has. The component
+  // is core's and identical in both branches, so what turns it off is a prop that no
+  // core caller passes.
   function renderDoor(props = {}) {
     return render(
       <MemoryRouter>
@@ -190,21 +192,26 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in
     );
   }
 
-  // The corner's own "Sign in" icon (X3, 2026-10-04) is every signed-out page's, not
-  // this door's: what `offerSignIn` decides is the button in the page body.
+  // Two ways to /login a signed-out page has: the button ending its body, and the
+  // corner's icon (X3, 2026-10-04). `offerSignIn` decides both.
   const body = (container) => container.querySelector('.page-container');
+  const corner = (container) => container.querySelector('.hero-corners');
 
-  test('by default the sign-in button to /login is there', () => {
+  test('by default both are there: the sign-in button, and the corner’s "Sign in" icon', () => {
     const { container } = renderDoor();
 
     expect(body(container).querySelector('a[href="/login"]')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Already have an account? Sign in →' })).toBeVisible();
+    expect(corner(container).querySelector('a[href="/login"]')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeVisible();
   });
 
-  test('with offerSignIn={false} no link leads to /login, and the rest of the page is untouched', () => {
+  test('with offerSignIn={false} no link leads to /login anywhere, and the rest of the page is untouched', () => {
     const { container } = renderDoor({ offerSignIn: false });
 
-    expect(body(container).querySelector('a[href="/login"]')).toBeNull();
+    expect(container.querySelector('a[href^="/login"]')).toBeNull();
+    expect(corner(container)).toBeEmptyDOMElement();
+    expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
     expect(screen.queryByText(/Already have an account/)).toBeNull();
     // The form and the deployment's own children stay exactly where they were.
     expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
@@ -223,7 +230,16 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in
     submitEmail();
     await screen.findByText(/Magic link sent! Check your inbox/);
 
-    expect(body(container).querySelector('a[href="/login"]')).toBeNull();
+    expect(container.querySelector('a[href^="/login"]')).toBeNull();
+  });
+
+  test('a reader who has a session is not affected: the account menu stays', () => {
+    localStorage.setItem('userCode', 'ABC123');
+    const { container } = renderDoor({ offerSignIn: false });
+
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+    expect(corner(container)).not.toBeEmptyDOMElement();
+    localStorage.removeItem('userCode');
   });
 });
 
