@@ -514,20 +514,20 @@ export default function CollectionPage() {
                   <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
                     {t('collectionPage.addThing')}
                   </ButtonLink>
+                  {/* Cold start (DESIGN §2/§6), a third button since X6 (CA, 2026-10-04)
+                      — it was a quiet line under the row ("Your collection is taking
+                      shape. Now invite your circle →"). The owner has something worth
+                      showing but has not invited anyone: secondary, like "Add thing",
+                      so the row keeps its one primary. It goes once the first guest
+                      joins, or while there is nothing to show. */}
+                  {collection.invites.length === 0 && visibleThings.length > 0 && (
+                    <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
+                      {t('collectionPage.inviteYourPeople')}
+                    </ButtonLink>
+                  )}
                 </div>
                 <CollectionDownloadsStatus downloads={downloads} />
                 <div className="spacer-s"></div>
-                {/* Cold-start nudge (DESIGN §2/§6): the owner has something worth
-                showing but hasn't invited anyone — a quiet one-line pointer, no
-                banner or pressure. It disappears once the first guest joins. */}
-                {collection.invites.length === 0 && visibleThings.length > 0 && (
-                  <p className="invite-nudge">
-                    {t('collectionPage.inviteNudge')}{' '}
-                    <Link to={`/collections/${code}/invites`} className="owner-link">
-                      {t('collectionPage.inviteNudgeLink')}
-                    </Link>
-                  </p>
-                )}
               </>
             )}
             {/* Everything in here is a rank-and-file member's control —
