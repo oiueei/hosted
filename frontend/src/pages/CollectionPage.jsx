@@ -422,13 +422,20 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
-                {/* The row holds "Edit collection" alone (CA, 2026-10-03):
-                    "Add thing", "Manage members" and the three downloads live
-                    in the collection menu in the corner; the outcome of a
-                    download lands right under the row. */}
+                {/* "Edit collection" and "Add thing" (CA, 2026-10-04), always — with
+                    things or without. The row held "Edit collection" alone from
+                    2026-10-03, with "Add thing" in the collection menu; an empty
+                    group then had no other way in than its own phrase, and CA wants
+                    the button where the eye lands. It stays in the menu too (CA
+                    chose that knowing it repeats). "Manage members" and the
+                    downloads live only in the menu; the outcome of a download
+                    lands right under the row. */}
                 <div className="button-row-wide">
                   <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
                     {t('collectionPage.editCollection')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                    {t('collectionPage.addThing')}
                   </ButtonLink>
                 </div>
                 <CollectionDownloadsStatus downloads={downloads} />
@@ -601,25 +608,14 @@ export default function CollectionPage() {
           </div>
         )}
         {visibleThings.length === 0 ? (
-          <>
-            <p>
-              {t('collectionPage.noThings')}
-              {canAddThing && (
-                <>
-                  {' '}
-                  <Link to={`/collections/${code}/add`}>{t('collectionPage.addOne')}</Link>.
-                </>
-              )}
-            </p>
-            <div className="spacer-xxs" />
-            {canAddThing && (
-              <p>
-                <Link to={`/collections/${code}/add#bulk-add`}>
-                  {t('collectionPage.addManyCsv')}
-                </Link>
-              </p>
-            )}
-          </>
+          // Whoever can add a thing (a curator, or a member of a COMMUNITY group)
+          // already has "Add thing" in the hero, so an empty group says nothing to
+          // them (CA, 2026-10-04): the phrase, "Add one" and the CSV link are gone,
+          // the CSV one into the collection menu. Whoever cannot — a member of a
+          // PROPRIETARY group, a reader with no session — is told, with no link.
+          canAddThing ? null : (
+            <p>{t('collectionPage.noThings')}</p>
+          )
         ) : shownThings.length === 0 ? (
           <p>{t('collectionPage.noThingsForTag')}</p>
         ) : (
@@ -657,7 +653,8 @@ export default function CollectionPage() {
           </>
         )}
         {/* A way in for a signed-out reader where no button leads there (see
-            `anonJoinKey`): under "No things in this collection yet." in an empty
+            `anonJoinKey`): under "No things in this collection yet." (which a
+            signed-out reader is always shown, as they cannot add) in an empty
             group, and under the grid — after "Show more" — of a COMMUNITY one.
             Not in the hero (CA removed that line on 2026-09-21), and it goes to
             the group's join page with no ?thing=: there is no thing in it. */}

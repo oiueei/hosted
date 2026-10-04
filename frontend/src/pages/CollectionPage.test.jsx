@@ -600,7 +600,7 @@ describe('CollectionPage — the member row: "Invite someone" and "Add thing"', 
     expect(screen.queryByText(/The curators decide/)).toBeNull();
   });
 
-  test('whoever runs the group sees neither here — theirs are in the collection menu', async () => {
+  test('whoever runs the group has no member row: no "Invite someone", and one "Add thing" — the curator row’s', async () => {
     renderAs({
       ...MEMBER,
       mode: 'COMMUNITY',
@@ -610,7 +610,13 @@ describe('CollectionPage — the member row: "Invite someone" and "Add thing"', 
     await screen.findByRole('link', { name: 'Edit collection' });
 
     expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Add thing' })).toBeNull();
+    // The menu is closed, so the only "Add thing" is the hero's — in the row of
+    // "Edit collection", not in a member's row.
+    const [add] = screen.getAllByRole('link', { name: 'Add thing' });
+    expect(screen.getAllByRole('link', { name: 'Add thing' })).toHaveLength(1);
+    expect(
+      within(add.closest('.button-row-wide')).getByRole('link', { name: 'Edit collection' })
+    ).toBeInTheDocument();
   });
 });
 
@@ -800,7 +806,7 @@ describe('A signed-in visitor on a public group', () => {
     renderPage();
 
     expect(await screen.findByText(/No things in this collection yet/)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href$="/add"]')).toBeNull();
     expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
   });
 
@@ -837,7 +843,7 @@ describe('A signed-in visitor on a public group', () => {
       show(PUBLIC_COMMUNITY);
 
       const noThings = await screen.findByText(/No things in this collection yet/);
-      expect(screen.queryByRole('link', { name: 'Add one' })).not.toBeInTheDocument();
+      expect(document.querySelector('a[href$="/add"]')).toBeNull();
       expect(screen.queryByRole('link', { name: /Add several at once/ })).not.toBeInTheDocument();
       expect(joinLinks()).toHaveLength(1);
       expect(joinLinks()[0]).toHaveTextContent(en.collectionPage.anonJoinCommunity);
@@ -909,7 +915,10 @@ describe('A signed-in visitor on a public group', () => {
     });
   });
 
-  test('a member of an empty group is invited to start it', async () => {
+  // Whoever can add a thing has "Add thing" in their row (CA, 2026-10-04), so an
+  // empty group no longer says a word to them: not the phrase, not "Add one" (gone)
+  // and not the CSV link (it moved into the curators' menu).
+  test('a member of an empty COMMUNITY group sees no "no things" block: their "Add thing" is the invitation', async () => {
     apiFetch.mockImplementation(() =>
       Promise.resolve({
         ok: true,
@@ -920,14 +929,29 @@ describe('A signed-in visitor on a public group', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('link', { name: 'Add one' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Add thing' })).toHaveAttribute(
       'href',
       '/collections/COL001/add'
     );
-    expect(screen.getByRole('link', { name: /Add several at once/ })).toHaveAttribute(
-      'href',
-      '/collections/COL001/add#bulk-add'
+    expect(screen.queryByText(/No things in this collection yet/)).toBeNull();
+    expect(document.querySelector('a[href$="#bulk-add"]')).toBeNull();
+  });
+
+  test('a member of an empty PROPRIETARY group is still told, and offered nothing to click', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', is_member: true }),
+      })
     );
+
+    renderPage();
+
+    const phrase = await screen.findByText(/No things in this collection yet/);
+    expect(phrase.querySelector('a')).toBeNull();
+    expect(document.querySelector('a[href$="/add"], a[href$="#bulk-add"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Add thing' })).toBeNull();
   });
 });
 
@@ -1484,15 +1508,16 @@ describe('CollectionPage as a co-owner', () => {
     // "Manage members" lives in the collection menu now (2026-10-03): open it.
     fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
     expect(await screen.findByRole('link', { name: 'Manage members' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Add thing' })).toBeInTheDocument();
+    // "Add thing" is in the menu and in the hero row (2026-10-04): one each.
+    expect(screen.getAllByRole('link', { name: 'Add thing' })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  // The hero row holds "Edit collection" alone (CA, 2026-10-03): the rest of
-  // the curator's controls are in the collection menu, one click further, so
-  // the row that used to hold four buttons reads as one thing — the group's
-  // settings — instead of a toolbar.
-  test('the curator hero row holds "Edit collection" alone', async () => {
+  // The hero row holds "Edit collection" and "Add thing" (CA, 2026-10-04): the
+  // first primary, the second secondary. It held "Edit collection" alone from
+  // 2026-10-03 — the rest of the curator's controls are in the collection menu,
+  // one click further — and the group's most common act was in the menu.
+  test('the curator hero row holds "Edit collection" and then "Add thing", the second secondary', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1511,8 +1536,61 @@ describe('CollectionPage as a co-owner', () => {
     const row = container.querySelector('.button-row-wide');
     expect(row).not.toBeNull();
     const inRow = [...row.querySelectorAll('a, button')];
-    expect(inRow).toHaveLength(1);
-    expect(inRow[0]).toHaveAccessibleName('Edit collection');
+    expect(inRow.map((el) => el.textContent)).toEqual(['Edit collection', 'Add thing']);
+    expect(inRow[1]).toHaveAttribute('href', '/collections/COL001/add');
+    // The secondary tokens are a white background; the primary's are the theeeme's.
+    expect(inRow[0].style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
+    expect(inRow[1].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+  });
+
+  // The button is there with things or without (CA, 2026-10-04): an empty group
+  // had it only in the menu, and a group with things only there too.
+  const KETTLE = {
+    code: 'THG001',
+    headline: 'Kettle',
+    type: 'GIFT_THING',
+    status: 'ACTIVE',
+    owner: 'OTHER1',
+    owner_name: 'The Founder',
+    created: '2026-07-01T10:00:00Z',
+    tags: [],
+    gallery_urls: [],
+  };
+
+  const renderCurating = (collection) => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    return render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  test('an empty group says nothing to whoever runs it — "Add thing" is in the hero', async () => {
+    renderCurating(CO_OWNED);
+
+    expect(await screen.findByRole('link', { name: 'Add thing' })).toHaveAttribute(
+      'href',
+      '/collections/COL001/add'
+    );
+    expect(screen.queryByText(/No things in this collection yet/)).toBeNull();
+    expect(document.querySelector('a[href$="#bulk-add"]')).toBeNull();
+  });
+
+  test('with things, whoever runs the group still has "Add thing" in the hero', async () => {
+    renderCurating({ ...CO_OWNED, things: [KETTLE] });
+
+    await screen.findByText('Kettle');
+    expect(screen.getByRole('link', { name: 'Add thing' })).toHaveAttribute(
+      'href',
+      '/collections/COL001/add'
+    );
   });
 
   test('the hero names the whole team on one "Run by:" line, founder first', async () => {

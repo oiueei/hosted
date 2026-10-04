@@ -19,6 +19,10 @@ const PANEL_ID = 'collection-menu-panel';
  * `IconDocumentGroup` (CA, 2026-10-04): the menu holds the group's things and
  * files, which a bare ⋯ (what it was drawn as at first) did not say.
  *
+ * Its entries, in order: "Add thing", "Add several at once (CSV)", "Manage
+ * members", a divider, then the downloads. "Add thing" is also a button in the
+ * hero row (CA, 2026-10-04, who chose to repeat it).
+ *
  * The panel mixes links with the three download buttons, so it is a plain
  * `<div>` — not the account menu's `<nav>` (this is not all navigation)
  * and not `role="menu"` (that role expects arrow keys between actions;
@@ -73,6 +77,12 @@ export default function CollectionMenu({ code, hasDateThings, downloads }) {
         <div id={PANEL_ID} className="collection-menu-panel">
           <Link to={`/collections/${code}/add`} onClick={close}>
             {t('collectionPage.addThing')}
+          </Link>
+          {/* The CSV import used to be a line under an empty group's phrase; it is
+              here, right after "Add thing", and curators only (CA, 2026-10-04). A
+              COMMUNITY member reaches the same section from the add page. */}
+          <Link to={`/collections/${code}/add#bulk-add`} onClick={close}>
+            {t('collectionPage.addManyCsv')}
           </Link>
           <Link to={`/collections/${code}/invites`} onClick={close}>
             {t('collectionPage.manageGuests')}

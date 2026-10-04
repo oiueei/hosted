@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -152,6 +152,9 @@ function renderPage() {
 }
 
 const TRIGGER = 'Collection options';
+/** The open panel, or null when it is closed. "Add thing" is also a button in the
+ * hero row now (CA, 2026-10-04), so a link of that name no longer tells the two apart. */
+const panel = () => document.getElementById('collection-menu-panel');
 const CALENDAR = 'Download the calendar (ICS)';
 
 /** The menu's trigger, then the panel open — every test below starts here. */
@@ -200,7 +203,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     renderCollection(COLLECTION);
     await openMenu();
 
-    expect(screen.getByRole('link', { name: 'Add thing' })).toHaveAttribute(
+    expect(within(panel()).getByRole('link', { name: 'Add thing' })).toHaveAttribute(
       'href',
       '/collections/COL001/add'
     );
@@ -229,6 +232,35 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     expect(icon).toHaveAttribute('aria-hidden', 'true');
     // The button's own name is still the one `aria-label`, not the icon's.
     expect(trigger).toHaveAccessibleName(TRIGGER);
+  });
+
+  test('"Add several at once (CSV)" follows "Add thing" in the panel, and goes to the bulk section', async () => {
+    renderCollection(COLLECTION);
+    await openMenu();
+
+    const entries = within(panel())
+      .getAllByRole('link')
+      .map((link) => [link.textContent, link.getAttribute('href')]);
+    expect(entries).toEqual([
+      ['Add thing', '/collections/COL001/add'],
+      ['Add several at once (CSV)', '/collections/COL001/add#bulk-add'],
+      ['Manage members', '/collections/COL001/invites'],
+    ]);
+  });
+
+  test('choosing the CSV entry closes the panel', async () => {
+    renderCollection(COLLECTION);
+    await openMenu();
+    // jsdom would try to follow the anchor's href and say it cannot.
+    const noNavigation = (event) => event.preventDefault();
+    document.addEventListener('click', noNavigation);
+    try {
+      fireEvent.click(within(panel()).getByRole('link', { name: 'Add several at once (CSV)' }));
+    } finally {
+      document.removeEventListener('click', noNavigation);
+    }
+
+    expect(panel()).toBeNull();
   });
 
   test('a co-curator (not the founder) gets it too', async () => {
@@ -574,7 +606,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
-    expect(screen.queryByRole('link', { name: 'Add thing' })).not.toBeInTheDocument();
+    expect(panel()).toBeNull();
     expect(trigger).toHaveFocus();
   });
 
@@ -586,7 +618,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     // The panel is gone at once (the file keeps fetching underneath)…
-    expect(screen.queryByRole('link', { name: 'Add thing' })).not.toBeInTheDocument();
+    expect(panel()).toBeNull();
     // …and the focus did not fall to <body> with the button that held it.
     expect(trigger).toHaveFocus();
   });
@@ -595,7 +627,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
   // whether or not the link closes it — a test with a plain click would pass
   // for the wrong reason. A modified click (a new tab) is the case that stays
   // on the page, and the one where the panel would otherwise be left open.
-  test.each(['Add thing', 'Manage members'])(
+  test.each(['Add thing', 'Add several at once (CSV)', 'Manage members'])(
     'a click on "%s" that opens a new tab still closes the panel',
     async (name) => {
       renderCollection(COLLECTION);
@@ -604,12 +636,12 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       const noNavigation = (event) => event.preventDefault();
       document.addEventListener('click', noNavigation);
       try {
-        fireEvent.click(screen.getByRole('link', { name }), { ctrlKey: true });
+        fireEvent.click(within(panel()).getByRole('link', { name }), { ctrlKey: true });
       } finally {
         document.removeEventListener('click', noNavigation);
       }
 
-      expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+      expect(panel()).toBeNull();
       // Still on the collection's page, trigger folded.
       expect(screen.getByRole('button', { name: TRIGGER })).toHaveAttribute(
         'aria-expanded',
@@ -626,7 +658,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.mouseDown(accountTrigger);
     fireEvent.click(accountTrigger);
 
-    expect(screen.queryByRole('link', { name: 'Add thing' })).not.toBeInTheDocument();
+    expect(panel()).toBeNull();
     expect(screen.getByRole('link', { name: 'My profile' })).toBeInTheDocument();
   });
 });
