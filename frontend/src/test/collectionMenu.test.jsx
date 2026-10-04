@@ -234,7 +234,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     expect(trigger).toHaveAccessibleName(TRIGGER);
   });
 
-  test('"Add several at once (CSV)" follows "Add thing" in the panel, and goes to the bulk section', async () => {
+  test('"Add several at once (CSV)" follows "Add thing" in the panel, and goes to its own page', async () => {
     renderCollection(COLLECTION);
     await openMenu();
 
@@ -243,7 +243,8 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       .map((link) => [link.textContent, link.getAttribute('href')]);
     expect(entries).toEqual([
       ['Add thing', '/collections/COL001/add'],
-      ['Add several at once (CSV)', '/collections/COL001/add#bulk-add'],
+      // A page of its own since X5 (2026-10-04), no longer a section of /add.
+      ['Add several at once (CSV)', '/collections/COL001/import'],
       ['Manage members', '/collections/COL001/invites'],
     ]);
   });

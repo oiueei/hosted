@@ -134,6 +134,7 @@
     "verify": "Verificant — OIUEEI",
     "myBookings": "Les meves sol·licituds — OIUEEI",
     "addThing": "Afegir cosa — OIUEEI",
+    "importThings": "Afegir-ne uns quants alhora (CSV) — OIUEEI",
     "editThing": "Editar {{headline}} — OIUEEI",
     "editThingDefault": "Editar cosa — OIUEEI",
     "deleteThing": "Eliminar {{headline}} — OIUEEI",
@@ -843,7 +844,6 @@
     "revoked": "Has deixat de compartir: l'enllaç ja no funciona."
   },
   "bulkAdd": {
-    "heading": "Afegir-ne diversos alhora (CSV)",
     "help": "Afegeix diverses coses des d'un CSV — o un ZIP amb les fotos incloses.",
     "formatTitle": "Format del CSV/ZIP",
     "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només LEND/RENT). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\".",

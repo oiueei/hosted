@@ -70,6 +70,42 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+/**
+ * The CSV import left this page (X5, CA 2026-10-04): it is `/collections/:code/import`
+ * now, reached from a curator's collection menu. This one is the form for one thing.
+ */
+describe('AddThingPage — no CSV import any more', () => {
+  test('the page has no bulk section and no import heading', async () => {
+    mockApi();
+    const { container } = renderPage();
+    await screen.findByRole('combobox', { name: /Type/ });
+
+    expect(container.querySelector('#bulk-add, .bulk-add-section')).toBeNull();
+    expect(screen.queryByText(/Add multiple things from a CSV/)).toBeNull();
+    expect(screen.queryByText(/Add many at once|Add several at once/)).toBeNull();
+  });
+
+  test('the old #bulk-add address scrolls nowhere: there is nothing to scroll to', async () => {
+    mockApi();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      render(
+        <MemoryRouter initialEntries={['/collections/COL001/add#bulk-add']}>
+          <Routes>
+            <Route path="/collections/:code/add" element={<AddThingPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      await screen.findByRole('combobox', { name: /Type/ });
+
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      delete Element.prototype.scrollIntoView;
+    }
+  });
+});
+
 describe('AddThingPage — the collection decides which types exist', () => {
   test('with no allowlist, every type is on offer', async () => {
     mockApi();

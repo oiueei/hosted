@@ -1936,7 +1936,7 @@ caption:has(> .sr-only:only-child) {
   font-size: var(--fontsize-body-s);
 }
 
-/* CSV bulk-add (BulkAddCsv on AddThingPage). */
+/* CSV bulk-add (BulkAddCsv on ImportThingsPage). */
 .bulk-add-section {
   margin-top: var(--spacing-xl);
   padding-top: var(--spacing-l);

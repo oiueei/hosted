@@ -134,6 +134,7 @@
     "verify": "Verificando — OIUEEI",
     "myBookings": "Mis solicitudes — OIUEEI",
     "addThing": "Añadir cosa — OIUEEI",
+    "importThings": "Añadir varios a la vez (CSV) — OIUEEI",
     "editThing": "Editar {{headline}} — OIUEEI",
     "editThingDefault": "Editar cosa — OIUEEI",
     "deleteThing": "Eliminar {{headline}} — OIUEEI",
@@ -843,7 +844,6 @@
     "revoked": "Has dejado de compartir: el enlace ya no funciona."
   },
   "bulkAdd": {
-    "heading": "Añadir varios a la vez (CSV)",
     "help": "Añade varias cosas desde un CSV — o un ZIP con las fotos incluidas.",
     "formatTitle": "Formato del CSV/ZIP",
     "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo LEND/RENT). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\".",

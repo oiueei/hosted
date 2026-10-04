@@ -140,10 +140,10 @@ export default function CollectionMenu({
               <Link to={`/collections/${code}/add`} onClick={close}>
                 {t('collectionPage.addThing')}
               </Link>
-              {/* The CSV import used to be a line under an empty group's phrase; it is
-                  here, right after "Add thing", and curators only (CA, 2026-10-04). A
-                  COMMUNITY member reaches the same section from the add page. */}
-              <Link to={`/collections/${code}/add#bulk-add`} onClick={close}>
+              {/* The CSV import used to be a line under an empty group's phrase, then a
+                  section of the add page; it is a page of its own now (X5, CA
+                  2026-10-04) and this entry — curators only — is the way to it. */}
+              <Link to={`/collections/${code}/import`} onClick={close}>
                 {t('collectionPage.addManyCsv')}
               </Link>
               <Link to={`/collections/${code}/invites`} onClick={close}>
