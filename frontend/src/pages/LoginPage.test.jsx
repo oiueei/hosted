@@ -239,17 +239,28 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
     expect(notice.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  test('the page ends with its reading: the last link is the no-banner claim’s, below the licence', () => {
+  test('the no-banner claim’s link comes after the licence, below the door, whatever else the deployment adds', () => {
     // CA, 2026-09-21: the things you look for deliberately belong at the foot and
     // not between a returning member and the field they came for. The page's own
     // "Legal notice & privacy" link went on 2026-10-03 and the "Trouble signing in?"
-    // line on 2026-10-04, so what is left to close it is the reading itself.
+    // line on 2026-10-04, so what is left is the reading itself.
+    //
+    // It does not say which link is *last*: that depends on `deployment/` — upstream
+    // the reading is the end of the page, and a deployment with a help page
+    // (`faqPath`) puts that link after it (`deployment.test.jsx` pins that, with the
+    // module mocked). A core test cannot assume what `deployment/` holds.
     renderLogin();
-    const links = [...document.querySelectorAll('a')];
-    const last = links.at(-1);
-    expect(last).toHaveAttribute('href', 'https://github.com/oiueei/standalone#privacy');
+    const signIn = screen.getByRole('button', { name: 'Sign in' });
     const licence = screen.getByText(/OIUEEI's code is open source under the EUPL-1.2/i);
-    expect(licence.compareDocumentPosition(last) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const noBanner = document.querySelector(
+      'a[href="https://github.com/oiueei/standalone#privacy"]'
+    );
+
+    expect(noBanner).not.toBeNull();
+    expect(signIn.compareDocumentPosition(licence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      licence.compareDocumentPosition(noBanner) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   test('the page has no "Trouble signing in?" line, and nothing in its content links /contact', () => {
