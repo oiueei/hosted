@@ -84,6 +84,15 @@ function renderArriving(state = { addedThing: 'NEW123' }, collection = COLLECTIO
 const cardOf = (code) => document.querySelector(`[data-thing-code="${code}"]`);
 const uploadedNotice = () => screen.queryByText('Thing uploaded!');
 
+// The page's effect runs after the commit that paints the cards, and the notice is
+// painted in that same commit: under load `findByText` can return in between, with
+// the notice on screen and nothing of what the effect does yet — the focus still on
+// <body>, and a "was not called" that holds only because nothing has run. The
+// effect's first act is to clear the state it was opened with and it does all the
+// rest in the same pass, so the cleared state is the sign it has finished.
+const effectHasRun = () =>
+  waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('null'));
+
 let media;
 let scrollIntoView;
 let cardRect;
@@ -115,11 +124,14 @@ describe('CollectionPage after adding a thing, on a phone', () => {
     renderArriving();
 
     expect(await screen.findByText('Thing uploaded!')).toBeInTheDocument();
+    // Not left running: a test that ends before the effect has run lets it fire in the next one.
+    await effectHasRun();
   });
 
   test('brings the page down to the new card, centred and smooth, when it is out of sight', async () => {
     renderArriving();
     await screen.findByText('Thing uploaded!');
+    await effectHasRun();
 
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' });
@@ -132,6 +144,7 @@ describe('CollectionPage after adding a thing, on a phone', () => {
     renderArriving();
 
     expect(await screen.findByText('Thing uploaded!')).toBeInTheDocument();
+    await effectHasRun();
     expect(scrollIntoView).not.toHaveBeenCalled();
     // …and still hands over the focus.
     expect(within(cardOf('NEW123')).getByRole('link', { name: 'Blue chair' })).toHaveFocus();
@@ -142,6 +155,7 @@ describe('CollectionPage after adding a thing, on a phone', () => {
     media = mockMatchMedia({ [PHONE]: true, [REDUCED_MOTION]: true });
     renderArriving();
     await screen.findByText('Thing uploaded!');
+    await effectHasRun();
 
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'auto' });
   });
@@ -149,6 +163,7 @@ describe('CollectionPage after adding a thing, on a phone', () => {
   test('puts the focus on the new card’s link', async () => {
     renderArriving();
     await screen.findByText('Thing uploaded!');
+    await effectHasRun();
 
     expect(within(cardOf('NEW123')).getByRole('link', { name: 'Blue chair' })).toHaveFocus();
     expect(document.activeElement).not.toBe(
@@ -170,6 +185,7 @@ describe('CollectionPage after adding a thing, on a phone', () => {
     );
     renderArriving();
     await screen.findByText('Thing uploaded!');
+    await effectHasRun();
 
     const card = cardOf('NEW123');
     expect(card).toHaveClass('thing-card--just-added');
@@ -192,6 +208,7 @@ describe('CollectionPage after adding a thing, on a phone', () => {
     renderArriving({ addedThing: 'GONE99' });
 
     expect(await screen.findByText('Thing uploaded!')).toBeInTheDocument();
+    await effectHasRun();
     expect(scrollIntoView).not.toHaveBeenCalled();
     expect(document.querySelector('.thing-card--just-added')).toBeNull();
   });
@@ -199,6 +216,9 @@ describe('CollectionPage after adding a thing, on a phone', () => {
   test('arriving with no state does nothing at all', async () => {
     renderArriving(null);
     await screen.findByText('Blue chair');
+    // No state, so nothing to clear: the title is set by the effect declared right after
+    // the one under test, in the same flush, so it is the sign that one has had its turn.
+    await waitFor(() => expect(document.title).toContain('Kitchen Collection'));
 
     expect(uploadedNotice()).toBeNull();
     expect(scrollIntoView).not.toHaveBeenCalled();
