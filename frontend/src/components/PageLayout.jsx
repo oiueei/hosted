@@ -32,6 +32,11 @@ import useTheeeme from '../hooks/useTheeeme';
  *   panel the buttons open (an `InlineConfirm`) goes on a line of its own under
  *   the row (`.hero-actions > .thing-report-confirm`). No page but a thing's
  *   uses it yet.
+ * - `collectionMenu`: optional node for the corner, after the account menu
+ *   (`.hero-corners`: account · collection menu · …). A thing's page, read through
+ *   a collection, passes the collection's menu (X4, CA 2026-10-04). When it is
+ *   there the account menu stops offering "Requests to me", which the collection
+ *   menu carries as its first entry.
  * - `children`: page-container content.
  */
 export default function PageLayout({
@@ -40,6 +45,7 @@ export default function PageLayout({
   backLabel,
   description,
   heroActions,
+  collectionMenu,
   children,
 }) {
   const { tc, koro } = useTheeeme();
@@ -57,7 +63,8 @@ export default function PageLayout({
           style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
         >
           <span className="hero-corners">
-            <AccountMenu />
+            <AccountMenu requestsInCollectionMenu={!!collectionMenu} />
+            {collectionMenu}
           </span>
           {backTo && <BackLink to={backTo} label={backLabel} />}
           {title && <h1 className="form-hero-title">{title}</h1>}

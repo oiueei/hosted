@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
@@ -222,6 +222,67 @@ describe('AccountMenu — signed in', () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+/**
+ * "Requests to me" moved to the collection menu on the pages that have one (X4, CA
+ * 2026-10-04). `requestsInCollectionMenu` tells the account menu not to offer it
+ * there — and not to ask the server about it either. Without the prop (Home, `/me`
+ * and every page with no collection menu) nothing changed.
+ */
+describe('AccountMenu — where the collection menu carries "Requests to me"', () => {
+  const renderWithCollectionMenu = () =>
+    render(
+      <MemoryRouter>
+        <AccountMenu requestsInCollectionMenu />
+      </MemoryRouter>
+    );
+
+  test('it leaves the link out even for an account that receives requests', async () => {
+    meSays(true);
+    renderWithCollectionMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    expect(screen.getByRole('link', { name: /my requests/i })).toBeInTheDocument();
+    // Give the (unasked) answer every chance to arrive.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole('link', { name: REQUESTS_TO_ME.name })).not.toBeInTheDocument();
+  });
+
+  test('it does not ask the server whether the account receives requests', async () => {
+    meSays(true);
+    renderWithCollectionMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('the rest of the menu is as it was, in order', () => {
+    meSays(false);
+    renderWithCollectionMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    const names = within(screen.getByRole('navigation'))
+      .getAllByRole('link')
+      .map((l) => l.textContent);
+    expect(names).toEqual(['Home', 'My profile', 'My requests', 'Log out']);
+  });
+
+  test('without the prop an account that receives requests still has it, after My requests', async () => {
+    meSays(true);
+    renderMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    expect(await screen.findByRole('link', { name: REQUESTS_TO_ME.name })).toHaveAttribute(
+      'href',
+      '/owner-bookings'
+    );
   });
 });
 

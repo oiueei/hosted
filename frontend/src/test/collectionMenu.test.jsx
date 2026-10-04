@@ -917,3 +917,139 @@ describe('the collection menu for a member', () => {
     expect(screen.queryByRole('button', { name: TRIGGER })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * "Requests to me" moved here from the account menu on the collection's page (X4,
+ * CA 2026-10-04): the first entry of the menu — a curator's and a member's — for
+ * whoever receives requests, with a divider under it, and out of the account menu.
+ * Everywhere else the account menu keeps it. The question is asked as it always was:
+ * when the panel opens, and no answer means no link.
+ */
+describe('the collection menu — "Requests to me"', () => {
+  const MEMBER = {
+    ...COLLECTION,
+    owner: 'OTHER1',
+    owner_name: 'Owner',
+    is_curator: false,
+    is_member: true,
+    digest_frequency: 'NONE',
+    welcome_doc_url: '',
+  };
+  const REQUESTS = 'Requests to me';
+
+  /** The page, with `GET /auth/me/` answering what the test says (or failing). */
+  function renderReceiving(collection, me) {
+    setApi(collection);
+    const base = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation((url, options) =>
+      url === '/api/v1/auth/me/'
+        ? answer(me, () => ({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ receives_requests: false }),
+          }))
+        : base(url, options)
+    );
+    return renderPage();
+  }
+  const receives = (value) => ({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({ receives_requests: value }),
+  });
+  const entries = () => [...panel().querySelectorAll('a, button')].map((e) => e.textContent.trim());
+  const meCalls = () => apiFetch.mock.calls.filter(([url]) => url === '/api/v1/auth/me/');
+
+  test('a curator who receives requests has it first, with a divider under it', async () => {
+    renderReceiving(COLLECTION, receives(true));
+    await openMenu();
+
+    await waitFor(() => expect(entries()[0]).toBe(REQUESTS));
+    expect(within(panel()).getByRole('link', { name: REQUESTS })).toHaveAttribute(
+      'href',
+      '/owner-bookings'
+    );
+    // A divider directly under it, before the rest of the menu.
+    const first = panel().firstElementChild;
+    expect(first).toHaveTextContent(REQUESTS);
+    expect(first.nextElementSibling).toHaveClass('collection-menu-divider');
+    expect(entries().slice(1, 4)).toEqual([
+      'Add thing',
+      'Add several at once (CSV)',
+      'Manage members',
+    ]);
+  });
+
+  test('a member who receives requests has it first too', async () => {
+    renderReceiving(MEMBER, receives(true));
+    await openMenu();
+
+    await waitFor(() => expect(entries()[0]).toBe(REQUESTS));
+    expect(panel().firstElementChild.nextElementSibling).toHaveClass('collection-menu-divider');
+    expect(entries()).toContain('Leave the group');
+  });
+
+  test('somebody who receives none has the menu as it was, with no stray divider', async () => {
+    renderReceiving(COLLECTION, receives(false));
+    await openMenu();
+    await waitFor(() => expect(meCalls().length).toBeGreaterThan(0));
+
+    expect(within(panel()).queryByRole('link', { name: REQUESTS })).toBeNull();
+    expect(entries()[0]).toBe('Add thing');
+    expect(panel().firstElementChild).toHaveTextContent('Add thing');
+  });
+
+  test.each([
+    ['an error status', { ok: false, status: 500, json: () => Promise.resolve({}) }],
+    ['a request that never arrives', () => Promise.reject(new TypeError('Failed to fetch'))],
+  ])('with %s there is no link: guessing would put a dead page in the menu', async (_what, me) => {
+    renderReceiving(COLLECTION, me);
+    await openMenu();
+    await waitFor(() => expect(meCalls().length).toBeGreaterThan(0));
+
+    expect(within(panel()).queryByRole('link', { name: REQUESTS })).toBeNull();
+  });
+
+  test('the server is asked when the panel opens, not before, and again each time', async () => {
+    renderReceiving(COLLECTION, receives(true));
+    await screen.findByText('Drill');
+    expect(meCalls()).toHaveLength(0);
+
+    await openMenu();
+    await waitFor(() => expect(meCalls()).toHaveLength(1));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await openMenu();
+
+    await waitFor(() => expect(meCalls()).toHaveLength(2));
+  });
+
+  test('on the collection page the account menu no longer offers it; the collection menu does', async () => {
+    renderReceiving(COLLECTION, receives(true));
+    await openMenu();
+    await waitFor(() => expect(entries()[0]).toBe(REQUESTS));
+    // Close this one, open the account menu (a click outside closes it).
+    const accountTrigger = screen.getByRole('button', { name: 'Your account' });
+    fireEvent.mouseDown(accountTrigger);
+    fireEvent.click(accountTrigger);
+
+    expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole('link', { name: REQUESTS })).not.toBeInTheDocument();
+  });
+
+  test('a signed-in reader with no collection menu on that page keeps it in the account menu', async () => {
+    // Neither curator nor member of a public group: no collection menu, so the link
+    // must not vanish from both.
+    renderReceiving(
+      { ...MEMBER, is_member: false, visibility: 'PUBLIC', mode: 'COMMUNITY' },
+      receives(true)
+    );
+    await screen.findByText('Drill');
+    fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
+
+    expect(await screen.findByRole('link', { name: REQUESTS })).toHaveAttribute(
+      'href',
+      '/owner-bookings'
+    );
+  });
+});

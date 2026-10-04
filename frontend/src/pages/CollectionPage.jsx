@@ -360,7 +360,9 @@ export default function CollectionPage() {
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
             <span className="hero-corners">
-              <AccountMenu />
+              {/* "Requests to me" is the collection menu's first entry where this page
+                  has one (X4, CA 2026-10-04): the account menu then leaves it out. */}
+              <AccountMenu requestsInCollectionMenu={isCurator || isMember} />
               {/* The group's own options (CA, 2026-10-03), between the account menu
                   and the share one: a curator's, and since X2 (2026-10-04) a
                   member's, with what is theirs. Nothing for a reader who is

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { IconDocumentGroup, Notification } from 'hds-react';
 import useDismissable from '../hooks/useDismissable';
+import useReceivesRequests from '../hooks/useReceivesRequests';
 import StatusRegion from './StatusRegion';
 
 const PANEL_ID = 'collection-menu-panel';
@@ -51,6 +52,11 @@ const PANEL_ID = 'collection-menu-panel';
  * document is the first entry of a curator's menu too: it no longer sits as a
  * loose link in the hero.
  *
+ * **"Requests to me" is the first entry of both** (X4, CA 2026-10-04), for whoever can
+ * receive requests, with a divider under it: it moved here from the account menu on
+ * the pages that have this one. The same menu is the corner of a thing's page when it
+ * is read through a collection.
+ *
  * Props: `code`; `headline` (the resolved name, handed to the leave page, which has
  * nothing else to name the group with); `isCurator` (default true, the menu it
  * always was); `hasDateThings` and `downloads` (a curator's); `welcomeDocUrl`
@@ -72,6 +78,10 @@ export default function CollectionMenu({
   const wrapperRef = useRef(null);
   const buttonRef = useRef(null);
   useDismissable({ open, setOpen, wrapperRef, buttonRef });
+  // "Requests to me" is the first entry, for whoever receives requests, on the
+  // collection's page and on a thing's (X4, CA 2026-10-04): moved from the account
+  // menu, with the same question asked the same way when this panel opens.
+  const receivesRequests = useReceivesRequests(open);
   const { calendar, stats, collectionExport } = downloads ?? {};
 
   const label = t('collectionMenu.label');
@@ -102,6 +112,14 @@ export default function CollectionMenu({
       </button>
       {open && (
         <div id={PANEL_ID} className="collection-menu-panel">
+          {receivesRequests && (
+            <>
+              <Link to="/owner-bookings" onClick={close}>
+                {t('home.requestsToMe')}
+              </Link>
+              <hr className="collection-menu-divider" />
+            </>
+          )}
           {/* The group's welcome PDF, first for everyone who is served it. It was a
               loose link in the hero until X2 (2026-10-04). A new tab, said out loud
               the way "Ideas and bugs" says it: the visible words first, then the

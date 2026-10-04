@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
+import CollectionMenu, {
+  CollectionDigestStatus,
+  CollectionDownloadsStatus,
+} from '../components/CollectionMenu';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InlineConfirm from '../components/InlineConfirm';
 import ThingTags from '../components/ThingTags';
@@ -22,6 +26,8 @@ import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ButtonLink from '../components/ButtonLink';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import useCollectionDownloads from '../hooks/useCollectionDownloads';
+import useDigestPreference from '../hooks/useDigestPreference';
 
 export default function ThingPage() {
   const { code, thingCode } = useParams();
@@ -41,6 +47,26 @@ export default function ThingPage() {
   useEffect(() => {
     document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
   }, [thing, headline, t]);
+
+  // The collection menu of the corner, when this page is read through a collection
+  // (X4, CA 2026-10-04): the same one the collection's own page has — a curator's
+  // (Add thing, CSV, Manage members, downloads) or a member's (document, summary,
+  // leave) — plus "Requests to me". Both hooks are called here, unconditionally, and
+  // only used when the server sent `collection_menu` (see ThingSerializer).
+  const downloads = useCollectionDownloads(code);
+  const digestPref = useDigestPreference({
+    code,
+    muted: !!thing?.collection_menu?.is_digest_muted,
+    onChange: useCallback(
+      (muted) =>
+        setThing((prev) =>
+          prev?.collection_menu
+            ? { ...prev, collection_menu: { ...prev.collection_menu, is_digest_muted: muted } }
+            : prev
+        ),
+      []
+    ),
+  });
 
   // Anonymous visitor on a PUBLIC collection: like ThingLinkbox's login-to-act
   // mode, show the action buttons but route each click to the collection's join
@@ -229,8 +255,37 @@ export default function ThingPage() {
     </>
   ) : null;
 
+  // `collection_menu` is there only for a curator or a member of the collection the
+  // page is read through, and only on a collection-context URL.
+  // The server sends it to nobody else; the page does not take its word for who is signed in.
+  const menu = code && isAuthenticated ? thing.collection_menu : null;
+  const collectionMenu = menu ? (
+    <CollectionMenu
+      code={code}
+      headline={L(thing.collection_headline)}
+      isCurator={menu.is_curator}
+      hasDateThings={menu.has_date_things}
+      downloads={downloads}
+      welcomeDocUrl={menu.welcome_doc_url || ''}
+      digest={menu.is_member && menu.digest_frequency !== 'NONE' ? digestPref : null}
+    />
+  ) : undefined;
+
   return (
-    <PageLayout backTo={backPath} backLabel={backLabel} heroActions={decisionActions}>
+    <PageLayout
+      backTo={backPath}
+      backLabel={backLabel}
+      heroActions={decisionActions}
+      collectionMenu={collectionMenu}
+    >
+      {/* The outcome of a download (a curator's) or of the summary switch (a member's)
+          from the corner menu: a live region right under the hero. */}
+      {menu &&
+        (menu.is_curator ? (
+          <CollectionDownloadsStatus downloads={downloads} />
+        ) : (
+          <CollectionDigestStatus digest={digestPref} />
+        ))}
       <div className="form-grid">
         {thing.collection_is_onboarding && <DemoNotice />}
         {(() => {

@@ -1,6 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
+
+import { apiFetch } from '../services/api';
 import PageLayout from './PageLayout';
 import { declarations, declarationsInMedia } from '../test/cssRules';
 
@@ -19,7 +22,10 @@ const renderLayout = (props) =>
     </MemoryRouter>
   );
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  vi.clearAllMocks();
+});
 
 describe('PageLayout — heroActions', () => {
   test('are painted in the hero after the title and the description, in a wide row', () => {
@@ -55,6 +61,63 @@ describe('PageLayout — heroActions', () => {
     const { container } = renderLayout({ heroActions: null });
 
     expect(container.querySelector('.hero-actions')).toBeNull();
+  });
+});
+
+/**
+ * `collectionMenu` (X4, CA 2026-10-04): the collection's menu in the corner of a
+ * page that reads a collection — a thing's — after the account menu. When it is
+ * there, "Requests to me" is its first entry and the account menu stops offering it.
+ */
+describe('PageLayout — collectionMenu', () => {
+  const MENU = <span data-testid="the-collection-menu">menu</span>;
+  const meSays = (receives) =>
+    apiFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ receives_requests: receives }),
+    });
+
+  test('it sits in the corner after the account menu', () => {
+    localStorage.setItem('userCode', 'ABC123');
+    const { container } = renderLayout({ collectionMenu: MENU });
+
+    const corners = container.querySelector('.hero-corners');
+    expect([...corners.children].map((c) => c.className || c.dataset.testid)).toEqual([
+      'account-menu',
+      'the-collection-menu',
+    ]);
+  });
+
+  test('without it the corner is the account menu alone', () => {
+    localStorage.setItem('userCode', 'ABC123');
+    const { container } = renderLayout({});
+
+    expect(container.querySelector('.hero-corners').children).toHaveLength(1);
+  });
+
+  test('with it, the account menu does not offer "Requests to me"', async () => {
+    localStorage.setItem('userCode', 'ABC123');
+    meSays(true);
+    renderLayout({ collectionMenu: MENU });
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole('link', { name: 'Requests to me' })).not.toBeInTheDocument();
+  });
+
+  test('without it, the account menu keeps the link', async () => {
+    localStorage.setItem('userCode', 'ABC123');
+    meSays(true);
+    renderLayout({});
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Requests to me' })).toBeInTheDocument()
+    );
   });
 });
 
