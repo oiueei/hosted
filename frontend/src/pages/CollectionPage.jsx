@@ -691,13 +691,17 @@ export default function CollectionPage() {
             {remainingThings > 0 && (
               <>
                 <div className="spacer-m" />
-                <Button
-                  variant="secondary"
-                  style={btnSecondaryStyle}
-                  onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
-                >
-                  {t('collectionPage.showMoreThings', { count: remainingThings })}
-                </Button>
+                {/* A pager is a loose action button like any other: in a wide row,
+                    so on a phone it is the width of the screen (CA, 2026-10-04). */}
+                <div className="button-row-wide">
+                  <Button
+                    variant="secondary"
+                    style={btnSecondaryStyle}
+                    onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
+                  >
+                    {t('collectionPage.showMoreThings', { count: remainingThings })}
+                  </Button>
+                </div>
               </>
             )}
           </>

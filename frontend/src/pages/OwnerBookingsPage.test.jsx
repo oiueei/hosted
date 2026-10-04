@@ -368,6 +368,16 @@ describe('OwnerBookingsPage cancelling a member’s reservation', () => {
 });
 
 describe('OwnerBookingsPage pagination', () => {
+  test('the pager sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockApi([
+      { results: [booking()], next: 'http://api.example.com/api/v1/owner-bookings/?page=2' },
+    ]);
+    renderPage();
+
+    const more = await screen.findByRole('button', { name: 'Load more' });
+    expect(more.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('"Load more" appends the next page and keeps the request same-origin', async () => {
     mockApi([
       { results: [booking()], next: 'http://api.example.com/api/v1/owner-bookings/?page=2' },

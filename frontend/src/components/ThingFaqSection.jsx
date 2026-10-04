@@ -220,14 +220,18 @@ export default function ThingFaqSection({
       {faqsNext && (
         <>
           <div className="spacer-s" />
-          <Button
-            variant="secondary"
-            onClick={loadMoreFaqs}
-            disabled={loadingMore}
-            style={btnSecondaryStyle}
-          >
-            {t('common.loadMore')}
-          </Button>
+          {/* A pager is a loose action button like any other: in a wide row, so on a
+              phone it is the width of the screen (CA, 2026-10-04). */}
+          <div className="button-row-wide">
+            <Button
+              variant="secondary"
+              onClick={loadMoreFaqs}
+              disabled={loadingMore}
+              style={btnSecondaryStyle}
+            >
+              {t('common.loadMore')}
+            </Button>
+          </div>
         </>
       )}
 

@@ -409,6 +409,14 @@ describe('MyBookingsPage cancelling a confirmed reservation', () => {
 });
 
 describe('MyBookingsPage pagination', () => {
+  test('the pager sits in a wide row, so on a phone it is the width of the screen', async () => {
+    mockList([booking()], 'http://testserver/api/v1/my-bookings/?page=2');
+    renderPage();
+
+    const more = await screen.findByRole('button', { name: 'Load more' });
+    expect(more.parentElement).toHaveClass('button-row-wide');
+  });
+
   test('"Load more" appends the next page and keeps the request same-origin', async () => {
     // DRF returns an absolute `next`; sending it verbatim would leave the Vite
     // proxy in dev and drop the auth cookies with it.
