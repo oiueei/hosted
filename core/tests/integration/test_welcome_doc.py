@@ -59,44 +59,62 @@ class TestWelcomeDocOnJoin:
 
         assert _doc_emails() == []
 
+    def _type_the_address_and_press_the_link(self, api_client, email, **target):
+        """The join: the address is typed, the link that comes back is pressed."""
+        api_client.post(JOIN_URL, {"email": email, **target}, format="json")
+        rsvp = RSVP.objects.filter(user_email=email, action=RSVP.Action.MAGIC_LINK).latest(
+            "created"
+        )
+        return _verify(rsvp)
+
     def test_rejoining_does_not_resend(self, api_client, collection):
         # Login-to-act on a PUBLIC collection re-runs the (idempotent) M2M add on
         # every join, so an existing member must not get the document again.
         collection.welcome_doc = DOC_ID
         collection.visibility = Collection.Visibility.PUBLIC
         collection.save()
+        join = {"collection_code": collection.code}
 
-        api_client.post(
-            JOIN_URL,
-            {"email": "joiner@test.com", "collection_code": collection.code},
-            format="json",
-        )
+        self._type_the_address_and_press_the_link(api_client, "joiner@test.com", **join)
         assert len(_doc_emails()) == 1
 
-        api_client.post(
-            JOIN_URL,
-            {"email": "joiner@test.com", "collection_code": collection.code},
-            format="json",
-        )
+        self._type_the_address_and_press_the_link(api_client, "joiner@test.com", **join)
 
         assert len(_doc_emails()) == 1
         assert collection.invites.filter(email="joiner@test.com").exists()
 
-    def test_share_token_join_sends_the_document(self, api_client, collection):
+    def test_share_token_join_sends_the_document_when_the_link_is_pressed(
+        self, api_client, collection
+    ):
         collection.welcome_doc = DOC_ID
         collection.share_token = "sharetoken1234567890ab"
         collection.save()
 
-        api_client.post(
-            JOIN_URL,
-            {"email": "shared@test.com", "share_token": collection.share_token},
-            format="json",
+        self._type_the_address_and_press_the_link(
+            api_client, "shared@test.com", share_token=collection.share_token
         )
 
         sent = _doc_emails()
         assert len(sent) == 1
         assert sent[0].to == ["shared@test.com"]
         assert User.objects.filter(email="shared@test.com").exists()
+
+    def test_typing_an_address_sends_the_document_to_nobody(self, api_client, collection):
+        """Somebody else's address, typed: they get a magic link to a page they never
+        asked for, and that is all. The group's rules arrive with the membership,
+        which arrives with the click of whoever owns the mailbox."""
+        collection.welcome_doc = DOC_ID
+        collection.share_token = "sharetoken1234567890ab"
+        collection.save()
+
+        api_client.post(
+            JOIN_URL,
+            {"email": "victim@test.com", "share_token": collection.share_token},
+            format="json",
+        )
+
+        assert _doc_emails() == []
+        assert not collection.invites.filter(email="victim@test.com").exists()
 
     def test_the_signed_in_door_sends_it_like_every_other(
         self, authenticated_client, user, user2, collection

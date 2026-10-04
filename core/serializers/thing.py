@@ -6,8 +6,8 @@ from django.db.models import Count, Prefetch
 from rest_framework import serializers
 
 from core.models import Thing
-from core.models.booking import BookingPeriod
-from core.utils import asset_url
+from core.models.booking import DATE_BASED_TYPES, BookingPeriod
+from core.utils import asset_url, doc_asset_url
 from core.validators import (
     LOCALIZED_DESCRIPTION_STORAGE,
     LOCALIZED_DESCRIPTION_VISIBLE,
@@ -136,6 +136,21 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         resolver = getattr(self, "_viewable_collection", None)
         return resolver(obj) if resolver else None
 
+    def _viewer_curates(self, collection, user_code):
+        """Whether ``user_code`` owns or co-owns ``collection``, asked once per request.
+
+        ``Collection.is_curator`` reads ``co_owners`` through ``.all()``: free when
+        the queryset prefetched it (the lists do), one query when it did not (the
+        thing's own page loads a bare row). ``can_manage`` and ``collection_menu``
+        both need the answer for the same collection, so the first asker pays and the
+        second reads it from the shared context.
+        """
+        cache = self.context.setdefault("_curator_by_collection", {})
+        key = (collection.code, user_code)
+        if key not in cache:
+            cache[key] = collection.is_curator(user_code)
+        return cache[key]
+
     def get_can_manage(self, obj):
         """Whether the reader may run this thing's catalogue entry — edit,
         hide, activate, delete — which the frontend gates those controls on.
@@ -161,7 +176,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
         return bool(
             collection is not None
             and collection.mode == Collection.Mode.PROPRIETARY
-            and collection.is_curator(code)
+            and self._viewer_curates(collection, code)
         )
 
     def get_owner_name(self, obj):
@@ -314,6 +329,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_is_onboarding = serializers.SerializerMethodField()
     collection_request_info = serializers.SerializerMethodField()
     collection_language = serializers.SerializerMethodField()
+    collection_menu = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
     reservation_max_days = serializers.SerializerMethodField()
@@ -362,6 +378,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_is_onboarding",
             "collection_request_info",
             "collection_language",
+            "collection_menu",
             "rental_durations",
             "rental_weekdays",
             "reservation_max_days",
@@ -514,6 +531,79 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         both mean "don't override"."""
         first = self._viewable_collection(obj)
         return (first.language if first else "") or ""
+
+    def _viewer_muted_collection_codes(self):
+        """Codes of the collections whose digest this viewer has silenced — one
+        query per request, cached on the shared context, and only ever asked for a
+        member of a group that sends a digest."""
+        if "_viewer_muted_collection_codes" not in self.context:
+            from core.models import Collection
+
+            user = self.context["request"].user
+            self.context["_viewer_muted_collection_codes"] = frozenset(
+                Collection.objects.filter(digest_muted=user).values_list("code", flat=True)
+            )
+        return self.context["_viewer_muted_collection_codes"]
+
+    def get_collection_menu(self, obj):
+        """What the thing's own page needs to paint the collection menu (X4, CA
+        2026-10-04) — and nothing more, so the page never loads the collection
+        itself (``GET /collections/{code}/`` carries every one of its things).
+
+        Present only when the SPA reads the thing **through a collection**
+        (``?collection=<code>``) and the viewer is a **curator** or a **member** of
+        exactly that collection: the menu is theirs, and its contents (the welcome
+        document above all) are served to those two only, like the collection's own
+        payload. Anyone else, an anonymous reader, a listing and a thing read with no
+        ``?collection=`` get ``None``, which costs nothing.
+
+        ``is_curator`` / ``is_member`` follow ``CollectionSerializer`` (a co-owner is
+        a curator, never a member); ``digest_frequency`` and ``is_digest_muted`` feed
+        the member's "Mute the summary"; ``has_date_things`` is the rule the
+        collection page uses for the calendar entry — the allowlist when there is
+        one, else whether the group holds a date-based thing (one query, curators of
+        an old collection only).
+        """
+        request = self.context.get("request")
+        wanted = self._requested_collection_code()
+        if not (wanted and request is not None and request.user.is_authenticated):
+            return None
+        collection = self._viewable_collection(obj)
+        if collection is None or collection.code != wanted:
+            return None
+
+        from core.models import Collection
+
+        code = request.user.code
+        is_curator = self._viewer_curates(collection, code)
+        # Owned and invited collections, one cached query — and a co-owner is in
+        # `invites` too, which is why the curator test comes first.
+        is_member = not is_curator and collection.code in self._viewer_collection_codes()
+        if not (is_curator or is_member):
+            return None
+
+        sends_digest = collection.digest_frequency != Collection.DigestFrequency.NONE
+        is_digest_muted = (
+            is_member and sends_digest and collection.code in self._viewer_muted_collection_codes()
+        )
+        has_date_things = False
+        if is_curator:
+            allowed = collection.allowed_thing_types or []
+            if allowed:
+                has_date_things = any(kind in DATE_BASED_TYPES for kind in allowed)
+            else:
+                has_date_things = collection.things.filter(type__in=DATE_BASED_TYPES).exists()
+
+        return {
+            "is_curator": is_curator,
+            "is_member": is_member,
+            "welcome_doc_url": (
+                doc_asset_url(collection.welcome_doc) if collection.welcome_doc else None
+            ),
+            "digest_frequency": collection.digest_frequency,
+            "is_digest_muted": is_digest_muted,
+            "has_date_things": has_date_things,
+        }
 
     def get_rental_durations(self, obj):
         """Allowed rental lengths (days) from this thing's first collection (#7).

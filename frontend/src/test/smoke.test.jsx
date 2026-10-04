@@ -139,6 +139,7 @@ import LogoutPage from '../pages/LogoutPage';
 import VerifyPage from '../pages/VerifyPage';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import AddThingPage from '../pages/AddThingPage';
+import ImportThingsPage from '../pages/ImportThingsPage';
 import MyBookingsPage from '../pages/MyBookingsPage';
 import OwnerBookingsPage from '../pages/OwnerBookingsPage';
 import DeleteThingPage from '../pages/DeleteThingPage';
@@ -243,6 +244,11 @@ smokeAndAxe('NotificationsPage', NotificationsPage);
 smokeAndAxe('AddThingPage', AddThingPage, {
   path: '/collections/:code/add',
   entry: '/collections/COL001/add',
+});
+
+smokeAndAxe('ImportThingsPage', ImportThingsPage, {
+  path: '/collections/:code/import',
+  entry: '/collections/COL001/import',
 });
 
 smokeAndAxe('CollectionPage', CollectionPage, {

@@ -1949,13 +1949,18 @@ class TestAuthViewEdgeCases:
 class TestJoinView:
     """Tests for the join endpoint (`/auth/join/`)."""
 
-    def test_a_valid_target_creates_the_account_and_joins_it(self, api_client, public_collection):
+    def test_a_valid_target_creates_the_account_with_no_group_and_sends_the_link(
+        self, api_client, public_collection
+    ):
         """The whole of what this endpoint does, in one request.
 
         The four tests that stood here checked the onboarding fallback — that a
         bare email joined every `is_onboarding` collection and nothing else.
         That fallback was the demo, and it left with it. What remains is this:
-        a collection you were pointed at, joined, with a magic link on its way.
+        a collection you were pointed at, an account for the magic link to
+        belong to, and the link on its way. Nobody is joined by *typing* an
+        address (W1, 2026-10-04); the click on the link does that, and the
+        tests of `test_public_join.py` and `test_share_link.py` press it.
         """
         from unittest.mock import patch
 
@@ -1968,11 +1973,11 @@ class TestJoinView:
 
         assert response.status_code == status.HTTP_200_OK
         new_user = User.objects.get(email="newperson@example.com")
-        assert public_collection.invites.filter(code=new_user.code).exists()
+        assert not public_collection.invites.filter(code=new_user.code).exists()
         assert RSVP.objects.filter(user_code=new_user, action="MAGIC_LINK").exists()
         mock_email.assert_called_once()
 
-    def test_an_existing_account_joins_without_being_recreated(
+    def test_an_existing_account_is_not_recreated_nor_joined_by_typing_its_address(
         self, api_client, user, public_collection
     ):
         from unittest.mock import patch
@@ -1985,7 +1990,7 @@ class TestJoinView:
             )
 
         assert response.status_code == status.HTTP_200_OK
-        assert public_collection.invites.filter(code=user.code).exists()
+        assert not public_collection.invites.filter(code=user.code).exists()
         assert User.objects.filter(email=user.email).count() == 1
         mock_email.assert_called_once()
 

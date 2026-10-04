@@ -4,7 +4,8 @@ Integration tests for the collection share-link feature.
 Covers:
 - Generating, rotating and revoking the share token (owner only).
 - Token never exposed via the standard collection retrieve endpoint.
-- Pop-in flow with valid / invalid / revoked share tokens.
+- Join flow with valid / invalid / revoked share tokens — the membership is made
+  when the magic link is pressed, not when the address is typed (W1, 2026-10-04).
 """
 
 import pytest
@@ -12,7 +13,7 @@ from django.core import mail
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import RSVP, Collection, User
+from core.models import RSVP, Collection, Event, User
 
 
 @pytest.fixture
@@ -146,21 +147,159 @@ class TestShareTokenLeakProtection:
 
 @pytest.mark.django_db
 class TestJoinWithShareToken:
-    def test_valid_token_adds_user_to_collection(self, share_link_setup):
-        collection = share_link_setup["collection"]
-        token = (
-            share_link_setup["owner_client"].post(URL.format(collection.code)).data["share_token"]
+    def _send(self, setup, email):
+        """Type `email` on the share page; return the token used and the link's RSVP."""
+        collection = setup["collection"]
+        token = setup["owner_client"].post(URL.format(collection.code)).data["share_token"]
+        resp = setup["anon_client"].post(
+            JOIN_URL, {"email": email, "share_token": token}, format="json"
         )
+        assert resp.status_code == 200
+        rsvp = RSVP.objects.get(user_email=email, action=RSVP.Action.MAGIC_LINK)
+        return token, rsvp
 
-        resp = share_link_setup["anon_client"].post(
-            JOIN_URL,
-            {"email": "newjoiner@test.com", "share_token": token},
-            format="json",
-        )
+    def _press(self, rsvp):
+        return APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
+
+    def test_a_valid_token_creates_the_account_and_sends_the_link_but_joins_nobody(
+        self, share_link_setup
+    ):
+        """Typing an address is not proof it is yours: somebody else's mailbox must
+        not end up inside the group, with its welcome document, because of it."""
+        collection = share_link_setup["collection"]
+        mail.outbox.clear()
+
+        _, rsvp = self._send(share_link_setup, "newjoiner@test.com")
+
+        new_user = User.objects.get(email="newjoiner@test.com")
+        assert len(mail.outbox) == 1
+        assert rsvp.target_code == collection.code
+        assert not collection.invites.filter(code=new_user.code).exists()
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code
+        ).exists()
+
+    def test_pressing_the_link_joins_and_lands_on_the_collection(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        _, rsvp = self._send(share_link_setup, "pressed@test.com")
+
+        resp = self._press(rsvp)
 
         assert resp.status_code == 200
-        new_user = User.objects.get(email="newjoiner@test.com")
+        assert resp.data["landing"] == "collection"
+        assert resp.data["collection"] == collection.code
+        new_user = User.objects.get(email="pressed@test.com")
         assert collection.invites.filter(code=new_user.code).exists()
+        # The join is logged when it happens, with the door it came through.
+        joined = Event.objects.get(kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code)
+        assert joined.source == Event.Source.SHARE
+
+    def test_the_link_stores_the_token_it_was_sent_with(self, share_link_setup):
+        token, rsvp = self._send(share_link_setup, "stored@test.com")
+
+        assert rsvp.context == {"join_source": "SHARE", "share_token": token}
+
+    def test_a_token_rotated_before_the_click_joins_nobody(self, share_link_setup):
+        """Rotating is what a curator does when a link has escaped. The link that was
+        in force when the address was typed is gone by the time it is pressed, and
+        pressing must not honour it — nor land them on a group that would answer 403."""
+        collection = share_link_setup["collection"]
+        _, rsvp = self._send(share_link_setup, "rotated@test.com")
+        share_link_setup["owner_client"].post(
+            URL.format(collection.code), {"rotate": True}, format="json"
+        )
+
+        resp = self._press(rsvp)
+
+        assert resp.status_code == 200
+        new_user = User.objects.get(email="rotated@test.com")
+        assert not collection.invites.filter(code=new_user.code).exists()
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code
+        ).exists()
+        # Signed in all the same, and landed by the general rule — Home here.
+        assert resp.data["landing"] == "home"
+        assert "collection" not in resp.data
+        assert "invited_collection" not in resp.data
+
+    def test_a_token_revoked_before_the_click_joins_nobody(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        _, rsvp = self._send(share_link_setup, "revokedlater@test.com")
+        share_link_setup["owner_client"].delete(URL.format(collection.code))
+
+        resp = self._press(rsvp)
+
+        new_user = User.objects.get(email="revokedlater@test.com")
+        assert not collection.invites.filter(code=new_user.code).exists()
+        assert resp.data["landing"] == "home"
+
+    def test_a_collection_made_inactive_before_the_click_joins_nobody(self, share_link_setup):
+        collection = share_link_setup["collection"]
+        _, rsvp = self._send(share_link_setup, "archivedlater@test.com")
+        collection.status = "INACTIVE"
+        collection.save(update_fields=["status"])
+
+        resp = self._press(rsvp)
+
+        new_user = User.objects.get(email="archivedlater@test.com")
+        assert not collection.invites.filter(code=new_user.code).exists()
+        assert resp.data["landing"] == "home"
+
+    def test_a_context_naming_an_unknown_door_joins_nobody(self, share_link_setup):
+        """The context is ours, but a value written by another route must not be able to
+        join anyone: only the two doors `JoinView` knows are honoured."""
+        collection = share_link_setup["collection"]
+        collection.share_token = "sharetoken1234567890ab"
+        collection.save(update_fields=["share_token"])
+        _, rsvp = self._send(share_link_setup, "odd@test.com")
+        rsvp.context = {"join_source": "SOMETHING", "share_token": collection.share_token}
+        rsvp.save(update_fields=["context"])
+
+        resp = self._press(rsvp)
+
+        new_user = User.objects.get(email="odd@test.com")
+        assert not collection.invites.filter(code=new_user.code).exists()
+        assert resp.data["landing"] == "home"
+
+    def test_a_share_link_whose_context_lost_its_token_joins_nobody(self, share_link_setup):
+        """No token on the RSVP is not "any token will do" — and the case that matters
+        is the one where both sides are empty: a revoked link (the collection has no
+        token) whose RSVP has none either must not read as "they match"."""
+        collection = share_link_setup["collection"]
+        _, rsvp = self._send(share_link_setup, "notoken@test.com")
+        share_link_setup["owner_client"].delete(URL.format(collection.code))
+        rsvp.context = {"join_source": "SHARE"}
+        rsvp.save(update_fields=["context"])
+        collection.refresh_from_db()
+        assert collection.share_token is None
+
+        resp = self._press(rsvp)
+
+        new_user = User.objects.get(email="notoken@test.com")
+        assert not collection.invites.filter(code=new_user.code).exists()
+        assert resp.data["landing"] == "home"
+
+    def test_a_link_with_no_pending_join_only_lands(self, share_link_setup):
+        """A link sent before the join moved to the click lives 24 hours: its person
+        was joined when it was sent, so it lands them and decides nothing."""
+        collection = share_link_setup["collection"]
+        member = User.objects.create(code="SHOLD1", email="old@test.com", name="Old")
+        collection.invites.add(member)
+        rsvp = RSVP.objects.create(
+            user_code=member,
+            user_email=member.email,
+            target_code=collection.code,
+            origin=RSVP.Origin.POPIN,
+        )
+
+        resp = self._press(rsvp)
+
+        assert resp.data["landing"] == "collection"
+        assert resp.data["collection"] == collection.code
+        # Nothing was joined by the click, so nothing was logged by it.
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=member.code
+        ).exists()
 
     def test_an_invalid_token_creates_nothing_at_all(self, share_link_setup):
         """Answered like a valid one, and nothing happens behind it.
@@ -235,6 +374,8 @@ class TestJoinWithShareToken:
         )
 
         assert resp.status_code == 200
+        assert not collection.invites.filter(code=existing.code).exists()
+        self._press(RSVP.objects.get(user_code=existing, action=RSVP.Action.MAGIC_LINK))
         assert collection.invites.filter(code=existing.code).exists()
 
     def test_share_token_stamps_target_and_redirects(self, share_link_setup):

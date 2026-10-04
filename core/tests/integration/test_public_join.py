@@ -1,10 +1,11 @@
 """Integration tests for login-to-act auto-join on PUBLIC collections (#5, phase 3).
 
 A visitor who tries to act on a PUBLIC collection submits their email plus the
-collection code to the join endpoint; on submission they are added to that collection's
-invitees and emailed a magic link. The code only joins PUBLIC, ACTIVE
-collections — never a PRIVATE one — and an unknown/non-public code is silently
-ignored (same unified response, no enumeration oracle).
+collection code to the join endpoint and is emailed a magic link; **pressing the
+link** adds them to that collection's invitees (W1, 2026-10-04 — typing an
+address is not proof it is yours, so nobody is joined on submit). The code only
+joins PUBLIC, ACTIVE collections — never a PRIVATE one — and an unknown/non-public
+code is silently ignored (same unified response, no enumeration oracle).
 """
 
 import pytest
@@ -16,6 +17,11 @@ from rest_framework.test import APIClient
 from core.models import RSVP, Collection, Event, Thing, User
 
 JOIN_URL = "/api/v1/auth/join/"
+
+
+def press(rsvp):
+    """Open the magic link — the click that joins."""
+    return APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
 
 
 @pytest.fixture
@@ -60,7 +66,9 @@ def join_setup(db):
 
 @pytest.mark.django_db
 class TestPublicAutoJoin:
-    def test_public_code_adds_user_and_sends_magic_link(self, join_setup):
+    def test_public_code_creates_the_account_and_sends_the_link_but_joins_nobody(self, join_setup):
+        """Typing an address is not proof it is yours: the membership waits."""
+        mail.outbox.clear()
         resp = join_setup["anon"].post(
             JOIN_URL,
             {"email": "visitor@test.com", "collection_code": "JPUB01"},
@@ -68,9 +76,46 @@ class TestPublicAutoJoin:
         )
         assert resp.status_code == 200
         user = User.objects.get(email="visitor@test.com")
-        assert join_setup["public"].invites.filter(code=user.code).exists()
-        # A magic-link RSVP was issued so the visitor can log in and then act.
+        # A magic-link RSVP was issued so the visitor can log in and then act…
         assert RSVP.objects.filter(user_code=user, action=RSVP.Action.MAGIC_LINK).exists()
+        assert len(mail.outbox) == 1
+        # …and the account belongs to no group at all, demonstration ones included.
+        assert not join_setup["public"].invites.filter(code=user.code).exists()
+        assert not join_setup["onboarding"].invites.filter(code=user.code).exists()
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=user.code
+        ).exists()
+
+    def test_pressing_the_link_joins_the_collection(self, join_setup):
+        join_setup["anon"].post(
+            JOIN_URL,
+            {"email": "pressed@test.com", "collection_code": "JPUB01"},
+            format="json",
+        )
+        user = User.objects.get(email="pressed@test.com")
+        rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
+
+        resp = press(rsvp)
+
+        assert resp.status_code == 200
+        assert resp.data["landing"] == "collection"
+        assert resp.data["collection"] == "JPUB01"
+        assert join_setup["public"].invites.filter(code=user.code).exists()
+
+    def test_the_click_logs_the_join_with_its_source(self, join_setup):
+        join_setup["anon"].post(
+            JOIN_URL,
+            {"email": "source@test.com", "collection_code": "JPUB01"},
+            format="json",
+        )
+        user = User.objects.get(email="source@test.com")
+        rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
+
+        press(rsvp)
+
+        joined = Event.objects.get(kind=Event.Kind.MEMBER_JOINED, actor_code=user.code)
+        assert joined.collection_code == "JPUB01"
+        assert joined.source == Event.Source.PUBLIC
 
     def test_public_code_does_not_also_join_onboarding(self, join_setup):
         join_setup["anon"].post(
@@ -79,8 +124,56 @@ class TestPublicAutoJoin:
             format="json",
         )
         user = User.objects.get(email="visitor2@test.com")
+        press(RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK))
         assert join_setup["public"].invites.filter(code=user.code).exists()
         assert not join_setup["onboarding"].invites.filter(code=user.code).exists()
+
+    def test_the_collection_going_private_before_the_click_joins_nobody(self, join_setup):
+        """A public door that closed between the send and the click stays closed.
+
+        The link was asked for while the group was open; pressing it after the
+        owner made it private must not walk a stranger into an invite-only group,
+        and must not land them on a page that would answer 403.
+        """
+        join_setup["anon"].post(
+            JOIN_URL,
+            {"email": "late@test.com", "collection_code": "JPUB01"},
+            format="json",
+        )
+        user = User.objects.get(email="late@test.com")
+        rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
+        public = join_setup["public"]
+        public.visibility = Collection.Visibility.PRIVATE
+        public.save(update_fields=["visibility"])
+
+        resp = press(rsvp)
+
+        assert resp.status_code == 200
+        assert not public.invites.filter(code=user.code).exists()
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=user.code
+        ).exists()
+        # They are still signed in, and land by the general rule: Home.
+        assert resp.data["landing"] == "home"
+        assert "collection" not in resp.data
+        assert "invited_collection" not in resp.data
+
+    def test_the_collection_going_inactive_before_the_click_joins_nobody(self, join_setup):
+        join_setup["anon"].post(
+            JOIN_URL,
+            {"email": "archived@test.com", "collection_code": "JPUB01"},
+            format="json",
+        )
+        user = User.objects.get(email="archived@test.com")
+        rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
+        public = join_setup["public"]
+        public.status = "INACTIVE"
+        public.save(update_fields=["status"])
+
+        resp = press(rsvp)
+
+        assert not public.invites.filter(code=user.code).exists()
+        assert resp.data["landing"] == "home"
 
     def test_private_code_does_not_join(self, join_setup):
         """A PRIVATE collection's code buys nothing — not membership, not an account.
@@ -126,6 +219,11 @@ class TestPublicAutoJoin:
             format="json",
         )
         assert resp.status_code == 200
+        # Not yet: the owner of that mailbox has not pressed anything.
+        assert not join_setup["public"].invites.filter(code=existing.code).exists()
+
+        press(RSVP.objects.get(user_code=existing, action=RSVP.Action.MAGIC_LINK))
+
         assert join_setup["public"].invites.filter(code=existing.code).exists()
 
     def test_public_code_stamps_target_on_rsvp(self, join_setup):
@@ -228,7 +326,7 @@ class TestLoginToActReturnsToTheThing:
         thing = self._thing_in_public(join_setup)
         rsvp = self._join(join_setup, "act@test.com", thing_code=thing.code)
 
-        assert rsvp.context == {"thing_code": thing.code}
+        assert rsvp.context == {"join_source": "PUBLIC", "thing_code": thing.code}
 
         resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
         assert resp.data["landing"] == "collection"
@@ -237,7 +335,7 @@ class TestLoginToActReturnsToTheThing:
 
     def test_no_thing_code_lands_on_the_collection_as_before(self, join_setup):
         rsvp = self._join(join_setup, "plain@test.com")
-        assert rsvp.context == {}
+        assert rsvp.context == {"join_source": "PUBLIC"}
         resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
         assert "thing" not in resp.data
 
@@ -247,7 +345,7 @@ class TestLoginToActReturnsToTheThing:
         )
         # not added to JPUB01
         rsvp = self._join(join_setup, "foreign@test.com", thing_code=other.code)
-        assert rsvp.context == {}
+        assert rsvp.context == {"join_source": "PUBLIC"}
         resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
         assert "thing" not in resp.data
         # ...and the join itself still worked.
@@ -256,11 +354,11 @@ class TestLoginToActReturnsToTheThing:
     def test_an_inactive_thing_is_ignored(self, join_setup):
         thing = self._thing_in_public(join_setup, status="INACTIVE")
         rsvp = self._join(join_setup, "hidden@test.com", thing_code=thing.code)
-        assert rsvp.context == {}
+        assert rsvp.context == {"join_source": "PUBLIC"}
 
     def test_an_unknown_thing_code_is_ignored(self, join_setup):
         rsvp = self._join(join_setup, "ghost@test.com", thing_code="NOPE00")
-        assert rsvp.context == {}
+        assert rsvp.context == {"join_source": "PUBLIC"}
         resp = APIClient().get(f"/api/v1/auth/verify/{rsvp.token}/")
         assert "thing" not in resp.data
 
@@ -290,11 +388,14 @@ class TestMemberJoinedIsLoggedOncePerJoin:
     EMAIL = "rejoin@test.com"
 
     def _pop_in(self, join_setup):
-        return join_setup["anon"].post(
+        """Type the address, then press the link that comes back — the join."""
+        join_setup["anon"].post(
             JOIN_URL,
             {"email": self.EMAIL, "collection_code": "JPUB01"},
             format="json",
         )
+        user = User.objects.get(email=self.EMAIL)
+        return press(RSVP.objects.filter(user_code=user).latest("created"))
 
     def _joins(self, user, collection):
         return Event.objects.filter(

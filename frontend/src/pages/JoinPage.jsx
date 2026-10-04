@@ -14,11 +14,11 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 /**
  * Login-to-act landing page for a PUBLIC collection. An anonymous visitor who
  * clicks an action button (reserve / order / respond …) on a public collection
- * lands here: they enter their email, the backend (pop-in) joins them to that
- * collection and emails a magic link, and following it drops them back on the
- * collection — now a member who can act. Standard `form-hero` + `Koros` layout,
- * with the collection's own photo (`HeroPhoto`, the same composition as its page)
- * when it has one.
+ * lands here: they enter their email, the backend emails a magic link, and
+ * pressing it joins them to that collection and drops them back on it — now a
+ * member who can act. Standard `form-hero` + `Koros` layout, with the
+ * collection's own photo (`HeroPhoto`, the same composition as its page) when
+ * it has one.
  */
 export default function JoinPage() {
   const { code } = useParams();
@@ -53,9 +53,16 @@ export default function JoinPage() {
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
 
+  // "Join {collection}", the words `/share/:token` already says (CA, 2026-10-04):
+  // the page says which group the stranger is about to join, in the title and the
+  // tab, once the name is known. Until then — a collection that cannot be read
+  // keeps the generic copy rather than an invented name — the title of always.
+  const heading = headline ? t('share.pageTitleNamed', { name: headline }) : t('joinToAct.heading');
   useEffect(() => {
-    document.title = `${t('joinToAct.heading')} — OIUEEI`;
-  }, [t]);
+    document.title = headline
+      ? t('titles.shareNamed', { name: headline })
+      : `${t('joinToAct.heading')} — OIUEEI`;
+  }, [t, headline]);
 
   useEffect(() => {
     if (!code) return undefined;
@@ -95,7 +102,7 @@ export default function JoinPage() {
               <AccountMenu />
             </span>
             <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
-            <h1 className="form-hero-title">{t('joinToAct.heading')}</h1>
+            <h1 className="form-hero-title">{heading}</h1>
           </div>
         </div>
         {thumbnailUrl && (

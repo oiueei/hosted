@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
@@ -225,13 +225,157 @@ describe('AccountMenu — signed in', () => {
   });
 });
 
-describe('AccountMenu — signed out', () => {
-  test('renders nothing at all', () => {
-    localStorage.removeItem('userCode');
+/**
+ * "Requests to me" moved to the collection menu on the pages that have one (X4, CA
+ * 2026-10-04). `requestsInCollectionMenu` tells the account menu not to offer it
+ * there — and not to ask the server about it either. Without the prop (Home, `/me`
+ * and every page with no collection menu) nothing changed.
+ */
+describe('AccountMenu — where the collection menu carries "Requests to me"', () => {
+  const renderWithCollectionMenu = () =>
+    render(
+      <MemoryRouter>
+        <AccountMenu requestsInCollectionMenu />
+      </MemoryRouter>
+    );
 
-    const { container } = renderMenu();
+  test('it leaves the link out even for an account that receives requests', async () => {
+    meSays(true);
+    renderWithCollectionMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    expect(screen.getByRole('link', { name: /my requests/i })).toBeInTheDocument();
+    // Give the (unasked) answer every chance to arrive.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole('link', { name: REQUESTS_TO_ME.name })).not.toBeInTheDocument();
+  });
+
+  test('it does not ask the server whether the account receives requests', async () => {
+    meSays(true);
+    renderWithCollectionMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('the rest of the menu is as it was, in order', () => {
+    meSays(false);
+    renderWithCollectionMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    const names = within(screen.getByRole('navigation'))
+      .getAllByRole('link')
+      .map((l) => l.textContent);
+    expect(names).toEqual(['Home', 'My profile', 'My requests', 'Log out']);
+  });
+
+  test('without the prop an account that receives requests still has it, after My requests', async () => {
+    meSays(true);
+    renderMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+
+    expect(await screen.findByRole('link', { name: REQUESTS_TO_ME.name })).toHaveAttribute(
+      'href',
+      '/owner-bookings'
+    );
+  });
+});
+
+/**
+ * Signed out, the same icon in the same place is a link to sign in (X3, CA
+ * 2026-10-04): a plain `<Link>` to `/login` that comes back to the page the reader
+ * is on, named "Sign in" — not a panel. It was nothing at all. It is not painted on
+ * the doors a login never returns to: `/login` itself, `/logout`, `/verify/…`.
+ */
+describe('AccountMenu — signed out', () => {
+  const renderAt = (path) => {
+    localStorage.removeItem('userCode');
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <AccountMenu />
+      </MemoryRouter>
+    );
+  };
+
+  test('on a public collection it is a "Sign in" link back to that collection, in the trigger’s place', () => {
+    const { container } = renderAt('/collections/COL001');
+
+    const link = screen.getByRole('link', { name: 'Sign in' });
+    expect(link).toHaveAttribute('href', '/login?next=%2Fcollections%2FCOL001');
+    // The trigger's own class — size, colour and place come from it — inside the
+    // same wrapper, and an icon the screen reader does not read twice.
+    expect(link).toHaveClass('account-menu-trigger');
+    expect(container.querySelector('.account-menu')).toContainElement(link);
+    expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    // Not the signed-in menu: no button, no panel.
+    expect(screen.queryByRole('button', { name: /your account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  test('on /legal the way back is /legal itself', () => {
+    renderAt('/legal');
+
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Flegal'
+    );
+  });
+
+  test('the query string comes along: it is part of the page they were on', () => {
+    renderAt('/collections/COL001/things/THG001?x=1');
+
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Fcollections%2FCOL001%2Fthings%2FTHG001%3Fx%3D1'
+    );
+  });
+
+  test('where there is nothing to come back to it is a plain /login', () => {
+    renderAt('/');
+
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
+
+  test.each([
+    '/login',
+    '/login?next=%2Fcollections%2FCOL001',
+    '/logout',
+    '/verify/abc123',
+    '/rsvp/abc123',
+    '/magic-link/abc123',
+    '/LOGIN',
+    '/%76erify/abc123',
+  ])('on %s it paints nothing at all', (path) => {
+    const { container } = renderAt(path);
 
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByRole('button', { name: /your account/i })).not.toBeInTheDocument();
+  });
+
+  test('it asks the server nothing: the only request the signed-in menu makes is when it opens', () => {
+    renderAt('/collections/COL001');
+
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('signed in, the link is not there and the menu is the one it always was', () => {
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <AccountMenu />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
+  });
+
+  test('has no axe violations', async () => {
+    const { container } = renderAt('/collections/COL001');
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

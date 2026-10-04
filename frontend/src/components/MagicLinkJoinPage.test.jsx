@@ -190,17 +190,21 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in
     );
   }
 
+  // The corner's own "Sign in" icon (X3, 2026-10-04) is every signed-out page's, not
+  // this door's: what `offerSignIn` decides is the button in the page body.
+  const body = (container) => container.querySelector('.page-container');
+
   test('by default the sign-in button to /login is there', () => {
     const { container } = renderDoor();
 
-    expect(container.querySelector('a[href="/login"]')).not.toBeNull();
+    expect(body(container).querySelector('a[href="/login"]')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Already have an account? Sign in →' })).toBeVisible();
   });
 
   test('with offerSignIn={false} no link leads to /login, and the rest of the page is untouched', () => {
     const { container } = renderDoor({ offerSignIn: false });
 
-    expect(container.querySelector('a[href="/login"]')).toBeNull();
+    expect(body(container).querySelector('a[href="/login"]')).toBeNull();
     expect(screen.queryByText(/Already have an account/)).toBeNull();
     // The form and the deployment's own children stay exactly where they were.
     expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
@@ -219,7 +223,7 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave the sign-in
     submitEmail();
     await screen.findByText(/Magic link sent! Check your inbox/);
 
-    expect(container.querySelector('a[href="/login"]')).toBeNull();
+    expect(body(container).querySelector('a[href="/login"]')).toBeNull();
   });
 });
 

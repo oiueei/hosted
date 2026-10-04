@@ -333,6 +333,102 @@ describe('ThingPage — owner button matrix', () => {
   });
 });
 
+// ════════════════════════════════════════════════════════════════════════
+// ThingPage — the decision about a request sits in the hero (X1, CA 2026-10-04)
+// Whoever runs the thing sees "Confirm hold" (primary) and "Decline hold"
+// (secondary) as the first thing under the way back, in a wide row; Edit and
+// Delete stay in the content. A member's "Reserve" stays in the content too: CA
+// wants them to read the whole page before they ask.
+// ════════════════════════════════════════════════════════════════════════
+describe('ThingPage — the decision about a request sits in the hero', () => {
+  const PENDING = [
+    { code: 'BK1', status: 'PENDING', requester_name: 'Lele', end_date: '2099-12-31' },
+  ];
+  const heroRow = (container) => container.querySelector('.form-hero .hero-actions');
+  const content = (container) => container.querySelector('.page-container');
+  const labels = (el) => [...el.children].map((c) => c.textContent.trim());
+  const PRIMARY = 'var(--color-bus)';
+  const SECONDARY = 'var(--color-white)';
+
+  test('a loan with a request waiting: Confirm (primary) and Decline (secondary), in a wide row in the hero', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    setApi({
+      thing: makeThing({ type: 'LEND_THING', status: 'ACTIVE', owner: 'OWNER1' }),
+      calendar: PENDING,
+    });
+    const { container } = renderThingPage();
+
+    const confirm = await screen.findByRole('button', { name: 'Confirm hold' });
+    const decline = screen.getByRole('button', { name: 'Decline hold' });
+
+    const row = heroRow(container);
+    expect(row).toHaveClass('button-row-wide');
+    expect(labels(row)).toEqual(['Confirm hold', 'Decline hold']);
+    expect(confirm.style.getPropertyValue('--background-color')).toBe(PRIMARY);
+    expect(decline.style.getPropertyValue('--background-color')).toBe(SECONDARY);
+    // Nothing is painted twice, and what is not a decision stays where it was.
+    expect(screen.getAllByRole('button', { name: 'Confirm hold' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Decline hold' })).toHaveLength(1);
+    expect(content(container)).not.toContainElement(confirm);
+    expect(content(container)).toContainElement(screen.getByRole('link', { name: 'Edit' }));
+    // Delete is not offered while a request is waiting — in the hero or anywhere.
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+  });
+
+  test('a taken gift: its transfer confirm and Decline are in the hero, and the confirm opens there', async () => {
+    localStorage.setItem('userCode', 'OWNER1');
+    setApi({ thing: makeThing({ status: 'TAKEN', owner: 'OWNER1' }), calendar: PENDING });
+    const { container } = renderThingPage();
+
+    const confirm = await screen.findByRole('button', { name: 'Confirm hold' });
+    const row = heroRow(container);
+    expect(labels(row)).toEqual(['Confirm hold', 'Decline hold']);
+    expect(confirm.style.getPropertyValue('--background-color')).toBe(PRIMARY);
+    expect(
+      screen
+        .getByRole('button', { name: 'Decline hold' })
+        .style.getPropertyValue('--background-color')
+    ).toBe(SECONDARY);
+    expect(content(container)).toContainElement(screen.getByRole('link', { name: 'Edit' }));
+
+    fireEvent.click(confirm);
+
+    // The panel is a sibling of the trigger, so it opens inside the row — the
+    // stylesheet then gives it a line of its own — and never in the content.
+    const panel = (await screen.findByText(/transfers the item/i)).closest('.thing-report-confirm');
+    expect(row).toContainElement(panel);
+    expect(content(container).querySelector('.thing-report-confirm')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Confirm hold' })).toHaveLength(1);
+  });
+
+  test.each([
+    ['a loan with no request waiting', { type: 'LEND_THING', status: 'ACTIVE' }],
+    ['a gift nobody has asked for', { type: 'GIFT_THING', status: 'ACTIVE' }],
+    ['a hidden thing', { type: 'GIFT_THING', status: 'INACTIVE' }],
+  ])('%s: the hero has no buttons', async (_what, over) => {
+    localStorage.setItem('userCode', 'OWNER1');
+    setApi({ thing: makeThing({ ...over, owner: 'OWNER1' }) });
+    const { container } = renderThingPage();
+
+    await screen.findByRole('link', { name: 'Edit' });
+
+    expect(heroRow(container)).toBeNull();
+    expect(container.querySelector('.hero-actions')).toBeNull();
+  });
+
+  test('a member keeps "Claim" in the content: they read the page before they ask', async () => {
+    localStorage.setItem('userCode', 'GUEST1');
+    setApi({ thing: makeThing({ type: 'GIFT_THING', status: 'ACTIVE', owner: 'OWNER1' }) });
+    const { container } = renderThingPage();
+
+    const claim = await screen.findByRole('button', { name: 'Claim' });
+
+    expect(content(container)).toContainElement(claim);
+    expect(container.querySelector('.hero-actions')).toBeNull();
+    expect(container.querySelector('.form-hero')).not.toContainElement(claim);
+  });
+});
+
 describe('ThingPage — a co-curator demoted since the page loaded', () => {
   test('pressing Confirm hold says why, reloads the thing, and the controls that are no longer theirs go', async () => {
     localStorage.setItem('userCode', 'CURATOR1');
