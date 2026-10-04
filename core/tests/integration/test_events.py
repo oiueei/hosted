@@ -100,11 +100,14 @@ class TestMembershipEvents:
         assert event.collection_code == collection.code
 
     def test_joining_logs_user_joined_and_member_joined(self, api_client, public_collection):
-        """Both events, from one request: an account was born and a group grew.
+        """Both events, from one join: an account was born and a group grew.
 
         They are separate rows because they answer separate questions — how many
         people arrived, and how many joins each collection got — and a join by
-        someone who already had an account logs only the second.
+        someone who already had an account logs only the second. They are also
+        written at different moments (W1, 2026-10-04): the account when the
+        address is typed, because the magic link needs one, and the membership
+        when the link is pressed, because only then is it somebody joining.
         """
         response = api_client.post(
             "/api/v1/auth/join/",
@@ -115,6 +118,13 @@ class TestMembershipEvents:
         assert response.status_code == status.HTTP_200_OK
         new_user = User.objects.get(email="joiner@test.com")
         assert Event.objects.filter(kind=Event.Kind.USER_JOINED, actor_code=new_user.code).exists()
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code
+        ).exists()
+
+        rsvp = RSVP.objects.get(user_code=new_user, action=RSVP.Action.MAGIC_LINK)
+        api_client.get(f"/api/v1/auth/verify/{rsvp.token}/")
+
         assert Event.objects.filter(
             kind=Event.Kind.MEMBER_JOINED,
             actor_code=new_user.code,

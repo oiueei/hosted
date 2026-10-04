@@ -105,7 +105,9 @@ class TestTheAnswerIsAlwaysTheSame:
 class TestARealTargetStillWorks:
     """The hardening must cost the two doors that are actual product nothing."""
 
-    def test_a_public_collection_code_joins_and_mails(self, api_client, public_collection):
+    def test_a_public_collection_code_mails_a_link_that_joins_when_pressed(
+        self, api_client, public_collection
+    ):
         response = api_client.post(
             URL,
             {"email": "joiner@test.com", "collection_code": public_collection.code},
@@ -114,9 +116,14 @@ class TestARealTargetStillWorks:
 
         assert response.status_code == 200
         joiner = User.objects.get(email="joiner@test.com")
-        assert public_collection.invites.filter(code=joiner.code).exists()
-        assert RSVP.objects.filter(user_code=joiner, target_code=public_collection.code).exists()
+        rsvp = RSVP.objects.get(user_code=joiner, target_code=public_collection.code)
         assert len(mail.outbox) == 1
+        # The address was only typed: the membership is made by the click (W1).
+        assert not public_collection.invites.filter(code=joiner.code).exists()
+
+        api_client.get(f"/api/v1/auth/verify/{rsvp.token}/")
+
+        assert public_collection.invites.filter(code=joiner.code).exists()
 
 
 @pytest.mark.django_db
@@ -168,7 +175,6 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         assert len(mail.outbox) == 2
         assert not User.objects.filter(email="third@test.com").exists()
         assert not RSVP.objects.filter(user_email="third@test.com").exists()
-        assert not public_collection.invites.filter(email="third@test.com").exists()
 
     @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
     def test_the_refusal_is_indistinguishable_from_a_join(self, api_client, public_collection):
@@ -207,7 +213,8 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         self._join(api_client, bystander, "three@test.com")
 
         assert not User.objects.filter(email="two@test.com").exists()
-        assert bystander.invites.filter(email="three@test.com").exists()
+        # Admitted = a link was sent for the bystander; the click would join them.
+        assert RSVP.objects.filter(user_email="three@test.com", target_code=bystander.code).exists()
 
     @override_settings(**QUOTA_SETTINGS)
     def test_unset_means_no_cap_at_all(self, api_client, public_collection):
@@ -219,7 +226,7 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
             assert self._join(api_client, public_collection, email).status_code == 200
 
         assert len(mail.outbox) == 3
-        assert public_collection.invites.count() == 3
+        assert RSVP.objects.filter(target_code=public_collection.code).count() == 3
 
     @override_settings(
         RATELIMIT_ENABLE=False,
@@ -254,7 +261,7 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
             assert self._join(api_client, public_collection, email).status_code == 200
 
         # A cap of 1 would have stopped the second. The layer is off, so it does
-        # not apply and all three are genuinely admitted — not merely answered
-        # with the unified 200, which a refusal returns too.
-        assert public_collection.invites.count() == 3
+        # not apply and all three are genuinely admitted — a link was made and
+        # mailed for each, not merely the unified 200 a refusal returns too.
+        assert RSVP.objects.filter(target_code=public_collection.code).count() == 3
         assert len(mail.outbox) == 3

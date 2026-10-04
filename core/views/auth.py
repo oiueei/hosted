@@ -456,6 +456,57 @@ class VerifyLinkView(APIView):
         )
         return codes[0] if len(codes) == 1 else None
 
+    @staticmethod
+    def _join_when_pressed(rsvp, user):
+        """The collection a magic link takes the person to, or None — joining them first
+        when the link was a join and that is still allowed.
+
+        ``JoinView`` no longer joins when the address is typed (it may be somebody
+        else's): it writes ``join_source`` — and, for a share link, the
+        ``share_token`` it used — on the RSVP, and the click lands here. The join is
+        **checked again**, because the world moves between the send and the click:
+
+        * by share link: the collection is still ACTIVE **and its ``share_token`` is
+          still the one the link was sent with** — a curator who rotated or revoked it
+          in between withdrew exactly this invitation;
+        * by public collection: it is still ACTIVE **and** PUBLIC.
+
+        Not allowed → nobody is joined and ``None`` comes back, so the general landing
+        rule answers instead of a collection that would 403. Allowed → the join goes
+        through ``_join_collection`` like every other door, so the ``MEMBER_JOINED``
+        event (with its source) and the welcome document happen now, once.
+
+        A link with a ``target_code`` and **no** ``join_source`` is not a pending join:
+        one sent before the join moved to the click (a magic link lives 24 hours), whose
+        person was already joined then, or one a deployment's own door stamped. It only
+        lands, as it always did.
+        """
+        if not rsvp.target_code:
+            return None
+        collection = Collection.objects.filter(
+            code=rsvp.target_code, status=Collection.Status.ACTIVE
+        ).first()
+        if collection is None:
+            return None
+
+        context = rsvp.context or {}
+        source = context.get("join_source")
+        if source is None:
+            return collection.code
+
+        if source == Event.Source.SHARE:
+            sent_with = context.get("share_token")
+            allowed = bool(sent_with) and sent_with == collection.share_token
+        elif source == Event.Source.PUBLIC:
+            allowed = collection.visibility == Collection.Visibility.PUBLIC
+        else:
+            allowed = False
+        if not allowed:
+            return None
+
+        _join_collection(collection, user, source=Event.Source(source))
+        return collection.code
+
     def _handle_magic_link(self, request, rsvp):
         """Handle magic link authentication.
 
@@ -465,7 +516,11 @@ class VerifyLinkView(APIView):
         returning users on /welcome. The rules, in order:
 
         1. The link carries a collection (``target_code``: a share-token or
-           public-collection join) → that collection. They joined it to get there.
+           public-collection join) → that collection. They joined it to get
+           there: the join is made **here, at the click**, once checked again
+           (``_join_when_pressed``) — not when the address was typed. A link
+           whose join is no longer allowed carries no collection, and the rules
+           below answer.
         2. Otherwise a link that remembers where the person was going
            (``context["next"]``, stamped by ``RequestLinkView``) → that path
            (``"path"``). It outranks the single-collection rule: the email they
@@ -492,20 +547,13 @@ class VerifyLinkView(APIView):
         user, refresh, user_data = result
 
         # A join magic link carries the collection the visitor came for
-        # (``target_code``, stamped by JoinView). Drop them straight onto it
-        # after login — they were already added to its invites (private share)
-        # or it is PUBLIC (login-to-act). If the collection went INACTIVE
-        # between the join and the click, this simply doesn't match — the rules
-        # below take over naturally instead of landing the user on a page
-        # that 403s.
-        invited_collection = None
-        if (
-            rsvp.target_code
-            and Collection.objects.filter(
-                code=rsvp.target_code, status=Collection.Status.ACTIVE
-            ).exists()
-        ):
-            invited_collection = rsvp.target_code
+        # (``target_code``, stamped by JoinView). The click is what joins them to
+        # it — and only if that is still allowed — and then drops them onto it.
+        # If the collection went INACTIVE, was made private, or its share link
+        # was rotated or revoked between the send and the click, nobody is joined
+        # and the rules below take over naturally, instead of landing the user on
+        # a page that 403s.
+        invited_collection = self._join_when_pressed(rsvp, user)
         origin = rsvp.origin
         # The thing the visitor was trying to act on when they hit the join wall
         # (JoinView stashes it here); resolved to a landing detail below.
@@ -842,7 +890,20 @@ class VerifyLinkView(APIView):
 class JoinView(APIView):
     """
     POST /api/v1/auth/join/
-    Join a collection you were pointed at, and get a magic link back.
+    Ask to join a collection you were pointed at, and get a magic link back.
+
+    **Nothing is joined here — the click joins.** The address is only typed, and
+    it may be somebody else's: joining on submit put a stranger into a group
+    they had never heard of, and sent them its welcome document, because
+    someone else typed their email. So this view creates the account (the RSVP
+    needs one) with **no membership at all**, stamps the collection on the
+    magic-link RSVP and writes into its `context` what the click will need —
+    `join_source` and, for a share link, the `share_token` used — and the
+    membership is made by `VerifyLinkView` when the link is pressed, after
+    checking the join is still allowed. That is what an emailed invitation has
+    always done (`_handle_collection_invite`). A signed-in reader's own join
+    (`CollectionJoinView`, `ShareJoinView`) stays immediate: there the person
+    pressing is the person joining.
 
     Two doors reach it, and both are the product: an owner's `share_token`
     (the `/share/:token` link they handed out) and a PUBLIC collection's
@@ -940,14 +1001,21 @@ class JoinView(APIView):
         if created:
             Event.log(Event.Kind.USER_JOINED, actor=user)
 
-        _join_collection(join_collection, user, source=join_source)
+        # Nobody is joined here. The address is only *typed* — it may be somebody
+        # else's — so the membership waits for the click on the magic link, which
+        # only the mailbox's owner can make (see `VerifyLinkView._join_when_pressed`).
+        # What the click needs to decide is written on the RSVP: which door this
+        # was and, for a share link, the token that was used, so a link rotated or
+        # revoked in between can be told apart from the one still in force.
+        join_context = {"join_source": join_source.value}
+        if join_source == Event.Source.SHARE:
+            join_context["share_token"] = share_token
 
         # The visitor may have been trying to act on one specific thing (they
         # clicked "Reserve" on a card). Remember it so the magic link lands them
         # back on *that* thing rather than the collection index. Only a
         # non-hidden thing that actually lives in the joined collection
         # qualifies; anything else silently falls back to the collection landing.
-        join_context = {}
         if (
             thing_code
             and join_collection.things.filter(
@@ -955,7 +1023,7 @@ class JoinView(APIView):
                 status__in=[Thing.Status.ACTIVE, Thing.Status.TAKEN],
             ).exists()
         ):
-            join_context = {"thing_code": thing_code}
+            join_context["thing_code"] = thing_code
 
         # The collection is stamped on the magic-link RSVP so VerifyLinkView drops
         # them straight onto it after login. There is always one now: this point
