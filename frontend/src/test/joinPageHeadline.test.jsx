@@ -130,6 +130,80 @@ describe('JoinPage — the collection is named', () => {
 });
 
 /**
+ * "Join {collection}" (CA, 2026-10-04): the title says which group the stranger is
+ * about to join, the way `/share/:token` already does — it used to be "Join to
+ * take part" with the name only in the text below and in the way back. The words
+ * are the share page's own (`share.pageTitleNamed`, `titles.shareNamed`); until
+ * the name is known the title of always.
+ */
+describe('JoinPage — the title names the collection', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const collectionNamed = (headline) =>
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline,
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+        }),
+    });
+
+  test('with the collection loaded, the h1 and the tab both say "Join {name}"', async () => {
+    collectionNamed('Tool Library');
+
+    renderJoin(undefined);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Join Tool Library' })
+    ).toBeInTheDocument();
+    await waitFor(() => expect(document.title).toBe('Join Tool Library — OIUEEI'));
+    expect(screen.queryByRole('heading', { level: 1, name: 'Join to take part' })).toBeNull();
+  });
+
+  test('a headline written once per language is read in the reader’s own', async () => {
+    collectionNamed(JSON.stringify({ en: 'Tool Library', es: 'Biblioteca de herramientas' }));
+
+    renderJoin(undefined);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Join Tool Library' })
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\{"en"/);
+  });
+
+  test('with the name already in the navigation state it is there from the first paint', () => {
+    // The collection call never answers: nothing but the state can have named it.
+    apiFetch.mockReturnValue(new Promise(() => {}));
+
+    renderJoin({ collectionHeadline: 'Tool Library' });
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Join Tool Library' })
+    ).toBeInTheDocument();
+    expect(document.title).toBe('Join Tool Library — OIUEEI');
+  });
+
+  test('without a name — a collection it cannot read — it is the title of always', async () => {
+    apiFetch.mockResolvedValue({ ok: false, status: 404 });
+
+    renderJoin(undefined);
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Join to take part' })
+    ).toBeInTheDocument();
+    expect(document.title).toBe('Join to take part — OIUEEI');
+  });
+});
+
+/**
  * The door looks like the page it leads to (CA, 2026-10-02): a collection with a
  * photo paints it in the hero with the same composition its own page uses
  * (`HeroPhoto`), where `/join` used to be a plain hero in the same colours. The
@@ -168,7 +242,7 @@ describe('JoinPage — the hero carries the collection’s photo', () => {
     expect(container.querySelector('.form-hero')).toHaveClass('form-hero--photo');
     // The words are still in the hero, above the photo's wedge.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Join to take part' })
+      screen.getByRole('heading', { level: 1, name: 'Join Tool Library' })
     ).toBeInTheDocument();
   });
 
