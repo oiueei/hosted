@@ -167,6 +167,10 @@ TEXTS = {
         "Confirm hold: {accept} | Decline hold: {reject}"
     ),
     "booking_request_intro": "{requester} has sent a {action} request:",
+    # The requester's address travels with the request to whoever manages the thing (E1,
+    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
+    "requester_email_label": "Email",
     "hold_confirm_cta": "Confirm hold",
     "hold_cancel_cta": "Decline hold",
     # Booking decision (to requester)
@@ -196,6 +200,12 @@ TEXTS = {
     # person's name is not in it any more (CA, 2026-10-02).
     "confirmation_outro_one": "We've let the curator know — they'll get back to you soon.",
     "confirmation_outro_other": "We've let the curators know — they'll get back to you soon.",
+    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # which the managers now hold. Said, never printed — the email already arrives there.
+    "contact_shared_request": (
+        "Your email goes with the request: if needed, they'll write to you here, at the address "
+        "you sign in to OIUEEI with."
+    ),
     # FAQ question (to owner)
     "faq_question_subject": "There is a question to be answered",
     "faq_question_plain": "{questioner} has asked about '{thing}': {question} View thing: {url}",
@@ -257,12 +267,12 @@ TEXTS = {
         "Your reservation of '{thing}' is confirmed for {start} to {end}. View the listing: {url}"
     ),
     "reservation_confirmed_intro": "Your reservation is confirmed:",
+    "contact_shared_reservation": "Your email goes with the booking.",
     "reservation_fee_label": "Fee",
     "reservation_where_label": "Where",
     "reservation_notice_subject": "{requester} reserved '{thing}'",
     "reservation_notice_plain": "{requester} reserved '{thing}' for {start} to {end}.",
     "reservation_notice_intro": "{requester} has reserved:",
-    "reservation_requester_email_label": "Email",
     "reservation_note_label": "Their note",
     "reservation_cancelled_subject": "Reservation cancelled: '{thing}'",
     "reservation_cancelled_to_guest_plain": (

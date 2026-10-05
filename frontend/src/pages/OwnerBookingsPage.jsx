@@ -199,6 +199,7 @@ export default function OwnerBookingsPage() {
     _collectionCode: b.collection_code,
     _collectionHeadline: L(b.collection_headline),
     _requesterName: b.requester_name,
+    _requesterEmail: b.requester_email,
     _startDate: b.start_date,
     _endDate: b.end_date,
     _when: formatBookingWhen(b),
@@ -247,14 +248,24 @@ export default function OwnerBookingsPage() {
       transform: (row) => (
         <div className="table-cell-lines">
           {/* Always shown: a requester who never set a name arrives as '' from
-              the serializer (the email fallback is withheld, L2), and dropping
-              the line entirely loses "who asked". `common.aMember` is the same
-              stand-in the inbox and the cards use. */}
+              `requester_name` (the serializer never puts their address in the name's
+              place, L2), and dropping the line entirely loses "who asked".
+              `common.aMember` is the same stand-in the inbox and the cards use. */}
           <p>
             {t('ownerBookings.requestedBy', {
               name: row._requesterName || t('common.aMember'),
             })}
           </p>
+          {/* And the address itself, under the name, as a link (E4, CA 2026-10-05): the
+              reader runs this thing, and the request email already carries it to them
+              (E1) — L2's own exception, the reader holds it. It arrives in
+              `requester_email`; the line is left out when it comes empty. Not a card's
+              own line: `ResponsiveTable` paints the card from this same cell. */}
+          {row._requesterEmail && (
+            <p>
+              <a href={`mailto:${row._requesterEmail}`}>{row._requesterEmail}</a>
+            </p>
+          )}
           <p>
             {t('myBookings.requested', {
               date: formatDate(row._created),

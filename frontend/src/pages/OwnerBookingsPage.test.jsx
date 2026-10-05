@@ -722,3 +722,96 @@ describe('OwnerBookingsPage — the bold links of the table', () => {
     }
   });
 });
+
+// E4 (CA, 2026-10-05). The request email already carries the requester's address to
+// every manager of the thing (E1) and the API sends it in `requester_email`; the page
+// is the other place a manager looks for it, so it sits under "Asked by …" as a link
+// they can write from. Table and phone card are painted from the same cell, so one
+// test each says it.
+describe('OwnerBookingsPage — the requester’s address under the name', () => {
+  const asked = (over = {}) => booking({ requester_email: 'lele@example.com', ...over });
+
+  test('in the table it is a mailto link right under "Asked by …"', async () => {
+    mockApi([{ results: [asked()], next: null }]);
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'lele@example.com' });
+    expect(link).toHaveAttribute('href', 'mailto:lele@example.com');
+    expect(
+      within(screen.getAllByRole('table')[0]).getByRole('link', { name: 'lele@example.com' })
+    ).toBe(link);
+    // Its own line, directly under the name's.
+    expect(link.closest('p').previousElementSibling).toHaveTextContent('Asked by Lele');
+    expect(link.closest('p').nextElementSibling).toHaveTextContent('Requested 01/08/2026');
+  });
+
+  test('on a phone it is in the card, the same link', async () => {
+    const media = mockMatchMedia({ [PHONE]: true });
+    try {
+      mockApi([{ results: [asked()], next: null }]);
+      renderPage();
+
+      const list = await screen.findByRole('list', { name: 'Requests waiting for your answer' });
+      const [card] = within(list).getAllByRole('listitem');
+      const link = within(card).getByRole('link', { name: 'lele@example.com' });
+      expect(link).toHaveAttribute('href', 'mailto:lele@example.com');
+      expect(link.closest('p').previousElementSibling).toHaveTextContent('Asked by Lele');
+      expect(screen.queryByRole('table')).toBeNull();
+    } finally {
+      media.restore();
+    }
+  });
+
+  test('each row has its own requester’s address, settled requests included', async () => {
+    mockApi([
+      {
+        results: [
+          asked(),
+          asked({
+            code: 'BKG002',
+            status: 'ACCEPTED',
+            requester_name: 'Lili',
+            requester_email: 'lili@example.com',
+          }),
+        ],
+        next: null,
+      },
+    ]);
+    renderPage();
+
+    expect(await screen.findByRole('link', { name: 'lele@example.com' })).toHaveAttribute(
+      'href',
+      'mailto:lele@example.com'
+    );
+    expect(screen.getByRole('link', { name: 'lili@example.com' })).toHaveAttribute(
+      'href',
+      'mailto:lili@example.com'
+    );
+  });
+
+  test('a requester with no name is still "A member" and still has the address to write to', async () => {
+    mockApi([{ results: [asked({ requester_name: '' })], next: null }]);
+    renderPage();
+
+    expect(await screen.findByText('Asked by A member')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'lele@example.com' })).toBeInTheDocument();
+    // …and the address does not take the name's place.
+    expect(screen.queryByText('Asked by lele@example.com')).toBeNull();
+  });
+
+  test.each([
+    ['empty', ''],
+    ['absent', undefined],
+    ['null', null],
+  ])(
+    'with the address %s the line is not painted, and the rest of the cell is',
+    async (_, value) => {
+      mockApi([{ results: [booking({ requester_email: value })], next: null }]);
+      renderPage();
+
+      expect(await screen.findByText('Asked by Lele')).toBeInTheDocument();
+      expect(document.querySelector('a[href^="mailto:"]')).toBeNull();
+      expect(screen.getByText('Requested 01/08/2026')).toBeInTheDocument();
+    }
+  );
+});

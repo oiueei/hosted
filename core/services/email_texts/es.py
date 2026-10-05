@@ -161,6 +161,10 @@ TEXTS = {
         "Confirmar la solicitud: {accept} | Rechazar la solicitud: {reject}"
     ),
     "booking_request_intro": "{requester} te ha enviado una solicitud de {action}:",
+    # The requester's address travels with the request to whoever manages the thing (E1,
+    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
+    "requester_email_label": "Email",
     "hold_confirm_cta": "Confirmar la solicitud",
     "hold_cancel_cta": "Rechazar la solicitud",
     # Booking decision (to requester)
@@ -192,6 +196,12 @@ TEXTS = {
     # person's name is not in it any more (CA, 2026-10-02).
     "confirmation_outro_one": "Hemos avisado al dinamizador — te responderá pronto.",
     "confirmation_outro_other": "Hemos avisado a los dinamizadores — te responderán pronto.",
+    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # which the managers now hold. Said, never printed — the email already arrives there.
+    "contact_shared_request": (
+        "Tu email va con la solicitud: si hace falta, te escribirán aquí, al correo con el que "
+        "entras en OIUEEI."
+    ),
     # FAQ question (to owner)
     "faq_question_subject": "Hay una pregunta por responder",
     "faq_question_plain": (
@@ -258,12 +268,12 @@ TEXTS = {
         "Tu reserva de '{thing}' está confirmada del {start} al {end}. Ver la publicación: {url}"
     ),
     "reservation_confirmed_intro": "Tu reserva está confirmada:",
+    "contact_shared_reservation": "Tu email va con la reserva.",
     "reservation_fee_label": "Coste",
     "reservation_where_label": "Dónde",
     "reservation_notice_subject": "{requester} ha reservado '{thing}'",
     "reservation_notice_plain": "{requester} ha reservado '{thing}' del {start} al {end}.",
     "reservation_notice_intro": "{requester} ha reservado:",
-    "reservation_requester_email_label": "Email",
     "reservation_note_label": "Su mensaje",
     "reservation_cancelled_subject": "Reserva cancelada: '{thing}'",
     "reservation_cancelled_to_guest_plain": (
