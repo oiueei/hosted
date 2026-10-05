@@ -37,7 +37,8 @@ export const deploymentRoutes = [
 // service is (CA, 2026-10-03). The name is upstream's and means "where a
 // stranger who is new is sent from /login" — upstream it is the open door
 // itself, the only page a newcomer needs, but here the newcomer first reads
-// /welcome, whose hero offers both ways on: "New here?" to the open door above
+// /welcome, whose last row of buttons (after the personas — a stranger's hero has
+// none since 2026-10-05) offers both ways on: "New here?" to the open door above
 // and "Already have an account?" back to /login. So this is deliberately NOT
 // '/popin' any more, though that route is still declared and still reached.
 export const popInPath = '/welcome';

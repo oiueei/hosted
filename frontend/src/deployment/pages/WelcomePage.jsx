@@ -102,41 +102,37 @@ export default function WelcomePage() {
             </p>
           )}
           <h1 className="form-hero-title">{t('welcome.pageTitle')}</h1>
-          <div className="button-row-wide" style={{ paddingBottom: 'var(--spacing-s)' }}>
-            {isAuthenticated ? (
-              <>
-                <ButtonLink
-                  to="/collections/new"
-                  state={{
-                    backPath: '/welcome',
-                    backLabel: t('welcome.pageTitle'),
-                  }}
-                  style={btnStyle}
-                >
-                  {t('welcome.createCollection')}
-                </ButtonLink>
-                <ButtonLink
-                  to="/me/edit"
-                  state={{
-                    backPath: '/welcome',
-                    backLabel: t('welcome.pageTitle'),
-                  }}
-                  style={btnSecondaryStyle}
-                >
-                  {t('welcome.editProfile')}
-                </ButtonLink>
-              </>
-            ) : (
-              <>
-                <ButtonLink to="/popin" style={btnStyle}>
-                  {t('welcome.newHereCta')}
-                </ButtonLink>
-                <ButtonLink to="/login" style={btnSecondaryStyle}>
-                  {t('welcome.haveAccountCta')}
-                </ButtonLink>
-              </>
-            )}
-          </div>
+          {/* The hero has buttons only for someone who is already in: "Create
+              collection" (primary) and "Edit profile". A stranger's hero has none
+              (CA, 2026-10-05) — the title and the wave, and the doors are the last
+              row of the page, after the personas — so the gap under the title that
+              the row's padding gave is kept with a spacer, not by an empty row. */}
+          {isAuthenticated ? (
+            <div className="button-row-wide" style={{ paddingBottom: 'var(--spacing-s)' }}>
+              <ButtonLink
+                to="/collections/new"
+                state={{
+                  backPath: '/welcome',
+                  backLabel: t('welcome.pageTitle'),
+                }}
+                style={btnStyle}
+              >
+                {t('welcome.createCollection')}
+              </ButtonLink>
+              <ButtonLink
+                to="/me/edit"
+                state={{
+                  backPath: '/welcome',
+                  backLabel: t('welcome.pageTitle'),
+                }}
+                style={btnSecondaryStyle}
+              >
+                {t('welcome.editProfile')}
+              </ButtonLink>
+            </div>
+          ) : (
+            <div className="spacer-s" />
+          )}
         </div>
         <Koros
           className="form-hero-koros"
@@ -225,26 +221,41 @@ export default function WelcomePage() {
         ))}
         <div className="spacer-xl" />
         {/* One row at the end, after the personas (CA, 2026-10-03), the first
-            button the primary one and the rest secondary. Signed out: "New
-            here?" to the open door (the same words as the hero's), then the FAQ
-            and "Ideas and bugs". Signed in: the person is already inside, so no
-            "enter" button — the FAQ is the primary and "Ideas and bugs" follows.
+            button the primary one and the rest secondary. Signed out (CA,
+            2026-10-05; the hero has no buttons for a stranger): "New here?" to
+            the open door, primary, then the FAQ, then "Already have an account?"
+            back to /login — the question and its answer, the way they were in the
+            hero, now the whole of the page's doors. No "Ideas and bugs" for a
+            stranger. Signed in: the person is already inside, so no "enter"
+            button — the FAQ is the primary and "Ideas and bugs" follows, as ever.
             The FAQ used to be a link in the commitment section and "Ideas and
-            bugs" a line under this row; both are buttons of the row now, and
-            `FeedbackLink` renders only its `<a>` for that, nothing at all where
-            the deployment sets no feedback URL. */}
+            bugs" a line under this row; `FeedbackLink` renders only its `<a>` for
+            that, nothing at all where the deployment has no feedback form. */}
         <div className="button-row-wide">
-          {!isAuthenticated && (
-            <ButtonLink to="/popin" style={btnStyle}>
-              {t('welcome.newHereCta')}
-            </ButtonLink>
+          {isAuthenticated ? (
+            <>
+              {faqPath && (
+                <ButtonLink to={faqPath} style={btnStyle}>
+                  {t('welcome.faqLink')}
+                </ButtonLink>
+              )}
+              <FeedbackLink style={btnSecondaryStyle} />
+            </>
+          ) : (
+            <>
+              <ButtonLink to="/popin" style={btnStyle}>
+                {t('welcome.newHereCta')}
+              </ButtonLink>
+              {faqPath && (
+                <ButtonLink to={faqPath} style={btnSecondaryStyle}>
+                  {t('welcome.faqLink')}
+                </ButtonLink>
+              )}
+              <ButtonLink to="/login" style={btnSecondaryStyle}>
+                {t('welcome.haveAccountCta')}
+              </ButtonLink>
+            </>
           )}
-          {faqPath && (
-            <ButtonLink to={faqPath} style={isAuthenticated ? btnStyle : btnSecondaryStyle}>
-              {t('welcome.faqLink')}
-            </ButtonLink>
-          )}
-          <FeedbackLink style={btnSecondaryStyle} />
         </div>
       </div>
     </div>
