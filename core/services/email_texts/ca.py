@@ -168,6 +168,10 @@ TEXTS = {
         "Confirmar la sol·licitud: {accept} | Rebutjar la sol·licitud: {reject}"
     ),
     "booking_request_intro": "{requester} t'ha enviat una sol·licitud {action}:",
+    # The requester's address travels with the request to whoever manages the thing (E1,
+    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
+    "requester_email_label": "Email",
     "hold_confirm_cta": "Confirmar la sol·licitud",
     "hold_cancel_cta": "Rebutjar la sol·licitud",
     # Booking decision (to requester)
@@ -202,6 +206,12 @@ TEXTS = {
     # person's name is not in it any more (CA, 2026-10-02).
     "confirmation_outro_one": "Hem avisat el dinamitzador — aviat et respondrà.",
     "confirmation_outro_other": "Hem avisat els dinamitzadors — aviat et respondran.",
+    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # which the managers now hold. Said, never printed — the email already arrives there.
+    "contact_shared_request": (
+        "El teu email va amb la sol·licitud: si cal, t'escriuran aquí, al correu amb què entres a "
+        "OIUEEI."
+    ),
     # FAQ question (to owner)
     "faq_question_subject": "Hi ha una pregunta per respondre",
     "faq_question_plain": (
@@ -269,12 +279,12 @@ TEXTS = {
         "Veure la publicació: {url}"
     ),
     "reservation_confirmed_intro": "La teva reserva està confirmada:",
+    "contact_shared_reservation": "El teu email va amb la reserva.",
     "reservation_fee_label": "Cost",
     "reservation_where_label": "On",
     "reservation_notice_subject": "{requester} ha reservat '{thing}'",
     "reservation_notice_plain": "{requester} ha reservat '{thing}' del {start} al {end}.",
     "reservation_notice_intro": "{requester} ha reservat:",
-    "reservation_requester_email_label": "Email",
     "reservation_note_label": "El seu missatge",
     "reservation_cancelled_subject": "Reserva cancel·lada: '{thing}'",
     "reservation_cancelled_to_guest_plain": (

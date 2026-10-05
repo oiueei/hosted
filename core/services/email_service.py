@@ -1475,6 +1475,30 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
 # --- Category 2: Activity ------------------------------------------------------
 
 
+def _requester_contact(T, requester):
+    """The requester's address, for the emails that tell whoever manages a thing that
+    somebody asked for it (E1, CA 2026-10-05).
+
+    The address travels **with the request**, not when it is accepted: whoever sells a
+    thing to a stranger can agree on price, place and time before committing the thing.
+    It goes one way only — requester to manager; the manager's address is never shown to
+    the requester, who will have it if they are written to. L2 allows it because the
+    reader of these emails is whoever manages the thing and already reads the same
+    address in the app (``BookingPeriodSerializer.requester_email``, shown on the
+    "Requests to me" page since E4). The sender sets ``Reply-To`` to the same address, so
+    "Reply" reaches the requester; there is no sentence saying so (E5, CA 2026-10-05: CA
+    took it out).
+
+    Returns ``(plain, blocks)``: the plain-text line (``Email: …``) and the HTML blocks
+    (one ``email=True`` field).
+    """
+    label = T("requester_email_label")
+    return (
+        f"{label}: {requester.email}",
+        [_field(label, requester.email, email=True)],
+    )
+
+
 def send_booking_request_email(requester, thing, booking, manager_email, accept_link, reject_link):
     """Send a booking request email to one manager of the thing — its owner, or a
     curator of a PROPRIETARY collection it sits in — with **their own**
@@ -1505,10 +1529,16 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
             reject=reject_link,
         )
 
+    # Their address, right under the entry sentence in the HTML and after the sentence in
+    # the plain text (E1); "Reply" reaches them through the Reply-To below.
+    contact_plain, contact_blocks = _requester_contact(T, requester)
+    plain += "\n\n" + contact_plain
+
     subject = T("booking_request_subject").format(action=action)
     html = _render_email(
         [
             _para(T("booking_request_intro").format(requester=requester_name, action=action)),
+            *contact_blocks,
             *_booking_detail_blocks(booking, lang),
             # Confirming is the primary button, cancelling the secondary one, and
             # both links follow as text — the same two-answer shape as the
@@ -1523,7 +1553,15 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
         header=header,
     )
     _send(
-        manager_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header
+        manager_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        reply_to=[requester.email],
+        user=user,
+        lang=lang,
+        header=header,
     )
 
 
@@ -1637,6 +1675,10 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
     # / "responderán"). Nobody told cannot happen (the owner is always a manager and
     # a requester is never the owner); it is read as one rather than as "curators".
     outro = T("confirmation_outro_one" if informed <= 1 else "confirmation_outro_other")
+    # And where they will be written to (E2, CA 2026-10-05): the address they sign in
+    # with, which the managers now hold. Behind the outro in both halves; never printed
+    # — the email already arrives there.
+    contact_shared = T("contact_shared_request")
     thing_url = _thing_url(thing, reader=user, collection=collection)
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
@@ -1647,12 +1689,12 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
             action=action,
             thing=headline,
             when=_when_phrase(booking, T),
-            outro=outro,
+            outro=f"{outro} {contact_shared}",
             url=thing_url,
         )
     else:
         plain = T("confirmation_plain").format(
-            action=action, thing=headline, outro=outro, url=thing_url
+            action=action, thing=headline, outro=f"{outro} {contact_shared}", url=thing_url
         )
 
     note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
@@ -1665,6 +1707,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
             _para(T("confirmation_intro").format(action=action)),
             *_booking_detail_blocks(booking, lang),
             _para(outro),
+            _para(contact_shared),
             _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
             *note_blocks,
         ],
@@ -2040,6 +2083,10 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
+    # Where they will be written to (E2, CA 2026-10-05): said, not printed.
+    contact_shared = T("contact_shared_reservation")
+    plain += "\n\n" + contact_shared
+    blocks.append(_para(contact_shared))
     blocks.append(_cta(thing_url, T("view_thing_cta"), T("cta_fallback")))
     # The owner's note for whoever books here — after the listing link, before
     # the legal footer (which _render_email appends itself). Same collection
@@ -2083,20 +2130,33 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     # The requester's own address, so the owner can reach them directly (CA,
     # 2026-09-22): a RESERVE_THING requester is always a collection member by
     # the time this fires (403 otherwise, see request_reservation), so a real
-    # address is guaranteed here. The owner already sees it in the app
-    # (BookingPeriodSerializer.requester_email) — L2's own exception, the
-    # reader already holds it — this just puts it in the notice too.
-    plain += "\n\n" + T("reservation_requester_email_label") + ": " + requester.email
+    # address is guaranteed here. The owner reads the same address in the app —
+    # "Requests to me" shows it as a link (E4, CA 2026-10-05; it is
+    # BookingPeriodSerializer.requester_email) — which is L2's own exception, the
+    # reader already holds it. Since E1 (CA, 2026-10-05) "Reply" reaches them: the
+    # Reply-To below is the requester's.
+    contact_plain, contact_blocks = _requester_contact(T, requester)
+    plain += "\n\n" + contact_plain
     blocks = [
         _para(T("reservation_notice_intro").format(requester=requester_name)),
-        _field(T("reservation_requester_email_label"), requester.email, email=True),
+        *contact_blocks,
         _field(T("dates_label"), _fmt_dates(start, end)),
     ]
     if booking.project_note:
         plain += "\n\n" + T("reservation_note_label") + ": " + booking.project_note
         blocks.append(_field(T("reservation_note_label"), booking.project_note))
     html = _render_email(blocks, lang=lang, header=header)
-    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
+    _send(
+        owner_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        reply_to=[requester.email],
+        user=user,
+        lang=lang,
+        header=header,
+    )
 
 
 def send_reservation_cancelled_email(
