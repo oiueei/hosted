@@ -5,6 +5,13 @@ import { describe, test, expect, vi } from 'vitest';
 import SiteFooter from '../components/SiteFooter';
 import { declarations, declarationsInMedia, rulesFor, declared } from './cssRules';
 
+// This file is about what a deployment with no forms of its own hosted elsewhere shows
+// — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
+// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// `externalForms` a deployment may have are switched off here by stubbing the helper
+// that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
+vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+
 /**
  * The colophon carries the public doors a signed-out reader has.
  *
@@ -35,7 +42,7 @@ describe('SiteFooter', () => {
        *does* have an about page — where the real export is a path and asserting
        its absence would fail on the branch this indirection exists to serve. */
     vi.resetModules();
-    vi.doMock('../deployment', () => ({ aboutPath: null }));
+    vi.doMock('../deployment', () => ({ aboutPath: null, externalForms: null }));
     const { default: Footer } = await import('../components/SiteFooter');
 
     render(
@@ -151,7 +158,7 @@ describe('SiteFooter — one line from 768px', () => {
      that has the other shape. */
   const lineWith = async (aboutPath) => {
     vi.resetModules();
-    vi.doMock('../deployment', () => ({ aboutPath }));
+    vi.doMock('../deployment', () => ({ aboutPath, externalForms: null }));
     try {
       const { default: Footer } = await import('../components/SiteFooter');
       const { container } = render(

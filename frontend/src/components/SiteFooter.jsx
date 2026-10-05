@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import useTheeeme from '../hooks/useTheeeme';
 import { aboutPath } from '../deployment';
+import { externalFormUrl } from '../utils/externalForms';
 
 /**
  * The colophon under every page (i14): "Made with ♥︎ in Zona Franca,
@@ -28,7 +29,11 @@ import { aboutPath } from '../deployment';
  *
  * **"Contact us" is the third door** (CA, 2026-10-04): it was a speech-bubble icon
  * in the corner of every hero ("too many icons up there"); it is `/contact` here,
- * on every page, in the reader's language. `/login` keeps its own "trouble signing
+ * on every page, in the reader's language — **or, where a deployment hosts a form of
+ * its own for it (`deployment/externalForms.contact`, TL1, CA 2026-10-05), a plain
+ * link to that form** in the reader's language, in a new tab and announced as one.
+ * `/contact` and its page stay in the app either way (upstream uses them; elsewhere
+ * they are reached only by typing the address). `/login` keeps its own "trouble signing
  * in?" line, which is a different link, in the content.
  *
  * **Aligned to the content column, not centred** (CA, 2026-10-04): the footer's own
@@ -50,8 +55,11 @@ import { aboutPath } from '../deployment';
  */
 export default function SiteFooter() {
   useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tc } = useTheeeme();
+  // Where "Contact us" goes: a form a deployment hosts elsewhere, in the reader's
+  // language and in a new tab, or the app's own `/contact` (TL1, CA 2026-10-05).
+  const contactUrl = externalFormUrl('contact', i18n.resolvedLanguage || i18n.language);
   return (
     <footer
       className="site-footer"
@@ -71,7 +79,20 @@ export default function SiteFooter() {
           )}
           <Link to="/legal">{t('footer.legal')}</Link>
           <span aria-hidden="true"> · </span>
-          <Link to="/contact">{t('footer.contact')}</Link>
+          {contactUrl ? (
+            // Opens in a new tab and says so, the way "Ideas and bugs" does: the
+            // visible words first, then the sentence (HDS's own prop would print it).
+            <a
+              href={contactUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${t('footer.contact')}. ${t('common.opensInNewTab')}`}
+            >
+              {t('footer.contact')}
+            </a>
+          ) : (
+            <Link to="/contact">{t('footer.contact')}</Link>
+          )}
         </nav>
         <span className="site-footer-sep" aria-hidden="true">
           {' · '}

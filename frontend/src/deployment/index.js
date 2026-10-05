@@ -34,6 +34,20 @@
  *   deployment: who operates it, what it lets people create, how to ask for
  *   something it holds back. This repository has no answers to give.
  *   Same shape as `aboutPath`: a link to a 404 is worse than one link fewer.
+ * @property {?{contact?: ?Object<string, string>, feedback?: ?Object<string, string>, requestAccess?: ?Object<string, string>}} externalForms
+ *   Forms hosted elsewhere that take the place of the app's own ways of writing to
+ *   the team (TL1, CA 2026-10-05), or `null` for none — which is upstream, where
+ *   nothing changes: `/contact` is the app's own page, "Ideas and bugs" appears only
+ *   if `VITE_FEEDBACK_URL` is set, and "Request access" goes where the server's
+ *   `capabilities.request_url` says. Each of the three is `{ es, ca, en }`, one URL
+ *   per language, or `null` / absent for "there is none"; the page of the reader's
+ *   language is opened as it is written here (no parameter is added to it) in a new
+ *   tab, and a language without a URL falls back to `es`, and then to nothing.
+ *   - `contact`: where the footer's "Contact us" goes, instead of `/contact`.
+ *   - `feedback`: "Ideas and bugs", before `VITE_FEEDBACK_URL`.
+ *   - `requestAccess`: "Request access", before `capabilities.request_url`.
+ *   Core knows nothing about who hosts the forms; this is the same extension point
+ *   as `popInPath`, `aboutPath` and `faqPath`.
  * @property {Object<string, Object>} deploymentI18n
  *   Extra translations, keyed by language code, merged into the `translation`
  *   namespace at startup. A deployment's copy stays out of
@@ -51,5 +65,9 @@ export const popInPath = null;
 export const aboutPath = null;
 
 export const faqPath = null;
+
+// No forms of its own hosted elsewhere: the app's own pages and the server's answers
+// stand (see the docstring). A deployment that has them writes the object here.
+export const externalForms = null;
 
 export const deploymentI18n = {};

@@ -155,6 +155,15 @@ export const popInPath = '/join';        // the "new here?" button on /login
 export const aboutPath = '/about';       // the footer's "what this is" link
 export const faqPath = '/faq';           // the help link under /login's form
 
+// Forms hosted elsewhere (a form service) that stand in for the app's own ways of
+// writing to you: the footer's "Contact us", "Ideas and bugs" and "Request access".
+// One address per language; leave a key out (or the whole object `null`) for none.
+export const externalForms = {
+  contact: { es: 'https://forms.example/c-es', ca: 'https://forms.example/c-ca', en: 'https://forms.example/c-en' },
+  feedback: { es: 'https://forms.example/f-es', ca: 'https://forms.example/f-ca', en: 'https://forms.example/f-en' },
+  requestAccess: { es: 'https://forms.example/r-es', ca: 'https://forms.example/r-ca', en: 'https://forms.example/r-en' },
+};
+
 export const deploymentI18n = {
   en: { join: { title: 'Come and see' } },
   es: { join: { title: 'Pásate a vernos' } },
@@ -162,9 +171,20 @@ export const deploymentI18n = {
 ```
 
 Upstream exports the empty values: no extra routes, no open door, no about page,
-no FAQ link, no extra copy. `App.jsx`, `LoginPage.jsx`, `SiteFooter.jsx`,
-`CollectionPage.jsx` and `VerifyPage.jsx` read them and are **byte-identical in
-both**.
+no FAQ link, no forms of its own, no extra copy. `App.jsx`, `LoginPage.jsx`,
+`SiteFooter.jsx`, `CollectionPage.jsx` and `VerifyPage.jsx` read them and are
+**byte-identical in both**.
+
+`externalForms` is `{ contact, feedback, requestAccess }`, each `{ es, ca, en }`.
+When a deployment has one, the place that used to lead to the app's own way opens the
+form instead, **in a new tab and exactly as the address is written** (no language,
+user or page is added to it): the footer's "Contact us" opens the `contact` form
+(otherwise `/contact`, the app's own page, which stays in either case); "Ideas and
+bugs" opens `feedback` (otherwise the build variable `VITE_FEEDBACK_URL` — one address
+for every language — or nothing); "Request access" opens `requestAccess` (otherwise
+`capabilities.request_url` from section 3). The address of the reader's language is
+used; a language without one uses `es`; no address at all, and the place behaves as
+it does upstream. Core knows nothing about who hosts the forms.
 
 `deploymentI18n` is deep-merged into the `translation` namespace every time a
 language file lands, so a deployment's strings stay out of

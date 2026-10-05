@@ -1,11 +1,14 @@
 import { Link as HdsLink } from 'hds-react';
 import { useTranslation } from 'react-i18next';
+import { externalFormUrl } from '../utils/externalForms';
 
-// Alpha feedback channel. This is service-layer policy, not product: without
-// VITE_FEEDBACK_URL the door simply isn't offered, the same pattern as
-// `popInPath`/`aboutPath` in `src/deployment/` — upstream doesn't point anyone's
-// feedback at CA's own form on their behalf. A deployment that wants the feature
-// sets the build-time env var and points it at its own.
+// Alpha feedback channel. This is service-layer policy, not product: without a form
+// the door simply isn't offered, the same pattern as `popInPath`/`aboutPath` in
+// `src/deployment/` — upstream doesn't point anyone's feedback at CA's own form on
+// their behalf. A deployment that wants the feature either hosts forms of its own
+// (`deployment/externalForms.feedback`, one address per language, TL1, CA 2026-10-05:
+// it is read first) or sets the build-time env var `VITE_FEEDBACK_URL`, a single
+// address for every language, as it always could.
 const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_URL;
 
 /**
@@ -29,15 +32,18 @@ const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_URL;
  * the label of an `external` link. The visible name stays inside the accessible
  * one (WCAG 2.5.3).
  *
- * Renders nothing without a URL.
+ * The address is the deployment's form of the reader's language
+ * (`externalForms.feedback`, as written — nothing is added to it) if it has one;
+ * otherwise `VITE_FEEDBACK_URL`, as before. Renders nothing without either.
  */
 export default function FeedbackLink({ style }) {
-  const { t } = useTranslation();
-  if (!FEEDBACK_URL) return null;
+  const { t, i18n } = useTranslation();
+  const url = externalFormUrl('feedback', i18n.resolvedLanguage || i18n.language) || FEEDBACK_URL;
+  if (!url) return null;
   const label = t('feedback.button');
   return (
     <HdsLink
-      href={FEEDBACK_URL}
+      href={url}
       useButtonStyles
       style={style}
       target="_blank"
