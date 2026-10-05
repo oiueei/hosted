@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { StrictMode, useEffect } from 'react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
@@ -221,6 +221,15 @@ describe('a magic link applies the saved language of the account', () => {
 
   // What language the page the person lands on is first painted in.
   const seen = { language: undefined };
+  // `seen` is written by an effect, which runs AFTER the commit that paints "landed":
+  // `findByText('landed')` can resolve first, and on a loaded machine (the whole suite
+  // with coverage) it does, so reading `seen` straight after it read `undefined`.
+  // Wait for the effect to have run — and only for that: the value is asserted after
+  // this, not inside the wait, or a language that changes late would pass as good.
+  const landed = async () => {
+    await screen.findByText('landed');
+    await waitFor(() => expect(seen.language).not.toBeUndefined());
+  };
   function Landing() {
     useEffect(() => {
       seen.language = i18n.language;
@@ -258,7 +267,7 @@ describe('a magic link applies the saved language of the account', () => {
   test('a saved language is in force before the person lands, and persists like the profile’s', async () => {
     renderMagicLink('ca');
 
-    await screen.findByText('landed');
+    await landed();
     expect(seen.language).toBe('ca');
     expect(i18n.language).toBe('ca');
     // Kept for the next visit exactly as the profile page's own Select keeps it.
@@ -272,7 +281,7 @@ describe('a magic link applies the saved language of the account', () => {
   ])('%s leaves the language alone', async (_what, language) => {
     renderMagicLink(language);
 
-    await screen.findByText('landed');
+    await landed();
     expect(seen.language).toBe('es');
     expect(i18n.language).toBe('es');
   });
