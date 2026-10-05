@@ -340,6 +340,79 @@ describe('RequestThingPage — free dates: the return calendar', () => {
   });
 });
 
+// RW1 (CA, 2026-10-05): the server demands the collection's weekdays at both ends of a loan
+// or rental, with or without fixed lengths, and the free form did not apply them — a
+// Wednesday could be picked in a "Saturdays only" collection and was refused on send.
+// June 2026: the 6th, 13th and 20th are Saturdays; the 3rd and 10th are Wednesdays.
+describe('RequestThingPage — free dates: only the weekdays the collection allows', () => {
+  const SATURDAYS = { rental_weekdays: [5] };
+
+  test('the pickup calendar leaves a Wednesday out and a Saturday open', async () => {
+    free([], SATURDAYS);
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('pickup');
+
+    expect(dayDisabled('2026-06-03')).toBe(true); // Wednesday
+    expect(dayDisabled('2026-06-05')).toBe(true); // Friday
+    expect(dayDisabled('2026-06-07')).toBe(true); // Sunday
+    expect(dayEnabled('2026-06-06')).toBe(true); // Saturday
+    expect(dayEnabled('2026-06-13')).toBe(true);
+  });
+
+  test('the return calendar does the same before any pickup is chosen', async () => {
+    free([], SATURDAYS);
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('return');
+
+    expect(dayDisabled('2026-06-03')).toBe(true);
+    expect(dayDisabled('2026-06-10')).toBe(true);
+    expect(dayEnabled('2026-06-06')).toBe(true);
+    expect(dayEnabled('2026-06-13')).toBe(true);
+  });
+
+  test('and with a pickup chosen', async () => {
+    free([], SATURDAYS);
+    const { container } = renderPage();
+    await freeFormReady();
+    typeInto(container, '#request-start-date', '06/06/2026');
+
+    await openFreeCalendar('return');
+
+    expect(dayDisabled('2026-06-10')).toBe(true); // a Wednesday, after the pickup
+    expect(dayDisabled('2026-06-12')).toBe(true);
+    expect(dayEnabled('2026-06-13')).toBe(true); // the next Saturday
+    expect(dayEnabled('2026-06-20')).toBe(true);
+  });
+
+  test('a collection with no weekdays listed leaves every day open', async () => {
+    free([], { rental_weekdays: [] });
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('pickup');
+
+    expect(dayEnabled('2026-06-03')).toBe(true);
+    expect(dayEnabled('2026-06-06')).toBe(true);
+    expect(dayEnabled('2026-06-07')).toBe(true);
+  });
+
+  test('G8 still holds on an allowed weekday: the booking’s return day can be picked up, the days it occupies cannot', async () => {
+    free([{ start_date: '2026-06-13', end_date: '2026-06-20', status: 'ACCEPTED' }], SATURDAYS);
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('pickup');
+
+    expect(dayEnabled('2026-06-06')).toBe(true);
+    expect(dayDisabled('2026-06-13')).toBe(true); // a Saturday, but occupied
+    expect(dayEnabled('2026-06-20')).toBe(true); // a Saturday, and the chained handover
+  });
+});
+
 describe('RequestThingPage — free dates: the request the calendar now allows', () => {
   test('a request 06→08 after a booking 05→06 is sent with those dates', async () => {
     free([{ start_date: '2026-06-05', end_date: '2026-06-06', status: 'ACCEPTED' }]);

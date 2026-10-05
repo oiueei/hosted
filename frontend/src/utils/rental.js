@@ -207,27 +207,48 @@ export const rangeBlocked = (pickup, len, blockedPeriods) => {
 };
 
 // LEND/RENT with free dates (no fixed lengths): the two pickers of the request form
-// follow the SAME rule as the server and the card, the one of chained handovers — a
-// booking [s, e] occupies the pickup on [s, e), and its return day e is free for the
-// next pickup. The server accepts a request [start, end] unless it shares an interior
-// day with a booking (`BookingPeriod.has_overlap`: s < end AND e > start). Both
-// pickers used to grey out BOTH ends of every booking (the calendar *display* range),
-// which blocked picking up on another booking's return day and returning on another's
-// pickup day — two things the server allows (G8, CA 2026-10-05: a card saying
-// "available from 06/10" with a calendar that began on the 7th).
+// follow the SAME rules as the server and the card. Two of them:
+//
+// - **Chained handovers.** A booking [s, e] occupies the pickup on [s, e), and its
+//   return day e is free for the next pickup. The server accepts a request
+//   [start, end] unless it shares an interior day with a booking
+//   (`BookingPeriod.has_overlap`: s < end AND e > start). Both pickers used to grey
+//   out BOTH ends of every booking (the calendar *display* range), which blocked
+//   picking up on another booking's return day and returning on another's pickup day
+//   — two things the server allows (G8, CA 2026-10-05: a card saying "available from
+//   06/10" with a calendar that began on the 7th).
+// - **The collection's weekdays** (`rental_weekdays`, Python's 0 = Monday; `[]` = any
+//   day). The server demands them at BOTH ends — `Collection.rental_violation` answers
+//   `rental_pickup_weekday` for the pickup and `rental_return_weekday` for the return —
+//   and it does so with or without fixed lengths. The fixed-length form already applied
+//   them (`isPickupDisabled`); the free form did not, so a Wednesday could be picked in
+//   a "Saturdays only" collection and the server refused it on send (RW1, CA
+//   2026-10-05). A day of the wrong weekday is out in both pickers, whatever the other
+//   one holds: the return picker has no pickup to measure against until one is chosen,
+//   and the weekday does not depend on it.
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// The pickup picker: a closure day is out, and so is any day a booking occupies
-// ([s, e) — not its return day).
-export const freePickupDisabled = (date, { blockedPeriods = [], closedDates = [] }) =>
-  isClosedDate(date, closedSet(closedDates)) || isPickupBlocked(date, blockedPeriods);
+// The pickup picker: a day of a weekday the collection does not allow is out, a closure
+// day is out, and so is any day a booking occupies ([s, e) — not its return day).
+export const freePickupDisabled = (
+  date,
+  { rentalWeekdays = [], blockedPeriods = [], closedDates = [] }
+) =>
+  !weekdayAllowed(date, rentalWeekdays) ||
+  isClosedDate(date, closedSet(closedDates)) ||
+  isPickupBlocked(date, blockedPeriods);
 
 // The return picker, given the pickup chosen (ISO string, or '' when there is none
-// yet): a closure day is out; so is a day before the pickup; so is a day whose stretch
-// [pickup, return) runs over a booking — a return that lands exactly on another
-// booking's pickup is the chained handover and stays open (`rangeBlocked`). With no
-// pickup chosen there is no stretch to measure, so it is the pickup's rule.
-export const freeReturnDisabled = (date, { pickup, blockedPeriods = [], closedDates = [] }) => {
+// yet): a day of a weekday the collection does not allow is out; a closure day is out;
+// so is a day before the pickup; so is a day whose stretch [pickup, return) runs over a
+// booking — a return that lands exactly on another booking's pickup is the chained
+// handover and stays open (`rangeBlocked`). With no pickup chosen there is no stretch to
+// measure, so it is the pickup's rule.
+export const freeReturnDisabled = (
+  date,
+  { pickup, rentalWeekdays = [], blockedPeriods = [], closedDates = [] }
+) => {
+  if (!weekdayAllowed(date, rentalWeekdays)) return true;
   if (isClosedDate(date, closedSet(closedDates))) return true;
   if (!pickup) return isPickupBlocked(date, blockedPeriods);
   const days = Math.round((parseLocalDate(date) - parseLocalDate(pickup)) / MS_PER_DAY);
