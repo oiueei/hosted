@@ -4,6 +4,13 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 import ApprovalNotice from '../components/ApprovalNotice';
 import { isOfferable } from '../hooks/useCapabilities';
 
+// This file is about what a deployment with no forms of its own hosted elsewhere shows
+// — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
+// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// `externalForms` a deployment may have are switched off here by stubbing the helper
+// that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
+vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+
 /**
  * The notice a narrowed deployment owes anyone looking at a shorter list than
  * the product has, and the predicate that shortens it.

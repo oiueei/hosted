@@ -8,6 +8,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
 import StatusRegion from './StatusRegion';
+import BulkInviteResult from './BulkInviteResult';
 
 const MAX_ROWS = 100;
 // An "email" column (required) and an optional "name" column.
@@ -21,14 +22,6 @@ lele@mail.com,LeLe
 lili@mail.com,Super LiLi
 lolo@mail.com,
 lulu@mail.com,`;
-
-const REASON_KEY = {
-  invalid: 'bulkInvite.reasonInvalid',
-  duplicate: 'bulkInvite.reasonDuplicate',
-  already_member: 'bulkInvite.reasonAlreadyMember',
-  already_invited: 'bulkInvite.reasonAlreadyInvited',
-  daily_limit: 'bulkInvite.reasonDailyLimit',
-};
 
 /**
  * Bulk-invite collection guests from a CSV. Parses the file client-side with
@@ -157,31 +150,7 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
           </Notification>
         )}
       </StatusRegion>
-      <StatusRegion>
-        {result && (
-          <Notification
-            type={result.invited > 0 ? 'success' : 'info'}
-            size="small"
-            style={{ marginTop: 'var(--spacing-s)' }}
-          >
-            {t('bulkInvite.resultInvited', { count: result.invited })}
-            {result.skipped && result.skipped.length > 0 && (
-              <>
-                <div style={{ marginTop: 'var(--spacing-2-xs)' }}>
-                  {t('bulkInvite.resultSkipped', { count: result.skipped.length })}
-                </div>
-                <ul style={{ margin: 'var(--spacing-2-xs) 0 0', paddingLeft: 'var(--spacing-m)' }}>
-                  {result.skipped.map((s, i) => (
-                    <li key={i}>
-                      {s.email} — {t(REASON_KEY[s.reason] || 'bulkInvite.reasonInvalid')}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </Notification>
-        )}
-      </StatusRegion>
+      <BulkInviteResult result={result} />
       {rows.length > 0 && (
         <>
           <h3 className="bulk-add-preview-title">

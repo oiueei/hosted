@@ -7,7 +7,8 @@ import {
   durationLabel,
   isPickupDisabled,
   reservationPickupDisabled,
-  isDateBlocked,
+  freePickupDisabled,
+  freeReturnDisabled,
   derivedReturnDate,
   isoToDisplay,
   displayToIso,
@@ -258,7 +259,13 @@ export default function RequestThingPage() {
           duration: chosenDuration,
           closedDates,
         });
-  const dateBlocked = (date) => isDateBlocked(date, blockedPeriods, closedDates);
+  // The free form (LEND/RENT with no fixed lengths) has two pickers, and each follows
+  // the rule of chained handovers the server and the card use (G8): the pickup is out
+  // on [s, e) of a booking, the return is out when the stretch from the pickup runs
+  // over one. The return is judged against the pickup chosen so far.
+  const freePickupBlocked = (date) => freePickupDisabled(date, { blockedPeriods, closedDates });
+  const freeReturnBlocked = (date) =>
+    freeReturnDisabled(date, { pickup: selectedIso, blockedPeriods, closedDates });
 
   // The request body, built fresh from current form state — `null` when a
   // required field is still empty. A function, not a one-off inline block, so
@@ -866,7 +873,7 @@ export default function RequestThingPage() {
                 minDate={TODAY}
                 maxDate={MAX_DATE}
                 dateOutsideRangeErrorText={t('request.dateRange')}
-                isDateDisabledBy={dateBlocked}
+                isDateDisabledBy={freePickupBlocked}
                 malformedDateErrorText={t('request.dateOverlap')}
               />
               <div className="spacer-xxxs" />
@@ -886,7 +893,7 @@ export default function RequestThingPage() {
                 minDate={TODAY}
                 maxDate={MAX_DATE}
                 dateOutsideRangeErrorText={t('request.dateRange')}
-                isDateDisabledBy={dateBlocked}
+                isDateDisabledBy={freeReturnBlocked}
                 malformedDateErrorText={t('request.dateOverlap')}
               />
             </div>

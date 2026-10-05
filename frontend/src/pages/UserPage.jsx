@@ -19,7 +19,7 @@ import useTheeeme from '../hooks/useTheeeme';
 
 export default function UserPage() {
   const { userCode: paramCode } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // A group's headline may carry one text per language.
   const L = useLocalized();
   const [user, setUser] = useState(null);
@@ -237,7 +237,7 @@ export default function UserPage() {
                 _id: c.code,
                 _code: c.code,
                 _headline: L(c.headline),
-                _team: teamText(c, t),
+                _team: teamText(c, t, i18n.resolvedLanguage || i18n.language),
               }))}
               indexKey="_id"
               renderIndexCol={false}

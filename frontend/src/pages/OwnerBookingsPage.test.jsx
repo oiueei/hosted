@@ -152,8 +152,24 @@ describe('OwnerBookingsPage listing', () => {
 
   test('the type and the state sit in a status cell that sizes each label to its word', async () => {
     // Same cell, same class as /my-bookings (CA, 2026-10-03); the rule is pinned
-    // in `tableCellStyles.test.js`.
-    mockApi([{ results: [booking({ status: 'ACCEPTED' })], next: null }]);
+    // in `tableCellStyles.test.js`. The type shows only in a table that mixes verbs
+    // (G9), so there are two of them.
+    mockApi([
+      {
+        results: [
+          booking({ status: 'ACCEPTED' }),
+          booking({
+            code: 'BKG002',
+            status: 'REJECTED',
+            thing_type: 'GIFT_THING',
+            thing_headline: 'Tent',
+            start_date: null,
+            end_date: null,
+          }),
+        ],
+        next: null,
+      },
+    ]);
     renderPage();
 
     await screen.findByText('Cordless drill');
@@ -451,7 +467,22 @@ describe('OwnerBookingsPage on a phone', () => {
   afterEach(() => media.restore());
 
   test('a request is a card holding the thing, who asked, when, both labels and both decisions', async () => {
-    mockApi([{ results: [booking({ requester_name: 'Lele' })], next: null }]);
+    // The verb's label is there because this table mixes verbs (G9).
+    mockApi([
+      {
+        results: [
+          booking({ requester_name: 'Lele' }),
+          booking({
+            code: 'BKG002',
+            thing_type: 'GIFT_THING',
+            thing_headline: 'Tent',
+            start_date: null,
+            end_date: null,
+          }),
+        ],
+        next: null,
+      },
+    ]);
     renderPage();
 
     const list = await screen.findByRole('list', { name: 'Requests waiting for your answer' });
@@ -544,5 +575,150 @@ describe('OwnerBookingsPage on a phone', () => {
     await screen.findByRole('list', { name: 'Requests waiting for your answer' });
 
     expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
+  });
+});
+
+/**
+ * The verb's label ("Rental", "Reservation"…) over the state in the status cell tells
+ * rows apart only when a table mixes verbs (G9, CA 2026-10-05): many collections hold
+ * one verb, and the label repeated the same word in every row. It is decided per table
+ * — "waiting for your answer" and "already answered" — from that table's own rows, and
+ * again whenever more rows are loaded. The state label is not part of it.
+ */
+describe('OwnerBookingsPage — the verb’s label only where a table mixes verbs', () => {
+  const rental = (code, status = 'PENDING') =>
+    booking({ code, status, thing_type: 'RENT_THING', thing_headline: `Drill ${code}` });
+  const gift = (code, status = 'PENDING') =>
+    booking({
+      code,
+      status,
+      thing_type: 'GIFT_THING',
+      thing_headline: `Tent ${code}`,
+      start_date: null,
+      end_date: null,
+    });
+  const WAITING = 'Requests waiting for your answer';
+  const ANSWERED = 'Requests you have already answered';
+  const inTable = (name) => within(screen.getByRole('table', { name }));
+  const page = (...results) => mockApi([{ results, next: null }]);
+
+  test('a table of one verb has no label on any row, and every row still has its state', async () => {
+    page(rental('B1'), rental('B2'));
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(screen.queryByText('Rental')).toBeNull();
+    expect(screen.getAllByText('Pending')).toHaveLength(2);
+  });
+
+  test('a table that mixes verbs gives every row its verb', async () => {
+    page(rental('B1'), gift('B2'));
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    const [, first, second] = within(screen.getByRole('table', { name: WAITING })).getAllByRole(
+      'row'
+    );
+    expect(within(first).getByText('Rental')).toBeInTheDocument();
+    expect(within(second).getByText('Gift')).toBeInTheDocument();
+  });
+
+  test('the two tables decide apart: one verb waiting, a mix already answered', async () => {
+    page(rental('B1'), rental('B2'), rental('B3', 'ACCEPTED'), gift('B4', 'REJECTED'));
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(inTable(WAITING).queryByText('Rental')).toBeNull();
+    expect(inTable(ANSWERED).getByText('Rental')).toBeInTheDocument();
+    expect(inTable(ANSWERED).getByText('Gift')).toBeInTheDocument();
+  });
+
+  test('and the other way round: a mix waiting, one verb already answered', async () => {
+    page(rental('B1'), gift('B2'), rental('B3', 'ACCEPTED'), rental('B4', 'REJECTED'));
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(inTable(WAITING).getByText('Rental')).toBeInTheDocument();
+    expect(inTable(WAITING).getByText('Gift')).toBeInTheDocument();
+    expect(inTable(ANSWERED).queryByText('Rental')).toBeNull();
+  });
+
+  test('loading more rows of another verb puts the label back on the whole table', async () => {
+    mockApi([
+      {
+        results: [rental('B1'), rental('B2')],
+        next: 'http://testserver/api/v1/owner-bookings/?page=2',
+      },
+      { results: [gift('B3')], next: null },
+    ]);
+    renderPage();
+    await screen.findByText('Drill B1');
+    expect(screen.queryByText('Rental')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    await screen.findByText('Tent B3');
+    expect(screen.getAllByText('Rental')).toHaveLength(2);
+    expect(screen.getByText('Gift')).toBeInTheDocument();
+  });
+
+  describe('on a phone, where each request is a card', () => {
+    let media;
+    beforeEach(() => {
+      media = mockMatchMedia({ [PHONE]: true });
+    });
+    afterEach(() => media.restore());
+
+    test('the cards of a table of one verb have no label; those of a mix have it', async () => {
+      page(rental('B1'), rental('B2'), rental('B3', 'ACCEPTED'), gift('B4', 'REJECTED'));
+      renderPage();
+
+      const waiting = await screen.findByRole('list', { name: WAITING });
+      const answered = screen.getByRole('list', { name: ANSWERED });
+      expect(within(waiting).queryByText('Rental')).toBeNull();
+      expect(within(waiting).getAllByText('Pending')).toHaveLength(2);
+      expect(within(answered).getByText('Rental')).toBeInTheDocument();
+      expect(within(answered).getByText('Gift')).toBeInTheDocument();
+    });
+  });
+});
+
+// The thing's name is a bold link (G10, CA 2026-10-05): one rule in App.css for the
+// text links inside the component's own class, `.responsive-table` — see
+// `test/tableLinkWeight.test.jsx`. These pin that this page's links are inside it, in
+// the table and in the cards.
+describe('OwnerBookingsPage — the bold links of the table', () => {
+  const SELECTOR = ".responsive-table a:not([class*='hds-button'])";
+
+  test('the thing’s link is inside the component’s class, in the table', async () => {
+    mockApi([
+      {
+        results: [
+          booking(),
+          booking({ code: 'BKG002', status: 'ACCEPTED', thing_headline: 'Tent' }),
+        ],
+        next: null,
+      },
+    ]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    for (const name of ['Cordless drill', 'Tent']) {
+      expect(screen.getByRole('link', { name }).matches(SELECTOR)).toBe(true);
+    }
+  });
+
+  test('and in the cards of a phone, where the decisions are buttons the rule does not reach', async () => {
+    const media = mockMatchMedia({ [PHONE]: true });
+    try {
+      mockApi([{ results: [booking()], next: null }]);
+      renderPage();
+
+      const link = await screen.findByRole('link', { name: 'Cordless drill' });
+      expect(link.matches(SELECTOR)).toBe(true);
+      expect(screen.getByRole('button', { name: 'Confirm this request' }).matches('a')).toBe(false);
+    } finally {
+      media.restore();
+    }
   });
 });

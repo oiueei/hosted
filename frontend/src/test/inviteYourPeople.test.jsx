@@ -18,9 +18,13 @@ import CollectionPage from '../pages/CollectionPage';
 /**
  * "Your collection is taking shape. Now invite your circle →" was a quiet line under
  * the curator's hero row, shown while the group had things and nobody invited. It is
- * a third button of the row now (X6, CA 2026-10-04): `[Edit collection]` primary,
- * `[Add thing]`, `[Invite your people]`, to the invitations page — the same condition,
- * and one primary still.
+ * a third button of the row now (X6, CA 2026-10-04): `[Add thing]` primary,
+ * `[Edit collection]`, `[Invite your people]`, to the invitations page, and one
+ * primary still. (G1, CA 2026-10-05: "Add thing" took the first place and the primary
+ * tokens from "Edit collection".) It was shown only while the group had things and
+ * nobody invited, so it went with the first guest who accepted; since G5 (CA,
+ * 2026-10-05) it is **always** there for whoever runs the group — with things or
+ * without, with members or without.
  */
 const THING = (over) => ({
   code: 'THG001',
@@ -83,47 +87,90 @@ const isPrimary = (link) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe('the curator hero row — "Invite your people"', () => {
+  const THREE = ['Add thing', 'Edit collection', 'Invite your people'];
+
   test('with things and nobody invited: three buttons, the third secondary, to the invitations', async () => {
     const { container } = renderCollection(FOUNDER);
     await screen.findByText('Kettle');
 
     const row = heroRow(container);
-    expect(labels(row)).toEqual(['Edit collection', 'Add thing', 'Invite your people']);
+    expect(labels(row)).toEqual(THREE);
     expect(row.map((a) => a.getAttribute('href'))).toEqual([
-      '/collections/COL001/edit',
       '/collections/COL001/add',
+      '/collections/COL001/edit',
       '/collections/COL001/invites',
     ]);
     // One primary, the first: the row keeps its rule.
     expect(row.map(isPrimary)).toEqual([true, false, false]);
   });
 
-  test('with the first guest in, the row is the two it was', async () => {
+  // The button stayed only until the first guest accepted (X6's condition); CA invited
+  // people and it was gone. It is the row's third button in every shape of the group.
+  test('with the first guest in, it is still there', async () => {
     const { container } = renderCollection({
       ...FOUNDER,
       invites: [{ code: 'GUEST1', name: 'Lele' }],
     });
     await screen.findByText('Kettle');
 
-    expect(labels(heroRow(container))).toEqual(['Edit collection', 'Add thing']);
-    expect(screen.queryByRole('link', { name: 'Invite your people' })).toBeNull();
+    const row = heroRow(container);
+    expect(labels(row)).toEqual(THREE);
+    expect(row[2]).toHaveAttribute('href', '/collections/COL001/invites');
+    expect(row.map(isPrimary)).toEqual([true, false, false]);
   });
 
-  test('with nothing to show yet, it is not there either', async () => {
+  test('with many members, and many guests still pending, it is still there', async () => {
+    const { container } = renderCollection({
+      ...FOUNDER,
+      invites: Array.from({ length: 12 }, (_, i) => ({ code: `GST${i}`, name: `Guest ${i}` })),
+      pending_invites: [{ code: 'RSVP01', email: 'pending@example.com' }],
+    });
+    await screen.findByText('Kettle');
+
+    expect(labels(heroRow(container))).toEqual(THREE);
+  });
+
+  test('with nothing to show yet, it is there too', async () => {
     const { container } = renderCollection({ ...FOUNDER, things: [] });
     await screen.findByRole('link', { name: 'Edit collection' });
 
-    expect(labels(heroRow(container))).toEqual(['Edit collection', 'Add thing']);
+    const row = heroRow(container);
+    expect(labels(row)).toEqual(THREE);
+    expect(row[2]).toHaveAttribute('href', '/collections/COL001/invites');
   });
 
-  test('a group whose things are all hidden has nothing to show: two buttons', async () => {
+  test('a group whose things are all hidden has it too', async () => {
     const { container } = renderCollection({
       ...FOUNDER,
       things: [THING({ status: 'INACTIVE' })],
     });
     await screen.findByRole('link', { name: 'Edit collection' });
 
-    expect(labels(heroRow(container))).toEqual(['Edit collection', 'Add thing']);
+    expect(labels(heroRow(container))).toEqual(THREE);
+  });
+
+  test('a group with no things and members: the three, whoever got in', async () => {
+    const { container } = renderCollection({
+      ...FOUNDER,
+      things: [],
+      invites: [{ code: 'GUEST1', name: 'Lele' }],
+    });
+    await screen.findByRole('link', { name: 'Edit collection' });
+
+    expect(labels(heroRow(container))).toEqual(THREE);
+  });
+
+  test('a co-curator has it as the founder does', async () => {
+    const { container } = renderCollection({
+      ...FOUNDER,
+      owner: 'OTHER1',
+      owner_name: 'The Founder',
+      co_owners: [{ code: 'ABC123', name: 'Me' }],
+      invites: [{ code: 'ABC123', name: 'Me' }],
+    });
+    await screen.findByText('Kettle');
+
+    expect(labels(heroRow(container))).toEqual(THREE);
   });
 
   test('the line is gone: nothing says the collection is taking shape, in any wording', async () => {

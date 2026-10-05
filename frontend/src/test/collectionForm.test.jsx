@@ -20,6 +20,13 @@ import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
 import { dropHdsStyles } from './dropHdsStyles';
 
+// This file is about what a deployment with no forms of its own hosted elsewhere shows
+// — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
+// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// `externalForms` a deployment may have are switched off here by stubbing the helper
+// that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
+vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
 }

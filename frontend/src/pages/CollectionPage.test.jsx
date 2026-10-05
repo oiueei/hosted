@@ -297,10 +297,12 @@ describe('CollectionPage signed-out reader', () => {
   /**
    * The hero's "This group shares its things on OIUEEI. Join to take part →"
    * line was removed (CA, 2026-09-21), a line in the content stood in for it from
-   * 2026-09-29, and CA brought the hero's join back on 2026-10-04 — with a pair:
-   * `[Join this group]` primary and `[Sign in]` secondary, in a row, as on
-   * /welcome. The tests of every shape of group are further down (`the two doors
-   * of a signed-out reader`); this one is the hero of a plain public group.
+   * 2026-09-29, and CA brought the hero's join back on 2026-10-04 — with a pair, in
+   * a row, as on /welcome: `[Join this group]` primary and `[Sign in]` secondary at
+   * first, `[Sign in]` primary and `[Join this group]` secondary since G3 (CA,
+   * 2026-10-05), which also took the account icon out of the corner of this page.
+   * The tests of every shape of group are further down (`the two doors of a
+   * signed-out reader`); this one is the hero of a plain public group.
    *
    * Asserted through the links' targets and the raw i18n key — the old line's
    * strings went with it, so a resurrected `t('collectionPage.anonIntro')`
@@ -315,7 +317,7 @@ describe('CollectionPage signed-out reader', () => {
     is_member: false,
   };
 
-  test('is offered "Join this group" and "Sign in" in the hero, and no standing line', async () => {
+  test('is offered "Sign in" and "Join this group" in the hero, and no standing line', async () => {
     localStorage.clear();
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: async () => PUBLIC_VIEW })
@@ -332,11 +334,15 @@ describe('CollectionPage signed-out reader', () => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
     const doors = [...container.querySelectorAll('.form-hero .button-row-wide a')];
-    expect(doors.map((a) => a.textContent)).toEqual(['Join this group', 'Sign in']);
+    expect(doors.map((a) => a.textContent)).toEqual(['Sign in', 'Join this group']);
     expect(doors.map((a) => a.getAttribute('href'))).toEqual([
-      '/collections/COL001/join',
       '/login?next=%2Fcollections%2FCOL001',
+      '/collections/COL001/join',
     ]);
+    // "Sign in" is the primary: the theeeme's fill, where the second is the white of
+    // a secondary.
+    expect(doors[0].style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
+    expect(doors[1].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
     expect(container.textContent).not.toMatch(/collectionPage\.anonIntro/);
   });
 });
@@ -822,11 +828,12 @@ describe('A signed-in visitor on a public group', () => {
   });
 
   // A signed-out reader of a PUBLIC group has a button to press on every card, and
-  // since CA's call of 2026-10-04 also a pair of doors in the hero: "Join this group"
-  // (primary, to the group's join page, no ?thing= — there is no thing in it) and
-  // "Sign in" (secondary, to /login, which brings them back here). In every public
-  // group, COMMUNITY or PROPRIETARY, empty or not. The line in the content that stood
-  // for them from 2026-09-29 — only in a COMMUNITY or an empty group — is gone.
+  // since CA's call of 2026-10-04 also a pair of doors in the hero: "Sign in" (primary
+  // since G3, CA 2026-10-05: to /login, which brings them back here) and "Join this
+  // group" (secondary, to the group's join page, no ?thing= — there is no thing in it).
+  // In every public group, COMMUNITY or PROPRIETARY, empty or not. The line in the
+  // content that stood for them from 2026-09-29 — only in a COMMUNITY or an empty
+  // group — is gone.
   // Asserted by target as well as by words, and by the raw i18n key: the old
   // strings left the locales, so a resurrected `t('collectionPage.anonJoin…')`
   // renders its own key, which an English-text query would never catch.
@@ -859,12 +866,12 @@ describe('A signed-in visitor on a public group', () => {
     const expectTheTwoDoors = () => {
       const doors = heroDoors();
       expect(doors.map((a) => a.textContent)).toEqual([
-        en.collectionPage.visitorJoin,
         en.login.signIn,
+        en.collectionPage.visitorJoin,
       ]);
       expect(doors.map((a) => a.getAttribute('href'))).toEqual([
-        '/collections/COL001/join',
         '/login?next=%2Fcollections%2FCOL001',
+        '/collections/COL001/join',
       ]);
       expect(doors.map(isPrimary)).toEqual([true, false]);
     };
@@ -918,12 +925,28 @@ describe('A signed-in visitor on a public group', () => {
 
       await screen.findByText(/No things in this collection yet/);
 
-      // The hero's button; the corner icon (X3) carries the same words and the same way back.
-      const signIn = heroDoors()[1];
+      // The hero's button, the first of the row since G3 — and the only "Sign in" on
+      // the page: the corner icon (X3) that carried the same words is left out here.
+      const signIn = heroDoors()[0];
       const next = new URL(signIn.getAttribute('href'), 'https://oiueei.test').searchParams.get(
         'next'
       );
       expect(next).toBe('/collections/COL001');
+    });
+
+    // G3 (CA, 2026-10-05): the hero offers "Sign in" as its first button, so the
+    // account icon of the corner — X3's link to the same place — is left out of
+    // this page. A thing's page, the /legal page and the rest keep it (see
+    // `test/signedOutCorner.test.jsx`).
+    test('the corner has no account icon: the hero’s button is the only way to sign in', async () => {
+      show(PUBLIC_COMMUNITY);
+
+      await screen.findByText(/No things in this collection yet/);
+
+      expect(screen.getAllByRole('link', { name: en.login.signIn })).toHaveLength(1);
+      expect(heroDoors()[0]).toHaveTextContent(en.login.signIn);
+      expect(document.querySelector('.hero-corners .account-menu')).toBeNull();
+      expect(document.querySelector('.hero-corners a[href^="/login"]')).toBeNull();
     });
 
     test('a PRIVATE group is not reachable signed out, so it offers nothing either', async () => {
@@ -941,6 +964,10 @@ describe('A signed-in visitor on a public group', () => {
       expect(await screen.findByRole('button', { name: 'Join this group' })).toBeInTheDocument();
       expect(joinLinks()).toHaveLength(0);
       expect(screen.queryByRole('link', { name: en.login.signIn })).not.toBeInTheDocument();
+      // …and the corner is the account menu it always was.
+      expect(document.querySelector('.hero-corners')).toContainElement(
+        screen.getByRole('button', { name: /your account/i })
+      );
     });
 
     test.each([
@@ -1554,11 +1581,14 @@ describe('CollectionPage as a co-owner', () => {
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  // The hero row holds "Edit collection" and "Add thing" (CA, 2026-10-04): the
-  // first primary, the second secondary. It held "Edit collection" alone from
-  // 2026-10-03 — the rest of the curator's controls are in the collection menu,
-  // one click further — and the group's most common act was in the menu.
-  test('the curator hero row holds "Edit collection" and then "Add thing", the second secondary', async () => {
+  // The hero row holds "Add thing" and "Edit collection" (CA, 2026-10-05): the
+  // first primary, the second secondary — and "Invite your people", always, a third
+  // secondary one (G5, 2026-10-05; `test/inviteYourPeople.test.jsx` pins when it is
+  // there). It held "Edit collection" alone from 2026-10-03 — the rest of the
+  // curator's controls are in the collection menu, one click further — and then
+  // "Edit collection" primary with "Add thing" after it (2026-10-04): the thing a
+  // curator does most is put things in, so that is the button the eye lands on.
+  test('the curator hero row holds "Add thing" and then "Edit collection", the first primary, and "Invite your people"', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1577,11 +1607,18 @@ describe('CollectionPage as a co-owner', () => {
     const row = container.querySelector('.button-row-wide');
     expect(row).not.toBeNull();
     const inRow = [...row.querySelectorAll('a, button')];
-    expect(inRow.map((el) => el.textContent)).toEqual(['Edit collection', 'Add thing']);
-    expect(inRow[1]).toHaveAttribute('href', '/collections/COL001/add');
+    expect(inRow.map((el) => el.textContent)).toEqual([
+      'Add thing',
+      'Edit collection',
+      'Invite your people',
+    ]);
+    expect(inRow[0]).toHaveAttribute('href', '/collections/COL001/add');
+    expect(inRow[1]).toHaveAttribute('href', '/collections/COL001/edit');
+    expect(inRow[2]).toHaveAttribute('href', '/collections/COL001/invites');
     // The secondary tokens are a white background; the primary's are the theeeme's.
     expect(inRow[0].style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
     expect(inRow[1].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+    expect(inRow[2].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
   });
 
   // The button is there with things or without (CA, 2026-10-04): an empty group
@@ -1660,8 +1697,9 @@ describe('CollectionPage as a co-owner', () => {
     );
 
     const line = (await screen.findByText(/Run by:/)).closest('p');
-    // founder first, then each co-curator, all linked
-    expect(line).toHaveTextContent('Run by: The Founder, Me, Nil');
+    // founder first, then each co-curator, all linked — written as English writes a
+    // list of three: commas, and the conjunction before the last (G4, CA 2026-10-05)
+    expect(line).toHaveTextContent('Run by: The Founder, Me, and Nil');
     expect(within(line).getByRole('link', { name: 'The Founder' })).toHaveAttribute(
       'href',
       '/OTHER1'
@@ -1743,11 +1781,21 @@ describe('CollectionPage as a co-owner', () => {
       expect(line).toHaveTextContent(/^Run by: The Founder and 1 more person$/);
     });
 
-    test('named and unnamed together: the names with commas, then the count', async () => {
+    test('named and unnamed together: the names, then the count as the last of the list', async () => {
       renderTeamHero('en', { co_owners: [{ code: 'XYZ999', name: 'Nil' }, nameless('XYZ001')] });
 
       const line = (await screen.findByText('Run by:')).closest('p');
-      expect(line).toHaveTextContent(/^Run by: The Founder, Nil and 1 more person$/);
+      expect(line).toHaveTextContent(/^Run by: The Founder, Nil, and 1 more person$/);
+      expect(linked(line)).toEqual(['The Founder', 'Nil']);
+    });
+
+    test('two named and two without a name: "A, B, and 2 more people"', async () => {
+      renderTeamHero('en', {
+        co_owners: [{ code: 'XYZ999', name: 'Nil' }, nameless('XYZ001'), nameless('XYZ002')],
+      });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder, Nil, and 2 more people$/);
       expect(linked(line)).toEqual(['The Founder', 'Nil']);
     });
 
@@ -1770,10 +1818,14 @@ describe('CollectionPage as a co-owner', () => {
   // number — for a team of one and a team of three (CA, 2026-10-02), so it is
   // the same word in both lines. Nothing but these pins the Spanish and Catalan
   // wording of the hero.
+  //
+  // The names are joined with that language's own "and" (G4, CA 2026-10-05): "A y B",
+  // "A, B y C" in Spanish, "A i B", "A, B i C" in Catalan; the count of those without
+  // a name is the last element of the list, so its text carries no conjunction.
   describe.each([
-    ['es', 'Dinamización:', 'y 2 personas más'],
-    ['ca', 'Dinamització:', 'i 2 persones més'],
-  ])('in a %s group', (language, label, twoMore) => {
+    ['es', 'Dinamización:', 'y', '2 personas más'],
+    ['ca', 'Dinamització:', 'i', '2 persones més'],
+  ])('in a %s group', (language, label, and, twoMore) => {
     afterEach(async () => {
       // `useCollectionLanguage` moves the whole UI to the collection's language;
       // put it back so the next test starts in English.
@@ -1794,8 +1846,21 @@ describe('CollectionPage as a co-owner', () => {
       });
 
       const line = (await screen.findByText(label)).closest('p');
-      expect(line).toHaveTextContent(`${label} El Fundador, Yo, Nil`);
+      expect(line).toHaveTextContent(`${label} El Fundador, Yo ${and} Nil`);
       expect(screen.getAllByText(label)).toHaveLength(1);
+    });
+
+    test(`two names are joined by "${and}", with no comma`, async () => {
+      renderHero({ co_owners: [{ code: 'XYZ999', name: 'Nil' }] });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${and} Nil$`));
+      // The names are still links to the profiles; the conjunction is not.
+      expect(
+        within(line)
+          .getAllByRole('link')
+          .map((a) => a.textContent)
+      ).toEqual(['El Fundador', 'Nil']);
     });
 
     test(`with no co-curators the founder alone follows "${label}" (non-owner viewer)`, async () => {
@@ -1806,7 +1871,7 @@ describe('CollectionPage as a co-owner', () => {
       expect(screen.getAllByText(label)).toHaveLength(1);
     });
 
-    test(`co-curators with no name are counted after the names: "${twoMore}"`, async () => {
+    test(`co-curators with no name are counted after the names: "${and} ${twoMore}"`, async () => {
       renderHero({
         co_owners: [
           { code: 'XYZ001', name: '' },
@@ -1815,7 +1880,22 @@ describe('CollectionPage as a co-owner', () => {
       });
 
       const line = (await screen.findByText(label)).closest('p');
-      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${twoMore}$`));
+      // One conjunction, not two: "y y 2 personas más" is the text of the count
+      // keeping its own "y" under the list's.
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${and} ${twoMore}$`));
+    });
+
+    test('two named and two without a name: the names, then the count, one conjunction', async () => {
+      renderHero({
+        co_owners: [
+          { code: 'XYZ999', name: 'Nil' },
+          { code: 'XYZ001', name: '' },
+          { code: 'XYZ002', name: '' },
+        ],
+      });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador, Nil ${and} ${twoMore}$`));
     });
   });
 });

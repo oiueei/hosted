@@ -1,6 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
+// This file is about what a deployment with no forms of its own hosted elsewhere shows
+// — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
+// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// `externalForms` a deployment may have are switched off here by stubbing the helper
+// that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
+vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+
 /**
  * `App.jsx` — the frame every page renders inside: the skip link, the focus and
  * scroll reset on navigation, and `html[lang]`.

@@ -54,7 +54,9 @@ const PANEL_ID = 'account-menu-panel';
  * at all, so a visitor with no session had no corner. Not on `/login` (it would
  * lead to itself), `/logout` or `/verify/…` and its aliases, where it still paints
  * nothing — `isDoorPath`, the same list a login never returns to. On a public
- * collection it sits beside the hero's own "Sign in" button (W3): CA accepted both.
+ * collection it sat beside the hero's own "Sign in" button (W3), and CA accepted both
+ * until G3 (2026-10-05): `CollectionPage` now passes `offerSignIn={false}` there, since
+ * the hero's button is the way in.
  * **`offerSignIn={false}` paints nothing signed out either** (Y1, CA 2026-10-04): a
  * door that does not want to send people to `/login` — the hosted `/popin`, which
  * dropped "Already have an account?" on purpose — says so through

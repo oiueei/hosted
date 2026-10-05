@@ -140,6 +140,7 @@ import VerifyPage from '../pages/VerifyPage';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import AddThingPage from '../pages/AddThingPage';
 import ImportThingsPage from '../pages/ImportThingsPage';
+import ImportInvitesPage from '../pages/ImportInvitesPage';
 import MyBookingsPage from '../pages/MyBookingsPage';
 import OwnerBookingsPage from '../pages/OwnerBookingsPage';
 import DeleteThingPage from '../pages/DeleteThingPage';
@@ -264,6 +265,11 @@ smokeAndAxe('EditCollectionPage', EditCollectionPage, {
 smokeAndAxe('ManageInvitesPage', ManageInvitesPage, {
   path: '/collections/:code/invites',
   entry: '/collections/COL001/invites',
+});
+
+smokeAndAxe('ImportInvitesPage', ImportInvitesPage, {
+  path: '/collections/:code/invites/import',
+  entry: '/collections/COL001/invites/import',
 });
 
 smokeAndAxe('DeleteCollectionPage', DeleteCollectionPage, {
