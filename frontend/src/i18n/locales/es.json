@@ -629,6 +629,7 @@
     "errorResending": "Error al reenviar la invitación.",
     "invitationSent": "Invitación enviada.",
     "errorSending": "Error al enviar la invitación.",
+    "multipleHelper": "Puedes invitar a varias personas a la vez: separa los correos con comas.",
     "errorLoading": "Error al cargar la colección.",
     "noPermission": "No tienes acceso a los miembros de esta colección.",
     "caption": "Miembros de esta colección"

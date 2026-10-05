@@ -629,6 +629,7 @@
     "errorResending": "Error en reenviar la invitació.",
     "invitationSent": "Invitació enviada.",
     "errorSending": "Error en enviar la invitació.",
+    "multipleHelper": "Pots convidar diverses persones alhora: separa els correus amb comes.",
     "errorLoading": "Error en carregar la col·lecció.",
     "noPermission": "No tens accés als membres d'aquesta col·lecció.",
     "caption": "Membres d'aquesta col·lecció"
