@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
@@ -365,16 +364,19 @@ export default function HomePage() {
                 style={{ marginBottom: 'var(--spacing-s)' }}
               >
                 <strong>{L(inv.collection_headline)}</strong>
-                <div
-                  style={{
-                    marginTop: 'var(--spacing-xs)',
-                    display: 'flex',
-                    gap: 'var(--spacing-s)',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Link to={`/verify/${inv.accept_code}`}>{t('home.acceptInvitation')}</Link>
-                  <Link to={`/verify/${inv.reject_code}`}>{t('home.declineInvitation')}</Link>
+                {/* The answer is two buttons, as everywhere else something is decided
+                    (a thing's hero, the invitation email): accepting is the primary
+                    and comes first, declining the secondary (RW2, CA 2026-10-05). They
+                    were two text links side by side. In a `.button-row-wide`, so on a
+                    phone each is the width of the screen; the destinations are the same
+                    `/verify/` links as ever. */}
+                <div className="button-row-wide" style={{ marginTop: 'var(--spacing-xs)' }}>
+                  <ButtonLink to={`/verify/${inv.accept_code}`} style={btnStyle}>
+                    {t('home.acceptInvitation')}
+                  </ButtonLink>
+                  <ButtonLink to={`/verify/${inv.reject_code}`} style={btnSecondaryStyle}>
+                    {t('home.declineInvitation')}
+                  </ButtonLink>
                 </div>
               </Notification>
             ))}
