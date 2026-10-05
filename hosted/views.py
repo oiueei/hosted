@@ -18,6 +18,8 @@ import logging
 
 from django.conf import settings
 from django.utils.decorators import method_decorator
+from django.views.decorators.vary import vary_on_headers
+from django.views.generic import RedirectView
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -35,6 +37,8 @@ from core.utils import get_client_ip, redact_email
 # a second implementation here would drift within a release. The dependency runs
 # in the only direction that is safe: the service layer depends on the product.
 from core.views.auth import _join_collection, _send_magic_link, email_ratelimit_key
+
+from .tally import browser_language, request_access_url
 
 security_logger = logging.getLogger("security")
 
@@ -123,3 +127,24 @@ class PopInView(APIView):
             {"message": "Check your email — we've sent you a magic link to join OIUEEI."},
             status=status.HTTP_200_OK,
         )
+
+
+@method_decorator(vary_on_headers("Accept-Language"), name="dispatch")
+class RequestAccessRedirect(RedirectView):
+    """`/request-access/` — the page that used to be here — goes to the Tally form.
+
+    "Request access" was a Django page of ours at this address until it moved to Tally
+    (`tally.py`), and the address is still out in the world: in the "your request was not
+    approved" emails sent before the move, in bookmarks, in whatever somebody was once
+    sent. Without a route it falls into the SPA's catch-all, where React Router reads it
+    as the profile of a user called "request-access" and shows a broken profile page.
+
+    **302, not 301**: the form it points at is a service's, in a language chosen from
+    the browser, and neither should be cached as the permanent answer. The form is the
+    one of the browser's preferred language (``Accept-Language``), hence the ``Vary``.
+    """
+
+    permanent = False
+
+    def get_redirect_url(self, *args, **kwargs):
+        return request_access_url(browser_language(self.request))

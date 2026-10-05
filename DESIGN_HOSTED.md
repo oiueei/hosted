@@ -60,7 +60,7 @@ service* is gets told here.
   supplied through `frontend/src/deployment/`). Shared components must never assume the
   page exists; upstream they render one link fewer, and that is correct, not degraded.
 
-## 3. `/request-access/` and the approval notice — the validation gate
+## 3. "Request access" and the approval notice — the validation gate
 
 Creating `COMMUNITY`, `LEND`, `RENT` or `RESERVE` (an on-site reservation) needs a
 person to say yes. The design job is to make a manual gate feel like an honest
@@ -74,9 +74,10 @@ person to say yes. The design job is to make a manual gate feel like an honest
   not a plan, not a tier, not an upgrade. No pricing language on any of these surfaces,
   including the ones that would only hint at it.
 - **Do not simplify the form into a one-click "request access" button.** The written
-  answer *is* the filter: who you are, and what collection you intend to create. This
-  runs against the usual reduce-friction reflex, which is exactly why it is written
-  down — the friction is the feature.
+  answer *is* the filter: who you are, and what collection you intend to create. The
+  Tally form has to keep asking for both in writing. This runs against the usual
+  reduce-friction reflex, which is exactly why it is written down — the friction is the
+  feature.
 - **A refusal says the slots are currently full, and offers no appeal surface.** Design
   no debate UI around it. The door is a person's judgement, and it must not become a
   tribunal.
@@ -86,9 +87,15 @@ person to say yes. The design job is to make a manual gate feel like an honest
 - **Guests are never touched by this.** Anyone invited to a collection browses, asks,
   reserves and contributes with no validation at all. Gate copy must not appear on a
   single guest-facing surface.
-- It is a Django page **outside the SPA**, so it gets none of the theeeme/Koros
-  machinery for free. It still owes the same visual language and the same WCAG AA floor
-  as far as a server-rendered page can carry them.
+- It is a **Tally form, one per language** (`es`, `ca`, `en`), opened in a new tab from
+  the notice's button: a third party's page, so it gets none of the theeeme/Koros
+  machinery and its accessibility is Tally's, not ours. What is ours is what it asks and
+  how it is worded, in all three languages, in the tone of the rest of the service. The
+  request lands in Tally, not in the app; **the answer is given in the admin**, by
+  opening a row for the account — found by its email — and choosing a status, which
+  mails the person the decision. The old address of the page, `/request-access/`, is
+  still out in earlier emails and redirects to the form of the visitor's browser
+  language.
 
 ## 4. What is deliberately not in this document
 

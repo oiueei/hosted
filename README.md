@@ -20,7 +20,7 @@ Only what belongs to *this* operator's service — never a change to shared beha
 
 | Addition | What it is |
 |---|---|
-| [`hosted/`](hosted/) | The service-layer Django app: the open sign-up door (`/api/v1/auth/pop-in/`), the request-access form, the creator-validation model, the weekly operator report. See [`hosted/README.md`](hosted/README.md). |
+| [`hosted/`](hosted/) | The service-layer Django app: the open sign-up door (`/api/v1/auth/pop-in/`), where “Request access” lives (a Tally form per language, answered in the admin; the old `/request-access/` address redirects to it), the creator-validation model, the weekly operator report. See [`hosted/README.md`](hosted/README.md). |
 | `frontend/src/deployment/` | The SPA half — the `/popin`, `/welcome` and `/faq` pages and their copy, replacing the empty stubs upstream ships. |
 | [`DESIGN_HOSTED.md`](DESIGN_HOSTED.md) | Design rules for those surfaces. Adds to `DESIGN.md`, never overrides it. |
 | `frontend/src/legal/{ca,en,es}.js` | The full RGPD/LSSI legal notice. The operator's identity is injected from `VITE_LEGAL_OPERATOR` / `_NIF` / `_ADDRESS` at build time — `frontend/scripts/check-legal-env.mjs` enforces it, so the tax ID and address are never committed. |

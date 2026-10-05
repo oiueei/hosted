@@ -19,6 +19,8 @@ two cannot come apart.
 The addresses are used exactly as written: nothing about the person is added to them.
 """
 
+from django.utils.translation.trans_real import parse_accept_lang_header
+
 DEFAULT_LANGUAGE = "es"
 
 REQUEST_ACCESS = {
@@ -37,3 +39,21 @@ def request_access_url(language=None):
     not be the thing that fails.
     """
     return REQUEST_ACCESS.get(language or "", REQUEST_ACCESS[DEFAULT_LANGUAGE])
+
+
+def browser_language(request):
+    """The first language the browser asks for that there is a form in — else ``es``.
+
+    From ``Accept-Language``, by the browser's own order of preference (the ``q``
+    values), taking ``ca-ES`` as ``ca``. Nothing the browser asks for that this
+    deployment does not speak (``fr``, ``*``), no header, or one that does not parse, is
+    the Spanish form — the same answer ``request_access_url`` gives for an unknown
+    language, not Django's ``LANGUAGE_CODE`` (English), which is what
+    ``get_language_from_request`` falls back to here and would send a visitor with no
+    header to the English form.
+    """
+    for tag, _quality in parse_accept_lang_header(request.META.get("HTTP_ACCEPT_LANGUAGE", "")):
+        language = tag.split("-")[0]
+        if language in REQUEST_ACCESS:
+            return language
+    return DEFAULT_LANGUAGE

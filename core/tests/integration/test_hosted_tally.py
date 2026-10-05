@@ -11,7 +11,11 @@ render, and each is pinned here in the language of whoever it is for:
 - `capabilities.request_url` (what the approval notice falls back to);
 - the two 403 bodies that say where to ask (a collection mode and a thing type that are
   not open yet) — core builds them from that very value;
-- the email that tells somebody their request was not approved.
+- the email that tells somebody their request was not approved;
+
+and the old address of the page, `/request-access/` (and without the slash), which is out in
+the world — in those emails, in bookmarks — and now redirects to the form of the visitor's
+browser language.
 
 And the two copies of the addresses (this module's and `frontend/src/deployment/index.js`)
 are read side by side so they cannot come apart.
@@ -23,14 +27,15 @@ from pathlib import Path
 import pytest
 from django.contrib.auth.models import AnonymousUser
 from django.core import mail
-from django.urls import NoReverseMatch, reverse
+from django.test import RequestFactory
+from django.urls import resolve
 from rest_framework import status
 
 from core.services.email_service import resolve_email_language
 from hosted.emails import send_creator_validation_decision_email
 from hosted.models import CreatorValidation
 from hosted.policy import HostedCreatorPolicy
-from hosted.tally import DEFAULT_LANGUAGE, REQUEST_ACCESS, request_access_url
+from hosted.tally import DEFAULT_LANGUAGE, REQUEST_ACCESS, browser_language, request_access_url
 
 POLICY = "hosted.policy.HostedCreatorPolicy"
 ES, CA, EN = (REQUEST_ACCESS[lang] for lang in ("es", "ca", "en"))
@@ -206,15 +211,96 @@ class TestTheEmailThatSaysNo:
         assert "tally.so" not in body
 
 
+class TestTheBrowsersLanguage:
+    """`Accept-Language` → the form's language: the first the browser asks for that we
+    have a form in, by its own order of preference, and `es` for anything else — not
+    Django's `LANGUAGE_CODE` fallback (English), which `get_language_from_request` would
+    give a visitor with no header at all."""
+
+    @staticmethod
+    def language(header=None):
+        extra = {} if header is None else {"HTTP_ACCEPT_LANGUAGE": header}
+        return browser_language(RequestFactory().get("/request-access/", **extra))
+
+    @pytest.mark.parametrize(
+        ("header", "expected"),
+        [
+            ("ca", "ca"),
+            ("en", "en"),
+            ("es", "es"),
+            ("ca-ES,ca;q=0.9,en;q=0.8", "ca"),
+            ("en-GB,en;q=0.9", "en"),
+            ("EN-us", "en"),
+            ("en;q=0.5, ca;q=0.9", "ca"),
+            ("fr-FR,fr;q=0.9,en;q=0.5", "en"),
+            ("de, it;q=0.9, ca;q=0.2", "ca"),
+        ],
+    )
+    def test_the_first_of_ours_by_the_browsers_own_preference(self, header, expected):
+        assert self.language(header) == expected
+
+    @pytest.mark.parametrize(
+        "header", [None, "", "fr", "fr-FR,fr;q=0.9", "*", "garbage;;;", "ca;q=zz"]
+    )
+    def test_none_of_ours_or_nothing_usable_is_the_spanish_one(self, header):
+        assert self.language(header) == "es"
+
+
 @pytest.mark.django_db
-class TestThePageOfOurOwnIsGone:
-    def test_the_route_no_longer_exists(self):
-        with pytest.raises(NoReverseMatch):
-            reverse("hosted:request-access")
+class TestTheOldAddressOfThePage:
+    """The page is gone; its address redirects to the form.
 
-    def test_the_old_address_is_not_answered_by_a_form_of_ours(self, api_client):
-        response = api_client.get("/request-access/")
+    It was a Django page of ours (see the module docstring); without a route the address
+    falls into the SPA's catch-all, where React Router reads it as the profile of a user
+    called "request-access" and a broken profile page appears.
+    """
 
-        assert "Ask to run a group here" not in response.content.decode()
-        # …nor does the slash-less typo redirect there any more.
-        assert api_client.get("/request-access").status_code != status.HTTP_301_MOVED_PERMANENTLY
+    ADDRESSES = ["/request-access/", "/request-access"]
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_it_redirects_with_a_302_and_not_a_permanent_move(self, api_client, address):
+        response = api_client.get(address)
+
+        assert response.status_code == status.HTTP_302_FOUND
+        assert response.status_code != status.HTTP_301_MOVED_PERMANENTLY
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_with_no_language_header_it_is_the_spanish_form(self, api_client, address):
+        assert api_client.get(address)["Location"] == ES
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    @pytest.mark.parametrize(
+        ("header", "expected"),
+        [("ca", CA), ("ca-ES,ca;q=0.9,en;q=0.8", CA), ("en", EN), ("en-GB,en;q=0.9", EN)],
+    )
+    def test_it_follows_the_language_of_the_browser(self, api_client, address, header, expected):
+        response = api_client.get(address, HTTP_ACCEPT_LANGUAGE=header)
+
+        assert response["Location"] == expected
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_a_language_without_a_form_is_the_spanish_one(self, api_client, address):
+        assert api_client.get(address, HTTP_ACCEPT_LANGUAGE="fr-FR,fr;q=0.9")["Location"] == ES
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_the_answer_depends_on_the_header_and_says_so(self, api_client, address):
+        """Whatever sits in front of the app must not hand the Catalan form to a
+        Spanish browser."""
+        assert "Accept-Language" in api_client.get(address)["Vary"]
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_nobody_needs_to_be_signed_in(self, api_client, authenticated_client, address):
+        assert api_client.get(address).status_code == status.HTTP_302_FOUND
+        assert authenticated_client.get(address).status_code == status.HTTP_302_FOUND
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_it_is_this_apps_route_and_not_the_spa_catch_all(self, address):
+        """Both spellings are declared on purpose: the slash-less one resolves to the
+        catch-all otherwise, and Django's APPEND_SLASH never gets to fix it."""
+        assert resolve(address).app_name == "hosted"
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_the_page_that_was_here_is_not_served_any_more(self, api_client, address):
+        response = api_client.get(address, follow=False)
+
+        assert b"Ask to run a group here" not in response.content
