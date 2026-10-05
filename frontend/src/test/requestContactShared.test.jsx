@@ -29,14 +29,14 @@ import RequestThingPage from '../pages/RequestThingPage';
  */
 const APPROVED = {
   request: {
-    es: 'Quien gestiona esta cosa verá tu nombre y tu email para poder escribirte.',
-    ca: "Qui gestiona aquesta cosa veurà el teu nom i el teu email per poder escriure't.",
-    en: 'Whoever runs this thing will see your name and email so they can write to you.',
+    es: 'Quien gestiona esta cosa verá tu nombre y tu email.',
+    ca: 'Qui gestiona aquesta cosa veurà el teu nom i el teu email.',
+    en: 'Whoever runs this thing will see your name and email.',
   },
   reservation: {
-    es: 'Quien gestiona este espacio verá tu nombre y tu email para poder escribirte.',
-    ca: "Qui gestiona aquest espai veurà el teu nom i el teu email per poder escriure't.",
-    en: 'Whoever runs this space will see your name and email so they can write to you.',
+    es: 'Quien gestiona este espacio verá tu nombre y tu email.',
+    ca: 'Qui gestiona aquest espai veurà el teu nom i el teu email.',
+    en: 'Whoever runs this space will see your name and email.',
   },
 };
 
