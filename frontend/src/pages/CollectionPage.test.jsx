@@ -1582,12 +1582,13 @@ describe('CollectionPage as a co-owner', () => {
   });
 
   // The hero row holds "Add thing" and "Edit collection" (CA, 2026-10-05): the
-  // first primary, the second secondary. It held "Edit collection" alone from
-  // 2026-10-03 — the rest of the curator's controls are in the collection menu,
-  // one click further — and then "Edit collection" primary with "Add thing"
-  // after it (2026-10-04): the thing a curator does most is put things in, so
-  // that is the button the eye lands on.
-  test('the curator hero row holds "Add thing" and then "Edit collection", the first primary', async () => {
+  // first primary, the second secondary — and "Invite your people", always, a third
+  // secondary one (G5, 2026-10-05; `test/inviteYourPeople.test.jsx` pins when it is
+  // there). It held "Edit collection" alone from 2026-10-03 — the rest of the
+  // curator's controls are in the collection menu, one click further — and then
+  // "Edit collection" primary with "Add thing" after it (2026-10-04): the thing a
+  // curator does most is put things in, so that is the button the eye lands on.
+  test('the curator hero row holds "Add thing" and then "Edit collection", the first primary, and "Invite your people"', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
         ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
@@ -1606,12 +1607,18 @@ describe('CollectionPage as a co-owner', () => {
     const row = container.querySelector('.button-row-wide');
     expect(row).not.toBeNull();
     const inRow = [...row.querySelectorAll('a, button')];
-    expect(inRow.map((el) => el.textContent)).toEqual(['Add thing', 'Edit collection']);
+    expect(inRow.map((el) => el.textContent)).toEqual([
+      'Add thing',
+      'Edit collection',
+      'Invite your people',
+    ]);
     expect(inRow[0]).toHaveAttribute('href', '/collections/COL001/add');
     expect(inRow[1]).toHaveAttribute('href', '/collections/COL001/edit');
+    expect(inRow[2]).toHaveAttribute('href', '/collections/COL001/invites');
     // The secondary tokens are a white background; the primary's are the theeeme's.
     expect(inRow[0].style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
     expect(inRow[1].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+    expect(inRow[2].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
   });
 
   // The button is there with things or without (CA, 2026-10-04): an empty group

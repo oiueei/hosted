@@ -529,17 +529,18 @@ export default function CollectionPage() {
                   <ButtonLink to={`/collections/${code}/edit`} style={btnSecondaryStyle}>
                     {t('collectionPage.editCollection')}
                   </ButtonLink>
-                  {/* Cold start (DESIGN §2/§6), a third button since X6 (CA, 2026-10-04)
-                      — it was a quiet line under the row ("Your collection is taking
-                      shape. Now invite your circle →"). The owner has something worth
-                      showing but has not invited anyone: secondary, like "Edit
-                      collection", so the row keeps its one primary. It goes once the
-                      first guest joins, or while there is nothing to show. */}
-                  {collection.invites.length === 0 && visibleThings.length > 0 && (
-                    <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
-                      {t('collectionPage.inviteYourPeople')}
-                    </ButtonLink>
-                  )}
+                  {/* The third button of the row (X6, CA 2026-10-04; it was a quiet line
+                      under the row, "Your collection is taking shape. Now invite your
+                      circle →"): secondary, like "Edit collection", so the row keeps its
+                      one primary. It was shown only while the group had things and
+                      nobody invited, and went with the first guest who accepted — CA
+                      invited people and the button was gone (G5, 2026-10-05). Now it is
+                      always there for whoever runs the group, owner or co-curator, with
+                      things or without and with members or without: inviting is not a
+                      step of the beginning. */}
+                  <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
+                    {t('collectionPage.inviteYourPeople')}
+                  </ButtonLink>
                 </div>
                 <CollectionDownloadsStatus downloads={downloads} />
                 <div className="spacer-s"></div>
