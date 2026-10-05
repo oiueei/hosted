@@ -417,7 +417,8 @@
     "successLabel": "¡Todo listo!",
     "successMessage": "Ya hemos avisado a quien gestiona esta cosa — te responderá pronto.",
     "backTo": "Volver a {{label}}",
-    "errorSending": "Error al enviar la solicitud."
+    "errorSending": "Error al enviar la solicitud.",
+    "contactShared": "Quien gestiona esta cosa verá tu nombre y tu email para poder escribirte."
   },
   "datePicker": {
     "open": "Elegir fecha",
@@ -1012,6 +1013,7 @@
     "joinedLabel": "Te has unido al grupo",
     "joinedGroup": "Para reservar aquí te has unido a {{group}}. Puedes salir desde tu perfil.",
     "dateSummary": "Reservado del {{start}} al {{end}}.",
+    "contactShared": "Quien gestiona este espacio verá tu nombre y tu email para poder escribirte.",
     "dateRange": "Elige una fecha entre hoy y dentro de {{days}} días.",
     "noteFrom": "Su mensaje: {{note}}",
     "maxDaysLabel": "Reserva más larga (días)",

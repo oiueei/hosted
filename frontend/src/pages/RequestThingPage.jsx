@@ -901,6 +901,15 @@ export default function RequestThingPage() {
 
           <div className="spacer-xs" />
           <div className="form-grid">
+            {/* Said before the press (DESIGN §6): whoever runs the thing is sent the
+                requester's name and email with the request (E1, CA 2026-10-05), so
+                the person finds it out here, not by being written to. The address
+                itself is not shown — the page does not hold the user, and does not
+                earn one more request for it. Only here: not in the join-the-group
+                nudge above, and not once the request has gone. */}
+            <p className="text-muted" style={{ margin: 0 }}>
+              {isReservation ? t('reservation.contactShared') : t('request.contactShared')}
+            </p>
             <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
               {submitting
                 ? t('common.sending')
