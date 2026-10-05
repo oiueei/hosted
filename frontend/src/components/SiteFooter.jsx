@@ -9,7 +9,9 @@ import { aboutPath } from '../deployment';
  * OIUEEI is · Privacy & legal · Contact us · Made with ♥︎ in …" — and under 768px
  * the two lines it always was, the doors over the text (CA, 2026-10-03). Global (mounted once in App), painted with the viewer's theeeme
  * `color_02` — the same token every `.form-page` uses as its background — so
- * there is no colour seam under the 100vh page. `useLocation()` re-renders it
+ * there is no colour seam under the page. It sits at the bottom of the visible
+ * screen on a short page and after the content on a long one (G7, CA 2026-10-05:
+ * `#root` is a column as tall as the viewport, `<main>` takes what is left). `useLocation()` re-renders it
  * on navigation, which re-reads the theeeme after a login/profile change (the
  * pages get this for free by remounting; a permanent component must ask).
  * The heart is U+2665 + U+FE0E (text presentation) so it inherits the text
