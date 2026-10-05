@@ -400,6 +400,83 @@ describe('HomePage — invitations waiting for an answer', () => {
       '/verify/ACC002'
     );
   });
+
+  // RW2 (CA, 2026-10-05): the answer is two buttons, as everywhere else something is
+  // decided. They were two text links side by side. The destinations did not change.
+  describe('the answer is two buttons', () => {
+    const WITH_THEEEME = {
+      ...USER,
+      theeeme_colors: {
+        color_01: 'bus',
+        color_02: 'white',
+        color_03: 'engel',
+        color_04: 'black',
+        color_05: 'black',
+        color_06: 'white',
+      },
+    };
+    const card = (headline) => screen.getByText(headline).closest('section');
+    const accept = (within_) => within_.getByRole('link', { name: 'Accept invitation' });
+    const decline = (within_) => within_.getByRole('link', { name: 'Decline invitation' });
+    const background = (link) => link.style.getPropertyValue('--background-color');
+
+    test('accepting is the primary and comes first; declining is the secondary, after it', async () => {
+      mockDashboard({ mine: [MINE], invitations: [TOOLS], user: WITH_THEEEME });
+      renderHome();
+      await screen.findByText('Tools');
+
+      const inCard = within(card('Tools'));
+      expect(accept(inCard)).toHaveAttribute('href', '/verify/ACC001');
+      expect(decline(inCard)).toHaveAttribute('href', '/verify/REJ001');
+      // In that order.
+      expect(
+        accept(inCard).compareDocumentPosition(decline(inCard)) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      // The theeeme's tokens: the primary is filled with the first colour, the secondary is
+      // white with that colour as its border.
+      expect(background(accept(inCard))).toBe('var(--color-bus)');
+      expect(background(decline(inCard))).toBe('var(--color-white)');
+      expect(decline(inCard).style.getPropertyValue('--border-color')).toBe('var(--color-bus)');
+    });
+
+    test('they are buttons that are links, not text links', async () => {
+      mockDashboard({ mine: [MINE], invitations: [TOOLS], user: WITH_THEEEME });
+      renderHome();
+      await screen.findByText('Tools');
+
+      const inCard = within(card('Tools'));
+      // The class HDS gives a link that wears a button's style (`useButtonStyles`).
+      expect(accept(inCard).className).toMatch(/hds-button/);
+      expect(decline(inCard).className).toMatch(/hds-button/);
+    });
+
+    test('both sit in one wide row, so on a phone each is the width of the screen', async () => {
+      mockDashboard({ mine: [MINE], invitations: [TOOLS], user: WITH_THEEEME });
+      renderHome();
+      await screen.findByText('Tools');
+
+      const inCard = within(card('Tools'));
+      const row = accept(inCard).parentElement;
+      expect(row).toHaveClass('button-row-wide');
+      expect(decline(inCard).parentElement).toBe(row);
+    });
+
+    test('with two invitations each card has its own pair, to its own codes', async () => {
+      mockDashboard({ mine: [MINE], invitations: [TOOLS, BOOKS], user: WITH_THEEEME });
+      renderHome();
+      await screen.findByText('Tools');
+
+      const tools = within(card('Tools'));
+      const books = within(card('Books'));
+      expect(accept(tools)).toHaveAttribute('href', '/verify/ACC001');
+      expect(decline(tools)).toHaveAttribute('href', '/verify/REJ001');
+      expect(accept(books)).toHaveAttribute('href', '/verify/ACC002');
+      expect(decline(books)).toHaveAttribute('href', '/verify/REJ002');
+      expect(screen.getAllByRole('link', { name: 'Accept invitation' })).toHaveLength(2);
+      expect(background(accept(books))).toBe('var(--color-bus)');
+      expect(background(decline(books))).toBe('var(--color-white)');
+    });
+  });
 });
 
 describe('HomePage — collections that are switched off', () => {
