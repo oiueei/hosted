@@ -362,7 +362,14 @@ export default function CollectionPage() {
             <span className="hero-corners">
               {/* "Requests to me" is the collection menu's first entry where this page
                   has one (X4, CA 2026-10-04): the account menu then leaves it out. */}
-              <AccountMenu requestsInCollectionMenu={isCurator || isMember} />
+              {/* Signed out, in a PUBLIC group the hero already offers "Sign in" (G3, CA
+                  2026-10-05), so the corner's icon to the same place is left out; with
+                  a session `offerSignIn` changes nothing, and on every other page a
+                  signed-out reader keeps the icon. */}
+              <AccountMenu
+                requestsInCollectionMenu={isCurator || isMember}
+                offerSignIn={!showsSignedOutDoors}
+              />
               {/* The group's own options (CA, 2026-10-03), between the account menu
                   and the share one: a curator's, and since X2 (2026-10-04) a
                   member's, with what is theirs. Nothing for a reader who is
@@ -447,28 +454,31 @@ export default function CollectionPage() {
             {/* The group's welcome PDF is an entry of the collection menu (X2,
                 2026-10-04), first, for members and curators — the API serves its
                 URL to those two only. It was a loose link here. */}
-            {/* The hero's "join" is back for a signed-out reader (CA, 2026-10-04),
-              with its pair. Its first form — "This group shares its things on
+            {/* The hero's two doors for a signed-out reader (CA, 2026-10-04), in the
+              order CA put them on 2026-10-05: "Sign in" first and primary, to /login,
+              which brings them back here — most people who open a public group
+              without a session already have an account, and the member whose session
+              expired (the weekly digest's link is an ordinary one) is one of them —
+              and "Join this group" secondary, to the join page (no ?thing=: there is
+              no thing in it). Its first form — "This group shares its things on
               OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
               the content stood in for it from 2026-09-29, only where no card
-              had a button to press, and that line is gone in turn. Now a row, as
-              on /welcome: "Join this group" first and primary, to the join page
-              (no ?thing=: there is no thing in it), and "Sign in" secondary, to
-              /login, which brings them back here — for the member who has no
-              session and for anyone who already has an account. In every PUBLIC
+              had a button to press, and that line is gone in turn. In every PUBLIC
               group, COMMUNITY or PROPRIETARY, empty or not; the action button on
-              each card (login-to-act) is still there for whoever has one. */}
+              each card (login-to-act) is still there for whoever has one. The
+              account icon of the corner is left out on this page (above): this row
+              is its replacement. */}
             {showsSignedOutDoors && (
               <div className="invite-nudge">
                 <div className="button-row-wide">
-                  <ButtonLink to={`/collections/${code}/join`} style={btnStyle}>
-                    {t('collectionPage.visitorJoin')}
-                  </ButtonLink>
                   <ButtonLink
                     to={loginPathFor({ pathname: `/collections/${code}` })}
-                    style={btnSecondaryStyle}
+                    style={btnStyle}
                   >
                     {t('login.signIn')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/join`} style={btnSecondaryStyle}>
+                    {t('collectionPage.visitorJoin')}
                   </ButtonLink>
                 </div>
               </div>
