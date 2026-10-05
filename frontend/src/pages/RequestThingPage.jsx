@@ -260,12 +260,19 @@ export default function RequestThingPage() {
           closedDates,
         });
   // The free form (LEND/RENT with no fixed lengths) has two pickers, and each follows
-  // the rule of chained handovers the server and the card use (G8): the pickup is out
-  // on [s, e) of a booking, the return is out when the stretch from the pickup runs
-  // over one. The return is judged against the pickup chosen so far.
-  const freePickupBlocked = (date) => freePickupDisabled(date, { blockedPeriods, closedDates });
+  // the rules the server and the card use: the weekdays the collection allows at both
+  // ends (RW1), and the chained handovers of G8 — the pickup is out on [s, e) of a
+  // booking, the return is out when the stretch from the pickup runs over one. The
+  // return is judged against the pickup chosen so far.
+  const freePickupBlocked = (date) =>
+    freePickupDisabled(date, { rentalWeekdays, blockedPeriods, closedDates });
   const freeReturnBlocked = (date) =>
-    freeReturnDisabled(date, { pickup: selectedIso, blockedPeriods, closedDates });
+    freeReturnDisabled(date, {
+      pickup: selectedIso,
+      rentalWeekdays,
+      blockedPeriods,
+      closedDates,
+    });
 
   // The request body, built fresh from current form state — `null` when a
   // required field is still empty. A function, not a one-off inline block, so

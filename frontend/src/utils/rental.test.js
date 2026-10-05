@@ -233,6 +233,103 @@ describe('freeReturnDisabled', () => {
   });
 });
 
+// RW1 (CA, 2026-10-05): the free form follows the collection's weekdays too, as the server
+// does at BOTH ends (`Collection.rental_violation`: `rental_pickup_weekday` for the pickup,
+// `rental_return_weekday` for the return), with or without fixed lengths. In October 2026
+// the 3rd is a Saturday, the 7th a Wednesday and the 10th a Saturday (Python weekday 5).
+describe('the free form and the weekdays the collection allows', () => {
+  const SATURDAYS = [5];
+  const WEDNESDAY = '2026-10-07';
+  const SATURDAY = '2026-10-10';
+
+  describe('the pickup', () => {
+    test('with only Saturdays: a Wednesday is out and a Saturday is open', () => {
+      expect(freePickupDisabled(WEDNESDAY, { rentalWeekdays: SATURDAYS })).toBe(true);
+      expect(freePickupDisabled(SATURDAY, { rentalWeekdays: SATURDAYS })).toBe(false);
+      expect(freePickupDisabled('2026-10-17', { rentalWeekdays: SATURDAYS })).toBe(false);
+    });
+
+    test('every other weekday is out, not just the Wednesday', () => {
+      const out = [
+        '2026-10-05',
+        '2026-10-06',
+        '2026-10-07',
+        '2026-10-08',
+        '2026-10-09',
+        '2026-10-11',
+      ];
+      for (const day of out) {
+        expect(freePickupDisabled(day, { rentalWeekdays: SATURDAYS }), day).toBe(true);
+      }
+    });
+
+    test('with no weekdays listed (any day) the weekday rule disables nothing', () => {
+      for (const day of ['2026-10-05', '2026-10-07', '2026-10-10', '2026-10-11']) {
+        expect(freePickupDisabled(day, { rentalWeekdays: [] }), day).toBe(false);
+        expect(freePickupDisabled(day, {}), day).toBe(false);
+      }
+    });
+
+    test('a day with the right weekday is still out when a booking occupies it or it is a closure', () => {
+      const booking = [{ start_date: SATURDAY, end_date: '2026-10-17' }];
+      const opts = { rentalWeekdays: SATURDAYS, blockedPeriods: booking };
+      expect(freePickupDisabled(SATURDAY, opts)).toBe(true);
+      // …and its return day, a Saturday too, is the chained handover: open.
+      expect(freePickupDisabled('2026-10-17', opts)).toBe(false);
+      expect(freePickupDisabled('2026-10-24', { ...opts, closedDates: ['2026-10-24'] })).toBe(true);
+    });
+
+    test('accepts a Date, which is what the calendar hands over', () => {
+      expect(freePickupDisabled(new Date(2026, 9, 7), { rentalWeekdays: SATURDAYS })).toBe(true);
+      expect(freePickupDisabled(new Date(2026, 9, 10), { rentalWeekdays: SATURDAYS })).toBe(false);
+    });
+  });
+
+  describe('the return', () => {
+    test('with a pickup chosen: a Wednesday is out and a Saturday is open', () => {
+      const opts = { pickup: '2026-10-03', rentalWeekdays: SATURDAYS };
+      expect(freeReturnDisabled(WEDNESDAY, opts)).toBe(true);
+      expect(freeReturnDisabled(SATURDAY, opts)).toBe(false);
+    });
+
+    test('with no pickup chosen yet: the same — the weekday does not depend on it', () => {
+      for (const pickup of ['', undefined]) {
+        const opts = { pickup, rentalWeekdays: SATURDAYS };
+        expect(freeReturnDisabled(WEDNESDAY, opts)).toBe(true);
+        expect(freeReturnDisabled(SATURDAY, opts)).toBe(false);
+      }
+    });
+
+    test('with no weekdays listed (any day) the weekday rule disables nothing', () => {
+      for (const day of ['2026-10-07', '2026-10-08', '2026-10-10', '2026-10-11']) {
+        expect(freeReturnDisabled(day, { pickup: '2026-10-03', rentalWeekdays: [] }), day).toBe(
+          false
+        );
+        expect(freeReturnDisabled(day, { pickup: '2026-10-03' }), day).toBe(false);
+        expect(freeReturnDisabled(day, { pickup: '' }), day).toBe(false);
+      }
+    });
+
+    test('the chained handover of G8 holds on an allowed weekday: a return on another booking’s pickup stays open', () => {
+      // Pickup Saturday the 3rd; a booking from Saturday the 10th. A return on the 10th
+      // lands on that pickup (open); one on the 17th runs over the booking (out).
+      const opts = {
+        pickup: '2026-10-03',
+        rentalWeekdays: SATURDAYS,
+        blockedPeriods: [{ start_date: SATURDAY, end_date: '2026-10-14' }],
+      };
+      expect(freeReturnDisabled(SATURDAY, opts)).toBe(false);
+      expect(freeReturnDisabled('2026-10-17', opts)).toBe(true);
+    });
+
+    test('a day before the pickup is out even on an allowed weekday', () => {
+      expect(
+        freeReturnDisabled('2026-10-03', { pickup: SATURDAY, rentalWeekdays: SATURDAYS })
+      ).toBe(true);
+    });
+  });
+});
+
 describe('isPickupDisabled', () => {
   const base = { rentalWeekdays: [2], blockedPeriods: [], duration: '' };
   test('disables a pickup on a disallowed weekday', () => {
