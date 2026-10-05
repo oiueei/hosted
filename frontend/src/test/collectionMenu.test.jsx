@@ -246,7 +246,23 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       // A page of its own since X5 (2026-10-04), no longer a section of /add.
       ['Add several at once (CSV)', '/collections/COL001/import'],
       ['Manage members', '/collections/COL001/invites'],
+      // …and so is the CSV of invitations since G2 (2026-10-05), right after the
+      // members page it left.
+      ['Invite many at once (CSV)', '/collections/COL001/invites/import'],
     ]);
+  });
+
+  test('"Invite many at once (CSV)" is right after "Manage members", and nowhere else', async () => {
+    renderCollection(COLLECTION);
+    await openMenu();
+
+    const names = within(panel())
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+    expect(names.indexOf('Invite many at once (CSV)')).toBe(names.indexOf('Manage members') + 1);
+    expect(
+      within(panel()).getAllByRole('link', { name: 'Invite many at once (CSV)' })
+    ).toHaveLength(1);
   });
 
   test('choosing the CSV entry closes the panel', async () => {
@@ -630,28 +646,27 @@ describe('the collection menu in the CollectionPage hero corner', () => {
   // whether or not the link closes it — a test with a plain click would pass
   // for the wrong reason. A modified click (a new tab) is the case that stays
   // on the page, and the one where the panel would otherwise be left open.
-  test.each(['Add thing', 'Add several at once (CSV)', 'Manage members'])(
-    'a click on "%s" that opens a new tab still closes the panel',
-    async (name) => {
-      renderCollection(COLLECTION);
-      await openMenu();
-      // jsdom would try to follow the anchor's href and say it cannot.
-      const noNavigation = (event) => event.preventDefault();
-      document.addEventListener('click', noNavigation);
-      try {
-        fireEvent.click(within(panel()).getByRole('link', { name }), { ctrlKey: true });
-      } finally {
-        document.removeEventListener('click', noNavigation);
-      }
-
-      expect(panel()).toBeNull();
-      // Still on the collection's page, trigger folded.
-      expect(screen.getByRole('button', { name: TRIGGER })).toHaveAttribute(
-        'aria-expanded',
-        'false'
-      );
+  test.each([
+    'Add thing',
+    'Add several at once (CSV)',
+    'Manage members',
+    'Invite many at once (CSV)',
+  ])('a click on "%s" that opens a new tab still closes the panel', async (name) => {
+    renderCollection(COLLECTION);
+    await openMenu();
+    // jsdom would try to follow the anchor's href and say it cannot.
+    const noNavigation = (event) => event.preventDefault();
+    document.addEventListener('click', noNavigation);
+    try {
+      fireEvent.click(within(panel()).getByRole('link', { name }), { ctrlKey: true });
+    } finally {
+      document.removeEventListener('click', noNavigation);
     }
-  );
+
+    expect(panel()).toBeNull();
+    // Still on the collection's page, trigger folded.
+    expect(screen.getByRole('button', { name: TRIGGER })).toHaveAttribute('aria-expanded', 'false');
+  });
 
   test('opening the account menu closes the collection menu — it is a click outside', async () => {
     renderCollection(COLLECTION);
@@ -737,7 +752,12 @@ describe('the collection menu for a member', () => {
     expect(
       divider.compareDocumentPosition(within(panel()).getByRole('link', { name: LEAVE }))
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    for (const curators of ['Add thing', 'Add several at once (CSV)', 'Manage members']) {
+    for (const curators of [
+      'Add thing',
+      'Add several at once (CSV)',
+      'Manage members',
+      'Invite many at once (CSV)',
+    ]) {
       expect(within(panel()).queryByRole('link', { name: curators })).toBeNull();
     }
     expect(within(panel()).queryByRole('button', { name: /Download/ })).toBeNull();
@@ -873,11 +893,12 @@ describe('the collection menu for a member', () => {
     renderCollection({ ...COLLECTION, welcome_doc_url: DOC, digest_frequency: 'WEEKLY' });
     await openMenu();
 
-    expect(entries().slice(0, 4)).toEqual([
+    expect(entries().slice(0, 5)).toEqual([
       "The group's welcome document (PDF)",
       'Add thing',
       'Add several at once (CSV)',
       'Manage members',
+      'Invite many at once (CSV)',
     ]);
     expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();
     expect(within(panel()).queryByRole('link', { name: LEAVE })).toBeNull();
@@ -974,10 +995,11 @@ describe('the collection menu — "Requests to me"', () => {
     const first = panel().firstElementChild;
     expect(first).toHaveTextContent(REQUESTS);
     expect(first.nextElementSibling).toHaveClass('collection-menu-divider');
-    expect(entries().slice(1, 4)).toEqual([
+    expect(entries().slice(1, 5)).toEqual([
       'Add thing',
       'Add several at once (CSV)',
       'Manage members',
+      'Invite many at once (CSV)',
     ]);
   });
 

@@ -17,7 +17,6 @@ import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
-import BulkInviteCsv from '../components/BulkInviteCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
@@ -462,9 +461,6 @@ export default function ManageInvitesPage() {
               {inviteLoading ? t('common.sending') : t('manageInvites.invite')}
             </Button>
           </div>
-          <div className="spacer-m" />
-          <h2>{t('bulkInvite.heading')}</h2>
-          <BulkInviteCsv collectionCode={code} onInvited={fetchCollection} />
         </>
       )}
 

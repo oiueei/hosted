@@ -135,6 +135,7 @@
     "myBookings": "Mis solicitudes — OIUEEI",
     "addThing": "Añadir cosa — OIUEEI",
     "importThings": "Añadir varios a la vez (CSV) — OIUEEI",
+    "importInvites": "Invitar a varios a la vez (CSV) — OIUEEI",
     "editThing": "Editar {{headline}} — OIUEEI",
     "editThingDefault": "Editar cosa — OIUEEI",
     "deleteThing": "Eliminar {{headline}} — OIUEEI",

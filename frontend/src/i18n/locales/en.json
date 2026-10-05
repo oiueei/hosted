@@ -141,6 +141,7 @@
     "myBookings": "My requests — OIUEEI",
     "addThing": "Add thing — OIUEEI",
     "importThings": "Add several at once (CSV) — OIUEEI",
+    "importInvites": "Invite many at once (CSV) — OIUEEI",
     "editThing": "Edit {{headline}} — OIUEEI",
     "editThingDefault": "Edit thing — OIUEEI",
     "deleteThing": "Delete {{headline}} — OIUEEI",

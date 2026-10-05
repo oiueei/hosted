@@ -22,7 +22,8 @@ const PANEL_ID = 'collection-menu-panel';
  * files, which a bare ⋯ (what it was drawn as at first) did not say.
  *
  * Its entries, in order: "Add thing", "Add several at once (CSV)", "Manage
- * members", a divider, then the downloads. "Add thing" is also a button in the
+ * members", "Invite many at once (CSV)" (G2, CA 2026-10-05: the CSV of invitations
+ * left the members page for a page of its own), a divider, then the downloads. "Add thing" is also a button in the
  * hero row (CA, 2026-10-04, who chose to repeat it).
  *
  * The panel mixes links with the three download buttons, so it is a plain
@@ -148,6 +149,12 @@ export default function CollectionMenu({
               </Link>
               <Link to={`/collections/${code}/invites`} onClick={close}>
                 {t('collectionPage.manageGuests')}
+              </Link>
+              {/* The CSV of invitations, like the CSV of things above: it was the last
+                  block of the members page, and it is a page of its own since G2
+                  (CA, 2026-10-05). Curators only, as the invitations are. */}
+              <Link to={`/collections/${code}/invites/import`} onClick={close}>
+                {t('bulkInvite.heading')}
               </Link>
               <hr className="collection-menu-divider" />
               {hasDateThings && (

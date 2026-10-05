@@ -96,6 +96,22 @@ describe('ManageInvitesPage (the guest list)', () => {
     expect(screen.getByLabelText('Guest email')).toHaveValue('');
   });
 
+  // The CSV of invitations was the last block of this page, under the form that
+  // invites one address at a time; it has a page of its own since G2 (CA,
+  // 2026-10-05), reached from the collection menu. The one-by-one form stays.
+  test('the CSV of invitations is not on this page any more — the form for one address is', async () => {
+    mockRoutes();
+    const { container } = renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(screen.getByLabelText('Guest email')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Invite' })).toBeInTheDocument();
+    expect(screen.queryByText('Invite many at once (CSV)')).toBeNull();
+    expect(screen.queryByRole('heading', { name: /\(CSV\)/ })).toBeNull();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    expect(container.querySelector('#bulk-invite-csv')).toBeNull();
+  });
+
   test('the guest table carries a name', async () => {
     renderPage();
 
