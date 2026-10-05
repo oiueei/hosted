@@ -2,14 +2,10 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
-// `FeedbackLink` reads VITE_FEEDBACK_URL once, when its module loads, and this
-// file imports WelcomePage statically — so the variable is set here, hoisted
-// above the imports, for the "Ideas and bugs" button of the closing row. (With
-// no URL the button is simply absent, which `FeedbackLink.test.jsx` pins.)
-vi.hoisted(() => {
-  vi.stubEnv('VITE_FEEDBACK_URL', 'https://forms.example/feedback');
-});
-const FEEDBACK_URL = 'https://forms.example/feedback';
+// "Ideas and bugs" of the closing row is this deployment's own Tally form, in the
+// language on screen (`externalForms.feedback`, TL1/TLH1, CA 2026-10-05) — English
+// here. `FeedbackLink` prefers it to the `VITE_FEEDBACK_URL` this file used to stub to
+// have a button at all, so the address expected is the deployment's, read from it.
 
 vi.mock('../services/api', () => ({
   apiFetch: vi.fn(),
@@ -20,6 +16,9 @@ import { apiFetch } from '../services/api';
 import './testI18n';
 import WelcomePage from './pages/WelcomePage';
 import { nestedTabStops } from '../test/nestedInteractive';
+import { externalForms } from './index';
+
+const FEEDBACK_URL = externalForms.feedback.en;
 
 // /welcome is the page that explains what OIUEEI is — the one you send to
 // somebody who has never heard of it. It sits in the public route block, but it

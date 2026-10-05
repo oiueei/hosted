@@ -6,9 +6,10 @@ export { deploymentI18n } from './i18n';
  * What this deployment adds to the SPA.
  *
  * Upstream this directory exports nothing but empties — no routes, no open
- * door, no about page — and `App.jsx`, `LoginPage.jsx`, `SiteFooter.jsx`,
- * `CollectionPage.jsx` and `VerifyPage.jsx` read these four values and are
- * **byte-identical on both branches**. That is the entire point: this file is
+ * door, no about page, no forms of its own — and `App.jsx`, `LoginPage.jsx`,
+ * `SiteFooter.jsx`, `CollectionPage.jsx`, `VerifyPage.jsx` and the components
+ * that read `externalForms` read these values and are **byte-identical on both
+ * branches**. That is the entire point: this file is
  * replaced wholesale, and nothing shared is edited, so a merge from upstream
  * stays a merge.
  *
@@ -56,3 +57,29 @@ export const aboutPath = '/welcome';
 // arrives, and handing them a page in a language they did not choose is a worse
 // welcome than one link fewer.
 export const faqPath = '/faq';
+
+// The three ways of writing to the team go to forms on Tally, not to pages of the
+// app (CA, 2026-10-05): the footer's "Contact us", "Ideas and bugs" and "Request
+// access". Core knows nothing about who hosts them — `utils/externalForms.js` gives
+// each place the address of the reader's language, exactly as it is written here (no
+// parameter is added: nothing of the reader goes to Tally except what they type
+// there), and the place opens it in a new tab. A language without an address uses
+// `es`. Tally is named in the privacy section of /legal (src/legal/{es,ca,en}.js),
+// which has to say as much as these three forms receive.
+export const externalForms = {
+  contact: {
+    es: 'https://tally.so/r/PdaOy1',
+    ca: 'https://tally.so/r/Gx2lye',
+    en: 'https://tally.so/r/Y5LagN',
+  },
+  feedback: {
+    es: 'https://tally.so/r/lbZRb5',
+    ca: 'https://tally.so/r/68XN1O',
+    en: 'https://tally.so/r/A76Xkz',
+  },
+  requestAccess: {
+    es: 'https://tally.so/r/zxaY4M',
+    ca: 'https://tally.so/r/D4lz9N',
+    en: 'https://tally.so/r/aQ8dPX',
+  },
+};
