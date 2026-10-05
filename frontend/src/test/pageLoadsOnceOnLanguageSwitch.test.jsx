@@ -54,6 +54,7 @@ import EditCollectionPage from '../pages/EditCollectionPage';
 import ManageInvitesPage from '../pages/ManageInvitesPage';
 import AddThingPage from '../pages/AddThingPage';
 import ImportThingsPage from '../pages/ImportThingsPage';
+import ImportInvitesPage from '../pages/ImportInvitesPage';
 import RequestThingPage from '../pages/RequestThingPage';
 import DeleteThingPage from '../pages/DeleteThingPage';
 import DeleteCollectionPage from '../pages/DeleteCollectionPage';
@@ -164,6 +165,13 @@ const PAGES = [
     Page: ImportThingsPage,
     route: '/collections/:code/import',
     entry: '/collections/COL001/import',
+    gets: ['/api/v1/collections/COL001/'],
+  },
+  {
+    name: 'ImportInvitesPage',
+    Page: ImportInvitesPage,
+    route: '/collections/:code/invites/import',
+    entry: '/collections/COL001/invites/import',
     gets: ['/api/v1/collections/COL001/'],
   },
   {

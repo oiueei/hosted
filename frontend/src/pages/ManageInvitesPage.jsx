@@ -17,9 +17,10 @@ import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
-import BulkInviteCsv from '../components/BulkInviteCsv';
+import BulkInviteResult from '../components/BulkInviteResult';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
+import { parseEmailList } from '../utils/emailList';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 export default function ManageInvitesPage() {
@@ -50,8 +51,12 @@ export default function ManageInvitesPage() {
   // co-owner. The founder is no longer a distinct client-side tier here.
   const [isCurator, setIsCurator] = useState(false);
   const [coOwnerCodes, setCoOwnerCodes] = useState(new Set());
+  // What is in the invitations field: one address or several, cut by commas (G6).
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  // The summary of the last batch the field sent (several addresses at once), in the
+  // shape the CSV tool says it in; null for none, or after a single invitation.
+  const [bulkResult, setBulkResult] = useState(null);
   const [toast, setToast] = useState(null);
   const [resending, setResending] = useState(null);
   const [promoting, setPromoting] = useState(null);
@@ -189,26 +194,65 @@ export default function ManageInvitesPage() {
     }
   };
 
+  // Several addresses are one batch for `invite/bulk/` — best-effort, never split into
+  // single calls behind the reader's back, and never cut at 100: past the server's cap
+  // its own message comes back and the field stays as it was. What was skipped (and
+  // why) is the summary; what went out joins the pending list; the field keeps exactly
+  // the addresses that did not, to be corrected or retried.
+  const inviteMany = async (emails) => {
+    const res = await apiFetch(`/api/v1/collections/${code}/invite/bulk/`, {
+      method: 'POST',
+      body: JSON.stringify({ invites: emails.map((email) => ({ email })) }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      // The server lowercases what it validates and cuts an invalid one at 64
+      // characters, so the addresses are compared in that shape.
+      const same = (email) => String(email).slice(0, 64).toLowerCase();
+      const skipped = new Set((data.skipped || []).map((row) => same(row.email)));
+      setPendingInvites((prev) => [
+        ...prev,
+        ...emails.filter((email) => !skipped.has(same(email))).map((email) => ({ email })),
+      ]);
+      setInviteEmail(emails.filter((email) => skipped.has(same(email))).join(', '));
+      setBulkResult(data);
+    } else if (res.status === 429) {
+      setToast({ type: 'error', message: t('common.tooManyAttempts') });
+    } else {
+      const detail = await extractApiError(res);
+      setToast({ type: 'error', message: detail || t('bulkInvite.error') });
+    }
+  };
+
+  const inviteOne = async (email) => {
+    const res = await apiFetch(`/api/v1/collections/${code}/invite/`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    if (res.ok) {
+      setPendingInvites((prev) => [...prev, { email }]);
+      setInviteEmail('');
+      setToast({ type: 'success', message: t('manageInvites.invitationSent') });
+    } else if (res.status === 429) {
+      setToast({ type: 'error', message: t('common.tooManyAttempts') });
+    } else {
+      const detail = await extractApiError(res);
+      setToast({ type: 'error', message: detail || t('manageInvites.errorSending') });
+    }
+  };
+
   const handleInvite = async () => {
     if (inviteLockRef.current) return;
+    const emails = parseEmailList(inviteEmail);
+    if (emails.length === 0) return;
     inviteLockRef.current = true;
     setInviteLoading(true);
     setToast(null);
+    setBulkResult(null);
     try {
-      const res = await apiFetch(`/api/v1/collections/${code}/invite/`, {
-        method: 'POST',
-        body: JSON.stringify({ email: inviteEmail.trim() }),
-      });
-      if (res.ok) {
-        setPendingInvites((prev) => [...prev, { email: inviteEmail.trim() }]);
-        setInviteEmail('');
-        setToast({ type: 'success', message: t('manageInvites.invitationSent') });
-      } else if (res.status === 429) {
-        setToast({ type: 'error', message: t('common.tooManyAttempts') });
-      } else {
-        const detail = await extractApiError(res);
-        setToast({ type: 'error', message: detail || t('manageInvites.errorSending') });
-      }
+      // One address is the invitation it always was; several are a batch.
+      if (emails.length === 1) await inviteOne(emails[0]);
+      else await inviteMany(emails);
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });
     } finally {
@@ -446,25 +490,35 @@ export default function ManageInvitesPage() {
         <>
           <div className="spacer-xl" />
           <div className="form-grid section-mt">
+            {/* One address or several, separated by commas (G6, CA 2026-10-05), so this is
+                a text field and not `type="email"`: the browser's email field strips
+                the line breaks of a pasted list (gluing two addresses into one), has
+                no place for `;`, and only takes commas with `multiple`. `inputMode`
+                keeps the email keyboard on a phone, and the three attributes after it
+                keep it from capitalising or "correcting" an address, which `type=email`
+                did on its own. */}
             <TextInput
               id="manage-invites-email"
               label={t('manageInvites.emailLabel')}
-              type="email"
+              type="text"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder={t('manageInvites.emailPlaceholder')}
+              helperText={t('manageInvites.multipleHelper')}
             />
             <Button
-              disabled={inviteLoading || !inviteEmail.trim()}
+              disabled={inviteLoading || parseEmailList(inviteEmail).length === 0}
               onClick={handleInvite}
               style={{ ...btnStyle, width: '100%' }}
             >
               {inviteLoading ? t('common.sending') : t('manageInvites.invite')}
             </Button>
           </div>
-          <div className="spacer-m" />
-          <h2>{t('bulkInvite.heading')}</h2>
-          <BulkInviteCsv collectionCode={code} onInvited={fetchCollection} />
+          <BulkInviteResult result={bulkResult} />
         </>
       )}
 

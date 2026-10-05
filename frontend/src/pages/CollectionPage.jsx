@@ -16,7 +16,7 @@ import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
-import { collectionTeam } from '../utils/team';
+import { teamParts } from '../utils/team';
 import { loginPathFor } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
@@ -58,7 +58,7 @@ export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
   const [error, setError] = useState('');
@@ -268,9 +268,11 @@ export default function CollectionPage() {
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
   // The team the hero names, founder first, whoever has no name counted at the
-  // end rather than listed — one rule (`utils/team.js`) shared with the "Run by"
-  // column of "My groups", so the two cannot disagree.
-  const { named: namedTeam, unnamedCount: unnamedTeamCount } = collectionTeam(collection);
+  // end rather than listed, written as the language on screen writes a list
+  // ("A y B", "A, B y C") — one rule (`utils/team.js`) shared with the "Run by"
+  // column of "My groups", so the two cannot disagree. The pieces come apart so
+  // each name can be a link.
+  const teamLine = teamParts(collection, t, i18n.resolvedLanguage || i18n.language);
   const isAuthenticated = !!userCode;
   // The Community/visibility tags in the H1 are purely informational — no
   // click, no delete, so no hover/focus state to design for — so they follow
@@ -362,7 +364,14 @@ export default function CollectionPage() {
             <span className="hero-corners">
               {/* "Requests to me" is the collection menu's first entry where this page
                   has one (X4, CA 2026-10-04): the account menu then leaves it out. */}
-              <AccountMenu requestsInCollectionMenu={isCurator || isMember} />
+              {/* Signed out, in a PUBLIC group the hero already offers "Sign in" (G3, CA
+                  2026-10-05), so the corner's icon to the same place is left out; with
+                  a session `offerSignIn` changes nothing, and on every other page a
+                  signed-out reader keeps the icon. */}
+              <AccountMenu
+                requestsInCollectionMenu={isCurator || isMember}
+                offerSignIn={!showsSignedOutDoors}
+              />
               {/* The group's own options (CA, 2026-10-03), between the account menu
                   and the share one: a curator's, and since X2 (2026-10-04) a
                   member's, with what is theirs. Nothing for a reader who is
@@ -420,19 +429,21 @@ export default function CollectionPage() {
                 single founder line, and only to non-owners — the owner knows
                 who they are. */}
             {collection.co_owners?.length > 0
-              ? namedTeam.length > 0 && (
+              ? teamLine.length > 0 && (
                   <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
                     <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
-                    {namedTeam.map((c, i) => (
-                      <span key={c.code}>
-                        {i > 0 && ', '}
-                        <Link to={`/${c.code}`} className="owner-link">
-                          {c.name}
-                        </Link>
-                      </span>
-                    ))}
-                    {unnamedTeamCount > 0 &&
-                      ` ${t('collectionPage.curatorsMore', { count: unnamedTeamCount })}`}
+                    {teamLine.map((part, i) => {
+                      if (part.type === 'member') {
+                        return (
+                          <Link key={i} to={`/${part.member.code}`} className="owner-link">
+                            {part.member.name}
+                          </Link>
+                        );
+                      }
+                      // The count of those without a name is plain text, and so is
+                      // what the language puts between the pieces ("," and "y").
+                      return part.type === 'more' ? part.text : part.value;
+                    })}
                   </p>
                 )
               : !isOwner &&
@@ -447,28 +458,31 @@ export default function CollectionPage() {
             {/* The group's welcome PDF is an entry of the collection menu (X2,
                 2026-10-04), first, for members and curators — the API serves its
                 URL to those two only. It was a loose link here. */}
-            {/* The hero's "join" is back for a signed-out reader (CA, 2026-10-04),
-              with its pair. Its first form — "This group shares its things on
+            {/* The hero's two doors for a signed-out reader (CA, 2026-10-04), in the
+              order CA put them on 2026-10-05: "Sign in" first and primary, to /login,
+              which brings them back here — most people who open a public group
+              without a session already have an account, and the member whose session
+              expired (the weekly digest's link is an ordinary one) is one of them —
+              and "Join this group" secondary, to the join page (no ?thing=: there is
+              no thing in it). Its first form — "This group shares its things on
               OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
               the content stood in for it from 2026-09-29, only where no card
-              had a button to press, and that line is gone in turn. Now a row, as
-              on /welcome: "Join this group" first and primary, to the join page
-              (no ?thing=: there is no thing in it), and "Sign in" secondary, to
-              /login, which brings them back here — for the member who has no
-              session and for anyone who already has an account. In every PUBLIC
+              had a button to press, and that line is gone in turn. In every PUBLIC
               group, COMMUNITY or PROPRIETARY, empty or not; the action button on
-              each card (login-to-act) is still there for whoever has one. */}
+              each card (login-to-act) is still there for whoever has one. The
+              account icon of the corner is left out on this page (above): this row
+              is its replacement. */}
             {showsSignedOutDoors && (
               <div className="invite-nudge">
                 <div className="button-row-wide">
-                  <ButtonLink to={`/collections/${code}/join`} style={btnStyle}>
-                    {t('collectionPage.visitorJoin')}
-                  </ButtonLink>
                   <ButtonLink
                     to={loginPathFor({ pathname: `/collections/${code}` })}
-                    style={btnSecondaryStyle}
+                    style={btnStyle}
                   >
                     {t('login.signIn')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/join`} style={btnSecondaryStyle}>
+                    {t('collectionPage.visitorJoin')}
                   </ButtonLink>
                 </div>
               </div>
@@ -499,32 +513,34 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
-                {/* "Edit collection" and "Add thing" (CA, 2026-10-04), always — with
-                    things or without. The row held "Edit collection" alone from
-                    2026-10-03, with "Add thing" in the collection menu; an empty
-                    group then had no other way in than its own phrase, and CA wants
-                    the button where the eye lands. It stays in the menu too (CA
-                    chose that knowing it repeats). "Manage members" and the
-                    downloads live only in the menu; the outcome of a download
-                    lands right under the row. */}
+                {/* "Add thing" first and primary, then "Edit collection" (CA, 2026-10-05,
+                    after seeing a new collection): what a curator does most, and what
+                    an empty group needs before anything else, is put things in it;
+                    editing the group is the second thing. It was the other way round
+                    from 2026-10-04 ("Edit collection" primary, "Add thing" joining it
+                    that day). Always there, with things or without, and still an
+                    entry of the collection menu (CA chose that knowing it repeats).
+                    "Manage members" and the downloads live only in the menu; the
+                    outcome of a download lands right under the row. */}
                 <div className="button-row-wide">
-                  <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
-                    {t('collectionPage.editCollection')}
-                  </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                  <ButtonLink to={`/collections/${code}/add`} style={btnStyle}>
                     {t('collectionPage.addThing')}
                   </ButtonLink>
-                  {/* Cold start (DESIGN §2/§6), a third button since X6 (CA, 2026-10-04)
-                      — it was a quiet line under the row ("Your collection is taking
-                      shape. Now invite your circle →"). The owner has something worth
-                      showing but has not invited anyone: secondary, like "Add thing",
-                      so the row keeps its one primary. It goes once the first guest
-                      joins, or while there is nothing to show. */}
-                  {collection.invites.length === 0 && visibleThings.length > 0 && (
-                    <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
-                      {t('collectionPage.inviteYourPeople')}
-                    </ButtonLink>
-                  )}
+                  <ButtonLink to={`/collections/${code}/edit`} style={btnSecondaryStyle}>
+                    {t('collectionPage.editCollection')}
+                  </ButtonLink>
+                  {/* The third button of the row (X6, CA 2026-10-04; it was a quiet line
+                      under the row, "Your collection is taking shape. Now invite your
+                      circle →"): secondary, like "Edit collection", so the row keeps its
+                      one primary. It was shown only while the group had things and
+                      nobody invited, and went with the first guest who accepted — CA
+                      invited people and the button was gone (G5, 2026-10-05). Now it is
+                      always there for whoever runs the group, owner or co-curator, with
+                      things or without and with members or without: inviting is not a
+                      step of the beginning. */}
+                  <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
+                    {t('collectionPage.inviteYourPeople')}
+                  </ButtonLink>
                 </div>
                 <CollectionDownloadsStatus downloads={downloads} />
                 <div className="spacer-s"></div>

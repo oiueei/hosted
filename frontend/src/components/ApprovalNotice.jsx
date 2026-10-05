@@ -2,6 +2,7 @@ import { Link as HdsLink } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import useCapabilities from '../hooks/useCapabilities';
 import useTheeeme from '../hooks/useTheeeme';
+import { externalFormUrl } from '../utils/externalForms';
 
 /**
  * "Some of these need approval here" — the one line a narrowed deployment owes
@@ -32,7 +33,7 @@ import useTheeeme from '../hooks/useTheeeme';
  *   nothing were withheld.
  */
 export default function ApprovalNotice({ kind, catalogue }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const capabilities = useCapabilities();
   const { btnStyle } = useTheeeme();
 
@@ -45,7 +46,13 @@ export default function ApprovalNotice({ kind, catalogue }) {
   if (withheld.length === 0) return null;
 
   const list = withheld.map((option) => option.label).join(', ');
-  const requestUrl = capabilities.request_url;
+  // Where to ask: the deployment's own form for it, in the reader's language
+  // (`externalForms.requestAccess`, as written, TL1, CA 2026-10-05), or the address
+  // the server gives (`capabilities.request_url`), as before. It opens in a new tab
+  // either way.
+  const requestUrl =
+    externalFormUrl('requestAccess', i18n.resolvedLanguage || i18n.language) ||
+    capabilities.request_url;
 
   const requestLabel = t('capabilities.requestAccess');
 

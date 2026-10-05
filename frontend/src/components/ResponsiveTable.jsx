@@ -40,6 +40,11 @@ function textOf(node) {
  * whose content is `null` for a row (the actions of a settled request) leaves out
  * its place in that card, label included.
  *
+ * **Its own class, `responsive-table`, on whichever form it paints** (the `.table-wrap`
+ * of the table, the `<ul>` of the cards): a style that is only for these three tables
+ * hangs from it — the bold text links (G10) — instead of from `.table-wrap`, which the
+ * guests' table of `/invites` shares.
+ *
  * **One or the other, never both**: the card list replaces the table in the DOM
  * rather than the stylesheet hiding one of them, so a screen reader never hears a
  * row twice. The list is named by the caption, since a `<ul>` has no `<caption>`.
@@ -50,7 +55,7 @@ export default function ResponsiveTable({ cols, rows, indexKey, caption, ...tabl
 
   if (!phone) {
     return (
-      <div className="table-wrap">
+      <div className="table-wrap responsive-table">
         <Table
           // The card-only keys stay out of HDS's hands.
           cols={cols.map(({ cardTransform, cardLabel, ...col }) => col)}
@@ -64,7 +69,7 @@ export default function ResponsiveTable({ cols, rows, indexKey, caption, ...tabl
   }
 
   return (
-    <ul className="table-cards" aria-label={textOf(caption)}>
+    <ul className="table-cards responsive-table" aria-label={textOf(caption)}>
       {rows.map((row) => (
         <li key={row[indexKey]} className="table-card">
           {cols.map((col) => {

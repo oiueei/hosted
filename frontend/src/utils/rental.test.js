@@ -5,8 +5,9 @@ import {
   addDays,
   toISODate,
   weekdayAllowed,
-  isDateBlocked,
   isPickupBlocked,
+  freePickupDisabled,
+  freeReturnDisabled,
   isPickupDisabled,
   reservationPickupDisabled,
   derivedReturnDate,
@@ -91,21 +92,6 @@ describe('weekdayAllowed', () => {
   });
 });
 
-describe('isDateBlocked', () => {
-  const periods = [{ start_date: '2024-01-03', end_date: '2024-01-05' }];
-  test('is inclusive of both ends', () => {
-    expect(isDateBlocked('2024-01-03', periods)).toBe(true);
-    expect(isDateBlocked('2024-01-05', periods)).toBe(true);
-  });
-  test('is false outside the range', () => {
-    expect(isDateBlocked('2024-01-02', periods)).toBe(false);
-    expect(isDateBlocked('2024-01-06', periods)).toBe(false);
-  });
-  test('accepts a Date as well as a string', () => {
-    expect(isDateBlocked(new Date(2024, 0, 4), periods)).toBe(true);
-  });
-});
-
 describe('isPickupBlocked', () => {
   const periods = [{ start_date: '2024-01-03', end_date: '2024-01-05' }];
   test('blocks pickup on the start day and interior days', () => {
@@ -118,6 +104,132 @@ describe('isPickupBlocked', () => {
   test('is false outside the range', () => {
     expect(isPickupBlocked('2024-01-02', periods)).toBe(false);
     expect(isPickupBlocked('2024-01-06', periods)).toBe(false);
+  });
+});
+
+// LEND/RENT with free dates (G8, CA 2026-10-05): the two pickers follow the rule the
+// server and the card use — chained handovers. A booking [s, e] occupies the pickup on
+// [s, e); its return day e is free for the next pickup, and a request [start, end]
+// conflicts only if it shares an interior day with one (`BookingPeriod.has_overlap`:
+// s < end AND e > start). The pickers used to grey out both ends of every booking.
+describe('freePickupDisabled', () => {
+  const booking05to06 = [{ start_date: '2026-10-05', end_date: '2026-10-06' }];
+
+  test('CA’s case: a booking 05→06 — the 06 can be picked up, the 05 cannot', () => {
+    const opts = { blockedPeriods: booking05to06 };
+    expect(freePickupDisabled('2026-10-05', opts)).toBe(true);
+    expect(freePickupDisabled('2026-10-06', opts)).toBe(false);
+    expect(freePickupDisabled('2026-10-04', opts)).toBe(false);
+    expect(freePickupDisabled('2026-10-07', opts)).toBe(false);
+  });
+
+  test('a longer booking blocks its days up to, and not including, its return day', () => {
+    const opts = { blockedPeriods: [{ start_date: '2026-10-08', end_date: '2026-10-10' }] };
+    expect(freePickupDisabled('2026-10-07', opts)).toBe(false);
+    expect(freePickupDisabled('2026-10-08', opts)).toBe(true);
+    expect(freePickupDisabled('2026-10-09', opts)).toBe(true);
+    expect(freePickupDisabled('2026-10-10', opts)).toBe(false); // chained handover
+    expect(freePickupDisabled('2026-10-11', opts)).toBe(false);
+  });
+
+  test('a closure day is out, with or without a booking', () => {
+    expect(freePickupDisabled('2026-10-12', { closedDates: ['2026-10-12'] })).toBe(true);
+    expect(freePickupDisabled('2026-10-13', { closedDates: ['2026-10-12'] })).toBe(false);
+  });
+
+  test('no bookings and no closures: every day is open', () => {
+    expect(freePickupDisabled('2026-10-05', {})).toBe(false);
+  });
+
+  test('accepts a Date, which is what the calendar hands over', () => {
+    expect(freePickupDisabled(new Date(2026, 9, 6), { blockedPeriods: booking05to06 })).toBe(false);
+    expect(freePickupDisabled(new Date(2026, 9, 5), { blockedPeriods: booking05to06 })).toBe(true);
+  });
+});
+
+describe('freeReturnDisabled', () => {
+  // A booking 08→10, and a pickup on the 6th: the stretch [6, return) must not run over it.
+  const later = {
+    pickup: '2026-10-06',
+    blockedPeriods: [{ start_date: '2026-10-08', end_date: '2026-10-10' }],
+  };
+
+  test('a stretch that ends where another booking begins is a chained handover: open', () => {
+    expect(freeReturnDisabled('2026-10-07', later)).toBe(false);
+    expect(freeReturnDisabled('2026-10-08', later)).toBe(false); // lands on the next pickup
+  });
+
+  test('a stretch that runs over the booking is out, up to and past its return day', () => {
+    expect(freeReturnDisabled('2026-10-09', later)).toBe(true);
+    expect(freeReturnDisabled('2026-10-10', later)).toBe(true);
+    expect(freeReturnDisabled('2026-10-11', later)).toBe(true);
+  });
+
+  test('a day before the pickup is out; the pickup’s own day is open (a same-day return)', () => {
+    expect(freeReturnDisabled('2026-10-05', later)).toBe(true);
+    expect(freeReturnDisabled('2026-10-06', later)).toBe(false);
+  });
+
+  test('CA’s case: a booking 05→06 and a pickup on the 6th — a return on the 8th is open', () => {
+    const opts = {
+      pickup: '2026-10-06',
+      blockedPeriods: [{ start_date: '2026-10-05', end_date: '2026-10-06' }],
+    };
+    expect(freeReturnDisabled('2026-10-08', opts)).toBe(false);
+  });
+
+  test('a booking behind the pickup does not matter', () => {
+    const opts = {
+      pickup: '2026-10-06',
+      blockedPeriods: [{ start_date: '2026-10-01', end_date: '2026-10-03' }],
+    };
+    expect(freeReturnDisabled('2026-10-07', opts)).toBe(false);
+    expect(freeReturnDisabled('2026-10-20', opts)).toBe(false);
+  });
+
+  test('a booking inside the stretch is out wherever the return lands after it', () => {
+    const opts = {
+      pickup: '2026-10-01',
+      blockedPeriods: [{ start_date: '2026-10-03', end_date: '2026-10-04' }],
+    };
+    expect(freeReturnDisabled('2026-10-03', opts)).toBe(false);
+    expect(freeReturnDisabled('2026-10-04', opts)).toBe(true);
+    expect(freeReturnDisabled('2026-10-15', opts)).toBe(true);
+  });
+
+  test('a closure day is out as a return, and the days across it are not (the item is already out)', () => {
+    const opts = { pickup: '2026-10-10', closedDates: ['2026-10-12'] };
+    expect(freeReturnDisabled('2026-10-12', opts)).toBe(true);
+    expect(freeReturnDisabled('2026-10-13', opts)).toBe(false);
+  });
+
+  test('with no pickup chosen yet it is the pickup’s rule: [s, e) is out and e is open', () => {
+    const opts = {
+      pickup: '',
+      blockedPeriods: [{ start_date: '2026-10-05', end_date: '2026-10-06' }],
+    };
+    expect(freeReturnDisabled('2026-10-05', opts)).toBe(true);
+    expect(freeReturnDisabled('2026-10-06', opts)).toBe(false);
+    expect(freeReturnDisabled('2026-10-12', { ...opts, closedDates: ['2026-10-12'] })).toBe(true);
+    expect(freeReturnDisabled('2026-10-07', { blockedPeriods: opts.blockedPeriods })).toBe(false);
+  });
+
+  test('a stretch across a change of clocks counts whole days (the test runs in New York)', () => {
+    // US clocks go forward on 8 Mar 2026 (a day of 23 hours) and back on 1 Nov (25): a
+    // stretch that crosses either is a whole number of calendar days all the same.
+    const spring = {
+      pickup: '2026-03-06',
+      blockedPeriods: [{ start_date: '2026-03-10', end_date: '2026-03-12' }],
+    };
+    expect(freeReturnDisabled('2026-03-10', spring)).toBe(false); // chained
+    expect(freeReturnDisabled('2026-03-11', spring)).toBe(true);
+    const autumn = {
+      pickup: '2026-10-30',
+      blockedPeriods: [{ start_date: '2026-11-03', end_date: '2026-11-05' }],
+    };
+    expect(freeReturnDisabled('2026-11-03', autumn)).toBe(false); // chained
+    expect(freeReturnDisabled('2026-11-04', autumn)).toBe(true);
+    expect(freeReturnDisabled(new Date(2026, 10, 2), autumn)).toBe(false);
   });
 });
 
@@ -168,7 +280,6 @@ describe('isPickupDisabled', () => {
     expect(isPickupDisabled('2024-12-25', opts)).toBe(true); // pickup on the holiday
     expect(isPickupDisabled('2024-12-24', opts)).toBe(false); // interior closure is fine...
     expect(isPickupDisabled('2024-12-18', { ...opts, duration: '7' })).toBe(true); // ...but not the return
-    expect(isDateBlocked('2024-12-25', [], ['2024-12-25'])).toBe(true);
   });
 });
 

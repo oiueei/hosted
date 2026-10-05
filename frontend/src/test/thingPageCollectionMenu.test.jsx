@@ -155,6 +155,7 @@ describe('the thing page — who has the collection menu', () => {
       'Add thing',
       'Add several at once (CSV)',
       'Manage members',
+      'Invite many at once (CSV)',
       'Download the calendar (ICS)',
       'Download the stats (CSV)',
       'Download the whole collection (JSON)',

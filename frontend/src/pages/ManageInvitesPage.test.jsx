@@ -25,6 +25,9 @@ const PROPOSAL = {
 function mockRoutes({
   collection = COLLECTION,
   invite = { status: 200 },
+  // The batch endpoint (several addresses typed in the field, G6): by default it
+  // sends everybody; `reject` is a request that never arrives.
+  bulk = { status: 200 },
   proposal = { status: 200 },
 } = {}) {
   // An answered suggestion stops being pending server-side, so the reload an
@@ -34,6 +37,10 @@ function mockRoutes({
   globalThis.fetch = vi.fn((url) => {
     const respond = (status, body) =>
       Promise.resolve({ ok: status < 400, status, json: async () => body });
+    if (url.endsWith('/invite/bulk/')) {
+      if (bulk.reject) return Promise.reject(new TypeError('Failed to fetch'));
+      return respond(bulk.status, bulk.body ?? { invited: 0, skipped: [] });
+    }
     if (url.endsWith('/invite/')) {
       return respond(invite.status, invite.body ?? { message: 'Invitation sent' });
     }
@@ -94,6 +101,38 @@ describe('ManageInvitesPage (the guest list)', () => {
     // The new address appears as Pending without waiting for a refetch.
     expect(screen.getByText('new@example.com')).toBeInTheDocument();
     expect(screen.getByLabelText('Guest email')).toHaveValue('');
+  });
+
+  // The CSV of invitations was the last block of this page, under the form that
+  // invites one address at a time; it has a page of its own since G2 (CA,
+  // 2026-10-05), reached from the collection menu. The one-by-one form stays.
+  test('the CSV of invitations is not on this page any more — the form for one address is', async () => {
+    mockRoutes();
+    const { container } = renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(screen.getByLabelText('Guest email')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Invite' })).toBeInTheDocument();
+    expect(screen.queryByText('Invite many at once (CSV)')).toBeNull();
+    expect(screen.queryByRole('heading', { name: /\(CSV\)/ })).toBeNull();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    expect(container.querySelector('#bulk-invite-csv')).toBeNull();
+  });
+
+  // The bold links of the three request/groups tables hang from the class of
+  // `ResponsiveTable` (G10, CA 2026-10-05); this page's table is a plain HDS `Table` in
+  // a `.table-wrap`, and the rule must not reach it.
+  test('the guests’ table is not a ResponsiveTable: the bold links of the others do not reach it', async () => {
+    mockRoutes();
+    const { container } = renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(container.querySelector('.table-wrap')).not.toBeNull();
+    expect(container.querySelector('.responsive-table')).toBeNull();
+    const selector = ".responsive-table a:not([class*='hds-button'])";
+    for (const link of container.querySelectorAll('table a')) {
+      expect(link.matches(selector)).toBe(false);
+    }
   });
 
   test('the guest table carries a name', async () => {
@@ -511,5 +550,236 @@ describe('ManageInvitesPage — co-owners', () => {
     const anaRow = screen.getByText(/Ana/).closest('tr');
     expect(within(beaRow).getByText('Team')).toBeInTheDocument();
     expect(within(anaRow).queryByText('Team')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The invitations field takes several addresses (G6, CA 2026-10-05): `lalo@oiueei.com,
+ * lelo@oiueei.com`. One address is the invitation it always was (`invite/`); several are
+ * one batch for `invite/bulk/`, summarised the way the CSV tool says it. The ones that
+ * went out join the pending list and the field keeps the ones that did not.
+ */
+describe('ManageInvitesPage — several addresses in the invitations field', () => {
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'OWNER1');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  const field = () => screen.getByLabelText('Guest email');
+  const type = (value) => fireEvent.change(field(), { target: { value } });
+  const send = () => fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+  const bulkCalls = () => globalThis.fetch.mock.calls.filter(([u]) => u.endsWith('/invite/bulk/'));
+  const singleCalls = () =>
+    globalThis.fetch.mock.calls.filter(([u]) => u.endsWith('/invite/') && !u.endsWith('/bulk/'));
+  const bulkBody = () => JSON.parse(bulkCalls()[0][1].body);
+
+  async function open(routes) {
+    mockRoutes(routes);
+    renderPage();
+    await screen.findByText(/Ana/);
+  }
+
+  test('the field is a text field with the email keyboard, not type=email, and says it takes several', async () => {
+    await open();
+
+    // `type="email"` would strip a pasted list's line breaks, have no place for ";"
+    // and take commas only with `multiple`; `inputMode` keeps the email keyboard.
+    expect(field()).toHaveAttribute('type', 'text');
+    expect(field()).toHaveAttribute('inputmode', 'email');
+    expect(field()).toHaveAttribute('autocapitalize', 'none');
+    expect(field()).toHaveAttribute('spellcheck', 'false');
+    // The helper is the field's description — `aria-describedby`, which TextInput does.
+    expect(field()).toHaveAccessibleDescription(
+      'You can invite several people at once: separate the emails with commas.'
+    );
+  });
+
+  test('one address is the invitation it always was: invite/, no batch', async () => {
+    await open();
+
+    type('new@example.com');
+    send();
+
+    await screen.findByText('Invitation sent.');
+    expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(1);
+    expect(bulkCalls()).toHaveLength(0);
+    // …also with a comma left at the end, which is no second address.
+    type('other@example.com, ');
+    send();
+    await waitFor(() =>
+      expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(2)
+    );
+    expect(bulkCalls()).toHaveLength(0);
+    expect(JSON.parse(singleCalls().at(-1)[1].body)).toEqual({ email: 'other@example.com' });
+  });
+
+  test('two addresses with a comma — spaces around them, one repeated — are ONE batch of two', async () => {
+    await open();
+
+    type('lalo@oiueei.com ,  lelo@oiueei.com, LALO@oiueei.com');
+    send();
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][0]).toBe('/api/v1/collections/COL001/invite/bulk/');
+    expect(bulkCalls()[0][1].method).toBe('POST');
+    expect(bulkBody()).toEqual({
+      invites: [{ email: 'lalo@oiueei.com' }, { email: 'lelo@oiueei.com' }],
+    });
+    // Never one by one through the single endpoint.
+    expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(0);
+  });
+
+  // A one-line field never receives a line break (the browser — and jsdom — turns them
+  // into spaces or drops them before the page sees the value), so the page can only be
+  // shown ";" and spaces; the line breaks themselves are `utils/emailList.test.js`'s.
+  test('";" separates too, and so do the spaces a browser makes of a pasted column’s line breaks', async () => {
+    await open();
+
+    type('a@x.com;b@y.com; c@z.com d@w.com');
+    send();
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkBody().invites.map((i) => i.email)).toEqual([
+      'a@x.com',
+      'b@y.com',
+      'c@z.com',
+      'd@w.com',
+    ]);
+  });
+
+  test('the summary says how many went out, and the ones that did are pending; the field empties', async () => {
+    await open({ bulk: { status: 200, body: { invited: 2, skipped: [] } } });
+
+    type('lalo@oiueei.com, lelo@oiueei.com');
+    send();
+
+    // The CSV tool's own words and shape.
+    expect(await screen.findByText('2 invitations sent.')).toBeInTheDocument();
+    expect(screen.getByText('lalo@oiueei.com')).toBeInTheDocument();
+    expect(screen.getByText('lelo@oiueei.com')).toBeInTheDocument();
+    expect(field()).toHaveValue('');
+    // It is a batch, not a single invitation: no "Invitation sent." toast.
+    expect(screen.queryByText('Invitation sent.')).toBeNull();
+  });
+
+  test('what was skipped stays in the field, with its reason; what went out joins the pending list', async () => {
+    await open({
+      bulk: {
+        status: 200,
+        body: {
+          invited: 1,
+          skipped: [
+            { email: 'nope', reason: 'invalid' },
+            // The server lowercases what it validates: the field keeps what was typed.
+            { email: 'ana@example.com', reason: 'already_member' },
+          ],
+        },
+      },
+    });
+
+    type('lalo@oiueei.com, nope, Ana@Example.com');
+    send();
+
+    expect(await screen.findByText('1 invitations sent.')).toBeInTheDocument();
+    expect(screen.getByText('2 skipped:')).toBeInTheDocument();
+    expect(screen.getByText('nope — invalid email')).toBeInTheDocument();
+    expect(screen.getByText('ana@example.com — already a member')).toBeInTheDocument();
+    // The field holds exactly the ones that did not go, as typed, to correct or retry.
+    expect(field()).toHaveValue('nope, Ana@Example.com');
+    // The one that did is pending now; the others were not added.
+    expect(screen.getByText('lalo@oiueei.com')).toBeInTheDocument();
+    expect(screen.queryByText('nope')).toBeNull();
+  });
+
+  test('an address too long to be one is cut by the server at 64 characters and still stays in the field', async () => {
+    const long = `${'x'.repeat(70)}@example.com`;
+    await open({
+      bulk: {
+        status: 200,
+        body: { invited: 1, skipped: [{ email: long.slice(0, 64), reason: 'invalid' }] },
+      },
+    });
+
+    type(`lalo@oiueei.com, ${long}`);
+    send();
+
+    await screen.findByText('1 invitations sent.');
+    expect(field()).toHaveValue(long);
+  });
+
+  test('past 100 addresses it is still one batch, and the server’s own message comes back', async () => {
+    const many = Array.from({ length: 101 }, (_, i) => `p${i}@example.com`);
+    await open({
+      bulk: {
+        status: 400,
+        body: { error: 'At most 100 invitations can be sent at once.' },
+      },
+    });
+
+    type(many.join(', '));
+    send();
+
+    expect(
+      await screen.findByText('At most 100 invitations can be sent at once.')
+    ).toBeInTheDocument();
+    // Not split behind the reader's back: all 101 went in one call.
+    expect(bulkCalls()).toHaveLength(1);
+    expect(bulkBody().invites).toHaveLength(101);
+    expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(0);
+    // Nothing went out, so nothing changes: the field keeps the whole list.
+    expect(field()).toHaveValue(many.join(', '));
+    expect(screen.queryByText(/invitations sent\./)).toBeNull();
+  });
+
+  test('too many attempts says so and keeps the field', async () => {
+    await open({ bulk: { status: 429, body: {} } });
+
+    type('a@x.com, b@y.com');
+    send();
+
+    expect(
+      await screen.findByText('Too many attempts — please wait a moment and try again.')
+    ).toBeInTheDocument();
+    expect(field()).toHaveValue('a@x.com, b@y.com');
+  });
+
+  test('a request that never arrives says so and keeps the field', async () => {
+    await open({ bulk: { reject: true } });
+
+    type('a@x.com, b@y.com');
+    send();
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(field()).toHaveValue('a@x.com, b@y.com');
+    // …and the button is back, ready to try again.
+    expect(screen.getByRole('button', { name: 'Invite' })).toBeEnabled();
+  });
+
+  test('the next send starts clean: the last batch’s summary goes', async () => {
+    await open({ bulk: { status: 200, body: { invited: 2, skipped: [] } } });
+    type('a@x.com, b@y.com');
+    send();
+    await screen.findByText('2 invitations sent.');
+
+    type('new@example.com');
+    send();
+
+    await screen.findByText('Invitation sent.');
+    expect(screen.queryByText('2 invitations sent.')).toBeNull();
+  });
+
+  test('the button waits for an address: nothing, or only separators, is nothing to send', async () => {
+    await open();
+    const invite = screen.getByRole('button', { name: 'Invite' });
+
+    expect(invite).toBeDisabled();
+    type(' , ;  ');
+    expect(invite).toBeDisabled();
+    type('a@x.com');
+    expect(invite).toBeEnabled();
+    type('a@x.com, b@y.com');
+    expect(invite).toBeEnabled();
   });
 });

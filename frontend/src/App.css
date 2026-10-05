@@ -456,8 +456,42 @@ a.account-menu-trigger {
   }
 }
 
-.form-page {
+/* The page is a column as tall as what is visible (G7, CA 2026-10-05), with the footer
+   at the bottom of it: a short page has no scroll and the footer sits at the bottom
+   of the screen; a long one has the footer after its content. It used to be
+   `.form-page { min-height: 100vh }` with the footer AFTER `<main>`, so every page was
+   a screen plus a footer: always a scroll, and the footer always just under the first
+   screen. On iOS Safari `100vh` is also taller than what is visible (it counts the
+   browser's bar), so the page overflowed even when it fitted; `100dvh`, the visible
+   height, follows for whoever understands it, and `100vh` stays as the line for the
+   rest. The container is `#root` — the footer, `<main>` and the skip link are its
+   children, so no element of App.jsx had to change — `<main>` takes what is left
+   (`flex: 1 0 auto`) and is a column itself, so the `.form-page` it holds fills it and
+   the page's own colour (`color_02`, inline on `.form-page`) reaches the footer with no
+   strip of another colour between them. */
+#root {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+main {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A bare `.page-container` straight under `<main>` (the loading spinner, Home's
+   offline banner) has `margin: 0 auto`, which in a column flex container stops it
+   stretching: it would shrink to its content. Full width, and `max-width` keeps its
+   column. */
+main > .page-container {
+  width: 100%;
+}
+
+.form-page {
+  flex: 1 0 auto;
   background-color: var(--color-black-5);
 }
 
@@ -1807,6 +1841,20 @@ figure[class*='Highlight-module_highlight'] {
 .table-cell-link--muted {
   font-size: var(--fontsize-body-s);
   color: var(--color-black-60);
+}
+
+/* The text links of the three tables — the thing's name in /my-bookings and
+   /owner-bookings, the group's name and "Leave the group" in "My groups" — are bold
+   (G10, CA 2026-10-05): they are what the eye looks for in a row. One rule for both
+   forms of `ResponsiveTable`, the desktop table and the phone's cards, hung from the
+   component's own class so it reaches no other table (the guests' table of
+   /invites is a plain HDS `Table` in a `.table-wrap`, not this). It leaves out
+   anything with a button's style — a `ButtonLink` is an `<a>` too, and its weight is
+   the button's — by the class HDS gives them (`…hds-button…`, a prefix that survives
+   the hashing). It sets the weight and nothing else: "Leave the group" keeps its
+   size and its grey (`.table-cell-link--muted`) and is only bolder. */
+.responsive-table a:not([class*='hds-button']) {
+  font-weight: 700;
 }
 
 /* Pipe tables in Markdown bios: wide content scrolls inside its own wrapper so

@@ -10,6 +10,7 @@ import TooltipButton from '../components/TooltipButton';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import { formatDate, formatBookingWhen } from '../utils/rental';
+import { markMixedVerbs } from '../utils/bookingRows';
 import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
 import ResponsiveTable from '../components/ResponsiveTable';
@@ -194,7 +195,7 @@ export default function MyBookingsPage() {
       headerName: t('myBookings.colStatus'),
       transform: (row) => (
         <div className="table-status-cell">
-          <Tag>{t('types.' + row._type)}</Tag>
+          {row._showType && <Tag>{t('types.' + row._type)}</Tag>}
           <StatusLabel type={STATUS_TYPES[row._status] || 'neutral'}>
             {STATUS_LABELS[row._status] || row._status}
           </StatusLabel>
@@ -259,11 +260,13 @@ export default function MyBookingsPage() {
       ) : (
         <>
           {(() => {
-            const pendingRows = rows.filter(
-              (r) => r._status === 'PENDING' || isFutureReservation(r)
+            // Each table decides on its own whether its rows carry the verb's label:
+            // only when it mixes verbs (G9).
+            const pendingRows = markMixedVerbs(
+              rows.filter((r) => r._status === 'PENDING' || isFutureReservation(r))
             );
-            const otherRows = rows.filter(
-              (r) => !(r._status === 'PENDING' || isFutureReservation(r))
+            const otherRows = markMixedVerbs(
+              rows.filter((r) => !(r._status === 'PENDING' || isFutureReservation(r)))
             );
             const topHeading = rows.some((r) => r._type === 'RESERVE_THING')
               ? t('myBookings.currentHeading')

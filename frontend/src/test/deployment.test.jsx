@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe('the module keeps its contract', () => {
-  test('exports the five values App.jsx and the pages read', async () => {
+  test('exports the six values App.jsx and the pages read', async () => {
     /* Asserted as a **shape**, not as this checkout's values.
 
        The obvious version of this test — `deploymentRoutes` is `[]`, both paths
@@ -50,7 +50,7 @@ describe('the module keeps its contract', () => {
        App.jsx, LoginPage, SiteFooter, CollectionPage and VerifyPage read. The
        behaviours themselves are pinned below with the module mocked, which
        works identically wherever it runs. */
-    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath, faqPath } =
+    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath, faqPath, externalForms } =
       await import('../deployment');
 
     expect(Array.isArray(deploymentRoutes)).toBe(true);
@@ -62,6 +62,17 @@ describe('the module keeps its contract', () => {
     expect(deploymentI18n).not.toBeNull();
     [popInPath, aboutPath, faqPath].forEach((path) => {
       expect(path === null || typeof path === 'string').toBe(true);
+    });
+    // The forms hosted elsewhere (TL1): null for none, else `{ contact, feedback,
+    // requestAccess }`, each `{ es, ca, en }` of addresses, or null / absent. Core
+    // reads them through `utils/externalForms.js`.
+    expect(externalForms === null || typeof externalForms === 'object').toBe(true);
+    ['contact', 'feedback', 'requestAccess'].forEach((kind) => {
+      const urls = externalForms?.[kind];
+      if (!urls) return;
+      ['es', 'ca', 'en'].forEach((language) => {
+        expect(urls[language] == null || typeof urls[language] === 'string').toBe(true);
+      });
     });
   });
 });
@@ -77,6 +88,7 @@ describe('a deployment that adds a route', () => {
       aboutPath: null,
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: App } = await import('../App');
 
@@ -94,6 +106,7 @@ describe('a deployment that adds a route', () => {
       aboutPath: null,
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: App } = await import('../App');
 
@@ -121,6 +134,7 @@ describe('the open-door button follows popInPath', () => {
       aboutPath: null,
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -144,6 +158,7 @@ describe('the open-door button follows popInPath', () => {
       aboutPath: null,
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -167,6 +182,7 @@ describe('the faq link follows faqPath', () => {
       aboutPath: null,
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -189,6 +205,7 @@ describe('the faq link follows faqPath', () => {
       aboutPath: null,
       faqPath: '/help',
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -216,6 +233,7 @@ describe('the faq link follows faqPath', () => {
       aboutPath: null,
       faqPath: '/help',
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -245,6 +263,7 @@ describe('the about link follows aboutPath', () => {
       aboutPath: '/about-us',
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     const { default: SiteFooter } = await import('../components/SiteFooter');
 
@@ -309,6 +328,7 @@ describe("the dashboard's second button follows aboutPath", () => {
       aboutPath: null,
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     mockEmptyDashboard();
     await renderHome();
@@ -337,6 +357,7 @@ describe("the dashboard's second button follows aboutPath", () => {
       aboutPath: '/about-us',
       faqPath: null,
       deploymentI18n: {},
+      externalForms: null,
     }));
     mockEmptyDashboard();
     await renderHome();

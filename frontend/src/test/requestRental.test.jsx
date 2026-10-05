@@ -203,3 +203,163 @@ describe('RequestThingPage — pickup calendar disabling', () => {
     expect(dayEnabled('2026-06-24')).toBe(true); // clear of the booking
   });
 });
+
+// ── LEND/RENT with free dates (no fixed lengths) ─────────────────────────────
+//
+// The two pickers of the free form follow the rule of chained handovers the server and
+// the card use (G8, CA 2026-10-05): a booking [s, e] occupies the pickup on [s, e), its
+// return day e is free for the next pickup, and a stretch is out only if it runs over a
+// booking. Both pickers used to grey out BOTH ends of every booking, so a card saying
+// "available from 06/10" came with a calendar that began on the 7th, and a request from
+// the 6th to the 8th — which the server accepts — could not be made.
+const FREE_THING = {
+  code: 'LEND01',
+  type: 'LEND_THING',
+  headline: 'Ladder',
+  fee: null,
+  collection_code: 'COL001',
+  rental_durations: [],
+  rental_weekdays: [],
+  available_today: true,
+  next_available: null,
+};
+
+// The free form has two calendars: the pickup's button first, the return's second.
+async function openFreeCalendar(which) {
+  const buttons = screen.getAllByRole('button', { name: 'Choose date' });
+  fireEvent.click(buttons[which === 'return' ? 1 : 0]);
+  await waitFor(() => expect(document.querySelector('[data-date]')).toBeTruthy());
+}
+// The form is there once its two calendar buttons are.
+const freeFormReady = () => screen.findAllByRole('button', { name: 'Choose date' });
+const typeInto = (container, selector, display) => {
+  const input = container.querySelector(selector);
+  fireEvent.change(input, { target: { value: display } });
+  fireEvent.blur(input);
+};
+const free = (calendar = [], extra = {}) =>
+  setApi({ thing: { ...FREE_THING, ...extra }, calendar });
+
+describe('RequestThingPage — free dates: the pickup calendar', () => {
+  test('a booking’s return day can be picked up; the days it occupies cannot', async () => {
+    free([{ start_date: '2026-06-08', end_date: '2026-06-10', status: 'ACCEPTED' }]);
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('pickup');
+
+    expect(dayEnabled('2026-06-07')).toBe(true);
+    expect(dayDisabled('2026-06-08')).toBe(true);
+    expect(dayDisabled('2026-06-09')).toBe(true);
+    expect(dayEnabled('2026-06-10')).toBe(true); // the booking's return day: chained
+    expect(dayEnabled('2026-06-11')).toBe(true);
+  });
+
+  test('CA’s case: a booking 05→06 — the 06 can be picked up and the 05 cannot', async () => {
+    free([{ start_date: '2026-06-05', end_date: '2026-06-06', status: 'ACCEPTED' }]);
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('pickup');
+
+    expect(dayDisabled('2026-06-05')).toBe(true);
+    expect(dayEnabled('2026-06-06')).toBe(true);
+    expect(dayEnabled('2026-06-07')).toBe(true);
+  });
+
+  test('a closure day is out', async () => {
+    free([], { closed_dates: ['2026-06-12'] });
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('pickup');
+
+    expect(dayDisabled('2026-06-12')).toBe(true);
+    expect(dayEnabled('2026-06-11')).toBe(true);
+    expect(dayEnabled('2026-06-13')).toBe(true);
+  });
+});
+
+describe('RequestThingPage — free dates: the return calendar', () => {
+  test('with a pickup chosen, a return that lands on another booking’s pickup stays open; one that runs over it does not', async () => {
+    // A booking 08→10, and a pickup on Saturday the 6th.
+    free([{ start_date: '2026-06-08', end_date: '2026-06-10', status: 'ACCEPTED' }]);
+    const { container } = renderPage();
+    await freeFormReady();
+    typeInto(container, '#request-start-date', '06/06/2026');
+
+    await openFreeCalendar('return');
+
+    expect(dayDisabled('2026-06-05')).toBe(true); // before the pickup
+    expect(dayEnabled('2026-06-06')).toBe(true); // the pickup day itself: a same-day return
+    expect(dayEnabled('2026-06-07')).toBe(true);
+    expect(dayEnabled('2026-06-08')).toBe(true); // chained onto the booking's pickup
+    expect(dayDisabled('2026-06-09')).toBe(true); // runs over it
+    expect(dayDisabled('2026-06-10')).toBe(true);
+    expect(dayDisabled('2026-06-11')).toBe(true);
+  });
+
+  test('with no pickup chosen yet it follows the pickup’s rule', async () => {
+    free([{ start_date: '2026-06-05', end_date: '2026-06-06', status: 'ACCEPTED' }]);
+    renderPage();
+    await freeFormReady();
+
+    await openFreeCalendar('return');
+
+    expect(dayDisabled('2026-06-05')).toBe(true);
+    expect(dayEnabled('2026-06-06')).toBe(true);
+    expect(dayEnabled('2026-06-07')).toBe(true);
+  });
+
+  test('a closure day is out as a return', async () => {
+    free([], { closed_dates: ['2026-06-12'] });
+    const { container } = renderPage();
+    await freeFormReady();
+    typeInto(container, '#request-start-date', '10/06/2026');
+
+    await openFreeCalendar('return');
+
+    expect(dayDisabled('2026-06-12')).toBe(true);
+    expect(dayEnabled('2026-06-11')).toBe(true);
+    // Across the closure the item is already out, so the day after is open.
+    expect(dayEnabled('2026-06-13')).toBe(true);
+  });
+
+  test('a pickup after the booking leaves the days before it out and the ones after it open', async () => {
+    free([{ start_date: '2026-06-08', end_date: '2026-06-10', status: 'ACCEPTED' }]);
+    const { container } = renderPage();
+    await freeFormReady();
+
+    typeInto(container, '#request-start-date', '11/06/2026');
+    await openFreeCalendar('return');
+
+    expect(dayDisabled('2026-06-09')).toBe(true); // before the pickup
+    expect(dayDisabled('2026-06-10')).toBe(true);
+    expect(dayEnabled('2026-06-11')).toBe(true);
+    expect(dayEnabled('2026-06-12')).toBe(true); // clear of the booking, which is behind
+  });
+});
+
+describe('RequestThingPage — free dates: the request the calendar now allows', () => {
+  test('a request 06→08 after a booking 05→06 is sent with those dates', async () => {
+    free([{ start_date: '2026-06-05', end_date: '2026-06-06', status: 'ACCEPTED' }]);
+    const { container } = renderPage();
+    await freeFormReady();
+    typeInto(container, '#request-start-date', '06/06/2026');
+    typeInto(container, '#request-end-date', '08/06/2026');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrow' }));
+
+    await waitFor(() => {
+      const post = apiFetch.mock.calls.find(
+        ([url, o]) => /\/request\/$/.test(url) && o?.method === 'POST'
+      );
+      expect(post).toBeTruthy();
+      expect(JSON.parse(post[1].body)).toEqual({
+        start_date: '2026-06-06',
+        end_date: '2026-06-08',
+        collection_code: 'COL001',
+      });
+    });
+  });
+});

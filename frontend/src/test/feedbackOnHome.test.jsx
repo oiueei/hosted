@@ -12,6 +12,13 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 
+// This file is about what a deployment with no forms of its own hosted elsewhere shows
+// — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
+// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// `externalForms` a deployment may have are switched off here by stubbing the helper
+// that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
+vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+
 /**
  * "Ideas and bugs" at the foot of Home (CA, 2026-10-03): a secondary button, alone,
  * in its own container — and only where the deployment sets `VITE_FEEDBACK_URL`,
