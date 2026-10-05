@@ -183,10 +183,6 @@ TEXTS = {
     ),
     "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
     "decision_intro": "Your {action} request has been {decision}:",
-    "contact_shared_accepted": (
-        "To arrange the hand-over, they'll write to you here, at the address you sign in to "
-        "OIUEEI with."
-    ),
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",
     "invite_rejected_plain": "{invitee} has declined the invitation to '{collection}'.",

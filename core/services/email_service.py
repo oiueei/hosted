@@ -1608,15 +1608,8 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
     html_blocks = [
         _para(T("decision_intro").format(action=action, decision=decision_word)),
         *_booking_detail_blocks(booking, lang),
+        _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
     ]
-    # Where the hand-over will be arranged (E2, CA 2026-10-05): said on an ACCEPTED
-    # decision only — a refusal has nothing to arrange. The address itself is not
-    # printed; the email already arrives there.
-    if accepted:
-        contact_shared = T("contact_shared_accepted")
-        plain += "\n\n" + contact_shared
-        html_blocks.append(_para(contact_shared))
-    html_blocks.append(_cta(thing_url, T("view_thing_cta"), T("cta_fallback")))
     # The owner's note rides an ACCEPTED decision only — that is the moment
     # the hold becomes real and the note's "how to collect / where we are"
     # prose is finally actionable; a refusal has no next steps for it to

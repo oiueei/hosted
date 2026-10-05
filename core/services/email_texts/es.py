@@ -179,9 +179,6 @@ TEXTS = {
         "Tu solicitud de {action} de '{thing}' ha sido {decision}. Ver la publicación: {url}"
     ),
     "decision_intro": "Tu solicitud de {action} ha sido {decision}:",
-    "contact_shared_accepted": (
-        "Para quedar, te escribirán aquí, al correo con el que entras en OIUEEI."
-    ),
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",
     "invite_rejected_plain": "{invitee} ha rechazado la invitación a '{collection}'.",

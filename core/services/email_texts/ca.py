@@ -187,7 +187,6 @@ TEXTS = {
         "La teva sol·licitud {action} de '{thing}' ha estat {decision}. Veure la publicació: {url}"
     ),
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
-    "contact_shared_accepted": "Per quedar, t'escriuran aquí, al correu amb què entres a OIUEEI.",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",
     "invite_rejected_plain": "{invitee} ha rebutjat la invitació a '{collection}'.",

@@ -9,8 +9,8 @@ What is pinned:
 - **"request sent"** (``send_booking_confirmation_email``) says it right behind the
   sentence that tells them the curator was told, in the HTML and in the plain text, for
   every verb that waits for a decision;
-- **"accepted"** (``send_booking_decision_email``) says it — and a **refusal does not**:
-  there is nothing to arrange with someone whose request did not go ahead;
+- **"accepted"** (``send_booking_decision_email``) is the email it was before this round,
+  and a refusal too: E2 gave it a sentence and E6 (CA, 2026-10-05) took it back out;
 - **"reservation confirmed"** (``send_reservation_confirmed_email``) says it;
 - none of the three **prints the address** — the email is already in that inbox;
 - the sentences are the approved ones in the three catalogues, and the managers' emails
@@ -38,12 +38,6 @@ APPROVED = {
         "en": "Your email goes with the request: if needed, they'll write to you here, at the "
         "address you sign in to OIUEEI with.",
     },
-    "contact_shared_accepted": {
-        "es": "Para quedar, te escribirán aquí, al correo con el que entras en OIUEEI.",
-        "ca": "Per quedar, t'escriuran aquí, al correu amb què entres a OIUEEI.",
-        "en": "To arrange the hand-over, they'll write to you here, at the address you sign in "
-        "to OIUEEI with.",
-    },
     "contact_shared_reservation": {
         "es": "Tu email va con la reserva: si hace falta, te escribirán aquí, al correo con el "
         "que entras en OIUEEI.",
@@ -52,6 +46,15 @@ APPROVED = {
         "en": "Your email goes with the booking: if needed, they'll write to you here, at the "
         "address you sign in to OIUEEI with.",
     },
+}
+
+# What E2 put in the "accepted" email until E6 (CA, 2026-10-05) took it out: the words that
+# must not come back, in the three languages.
+GONE_ACCEPTED = {
+    "es": "Para quedar, te escribirán aquí, al correo con el que entras en OIUEEI.",
+    "ca": "Per quedar, t'escriuran aquí, al correu amb què entres a OIUEEI.",
+    "en": "To arrange the hand-over, they'll write to you here, at the address you sign in "
+    "to OIUEEI with.",
 }
 LANGUAGES = ["es", "ca", "en"]
 # The catalogues themselves, not `T()`: that falls back to English for a missing key, which
@@ -178,49 +181,31 @@ class TestRequestSent:
 
 @pytest.mark.django_db
 class TestDecision:
+    """E6 (CA, 2026-10-05): the decision email is the one it was before the round. E2 had
+    given the accepted copy a sentence about the hand-over; it is gone, and so is its key."""
+
+    @pytest.mark.parametrize("accepted", [True, False])
     @pytest.mark.parametrize("language", LANGUAGES)
-    def test_an_accepted_request_says_where_the_hand_over_will_be_arranged(
-        self, user, user2, thing, language
+    def test_neither_decision_says_anything_about_being_written_to(
+        self, user, user2, thing, language, accepted
     ):
         speaking(user2, language)
-        booking = a_booking(thing, user2, user, status="ACCEPTED")
+        booking = a_booking(thing, user2, user, status="ACCEPTED" if accepted else "REJECTED")
         mail.outbox.clear()
 
-        email_service.send_booking_decision_email(booking, thing, accepted=True)
+        email_service.send_booking_decision_email(booking, thing, accepted=accepted)
 
         body, html = the_email_sent()
-        sentence = phrase("contact_shared_accepted", language)
-        assert sentence in body
-        assert escape(sentence) in html
-        # Before the call to action, with the details above it.
-        assert html.index(escape(sentence)) < html.index(TEXTS[language]["view_thing_cta"])
-
-    @pytest.mark.parametrize("language", LANGUAGES)
-    def test_a_refusal_does_not_say_it(self, user, user2, thing, language):
-        """Nothing to arrange with someone whose request did not go ahead — and the
-        sentence promises they will be written to, which a refusal does not."""
-        speaking(user2, language)
-        booking = a_booking(thing, user2, user, status="REJECTED")
-        mail.outbox.clear()
-
-        email_service.send_booking_decision_email(booking, thing, accepted=False)
-
-        body, html = the_email_sent()
+        for gone in GONE_ACCEPTED.values():
+            assert gone not in body
+            assert escape(gone) not in html
         for key in APPROVED:
             assert phrase(key, language) not in body
             assert escape(phrase(key, language)) not in html
 
-    def test_it_holds_for_a_thing_with_no_dates(self, user, user2, thing):
-        booking = a_booking(thing, user2, user, kind="GIFT_THING", dates=False, status="ACCEPTED")
-        mail.outbox.clear()
-
-        email_service.send_booking_decision_email(booking, thing, accepted=True)
-
-        body, html = the_email_sent()
-        assert phrase("contact_shared_accepted", "en") in body
-        assert escape(phrase("contact_shared_accepted", "en")) in html
-
-    def test_it_comes_before_the_owners_note(self, user, user2, thing, collection):
+    def test_an_accepted_one_still_has_its_details_its_button_and_the_owners_note(
+        self, user, user2, thing, collection
+    ):
         collection.email_note = "Ring the bell twice."
         collection.save(update_fields=["email_note"])
         booking = a_booking(thing, user2, user, status="ACCEPTED")
@@ -231,9 +216,19 @@ class TestDecision:
         )
 
         body, html = the_email_sent()
-        sentence = phrase("contact_shared_accepted", "en")
-        assert body.index(sentence) < body.index("Ring the bell twice.")
-        assert html.index(escape(sentence)) < html.index("Ring the bell twice.")
+        assert "has been confirmed" in body
+        assert "Ring the bell twice." in body and "Ring the bell twice." in html
+        assert TEXTS["en"]["view_thing_cta"] in html
+
+    def test_it_holds_for_a_thing_with_no_dates(self, user, user2, thing):
+        booking = a_booking(thing, user2, user, kind="GIFT_THING", dates=False, status="ACCEPTED")
+        mail.outbox.clear()
+
+        email_service.send_booking_decision_email(booking, thing, accepted=True)
+
+        body, html = the_email_sent()
+        assert GONE_ACCEPTED["en"] not in body
+        assert escape(GONE_ACCEPTED["en"]) not in html
 
     def test_it_does_not_print_the_address(self, user, user2, thing):
         booking = a_booking(thing, user2, user, status="ACCEPTED")
@@ -327,3 +322,7 @@ class TestTheWordsAreInTheThreeCatalogues:
     @pytest.mark.parametrize("key", sorted(APPROVED))
     def test_no_language_is_left_to_fall_back_to_english(self, key):
         assert all(key in TEXTS[language] for language in LANGUAGES)
+
+    @pytest.mark.parametrize("language", LANGUAGES)
+    def test_the_accepted_sentence_is_gone_from_the_catalogue(self, language):
+        assert "contact_shared_accepted" not in TEXTS[language]
