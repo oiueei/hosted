@@ -178,23 +178,10 @@ export const closedSet = (closedDates) => new Set(closedDates || []);
 // Is `date` one of the collection's closure days (festivos)?
 export const isClosedDate = (date, closed) => closed.has(toISODate(parseLocalDate(date)));
 
-// Is `date` inside any blocked [start_date, end_date] period (both ends inclusive),
-// OR a closure day? This is the calendar *display* range — the item is out from
-// pickup through the return day. Pickup selectability uses the stricter [start, end)
-// below.
-export const isDateBlocked = (date, blockedPeriods, closedDates = []) => {
-  const d = parseLocalDate(date);
-  if (closedSet(closedDates).has(toISODate(d))) return true;
-  return blockedPeriods.some((period) => {
-    const start = parseLocalDate(period.start_date);
-    const end = parseLocalDate(period.end_date);
-    return d >= start && d <= end;
-  });
-};
-
 // Is `date` blocked for a PICKUP? A booking [s, e] blocks pickup on [s, e) — but
 // NOT on its return day e, which is free for the next pickup (back-to-back
-// handovers, mirroring BookingPeriod.has_overlap's strict overlap).
+// handovers, mirroring BookingPeriod.has_overlap's strict overlap). A pickup on e
+// is chained to the booking before it, which the server accepts.
 export const isPickupBlocked = (date, blockedPeriods) => {
   const d = parseLocalDate(date);
   return blockedPeriods.some((period) => {
@@ -217,6 +204,35 @@ export const rangeBlocked = (pickup, len, blockedPeriods) => {
     const end = parseLocalDate(period.end_date);
     return p < end && start < r;
   });
+};
+
+// LEND/RENT with free dates (no fixed lengths): the two pickers of the request form
+// follow the SAME rule as the server and the card, the one of chained handovers — a
+// booking [s, e] occupies the pickup on [s, e), and its return day e is free for the
+// next pickup. The server accepts a request [start, end] unless it shares an interior
+// day with a booking (`BookingPeriod.has_overlap`: s < end AND e > start). Both
+// pickers used to grey out BOTH ends of every booking (the calendar *display* range),
+// which blocked picking up on another booking's return day and returning on another's
+// pickup day — two things the server allows (G8, CA 2026-10-05: a card saying
+// "available from 06/10" with a calendar that began on the 7th).
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// The pickup picker: a closure day is out, and so is any day a booking occupies
+// ([s, e) — not its return day).
+export const freePickupDisabled = (date, { blockedPeriods = [], closedDates = [] }) =>
+  isClosedDate(date, closedSet(closedDates)) || isPickupBlocked(date, blockedPeriods);
+
+// The return picker, given the pickup chosen (ISO string, or '' when there is none
+// yet): a closure day is out; so is a day before the pickup; so is a day whose stretch
+// [pickup, return) runs over a booking — a return that lands exactly on another
+// booking's pickup is the chained handover and stays open (`rangeBlocked`). With no
+// pickup chosen there is no stretch to measure, so it is the pickup's rule.
+export const freeReturnDisabled = (date, { pickup, blockedPeriods = [], closedDates = [] }) => {
+  if (isClosedDate(date, closedSet(closedDates))) return true;
+  if (!pickup) return isPickupBlocked(date, blockedPeriods);
+  const days = Math.round((parseLocalDate(date) - parseLocalDate(pickup)) / MS_PER_DAY);
+  if (days < 0) return true;
+  return rangeBlocked(pickup, days, blockedPeriods);
 };
 
 // Disable a pickup day when it — or, once a length is chosen, its return day or any
