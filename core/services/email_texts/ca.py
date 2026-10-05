@@ -169,10 +169,9 @@ TEXTS = {
     ),
     "booking_request_intro": "{requester} t'ha enviat una sol·licitud {action}:",
     # The requester's address travels with the request to whoever manages the thing (E1,
-    # CA 2026-10-05), and the hint says that replying reaches them: shared by the request
-    # email and the reservation notice.
+    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
     "requester_email_label": "Email",
-    "requester_reply_hint": "Per escriure-li, respon aquest correu.",
     "hold_confirm_cta": "Confirmar la sol·licitud",
     "hold_cancel_cta": "Rebutjar la sol·licitud",
     # Booking decision (to requester)

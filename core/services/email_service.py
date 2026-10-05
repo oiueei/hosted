@@ -1476,9 +1476,8 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
 
 
 def _requester_contact(T, requester):
-    """The requester's address and the line that says replying reaches them — for the
-    emails that tell whoever manages a thing that somebody asked for it (E1, CA
-    2026-10-05).
+    """The requester's address, for the emails that tell whoever manages a thing that
+    somebody asked for it (E1, CA 2026-10-05).
 
     The address travels **with the request**, not when it is accepted: whoever sells a
     thing to a stranger can agree on price, place and time before committing the thing.
@@ -1486,17 +1485,17 @@ def _requester_contact(T, requester):
     the requester, who will have it if they are written to. L2 allows it because the
     reader of these emails is whoever manages the thing and already reads the same
     address in the app (``BookingPeriodSerializer.requester_email``, shown on the
-    "Requests to me" page since E4). The ``Reply-To`` is set by the sender, so "Reply"
-    does what the line says.
+    "Requests to me" page since E4). The sender sets ``Reply-To`` to the same address, so
+    "Reply" reaches the requester; there is no sentence saying so (E5, CA 2026-10-05: CA
+    took it out).
 
-    Returns ``(plain, blocks)``: the plain-text lines (``Email: …`` and the hint) and
-    the HTML blocks (an ``email=True`` field and a paragraph).
+    Returns ``(plain, blocks)``: the plain-text line (``Email: …``) and the HTML blocks
+    (one ``email=True`` field).
     """
     label = T("requester_email_label")
-    hint = T("requester_reply_hint")
     return (
-        f"{label}: {requester.email}\n{hint}",
-        [_field(label, requester.email, email=True), _para(hint)],
+        f"{label}: {requester.email}",
+        [_field(label, requester.email, email=True)],
     )
 
 
@@ -1530,8 +1529,8 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
             reject=reject_link,
         )
 
-    # Their address and "reply to write to them", right under the entry sentence in the
-    # HTML and after the sentence in the plain text (E1).
+    # Their address, right under the entry sentence in the HTML and after the sentence in
+    # the plain text (E1); "Reply" reaches them through the Reply-To below.
     contact_plain, contact_blocks = _requester_contact(T, requester)
     plain += "\n\n" + contact_plain
 
@@ -2141,8 +2140,8 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     # address is guaranteed here. The owner reads the same address in the app —
     # "Requests to me" shows it as a link (E4, CA 2026-10-05; it is
     # BookingPeriodSerializer.requester_email) — which is L2's own exception, the
-    # reader already holds it. Since E1 (CA, 2026-10-05) the notice also says that
-    # replying reaches them, and does: the Reply-To below is the requester's.
+    # reader already holds it. Since E1 (CA, 2026-10-05) "Reply" reaches them: the
+    # Reply-To below is the requester's.
     contact_plain, contact_blocks = _requester_contact(T, requester)
     plain += "\n\n" + contact_plain
     blocks = [
