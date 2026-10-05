@@ -39,7 +39,7 @@ one working copy rather than two clones: nothing about the files on disk says
 which `main` they are heading for, so confirm the branch before committing a
 `core/` change.
 
-Publishing this code makes the **mechanism** transparent — the form, the
+Publishing this code makes the **mechanism** transparent — the request form, the
 `CreatorValidation` model, the admin action, the policy class. It does not make
 the **criterion** transparent: which answer to "what are you planning to run
 here?" earns a yes is a case-by-case judgement that lives in no file, the same
@@ -50,8 +50,8 @@ honesty note `SELF_HOSTING.md` makes about the extension points.
 | Piece | What it is |
 |---|---|
 | `views.PopInView` | The **open door**: an email alone gets an account, membership of every `is_onboarding` collection, and a magic link. Served at the historical `/api/v1/auth/pop-in/`. Upstream refuses exactly this. |
-| `views.RequestAccessView` + `forms.py` | The **request form** at `/request-access/` — two free-text questions, a plain Django page outside the SPA. |
-| `models.CreatorValidation` | One row per person who asked, and the answer. **No column on `core.User`**, so the public schema says nothing about a gate it does not have. |
+| `tally.py` | Where **"Request access"** lives: three forms on Tally, one per language (`es`, `ca`, `en`), opened in a new tab. It used to be a Django page of our own at `/request-access/` with two free-text questions (CA moved it, 2026-10-05); the request now lands in Tally and the answer is still given here, in the admin. The server needs the addresses in three places the SPA does not render — `capabilities.request_url`, the two 403 bodies that say where to ask, and the email of a refusal — and `request_access_url(language)` gives the one of the account's language (`es` when blank). The SPA has its own copy (`externalForms.requestAccess`), and a test reads both files so they cannot come apart. |
+| `models.CreatorValidation` | One row per person who asked, and the answer (the request itself is in Tally). **No column on `core.User`**, so the public schema says nothing about a gate it does not have. |
 | `policy.HostedCreatorPolicy` | The **narrowing**: giving and selling are open to everyone; COMMUNITY collections, lending, renting and on-site reservations wait for approval. |
 | `admin.py` | Where you answer, behind the admin's existing OTP. |
 | `management/commands/stats_summary.py` | The weekly **operator report**, with its demo/real partition. |

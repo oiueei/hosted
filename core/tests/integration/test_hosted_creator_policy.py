@@ -23,10 +23,14 @@ from rest_framework import status
 
 from core.models import Collection, Thing
 from hosted.models import CreatorValidation
-from hosted.policy import HostedCreatorPolicy, request_access_url
+from hosted.policy import HostedCreatorPolicy
+from hosted.tally import REQUEST_ACCESS
 
 POLICY = "hosted.policy.HostedCreatorPolicy"
-FORM_URL = "/request-access/"
+# The "Request access" form on Tally, in Spanish: what a user with no language set (and
+# the test client's default account) is pointed at. The other two languages and the
+# fallback are pinned in `test_hosted_tally.py`.
+FORM_URL = REQUEST_ACCESS["es"]
 
 
 @pytest.fixture(autouse=True)
@@ -259,7 +263,3 @@ class TestThePolicyItself:
             policy.capabilities(user)
             policy.capabilities(user)
             policy.allows_thing_type(user, Thing.Type.LEND_THING)
-
-    def test_the_request_url_resolves_to_the_form_that_exists(self, api_client):
-        """Not a hard-coded string: the link and the route move together."""
-        assert api_client.get(request_access_url()).status_code == status.HTTP_200_OK

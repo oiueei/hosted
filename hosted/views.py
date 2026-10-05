@@ -20,11 +20,8 @@ from django.conf import settings
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
-from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
-from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
 from core.models import RSVP, Collection, Language, User
@@ -38,10 +35,6 @@ from core.utils import get_client_ip, redact_email
 # a second implementation here would drift within a release. The dependency runs
 # in the only direction that is safe: the service layer depends on the product.
 from core.views.auth import _join_collection, _send_magic_link, email_ratelimit_key
-
-from .emails import send_creator_validation_request_email
-from .forms import RequestAccessForm
-from .models import CreatorValidation
 
 security_logger = logging.getLogger("security")
 
@@ -130,77 +123,3 @@ class PopInView(APIView):
             {"message": "Check your email — we've sent you a magic link to join OIUEEI."},
             status=status.HTTP_200_OK,
         )
-
-
-class RequestAccessView(APIView):
-    """
-    GET / POST `/request-access/`
-
-    The form somebody fills in to be allowed to run a COMMUNITY collection, to
-    lend or rent, or to run a space people book. A plain Django page, not part
-    of the SPA: it is this
-    deployment's own conversation with a person, it is read once, and putting it
-    in the React bundle would mean every visitor downloads a form almost nobody
-    fills in.
-
-    It is a DRF view rather than a Django one for a single reason: the session
-    is a **JWT cookie**, which only `CookieJWTAuthentication` resolves. A plain
-    `django.views.View` would see `AnonymousUser` for someone who is perfectly
-    well logged in.
-    """
-
-    permission_classes = [AllowAny]
-    authentication_classes = api_settings.DEFAULT_AUTHENTICATION_CLASSES
-    # The browser posts a real HTML form; the project default parses JSON only.
-    parser_classes = [FormParser, MultiPartParser]
-    renderer_classes = [TemplateHTMLRenderer]
-    template_name = "hosted/request_access.html"
-
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({"needs_login": True})
-
-        validation = self._existing(request.user)
-        return Response(
-            {
-                "validation": validation,
-                # A refused request can be made again: the answer was about what
-                # was said, and somebody may have more to say. Approved is the
-                # one state with nothing left to ask.
-                "form": None if validation and validation.is_approved else RequestAccessForm(),
-            }
-        )
-
-    @method_decorator(ratelimit(key="user_or_ip", rate="5/h", method="POST", block=True))
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response({"needs_login": True}, status=status.HTTP_403_FORBIDDEN)
-
-        validation = self._existing(request.user)
-        if validation and validation.is_approved:
-            return Response({"validation": validation, "form": None})
-
-        form = RequestAccessForm(request.data, instance=validation)
-        if not form.is_valid():
-            return Response(
-                {"form": form, "validation": validation}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # One row per person, reset to PENDING: asking again after a "no" is the
-        # same conversation continued, not a second file opened.
-        submitted = form.save(commit=False)
-        submitted.user = request.user
-        submitted.status = CreatorValidation.Status.PENDING
-        submitted.resolved = None
-        submitted.save()
-
-        security_logger.info(f"Creator validation requested by {request.user.code}")
-        # The operator is told, because nobody reads a table on the off chance.
-        # `_send` swallows its own failures, so a mail server having a bad
-        # afternoon cannot lose the request that is already saved above.
-        send_creator_validation_request_email(submitted)
-        return Response({"validation": submitted, "just_sent": True, "form": None})
-
-    @staticmethod
-    def _existing(user):
-        return CreatorValidation.objects.filter(user=user).first()

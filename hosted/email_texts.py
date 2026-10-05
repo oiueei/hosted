@@ -8,9 +8,7 @@ answer where there is no gate.
 
 Same shape as upstream's catalogues so it reads the same way: flat ``TEXTS``
 dicts of ``str.format`` templates, English as the reference and the fallback,
-`t(key, lang)` resolving one. The operator's own notice is not here — that one is
-written in the sender, like `send_stats_summary_email`, because it is an ops mail
-in the language of whoever runs the service rather than copy for a user.
+`t(key, lang)` resolving one.
 """
 
 EN = {

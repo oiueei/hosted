@@ -18,12 +18,11 @@ operator answers for what this service is used for, and cannot answer for what
 they have never been told.
 """
 
-from django.urls import NoReverseMatch, reverse
-
 from core.models import Collection, Thing
 from core.services.creator_policy import Capabilities, CreatorPolicy
 
 from .models import CreatorValidation
+from .tally import request_access_url
 
 # Available to anyone with an account, no questions asked.
 OPEN_MODES = (Collection.Mode.PROPRIETARY,)
@@ -42,7 +41,10 @@ class HostedCreatorPolicy(CreatorPolicy):
         return Capabilities(
             collection_modes=OPEN_MODES,
             thing_types=OPEN_TYPES,
-            request_url=request_access_url(),
+            # The form of the account's own language (blank = Automatic = `es`; an
+            # anonymous visitor has none). This is what the two 403 bodies that say
+            # where to ask carry too — core builds them from this very value.
+            request_url=request_access_url(getattr(user, "language", "")),
         )
 
     @staticmethod
@@ -65,23 +67,3 @@ class HostedCreatorPolicy(CreatorPolicy):
             ).exists()
             user._hosted_validation_approved = cached
         return cached
-
-
-def request_access_url():
-    """Where somebody goes to ask — the form this app serves.
-
-    A site-relative path, deliberately: the form is a Django page served by the
-    same deployment as the SPA that links it, so a relative link is correct
-    everywhere the app runs — localhost, a review app, production — with nothing
-    to configure and nothing to get wrong.
-
-    Resolved rather than hard-coded so the route can move without the copy in
-    two 403 bodies and one React component going stale. It falls back to the
-    canonical path when the URLconf is not mounted (a bare `manage.py shell`, a
-    test overriding ROOT_URLCONF): serving a capability list with a guessed link
-    beats 500ing `/auth/me/` over a URL name.
-    """
-    try:
-        return reverse("hosted:request-access")
-    except NoReverseMatch:
-        return "/request-access/"
