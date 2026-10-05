@@ -499,27 +499,28 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
-                {/* "Edit collection" and "Add thing" (CA, 2026-10-04), always — with
-                    things or without. The row held "Edit collection" alone from
-                    2026-10-03, with "Add thing" in the collection menu; an empty
-                    group then had no other way in than its own phrase, and CA wants
-                    the button where the eye lands. It stays in the menu too (CA
-                    chose that knowing it repeats). "Manage members" and the
-                    downloads live only in the menu; the outcome of a download
-                    lands right under the row. */}
+                {/* "Add thing" first and primary, then "Edit collection" (CA, 2026-10-05,
+                    after seeing a new collection): what a curator does most, and what
+                    an empty group needs before anything else, is put things in it;
+                    editing the group is the second thing. It was the other way round
+                    from 2026-10-04 ("Edit collection" primary, "Add thing" joining it
+                    that day). Always there, with things or without, and still an
+                    entry of the collection menu (CA chose that knowing it repeats).
+                    "Manage members" and the downloads live only in the menu; the
+                    outcome of a download lands right under the row. */}
                 <div className="button-row-wide">
-                  <ButtonLink to={`/collections/${code}/edit`} style={btnStyle}>
-                    {t('collectionPage.editCollection')}
-                  </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                  <ButtonLink to={`/collections/${code}/add`} style={btnStyle}>
                     {t('collectionPage.addThing')}
+                  </ButtonLink>
+                  <ButtonLink to={`/collections/${code}/edit`} style={btnSecondaryStyle}>
+                    {t('collectionPage.editCollection')}
                   </ButtonLink>
                   {/* Cold start (DESIGN §2/§6), a third button since X6 (CA, 2026-10-04)
                       — it was a quiet line under the row ("Your collection is taking
                       shape. Now invite your circle →"). The owner has something worth
-                      showing but has not invited anyone: secondary, like "Add thing",
-                      so the row keeps its one primary. It goes once the first guest
-                      joins, or while there is nothing to show. */}
+                      showing but has not invited anyone: secondary, like "Edit
+                      collection", so the row keeps its one primary. It goes once the
+                      first guest joins, or while there is nothing to show. */}
                   {collection.invites.length === 0 && visibleThings.length > 0 && (
                     <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
                       {t('collectionPage.inviteYourPeople')}

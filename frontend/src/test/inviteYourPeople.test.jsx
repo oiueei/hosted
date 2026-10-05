@@ -18,9 +18,10 @@ import CollectionPage from '../pages/CollectionPage';
 /**
  * "Your collection is taking shape. Now invite your circle →" was a quiet line under
  * the curator's hero row, shown while the group had things and nobody invited. It is
- * a third button of the row now (X6, CA 2026-10-04): `[Edit collection]` primary,
- * `[Add thing]`, `[Invite your people]`, to the invitations page — the same condition,
- * and one primary still.
+ * a third button of the row now (X6, CA 2026-10-04): `[Add thing]` primary,
+ * `[Edit collection]`, `[Invite your people]`, to the invitations page — the same
+ * condition, and one primary still. (G1, CA 2026-10-05: "Add thing" took the first
+ * place and the primary tokens from "Edit collection".)
  */
 const THING = (over) => ({
   code: 'THG001',
@@ -88,10 +89,10 @@ describe('the curator hero row — "Invite your people"', () => {
     await screen.findByText('Kettle');
 
     const row = heroRow(container);
-    expect(labels(row)).toEqual(['Edit collection', 'Add thing', 'Invite your people']);
+    expect(labels(row)).toEqual(['Add thing', 'Edit collection', 'Invite your people']);
     expect(row.map((a) => a.getAttribute('href'))).toEqual([
-      '/collections/COL001/edit',
       '/collections/COL001/add',
+      '/collections/COL001/edit',
       '/collections/COL001/invites',
     ]);
     // One primary, the first: the row keeps its rule.
@@ -105,7 +106,7 @@ describe('the curator hero row — "Invite your people"', () => {
     });
     await screen.findByText('Kettle');
 
-    expect(labels(heroRow(container))).toEqual(['Edit collection', 'Add thing']);
+    expect(labels(heroRow(container))).toEqual(['Add thing', 'Edit collection']);
     expect(screen.queryByRole('link', { name: 'Invite your people' })).toBeNull();
   });
 
@@ -113,7 +114,7 @@ describe('the curator hero row — "Invite your people"', () => {
     const { container } = renderCollection({ ...FOUNDER, things: [] });
     await screen.findByRole('link', { name: 'Edit collection' });
 
-    expect(labels(heroRow(container))).toEqual(['Edit collection', 'Add thing']);
+    expect(labels(heroRow(container))).toEqual(['Add thing', 'Edit collection']);
   });
 
   test('a group whose things are all hidden has nothing to show: two buttons', async () => {
@@ -123,7 +124,7 @@ describe('the curator hero row — "Invite your people"', () => {
     });
     await screen.findByRole('link', { name: 'Edit collection' });
 
-    expect(labels(heroRow(container))).toEqual(['Edit collection', 'Add thing']);
+    expect(labels(heroRow(container))).toEqual(['Add thing', 'Edit collection']);
   });
 
   test('the line is gone: nothing says the collection is taking shape, in any wording', async () => {
