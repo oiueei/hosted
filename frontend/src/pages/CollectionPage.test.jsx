@@ -1690,8 +1690,9 @@ describe('CollectionPage as a co-owner', () => {
     );
 
     const line = (await screen.findByText(/Run by:/)).closest('p');
-    // founder first, then each co-curator, all linked
-    expect(line).toHaveTextContent('Run by: The Founder, Me, Nil');
+    // founder first, then each co-curator, all linked — written as English writes a
+    // list of three: commas, and the conjunction before the last (G4, CA 2026-10-05)
+    expect(line).toHaveTextContent('Run by: The Founder, Me, and Nil');
     expect(within(line).getByRole('link', { name: 'The Founder' })).toHaveAttribute(
       'href',
       '/OTHER1'
@@ -1773,11 +1774,21 @@ describe('CollectionPage as a co-owner', () => {
       expect(line).toHaveTextContent(/^Run by: The Founder and 1 more person$/);
     });
 
-    test('named and unnamed together: the names with commas, then the count', async () => {
+    test('named and unnamed together: the names, then the count as the last of the list', async () => {
       renderTeamHero('en', { co_owners: [{ code: 'XYZ999', name: 'Nil' }, nameless('XYZ001')] });
 
       const line = (await screen.findByText('Run by:')).closest('p');
-      expect(line).toHaveTextContent(/^Run by: The Founder, Nil and 1 more person$/);
+      expect(line).toHaveTextContent(/^Run by: The Founder, Nil, and 1 more person$/);
+      expect(linked(line)).toEqual(['The Founder', 'Nil']);
+    });
+
+    test('two named and two without a name: "A, B, and 2 more people"', async () => {
+      renderTeamHero('en', {
+        co_owners: [{ code: 'XYZ999', name: 'Nil' }, nameless('XYZ001'), nameless('XYZ002')],
+      });
+
+      const line = (await screen.findByText('Run by:')).closest('p');
+      expect(line).toHaveTextContent(/^Run by: The Founder, Nil, and 2 more people$/);
       expect(linked(line)).toEqual(['The Founder', 'Nil']);
     });
 
@@ -1800,10 +1811,14 @@ describe('CollectionPage as a co-owner', () => {
   // number — for a team of one and a team of three (CA, 2026-10-02), so it is
   // the same word in both lines. Nothing but these pins the Spanish and Catalan
   // wording of the hero.
+  //
+  // The names are joined with that language's own "and" (G4, CA 2026-10-05): "A y B",
+  // "A, B y C" in Spanish, "A i B", "A, B i C" in Catalan; the count of those without
+  // a name is the last element of the list, so its text carries no conjunction.
   describe.each([
-    ['es', 'Dinamización:', 'y 2 personas más'],
-    ['ca', 'Dinamització:', 'i 2 persones més'],
-  ])('in a %s group', (language, label, twoMore) => {
+    ['es', 'Dinamización:', 'y', '2 personas más'],
+    ['ca', 'Dinamització:', 'i', '2 persones més'],
+  ])('in a %s group', (language, label, and, twoMore) => {
     afterEach(async () => {
       // `useCollectionLanguage` moves the whole UI to the collection's language;
       // put it back so the next test starts in English.
@@ -1824,8 +1839,21 @@ describe('CollectionPage as a co-owner', () => {
       });
 
       const line = (await screen.findByText(label)).closest('p');
-      expect(line).toHaveTextContent(`${label} El Fundador, Yo, Nil`);
+      expect(line).toHaveTextContent(`${label} El Fundador, Yo ${and} Nil`);
       expect(screen.getAllByText(label)).toHaveLength(1);
+    });
+
+    test(`two names are joined by "${and}", with no comma`, async () => {
+      renderHero({ co_owners: [{ code: 'XYZ999', name: 'Nil' }] });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${and} Nil$`));
+      // The names are still links to the profiles; the conjunction is not.
+      expect(
+        within(line)
+          .getAllByRole('link')
+          .map((a) => a.textContent)
+      ).toEqual(['El Fundador', 'Nil']);
     });
 
     test(`with no co-curators the founder alone follows "${label}" (non-owner viewer)`, async () => {
@@ -1836,7 +1864,7 @@ describe('CollectionPage as a co-owner', () => {
       expect(screen.getAllByText(label)).toHaveLength(1);
     });
 
-    test(`co-curators with no name are counted after the names: "${twoMore}"`, async () => {
+    test(`co-curators with no name are counted after the names: "${and} ${twoMore}"`, async () => {
       renderHero({
         co_owners: [
           { code: 'XYZ001', name: '' },
@@ -1845,7 +1873,22 @@ describe('CollectionPage as a co-owner', () => {
       });
 
       const line = (await screen.findByText(label)).closest('p');
-      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${twoMore}$`));
+      // One conjunction, not two: "y y 2 personas más" is the text of the count
+      // keeping its own "y" under the list's.
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador ${and} ${twoMore}$`));
+    });
+
+    test('two named and two without a name: the names, then the count, one conjunction', async () => {
+      renderHero({
+        co_owners: [
+          { code: 'XYZ999', name: 'Nil' },
+          { code: 'XYZ001', name: '' },
+          { code: 'XYZ002', name: '' },
+        ],
+      });
+
+      const line = (await screen.findByText(label)).closest('p');
+      expect(line).toHaveTextContent(new RegExp(`^${label} El Fundador, Nil ${and} ${twoMore}$`));
     });
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
@@ -112,7 +112,7 @@ describe('UserPage — My groups', () => {
     );
   });
 
-  test('the team column names the founder first, then the co-curators, as plain text', async () => {
+  test('the team column names the founder first, then the co-curators, joined by "and", as plain text', async () => {
     setApi({
       memberships: [
         {
@@ -129,7 +129,7 @@ describe('UserPage — My groups', () => {
 
     await screen.findByRole('table', { name: 'My groups' });
     const team = within(rowOf('Bibliocoses')).getAllByRole('cell')[1];
-    expect(team).toHaveTextContent(/^Lili, Lolo$/);
+    expect(team).toHaveTextContent(/^Lili and Lolo$/);
     // The hero links each name; here it is text.
     expect(within(team).queryByRole('link')).toBeNull();
   });
@@ -154,7 +154,7 @@ describe('UserPage — My groups', () => {
 
     await screen.findByRole('table', { name: 'My groups' });
     const team = within(rowOf('Bibliocoses')).getAllByRole('cell')[1];
-    expect(team).toHaveTextContent(/^Lili, Lolo and 1 more person$/);
+    expect(team).toHaveTextContent(/^Lili, Lolo, and 1 more person$/);
   });
 
   test('a group whose team has no names leaves the cell empty', async () => {
@@ -314,7 +314,7 @@ describe('My groups on a phone', () => {
       '/collections/COL001'
     );
     expect(within(card).getByText('Run by:')).toBeInTheDocument();
-    expect(within(card).getByText('Lili, Lolo')).toBeInTheDocument();
+    expect(within(card).getByText('Lili and Lolo')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: /leave the group/i })).toHaveAttribute(
       'href',
       '/collections/COL001/leave'
@@ -350,4 +350,83 @@ describe('My groups on a phone', () => {
 
     expect(await axe(container)).toHaveNoViolations();
   });
+});
+
+/**
+ * The team of a group is written as the language writes a list (G4, CA 2026-10-05):
+ * "Lili y Lolo", "Lili, Lolo y 2 personas más" — the same line the collection's hero
+ * has, without the links (`utils/team.js`). The count of those without a name is the
+ * last element of the list, so its text carries no conjunction of its own.
+ */
+describe('UserPage — My groups: the team in the language on screen', () => {
+  afterEach(async () => {
+    // Put the language back so the next test starts in English.
+    const { default: i18n } = await import('../i18n');
+    // The page is still mounted when this runs: the change is an update to it.
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    localStorage.removeItem('i18nextLng');
+  });
+
+  const named = (...names) => names.map((name, i) => ({ code: `CO000${i + 1}`, name }));
+  const nameless = (n) => Array.from({ length: n }, (_, i) => ({ code: `CO009${i}`, name: '' }));
+
+  // The founder is "Lili" in every case.
+  const CASES = [
+    ['en', 'two names', named('Lolo'), 'Lili and Lolo'],
+    ['en', 'three names', named('Lolo', 'Abel'), 'Lili, Lolo, and Abel'],
+    [
+      'en',
+      'two names and two without',
+      [...named('Lolo'), ...nameless(2)],
+      'Lili, Lolo, and 2 more people',
+    ],
+    ['en', 'one name and one without', nameless(1), 'Lili and 1 more person'],
+    ['es', 'two names', named('Lolo'), 'Lili y Lolo'],
+    ['es', 'three names', named('Lolo', 'Abel'), 'Lili, Lolo y Abel'],
+    [
+      'es',
+      'two names and two without',
+      [...named('Lolo'), ...nameless(2)],
+      'Lili, Lolo y 2 personas más',
+    ],
+    ['es', 'one name and one without', nameless(1), 'Lili y 1 persona más'],
+    ['ca', 'two names', named('Lolo'), 'Lili i Lolo'],
+    ['ca', 'three names', named('Lolo', 'Abel'), 'Lili, Lolo i Abel'],
+    [
+      'ca',
+      'two names and two without',
+      [...named('Lolo'), ...nameless(2)],
+      'Lili, Lolo i 2 persones més',
+    ],
+    ['ca', 'one name and one without', nameless(1), 'Lili i 1 persona més'],
+  ].map(([language, what, co_owners, expected]) => ({ language, what, co_owners, expected }));
+
+  test.each(CASES)(
+    'in $language, $what: "$expected"',
+    async ({ language, co_owners, expected }) => {
+      const { default: i18n } = await import('../i18n');
+      await i18n.changeLanguage(language);
+      setApi({
+        memberships: [
+          {
+            code: 'COL001',
+            headline: 'Bibliocoses',
+            owner: 'OWN001',
+            owner_name: 'Lili',
+            co_owners,
+          },
+        ],
+      });
+
+      renderOwn();
+
+      const row = (await screen.findByRole('link', { name: 'Bibliocoses' })).closest('tr');
+      const team = within(row).getAllByRole('cell')[1];
+      expect(team.textContent).toBe(expected);
+      // Plain text: the profile page links nobody here.
+      expect(within(team).queryByRole('link')).toBeNull();
+    }
+  );
 });

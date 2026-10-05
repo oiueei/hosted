@@ -6,7 +6,7 @@
  * The API sends a person's bare `name`, never an email standing in for it (the
  * email is withheld from co-members, L2), so someone who set none arrives as
  * `''`. Listing them would leave a gap — "Oriol, ," — so they are counted
- * instead ("and 2 more people", `collectionPage.curatorsMore`), the founder
+ * instead ("2 more people", `collectionPage.curatorsMore`), the founder
  * included. And with nobody named there is nothing to say at all.
  *
  * `CollectionPage`'s "Run by:" line (which links each name) and the "Run by"
@@ -23,15 +23,69 @@ export function collectionTeam(collection) {
   return { named, unnamedCount: team.length - named.length };
 }
 
+// The list formatter of the language on screen. A tag the browser cannot make
+// sense of is a RangeError; the reader's default language stands in rather than
+// a page that does not render.
+function listFormatter(language) {
+  const options = { style: 'long', type: 'conjunction' };
+  try {
+    return new Intl.ListFormat(language, options);
+  } catch {
+    return new Intl.ListFormat(undefined, options);
+  }
+}
+
 /**
- * The team as one line of plain text — "Oriol, Lili and 2 more people" — or `''`
+ * The team as the pieces of one sentence, written as the language writes a list
+ * (CA, 2026-10-05): "Carlos Alberto y Lula", "Carlos Alberto, Lula y Claude" in
+ * Spanish, "A i B" / "A, B i C" in Catalan, "A and B" / "A, B, and C" in English.
+ * The conjunction and the commas are the browser's own (`Intl.ListFormat`, in the
+ * language that i18n has on screen), not ours: the Oxford comma of English, and the
+ * Spanish "e" before a name that begins with "i", are written without us knowing.
+ *
+ * **Whoever has no name is the last element of the list**, so the sentence reads
+ * "Carlos Alberto, Lula y 2 personas más" and the text of `curatorsMore` carries no
+ * conjunction of its own ("2 personas más", not "y 2 personas más" — it would say it
+ * twice). With nobody named: `[]`.
+ *
+ * Each piece is `{ type: 'member', member }` (a name with its `code`, for the page
+ * to link), `{ type: 'more', text }` (the count of those without a name) or
+ * `{ type: 'literal', value }` (what the language puts between them). The hero
+ * renders them one by one, with a `Link` for each member; `teamText` joins them.
+ */
+export function teamParts(collection, t, language) {
+  const { named, unnamedCount } = collectionTeam(collection);
+  if (named.length === 0) return [];
+  const elements = named.map((member) => ({ type: 'member', member }));
+  if (unnamedCount > 0) {
+    elements.push({
+      type: 'more',
+      text: t('collectionPage.curatorsMore', { count: unnamedCount }),
+    });
+  }
+  const words = elements.map((element) =>
+    element.type === 'member' ? element.member.name : element.text
+  );
+  // The pieces come back in order, so the n-th `element` is the n-th word we gave
+  // it — matching them by their text would confuse two people with the same name.
+  let next = 0;
+  return listFormatter(language)
+    .formatToParts(words)
+    .map((part) =>
+      part.type === 'element' ? elements[next++] : { type: 'literal', value: part.value }
+    );
+}
+
+/**
+ * The team as one line of plain text — "Oriol, Lili y 2 personas más" — or `''`
  * when nobody has a name. The same words as the hero's line, minus the links.
  */
-export function teamText(collection, t) {
-  const { named, unnamedCount } = collectionTeam(collection);
-  if (named.length === 0) return '';
-  const names = named.map((member) => member.name).join(', ');
-  return unnamedCount > 0
-    ? `${names} ${t('collectionPage.curatorsMore', { count: unnamedCount })}`
-    : names;
+export function teamText(collection, t, language) {
+  return teamParts(collection, t, language)
+    .map((part) => {
+      if (part.type === 'member') return part.member.name;
+      if (part.type === 'more') return part.text;
+      return part.value;
+    })
+    .join('');
 }

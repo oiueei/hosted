@@ -16,7 +16,7 @@ import HeroPhoto from '../components/HeroPhoto';
 import useTheeeme from '../hooks/useTheeeme';
 import RecommendGuest from '../components/RecommendGuest';
 import { useLocalized } from '../utils/localized';
-import { collectionTeam } from '../utils/team';
+import { teamParts } from '../utils/team';
 import { loginPathFor } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
@@ -58,7 +58,7 @@ export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
   const [error, setError] = useState('');
@@ -268,9 +268,11 @@ export default function CollectionPage() {
   const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
   // The team the hero names, founder first, whoever has no name counted at the
-  // end rather than listed — one rule (`utils/team.js`) shared with the "Run by"
-  // column of "My groups", so the two cannot disagree.
-  const { named: namedTeam, unnamedCount: unnamedTeamCount } = collectionTeam(collection);
+  // end rather than listed, written as the language on screen writes a list
+  // ("A y B", "A, B y C") — one rule (`utils/team.js`) shared with the "Run by"
+  // column of "My groups", so the two cannot disagree. The pieces come apart so
+  // each name can be a link.
+  const teamLine = teamParts(collection, t, i18n.resolvedLanguage || i18n.language);
   const isAuthenticated = !!userCode;
   // The Community/visibility tags in the H1 are purely informational — no
   // click, no delete, so no hover/focus state to design for — so they follow
@@ -427,19 +429,21 @@ export default function CollectionPage() {
                 single founder line, and only to non-owners — the owner knows
                 who they are. */}
             {collection.co_owners?.length > 0
-              ? namedTeam.length > 0 && (
+              ? teamLine.length > 0 && (
                   <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
                     <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
-                    {namedTeam.map((c, i) => (
-                      <span key={c.code}>
-                        {i > 0 && ', '}
-                        <Link to={`/${c.code}`} className="owner-link">
-                          {c.name}
-                        </Link>
-                      </span>
-                    ))}
-                    {unnamedTeamCount > 0 &&
-                      ` ${t('collectionPage.curatorsMore', { count: unnamedTeamCount })}`}
+                    {teamLine.map((part, i) => {
+                      if (part.type === 'member') {
+                        return (
+                          <Link key={i} to={`/${part.member.code}`} className="owner-link">
+                            {part.member.name}
+                          </Link>
+                        );
+                      }
+                      // The count of those without a name is plain text, and so is
+                      // what the language puts between the pieces ("," and "y").
+                      return part.type === 'more' ? part.text : part.value;
+                    })}
                   </p>
                 )
               : !isOwner &&
