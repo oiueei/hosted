@@ -188,6 +188,7 @@ TEXTS = {
         "La teva sol·licitud {action} de '{thing}' ha estat {decision}. Veure la publicació: {url}"
     ),
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
+    "contact_shared_accepted": "Per quedar, t'escriuran aquí, al correu amb què entres a OIUEEI.",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",
     "invite_rejected_plain": "{invitee} ha rebutjat la invitació a '{collection}'.",
@@ -207,6 +208,12 @@ TEXTS = {
     # person's name is not in it any more (CA, 2026-10-02).
     "confirmation_outro_one": "Hem avisat el dinamitzador — aviat et respondrà.",
     "confirmation_outro_other": "Hem avisat els dinamitzadors — aviat et respondran.",
+    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # which the managers now hold. Said, never printed — the email already arrives there.
+    "contact_shared_request": (
+        "El teu email va amb la sol·licitud: si cal, t'escriuran aquí, al correu amb què entres a "
+        "OIUEEI."
+    ),
     # FAQ question (to owner)
     "faq_question_subject": "Hi ha una pregunta per respondre",
     "faq_question_plain": (
@@ -274,6 +281,10 @@ TEXTS = {
         "Veure la publicació: {url}"
     ),
     "reservation_confirmed_intro": "La teva reserva està confirmada:",
+    "contact_shared_reservation": (
+        "El teu email va amb la reserva: si cal, t'escriuran aquí, al correu amb què entres a "
+        "OIUEEI."
+    ),
     "reservation_fee_label": "Cost",
     "reservation_where_label": "On",
     "reservation_notice_subject": "{requester} ha reservat '{thing}'",

@@ -180,6 +180,9 @@ TEXTS = {
         "Tu solicitud de {action} de '{thing}' ha sido {decision}. Ver la publicación: {url}"
     ),
     "decision_intro": "Tu solicitud de {action} ha sido {decision}:",
+    "contact_shared_accepted": (
+        "Para quedar, te escribirán aquí, al correo con el que entras en OIUEEI."
+    ),
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",
     "invite_rejected_plain": "{invitee} ha rechazado la invitación a '{collection}'.",
@@ -197,6 +200,12 @@ TEXTS = {
     # person's name is not in it any more (CA, 2026-10-02).
     "confirmation_outro_one": "Hemos avisado al dinamizador — te responderá pronto.",
     "confirmation_outro_other": "Hemos avisado a los dinamizadores — te responderán pronto.",
+    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # which the managers now hold. Said, never printed — the email already arrives there.
+    "contact_shared_request": (
+        "Tu email va con la solicitud: si hace falta, te escribirán aquí, al correo con el que "
+        "entras en OIUEEI."
+    ),
     # FAQ question (to owner)
     "faq_question_subject": "Hay una pregunta por responder",
     "faq_question_plain": (
@@ -263,6 +272,10 @@ TEXTS = {
         "Tu reserva de '{thing}' está confirmada del {start} al {end}. Ver la publicación: {url}"
     ),
     "reservation_confirmed_intro": "Tu reserva está confirmada:",
+    "contact_shared_reservation": (
+        "Tu email va con la reserva: si hace falta, te escribirán aquí, al correo con el que "
+        "entras en OIUEEI."
+    ),
     "reservation_fee_label": "Coste",
     "reservation_where_label": "Dónde",
     "reservation_notice_subject": "{requester} ha reservado '{thing}'",

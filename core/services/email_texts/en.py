@@ -184,6 +184,10 @@ TEXTS = {
     ),
     "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
     "decision_intro": "Your {action} request has been {decision}:",
+    "contact_shared_accepted": (
+        "To arrange the hand-over, they'll write to you here, at the address you sign in to "
+        "OIUEEI with."
+    ),
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",
     "invite_rejected_plain": "{invitee} has declined the invitation to '{collection}'.",
@@ -201,6 +205,12 @@ TEXTS = {
     # person's name is not in it any more (CA, 2026-10-02).
     "confirmation_outro_one": "We've let the curator know — they'll get back to you soon.",
     "confirmation_outro_other": "We've let the curators know — they'll get back to you soon.",
+    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # which the managers now hold. Said, never printed — the email already arrives there.
+    "contact_shared_request": (
+        "Your email goes with the request: if needed, they'll write to you here, at the address "
+        "you sign in to OIUEEI with."
+    ),
     # FAQ question (to owner)
     "faq_question_subject": "There is a question to be answered",
     "faq_question_plain": "{questioner} has asked about '{thing}': {question} View thing: {url}",
@@ -262,6 +272,10 @@ TEXTS = {
         "Your reservation of '{thing}' is confirmed for {start} to {end}. View the listing: {url}"
     ),
     "reservation_confirmed_intro": "Your reservation is confirmed:",
+    "contact_shared_reservation": (
+        "Your email goes with the booking: if needed, they'll write to you here, at the address "
+        "you sign in to OIUEEI with."
+    ),
     "reservation_fee_label": "Fee",
     "reservation_where_label": "Where",
     "reservation_notice_subject": "{requester} reserved '{thing}'",

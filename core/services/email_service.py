@@ -1609,8 +1609,15 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
     html_blocks = [
         _para(T("decision_intro").format(action=action, decision=decision_word)),
         *_booking_detail_blocks(booking, lang),
-        _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
     ]
+    # Where the hand-over will be arranged (E2, CA 2026-10-05): said on an ACCEPTED
+    # decision only — a refusal has nothing to arrange. The address itself is not
+    # printed; the email already arrives there.
+    if accepted:
+        contact_shared = T("contact_shared_accepted")
+        plain += "\n\n" + contact_shared
+        html_blocks.append(_para(contact_shared))
+    html_blocks.append(_cta(thing_url, T("view_thing_cta"), T("cta_fallback")))
     # The owner's note rides an ACCEPTED decision only — that is the moment
     # the hold becomes real and the note's "how to collect / where we are"
     # prose is finally actionable; a refusal has no next steps for it to
@@ -1676,6 +1683,10 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
     # / "responderán"). Nobody told cannot happen (the owner is always a manager and
     # a requester is never the owner); it is read as one rather than as "curators".
     outro = T("confirmation_outro_one" if informed <= 1 else "confirmation_outro_other")
+    # And where they will be written to (E2, CA 2026-10-05): the address they sign in
+    # with, which the managers now hold. Behind the outro in both halves; never printed
+    # — the email already arrives there.
+    contact_shared = T("contact_shared_request")
     thing_url = _thing_url(thing, reader=user, collection=collection)
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
@@ -1686,12 +1697,12 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
             action=action,
             thing=headline,
             when=_when_phrase(booking, T),
-            outro=outro,
+            outro=f"{outro} {contact_shared}",
             url=thing_url,
         )
     else:
         plain = T("confirmation_plain").format(
-            action=action, thing=headline, outro=outro, url=thing_url
+            action=action, thing=headline, outro=f"{outro} {contact_shared}", url=thing_url
         )
 
     note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
@@ -1704,6 +1715,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
             _para(T("confirmation_intro").format(action=action)),
             *_booking_detail_blocks(booking, lang),
             _para(outro),
+            _para(contact_shared),
             _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
             *note_blocks,
         ],
@@ -2079,6 +2091,10 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
+    # Where they will be written to (E2, CA 2026-10-05): said, not printed.
+    contact_shared = T("contact_shared_reservation")
+    plain += "\n\n" + contact_shared
+    blocks.append(_para(contact_shared))
     blocks.append(_cta(thing_url, T("view_thing_cta"), T("cta_fallback")))
     # The owner's note for whoever books here — after the listing link, before
     # the legal footer (which _render_email appends itself). Same collection
