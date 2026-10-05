@@ -194,8 +194,10 @@ TEXTS = {
     "confirmation_intro": "Tu solicitud de {action} se ha enviado:",
     # Who was told: one person who runs the thing, or more than one (a team) — the
     # person's name is not in it any more (CA, 2026-10-02).
-    "confirmation_outro_one": "Hemos avisado al dinamizador — te responderá pronto.",
-    "confirmation_outro_other": "Hemos avisado a los dinamizadores — te responderán pronto.",
+    "confirmation_outro_one": "Hemos avisado a quien gestiona esta cosa — te responderá pronto.",
+    "confirmation_outro_other": (
+        "Hemos avisado a quienes gestionan esta cosa — te responderán pronto."
+    ),
     # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
     # which the managers now hold. Said, never printed — the email already arrives there.
     "contact_shared_request": (

@@ -1655,10 +1655,12 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
 
     ``informed`` is how many people the request told: the thing's managers bar the
     requester, which is what ``send_booking_request_notifications`` fans out to and
-    passes in. The email says "the curator" for one and "the curators" for more,
-    and no longer names the owner (CA, 2026-10-02: with a team the request reaches
-    everyone who runs the thing, so naming one person was untrue). Without it, the
-    count is worked out here the same way.
+    passes in. The email says "the person who runs it" for one and "the people who
+    run it" for more, and no longer names the owner (CA, 2026-10-02: with a team the
+    request reaches everyone who runs the thing, so naming one person was untrue;
+    CT1, CA 2026-10-05: nor does it say "curator" — in a COMMUNITY the one who runs a
+    thing is its owner, a member, not whoever curates the group — so it reads as the
+    request page does). Without it, the count is worked out here the same way.
 
     ``collection`` is the collection the request was made through
     (``booking_service.resolve_request_collection``) and feeds exactly one
@@ -1673,7 +1675,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
     # One person, or more than one: the sentence is a whole phrase per number, not a
     # word swapped in, because Spanish and Catalan change the verb too ("responderá"
     # / "responderán"). Nobody told cannot happen (the owner is always a manager and
-    # a requester is never the owner); it is read as one rather than as "curators".
+    # a requester is never the owner); it is read as one rather than as "the people".
     outro = T("confirmation_outro_one" if informed <= 1 else "confirmation_outro_other")
     # And where they will be written to (E2, CA 2026-10-05): the address they sign in
     # with, which the managers now hold. Behind the outro in both halves; never printed

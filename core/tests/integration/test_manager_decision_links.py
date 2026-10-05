@@ -11,6 +11,7 @@ from datetime import date, timedelta
 
 import pytest
 from django.core import mail
+from django.utils.html import escape
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -139,20 +140,28 @@ class TestEveryManagerGetsTheirOwnEmail:
 
 
 class TestTheRequesterIsToldHowManyWereWarned:
-    """The "request sent" email says who was warned by number — "the curator", or
-    "the curators" — and that number is the request's own fan-out: the thing's
-    managers bar the requester (CA, 2026-10-02: it used to name the owner, which
-    was untrue once a team runs the thing)."""
+    """The "request sent" email says who was warned by number — "the person who runs
+    it", or "the people who run it" — and that number is the request's own fan-out:
+    the thing's managers bar the requester (CA, 2026-10-02: it used to name the
+    owner, which was untrue once a team runs the thing; CT1, CA, 2026-10-05: nor
+    does it say "curator", which is untrue in a COMMUNITY, where whoever runs a
+    thing is its owner, a member)."""
 
-    ONE = "We've let the curator know"
-    MANY = "We've let the curators know"
+    ONE = "We've let the person who runs it know"
+    MANY = "We've let the people who run it know"
+    # Letter by letter, as CA approved them (SONNET_TASKS.md, round CT), for one person.
+    RUNS_IT = {
+        "es": "Hemos avisado a quien gestiona esta cosa — te responderá pronto.",
+        "ca": "Hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
+        "en": "We've let the person who runs it know — they'll get back to you soon.",
+    }
 
     def _told(self, who):
         sent = [m for m in mail.outbox if m.to == [who.email]]
         assert len(sent) == 1
         return sent[0].body
 
-    def test_a_thing_with_one_manager_says_the_curator(self, db, owner, member):
+    def test_a_thing_with_one_manager_says_the_person_who_runs_it(self, db, owner, member):
         solo = Collection.objects.create(
             code="SOLO01", owner=owner, headline="Mine", mode=Collection.Mode.PROPRIETARY
         )
@@ -168,7 +177,7 @@ class TestTheRequesterIsToldHowManyWereWarned:
         body = self._told(member)
         assert self.ONE in body and self.MANY not in body
 
-    def test_a_thing_run_by_a_team_says_the_curators(self, catalogue, member):
+    def test_a_thing_run_by_a_team_says_the_people_who_run_it(self, catalogue, member):
         mail.outbox.clear()
 
         _ask(member, catalogue["lend"])
@@ -183,13 +192,47 @@ class TestTheRequesterIsToldHowManyWereWarned:
 
         _ask(member, catalogue["lend"])
 
-        assert "Hemos avisado a los dinamizadores — te responderán pronto." in self._told(member)
+        assert "Hemos avisado a quienes gestionan esta cosa — te responderán pronto." in self._told(
+            member
+        )
+
+    @pytest.mark.parametrize("lang", ["es", "ca", "en"])
+    def test_in_a_community_it_never_calls_whoever_runs_the_thing_a_curator(
+        self, db, owner, co_curator, member, lang
+    ):
+        # In a COMMUNITY the one who runs a thing is its owner — a member, not whoever
+        # curates the group — so the email may not say "dinamizador" / "dinamitzador" /
+        # "curator", in any language, and says what the request page says.
+        contributor = User.objects.create(code="CONT02", email="contrib2@test.com", name="Lolo")
+        group = Collection.objects.create(
+            code="COMM02", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
+        )
+        group.invites.add(co_curator, contributor, member)
+        group.co_owners.add(co_curator)
+        tent = Thing.objects.create(
+            code="TENT02", type=Thing.Type.GIFT_THING, owner=contributor, headline="A tent"
+        )
+        group.things.add(tent)
+        member.language = lang
+        member.save(update_fields=["language"])
+        mail.outbox.clear()
+
+        _ask(member, tent)
+
+        (confirmation,) = [m for m in mail.outbox if m.to == [member.email]]
+        html = confirmation.alternatives[0][0]
+        said = self.RUNS_IT[lang]
+        assert said in confirmation.body
+        assert escape(said) in html
+        for stem in ("dinamiz", "dinamitz", "curator"):
+            assert stem not in confirmation.body.lower()
+            assert stem not in html.lower()
 
     def test_a_curator_who_asks_is_not_counted_among_those_warned(
         self, catalogue, owner, co_curator
     ):
         # Two people run the thing, but one of them is the one asking: only the
-        # founder is warned, so it is "the curator", not "the curators".
+        # founder is warned, so it is "the person who runs it", not "the people".
         mail.outbox.clear()
 
         _ask(co_curator, catalogue["gift"])
