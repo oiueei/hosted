@@ -68,7 +68,12 @@ export default [
   {
     id: 'reservas',
     q: '¿Cómo funcionan las reservas?',
-    a: 'Los **préstamos y alquileres** van con fechas: se elige un tramo en el calendario y quien gestiona la colección acepta o rechaza. Los **regalos y las ventas** no llevan fechas; se piden y ya está. Una solicitud sin responder caduca sola a las 72 horas, y un grupo puede fijar de antemano las duraciones o los días de recogida y devolución que le encajen.',
+    a: 'Los **préstamos y alquileres** van con fechas: se elige un tramo en el calendario y quien gestiona la cosa acepta o rechaza. Los **regalos y las ventas** no llevan fechas; se piden y ya está. Una solicitud sin responder caduca sola a las 72 horas, y un grupo puede fijar de antemano las duraciones o los días de recogida y devolución que le encajen.',
+  },
+  {
+    id: 'contacto',
+    q: '¿Cómo se ponen en contacto quien pide una cosa y quien la gestiona?',
+    a: 'Por correo, y en un solo sentido. Cuando pides una cosa, a quien la gestiona le llegan con la solicitud tu nombre y tu email —el que usas para entrar en OIUEEI—, para que pueda escribirte y quedar; también lo ve en «Solicitudes para mí». Su email no se te muestra: lo tendrás cuando te escriba. OIUEEI no tiene chat, y el pago o la entrega los acordáis vosotros.',
   },
   {
     id: 'sin-devolver',

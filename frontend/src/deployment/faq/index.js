@@ -3,7 +3,7 @@
  *
  * `LegalPage` imports its three texts eagerly and pays for all of them; this is
  * a dynamic import per language, so a reader downloads the chunk they can
- * actually read. Twelve answers today, and there will be more.
+ * actually read. Thirteen answers today, and there will be more.
  *
  * The fallback is a genuine last resort rather than a routine path: `i18n`
  * declares `supportedLngs`, so `i18n.language` has already been normalised to

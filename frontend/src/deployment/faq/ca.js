@@ -50,7 +50,12 @@ export default [
   {
     id: 'reservas',
     q: 'Com funcionen les reserves?',
-    a: 'Els **préstecs i lloguers** van amb dates: es tria un tram al calendari i qui gestiona la col·lecció accepta o rebutja. Els **regals i les vendes** no porten dates; es demanen i ja està. Una sol·licitud sense resposta caduca sola al cap de 72 hores, i un grup pot fixar per endavant les durades o els dies de recollida i devolució que li encaixin.',
+    a: 'Els **préstecs i lloguers** van amb dates: es tria un tram al calendari i qui gestiona la cosa accepta o rebutja. Els **regals i les vendes** no porten dates; es demanen i ja està. Una sol·licitud sense resposta caduca sola al cap de 72 hores, i un grup pot fixar per endavant les durades o els dies de recollida i devolució que li encaixin.',
+  },
+  {
+    id: 'contacto',
+    q: 'Com es posen en contacte qui demana una cosa i qui la gestiona?',
+    a: "Per correu, i en un sol sentit. Quan demanes una cosa, a qui la gestiona li arriben amb la sol·licitud el teu nom i el teu email —el que fas servir per entrar a OIUEEI—, perquè et pugui escriure i quedar; també el veu a «Sol·licituds per a mi». El seu email no se't mostra: el tindràs quan t'escrigui. OIUEEI no té xat, i el pagament o el lliurament els acordeu vosaltres.",
   },
   {
     id: 'sin-devolver',

@@ -28,6 +28,31 @@ const LANGUAGES = [
   ['en', faqEn],
 ];
 
+// The question about getting in touch (CTH1, CA 2026-10-05), letter by letter as CA approved it
+// (SONNET_TASKS.md, round CT): who tells whom, and by what route.
+const CONTACTO = {
+  es: {
+    q: '¿Cómo se ponen en contacto quien pide una cosa y quien la gestiona?',
+    a: 'Por correo, y en un solo sentido. Cuando pides una cosa, a quien la gestiona le llegan con la solicitud tu nombre y tu email —el que usas para entrar en OIUEEI—, para que pueda escribirte y quedar; también lo ve en «Solicitudes para mí». Su email no se te muestra: lo tendrás cuando te escriba. OIUEEI no tiene chat, y el pago o la entrega los acordáis vosotros.',
+  },
+  ca: {
+    q: 'Com es posen en contacte qui demana una cosa i qui la gestiona?',
+    a: "Per correu, i en un sol sentit. Quan demanes una cosa, a qui la gestiona li arriben amb la sol·licitud el teu nom i el teu email —el que fas servir per entrar a OIUEEI—, perquè et pugui escriure i quedar; també el veu a «Sol·licituds per a mi». El seu email no se't mostra: el tindràs quan t'escrigui. OIUEEI no té xat, i el pagament o el lliurament els acordeu vosaltres.",
+  },
+  en: {
+    q: 'How do the person asking for a thing and the person who runs it get in touch?',
+    a: "By email, and one way only. When you ask for a thing, whoever runs it gets your name and your email — the one you sign in to OIUEEI with — along with the request, so they can write to you and arrange things; they also see it under “Requests to me”. Their email isn't shown to you: you'll have it when they write. OIUEEI has no chat, and payment or hand-over is up to the two of you.",
+  },
+};
+
+// What `reservas` says about who answers a request, now and what it used to say: in a COMMUNITY
+// the one who accepts or declines is whoever runs the thing, not whoever runs the collection.
+const RESERVAS = {
+  es: { now: 'quien gestiona la cosa acepta o rechaza', gone: 'la colección' },
+  ca: { now: 'qui gestiona la cosa accepta o rebutja', gone: 'la col·lecció' },
+  en: { now: 'whoever runs the thing accepts or declines', gone: 'the collection' },
+};
+
 window.scrollTo = vi.fn();
 globalThis.fetch = vi.fn(() =>
   Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({}) })
@@ -144,6 +169,50 @@ describe('the three languages stay one page', () => {
     }
     await expect(loadFaqEntries('pt')).resolves.toBe(faqEn);
   });
+});
+
+describe('the question about getting in touch', () => {
+  test.each(LANGUAGES)(
+    '%s: it comes right after "reservas", word for word, with no link',
+    (lang, entries) => {
+      const index = entries.findIndex((entry) => entry.id === 'reservas');
+      const entry = entries[index + 1];
+
+      expect(entry.id).toBe('contacto');
+      expect(entry.q).toBe(CONTACTO[lang].q);
+      expect(entry.a).toBe(CONTACTO[lang].a);
+      expect(entry.link).toBeUndefined();
+    }
+  );
+
+  test.each(LANGUAGES)(
+    '%s: "reservas" says whoever runs the thing, not the collection',
+    (lang, entries) => {
+      const { a } = entries.find((entry) => entry.id === 'reservas');
+
+      expect(a).toContain(RESERVAS[lang].now);
+      expect(a).not.toContain(RESERVAS[lang].gone);
+    }
+  );
+
+  test.each(LANGUAGES)(
+    '%s: the page shows it as the next section after "reservas"',
+    async (lang, entries) => {
+      await i18n.changeLanguage(lang);
+      window.history.pushState({}, '', '/faq');
+      render(<App />);
+
+      await screen.findByRole('heading', { name: entries[0].q, level: 2 });
+
+      const ids = Array.from(document.querySelectorAll('h2[id]')).map((heading) => heading.id);
+      expect(ids.indexOf('contacto')).toBe(ids.indexOf('reservas') + 1);
+      const heading = document.getElementById('contacto');
+      expect(heading.textContent).toBe(CONTACTO[lang].q);
+      expect(screen.getByText(CONTACTO[lang].a)).toBeInTheDocument();
+      // An answer, not a way to somewhere else: no in-app link under it.
+      expect(heading.closest('section').querySelector('a')).toBeNull();
+    }
+  );
 });
 
 describe('the ways in', () => {

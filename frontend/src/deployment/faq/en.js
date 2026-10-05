@@ -50,7 +50,12 @@ export default [
   {
     id: 'reservas',
     q: 'How do bookings work?',
-    a: '**Loans and rentals** come with dates: you pick a stretch of the calendar and whoever runs the collection accepts or declines. **Gifts and sales** carry no dates; you ask, and that is that. An unanswered request expires on its own after 72 hours, and a group can set in advance the lengths, or the pickup and return days, that suit it.',
+    a: '**Loans and rentals** come with dates: you pick a stretch of the calendar and whoever runs the thing accepts or declines. **Gifts and sales** carry no dates; you ask, and that is that. An unanswered request expires on its own after 72 hours, and a group can set in advance the lengths, or the pickup and return days, that suit it.',
+  },
+  {
+    id: 'contacto',
+    q: 'How do the person asking for a thing and the person who runs it get in touch?',
+    a: "By email, and one way only. When you ask for a thing, whoever runs it gets your name and your email — the one you sign in to OIUEEI with — along with the request, so they can write to you and arrange things; they also see it under “Requests to me”. Their email isn't shown to you: you'll have it when they write. OIUEEI has no chat, and payment or hand-over is up to the two of you.",
   },
   {
     id: 'sin-devolver',
