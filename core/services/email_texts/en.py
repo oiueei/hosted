@@ -167,6 +167,11 @@ TEXTS = {
         "Confirm hold: {accept} | Decline hold: {reject}"
     ),
     "booking_request_intro": "{requester} has sent a {action} request:",
+    # The requester's address travels with the request to whoever manages the thing (E1,
+    # CA 2026-10-05), and the hint says that replying reaches them: shared by the request
+    # email and the reservation notice.
+    "requester_email_label": "Email",
+    "requester_reply_hint": "To write to them, reply to this email.",
     "hold_confirm_cta": "Confirm hold",
     "hold_cancel_cta": "Decline hold",
     # Booking decision (to requester)
@@ -262,7 +267,6 @@ TEXTS = {
     "reservation_notice_subject": "{requester} reserved '{thing}'",
     "reservation_notice_plain": "{requester} reserved '{thing}' for {start} to {end}.",
     "reservation_notice_intro": "{requester} has reserved:",
-    "reservation_requester_email_label": "Email",
     "reservation_note_label": "Their note",
     "reservation_cancelled_subject": "Reservation cancelled: '{thing}'",
     "reservation_cancelled_to_guest_plain": (

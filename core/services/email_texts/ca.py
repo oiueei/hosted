@@ -168,6 +168,11 @@ TEXTS = {
         "Confirmar la sol·licitud: {accept} | Rebutjar la sol·licitud: {reject}"
     ),
     "booking_request_intro": "{requester} t'ha enviat una sol·licitud {action}:",
+    # The requester's address travels with the request to whoever manages the thing (E1,
+    # CA 2026-10-05), and the hint says that replying reaches them: shared by the request
+    # email and the reservation notice.
+    "requester_email_label": "Email",
+    "requester_reply_hint": "Per escriure-li, respon aquest correu.",
     "hold_confirm_cta": "Confirmar la sol·licitud",
     "hold_cancel_cta": "Rebutjar la sol·licitud",
     # Booking decision (to requester)
@@ -274,7 +279,6 @@ TEXTS = {
     "reservation_notice_subject": "{requester} ha reservat '{thing}'",
     "reservation_notice_plain": "{requester} ha reservat '{thing}' del {start} al {end}.",
     "reservation_notice_intro": "{requester} ha reservat:",
-    "reservation_requester_email_label": "Email",
     "reservation_note_label": "El seu missatge",
     "reservation_cancelled_subject": "Reserva cancel·lada: '{thing}'",
     "reservation_cancelled_to_guest_plain": (
