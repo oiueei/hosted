@@ -39,12 +39,9 @@ APPROVED = {
         "address you sign in to OIUEEI with.",
     },
     "contact_shared_reservation": {
-        "es": "Tu email va con la reserva: si hace falta, te escribirán aquí, al correo con el "
-        "que entras en OIUEEI.",
-        "ca": "El teu email va amb la reserva: si cal, t'escriuran aquí, al correu amb què "
-        "entres a OIUEEI.",
-        "en": "Your email goes with the booking: if needed, they'll write to you here, at the "
-        "address you sign in to OIUEEI with.",
+        "es": "Tu email va con la reserva.",
+        "ca": "El teu email va amb la reserva.",
+        "en": "Your email goes with the booking.",
     },
 }
 

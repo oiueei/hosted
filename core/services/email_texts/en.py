@@ -267,10 +267,7 @@ TEXTS = {
         "Your reservation of '{thing}' is confirmed for {start} to {end}. View the listing: {url}"
     ),
     "reservation_confirmed_intro": "Your reservation is confirmed:",
-    "contact_shared_reservation": (
-        "Your email goes with the booking: if needed, they'll write to you here, at the address "
-        "you sign in to OIUEEI with."
-    ),
+    "contact_shared_reservation": "Your email goes with the booking.",
     "reservation_fee_label": "Fee",
     "reservation_where_label": "Where",
     "reservation_notice_subject": "{requester} reserved '{thing}'",

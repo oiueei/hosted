@@ -279,10 +279,7 @@ TEXTS = {
         "Veure la publicació: {url}"
     ),
     "reservation_confirmed_intro": "La teva reserva està confirmada:",
-    "contact_shared_reservation": (
-        "El teu email va amb la reserva: si cal, t'escriuran aquí, al correu amb què entres a "
-        "OIUEEI."
-    ),
+    "contact_shared_reservation": "El teu email va amb la reserva.",
     "reservation_fee_label": "Cost",
     "reservation_where_label": "On",
     "reservation_notice_subject": "{requester} ha reservat '{thing}'",
