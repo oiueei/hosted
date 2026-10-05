@@ -31,6 +31,12 @@ describe('.table-cell-lines', () => {
     expect(declarations('.table-cell-lines p', 'font-size')).toEqual(['var(--fontsize-body-s)']);
   });
 
+  test('a long address wraps instead of running off a phone’s card (E4)', () => {
+    // An email is one word of up to 64 characters, and the requester's now sits in the
+    // cell of /owner-bookings.
+    expect(declarations('.table-cell-lines p', 'overflow-wrap')).toEqual(['anywhere']);
+  });
+
   test('each kind of line has its grey, and the note its italic', () => {
     // "Requested on …" and "No dates" have none: the cell's own black (CA,
     // 2026-10-04) — their greys were under AA, which paletteContrast.test.js
