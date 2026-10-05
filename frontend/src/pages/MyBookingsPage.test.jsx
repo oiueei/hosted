@@ -147,8 +147,19 @@ describe('MyBookingsPage listing', () => {
     // CA, 2026-10-03: both labels filled the column (a bare flex column stretches
     // its children), and since Tag centres and StatusLabel does not, one read
     // centred and the other left. The layout is the class; its rule is pinned in
-    // `tableCellStyles.test.js`.
-    mockList([booking({ status: 'EXPIRED' })]);
+    // `tableCellStyles.test.js`. The type shows only in a table that mixes verbs
+    // (G9), so there are two of them.
+    mockList([
+      booking({ status: 'EXPIRED' }),
+      booking({
+        code: 'BKG002',
+        status: 'REJECTED',
+        thing_type: 'GIFT_THING',
+        thing_headline: 'Tent',
+        start_date: null,
+        end_date: null,
+      }),
+    ]);
     renderPage();
 
     await screen.findByText('Cordless drill');
@@ -510,7 +521,17 @@ describe('MyBookingsPage on a phone', () => {
   afterEach(() => media.restore());
 
   test('a request is a card holding the thing, its owner, when, both labels and the cancel', async () => {
-    mockBookings(booking());
+    // The verb's label is there because this table mixes verbs (G9).
+    mockBookings(
+      booking(),
+      booking({
+        code: 'BKG002',
+        thing_type: 'GIFT_THING',
+        thing_headline: 'Tent',
+        start_date: null,
+        end_date: null,
+      })
+    );
     renderPage();
 
     const list = await screen.findByRole('list', { name: 'Requests waiting for an answer' });
@@ -577,5 +598,126 @@ describe('MyBookingsPage on a phone', () => {
     await screen.findByRole('list', { name: 'Requests waiting for an answer' });
 
     expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
+  });
+});
+
+/**
+ * The verb's label ("Rental", "Reservation"…) over the state in the status cell tells
+ * rows apart only when a table mixes verbs (G9, CA 2026-10-05): many collections hold
+ * one verb, and the label repeated the same word in every row. It is decided per table
+ * — each page has two, what is waiting or current and what is past — from that table's
+ * own rows, and again whenever more rows are loaded. The state label and the "expired"
+ * note are not part of it.
+ */
+describe('MyBookingsPage — the verb’s label only where a table mixes verbs', () => {
+  const rental = (code, status = 'PENDING') =>
+    booking({ code, status, thing_type: 'RENT_THING', thing_headline: `Drill ${code}` });
+  const gift = (code, status = 'PENDING') =>
+    booking({
+      code,
+      status,
+      thing_type: 'GIFT_THING',
+      thing_headline: `Tent ${code}`,
+      start_date: null,
+      end_date: null,
+    });
+  const inTable = (name) => within(screen.getByRole('table', { name }));
+  const WAITING = 'Requests waiting for an answer';
+  const CLOSED = 'Requests already closed';
+
+  test('a table of one verb has no label on any row, and every row still has its state', async () => {
+    mockList([rental('B1'), rental('B2')]);
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(screen.queryByText('Rental')).toBeNull();
+    // (The heading over the table also says "Pending", hence the table.)
+    expect(inTable(WAITING).getAllByText('Pending')).toHaveLength(2);
+  });
+
+  test('a table that mixes verbs gives every row its verb', async () => {
+    mockList([rental('B1'), gift('B2')]);
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    const rows = within(screen.getByRole('table', { name: WAITING })).getAllByRole('row');
+    const [, first, second] = rows; // the header row, then one per request
+    expect(within(first).getByText('Rental')).toBeInTheDocument();
+    expect(within(second).getByText('Gift')).toBeInTheDocument();
+  });
+
+  test('the two tables decide apart: one verb waiting, a mix already closed', async () => {
+    mockList([rental('B1'), rental('B2'), rental('B3', 'REJECTED'), gift('B4', 'CANCELLED')]);
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(inTable(WAITING).queryByText('Rental')).toBeNull();
+    expect(inTable(CLOSED).getByText('Rental')).toBeInTheDocument();
+    expect(inTable(CLOSED).getByText('Gift')).toBeInTheDocument();
+  });
+
+  test('and the other way round: a mix waiting, one verb already closed', async () => {
+    mockList([rental('B1'), gift('B2'), rental('B3', 'REJECTED'), rental('B4', 'CANCELLED')]);
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(inTable(WAITING).getByText('Rental')).toBeInTheDocument();
+    expect(inTable(WAITING).getByText('Gift')).toBeInTheDocument();
+    expect(inTable(CLOSED).queryByText('Rental')).toBeNull();
+  });
+
+  test('loading more rows of another verb puts the label back on the whole table', async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [rental('B1'), rental('B2')],
+          next: 'http://testserver/api/v1/my-bookings/?page=2',
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ results: [gift('B3')], next: null }),
+      });
+    renderPage();
+    await screen.findByText('Drill B1');
+    expect(screen.queryByText('Rental')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    await screen.findByText('Tent B3');
+    expect(screen.getAllByText('Rental')).toHaveLength(2); // the two that had none
+    expect(screen.getByText('Gift')).toBeInTheDocument();
+  });
+
+  test('a single request is a table of one verb: no label', async () => {
+    mockList([rental('B1')]);
+    renderPage();
+
+    await screen.findByText('Drill B1');
+    expect(screen.queryByText('Rental')).toBeNull();
+  });
+
+  describe('on a phone, where each request is a card', () => {
+    let media;
+    beforeEach(() => {
+      media = mockMatchMedia({ [PHONE]: true });
+    });
+    afterEach(() => media.restore());
+
+    test('the cards of a table of one verb have no label; those of a mix have it', async () => {
+      mockList([rental('B1'), rental('B2'), rental('B3', 'REJECTED'), gift('B4', 'CANCELLED')]);
+      renderPage();
+
+      const waiting = await screen.findByRole('list', { name: WAITING });
+      const closed = screen.getByRole('list', { name: CLOSED });
+      expect(within(waiting).queryByText('Rental')).toBeNull();
+      expect(within(waiting).getAllByText('Pending')).toHaveLength(2);
+      expect(within(closed).getByText('Rental')).toBeInTheDocument();
+      expect(within(closed).getByText('Gift')).toBeInTheDocument();
+    });
   });
 });
