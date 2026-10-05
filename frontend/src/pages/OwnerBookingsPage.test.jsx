@@ -682,3 +682,43 @@ describe('OwnerBookingsPage — the verb’s label only where a table mixes verb
     });
   });
 });
+
+// The thing's name is a bold link (G10, CA 2026-10-05): one rule in App.css for the
+// text links inside the component's own class, `.responsive-table` — see
+// `test/tableLinkWeight.test.jsx`. These pin that this page's links are inside it, in
+// the table and in the cards.
+describe('OwnerBookingsPage — the bold links of the table', () => {
+  const SELECTOR = ".responsive-table a:not([class*='hds-button'])";
+
+  test('the thing’s link is inside the component’s class, in the table', async () => {
+    mockApi([
+      {
+        results: [
+          booking(),
+          booking({ code: 'BKG002', status: 'ACCEPTED', thing_headline: 'Tent' }),
+        ],
+        next: null,
+      },
+    ]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    for (const name of ['Cordless drill', 'Tent']) {
+      expect(screen.getByRole('link', { name }).matches(SELECTOR)).toBe(true);
+    }
+  });
+
+  test('and in the cards of a phone, where the decisions are buttons the rule does not reach', async () => {
+    const media = mockMatchMedia({ [PHONE]: true });
+    try {
+      mockApi([{ results: [booking()], next: null }]);
+      renderPage();
+
+      const link = await screen.findByRole('link', { name: 'Cordless drill' });
+      expect(link.matches(SELECTOR)).toBe(true);
+      expect(screen.getByRole('button', { name: 'Confirm this request' }).matches('a')).toBe(false);
+    } finally {
+      media.restore();
+    }
+  });
+});

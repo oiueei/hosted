@@ -721,3 +721,47 @@ describe('MyBookingsPage — the verb’s label only where a table mixes verbs',
     });
   });
 });
+
+// The thing's name is a bold link (G10, CA 2026-10-05): one rule in App.css for the
+// text links inside the component's own class, `.responsive-table` — see
+// `test/tableLinkWeight.test.jsx`. These pin that this page's links are inside it, in
+// the table and in the cards.
+describe('MyBookingsPage — the bold links of the table', () => {
+  const SELECTOR = ".responsive-table a:not([class*='hds-button'])";
+
+  test('the thing’s link is inside the component’s class, in the table', async () => {
+    mockList([booking(), booking({ code: 'BKG002', status: 'REJECTED', thing_headline: 'Tent' })]);
+    renderPage();
+
+    await screen.findByText('Cordless drill');
+    for (const name of ['Cordless drill', 'Tent']) {
+      expect(screen.getByRole('link', { name }).matches(SELECTOR)).toBe(true);
+    }
+  });
+
+  test('and in the cards of a phone', async () => {
+    const media = mockMatchMedia({ [PHONE]: true });
+    try {
+      mockList([booking()]);
+      renderPage();
+
+      const link = await screen.findByRole('link', { name: 'Cordless drill' });
+      expect(link.matches(SELECTOR)).toBe(true);
+    } finally {
+      media.restore();
+    }
+  });
+
+  test('the cancel control of a card is a button, not a link: the rule does not reach it', async () => {
+    const media = mockMatchMedia({ [PHONE]: true });
+    try {
+      mockList([booking()]);
+      renderPage();
+
+      const cancel = await screen.findByRole('button', { name: 'Cancel this booking request' });
+      expect(cancel.matches('a')).toBe(false);
+    } finally {
+      media.restore();
+    }
+  });
+});

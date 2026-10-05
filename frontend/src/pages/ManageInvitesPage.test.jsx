@@ -119,6 +119,22 @@ describe('ManageInvitesPage (the guest list)', () => {
     expect(container.querySelector('#bulk-invite-csv')).toBeNull();
   });
 
+  // The bold links of the three request/groups tables hang from the class of
+  // `ResponsiveTable` (G10, CA 2026-10-05); this page's table is a plain HDS `Table` in
+  // a `.table-wrap`, and the rule must not reach it.
+  test('the guests’ table is not a ResponsiveTable: the bold links of the others do not reach it', async () => {
+    mockRoutes();
+    const { container } = renderPage();
+    await screen.findByText(/Ana/);
+
+    expect(container.querySelector('.table-wrap')).not.toBeNull();
+    expect(container.querySelector('.responsive-table')).toBeNull();
+    const selector = ".responsive-table a:not([class*='hds-button'])";
+    for (const link of container.querySelectorAll('table a')) {
+      expect(link.matches(selector)).toBe(false);
+    }
+  });
+
   test('the guest table carries a name', async () => {
     renderPage();
 

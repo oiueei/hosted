@@ -430,3 +430,41 @@ describe('UserPage — My groups: the team in the language on screen', () => {
     }
   );
 });
+
+// The group's name and "Leave the group" are bold links (G10, CA 2026-10-05): one rule
+// in App.css for the text links inside the component's own class, `.responsive-table`
+// — see `test/tableLinkWeight.test.jsx`. "Leave the group" keeps its muted class (size
+// and grey) and is only bolder. These pin that both are inside it, in the table and in
+// the cards.
+describe('UserPage — the bold links of My groups', () => {
+  const SELECTOR = ".responsive-table a:not([class*='hds-button'])";
+  const groups = [{ code: 'COL001', headline: 'Bibliocoses', owner: 'OWN001', owner_name: 'Lili' }];
+
+  test('the group’s link and the way out are inside the component’s class, in the table', async () => {
+    setApi({ memberships: groups });
+    renderOwn();
+
+    const group = await screen.findByRole('link', { name: 'Bibliocoses' });
+    const leave = screen.getByRole('link', { name: /leave the group/i });
+    expect(group.matches(SELECTOR)).toBe(true);
+    expect(leave.matches(SELECTOR)).toBe(true);
+    // The way out keeps its muted class: the weight is the rule's, size and grey its own.
+    expect(leave).toHaveClass('table-cell-link--muted');
+  });
+
+  test('and in the cards of a phone', async () => {
+    const media = mockMatchMedia({ [PHONE]: true });
+    try {
+      setApi({ memberships: groups });
+      renderOwn();
+
+      const group = await screen.findByRole('link', { name: 'Bibliocoses' });
+      const leave = screen.getByRole('link', { name: /leave the group/i });
+      expect(group.matches(SELECTOR)).toBe(true);
+      expect(leave.matches(SELECTOR)).toBe(true);
+      expect(leave).toHaveClass('table-cell-link--muted');
+    } finally {
+      media.restore();
+    }
+  });
+});
