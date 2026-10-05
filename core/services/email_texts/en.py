@@ -198,8 +198,12 @@ TEXTS = {
     "confirmation_intro": "Your {action} request has been sent:",
     # Who was told: one person who runs the thing, or more than one (a team) — the
     # person's name is not in it any more (CA, 2026-10-02).
-    "confirmation_outro_one": "We've let the curator know — they'll get back to you soon.",
-    "confirmation_outro_other": "We've let the curators know — they'll get back to you soon.",
+    "confirmation_outro_one": (
+        "We've let the person who runs it know — they'll get back to you soon."
+    ),
+    "confirmation_outro_other": (
+        "We've let the people who run it know — they'll get back to you soon."
+    ),
     # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
     # which the managers now hold. Said, never printed — the email already arrives there.
     "contact_shared_request": (

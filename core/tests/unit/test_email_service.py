@@ -906,27 +906,29 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "2026-03-05" not in body and "2026-03-05" not in html
 
 
-# --- "We've let the curator(s) know" (CA, 2026-10-02) ---------------------------
+# --- "We've let the person who runs it know" (CA, 2026-10-02; CT1, 2026-10-05) ---
 #
 # The "Your request was sent" email named the thing's owner ("Hemos avisado a Carlos
 # Alberto"), but with a team the request reaches everyone who runs the thing. It now
-# says who was told by number — the curator, or the curators — and the verb follows
-# ("responderá" / "responderán"), in the HTML paragraph and in both plain-text
-# sentences. How many were told is the request's fan-out: the thing's managers bar
-# the requester.
+# says who was told by number — the person who runs it, or the people who run it — and
+# the verb follows ("responderá" / "responderán"), in the HTML paragraph and in both
+# plain-text sentences. How many were told is the request's fan-out: the thing's
+# managers bar the requester. CT1 took "dinamizador" / "curator" out of it (untrue in
+# a COMMUNITY, where whoever runs a thing is its owner) and put the request page's own
+# words in: letter by letter, as CA approved them (SONNET_TASKS.md, round CT).
 
 TOLD = {
     "es": (
-        "Hemos avisado al dinamizador — te responderá pronto.",
-        "Hemos avisado a los dinamizadores — te responderán pronto.",
+        "Hemos avisado a quien gestiona esta cosa — te responderá pronto.",
+        "Hemos avisado a quienes gestionan esta cosa — te responderán pronto.",
     ),
     "ca": (
-        "Hem avisat el dinamitzador — aviat et respondrà.",
-        "Hem avisat els dinamitzadors — aviat et respondran.",
+        "Hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
+        "Hem avisat les persones que gestionen aquesta cosa — aviat et respondran.",
     ),
     "en": (
-        "We've let the curator know — they'll get back to you soon.",
-        "We've let the curators know — they'll get back to you soon.",
+        "We've let the person who runs it know — they'll get back to you soon.",
+        "We've let the people who run it know — they'll get back to you soon.",
     ),
 }
 
@@ -949,7 +951,7 @@ def _told_by(user, user2, thing, lang, informed, dates):
 @pytest.mark.parametrize("dates", [True, False], ids=["dated", "undated"])
 @pytest.mark.parametrize("informed, which", [(1, 0), (2, 1), (5, 1)])
 @pytest.mark.parametrize("lang", ["en", "es", "ca"])
-def test_the_confirmation_says_the_curator_or_the_curators_by_how_many_were_told(
+def test_the_confirmation_says_who_runs_it_by_how_many_were_told(
     user, user2, thing, lang, informed, which, dates
 ):
     msg = _told_by(user, user2, thing, lang, informed, dates)
