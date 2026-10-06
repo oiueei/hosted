@@ -227,7 +227,7 @@ def approve_proposal(proposal):
         # The invitee almost certainly knows the member who suggested them, not
         # the owner — without this line a warm recommendation lands as an email
         # from a stranger. Bare `name`, so a proposer who never set one simply
-        # doesn't get a line rather than having their address forwarded (L2).
+        # doesn't get a line rather than having their address forwarded.
         proposer_name=proposal.proposer.name,
     )
     proposal.status = InvitationProposal.Status.APPROVED

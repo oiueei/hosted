@@ -107,8 +107,8 @@ def _send_magic_link(email, magic_link, collection_headline=None, user=None, col
     they are joining, and passed down — the email sender must not look the
     recipient up: request-link only sends for a registered email, so a DB round
     trip (or a synchronous SMTP one) would make "registered" responses measurably
-    slower than "not registered" ones — a timing oracle for email enumeration
-    (L10). When ``EMAIL_SEND_ASYNC`` is on (production), dispatch to a daemon
+    slower than "not registered" ones — a timing oracle for email enumeration.
+    When ``EMAIL_SEND_ASYNC`` is on (production), dispatch to a daemon
     thread so the response returns in constant time regardless. The send touches no
     DB (magic-link email is Cat. 1 / mandatory) and already swallows its own
     errors. Elsewhere it sends synchronously to keep tests deterministic.
@@ -209,7 +209,7 @@ class RequestLinkView(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Don't log the address of a non-registered email (M5) — just the IP.
+            # Don't log the address of a non-registered email — just the IP.
             security_logger.warning(f"Magic link request for unregistered email from IP {ip}")
             return Response(
                 {"message": unified_message},
@@ -230,7 +230,7 @@ class RequestLinkView(APIView):
         # Create RSVP. ``origin=LOGIN`` tells VerifyLinkView this is a returning
         # user, not a first visit — the new-visitor landing never applies again.
         #
-        # This INSERT is the timing signal L10 left behind: it only runs for a
+        # This INSERT is the one timing signal that remains: it only runs for a
         # registered address, so those responses are a hair slower than the early
         # return above. Known and accepted, not overlooked. Closing it is not the
         # one-line move it looks like — the delta is everything past the early
@@ -439,7 +439,7 @@ class VerifyLinkView(APIView):
         the ones an open door joins people to): somebody who peeked at the demo
         and then founded or joined a group of their own belongs in that group,
         not on Home, and somebody who only has the demo has no group to be
-        taken to (CA, 2026-10-04). Owned, invited and co-curated all count — a
+        taken to. Owned, invited and co-curated all count — a
         co-curator is always in ``invites`` too. A collection that is not ACTIVE
         does not count.
 
@@ -534,7 +534,7 @@ class VerifyLinkView(APIView):
            somebody who only peeked at the demo goes to Home, and somebody who
            also has a group of their own goes to it.
 
-        There is no ``"welcome"`` landing any more (CA, 2026-10-04): an open
+        There is no ``"welcome"`` landing any more: an open
         door's visitor used to be sent to the deployment's ``aboutPath`` page,
         and now gets the same answer as anyone else, from what they actually
         belong to.
@@ -940,7 +940,7 @@ class JoinView(APIView):
     the collection's own language for every future email to that member
     (`User.language` always wins over `Collection.language` in
     `resolve_email_language`), with no way back short of them visiting their
-    profile — CA's report, 2026-09-15. A brand-new user's `language` now
+    profile. A brand-new user's `language` now
     stays blank, so `_send_magic_link` (already passed `collection=
     join_collection`) resolves this very first email the same way every later
     one is: the collection's own language when the member has none of their
@@ -1125,7 +1125,7 @@ class MeView(APIView):
     # from a brand-new visitor's first page — reserving a slot, asking a question —
     # until some *later*, already-authenticated call to this endpoint (e.g. one
     # HomePage happens to make) finally set it. A visitor whose magic link drops
-    # them straight onto one thing (S13) may never make that later call at all.
+    # them straight onto one thing may never make that later call at all.
     def get(self, request):
         user = request.user
         user.update_last_activity()

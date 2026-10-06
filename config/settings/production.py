@@ -90,7 +90,7 @@ DEFAULT_FROM_EMAIL = _require_env("DEFAULT_FROM_EMAIL")
 
 # Dispatch magic-link emails off the request thread (see base.EMAIL_SEND_ASYNC /
 # core.views.auth._send_magic_link) so request-link returns in constant time and
-# can't be used as an email-enumeration timing oracle (L10). Other emails stay
+# can't be used as an email-enumeration timing oracle. Other emails stay
 # synchronous; EMAIL_TIMEOUT bounds the SMTP socket in both cases.
 EMAIL_SEND_ASYNC = True
 

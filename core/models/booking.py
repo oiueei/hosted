@@ -222,9 +222,8 @@ class BookingPeriod(models.Model):
         or ``end_date >= today``). Loading it all anyway made every read of a
         thing — anonymous reads of a PUBLIC one included — carry the whole
         booking history, and the hourly availability walk scan it once per day
-        of the horizon: a cost that grew with how much a space had been used
-        (2026-09-18 security round). One day of grace, because the browser's
-        "today" can be the server's yesterday.
+        of the horizon: a cost that grew with how much a space had been used. One
+        day of grace, because the browser's "today" can be the server's yesterday.
         """
         cutoff = timezone.localdate() - timedelta(days=1)
         return models.Q(status__in=[cls.Status.PENDING, cls.Status.ACCEPTED]) & (

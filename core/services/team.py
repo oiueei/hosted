@@ -53,7 +53,7 @@ def drop_team_notices_of(user, collection):
     thing (``InAppNotification.team_booking_notices``). Demoted from co-curator —
     or removed from the group, which removes the role too — a person kept those
     notices on screen, still asking them to decide what the server would now
-    refuse (CA, 2026-10-02: "New request — Lolioctupus asked for…" in the inbox
+    refuse ("New request — Lolioctupus asked for…" in the inbox
     of someone just demoted). So they go, and only they, and only this
     collection's:
 

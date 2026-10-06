@@ -224,7 +224,7 @@ class FAQAnswerView(APIView):
 
         # Notify questioner by email and in-app
         questioner = faq.questioner
-        answerer_name = request.user.name  # bare name (L2)
+        answerer_name = request.user.name  # bare name
         if questioner and questioner.email:
             send_faq_answer_email(answerer_name, thing, faq.question, faq.answer, questioner.email)
             InAppNotification.objects.create(
@@ -290,7 +290,7 @@ class FAQVisibilityView(APIView):
 
             # Notify questioner by email and in-app
             questioner = faq.questioner
-            hider_name = request.user.name  # bare name (L2)
+            hider_name = request.user.name  # bare name
             if questioner and questioner.email:
                 send_faq_hide_email(hider_name, thing, faq.question, questioner.email)
                 InAppNotification.objects.create(

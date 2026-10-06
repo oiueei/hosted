@@ -39,7 +39,7 @@ TEXTS = {
     # Shared by every CTA (one button or two) that has to spell its link out below it.
     "ctas_fallback": "Si prefieres, copia y pega estos enlaces en tu navegador:",
     # The one-line "what is this" under the OIUEEI parent title, for the one
-    # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
+    # email a reader may open with no idea what OIUEEI is.
     "generic_parent_pitch": (
         "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas "
         "para regalar, vender, alquilar, prestar o reservar — e invita a la gente a "
@@ -161,9 +161,9 @@ TEXTS = {
         "Confirmar la solicitud: {accept} | Rechazar la solicitud: {reject}"
     ),
     "booking_request_intro": "{requester} te ha enviado una solicitud de {action}:",
-    # The requester's address travels with the request to whoever manages the thing (E1,
-    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
-    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
+    # The requester's address travels with the request to whoever manages the thing:
+    # shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them.
     "requester_email_label": "Email",
     "hold_confirm_cta": "Confirmar la solicitud",
     "hold_cancel_cta": "Rechazar la solicitud",
@@ -193,12 +193,12 @@ TEXTS = {
     ),
     "confirmation_intro": "Tu solicitud de {action} se ha enviado:",
     # Who was told: one person who runs the thing, or more than one (a team) — the
-    # person's name is not in it any more (CA, 2026-10-02).
+    # person's name is not in it any more.
     "confirmation_outro_one": "Hemos avisado a quien gestiona esta cosa — te responderá pronto.",
     "confirmation_outro_other": (
         "Hemos avisado a quienes gestionan esta cosa — te responderán pronto."
     ),
-    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # Where the requester will be written to: the address they sign in with,
     # which the managers now hold. Said, never printed — the email already arrives there.
     "contact_shared_request": (
         "Tu email va con la solicitud: si hace falta, te escribirán aquí, al correo con el que "

@@ -19,7 +19,7 @@ small block builders (``_para``/``_strong``/``_field``/``_list``/``_links``/
 engine — no manual ``escape()`` in the body composition. Plain-text bodies (no
 XSS surface) stay as plain strings.
 
-Visual design (CA, 2026-09-22): every message is a white, rounded card
+Visual design: every message is a white, rounded card
 (``EMAIL_BODY_SIZE``/``EMAIL_HEADER_SIZE``/``EMAIL_FOOTER_SIZE``, the card
 itself in ``layout.html``). Every email names one **parent** — the thing it is
 about — as an ``<h1>``: a thing's own headline for thing-scoped mail, a
@@ -72,7 +72,7 @@ _PREFS_TOKEN_SALT = "notifications-prefs"
 #
 # So the long TTL is the user-protective choice here, not the lax one. Rotating
 # SECRET_KEY still invalidates every outstanding token at once, which is the
-# revocation path that matters. Reviewed and kept, 2026-08 security round.
+# revocation path that matters. Reviewed and kept.
 _PREFS_TOKEN_MAX_AGE = 60 * 60 * 24 * 365  # ~1 year — see above before shortening
 
 
@@ -230,7 +230,7 @@ def _recipient(email, collection=None):
 
 
 def _member_name(name, lang):
-    """A person's name as somebody else may be told it — never their address (L2).
+    """A person's name as somebody else may be told it — never their address.
 
     ``User.display_name`` falls back to the email when ``name`` is empty, which is
     right where the reader is the person themselves or somebody who already holds
@@ -364,8 +364,8 @@ def _send_per_language(
         )
 
 
-# Three text sizes for a message (CA, 2026-09-22), replacing the single
-# EMAIL_FONT_SIZE from a day earlier: EMAIL_BODY_SIZE for everything that is
+# Three text sizes for a message, replacing the single
+# EMAIL_FONT_SIZE an earlier version had: EMAIL_BODY_SIZE for everything that is
 # the message's own words — paragraphs, buttons, a CTA's fallback link —
 # EMAIL_HEADER_SIZE for the one <h1> "parent" title, EMAIL_FOOTER_SIZE for the
 # rule-separated block at the foot (the mark, "manage your preferences", the
@@ -376,7 +376,7 @@ EMAIL_HEADER_SIZE = "18px"
 EMAIL_FOOTER_SIZE = "12px"
 
 # The <h1> for an email with no thing, collection or FAQ question to be its
-# parent (CA, 2026-09-22) — the app itself, named the same untranslated way
+# parent — the app itself, named the same untranslated way
 # every locale names it ("OIUEEI" is not a word to translate). Used with
 # ``generic_parent_pitch``, the one-line "what is this" the reader gets right
 # under it — added only where the reader may genuinely not know
@@ -412,8 +412,8 @@ def _bottom(
     extra_footer=None,
     header=None,
 ):
-    """Everything after the message's own words, in one fixed order (CA,
-    2026-09-22): a rule, the OIUEEI mark, the viral line (eligible recipients
+    """Everything after the message's own words, in one fixed order: a rule,
+    the OIUEEI mark, the viral line (eligible recipients
     only — see below), "manage your preferences" (Cat. 2/3 mail; Cat. 1 has
     nothing to opt out of), a sender-specific extra line if any (the digest's
     per-collection mute link), and always last the legal-notice link — art. 14
@@ -442,7 +442,7 @@ def _bottom(
     html_parts = ['<hr style="border:none;border-top:1px solid #ddd;margin-top:24px;">']
 
     # The mark already led this message as its <h1> — GENERIC_PARENT's own
-    # branch in layout.html — so it does not also close it (CA, 2026-09-22).
+    # branch in layout.html — so it does not also close it.
     if _logo_bytes() is not None and header != GENERIC_PARENT:
         html_parts.append(
             '<p style="margin:16px 0 8px;"><img src="cid:oiueei-logo" alt="OIUEEI" '
@@ -471,7 +471,7 @@ def _bottom(
             line = random.choice(lines)
             url = f"{_frontend_base_url()}/collections/new"
             plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
-            # A highlighted callout, not plain footer prose (CA, 2026-09-22):
+            # A highlighted callout, not plain footer prose:
             # a pale-yellow background + padding sets the growth line apart
             # from the grey preferences/legal lines around it, and its own
             # text is black rather than the footer's muted grey — only the
@@ -561,8 +561,8 @@ def _send(
     anyone who curates a collection — owner or co-curator; the gate is the
     ``_curates_collection`` flag folded into the lookup queries). The operator's
     own ops mail is the one sender that passes ``False`` (an operator report,
-    not growth copy); everything else, including ``send_magic_link_email``
-    since S2, uses the default — so magic-link sends now do the one recipient
+    not growth copy); everything else, including ``send_magic_link_email``,
+    uses the default — so magic-link sends now do the one recipient
     lookup they used to skip (see that function's docstring for why the extra
     query is still timing-safe).
 
@@ -626,7 +626,7 @@ def _send(
         # that slipped into the subject — caught here so one tainted row can never
         # abort a multi-recipient loop or a nightly digest cron.
         # Log the exception class only — str(exc) (e.g. SMTPRecipientsRefused)
-        # can carry the raw recipient address, which would defeat redaction (M5).
+        # can carry the raw recipient address, which would defeat redaction.
         logger.error(
             "Email send failed (to=%s, subject=%r): %s",
             redact_email(to_email),
@@ -652,10 +652,9 @@ def _strong(text):
 
 def _field(label, value, email=False):
     """A ``Label: value`` line. ``email=True`` renders the value as a real
-    ``mailto:`` link, bus blue and NOT bold (CA, 2026-09-22, second review
-    round) — a client's own auto-linkification (Gmail, iOS/Android "data
-    detectors") wraps a bare address that looks like one in ITS OWN default
-    blue regardless of whatever inline style sits on an enclosing ``<span>``;
+    ``mailto:`` link, bus blue and NOT bold — a client's own auto-linkification
+    (Gmail, iOS/Android "data detectors") wraps a bare address that looks like one
+    in ITS OWN default blue regardless of whatever inline style sits on an enclosing ``<span>``;
     making it a real ``<a>`` up front, in our own colour, is what keeps the
     client from re-wrapping it its own way."""
     return {"type": "field", "label": label, "value": value, "email": email}
@@ -663,8 +662,8 @@ def _field(label, value, email=False):
 
 def _named_email_field(label, name, email):
     """A ``Label: Name (email)`` line where the name is plain black text and
-    only the parenthesised address is a bus-blue ``mailto:`` link (CA,
-    2026-09-22, third review round) — the capacity alarm's Owner row used to
+    only the parenthesised address is a bus-blue ``mailto:`` link —
+    the capacity alarm's Owner row used to
     colour the whole "Name (email)" string as if the name itself were a
     link too."""
     return {"type": "named_email_field", "label": label, "name": name, "email": email}
@@ -672,7 +671,7 @@ def _named_email_field(label, name, email):
 
 def _email(value):
     """An email address shown as its own value, as a real ``mailto:`` link in
-    bus blue, NOT bold (CA, 2026-09-22, second review round — it used to be
+    bus blue, NOT bold (it used to be
     bold, unlike ``_field(email=True)``'s value, which read as two different
     treatments for the same kind of thing). See ``_field``'s docstring for
     why this is a real link now rather than just a coloured ``<strong>``.
@@ -704,7 +703,7 @@ def _cta(url, label, fallback):
     them resolves a CSS custom property, so the app's primary button can only
     travel as a styled link. The ``fallback`` sentence and the raw URL cover
     the clients — and the moments — where the button cannot be clicked at all.
-    **Every CTA carries this now** (CA, 2026-09-22): it used to be only the
+    **Every CTA carries this now**: it used to be only the
     ones whose whole job was that one click (the magic link, a yes/no pair);
     the lighter, fallback-less ``_button`` this function replaced is gone.
     """
@@ -713,9 +712,9 @@ def _cta(url, label, fallback):
 
 # The app's two button roles as inline CSS, literal hex (email clients resolve no
 # `var()`): the PRIMARY is the filled bus-blue button, the SECONDARY its outlined
-# counterpart — white fill, a bus-blue border, **bus-blue label** (CA,
-# 2026-09-22, reviewing the real thing: it was black text on the border colour,
-# which read as two different decisions on one button). The secondary's padding
+# counterpart — white fill, a bus-blue border, **bus-blue label** (it was
+# black text on the border colour, which read as two different decisions on one
+# button). The secondary's padding
 # is two pixels short of the primary's on every side so its border brings both
 # to the same outer size. Defined once and handed to the layout, so the three
 # button blocks cannot drift apart. `BTN_PRIMARY_HOVER`/`BTN_SECONDARY_HOVER`
@@ -740,7 +739,7 @@ BTN_SECONDARY = (
 
 # Every plain-text link and every "this is data worth noticing" value (an
 # email address shown via `_email`/`_field(..., email=True)`) — bus blue,
-# underlined, `!important` on both (CA, 2026-09-22: seen not to apply in real
+# underlined, `!important` on both (seen not to apply in real
 # Gmail). A client's own stylesheet — Gmail webmail forces its own link blue
 # in places, and an unstyled `color-scheme` leaves auto-dark-mode free to
 # recolour inline styles that lack it — can otherwise beat a plain inline
@@ -757,8 +756,8 @@ def _ctas(primary, secondary, fallback):
     question (the collection invitation: accept or decline). Same reasons as
     there — an inline-styled anchor, literal hex, no ``<button>`` — with the
     app's own split between the two roles: the primary is the filled bus-blue
-    button, the secondary the white one with a bus-blue border and black text
-    (CA, 2026-09-21). ``primary`` and ``secondary`` are ``(url, label)`` pairs,
+    button, the secondary the white one with a bus-blue border and black text.
+    ``primary`` and ``secondary`` are ``(url, label)`` pairs,
     like ``_links``; the ``fallback`` sentence and both raw URLs cover the
     clients, and the moments, where a button cannot be clicked.
     """
@@ -808,7 +807,7 @@ def _md_inline(escaped_text):
     ``carnet (example.com)``. These emails leave from the operator's own
     domain, and the owner chooses both halves of the link: without the host,
     ``[https://www.oiueei.com/verify/…](https://elsewhere.example)`` reads as
-    the operator's own sign-in link (2026-09-18 security round). The host is
+    the operator's own sign-in link. The host is
     the one value here derived from unescaped text, so it is escaped once,
     itself.
     """
@@ -931,7 +930,7 @@ def _render_email(blocks, lang=None, header=None):
     ``header``, when set, leads the message as the ``<h1>``; the plain-text
     counterpart is ``_headline_prefix``, applied at the ``_send`` call.
 
-    The resolved ``lang`` lands on ``<html lang="...">`` itself (A4) — a
+    The resolved ``lang`` lands on ``<html lang="...">`` itself — a
     screen reader picks its pronunciation from that attribute, and every email
     already speaks a specific, known language (``resolve_email_language``), so
     leaving the tag blank was never "unknown", only unstated.
@@ -977,7 +976,7 @@ def _fmt_date(value):
 def _fmt_dates(start, end):
     """The value of the "Dates" line: ``start - end``, or the day **once** when
     they are the same one. A loan or a rental for a single day read
-    "13/10/2026 - 13/10/2026" (CA, 2026-10-02, seen in a confirmation email).
+    "13/10/2026 - 13/10/2026" in a confirmation email.
     Takes the strings the caller already formatted, so an HOUR-unit reservation's
     "05/10/2026 10:00" and "13:00" stay a range."""
     return start if start == end else f"{start} - {end}"
@@ -1094,8 +1093,8 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
 
     ``lang`` is resolved by the caller (the auth views know the user and, on a
     join, the collection) so language resolution never looks the recipient up
-    on its own (L10, email-enumeration timing oracle). The viral-line gate does
-    add one ``User`` lookup inside ``_send()`` now (S2) — safe here because both
+    on its own (email-enumeration timing oracle). The viral-line gate does
+    add one ``User`` lookup inside ``_send()`` — safe here because both
     callers only reach this function after already resolving the recipient
     (``RequestLinkView`` only for a confirmed-registered address; ``JoinView``
     after ``get_or_create``), so the extra query carries no new
@@ -1113,7 +1112,7 @@ def send_magic_link_email(email, magic_link, collection_headline=None, lang=None
         greeting = T("magic_greeting")
         # No collection to be the parent: OIUEEI is, with its own one-line
         # pitch as the intro — the one case in the catalogue where the reader
-        # may genuinely not know what this is (CA, 2026-09-22).
+        # may genuinely not know what this is.
         header = GENERIC_PARENT
         blocks = [
             _para(T("generic_parent_pitch")),
@@ -1147,7 +1146,7 @@ def send_collection_invite_email(
 
     **Neither name is ever `display_name`.** The fallback in `display_name` is the
     email address, and this message goes to a third party — somebody outside the
-    group who has not agreed to anything yet (L2). The two are handled
+    group who has not agreed to anything yet. The two are handled
     differently because they sit differently in the copy:
 
     - ``proposer_name`` has a line to itself, so **no name, no line**: the caller
@@ -1241,7 +1240,7 @@ def send_invitation_proposal_email(
     blocks.append(_para(T("proposal_nobody_told")))
     # Approving is the primary button, rejecting the secondary one, and both links
     # follow as text — the same two-answer shape as the invitation and the hold
-    # request (CA, 2026-09-21).
+    # request.
     blocks.append(
         _ctas(
             (approve_link, T("proposal_approve_cta")),
@@ -1276,7 +1275,7 @@ def send_proposal_declined_email(
     subject = T("proposal_declined_subject").format(collection=headline)
     # The plain body stays one flowing sentence (proposal_declined_body,
     # unchanged); the HTML pulls the address out into its own blue block
-    # (CA, 2026-09-22), the same treatment the proposal itself gives it.
+    # — the same treatment the proposal itself gives it.
     body = T("proposal_declined_body").format(
         owner=owner_name, collection=headline, email=proposed_email
     )
@@ -1477,17 +1476,17 @@ def send_collection_revoke_email(owner_name, collection_headline, email, collect
 
 def _requester_contact(T, requester):
     """The requester's address, for the emails that tell whoever manages a thing that
-    somebody asked for it (E1, CA 2026-10-05).
+    somebody asked for it.
 
     The address travels **with the request**, not when it is accepted: whoever sells a
     thing to a stranger can agree on price, place and time before committing the thing.
     It goes one way only — requester to manager; the manager's address is never shown to
-    the requester, who will have it if they are written to. L2 allows it because the
-    reader of these emails is whoever manages the thing and already reads the same
-    address in the app (``BookingPeriodSerializer.requester_email``, shown on the
-    "Requests to me" page since E4). The sender sets ``Reply-To`` to the same address, so
-    "Reply" reaches the requester; there is no sentence saying so (E5, CA 2026-10-05: CA
-    took it out).
+    the requester, who will have it if they are written to. The rule against naming
+    anyone by their address allows it because the reader of these emails is whoever
+    manages the thing and already reads the same address in the app
+    (``BookingPeriodSerializer.requester_email``, shown on the "Requests to me" page).
+    The sender sets ``Reply-To`` to the same address, so "Reply" reaches the requester;
+    there is no sentence saying so.
 
     Returns ``(plain, blocks)``: the plain-text line (``Email: …``) and the HTML blocks
     (one ``email=True`` field).
@@ -1530,7 +1529,7 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
         )
 
     # Their address, right under the entry sentence in the HTML and after the sentence in
-    # the plain text (E1); "Reply" reaches them through the Reply-To below.
+    # the plain text; "Reply" reaches them through the Reply-To below.
     contact_plain, contact_blocks = _requester_contact(T, requester)
     plain += "\n\n" + contact_plain
 
@@ -1542,7 +1541,7 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
             *_booking_detail_blocks(booking, lang),
             # Confirming is the primary button, cancelling the secondary one, and
             # both links follow as text — the same two-answer shape as the
-            # collection invitation (CA, 2026-09-21).
+            # collection invitation.
             _ctas(
                 (accept_link, T("hold_confirm_cta")),
                 (reject_link, T("hold_cancel_cta")),
@@ -1656,11 +1655,11 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
     ``informed`` is how many people the request told: the thing's managers bar the
     requester, which is what ``send_booking_request_notifications`` fans out to and
     passes in. The email says "the person who runs it" for one and "the people who
-    run it" for more, and no longer names the owner (CA, 2026-10-02: with a team the
-    request reaches everyone who runs the thing, so naming one person was untrue;
-    CT1, CA 2026-10-05: nor does it say "curator" — in a COMMUNITY the one who runs a
-    thing is its owner, a member, not whoever curates the group — so it reads as the
-    request page does). Without it, the count is worked out here the same way.
+    run it" for more. It does not name the owner (with a team the request reaches
+    everyone who runs the thing, so naming one person would be untrue) nor say
+    "curator" (in a COMMUNITY the one who runs a thing is its owner, a member, not
+    whoever curates the group), so it reads as the request page does. Without it,
+    the count is worked out here the same way.
 
     ``collection`` is the collection the request was made through
     (``booking_service.resolve_request_collection``) and feeds exactly one
@@ -1677,7 +1676,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
     # / "responderán"). Nobody told cannot happen (the owner is always a manager and
     # a requester is never the owner); it is read as one rather than as "the people".
     outro = T("confirmation_outro_one" if informed <= 1 else "confirmation_outro_other")
-    # And where they will be written to (E2, CA 2026-10-05): the address they sign in
+    # And where they will be written to: the address they sign in
     # with, which the managers now hold. Behind the outro in both halves; never printed
     # — the email already arrives there.
     contact_shared = T("contact_shared_request")
@@ -1786,7 +1785,7 @@ def send_faq_question_email(questioner_name, thing, question, owner_email):
     questioner_name = _member_name(questioner_name, lang)
 
     subject = T("faq_question_subject")
-    # The question itself is this email's parent (CA, 2026-09-22) — it is what
+    # The question itself is this email's parent — it is what
     # the owner opened the message to read, ahead of which thing it was asked
     # about.
     header = question
@@ -2085,7 +2084,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
         blocks.append(_field(T("reservation_fee_label"), str(thing.fee)))
     if thing.location:
         blocks.append(_field(T("reservation_where_label"), thing.location))
-    # Where they will be written to (E2, CA 2026-10-05): said, not printed.
+    # Where they will be written to: said, not printed.
     contact_shared = T("contact_shared_reservation")
     plain += "\n\n" + contact_shared
     blocks.append(_para(contact_shared))
@@ -2129,13 +2128,14 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     plain = T("reservation_notice_plain").format(
         requester=requester_name, thing=headline, start=start, end=end
     )
-    # The requester's own address, so the owner can reach them directly (CA,
-    # 2026-09-22): a RESERVE_THING requester is always a collection member by
+    # The requester's own address, so the owner can reach them directly: a
+    # RESERVE_THING requester is always a collection member by
     # the time this fires (403 otherwise, see request_reservation), so a real
     # address is guaranteed here. The owner reads the same address in the app —
-    # "Requests to me" shows it as a link (E4, CA 2026-10-05; it is
-    # BookingPeriodSerializer.requester_email) — which is L2's own exception, the
-    # reader already holds it. Since E1 (CA, 2026-10-05) "Reply" reaches them: the
+    # "Requests to me" shows it as a link (it is
+    # BookingPeriodSerializer.requester_email) — which is the exception to never
+    # naming anyone by their address: the
+    # reader already holds it. "Reply" reaches them: the
     # Reply-To below is the requester's.
     contact_plain, contact_blocks = _requester_contact(T, requester)
     plain += "\n\n" + contact_plain
@@ -2214,7 +2214,7 @@ def send_reservation_cancel_confirmation_email(
     ``is_own_reservation`` picks the wording: the member who cancelled their
     own reads "your reservation is cancelled"; a curator who cancelled someone
     else's reads "you cancelled {member}'s reservation" — ``member_name`` is
-    that person's bare ``name`` (L2: never ``display_name``, whose fallback is
+    that person's bare ``name`` (never ``display_name``, whose fallback is
     their email address).
     """
     user, lang = _recipient(canceller_email)
@@ -2384,11 +2384,10 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
         ("Owner code", owner.code if owner else "-"),
         ("Created", collection.created.isoformat()),
     ]
-    # The alert's own explanation is its <h1> now (CA, 2026-09-22, reviewing the
-    # real thing) — it used to be the one email with no parent at all; ops mail
-    # gets the same title treatment as everything else, even though this makes
-    # for an unusually long heading (three sentences, not a short name) — CA's
-    # call, made on the rendered email rather than the source.
+    # The alert's own explanation is its <h1> — it used to be the one email with
+    # no parent at all; ops mail gets the same title treatment as everything
+    # else, even though this makes for an unusually long heading (three
+    # sentences, not a short name).
     header = (
         "A collection has crossed the mass-upload alarm threshold. This is "
         "informational — nothing has been blocked and the owner has not been "
@@ -2401,7 +2400,7 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
         plain_lines.append(f"  {label}: {value}")
         if label == "Alarm threshold":
             # The owner's name is plain text; only their address is a link,
-            # bus blue (CA, 2026-09-22, third review round — the whole "Name
+            # bus blue (the whole "Name
             # (email)" string used to be coloured as if the name were a link
             # too).
             if owner:

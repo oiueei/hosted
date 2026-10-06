@@ -62,7 +62,7 @@ def _join_quota_key(collection_code):
 def join_quota_exhausted(collection_code):
     """Whether this collection has already taken today's joins.
 
-    Read-then-set on a DatabaseCache is not atomic (see the I7 note in
+    Read-then-set on a DatabaseCache is not atomic (see the DatabaseCache note in
     ``config/settings/base.py``), so a burst can slip a few past the line. That
     is the same trade-off every counter here makes and the right one: this is
     coarse abuse prevention protecting a sending reputation, not a quota anyone

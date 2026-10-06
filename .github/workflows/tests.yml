@@ -90,8 +90,8 @@ jobs:
         run: ruff format --check .
 
       # The floor is a ratchet, not a target: it sits ~2 points under the suite's
-      # real coverage (97.3% at the close of the 2026-08 testing round, which is
-      # why this went 94 → 95) so a genuine drop is visible. It stood at 80 long
+      # real coverage (97.3% when it went 94 → 95) so a genuine
+      # drop is visible. It stood at 80 long
       # after the suite passed 95, which meant a regression could delete a sixth
       # of the guard and still go green. Raise it as coverage grows; never lower
       # it to make a red build pass.

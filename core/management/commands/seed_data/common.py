@@ -5,7 +5,7 @@ Only fields that DON'T change between languages live here (codes, types,
 ownership, relationships, flags, prices, image ids, tags, …). The translatable
 text for each entity lives in the per-locale modules (en.py, es.py) and is
 merged onto this skeleton by `seed_demo.load_seed_data`. Adding a language means
-translating text only — never re-declaring structure (R17).
+translating text only — never re-declaring structure.
 
 Image ids (photo/thumbnail/gallery) are stored BARE here; `seed_demo` prefixes
 them with ``SEED_IMAGE_FOLDER`` (oiueei/seed/) at seed time — that's the storage
@@ -17,7 +17,7 @@ from datetime import date
 
 
 def _localized_tag(**texts):
-    """A tag label carrying one text per language (O6).
+    """A tag label carrying one text per language.
 
     The stored value is the serialized ``{lang: text}`` map. Things reference
     their collection's vocabulary **by raw string**, so each label is defined
@@ -56,7 +56,7 @@ TAG_METALISTERIA = _localized_tag(es="Metalistería", ca="Metal·listeria", en="
 TAG_ARTESANIA = _localized_tag(es="Oficios artesanales", ca="Oficis artesanals", en="Craft trades")
 TAG_PRECISION = _localized_tag(es="Precisión", ca="Precisió", en="Precision")
 
-# Lili's deposit policy (S6, D5) — reuses `_localized_tag`'s serialization: the
+# Lili's deposit policy — reuses `_localized_tag`'s serialization: the
 # stored value is still just a {lang: text} map, on a different field. Written
 # here rather than split across the per-language files because, like a tag
 # label, it is small, structural-adjacent owner content rather than the kind

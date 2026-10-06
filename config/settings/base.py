@@ -49,7 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    # Apply CSP/Permissions-Policy in every environment, not just production (I5).
+    # Apply CSP/Permissions-Policy in every environment, not just production.
     # Production additionally inserts WhiteNoise right after this so the SPA shell
     # it serves still gets these headers.
     "core.middleware.SecurityHeadersMiddleware",
@@ -142,7 +142,7 @@ FORMS_URLFIELD_ASSUME_HTTPS = True
 # counters would multiply per worker and reset on every dyno cycle.
 # DatabaseCache reuses the existing PostgreSQL add-on at zero extra cost;
 # the cache table is created by migration (see core/migrations).
-# Note (I7): DatabaseCache increments are not atomic, so under heavy concurrency
+# Note: DatabaseCache increments are not atomic, so under heavy concurrency
 # a rate-limit counter can slightly under-count (a few requests over the limit).
 # Accepted: the limits are coarse abuse-prevention, not exact quotas.
 #
@@ -386,7 +386,7 @@ AUTH_USER_MODEL = "core.User"
 # Magic Link settings
 MAGIC_LINK_EXPIRY_HOURS = 24
 # Send magic-link emails off the request thread (constant-time response, so the
-# request-link timing can't reveal whether an email is registered — L10).
+# request-link timing can't reveal whether an email is registered).
 # Off by default so dev/test send synchronously and stay deterministic;
 # production.py turns it on.
 EMAIL_SEND_ASYNC = False

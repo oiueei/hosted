@@ -18,7 +18,7 @@ class UserAdmin(admin.ModelAdmin):
         # about is a CharField (max_length=2000, not TextField — see
         # core/models/CLAUDE.md), so the admin's default widget is a
         # single-line <input>, which silently strips every pasted newline
-        # out of a multi-line Markdown bio (S8) — the API/TextArea save path
+        # out of a multi-line Markdown bio — the API/TextArea save path
         # preserves them fine; only this default admin widget doesn't.
         # formfield_overrides can't target one field by name, so override the
         # widget per-request here instead.
