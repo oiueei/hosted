@@ -20,7 +20,7 @@ export const deploymentI18n = {
       magicLinkSent: 'Magic link sent! Check your inbox and click the link to join.',
       closeThisTab: 'You can close this tab now — the link is on its way to your inbox.',
       errorSendingLink: 'Error sending link.',
-      faqLink: 'Frequently asked questions →',
+      faqLink: 'Frequently asked questions',
     },
     // The "you're looking at demo data" banner. The product (`DemoNotice`)
     // renders it on every page of an `is_onboarding` collection, but only once
@@ -101,7 +101,7 @@ export const deploymentI18n = {
       closeThisTab:
         'Ya puedes cerrar esta pestaña — el enlace está de camino a tu bandeja de entrada.',
       errorSendingLink: 'Error al enviar el enlace.',
-      faqLink: 'Preguntas frecuentes →',
+      faqLink: 'Preguntas frecuentes',
     },
     demoNotice: {
       title: 'Esto es una colección de demostración',
@@ -178,7 +178,7 @@ export const deploymentI18n = {
       closeThisTab:
         "Ja pots tancar aquesta pestanya — l'enllaç ja és de camí a la teva safata d'entrada.",
       errorSendingLink: "Error en enviar l'enllaç.",
-      faqLink: 'Preguntes freqüents →',
+      faqLink: 'Preguntes freqüents',
     },
     demoNotice: {
       title: 'Això és una col·lecció de demostració',

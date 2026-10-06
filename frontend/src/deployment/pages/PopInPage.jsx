@@ -1,6 +1,7 @@
-import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import MagicLinkJoinPage from '../../components/MagicLinkJoinPage';
+import ButtonLink from '../../components/ButtonLink';
+import useTheeeme from '../../hooks/useTheeeme';
 import { faqPath } from '../index';
 
 // This deployment's open door has no target — no share token, no collection
@@ -15,6 +16,7 @@ const POP_IN_ENDPOINT = '/api/v1/auth/pop-in/';
 
 export default function PopInPage() {
   const { t } = useTranslation();
+  const { btnSecondaryStyle } = useTheeeme();
   return (
     <MagicLinkJoinPage
       ns="popin"
@@ -22,9 +24,9 @@ export default function PopInPage() {
       titleKey="popin.title"
       descriptionKey="popin.description"
       endpoint={POP_IN_ENDPOINT}
-      // No "Already have an account? Sign in →" under the form:
-      // /welcome, where /login now sends strangers, already offers it in its
-      // hero. It is not a dead end for someone who has an account and lands here
+      // No "Already have an account?" button under the form: /welcome, where
+      // /login now sends strangers, already offers it in the row that closes the
+      // page. It is not a dead end for someone who has an account and lands here
       // anyway: typing their address gets them a magic link all the same —
       // `PopInView` does a `get_or_create` and answers byte for byte as it does
       // for a new address — which also joins them to the demo collections, as it
@@ -32,12 +34,13 @@ export default function PopInPage() {
       // gained for this: the component is core's and identical on both branches.
       offerSignIn={false}
     >
-      {/* The FAQ, for the door with the most first-time traffic.
-          `MagicLinkJoinPage`'s `children` slot renders it under the form. */}
+      {/* The FAQ, for the door with the most first-time traffic. `MagicLinkJoinPage`'s
+          `children` slot renders it under the form, in the form's own column, so a
+          full-width secondary button is as wide as the one above it. */}
       {faqPath && (
-        <p>
-          <Link to={faqPath}>{t('popin.faqLink')}</Link>
-        </p>
+        <ButtonLink to={faqPath} fullWidth style={btnSecondaryStyle}>
+          {t('popin.faqLink')}
+        </ButtonLink>
       )}
     </MagicLinkJoinPage>
   );
