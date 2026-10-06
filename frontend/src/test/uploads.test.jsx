@@ -16,7 +16,7 @@ vi.mock('../utils/uploadPdf', async (importOriginal) => ({
   uploadPdf: vi.fn(),
 }));
 
-import { uploadImage, UploadTooLargeError } from '../utils/uploadImage';
+import { uploadImage, UploadRateLimitedError, UploadTooLargeError } from '../utils/uploadImage';
 import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
 import ImageUpload from '../components/ImageUpload';
 import PdfUpload from '../components/PdfUpload';
@@ -182,6 +182,22 @@ describe('ImageUpload', () => {
     pick(container, photo());
 
     expect(await screen.findByText(/The image is too large \(max 10 MB\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test('an hour\'s allowance used up says to wait, rather than "upload failed"', async () => {
+    uploadImage.mockRejectedValue(new UploadRateLimitedError());
+    const onChange = vi.fn();
+    const { container } = render(<ImageUpload id="thumb" label="Thumbnail" onChange={onChange} />);
+
+    pick(container, photo());
+
+    expect(
+      await screen.findByText(
+        "You've reached the limit of 120 photos an hour. Try again in a while."
+      )
+    ).toBeInTheDocument();
     expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -382,6 +398,24 @@ describe('GalleryUpload', () => {
     pick(container, photo('a.jpg'), photo('b.jpg'));
 
     expect(await screen.findByText(/The image is too large \(max 10 MB\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
+    expect(onChange).toHaveBeenCalledWith([item(1)]);
+  });
+
+  test("the hour's allowance running out mid-batch keeps the photos that made it and says to wait", async () => {
+    uploadImage
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
+      .mockRejectedValueOnce(new UploadRateLimitedError());
+    const onChange = vi.fn();
+    const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
+
+    pick(container, photo('a.jpg'), photo('b.jpg'));
+
+    expect(
+      await screen.findByText(
+        "You've reached the limit of 120 photos an hour. Try again in a while."
+      )
+    ).toBeInTheDocument();
     expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
     expect(onChange).toHaveBeenCalledWith([item(1)]);
   });

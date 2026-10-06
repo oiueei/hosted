@@ -10,7 +10,11 @@ vi.mock('../services/api', () => ({
   getCsrfToken: () => 'tok',
 }));
 // The ticketed upload path is covered in src/utils/uploadImage.test.js.
-vi.mock('../utils/uploadImage', () => ({ uploadImage: vi.fn() }));
+// Stub the upload and keep the real constants and error classes the component reads.
+vi.mock('../utils/uploadImage', async (importOriginal) => ({
+  ...(await importOriginal()),
+  uploadImage: vi.fn(),
+}));
 
 import { apiFetch } from '../services/api';
 import ImportThingsPage from './ImportThingsPage';

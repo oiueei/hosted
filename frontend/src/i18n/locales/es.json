@@ -438,6 +438,7 @@
     "pdfView": "Ver el documento",
     "pdfTooLarge": "El archivo es demasiado grande (máximo 5 MB).",
     "imageTooLarge": "La imagen es demasiado grande (máximo 10 MB). Prueba con una foto que el navegador pueda redimensionar.",
+    "rateLimited": "Has llegado al máximo de {{max}} fotos por hora. Vuelve a intentarlo dentro de un rato.",
     "welcomeDocLabel": "Documento de bienvenida (PDF)",
     "welcomeDocHelper": "Opcional. Quien entra en el grupo lo recibe por correo, una sola vez."
   },
@@ -849,7 +850,7 @@
   "bulkAdd": {
     "help": "Añade varias cosas desde un CSV — o un ZIP con las fotos incluidas.",
     "formatTitle": "Formato del CSV/ZIP",
-    "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo LEND/RENT). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\".",
+    "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo LEND/RENT). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\". Las fotos adicionales (el carrusel) van en una columna \"photos\", separadas por | (hasta 8 por cosa).",
     "fileLabel": "Archivo CSV o ZIP",
     "empty": "No se encontraron filas en el archivo.",
     "tooMany": "Puedes importar hasta {{max}} elementos a la vez.",
@@ -862,8 +863,11 @@
     "rowErrors": "Estas filas no se pudieron importar (revisa sus columnas): {{rows}}",
     "zipNoCsv": "El ZIP debe contener un archivo CSV.",
     "zipMissingImages": "Estas fotos se nombran en el CSV pero faltan en el ZIP: {{files}}",
+    "tooManyPhotos": "Este ZIP lleva {{count}} fotos y se pueden subir {{max}} por hora. Pártelo en varios y súbelos con una hora de diferencia.",
+    "galleryTooLong": "Cada cosa admite como mucho {{max}} fotos adicionales en la columna \"photos\".",
     "zipError": "No pudimos leer ese ZIP. Revisa el archivo e inténtalo de nuevo.",
     "imageUploadError": "Algunas fotos no se pudieron subir. Revisa las imágenes e inténtalo de nuevo.",
+    "uploadRateLimited": "Has llegado al máximo de {{max}} fotos por hora y no se ha creado nada. Vuelve a intentarlo dentro de un rato.",
     "uploadingImages": "Subiendo fotos… ({{done}}/{{total}})",
     "formatBody": "Los tags van en una celda separados por | (y deben estar definidos en la colección — escribe la etiqueta en cualquiera de sus idiomas, por ejemplo \"Crianza\" o \"Criança\"). Las columnas fee y deposit aceptan tanto 1.5 como 1,5, y deposit solo se usa en filas LEND/RENT — un valor en otro tipo se rechaza. Para las fotos, comprime el CSV junto con las imágenes y pon el nombre de cada foto en la columna \"photo\" — así:",
     "downloadExample": "Descargar ejemplo (ZIP)"

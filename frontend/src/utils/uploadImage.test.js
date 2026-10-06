@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
@@ -7,7 +10,13 @@ vi.mock('./resizeImage', () => ({ resizeImage: vi.fn() }));
 
 import { apiFetch } from '../services/api';
 import { resizeImage } from './resizeImage';
-import { uploadImage, IMAGE_MAX_BYTES, UploadTooLargeError } from './uploadImage';
+import {
+  uploadImage,
+  IMAGE_MAX_BYTES,
+  UPLOADS_PER_HOUR,
+  UploadRateLimitedError,
+  UploadTooLargeError,
+} from './uploadImage';
 
 // What the server hands back (core/views/upload.py). Everything that constrains
 // the upload — key, type, cache policy, byte length — is already inside `url`'s
@@ -105,6 +114,25 @@ describe('uploadImage', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  test("a 429 from the ticket is the hour's allowance used up, not a failed upload", async () => {
+    apiFetch.mockResolvedValue({ ok: false, status: 429, json: () => Promise.resolve({}) });
+
+    await expect(uploadImage(photo())).rejects.toBeInstanceOf(UploadRateLimitedError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test.each([400, 403, 500])(
+    'any other refusal of the ticket (%i) is still signature_failed',
+    async (status) => {
+      apiFetch.mockResolvedValue({ ok: false, status, json: () => Promise.resolve({}) });
+
+      const failure = uploadImage(photo());
+
+      await expect(failure).rejects.toThrow('signature_failed');
+      await expect(failure).rejects.not.toBeInstanceOf(UploadRateLimitedError);
+    }
+  );
+
   test('throws upload_failed when the store rejects the upload', async () => {
     // What a tampered length or type looks like from here: 403 from the bucket.
     fetchMock.mockResolvedValue({ ok: false, status: 403 });
@@ -155,5 +183,21 @@ describe('uploadImage', () => {
 
       await expect(uploadImage(photo())).resolves.toHaveProperty('publicId', TICKET.key);
     });
+  });
+});
+
+describe('UPLOADS_PER_HOUR', () => {
+  test('is the allowance the server rations tickets at', () => {
+    // The client counts the photos of a ZIP against this before it uploads any, so a
+    // number that drifts from `UploadTicketView`'s either refuses imports the server
+    // would take or lets one start that the server stops half-way.
+    const serverSource = readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
+      'utf8'
+    );
+    const rate = serverSource.match(/ratelimit\(key="user", rate="(\d+)\/h"/);
+
+    expect(rate).not.toBeNull();
+    expect(UPLOADS_PER_HOUR).toBe(Number(rate[1]));
   });
 });

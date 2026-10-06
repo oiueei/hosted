@@ -12,6 +12,8 @@ the cap had to live in the browser, where anybody could skip it.
 """
 
 import pytest
+from django.core.cache import caches
+from django.test import override_settings
 
 from core.views.upload import DOCUMENT_MAX_BYTES, IMAGE_MAX_BYTES
 
@@ -310,3 +312,33 @@ class TestTheBrowserIsActuallyAllowedToUseTheTicket:
 
         assert res.status_code == 200
         assert self._origin(res.data["url"]) in self._connect_src(res)
+
+
+@pytest.mark.django_db
+class TestTicketsAreRationedPerUser:
+    """A ZIP import asks for one ticket per photo, so the hourly allowance has to cover a
+    whole one: up to a hundred things, a photo each, with room to spare."""
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "upload-ticket-ratelimit-test",
+            }
+        },
+    )
+    def test_the_hundred_and_twentieth_ticket_of_the_hour_is_issued_and_the_next_is_refused(
+        self, authenticated_client
+    ):
+        caches["default"].clear()
+
+        statuses = [
+            authenticated_client.post(URL, image_body(), format="json").status_code
+            for _ in range(120)
+        ]
+        assert statuses == [200] * 120
+
+        refused = authenticated_client.post(URL, image_body(), format="json")
+
+        assert refused.status_code == 429

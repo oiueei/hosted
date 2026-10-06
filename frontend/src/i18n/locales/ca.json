@@ -438,6 +438,7 @@
     "pdfView": "Veure el document",
     "pdfTooLarge": "El fitxer és massa gran (màxim 5 MB).",
     "imageTooLarge": "La imatge és massa gran (màxim 10 MB). Prova amb una foto que el navegador pugui redimensionar.",
+    "rateLimited": "Has arribat al màxim de {{max}} fotos per hora. Torna-ho a provar d'aquí a una estona.",
     "welcomeDocLabel": "Document de benvinguda (PDF)",
     "welcomeDocHelper": "Opcional. Qui entra al grup el rep per correu, una sola vegada."
   },
@@ -849,7 +850,7 @@
   "bulkAdd": {
     "help": "Afegeix diverses coses des d'un CSV — o un ZIP amb les fotos incloses.",
     "formatTitle": "Format del CSV/ZIP",
-    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només LEND/RENT). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\".",
+    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només LEND/RENT). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\". Les fotos addicionals (el carrusel) van en una columna \"photos\", separades per | (fins a 8 per cosa).",
     "fileLabel": "Fitxer CSV o ZIP",
     "empty": "No s'han trobat files al fitxer.",
     "tooMany": "Pots importar fins a {{max}} elements alhora.",
@@ -862,8 +863,11 @@
     "rowErrors": "Aquestes files no s'han pogut importar (revisa'n les columnes): {{rows}}",
     "zipNoCsv": "El ZIP ha de contenir un fitxer CSV.",
     "zipMissingImages": "Aquestes fotos s'anomenen al CSV però falten al ZIP: {{files}}",
+    "tooManyPhotos": "Aquest ZIP porta {{count}} fotos i se'n poden pujar {{max}} per hora. Parteix-lo en uns quants i puja'ls amb una hora de diferència.",
+    "galleryTooLong": "Cada cosa admet com a màxim {{max}} fotos addicionals a la columna \"photos\".",
     "zipError": "No hem pogut llegir aquest ZIP. Revisa el fitxer i torna-ho a provar.",
     "imageUploadError": "No s'han pogut pujar algunes fotos. Revisa les imatges i torna-ho a provar.",
+    "uploadRateLimited": "Has arribat al màxim de {{max}} fotos per hora i no s'ha creat res. Torna-ho a provar d'aquí a una estona.",
     "uploadingImages": "Pujant fotos… ({{done}}/{{total}})",
     "formatBody": "Els tags van en una cel·la separats per | (i han d'estar definits a la col·lecció — escriu l'etiqueta en qualsevol dels seus idiomes, per exemple \"Crianza\" o \"Criança\"). Les columnes fee i deposit accepten tant 1.5 com 1,5, i deposit només es fa servir en files LEND/RENT — un valor en un altre tipus es rebutja. Per a les fotos, comprimeix el CSV juntament amb les imatges i posa el nom de cada foto a la columna \"photo\" — així:",
     "downloadExample": "Baixar exemple (ZIP)"

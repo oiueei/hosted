@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadImage, UploadTooLargeError } from '../utils/uploadImage';
+import { uploadImage, uploadErrorKey, UPLOADS_PER_HOUR } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
@@ -54,11 +54,10 @@ export default function GalleryUpload({ items = [], onChange }) {
       // Selected more than the remaining slots — keep what fit, flag the cap.
       if (truncated) setError(t('gallery.maxImages', { max: MAX_IMAGES }));
     } catch (err) {
-      // The one failure worth naming: it is the user's file, and they can
-      // do something about it. Everything else is ours to apologise for.
-      setError(
-        t(err instanceof UploadTooLargeError ? 'upload.imageTooLarge' : 'upload.uploadError')
-      );
+      // Two failures are worth naming, because the person can do something about each:
+      // their file is too big, or the hour's allowance of photos is used up. Everything
+      // else is ours to apologise for.
+      setError(t(uploadErrorKey(err), { max: UPLOADS_PER_HOUR }));
     } finally {
       if (uploaded.length) onChange([...items, ...uploaded]);
       setUploading(false);
