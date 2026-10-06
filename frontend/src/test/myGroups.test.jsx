@@ -20,7 +20,7 @@ const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promis
 
 const ME = {
   code: 'ME0001',
-  name: 'Carlos',
+  name: 'Lala',
   email: 'me@test.com',
   koro: 'basic',
   created: '2026-01-01',
@@ -218,7 +218,7 @@ describe('UserPage — My groups', () => {
 
     renderOwn();
 
-    await screen.findByText(/Carlos/);
+    await screen.findByText(/Lala/);
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
   });
 
@@ -228,7 +228,7 @@ describe('UserPage — My groups', () => {
     renderOwn();
 
     // The profile still renders; only the groups list is absent.
-    expect(await screen.findByText(/Carlos/)).toBeInTheDocument();
+    expect(await screen.findByText(/Lala/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
   });
 
@@ -262,7 +262,7 @@ describe('UserPage — My groups: every group the account is in', () => {
     status: 'ACTIVE',
     is_curator: true,
     owner: 'ME0001',
-    owner_name: 'Carlos',
+    owner_name: 'Lala',
     co_owners: [],
     ...over,
   });
@@ -282,7 +282,7 @@ describe('UserPage — My groups: every group the account is in', () => {
     runs(code, headline, {
       owner: 'OWN001',
       owner_name: 'Lili',
-      co_owners: [{ code: 'ME0001', name: 'Carlos' }],
+      co_owners: [{ code: 'ME0001', name: 'Lala' }],
     });
 
   const names = (table) =>
@@ -383,7 +383,7 @@ describe('UserPage — My groups: every group the account is in', () => {
     const table = await screen.findByRole('table', { name: 'My groups' });
     expect(names(table)).toEqual(['Mike club', 'Bravo club']);
     expect(leaveLink(actionsOf('Mike club'))).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Carlos' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lala' })).toBeInTheDocument();
   });
 
   test('…and a co-curated group that comes only from the invite list still does not offer to leave', async () => {
@@ -414,7 +414,7 @@ describe('UserPage — My groups: every group the account is in', () => {
     const table = await screen.findByRole('table', { name: 'My groups' });
     expect(names(table)).toEqual(['Zulu group', 'Alpha group']);
     expect(screen.queryByRole('link', { name: /leave the group/i })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Carlos' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lala' })).toBeInTheDocument();
   });
 
   test('with both lists down there is no section, and the profile is still there', async () => {
@@ -422,7 +422,7 @@ describe('UserPage — My groups: every group the account is in', () => {
 
     renderOwn();
 
-    expect(await screen.findByText('Carlos')).toBeInTheDocument();
+    expect(await screen.findByText('Lala')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
   });
 
@@ -693,7 +693,7 @@ describe('UserPage — My groups: the team in the language on screen', () => {
             status: 'ACTIVE',
             is_curator: true,
             owner: 'ME0001',
-            owner_name: 'Carlos',
+            owner_name: 'Lala',
             co_owners: [],
           },
         ],
