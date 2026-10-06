@@ -134,6 +134,31 @@ AI-assistant: Claude Code (Claude Sonnet 5)
 
 When in doubt about how to compose the line, ask rather than decide.
 
+## Commit messages, code comments and docs
+
+The repositories are public, and whoever reads them later was not in the conversation that produced a change.
+Write for them.
+
+- **What changed and why, impersonally**, as a fact about the code or the product: "Access requests now go
+  through one Tally form per language; the server keeps the three addresses to name them in its 403s." Not who
+  asked for it.
+- **Never name the people who asked for, approved or decided a change** — no "CA", no "the user" meaning whoever
+  gave the instructions, no "X approved the wording", no "X moved it to Y". The roles inside the product
+  (requester, owner, member, manager, operator) are fine, and so are the demo personas (Lala…Lulu) where the seed
+  or a test uses them.
+- **No task or round ids** ("E1", "TLH2", "round G", "as before this round", "E2 had added…"): they point to
+  working notes that are never committed. If the history is the reason, say what the code did before.
+- **No references to working files** (`*_TASKS.md` and the like).
+- **Dates only when the date itself matters** — two migrations that must ship one release apart, an announced
+  removal. `git blame` already dates every line.
+- **Subject line short and imperative.** The body says the what and the why when the diff does not make them
+  obvious; it is not an account of how the change was arrived at.
+- **Attribution is the one `AI-assistant:` trailer** described under "Commit attribution", with the live model's
+  name. Nothing else in a commit attributes it.
+
+Commits written before 2026-10-06 do not follow this and are not rewritten; the comments and docs were cleaned
+once, on that date.
+
 ## Project Documentation
 
 For complete information about OIUEEI — project structure, tech stack, API endpoints, development setup, environment variables, security measures, and roadmap — see [`README.md`](README.md).
