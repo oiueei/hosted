@@ -258,3 +258,58 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * "Already have an account?" is a secondary button under the primary one, not a text
+ * link: one `<a>` (one tab stop) in the shape of a button, carrying the secondary
+ * tokens and as wide as the form it sits under. It goes to the sign-in that comes back
+ * to the group (or the thing), as the text link did.
+ */
+describe('JoinToAct — the sign-in button', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+    localStorage.removeItem('i18nextLng');
+  });
+
+  test('is a button-shaped link in the secondary style, as wide as the form, not a line of text', () => {
+    renderJoin();
+
+    const link = screen.getByRole('link', { name: 'Already have an account?' });
+    expect(link.tagName).toBe('A');
+    expect(link.className).toMatch(/hds-button/);
+    expect(link).toHaveClass('button-link--full');
+    // Not a sentence in a paragraph any more.
+    expect(link.closest('p')).toBeNull();
+    // The secondary tokens: a white fill, where the primary button wears the
+    // theeeme's colour.
+    const primary = screen.getByRole('button', { name: 'Send me a magic link' });
+    expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+    expect(primary.style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
+    // …and it comes after the primary one.
+    expect(primary.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('goes to the sign-in that comes back to the group', () => {
+    renderJoin();
+
+    expect(screen.getByRole('link', { name: 'Already have an account?' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Fcollections%2FPUB001'
+    );
+  });
+
+  test.each([
+    ['en', 'Already have an account?'],
+    ['es', '¿Ya tienes cuenta?'],
+    ['ca', 'Ja tens un compte?'],
+  ])('in %s it reads "%s", and nothing more', async (language, label) => {
+    await i18n.changeLanguage(language);
+    renderJoin();
+
+    const link = screen
+      .getAllByRole('link')
+      .find((a) => a.getAttribute('href')?.startsWith('/login'));
+    expect(link).toHaveTextContent(new RegExp(`^${label.replace('?', '\\?')}$`));
+  });
+});

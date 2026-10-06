@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
 import { TextInput, Button, Notification } from 'hds-react';
+import ButtonLink from './ButtonLink';
 import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
 import { loginPathFor } from '../utils/nextPath';
@@ -30,7 +30,7 @@ export default function JoinToAct({
   allowedThingTypes,
 }) {
   const { t, i18n } = useTranslation();
-  const { btnStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: 'joinToAct.sentBody',
     errorMessageKey: 'joinToAct.error',
@@ -107,9 +107,15 @@ export default function JoinToAct({
           </Button>
         </div>
       </form>
-      <p style={{ marginTop: 'var(--spacing-l)', marginBottom: 0 }}>
-        <Link to={loginPathFor({ pathname: returnPath })}>{t('joinToAct.alreadyHaveAccount')}</Link>
-      </p>
+      {/* A secondary button under the primary one, as wide as it is (the wrapper sets
+          the column, so no `.measure` here): someone who already has an account is one
+          button away from signing in, and the sign-in brings them back to what they came
+          for. */}
+      <div style={{ marginTop: 'var(--spacing-l)' }}>
+        <ButtonLink to={loginPathFor({ pathname: returnPath })} fullWidth style={btnSecondaryStyle}>
+          {t('joinToAct.alreadyHaveAccount')}
+        </ButtonLink>
+      </div>
     </>
   );
 

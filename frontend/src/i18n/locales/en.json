@@ -78,7 +78,7 @@
     "sent": "Check your email",
     "sentBody": "We've sent you a magic link to join. Open it on this device to start taking part.",
     "error": "Something went wrong. Please try again.",
-    "alreadyHaveAccount": "Already have an account? Sign in"
+    "alreadyHaveAccount": "Already have an account?"
   },
   "visibility": {
     "publicLabel": "Public collection",
