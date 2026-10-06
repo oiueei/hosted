@@ -181,8 +181,8 @@
     "licence": "El codi d'OIUEEI és obert, sota la llicència EUPL-1.2, un copyleft fort. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà.",
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
-    "popIn": "Nou per aquí? Passa →",
-    "faqLink": "Dubtes sobre aquest lloc? →"
+    "popIn": "Nou per aquí?",
+    "faqLink": "Dubtes sobre aquest lloc?"
   },
   "verify": {
     "declined": "Rebutjat",

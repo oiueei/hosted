@@ -35,6 +35,18 @@ afterEach(() => {
   window.history.pushState({}, '', '/');
 });
 
+// A button-shaped link — one <a>, one tab stop — in the secondary style (a white
+// fill, where the primary button wears the theeeme's colour), as wide as its column
+// and not a sentence in a paragraph.
+function expectSecondaryButton(link, href) {
+  expect(link.tagName).toBe('A');
+  expect(link).toHaveAttribute('href', href);
+  expect(link.className).toMatch(/hds-button/);
+  expect(link).toHaveClass('button-link--full');
+  expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+  expect(link.closest('p')).toBeNull();
+}
+
 describe('the module keeps its contract', () => {
   test('exports the six values App.jsx and the pages read', async () => {
     /* Asserted as a **shape**, not as this checkout's values.
@@ -172,6 +184,26 @@ describe('the open-door button follows popInPath', () => {
       expect(document.querySelector('a[href="/join-us"]')).not.toBeNull();
     });
   });
+
+  test('is a secondary button labelled with the question alone', async () => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: '/join-us',
+      aboutPath: null,
+      faqPath: null,
+      deploymentI18n: {},
+      externalForms: null,
+    }));
+    const { default: LoginPage } = await import('../pages/LoginPage');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expectSecondaryButton(await screen.findByRole('link', { name: 'New here?' }), '/join-us');
+  });
 });
 
 describe('the faq link follows faqPath', () => {
@@ -220,6 +252,29 @@ describe('the faq link follows faqPath', () => {
     });
   });
 
+  test('is a secondary button labelled with the question alone, not a line of text', async () => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      faqPath: '/help',
+      deploymentI18n: {},
+      externalForms: null,
+    }));
+    const { default: LoginPage } = await import('../pages/LoginPage');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expectSecondaryButton(
+      await screen.findByRole('link', { name: 'Questions about this site?' }),
+      '/help'
+    );
+  });
+
   test('sits at the foot of the page, after the reading, with nothing after it', async () => {
     // The link used to float between the alpha warning and the
     // footnotes. Questions about the site belong with the other
@@ -252,6 +307,42 @@ describe('the faq link follows faqPath', () => {
     // And it is the last link of the page: nothing is left after it.
     expect([...footnotes.querySelectorAll('a')].at(-1)).toBe(faq);
     expect(screen.queryByRole('link', { name: /Trouble signing in/i })).toBeNull();
+  });
+});
+
+describe('the door’s two secondary buttons read as the question alone, in every language', () => {
+  // `i18next` lives in node_modules, which `vi.resetModules()` does not reload: the
+  // language this test picks would outlive it and reach the next section's English.
+  let i18n;
+  afterEach(async () => {
+    await i18n?.changeLanguage('en');
+  });
+
+  test.each([
+    ['en', 'New here?', 'Questions about this site?'],
+    ['es', '¿Nuevo por aquí?', '¿Dudas sobre este sitio?'],
+    ['ca', 'Nou per aquí?', 'Dubtes sobre aquest lloc?'],
+  ])('in %s they say "%s" and "%s"', async (language, popIn, faq) => {
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: '/join-us',
+      aboutPath: null,
+      faqPath: '/help',
+      deploymentI18n: {},
+      externalForms: null,
+    }));
+    ({ default: i18n } = await import('../i18n'));
+    await i18n.changeLanguage(language);
+    const { default: LoginPage } = await import('../pages/LoginPage');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expect((await screen.findByRole('link', { name: popIn })).textContent).toBe(popIn);
+    expect(screen.getByRole('link', { name: faq }).textContent).toBe(faq);
   });
 });
 

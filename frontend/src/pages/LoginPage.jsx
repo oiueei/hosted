@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { TextInput, Button, Notification, Koros } from 'hds-react';
 import { getCsrfToken } from '../services/api';
 import { safeNextPath } from '../utils/nextPath';
@@ -229,11 +229,11 @@ export default function LoginPage() {
               out is not gone, it moved: "Contact us" is the third door of the
               site footer, on every page and so on this one. */}
           {faqPath && (
-            <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
-              <Link to={faqPath} style={{ textDecoration: 'underline' }}>
+            <div className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+              <ButtonLink to={faqPath} fullWidth style={btnSecondaryStyle}>
                 {t('login.faqLink')}
-              </Link>
-            </p>
+              </ButtonLink>
+            </div>
           )}
         </div>
       </div>
