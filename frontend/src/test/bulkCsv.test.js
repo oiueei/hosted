@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import Papa from 'papaparse';
-import { mapRow, photoNames, validateRows, MAX_ROWS } from '../utils/bulkCsv';
+import { mapRow, photoNames, validateRows, MAX_GALLERY, MAX_ROWS } from '../utils/bulkCsv';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
 
 describe('mapRow', () => {
@@ -140,5 +140,73 @@ describe('photoNames', () => {
   test('is empty when no row names one', () => {
     expect(photoNames([{ headline: 'A' }])).toEqual([]);
     expect(photoNames([])).toEqual([]);
+  });
+});
+
+describe('mapRow — the carousel (photos)', () => {
+  test('splits the photos cell on the pipe, trims and drops blanks', () => {
+    const row = mapRow({ headline: 'X', photos: 'a.jpg | b.jpg|' }, true);
+    expect(row.photos).toEqual(['a.jpg', 'b.jpg']);
+  });
+
+  test('keeps the order the cell lists them in', () => {
+    expect(mapRow({ headline: 'X', photos: 'c.jpg|a.jpg|b.jpg' }, true).photos).toEqual([
+      'c.jpg',
+      'a.jpg',
+      'b.jpg',
+    ]);
+  });
+
+  test('omits photos when the cell is empty or only pipes and spaces', () => {
+    expect(mapRow({ headline: 'X', photos: '   ' }, true)).not.toHaveProperty('photos');
+    expect(mapRow({ headline: 'X', photos: ' | | ' }, true)).not.toHaveProperty('photos');
+    expect(mapRow({ headline: 'X' }, true)).not.toHaveProperty('photos');
+  });
+
+  test('is read only for a ZIP, as photo is: a plain CSV ignores it', () => {
+    expect(mapRow({ headline: 'X', photos: 'a.jpg|b.jpg' }, false)).not.toHaveProperty('photos');
+  });
+});
+
+describe('validateRows — the carousel', () => {
+  const rowWith = (count) => ({
+    headline: 'X',
+    photos: Array.from({ length: count }, (_, i) => `p${i}.jpg`),
+  });
+
+  test('a thing takes at most 8 extra photos', () => {
+    expect(MAX_GALLERY).toBe(8);
+    expect(validateRows([rowWith(8)])).toBeNull();
+    expect(validateRows([rowWith(9)])).toBe('galleryTooLong');
+  });
+
+  test('one row over the limit refuses the whole file', () => {
+    expect(validateRows([rowWith(1), rowWith(9), rowWith(2)])).toBe('galleryTooLong');
+  });
+
+  test('a row with no carousel is not affected', () => {
+    expect(validateRows([{ headline: 'X' }])).toBeNull();
+  });
+});
+
+describe('photoNames — covers and carousels together', () => {
+  test('lists the cover and then the carousel of each row, in the order they first appear', () => {
+    const rows = [
+      { headline: 'A', photo: 'cover-a.jpg', photos: ['x.jpg', 'y.jpg'] },
+      { headline: 'B', photo: 'cover-b.jpg', photos: ['z.jpg'] },
+    ];
+    expect(photoNames(rows)).toEqual(['cover-a.jpg', 'x.jpg', 'y.jpg', 'cover-b.jpg', 'z.jpg']);
+  });
+
+  test('a name used as a cover, in a carousel, or by several rows counts once', () => {
+    const rows = [
+      { headline: 'A', photo: 'same.jpg', photos: ['same.jpg', 'x.jpg'] },
+      { headline: 'B', photos: ['x.jpg', 'same.jpg'] },
+    ];
+    expect(photoNames(rows)).toEqual(['same.jpg', 'x.jpg']);
+  });
+
+  test('a row with a carousel and no cover still lists its photos', () => {
+    expect(photoNames([{ headline: 'A', photos: ['x.jpg'] }])).toEqual(['x.jpg']);
   });
 });

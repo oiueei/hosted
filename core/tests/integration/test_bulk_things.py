@@ -177,6 +177,61 @@ class TestBulkCreate:
         assert set(events.values_list("thing_code", flat=True)) == set(res.data["codes"])
 
 
+class TestBulkGallery:
+    """A row's extra photos (the carousel) arrive as storage keys, like its cover."""
+
+    @staticmethod
+    def post(auth_client, collection, **extra):
+        row = {"type": "GIFT_THING", "headline": "With a carousel", **extra}
+        return auth_client.post(URL.format(code=collection.code), {"rows": [row]}, format="json")
+
+    def test_a_row_with_a_gallery_creates_the_thing_with_it_in_that_order(
+        self, auth_client, collection
+    ):
+        keys = ["oiueei/things/c3", "oiueei/things/a1", "oiueei/things/b2"]
+
+        res = self.post(auth_client, collection, thumbnail="oiueei/things/cover", gallery=keys)
+
+        assert res.status_code == 201
+        thing = Thing.objects.get(code=res.data["codes"][0])
+        assert thing.gallery == keys
+        assert thing.thumbnail == "oiueei/things/cover"
+
+    def test_a_row_with_no_gallery_has_an_empty_one(self, auth_client, collection):
+        res = self.post(auth_client, collection)
+
+        assert res.status_code == 201
+        assert Thing.objects.get(code=res.data["codes"][0]).gallery == []
+
+    def test_eight_extra_photos_are_the_most_a_thing_takes(self, auth_client, collection):
+        keys = [f"oiueei/things/p{i}" for i in range(8)]
+
+        res = self.post(auth_client, collection, gallery=keys)
+
+        assert res.status_code == 201
+        assert Thing.objects.get(code=res.data["codes"][0]).gallery == keys
+
+    def test_nine_are_refused_and_nothing_is_created(self, auth_client, collection):
+        keys = [f"oiueei/things/p{i}" for i in range(9)]
+
+        res = self.post(auth_client, collection, gallery=keys)
+
+        assert res.status_code == 400
+        assert res.data["errors"][0]["row"] == 0
+        assert "gallery" in res.data["errors"][0]["errors"]
+        assert collection.things.count() == 0
+
+    @pytest.mark.parametrize(
+        "key", ["oiueei/users/abc", "oiueei/documents/abc", "../../etc/passwd", ""]
+    )
+    def test_a_key_outside_the_things_folder_is_refused(self, auth_client, collection, key):
+        res = self.post(auth_client, collection, gallery=["oiueei/things/ok", key])
+
+        assert res.status_code == 400
+        assert "gallery" in res.data["errors"][0]["errors"]
+        assert collection.things.count() == 0
+
+
 class TestBulkFeeDecimalComma:
     """Spanish/Catalan spreadsheet exports write decimals as a comma."""
 

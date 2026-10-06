@@ -205,6 +205,205 @@ describe('BulkAddCsv — ZIP', () => {
   });
 });
 
+// The carousel: a `photos` column of filenames separated by `|`, up to 8 per thing.
+describe('BulkAddCsv — the carousel', () => {
+  const sentRows = () => JSON.parse(apiFetch.mock.calls[0][1].body).rows;
+
+  beforeEach(() => {
+    // Every upload answers with a key named after its file, so what travels can be read back.
+    uploadImage.mockImplementation(async (file) => ({ publicId: `oiueei/things/${file.name}` }));
+    apiFetch.mockResolvedValue(jsonResponse({ created: 2 }));
+  });
+
+  test('a name used by several rows is uploaded once, and each row sends its gallery in order', async () => {
+    const { container, onImported } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo,photos\nA,cover-a.jpg,x.jpg|y.jpg\nB,cover-b.jpg,y.jpg|x.jpg',
+        'cover-a.jpg': 'bytes',
+        'cover-b.jpg': 'bytes',
+        'x.jpg': 'bytes',
+        'y.jpg': 'bytes',
+      })
+    );
+    fireEvent.click(await screen.findByText('Add 2 items'));
+    await waitFor(() => expect(onImported).toHaveBeenCalledWith(2));
+
+    // Four files for the four distinct names, not six for the six mentions.
+    expect(uploadImage.mock.calls.map(([file]) => file.name).sort()).toEqual([
+      'cover-a.jpg',
+      'cover-b.jpg',
+      'x.jpg',
+      'y.jpg',
+    ]);
+    expect(sentRows()).toEqual([
+      {
+        headline: 'A',
+        thumbnail: 'oiueei/things/cover-a.jpg',
+        gallery: ['oiueei/things/x.jpg', 'oiueei/things/y.jpg'],
+      },
+      {
+        headline: 'B',
+        thumbnail: 'oiueei/things/cover-b.jpg',
+        gallery: ['oiueei/things/y.jpg', 'oiueei/things/x.jpg'],
+      },
+    ]);
+    // The filenames never travel: only the keys they uploaded to.
+    expect(JSON.stringify(sentRows())).not.toMatch(/"photos?":/);
+  });
+
+  test('a carousel with no cover sends the gallery and no thumbnail', async () => {
+    const { container, onImported } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photos\nA,x.jpg|y.jpg',
+        'x.jpg': 'bytes',
+        'y.jpg': 'bytes',
+      })
+    );
+    fireEvent.click(await screen.findByText('Add 1 items'));
+    await waitFor(() => expect(onImported).toHaveBeenCalled());
+
+    expect(sentRows()).toEqual([
+      { headline: 'A', gallery: ['oiueei/things/x.jpg', 'oiueei/things/y.jpg'] },
+    ]);
+  });
+
+  test('the preview adds how many extra photos a row carries after its cover', async () => {
+    const { container } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo,photos\nA,cover.jpg,x.jpg|y.jpg\nB,cover.jpg,\nC,,x.jpg',
+        'cover.jpg': 'bytes',
+        'x.jpg': 'bytes',
+        'y.jpg': 'bytes',
+      })
+    );
+
+    expect(await screen.findByText('A · 📷 cover.jpg +2')).toBeInTheDocument();
+    // No carousel: the line is what it was.
+    expect(screen.getByText('B · 📷 cover.jpg')).toBeInTheDocument();
+    // A carousel and no cover: the count alone.
+    expect(screen.getByText('C · 📷 +1')).toBeInTheDocument();
+  });
+
+  test('a photo named only in the carousel and missing from the ZIP is refused like a missing cover', async () => {
+    const { container } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo,photos\nA,cover.jpg,here.jpg|gone.jpg',
+        'cover.jpg': 'bytes',
+        'here.jpg': 'bytes',
+      })
+    );
+
+    expect(
+      await screen.findByText(
+        'These photos are named in the CSV but missing from the ZIP: gone.jpg'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Preview/)).toBeNull();
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  test('a row with more than 8 extra photos is refused, and says the limit', async () => {
+    const { container } = renderBulkAdd();
+    const names = Array.from({ length: 9 }, (_, i) => `p${i}.jpg`);
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': `headline,photos\nA,${names.join('|')}`,
+        ...Object.fromEntries(names.map((name) => [name, 'bytes'])),
+      })
+    );
+
+    expect(
+      await screen.findByText('Each thing takes at most 8 extra photos in the "photos" column.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Preview/)).toBeNull();
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  test('exactly 8 extra photos is fine', async () => {
+    const { container } = renderBulkAdd();
+    const names = Array.from({ length: 8 }, (_, i) => `p${i}.jpg`);
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': `headline,photos\nA,${names.join('|')}`,
+        ...Object.fromEntries(names.map((name) => [name, 'bytes'])),
+      })
+    );
+
+    expect(await screen.findByText('Preview (1)')).toBeInTheDocument();
+  });
+
+  test('a plain CSV has no photos: the column is ignored', async () => {
+    const { container, onImported } = renderBulkAdd();
+
+    pick(container, csvFile('headline,photos\nA,x.jpg|y.jpg'));
+    fireEvent.click(await screen.findByText('Add 1 items'));
+    await waitFor(() => expect(onImported).toHaveBeenCalled());
+
+    expect(screen.queryByText(/📷/)).toBeNull();
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(sentRows()).toEqual([{ headline: 'A' }]);
+  });
+
+  test("the carousels count against the hour's allowance with the covers", async () => {
+    // 61 things, a cover and one more photo each: 122 distinct files, over the 120 an
+    // hour allows — though only 61 rows, well within the 100 a file may hold.
+    const rows = Array.from({ length: 61 }, (_, i) => `T${i},c${i}.jpg,g${i}.jpg`);
+    const files = Object.fromEntries(
+      Array.from({ length: 61 }, (_, i) => [
+        [`c${i}.jpg`, 'b'],
+        [`g${i}.jpg`, 'b'],
+      ]).flat()
+    );
+    const { container } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({ 'things.csv': `headline,photo,photos\n${rows.join('\n')}`, ...files })
+    );
+
+    expect(
+      await screen.findByText(
+        'This ZIP has 122 photos and you can upload 120 an hour. Split it into several and upload them an hour apart.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Preview/)).toBeNull();
+  });
+
+  test('exactly 120 distinct photos is still imported', async () => {
+    const rows = Array.from({ length: 60 }, (_, i) => `T${i},c${i}.jpg,g${i}.jpg`);
+    const files = Object.fromEntries(
+      Array.from({ length: 60 }, (_, i) => [
+        [`c${i}.jpg`, 'b'],
+        [`g${i}.jpg`, 'b'],
+      ]).flat()
+    );
+    const { container } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({ 'things.csv': `headline,photo,photos\n${rows.join('\n')}`, ...files })
+    );
+
+    expect(await screen.findByText('Preview (60)')).toBeInTheDocument();
+  });
+});
+
 // An hour allows `UPLOADS_PER_HOUR` tickets and every photo of a ZIP takes one.
 describe("BulkAddCsv — the hour's allowance of photos", () => {
   const photosZip = (count) =>

@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
 import { apiFetch } from '../services/api';
 import { uploadImage, UploadRateLimitedError, UPLOADS_PER_HOUR } from '../utils/uploadImage';
-import { MAX_ROWS, mapRow, photoNames, validateRows } from '../utils/bulkCsv';
+import { MAX_GALLERY, MAX_ROWS, mapRow, photoNames, validateRows } from '../utils/bulkCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
@@ -45,10 +45,11 @@ function mimeFromName(name) {
  * (`POST /collections/{code}/things/bulk/`) — all rows are created or none.
  *
  * Plain `.csv`: text-only rows. `.zip` (CSV + image files): each row may name its
- * cover photo by filename in a `photo` column; on import the referenced images are
- * uploaded to the bucket (reusing the ticketed upload path) and their
- * public_ids are sent as `thumbnail`. Server-side validators reject HTML, line
- * breaks and spreadsheet-formula (CSV) injection per field.
+ * cover photo by filename in a `photo` column and its carousel in a `photos` column
+ * (`|`-separated, up to 8); on import the referenced images are uploaded to the bucket
+ * (reusing the ticketed upload path), each name once however many rows use it, and
+ * their public_ids are sent as `thumbnail` and `gallery`. Server-side validators reject
+ * HTML, line breaks and spreadsheet-formula (CSV) injection per field.
  *
  * Props:
  *   collectionCode – target collection
@@ -73,6 +74,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
     if (key === 'empty') return t('bulkAdd.empty');
     if (key === 'tooMany') return t('bulkAdd.tooMany', { max: MAX_ROWS });
     if (key === 'headlineRequired') return t('bulkAdd.headlineRequired');
+    if (key === 'galleryTooLong') return t('bulkAdd.galleryTooLong', { max: MAX_GALLERY });
     return null;
   };
 
@@ -188,10 +190,13 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
           );
           return;
         }
-        // Swap the `photo` filename for the uploaded `thumbnail` public_id.
-        payloadRows = rows.map(({ photo, ...rest }) =>
-          photo ? { ...rest, thumbnail: idByName.get(photo) } : rest
-        );
+        // Swap the filenames for the storage keys they uploaded to: `photo` becomes the
+        // `thumbnail`, and `photos` the `gallery`, in the order the CSV lists them.
+        payloadRows = rows.map(({ photo, photos, ...rest }) => ({
+          ...rest,
+          ...(photo ? { thumbnail: idByName.get(photo) } : {}),
+          ...(photos ? { gallery: photos.map((name) => idByName.get(name)) } : {}),
+        }));
       } else {
         payloadRows = rows;
       }
@@ -280,7 +285,9 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
                 {row.fee ? ` · ${row.fee}` : ''}
                 {row.deposit ? ` · 🔒${row.deposit}` : ''}
                 {row.tags ? ` · ${row.tags.join(', ')}` : ''}
-                {row.photo ? ` · 📷 ${row.photo}` : ''}
+                {row.photo || row.photos
+                  ? ` · 📷 ${[row.photo, row.photos && `+${row.photos.length}`].filter(Boolean).join(' ')}`
+                  : ''}
               </li>
             ))}
           </ol>
