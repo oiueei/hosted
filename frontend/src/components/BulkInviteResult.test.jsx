@@ -4,7 +4,7 @@ import BulkInviteResult from './BulkInviteResult';
 
 /**
  * The summary of a batch of invitations, shared by the CSV tool and by the invitations
- * field of `/invites` when it holds several addresses (G6, CA 2026-10-05).
+ * field of `/invites` when it holds several addresses.
  * `test/bulkInviteCsv.test.jsx` and `pages/ManageInvitesPage.test.jsx` pin it through
  * their own flows; these pin the component by itself.
  */

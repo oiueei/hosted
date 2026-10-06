@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
- * `useCollectionLanguage` — the hierarchy CA settled on (2026-09-15, mirrors
+ * `useCollectionLanguage` — the hierarchy (mirrors
  * the email-side `resolve_email_language`): a signed-in visitor's own
  * deliberately-saved language always wins; failing that, the collection they
  * are looking at; failing that, the plain browser/localStorage default,
@@ -206,7 +206,7 @@ describe('already matching', () => {
  * owner had written each headline in English too, an English browser with no
  * saved preference was shown the Catalan — and had no way back without an
  * account. An owner who wrote in the reader's language has already answered
- * which language that reader gets (design round, 2026-09-18).
+ * which language that reader gets.
  */
 describe("the owner's own text", () => {
   test('written in the reader’s language too, it keeps the reader in it', async () => {

@@ -87,7 +87,7 @@ describe('MyBookingsPage listing', () => {
   });
 
   test('the thing is one column, when it was asked and when it runs is the next', async () => {
-    // CA, 2026-10-03: the first column used to hold everything. Now "Thing" is the
+    // The first column used to hold everything. Now "Thing" is the
     // link and whose it is; "When" is the request date and the dates (or "No dates").
     mockList([
       booking({ owner_name: 'Lala' }),
@@ -126,7 +126,7 @@ describe('MyBookingsPage listing', () => {
   });
 
   test('the lines of a cell touch: they carry the shared class and no margin of their own', async () => {
-    // The look of CA's screenshot (2026-10-03) is `.table-cell-lines p { margin: 0 }`,
+    // The look is `.table-cell-lines p { margin: 0 }`,
     // pinned in `tableCellStyles.test.js`; an inline margin on a line would beat it.
     mockList([booking({ owner_name: 'Lala' })]);
     renderPage();
@@ -144,11 +144,11 @@ describe('MyBookingsPage listing', () => {
   });
 
   test('the type and the state sit in a status cell that sizes each label to its word', async () => {
-    // CA, 2026-10-03: both labels filled the column (a bare flex column stretches
+    // Both labels filled the column (a bare flex column stretches
     // its children), and since Tag centres and StatusLabel does not, one read
     // centred and the other left. The layout is the class; its rule is pinned in
-    // `tableCellStyles.test.js`. The type shows only in a table that mixes verbs
-    // (G9), so there are two of them.
+    // `tableCellStyles.test.js`. The type shows only in a table that mixes verbs,
+    // so there are two of them.
     mockList([
       booking({ status: 'EXPIRED' }),
       booking({
@@ -497,8 +497,8 @@ describe('MyBookingsPage pagination', () => {
 });
 
 /**
- * On a phone each of my requests is a card instead of a row (`ResponsiveTable`,
- * CA, 2026-10-04). Withdrawing one is a button with its words on it, and it must do
+ * On a phone each of my requests is a card instead of a row (`ResponsiveTable`).
+ * Withdrawing one is a button with its words on it, and it must do
  * what the icon in the table does: one press for a pending request, a question
  * first for a reservation that is coming up.
  */
@@ -521,7 +521,7 @@ describe('MyBookingsPage on a phone', () => {
   afterEach(() => media.restore());
 
   test('a request is a card holding the thing, its owner, when, both labels and the cancel', async () => {
-    // The verb's label is there because this table mixes verbs (G9).
+    // The verb's label is there because this table mixes verbs.
     mockBookings(
       booking(),
       booking({
@@ -603,7 +603,7 @@ describe('MyBookingsPage on a phone', () => {
 
 /**
  * The verb's label ("Rental", "Reservation"…) over the state in the status cell tells
- * rows apart only when a table mixes verbs (G9, CA 2026-10-05): many collections hold
+ * rows apart only when a table mixes verbs: many collections hold
  * one verb, and the label repeated the same word in every row. It is decided per table
  * — each page has two, what is waiting or current and what is past — from that table's
  * own rows, and again whenever more rows are loaded. The state label and the "expired"
@@ -722,7 +722,7 @@ describe('MyBookingsPage — the verb’s label only where a table mixes verbs',
   });
 });
 
-// The thing's name is a bold link (G10, CA 2026-10-05): one rule in App.css for the
+// The thing's name is a bold link: one rule in App.css for the
 // text links inside the component's own class, `.responsive-table` — see
 // `test/tableLinkWeight.test.jsx`. These pin that this page's links are inside it, in
 // the table and in the cards.

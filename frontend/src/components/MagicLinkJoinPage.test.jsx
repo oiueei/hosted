@@ -47,8 +47,8 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     expect(options.method).toBe('POST');
     // No `language` — sending the page's current UI language used to get it
     // stamped permanently onto the new member, outranking the collection's
-    // own language for every email to them from then on (CA's report,
-    // 2026-09-15). `share_token` targets the shared collection; the backend
+    // own language for every email to them from then on.
+    // `share_token` targets the shared collection; the backend
     // now resolves the newcomer's very first magic link from it instead.
     expect(JSON.parse(options.body)).toEqual({
       email: 'newcomer@example.com',
@@ -68,7 +68,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
 
     await screen.findByText(/Magic link sent! Check your inbox/);
     expect(screen.getByText(/You can close this tab now/)).toBeInTheDocument();
-    // Not flush against the notice above it (CA, 2026-09-21) — the line is
+    // Not flush against the notice above it — the line is
     // the message's quiet coda, not a footnote stapled to the box.
     expect(screen.getByText(/You can close this tab now/)).toHaveStyle({
       marginTop: 'var(--spacing-s)',
@@ -141,9 +141,9 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
   });
 });
 
-describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
+describe('MagicLinkJoinPage and the legal notice', () => {
   // The door used to carry its own "Legal notice & privacy" link, under the form
-  // and again after it was sent (art. 13 at the point of collection). CA took it
+  // and again after it was sent (art. 13 at the point of collection). It was taken
   // out: the site footer is on every page, this one included, and already links
   // /legal — so the information is still on the page where the address is typed,
   // once. These pin that the component does not bring a second copy back.
@@ -171,9 +171,9 @@ describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
 
 describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way to /login out)', () => {
   // `/share/:token` keeps "Already have an account? Sign in →"; the hosted
-  // `/popin` (CA, 2026-10-03) already leads people to /login another way and
-  // drops it. Since Y1 (CA, 2026-10-04) the same prop also leaves out the corner's
-  // own "Sign in" icon (X3), which every signed-out page otherwise has. The component
+  // `/popin` already leads people to /login another way and
+  // drops it. The same prop also leaves out the corner's
+  // own "Sign in" icon, which every signed-out page otherwise has. The component
   // is core's and identical in both branches, so what turns it off is a prop that no
   // core caller passes.
   function renderDoor(props = {}) {
@@ -193,7 +193,7 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way t
   }
 
   // Two ways to /login a signed-out page has: the button ending its body, and the
-  // corner's icon (X3, 2026-10-04). `offerSignIn` decides both.
+  // corner's icon. `offerSignIn` decides both.
   const body = (container) => container.querySelector('.page-container');
   const corner = (container) => container.querySelector('.hero-corners');
 

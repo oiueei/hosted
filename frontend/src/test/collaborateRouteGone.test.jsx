@@ -2,8 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
- * `/collaborate` left the front end (CA, 2026-10-04: "simpler"; it is noted in
- * `CA_TASKS.md` to be rethought). The only way in was a link under `/contact`'s
+ * `/collaborate` left the front end (the app is simpler without it; to be rethought). The only way in was a link under `/contact`'s
  * form, and that went too. There is no redirect and no route of its own: the path
  * is a single segment like any other unknown one, so it is read as a profile code
  * — the signed-in reader lands on `UserPage`'s own "User not found.", as `/shared`

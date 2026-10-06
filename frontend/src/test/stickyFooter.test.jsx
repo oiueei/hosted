@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { css, rulesFor, declared, declarations } from './cssRules';
 
 /**
- * The footer at the bottom of the visible screen, with no scroll to spare (G7, CA
- * 2026-10-05). `.form-page` had `min-height: 100vh` and the footer came after `<main>`,
+ * The footer at the bottom of the visible screen, with no scroll to spare.
+ * `.form-page` had `min-height: 100vh` and the footer came after `<main>`,
  * so every page was a screen plus a footer: always a scroll, and the footer always just
  * under the first screen — worse on iOS, where `100vh` is taller than what is visible.
  * Now `#root` is a column as tall as the viewport, `<main>` takes what is left and is a

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 /**
- * `public/detect-lang.js` runs before React mounts (A3), setting html[lang]
+ * `public/detect-lang.js` runs before React mounts, setting html[lang]
  * so the very first paint — and every crawler — sees the right language
  * instead of the static "en" in index.html. It has to stay a plain script a
  * browser can execute with nothing else loaded yet, so it can't import

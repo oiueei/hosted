@@ -100,7 +100,7 @@ describe('RentalRulesFields durations', () => {
   });
 });
 
-describe('RentalRulesFields deposit policy (S6)', () => {
+describe('RentalRulesFields deposit policy', () => {
   test('starts empty — no suggested amount or wording (DESIGN §6)', () => {
     renderFields();
     expect(screen.getByLabelText(/deposit policy/i).value).toBe('');

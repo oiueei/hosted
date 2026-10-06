@@ -3,12 +3,12 @@ import { describe, test, expect, afterEach, vi } from 'vitest';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
-// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// core test cannot assume what `deployment/` holds, so the
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
 
-// Service-layer policy, not product (S2): without VITE_FEEDBACK_URL the
+// Service-layer policy, not product: without VITE_FEEDBACK_URL the
 // component offers no door at all — the same pattern as `popInPath`/
 // `aboutPath` in `src/deployment/`. `import.meta.env.VITE_*` is read once at
 // module load, so each test resets the module cache and re-imports it after

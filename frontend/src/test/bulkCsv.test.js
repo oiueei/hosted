@@ -34,7 +34,7 @@ describe('mapRow', () => {
   });
 });
 
-describe('mapRow — deposit (S6)', () => {
+describe('mapRow — deposit', () => {
   test('keeps the deposit column, trimmed, like every other scalar column', () => {
     const row = mapRow({ headline: 'X', type: 'LEND_THING', deposit: ' 50 ' }, false);
     expect(row.deposit).toBe('50');
@@ -87,7 +87,7 @@ describe('validateRows', () => {
 });
 
 describe('CSV_PARSE_OPTIONS', () => {
-  // Regression for CODE B15: a Spanish-Excel CSV ("sep=;" hint + ";") parsed
+  // Regression: a Spanish-Excel CSV ("sep=;" hint + ";") parsed
   // fine as a plain .csv but broke inside a .zip, where the string path skipped
   // delimitersToGuess + stripSepLine. The shared options serve both paths.
   test('strips the sep=; line and auto-detects ";" on a string (the ZIP path)', () => {

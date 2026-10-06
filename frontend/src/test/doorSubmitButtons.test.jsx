@@ -10,7 +10,7 @@ import JoinToAct from '../components/JoinToAct';
  * and /collections/<code>/join — paint their submit button the same way: across the
  * whole width of the column, so on a phone it is the width of the screen and on a
  * desktop the width of the form. /join's alone was as wide as its own text
- * (CA, 2026-10-02, seen on an iPhone).
+ * (seen on an iPhone).
  *
  * HDS marks full width with a CSS-modules class whose hash changes between builds,
  * so the test reads the class by its stable part ("fullWidth") rather than writing

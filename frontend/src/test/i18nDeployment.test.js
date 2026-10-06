@@ -7,7 +7,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
  * nothing but configuration, and the shared test setup replaces the i18next
  * singleton with a minimal English-only `init` (`src/test/i18n-mock.js`). So the
  * real module was never imported by a test and never measured — which was fine
- * until this round put two behaviours in it:
+ * until two behaviours were put in it:
  *
  * 1. **A deployment's own copy survives the language chunk landing.** The bundles
  *    are re-applied on i18next's `loaded` event, not once at startup, because es

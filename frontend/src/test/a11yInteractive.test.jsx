@@ -212,7 +212,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 
-  // The member's collection menu (X2): a link that opens in a new tab, a button
+  // The member's collection menu: a link that opens in a new tab, a button
   // and a divider before the last link. Opened is the state that only exists
   // after a click.
   test('the opened collection menu of a member has no axe violations', async () => {

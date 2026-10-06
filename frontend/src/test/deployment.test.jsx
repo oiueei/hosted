@@ -63,7 +63,7 @@ describe('the module keeps its contract', () => {
     [popInPath, aboutPath, faqPath].forEach((path) => {
       expect(path === null || typeof path === 'string').toBe(true);
     });
-    // The forms hosted elsewhere (TL1): null for none, else `{ contact, feedback,
+    // The forms hosted elsewhere: null for none, else `{ contact, feedback,
     // requestAccess }`, each `{ es, ca, en }` of addresses, or null / absent. Core
     // reads them through `utils/externalForms.js`.
     expect(externalForms === null || typeof externalForms === 'object').toBe(true);
@@ -221,7 +221,7 @@ describe('the faq link follows faqPath', () => {
   });
 
   test('sits at the foot of the page, after the reading, with nothing after it', async () => {
-    // CA, 2026-09-21: the link used to float between the alpha warning and the
+    // The link used to float between the alpha warning and the
     // footnotes. Questions about the site belong with the other
     // deliberate-lookup links at the foot — not in a group of their own above
     // the reading. "Trouble signing in?" followed it until 2026-10-04, when it

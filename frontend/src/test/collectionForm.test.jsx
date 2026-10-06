@@ -22,7 +22,7 @@ import { dropHdsStyles } from './dropHdsStyles';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
-// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// core test cannot assume what `deployment/` holds, so the
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
@@ -109,8 +109,8 @@ describe('CreateCollectionPage', () => {
     expect(screen.getByText('Every member can add their own things too.')).toBeInTheDocument();
   });
 
-  // The mode radio does not decide who can read the group — only the switch does
-  // (CA, 2026-09-29). Community used to turn the switch on by itself, and again on
+  // The mode radio does not decide who can read the group — only the switch does.
+  // Community used to turn the switch on by itself, and again on
   // every re-choice even after the curator had switched it off; but whoever
   // contributes to a group is never shown whether it is public, so a group of
   // neighbours' families ended up readable by anyone without its members knowing.
@@ -162,7 +162,7 @@ describe('CreateCollectionPage', () => {
     expect(createBody()?.mode).toBe('COMMUNITY');
   });
 
-  // O1: the optional fields (thumbnail, welcome doc, tags, language, rental rules)
+  // The optional fields (thumbnail, welcome doc, tags, language, rental rules)
   // fold into a "More options" accordion, closed on load, so the happy path is
   // just title + mode + who-can-add. Nothing inside it is required or can block
   // submit, so the form is still completable without ever opening it.
@@ -248,7 +248,7 @@ describe('CreateCollectionPage', () => {
     await waitFor(() => expect(createBody()?.allow_member_proposals).toBe(true));
   });
 
-  // CA, 2026-10-02: a new collection asks its owner nothing until the owner says
+  // A new collection asks its owner nothing until the owner says
   // so (it used to start ticked). What the owner was shown is what ships.
   test('left alone, a new group does not ask to be asked: it starts off and ships off', async () => {
     const { container } = renderCreate();
@@ -314,7 +314,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
     expect(screen.getByRole('button', { name: 'Resume collection' })).toBeInTheDocument();
   });
 
-  // O1 on Edit: digest, language, thumbnail and the welcome doc fold into the
+  // On Edit: digest, language, thumbnail and the welcome doc fold into the
   // same "More options" accordion; status, mode and the identity cluster stay
   // visible. The digest select lives on BOTH forms now (see the Create suite
   // above) — it is folded here, not exclusive to here.
@@ -388,8 +388,8 @@ describe('EditCollectionPage — load + pause + submit', () => {
   });
 
   /**
-   * "Con cuánta antelación pueden reservar (días)" would not stay saved (CA,
-   * 2026-09-21). The number field only told the page about a new value when it
+   * "Con cuánta antelación pueden reservar (días)" would not stay saved.
+   * The number field only told the page about a new value when it
    * lost focus, so anything that saves without a blur first — Enter in the
    * field (implicit submission is a click on Save with no focus change), the
    * +/- stepper, a keyboard Save — sent the number the page had loaded, while

@@ -18,13 +18,11 @@ import CollectionPage from '../pages/CollectionPage';
 /**
  * "Your collection is taking shape. Now invite your circle →" was a quiet line under
  * the curator's hero row, shown while the group had things and nobody invited. It is
- * a third button of the row now (X6, CA 2026-10-04): `[Add thing]` primary,
+ * a third button of the row now: `[Add thing]` primary,
  * `[Edit collection]`, `[Invite your people]`, to the invitations page, and one
- * primary still. (G1, CA 2026-10-05: "Add thing" took the first place and the primary
- * tokens from "Edit collection".) It was shown only while the group had things and
- * nobody invited, so it went with the first guest who accepted; since G5 (CA,
- * 2026-10-05) it is **always** there for whoever runs the group — with things or
- * without, with members or without.
+ * primary still. It was shown only while the group had things and nobody invited,
+ * so it went with the first guest who accepted; now it is **always** there for
+ * whoever runs the group — with things or without, with members or without.
  */
 const THING = (over) => ({
   code: 'THG001',
@@ -104,8 +102,8 @@ describe('the curator hero row — "Invite your people"', () => {
     expect(row.map(isPrimary)).toEqual([true, false, false]);
   });
 
-  // The button stayed only until the first guest accepted (X6's condition); CA invited
-  // people and it was gone. It is the row's third button in every shape of the group.
+  // The button stayed only until the first guest accepted (the old condition); a curator who
+  // had invited people found it gone. It is the row's third button in every shape of the group.
   test('with the first guest in, it is still there', async () => {
     const { container } = renderCollection({
       ...FOUNDER,

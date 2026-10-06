@@ -8,8 +8,8 @@ import { css, rulesFor, declared } from './cssRules';
 
 /**
  * The text links of the three tables — the thing's name in /my-bookings and
- * /owner-bookings, the group's name and "Leave the group" in "My groups" — are bold
- * (G10, CA 2026-10-05). One rule, for both forms of `ResponsiveTable` (the desktop
+ * /owner-bookings, the group's name and "Leave the group" in "My groups" — are bold.
+ * One rule, for both forms of `ResponsiveTable` (the desktop
  * table and the phone's cards), hung from the component's own class so it reaches no
  * other table, and leaving out anything with a button's style.
  *

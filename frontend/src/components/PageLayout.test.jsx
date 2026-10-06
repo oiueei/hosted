@@ -8,7 +8,7 @@ import PageLayout from './PageLayout';
 import { declarations, declarationsInMedia } from '../test/cssRules';
 
 /**
- * `heroActions` (X1, CA 2026-10-04): buttons in the hero, after the title and the
+ * `heroActions`: buttons in the hero, after the title and the
  * description, in a `.button-row-wide` of their own. Only a thing's page uses it
  * for now, and its test says which buttons; this one is the slot itself and the
  * stylesheet that makes it behave, since jsdom applies no CSS.
@@ -65,7 +65,7 @@ describe('PageLayout — heroActions', () => {
 });
 
 /**
- * `collectionMenu` (X4, CA 2026-10-04): the collection's menu in the corner of a
+ * `collectionMenu`: the collection's menu in the corner of a
  * page that reads a collection — a thing's — after the account menu. When it is
  * there, "Requests to me" is its first entry and the account menu stops offering it.
  */
@@ -122,7 +122,7 @@ describe('PageLayout — collectionMenu', () => {
 });
 
 /**
- * `offerSignIn` (Y1, CA 2026-10-04): whether a reader with no session gets the corner's
+ * `offerSignIn`: whether a reader with no session gets the corner's
  * "Sign in" icon. `MagicLinkJoinPage` passes its own through, so a door that leaves out
  * "already have an account?" leaves out the icon too. Nothing changes with a session.
  */

@@ -3,7 +3,7 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
  * `/collections/:code/invites/import` is a route of the app, protected like
- * `/invites` (G2, CA 2026-10-05). The page's own tests render the page; only the
+ * `/invites`. The page's own tests render the page; only the
  * whole App can say the route table has the entry, that it sits behind
  * `RequireAuth`, and that it is not read as the sibling `/invites/remove`.
  */

@@ -63,7 +63,7 @@ beforeEach(() => {
   setApi();
 });
 
-describe('CollectionPage tag filter chips (S6)', () => {
+describe('CollectionPage tag filter chips', () => {
   test('resolves a localized tag label instead of rendering raw JSON, and still filters by it', async () => {
     render(
       <MemoryRouter initialEntries={['/collections/COL001']}>

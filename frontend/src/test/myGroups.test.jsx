@@ -92,7 +92,7 @@ describe('UserPage — My groups', () => {
   });
 
   test('is a table of three columns: the group, who runs it, and a nameless one for the way out', async () => {
-    // The same HDS Table as the request pages (CA, 2026-10-03). The last header
+    // The same HDS Table as the request pages. The last header
     // is named for a screen reader only, so the column is not an empty <th>.
     setApi({ memberships: [{ code: 'COL001', headline: 'Bibliocoses' }] });
 
@@ -282,8 +282,7 @@ describe('UserPage — the hero action buttons carry the full theeeme', () => {
 });
 
 /**
- * On a phone each group is a card instead of a row (`ResponsiveTable`, CA,
- * 2026-10-04): in a table, "Leave the group" broke word by word down a 100px
+ * On a phone each group is a card instead of a row (`ResponsiveTable`): in a table, "Leave the group" broke word by word down a 100px
  * column. The same cells, in the same order, with "Run by:" in front of the team
  * (the table has it as a header) and the way out on the right.
  */
@@ -353,7 +352,7 @@ describe('My groups on a phone', () => {
 });
 
 /**
- * The team of a group is written as the language writes a list (G4, CA 2026-10-05):
+ * The team of a group is written as the language writes a list:
  * "Lili y Lolo", "Lili, Lolo y 2 personas más" — the same line the collection's hero
  * has, without the links (`utils/team.js`). The count of those without a name is the
  * last element of the list, so its text carries no conjunction of its own.
@@ -431,7 +430,7 @@ describe('UserPage — My groups: the team in the language on screen', () => {
   );
 });
 
-// The group's name and "Leave the group" are bold links (G10, CA 2026-10-05): one rule
+// The group's name and "Leave the group" are bold links: one rule
 // in App.css for the text links inside the component's own class, `.responsive-table`
 // — see `test/tableLinkWeight.test.jsx`. "Leave the group" keeps its muted class (size
 // and grey) and is only bolder. These pin that both are inside it, in the table and in

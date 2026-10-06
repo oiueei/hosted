@@ -226,8 +226,8 @@ describe('AccountMenu — signed in', () => {
 });
 
 /**
- * "Requests to me" moved to the collection menu on the pages that have one (X4, CA
- * 2026-10-04). `requestsInCollectionMenu` tells the account menu not to offer it
+ * "Requests to me" moved to the collection menu on the pages that have one.
+ * `requestsInCollectionMenu` tells the account menu not to offer it
  * there — and not to ask the server about it either. Without the prop (Home, `/me`
  * and every page with no collection menu) nothing changed.
  */
@@ -287,8 +287,8 @@ describe('AccountMenu — where the collection menu carries "Requests to me"', (
 });
 
 /**
- * Signed out, the same icon in the same place is a link to sign in (X3, CA
- * 2026-10-04): a plain `<Link>` to `/login` that comes back to the page the reader
+ * Signed out, the same icon in the same place is a link to sign in:
+ * a plain `<Link>` to `/login` that comes back to the page the reader
  * is on, named "Sign in" — not a panel. It was nothing at all. It is not painted on
  * the doors a login never returns to: `/login` itself, `/logout`, `/verify/…`.
  */
@@ -357,7 +357,7 @@ describe('AccountMenu — signed out', () => {
   });
 
   test('with offerSignIn={false} it paints nothing at all, on any page', () => {
-    // Y1 (CA, 2026-10-04): a door that does not want to send people to /login — the
+    // A door that does not want to send people to /login — the
     // hosted /popin — says so, and PageLayout hands it down.
     localStorage.removeItem('userCode');
     const { container } = render(

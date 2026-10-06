@@ -5,7 +5,7 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 // PageLayout/RouteFocusReset call scrollTo in jsdom.
 window.scrollTo = vi.fn();
 
-// Every fetch fails, so each page lands in its error branch (DESIGN A1).
+// Every fetch fails, so each page lands in its error branch.
 vi.mock('../services/api', () => ({
   apiFetch: vi.fn(() =>
     Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) })

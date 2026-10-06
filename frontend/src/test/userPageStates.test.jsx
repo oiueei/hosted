@@ -69,7 +69,7 @@ describe('UserPage when the profile does not load', () => {
     renderAt('/OTH001');
 
     expect(await screen.findByText(message)).toBeInTheDocument();
-    // A dead end is not an answer: the way back is there (DESIGN A1).
+    // A dead end is not an answer: the way back is there.
     expect(screen.getByRole('link', { name: en.common.home })).toHaveAttribute('href', '/');
   });
 

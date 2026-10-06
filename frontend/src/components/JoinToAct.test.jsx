@@ -50,8 +50,8 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     expect(url).toBe('/api/v1/auth/join/');
     // No `language` — sending the page's current UI language used to get it
     // stamped permanently onto the new member, outranking the collection's
-    // own language for every email to them from then on (CA's report,
-    // 2026-09-15). The backend now resolves their very first magic link from
+    // own language for every email to them from then on.
+    // The backend now resolves their very first magic link from
     // the collection instead.
     expect(JSON.parse(options.body)).toEqual({
       email: 'visitor@example.com',
@@ -62,7 +62,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   // Somebody from another group who pressed "Request" on a public group, chose
   // "already have an account" and ended up on Home: the same failure as a session
   // that ran out, in small. Sign-in now brings them back to what they came for.
-  test('the door does not link to /legal itself — the site footer does (CA, 2026-10-03)', () => {
+  test('the door does not link to /legal itself — the site footer does', () => {
     // It used to repeat the footer's "Legal notice & privacy" link under the
     // form. The page this renders in already carries the footer.
     const { container } = renderJoin();
@@ -90,8 +90,8 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   });
 
   test('the intro reads at the pitch size — but stays a paragraph, not a heading', () => {
-    // Same first line of words as /login's pitch: .login-pitch, Body XL bold
-    // (CA, 2026-09-21). The element differs on purpose: JoinPage's hero <h1> is
+    // Same first line of words as /login's pitch: .login-pitch, Body XL bold.
+    // The element differs on purpose: JoinPage's hero <h1> is
     // real words, so this is body copy, and a heading here would put a full
     // sentence in the outline.
     renderJoin();
@@ -103,7 +103,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   });
 
   test('the close-the-tab line is not flush against the notice above it', async () => {
-    // CA, 2026-09-21: the line is the message's quiet coda, not a footnote
+    // The line is the message's quiet coda, not a footnote
     // stapled to the box. Same gap MagicLinkJoinPage gives it.
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -141,7 +141,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
  * The door's first line promises what a member of THIS collection can do. It used to
  * say the same four verbs everywhere — "request, reserve, ask or add your own things"
  * — to someone about to join a reservations collection, where nothing is requested
- * and a member adds nothing (CA, 2026-10-02). The verbs now come from the thing types
+ * and a member adds nothing. The verbs now come from the thing types
  * the collection allows and from its mode; "ask" is not a verb the door promises.
  */
 describe('JoinToAct — the first line says what a member can do in THIS collection', () => {
@@ -162,7 +162,7 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
   // What the five real shapes of collection say, word for word.
   const EXAMPLES = [
     {
-      what: 'a reservations collection (the FAB), in Catalan: reserve, and nothing else',
+      what: 'a reservations collection (a makerspace), in Catalan: reserve, and nothing else',
       language: 'ca',
       mode: 'PROPRIETARY',
       types: ['RESERVE_THING'],

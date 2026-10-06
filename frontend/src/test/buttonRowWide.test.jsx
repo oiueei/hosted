@@ -2,8 +2,8 @@ import { describe, test, expect } from 'vitest';
 import { declarations, declarationsInMedia, rulesFor } from './cssRules';
 
 /**
- * A loose action button goes in a `.button-row-wide`, even when it is the only one
- * (CA, 2026-10-04): under 768px the row stacks its children and takes each across
+ * A loose action button goes in a `.button-row-wide`, even when it is the only one:
+ * under 768px the row stacks its children and takes each across
  * the width of the screen, and on a desktop it leaves them at the width of their
  * own text. The pages pin that their buttons sit in one; this pins what the row
  * does, since jsdom applies no CSS.

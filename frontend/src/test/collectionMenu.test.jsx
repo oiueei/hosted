@@ -153,7 +153,7 @@ function renderPage() {
 
 const TRIGGER = 'Collection options';
 /** The open panel, or null when it is closed. "Add thing" is also a button in the
- * hero row now (CA, 2026-10-04), so a link of that name no longer tells the two apart. */
+ * hero row now, so a link of that name no longer tells the two apart. */
 const panel = () => document.getElementById('collection-menu-panel');
 const CALENDAR = 'Download the calendar (ICS)';
 
@@ -181,7 +181,7 @@ beforeEach(() => {
 });
 
 /**
- * The collection's own options, one click from its page (CA, 2026-10-03):
+ * The collection's own options, one click from its page:
  * "Add thing", "Manage members" and the three downloads left the hero row
  * (which keeps "Edit collection" alone) and the settings page's foot, and
  * live in this menu instead — a fourth icon in the hero's corner, curators
@@ -243,10 +243,10 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       .map((link) => [link.textContent, link.getAttribute('href')]);
     expect(entries).toEqual([
       ['Add thing', '/collections/COL001/add'],
-      // A page of its own since X5 (2026-10-04), no longer a section of /add.
+      // A page of its own, no longer a section of /add.
       ['Add several at once (CSV)', '/collections/COL001/import'],
       ['Manage members', '/collections/COL001/invites'],
-      // …and so is the CSV of invitations since G2 (2026-10-05), right after the
+      // …and so is the CSV of invitations, right after the
       // members page it left.
       ['Invite many at once (CSV)', '/collections/COL001/invites/import'],
     ]);
@@ -308,7 +308,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
   test('a signed-in reader who is neither a curator nor a member gets no menu, even with date-based things', async () => {
     // A PUBLIC group is readable by anyone: being signed in is not being in it. The
-    // member's menu (X2, below) is theirs only because it holds what is theirs.
+    // member's menu (below) is theirs only because it holds what is theirs.
     renderCollection({
       ...COLLECTION,
       owner: 'OTHER1',
@@ -682,7 +682,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 });
 
 /**
- * The same menu for a member (X2, CA 2026-10-04): the corner icon in the same
+ * The same menu for a member: the corner icon in the same
  * place, with what is theirs — the group's welcome document (a link that opens in
  * a new tab, first), "Mute the summary" / "Get the summary again" (only where the
  * group sends one) and, under a divider, "Leave the group". The three things were
@@ -941,8 +941,8 @@ describe('the collection menu for a member', () => {
 });
 
 /**
- * "Requests to me" moved here from the account menu on the collection's page (X4,
- * CA 2026-10-04): the first entry of the menu — a curator's and a member's — for
+ * "Requests to me" moved here from the account menu on the collection's page:
+ * the first entry of the menu — a curator's and a member's — for
  * whoever receives requests, with a divider under it, and out of the account menu.
  * Everywhere else the account menu keeps it. The question is asked as it always was:
  * when the panel opens, and no answer means no link.

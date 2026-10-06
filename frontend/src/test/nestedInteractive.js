@@ -1,7 +1,7 @@
 /**
  * One keyboard tab stop must never contain another.
  *
- * The 2026-08-30 round found 28 places where a router `<Link>` wrapped an HDS
+ * Keyboard testing on 2026-08-30 found 28 places where a router `<Link>` wrapped an HDS
  * `<Button>`: invalid HTML, **two tab stops for one control**, announced
  * "link… button", with the `<a>` taking the focus ring while the `<button>`
  * carried the look. WCAG 4.1.2, and the reason tabbing felt like it landed on

@@ -7,7 +7,7 @@ import { declarations, declarationsInMedia, rulesFor, declared } from './cssRule
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
-// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// core test cannot assume what `deployment/` holds, so the
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
@@ -68,8 +68,8 @@ describe('SiteFooter', () => {
 });
 
 /**
- * "Contact us" is the third door (CA, 2026-10-04): it was a speech-bubble icon in
- * the corner of every hero, and CA found too many icons up there. It sits in the
+ * "Contact us" is the third door: it was a speech-bubble icon in
+ * the corner of every hero, and there were too many icons up there. It sits in the
  * `<nav>` after the legal link, on every page and for everybody, signed in or not.
  */
 describe('SiteFooter — "Contact us"', () => {
@@ -103,7 +103,7 @@ describe('SiteFooter — "Contact us"', () => {
 });
 
 /**
- * One line from 768px (CA, 2026-10-03): "Privacy & legal · Contact us · Made with ♥︎
+ * One line from 768px: "Privacy & legal · Contact us · Made with ♥︎
  * in …", the doors and the colophon text side by side; under 768px the two lines it
  * always was. jsdom does no layout, so this pins what the component puts in the DOM
  * and what App.css declares and where — the rendering is for a browser.
@@ -188,7 +188,7 @@ describe('SiteFooter — one line from 768px', () => {
     const inner = '.site-footer-inner';
     expect(declarationsInMedia('(min-width: 768px)', inner, 'display')).toEqual(['flex']);
     expect(declarationsInMedia('(min-width: 768px)', inner, 'align-items')).toEqual(['center']);
-    // From the left of the column — not centred any more (CA, 2026-10-04).
+    // From the left of the column — not centred any more.
     expect(declarationsInMedia('(min-width: 768px)', inner, 'justify-content')).toEqual([
       'flex-start',
     ]);

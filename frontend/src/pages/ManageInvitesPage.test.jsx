@@ -25,7 +25,7 @@ const PROPOSAL = {
 function mockRoutes({
   collection = COLLECTION,
   invite = { status: 200 },
-  // The batch endpoint (several addresses typed in the field, G6): by default it
+  // The batch endpoint (several addresses typed in the field): by default it
   // sends everybody; `reject` is a request that never arrives.
   bulk = { status: 200 },
   proposal = { status: 200 },
@@ -104,8 +104,8 @@ describe('ManageInvitesPage (the guest list)', () => {
   });
 
   // The CSV of invitations was the last block of this page, under the form that
-  // invites one address at a time; it has a page of its own since G2 (CA,
-  // 2026-10-05), reached from the collection menu. The one-by-one form stays.
+  // invites one address at a time; it has a page of its own,
+  // reached from the collection menu. The one-by-one form stays.
   test('the CSV of invitations is not on this page any more — the form for one address is', async () => {
     mockRoutes();
     const { container } = renderPage();
@@ -120,7 +120,7 @@ describe('ManageInvitesPage (the guest list)', () => {
   });
 
   // The bold links of the three request/groups tables hang from the class of
-  // `ResponsiveTable` (G10, CA 2026-10-05); this page's table is a plain HDS `Table` in
+  // `ResponsiveTable`; this page's table is a plain HDS `Table` in
   // a `.table-wrap`, and the rule must not reach it.
   test('the guests’ table is not a ResponsiveTable: the bold links of the others do not reach it', async () => {
     mockRoutes();
@@ -554,7 +554,7 @@ describe('ManageInvitesPage — co-owners', () => {
 });
 
 /**
- * The invitations field takes several addresses (G6, CA 2026-10-05): `lalo@oiueei.com,
+ * The invitations field takes several addresses: `lalo@oiueei.com,
  * lelo@oiueei.com`. One address is the invitation it always was (`invite/`); several are
  * one batch for `invite/bulk/`, summarised the way the CSV tool says it. The ones that
  * went out join the pending list and the field keeps the ones that did not.

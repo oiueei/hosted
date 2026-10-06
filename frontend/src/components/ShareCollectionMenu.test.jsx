@@ -43,7 +43,7 @@ beforeEach(() => {
   });
 });
 
-describe('ShareCollectionMenu icon trigger (S9)', () => {
+describe('ShareCollectionMenu icon trigger', () => {
   test('is one combobox with an accessible name, not a nameless icon or a doubled control', () => {
     // The whole point of restyling HDS's own trigger (rather than driving a
     // separate icon button) is that there stays exactly ONE focusable element
