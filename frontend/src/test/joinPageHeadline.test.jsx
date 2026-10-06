@@ -81,7 +81,7 @@ describe('JoinPage — the collection is named', () => {
     expect(screen.getByText(/Join to request, reserve/)).toBeInTheDocument();
   });
 
-  test('a ?thing= from a "Reserve" click rides into the join request (S13)', async () => {
+  test('a ?thing= from a "Reserve" click rides into the join request', async () => {
     apiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ code: 'PUB001', headline: 'Tool Library' }),
@@ -130,7 +130,7 @@ describe('JoinPage — the collection is named', () => {
 });
 
 /**
- * "Join {collection}" (CA, 2026-10-04): the title says which group the stranger is
+ * "Join {collection}": the title says which group the stranger is
  * about to join, the way `/share/:token` already does — it used to be "Join to
  * take part" with the name only in the text below and in the way back. The words
  * are the share page's own (`share.pageTitleNamed`, `titles.shareNamed`); until
@@ -204,7 +204,7 @@ describe('JoinPage — the title names the collection', () => {
 });
 
 /**
- * The door looks like the page it leads to (CA, 2026-10-02): a collection with a
+ * The door looks like the page it leads to: a collection with a
  * photo paints it in the hero with the same composition its own page uses
  * (`HeroPhoto`), where `/join` used to be a plain hero in the same colours. The
  * photo comes from the collection endpoint the page already calls, which gives

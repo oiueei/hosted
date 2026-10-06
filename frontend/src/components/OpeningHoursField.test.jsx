@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
 import OpeningHoursField from './OpeningHoursField';
 
-// CA's own call: one raw-JSON TextArea instead of the per-day block editor it
+// Deliberate: one raw-JSON TextArea instead of the per-day block editor it
 // replaced — typing or pasting the schedule directly. It must still only ever
 // hand the parent real JSON, never a string or a parse error, since
 // opening_hours is a nested object in the request body.

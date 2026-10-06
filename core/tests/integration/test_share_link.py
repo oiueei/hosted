@@ -5,7 +5,7 @@ Covers:
 - Generating, rotating and revoking the share token (owner only).
 - Token never exposed via the standard collection retrieve endpoint.
 - Join flow with valid / invalid / revoked share tokens — the membership is made
-  when the magic link is pressed, not when the address is typed (W1, 2026-10-04).
+  when the magic link is pressed, not when the address is typed.
 """
 
 import pytest
@@ -505,7 +505,7 @@ class TestSharePreview:
 
     def test_a_localized_headline_comes_back_raw(self, share_link_setup):
         """`headline` may be a `{lang: text}` map — the SPA resolves it against
-        the reader's language (O6), the same as every other collection read, so
+        the reader's language, the same as every other collection read, so
         the endpoint hands back exactly what is stored."""
         collection = share_link_setup["collection"]
         collection.headline = '{"es": "El Chalmercadillo", "ca": "El mercadet", "en": "The swap"}'

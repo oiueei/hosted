@@ -2,8 +2,8 @@
 
 0126 changed ``User.notify_news``'s default to True which — as Django intends —
 rewrites no existing row. Every account created before this release therefore
-stays opted out, and the digest goes on reaching nobody: exactly the state the
-design round set out to fix.
+stays opted out, and the digest goes on reaching nobody: exactly the state this
+change set out to fix.
 
 **This is the deliberate part of that change: it flips a preference a real
 person already holds.** It is defensible only next to ``Collection.digest_muted``

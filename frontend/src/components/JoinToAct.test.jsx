@@ -50,8 +50,8 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     expect(url).toBe('/api/v1/auth/join/');
     // No `language` — sending the page's current UI language used to get it
     // stamped permanently onto the new member, outranking the collection's
-    // own language for every email to them from then on (CA's report,
-    // 2026-09-15). The backend now resolves their very first magic link from
+    // own language for every email to them from then on.
+    // The backend now resolves their very first magic link from
     // the collection instead.
     expect(JSON.parse(options.body)).toEqual({
       email: 'visitor@example.com',
@@ -62,7 +62,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   // Somebody from another group who pressed "Request" on a public group, chose
   // "already have an account" and ended up on Home: the same failure as a session
   // that ran out, in small. Sign-in now brings them back to what they came for.
-  test('the door does not link to /legal itself — the site footer does (CA, 2026-10-03)', () => {
+  test('the door does not link to /legal itself — the site footer does', () => {
     // It used to repeat the footer's "Legal notice & privacy" link under the
     // form. The page this renders in already carries the footer.
     const { container } = renderJoin();
@@ -90,8 +90,8 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   });
 
   test('the intro reads at the pitch size — but stays a paragraph, not a heading', () => {
-    // Same first line of words as /login's pitch: .login-pitch, Body XL bold
-    // (CA, 2026-09-21). The element differs on purpose: JoinPage's hero <h1> is
+    // Same first line of words as /login's pitch: .login-pitch, Body XL bold.
+    // The element differs on purpose: JoinPage's hero <h1> is
     // real words, so this is body copy, and a heading here would put a full
     // sentence in the outline.
     renderJoin();
@@ -103,7 +103,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
   });
 
   test('the close-the-tab line is not flush against the notice above it', async () => {
-    // CA, 2026-09-21: the line is the message's quiet coda, not a footnote
+    // The line is the message's quiet coda, not a footnote
     // stapled to the box. Same gap MagicLinkJoinPage gives it.
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -141,7 +141,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
  * The door's first line promises what a member of THIS collection can do. It used to
  * say the same four verbs everywhere — "request, reserve, ask or add your own things"
  * — to someone about to join a reservations collection, where nothing is requested
- * and a member adds nothing (CA, 2026-10-02). The verbs now come from the thing types
+ * and a member adds nothing. The verbs now come from the thing types
  * the collection allows and from its mode; "ask" is not a verb the door promises.
  */
 describe('JoinToAct — the first line says what a member can do in THIS collection', () => {
@@ -162,7 +162,7 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
   // What the five real shapes of collection say, word for word.
   const EXAMPLES = [
     {
-      what: 'a reservations collection (the FAB), in Catalan: reserve, and nothing else',
+      what: 'a reservations collection (a makerspace), in Catalan: reserve, and nothing else',
       language: 'ca',
       mode: 'PROPRIETARY',
       types: ['RESERVE_THING'],
@@ -256,5 +256,60 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
     expect(
       screen.getByText(/^Join to request, reserve, ask a question or add your own things\./)
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * "Already have an account?" is a secondary button under the primary one, not a text
+ * link: one `<a>` (one tab stop) in the shape of a button, carrying the secondary
+ * tokens and as wide as the form it sits under. It goes to the sign-in that comes back
+ * to the group (or the thing), as the text link did.
+ */
+describe('JoinToAct — the sign-in button', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+    localStorage.removeItem('i18nextLng');
+  });
+
+  test('is a button-shaped link in the secondary style, as wide as the form, not a line of text', () => {
+    renderJoin();
+
+    const link = screen.getByRole('link', { name: 'Already have an account?' });
+    expect(link.tagName).toBe('A');
+    expect(link.className).toMatch(/hds-button/);
+    expect(link).toHaveClass('button-link--full');
+    // Not a sentence in a paragraph any more.
+    expect(link.closest('p')).toBeNull();
+    // The secondary tokens: a white fill, where the primary button wears the
+    // theeeme's colour.
+    const primary = screen.getByRole('button', { name: 'Send me a magic link' });
+    expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+    expect(primary.style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
+    // …and it comes after the primary one.
+    expect(primary.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('goes to the sign-in that comes back to the group', () => {
+    renderJoin();
+
+    expect(screen.getByRole('link', { name: 'Already have an account?' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Fcollections%2FPUB001'
+    );
+  });
+
+  test.each([
+    ['en', 'Already have an account?'],
+    ['es', '¿Ya tienes cuenta?'],
+    ['ca', 'Ja tens un compte?'],
+  ])('in %s it reads "%s", and nothing more', async (language, label) => {
+    await i18n.changeLanguage(language);
+    renderJoin();
+
+    const link = screen
+      .getAllByRole('link')
+      .find((a) => a.getAttribute('href')?.startsWith('/login'));
+    expect(link).toHaveTextContent(new RegExp(`^${label.replace('?', '\\?')}$`));
   });
 });

@@ -51,7 +51,7 @@ describe('ContactPage', () => {
     );
   });
 
-  test('links nowhere to /collaborate: the page left the front end (CA, 2026-10-04)', () => {
+  test('links nowhere to /collaborate: the page left the front end', () => {
     const { container } = renderPage();
 
     expect(container.querySelector('a[href="/collaborate"]')).toBeNull();

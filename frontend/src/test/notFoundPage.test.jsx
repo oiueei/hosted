@@ -6,7 +6,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 /**
  * The 404 page offers one way out. Like every loose action button it sits in a
  * `.button-row-wide`, so on a phone it is the width of the screen and on a
- * desktop the width of its own text (CA, 2026-10-04).
+ * desktop the width of its own text.
  */
 describe('NotFoundPage', () => {
   beforeEach(() => localStorage.clear());

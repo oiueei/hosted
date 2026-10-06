@@ -39,7 +39,7 @@ Safety rails:
   ``asset_cleanup.ASSET_FIELDS`` — so anything in use is kept. The welcome PDF
   matters here: it is an object in the same tree as the photos, so it turns up
   in this sweep like any of them, and a missing cross-reference would delete a
-  live document. Welcome docs live in ``oiueei/documents/`` (S4), one of the
+  live document. Welcome docs live in ``oiueei/documents/``, one of the
   upload folders, so they are swept alongside every other folder and
   cross-referenced the same way.
 - Never touches the ``oiueei/seed/`` folder (the demo's shared image pool) —
@@ -120,7 +120,7 @@ class Command(BaseCommand):
         prefix = options["prefix"]
         configured_bucket = settings.OBJECT_STORAGE_BUCKET
 
-        # The wrong .env has happened (BACKUP_TASKS §2: the local one once
+        # The wrong .env has happened (the local one once
         # carried the production key), and against the wrong bucket this
         # command is not an error — it is a deletion. So a delete has to name
         # its target, and even a dry-run refuses a mismatched name, so the

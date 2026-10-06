@@ -1,4 +1,4 @@
-// Picks html[lang] before React mounts (A3). Mirrors
+// Picks html[lang] before React mounts. Mirrors
 // i18next-browser-languagedetector's own priority (a saved choice in
 // localStorage first, then the browser's own languages) and
 // src/i18n/index.js's fallbackLng map — retired locales (pt/eu/gl) land on

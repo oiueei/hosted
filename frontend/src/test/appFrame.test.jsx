@@ -3,7 +3,7 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
-// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// core test cannot assume what `deployment/` holds, so the
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
@@ -181,7 +181,7 @@ describe('html[lang]', () => {
 
 describe('the way to a human is reached from one place on the front door', () => {
   test('/login has no link to /contact in its content; the site footer has the one', async () => {
-    // "Trouble signing in? Tell us…" closed the page until CA took it out
+    // "Trouble signing in? Tell us…" closed the page until it was taken out
     // (2026-10-04): "Contact us" is the footer's third door on every page. Rendered
     // whole — App, so the footer is there — because the page alone cannot say how
     // many links the user sees.
@@ -201,7 +201,7 @@ describe('the way to a human is reached from one place on the front door', () =>
 describe('the legal notice is reached from one place on the front door', () => {
   test('/login links /legal exactly once, from the site footer', async () => {
     // The door once carried its own "Legal notice & privacy" link as well as the
-    // footer's (CA took it out, 2026-10-03). Rendered whole — App, so the footer
+    // footer's (since removed). Rendered whole — App, so the footer
     // is there — because the page alone cannot say how many links the user sees.
     const { default: App } = await import('../App');
     render(<App />);

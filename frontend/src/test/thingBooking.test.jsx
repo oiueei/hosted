@@ -334,11 +334,11 @@ describe('ThingPage — owner button matrix', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// ThingPage — the decision about a request sits in the hero (X1, CA 2026-10-04)
+// ThingPage — the decision about a request sits in the hero
 // Whoever runs the thing sees "Confirm hold" (primary) and "Decline hold"
 // (secondary) as the first thing under the way back, in a wide row; Edit and
-// Delete stay in the content. A member's "Reserve" stays in the content too: CA
-// wants them to read the whole page before they ask.
+// Delete stay in the content. A member's "Reserve" stays in the content too: they
+// are meant to read the whole page before they ask.
 // ════════════════════════════════════════════════════════════════════════
 describe('ThingPage — the decision about a request sits in the hero', () => {
   const PENDING = [
@@ -509,7 +509,7 @@ describe('ThingPage — anonymous login-to-act', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Claim' }));
 
     // Lands on the collection's join page, with the thing it was trying to
-    // reserve in the query string (S13) so the magic link comes back to it.
+    // reserve in the query string so the magic link comes back to it.
     expect(await screen.findByTestId('nav')).toHaveTextContent(
       '/collections/PUB001/join?thing=THG001'
     );
@@ -720,7 +720,7 @@ describe('useThingBooking — the owner decides a hold', () => {
     }
   );
 
-  // CA, 2026-10-02: a co-curator demoted in another tab kept the card's "Confirm
+  // A co-curator demoted in another tab kept the card's "Confirm
   // hold / Decline hold" on screen; pressing one, the server refused (correctly)
   // and the page said only "Error confirming hold." — no why, no way forward.
   // A 403 now says why and reloads the thing, so what is no longer theirs goes.

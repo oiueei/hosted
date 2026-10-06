@@ -1,6 +1,6 @@
 /**
  * The verb's label in the status cell of the request tables ("Rental", "Reservation"…)
- * tells rows apart only when a table mixes verbs (G9, CA 2026-10-05). Many collections
+ * tells rows apart only when a table mixes verbs. Many collections
  * hold one verb alone, and then the label repeated the same word in every row. So it is
  * decided **per table**, by that table's own rows: if all of them are of one verb none
  * carries the label, and if they mix, all of them do. `/my-bookings` and

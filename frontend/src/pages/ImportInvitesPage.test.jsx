@@ -14,10 +14,10 @@ import { apiFetch } from '../services/api';
 import ImportInvitesPage from './ImportInvitesPage';
 
 /**
- * The CSV of invitations has a page of its own (G2, CA 2026-10-05). It was the last
+ * The CSV of invitations has a page of its own. It was the last
  * block of `/collections/:code/invites`, under the form that invites one address at
- * a time; CA took it off that page and put it in the collection menu, as the CSV of
- * things had been (X5), and a menu entry only links. The page is `PageLayout` — the
+ * a time; it moved to the collection menu, as the CSV of
+ * things did, and a menu entry only links. The page is `PageLayout` — the
  * way back to "Manage members", the title — and `BulkInviteCsv`, which shows its own
  * result in place.
  */

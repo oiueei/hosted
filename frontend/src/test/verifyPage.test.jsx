@@ -7,7 +7,7 @@ import i18n from '../i18n';
 
 // VerifyPage talks to the backend via raw `fetch` (not the apiFetch wrapper), so
 // we drive both legs of the auto-commit (GET preview, POST commit) from here.
-// FRONTEND B1: the `requires_confirmation → POST` auto-commit and its
+// The `requires_confirmation → POST` auto-commit and its
 // `committedRef` StrictMode guard had zero behavioural coverage — the smoke
 // test mocks fetch to 400, so this path never executed.
 
@@ -210,7 +210,7 @@ describe('a refusal the link survives', () => {
 
 /**
  * The account's saved language is applied on sign-in, the way its theme and koro
- * already are (CA, 2026-10-02). The one effect that applies it (`App.jsx`) runs
+ * already are. The one effect that applies it (`App.jsx`) runs
  * once, when the app mounts — and opening a magic link mounts the app *before*
  * there is a session, so its `/auth/me/` is a 401 and applies nothing. A person with
  * "English" saved, opening the link on a phone, got the app in the browser's
@@ -330,7 +330,7 @@ describe('a magic link applies the saved language of the account', () => {
 });
 
 /**
- * A co-curator demoted after the email pressed "Confirm" on the old link (CA, 2026-10-02).
+ * A co-curator demoted after the email pressed "Confirm" on the old link.
  * The server refuses it, correctly, burns the link and leaves the request
  * pending — with a 403 that now carries `no_longer_manages`. The page used to say
  * "Invalid or expired link. If your link has expired, ask the person who invited
@@ -560,7 +560,7 @@ describe('where a magic link lands', () => {
     expect(await screen.findByText('landed on /collections/COL001')).toBeInTheDocument();
   });
 
-  test('a join that came from a "Reserve" click lands back on that thing (S13)', async () => {
+  test('a join that came from a "Reserve" click lands back on that thing', async () => {
     // The server sends `thing` when the join carried a thing code and it is
     // still a live thing in the collection — the visitor came to reserve it,
     // so drop them on it, not the grid.
@@ -605,7 +605,7 @@ describe('where a magic link lands', () => {
   );
 
   /* There is no `landing: "welcome"` case: the server stopped answering it
-     (CA, 2026-10-04) — someone who comes in by an open door lands where anyone
+     — someone who comes in by an open door lands where anyone
      with the same groups would — and a landing this page does not know goes home
      through the same `else` as `home`. */
 });

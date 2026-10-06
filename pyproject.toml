@@ -58,8 +58,8 @@ exclude_lines = [
 # only a directory or a top-level one.
 #
 # `only_mutate` is the per-run scope dial: mutating all of core/ is a
-# multi-hour run nobody will wait for. Point it at what a round actually
-# changed. Individual mutants can also be re-checked by name:
+# multi-hour run nobody will wait for. Point it at what actually changed.
+# Individual mutants can also be re-checked by name:
 #   mutmut run core.utils.x_get_client_ip__mutmut_4
 #
 # NOTE: .claude/skills/solid-testing/scripts/mutation_test.sh still speaks the
@@ -67,16 +67,15 @@ exclude_lines = [
 [tool.mutmut]
 source_paths = ["core/"]
 pytest_add_cli_args_test_selection = ["core/tests/"]
-# Pointed at what the 2026-09 pre-release **testing** round audited: the hourly
-# reservation engine and the collection a request resolves to, which is where
-# that release's work was. The 2026-08 scope — `serializers/booking.py`,
+# Pointed at the hourly reservation engine and the collection a request
+# resolves to, which is where the latest work was. An earlier scope — `serializers/booking.py`,
 # `serializers/user.py`, `services/asset_cleanup.py`, whose field lists guard a
 # privacy boundary and whose cleanup runs at delete time — came back clean and
 # is kept here, commented out, rather than lost.
 #
 # **A survivor is a lead, not a verdict.** mutmut 3 runs only the tests its
 # stats pass mapped to the mutated function, and that mapping misses tests
-# which reach the code through the API: in the 2026-09 sweep, inverting
+# which reach the code through the API: in one sweep, inverting
 # `_readable_by` and making `resolve_request_collection` pick the collection it
 # was NOT given both "survived", and both die against
 # test_request_collection_privacy.py when applied by hand. Re-check a survivor

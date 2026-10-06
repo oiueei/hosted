@@ -49,7 +49,7 @@ describe('LoginPage magic-link request (the front door)', () => {
   });
 
   test('"Try another email" is as wide as the Sign in button it replaces', async () => {
-    // CA, 2026-10-04: after sending, the page's two buttons — this one and, on a
+    // After sending, the page's two buttons — this one and, on a
     // deployment with an open door, "New here?" — were two widths, because this one
     // hugged its own text. It takes the column and the full width the form had.
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -111,7 +111,7 @@ describe('LoginPage magic-link request (the front door)', () => {
   });
 
   // The line says why they are on the login: the page they were opening. It is
-  // read from en.json so the test survives CA rewording it — what is pinned is
+  // read from en.json so the test survives rewording it — what is pinned is
   // when it shows, not its words.
   test('a login that arrives with somewhere to go back to says so above the form', () => {
     renderLogin('/login?next=%2Fcollections%2FX%2Fthings%2FY');
@@ -228,7 +228,7 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
 
   test('the front door says out loud that OIUEEI is in alpha, right under the door', () => {
     // The same sentence the FAQ and the legal notice carry (common.alphaNotice).
-    // It sits between the sign-in button and the prose (CA, 2026-09-21): the
+    // It sits between the sign-in button and the prose: the
     // whole point of the brick is that nobody signs in without having met it,
     // which a paragraph further down the page cannot promise.
     renderLogin();
@@ -240,7 +240,7 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
   });
 
   test('the no-banner claim’s link comes after the licence, below the door, whatever else the deployment adds', () => {
-    // CA, 2026-09-21: the things you look for deliberately belong at the foot and
+    // The things you look for deliberately belong at the foot and
     // not between a returning member and the field they came for. The page's own
     // "Legal notice & privacy" link went on 2026-10-03 and the "Trouble signing in?"
     // line on 2026-10-04, so what is left is the reading itself.
@@ -264,7 +264,7 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
   });
 
   test('the page has no "Trouble signing in?" line, and nothing in its content links /contact', () => {
-    // It was the locked-out user's way to a human (CA, 2026-09-21) and went on
+    // It was the locked-out user's way to a human and went on
     // 2026-10-04: that way out is the site footer's "Contact us", on every page.
     // The page alone has no footer, so a link to /contact here would be its own.
     const { container } = renderLogin();
@@ -281,7 +281,7 @@ describe('LoginPage privacy claim (the promise the front door makes)', () => {
 });
 
 describe('LoginPage layout: the door first, the reading after', () => {
-  // CA's ordering (2026-09-21): title, then the form, then the way in for
+  // The order: title, then the form, then the way in for
   // someone with no account — and every explanatory paragraph below those.
   // Someone who already has an account should not have to scroll past the
   // manifesto to reach the one field they came for.
@@ -312,7 +312,7 @@ describe('LoginPage layout: the door first, the reading after', () => {
   });
 
   test('the page no longer repeats what OIUEEI is above the form', () => {
-    // login.description was deleted outright (CA, 2026-09-21) — the licence
+    // login.description was deleted outright — the licence
     // paragraph below already says the same in fewer words, and this one stood
     // between a returning member and the field they came for.
     renderLogin();
@@ -320,7 +320,7 @@ describe('LoginPage layout: the door first, the reading after', () => {
   });
 });
 
-describe('LoginPage hero title-logo (S9)', () => {
+describe('LoginPage hero title-logo', () => {
   test('the h1 keeps the accessible name "OIUEEI" even though the logo replaces the text', () => {
     render(
       <MemoryRouter>

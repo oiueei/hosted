@@ -1,7 +1,7 @@
 """
 Catalan demo-data text. Merged onto the structural skeleton in common.py by
 `seed_demo.load_seed_data`. Collection/thing text is always seeded in every
-language at once (localized {lang: text} maps — O6); `--lang=ca` selects this
+language at once (localized {lang: text} maps); `--lang=ca` selects this
 file for the NON-localizable rest: user bios and FAQs.
 
 Text lengths respect model max_length (headline=64, description=256,

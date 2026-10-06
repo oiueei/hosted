@@ -11,7 +11,7 @@ import hdsLang from '../utils/hdsLang';
  * fixed-durations multi-select plus the pickup/return weekday chip row.
  *
  * Extracted from CollectionForm so it can live inside the collection form's
- * "More options" accordion (O1) while the identity cluster stays visible.
+ * "More options" accordion while the identity cluster stays visible.
  * Rendered for every collection: the rules only bite on LEND/RENT things, and
  * leaving them empty is the "no fixed durations" default.
  *
@@ -20,7 +20,7 @@ import hdsLang from '../utils/hdsLang';
  * are the theeeme token names for a selected weekday chip (fill + text — see
  * `WeekdayChips`).
  *
- * `depositPolicy` (D5, 2026-08) rides along here rather than getting its own
+ * `depositPolicy` rides along here rather than getting its own
  * component: it is the same class of statement as the duration/weekday rules
  * — how deposits work in this group — even though the amount itself lives on
  * each thing. Localizable like every other owner text (`LocalizedInfo

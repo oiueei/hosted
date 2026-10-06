@@ -2,8 +2,8 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 /**
  * `externalFormUrl(kind, language)` — the address of a form a deployment hosts
- * elsewhere in the place of one of the app's own ways of writing to the team (TL1, CA
- * 2026-10-05). The `deployment` module is mocked, the only way to exercise a
+ * elsewhere in the place of one of the app's own ways of writing to the team.
+ * The `deployment` module is mocked, the only way to exercise a
  * replacement from this repository (upstream's `externalForms` is `null`).
  */
 const FORMS = {

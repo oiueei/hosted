@@ -16,7 +16,7 @@ class SecurityHeadersMiddleware:
     """Add Content-Security-Policy and Permissions-Policy headers to every response.
 
     Enabled in all environments (registered in base MIDDLEWARE), not just
-    production, so the API and the served SPA shell always carry a CSP (I5).
+    production, so the API and the served SPA shell always carry a CSP.
 
     Two deliberate relaxations:
     - ``style-src 'unsafe-inline'`` stays in every environment: HDS components and

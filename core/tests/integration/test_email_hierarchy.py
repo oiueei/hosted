@@ -1,5 +1,5 @@
 """
-Email language hierarchy (O5): deployment default → collection → recipient.
+Email language hierarchy: deployment default → collection → recipient.
 
 The deployment speaks one language by default (``EMAIL_LANGUAGE``); a collection
 owner can set their group's; a member can set their own, which always wins.
@@ -149,7 +149,7 @@ class TestLanguagePreferences:
         # permanently — an accidental browser language, never a deliberate
         # choice — and it then outranked the collection's own language for
         # every future email to that member, with no way back short of a
-        # profile edit (CA's report, 2026-09-15). The field is no longer read
+        # profile edit. The field is no longer read
         # at all: a new member's `language` stays blank regardless of what a
         # request sends, so the collection's own language keeps governing
         # every email to them until they set a preference themselves.

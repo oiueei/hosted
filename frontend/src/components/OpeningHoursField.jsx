@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next';
  * The weekly opening-hours editor for an HOUR-unit reservations collection:
  * one raw-JSON `TextArea`, matching `Collection.opening_hours` exactly —
  * `{"0".."6": [["HH:MM","HH:MM"], ...]}`, Python weekday() numbering
- * (0=Mon…6=Sun) as string keys, a day absent or given `[]` closed. CA's own
- * call, after trying the per-day block editor this replaced: typing or
+ * (0=Mon…6=Sun) as string keys, a day absent or given `[]` closed. Deliberate,
+ * after trying the per-day block editor this replaced: typing or
  * pasting the JSON directly is faster than clicking through seven fieldsets
  * for a schedule you already have written down somewhere.
  *

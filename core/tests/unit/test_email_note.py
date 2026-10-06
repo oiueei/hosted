@@ -8,7 +8,7 @@ this suite pins the field itself; who may read it back, through the
 collection or a thing, is pinned against the API in
 core/tests/integration/test_curator_only_collection_fields.py.
 
-Owner prose like every other (D5): localized (O6), 512 visible per language,
+Owner prose like every other: localized, 512 visible per language,
 2048 stored — the same shape and the same trap as `request_info`
 (core/tests/unit/test_request_info.py), pinned again rather than assumed.
 """

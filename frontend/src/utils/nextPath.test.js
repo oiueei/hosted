@@ -58,7 +58,7 @@ describe('loginPathFor', () => {
   });
 });
 
-// The doors of the SPA (X3, 2026-10-04): the places a login never returns to and a
+// The doors of the SPA: the places a login never returns to and a
 // "Sign in" link would only lead back to. It is the list `safeNextPath` refuses, so
 // the two cannot disagree about what a door is.
 describe('isDoorPath', () => {

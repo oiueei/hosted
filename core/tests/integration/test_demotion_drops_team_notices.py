@@ -1,6 +1,6 @@
 """Whoever stops running a collection loses its team's notices, and nothing else.
 
-CA demoted a co-curator and, the next time they looked, that person's inbox still
+After a co-curator was demoted, that person's inbox still
 read "New request — Lolioctupus asked for…": a notice they had received as a
 manager, asking for a decision the server would now refuse. A demotion and a
 removal from the group both end the role, so both take out of that person's inbox

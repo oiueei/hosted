@@ -36,8 +36,8 @@ from core.views._helpers import type_validity_error, viewer_code
 
 def _resolve_tag_aliases(tags, vocabulary):
     """Resolve bulk-CSV tags against a collection's tag vocabulary, accepting
-    any language of a localized entry as an alias for its canonical string
-    (S10) — without this a CSV must carry the byte-identical
+    any language of a localized entry as an alias for its canonical string —
+    without this a CSV must carry the byte-identical
     ``{"es": "Crianza", "ca": "Criança"}`` JSON, which no human can type.
 
     Builds ``{value.casefold(): canonical}`` over the vocabulary: a localized
@@ -243,7 +243,7 @@ class ThingViewSet(ModelViewSet):
 
     def perform_update(self, serializer):
         # The type stays editable, but a PATCH can't move a thing to a type its
-        # collection forbids — re-validate against every collection it's in (L4).
+        # collection forbids — re-validate against every collection it's in.
         thing = serializer.instance
         new_type = serializer.validated_data.get("type", thing.type)
         if new_type != thing.type:
@@ -378,7 +378,7 @@ class ThingBulkCreateView(APIView):
             # Tags must belong to the collection's vocabulary (mirrors the
             # single-create subset check in ThingViewSet.perform_create), but
             # a CSV tag may also name a localized entry by any of its
-            # languages (S10) — resolved to the vocabulary's canonical string.
+            # languages — resolved to the vocabulary's canonical string.
             tags = serializer.validated_data.get("tags", [])
             if tags:
                 resolved, unknown, ambiguous = _resolve_tag_aliases(tags, collection.tags)

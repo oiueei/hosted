@@ -12,8 +12,8 @@ import RadioOptionGroup from './RadioOptionGroup';
  * to 1. This keeps a local draft string so the field can be emptied, or briefly
  * hold a half-typed value, while editing.
  *
- * **The parent hears every whole number as it appears, not only on blur**
- * (CA, 2026-09-21). It used to hear a value only when the field lost focus, so
+ * **The parent hears every whole number as it appears, not only on blur**.
+ * It used to hear a value only when the field lost focus, so
  * anything that saves without a blur first — the +/- stepper, which moves focus
  * to its own button and never touches the input, or a keyboard Save — sent the
  * number the page had loaded while the field on screen showed the new one: "how

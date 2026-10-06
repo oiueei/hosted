@@ -142,7 +142,7 @@ class World:
             allowed_thing_types=[Thing.Type.RESERVE_THING],
             # So the reservation-confirmation samples show what the owner's
             # own note (request_info.EmailNote) actually looks like inline,
-            # not just the collection with none set (CA, 2026-09-22).
+            # not just the collection with none set.
             email_note=(
                 "**Antes de venir:** la llave está en portería, pide la de "
                 "la sala polivalente. Deja la sala como la encontraste."

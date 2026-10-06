@@ -84,7 +84,7 @@ export default function HomePage() {
           if (!signal?.aborted) {
             // A co-curator is always on the invite list too, so the group they
             // help run came back here as well and showed twice, under "My
-            // collections" and under "Shared with me" (CA, 2026-10-02). It is
+            // collections" and under "Shared with me". It is
             // theirs to run: it stays under "My collections" only. Filtered here,
             // not in the endpoint, because the profile's "My groups" reads the
             // same list and must keep it.
@@ -201,7 +201,7 @@ export default function HomePage() {
   // come first and the invitation to create sits under them.
   const groupsFirst = myCollections?.length === 0 && invitedCollections?.length > 0;
 
-  // One "Create collection" button, in one place (CA, 2026-10-02: a new account saw
+  // One "Create collection" button, in one place (a new account saw
   // two buttons for the same thing). With any collection of their own — active or
   // not — it is in the hero and the list below is only the list. With none at all
   // it is the invitation under "My collections" instead, and the hero has none.
@@ -324,7 +324,7 @@ export default function HomePage() {
               requests" and "Requests to me" live in the account menu above (in
               every hero since 2026-09-28): this row used to repeat all three, up
               to four full-width buttons stacked on a phone before the inbox and
-              the groups — the crowding the groups-first round wanted gone. It
+              the groups — the crowding that had to go. It
               also judged "Requests to me" differently from the menu (hidden from
               whoever cannot receive requests, where the menu always shows it).
               And only once there is something to create *another* of: an account
@@ -354,7 +354,7 @@ export default function HomePage() {
               <Notification
                 key={inv.accept_code}
                 // `owner_name` is the bare name — the API withholds the owner's
-                // address from someone who is only invited so far (L2) — so an
+                // address from someone who is only invited so far — so an
                 // owner who never set one arrives empty and needs a subject.
                 label={t('home.invitedBy', { name: inv.owner_name || t('common.aMember') })}
                 type="info"
@@ -366,8 +366,8 @@ export default function HomePage() {
                 <strong>{L(inv.collection_headline)}</strong>
                 {/* The answer is two buttons, as everywhere else something is decided
                     (a thing's hero, the invitation email): accepting is the primary
-                    and comes first, declining the secondary (RW2, CA 2026-10-05). They
-                    were two text links side by side. In a `.button-row-wide`, so on a
+                    and comes first, declining the secondary. They
+                    used to be two text links side by side. In a `.button-row-wide`, so on a
                     phone each is the width of the screen; the destinations are the same
                     `/verify/` links as ever. */}
                 <div className="button-row-wide" style={{ marginTop: 'var(--spacing-xs)' }}>
@@ -388,9 +388,9 @@ export default function HomePage() {
         <div className="spacer-xl" />
         {groupsFirst ? myCollectionsSection : sharedSection}
 
-        {/* Alone, and secondary (CA, 2026-10-03). A loose action button goes in a
+        {/* Alone, and secondary. A loose action button goes in a
             `.button-row-wide` even when it is the only one, so on a phone it is the
-            width of the screen (CA, 2026-10-04); `.feedback-link` on the same
+            width of the screen; `.feedback-link` on the same
             element keeps the gap above it. The row is empty when the deployment
             has no feedback URL, and App.css hides an empty `.feedback-link`. */}
         <div className="button-row-wide feedback-link">

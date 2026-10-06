@@ -43,7 +43,7 @@ class BookingRequestError(Exception):
     carries them without restating them. ``as_body()`` is the response body:
     ``{"error": ...}`` plus ``code``/``params`` when there are any — what lets
     the request page say the refusal in the reader's language rather than the
-    English sentence (design round, 2026-09-18).
+    English sentence.
     """
 
     def __init__(self, message, status_code=400, code=None, params=None):
@@ -426,10 +426,10 @@ def _notify_team_of_decision(booking, thing, collection, decider, accepted):
     and whoever decided**. The requester gets their own BOOKING_ACCEPTED/REJECTED,
     and a "so-and-so decided" line about their own request would be noise in their
     inbox. The decider just did it: a card telling them "You confirmed the request"
-    was the reader being told what they had pressed a moment ago (CA, 2026-10-02 —
-    three of five cards in a screenshot). Without this record at all, a
-    co-curator's inbox kept a request the founder had already settled (CA,
-    2026-09-29); with it, that co-curator hears the decision once.
+    was the reader being told what they had pressed a moment ago (three of five
+    cards in one inbox). Without this record at all, a
+    co-curator's inbox kept a request the founder had already settled; with it,
+    that co-curator hears the decision once.
 
     Runs after ``_clear_request_notifications``, which is type-scoped to
     BOOKING_REQUESTED: the decision record carries the same ``booking_code``
@@ -450,9 +450,8 @@ def _notify_team_of_decision(booking, thing, collection, decider, accepted):
             # named them (`send_booking_request_notifications`): the name, or their
             # email when they set none. Every reader here manages the thing, and the
             # request already showed them that address — a bare name here made the
-            # same person "a member" in one card and an email in the next (CA,
-            # 2026-10-02). The decider is a co-member, so theirs stays the bare name
-            # (L2).
+            # same person "a member" in one card and an email in the next. The
+            # decider is a co-member, so theirs stays the bare name.
             "requester_name": booking.requester_code.display_name,
             "decider_name": decider.name,
             "accepted": accepted,
@@ -506,7 +505,7 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
 
     # Bare name, matching `MyBookingSerializer.get_owner_name`: the reader is
     # the requester, a co-member, and the API withholds the owner's address from
-    # them everywhere else (L2).
+    # them everywhere else.
     decider = decided_by if decided_by is not None else booking.owner_code
     owner_name = decider.name
     # The booking doesn't record which collection it was made through, so the
@@ -629,7 +628,7 @@ def resolve_request_collection(thing, collection_code=None, requester=None):
     With a ``requester``, only collections **they may read** are candidates, for
     the named one and both fallbacks alike: the code is the client's to send, and
     the first collection with rules may be a PRIVATE group they are not in — whose
-    note would then reach them by email (found in the 2026-09-18 security round).
+    note would then reach them by email.
     Returns None when no candidate is left — the notification then carries no
     collection and the emails no note.
     """
@@ -1026,7 +1025,7 @@ def _notify_reservation_cancelled(booking, thing, by_user):
     who actually cancelled, so the copy — "{other} cancelled a reservation of
     {thing}" — is true for every reader.
 
-    Whoever cancelled gets their own confirmation too — an email (S2) and, since
+    Whoever cancelled gets their own confirmation too — an email and, since
     2026-09-29, an in-app record of their own: the reservation's whole story
     lives in the inbox, and theirs stopped at the confirmation, with no trace
     that they were the one who ended it."""
@@ -1044,7 +1043,7 @@ def _notify_reservation_cancelled(booking, thing, by_user):
         if curator.code != by_user.code:
             recipients.setdefault(curator.code, (curator, curator.email))
 
-    # Bare name (L2): the email's `_member_name` and the frontend's
+    # Bare name: the email's `_member_name` and the frontend's
     # `common.aMember` cover an unset name.
     payload = {
         "thing_headline": thing.headline,

@@ -2,8 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
- * `/shared` ("Shared with me") left the front end (CA, 2026-10-03: "it has to be
- * simpler"). There is no redirect and no route of its own: the path is a single
+ * `/shared` ("Shared with me") left the front end. There is no redirect and no route of its own: the path is a single
  * segment like any other unknown one, so it is read as a profile code, the way
  * `/anything` is — the signed-in reader lands on `UserPage`'s own "User not
  * found." This renders the whole App at the old path, because the route table is

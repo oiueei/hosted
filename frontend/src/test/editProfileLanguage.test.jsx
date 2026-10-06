@@ -55,7 +55,7 @@ beforeEach(async () => {
   await i18n.changeLanguage('en');
 });
 
-describe('EditProfilePage language Select (S7)', () => {
+describe('EditProfilePage language Select', () => {
   test('changing language fetches the profile once and keeps unsaved edits', async () => {
     renderPage();
 

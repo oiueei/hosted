@@ -4,7 +4,7 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 /**
  * The two thing pages a member lands on most — `ThingPage`, where a magic link
- * drops them after joining to act (S13), and `RequestThingPage` — learn their
+ * drops them after joining to act, and `RequestThingPage` — learn their
  * collection's language only from the thing itself (`collection_language` on
  * `/things/{code}/`), since neither fetches the collection. `SharePage`,
  * `CollectionPage` and `EditCollectionPage` each pin their own wire into

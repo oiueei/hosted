@@ -615,7 +615,7 @@ const HOURLY_RESERVE_THING = {
   reservation_horizon_days: 90,
   reservation_min_minutes: 60,
   reservation_max_minutes: 180,
-  // CA's own schedule: Mon-Thu 10-14 & 16-20, Fri 10-14, weekend closed.
+  // The schedule: Mon-Thu 10-14 & 16-20, Fri 10-14, weekend closed.
   opening_hours: {
     0: [
       ['10:00', '14:00'],

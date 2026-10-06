@@ -50,7 +50,7 @@ export default function RequestThingPage() {
   const backLabel = location.state?.backLabel || t('common.back');
 
   // Fresh each render — a module-scope `new Date()` would freeze "today" at app
-  // load and drift stale past midnight (CODE C18).
+  // load and drift stale past midnight.
   const TODAY = new Date();
   TODAY.setHours(0, 0, 0, 0);
   const MAX_DATE = new Date(TODAY);
@@ -93,7 +93,7 @@ export default function RequestThingPage() {
   // RESERVE_THING's "you need to be a member of this group to reserve" (403)
   // can only happen on a PUBLIC collection (can_view already gated everything
   // else, and a non-member reaches it only there), so joining is always
-  // genuinely possible — CA's call: don't hand the reader a second button for
+  // genuinely possible — so don't hand the reader a second button for
   // a step that was never really a choice, just join them (the signed-in half
   // of login-to-act, CollectionPage's own handleJoin) and retry the exact
   // same reservation, transparently, from inside handleSubmit. `notMemberError`
@@ -103,7 +103,7 @@ export default function RequestThingPage() {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(false);
   // The group an automatic (or fallback) join just made the reader a member
-  // of — said out loud afterwards. Not asking first is CA's call; not telling
+  // of — said out loud afterwards. Not asking first is deliberate; not telling
   // them at all left someone in a group, its digest and its curator's roster
   // without knowing, above all when the retried reservation then failed.
   const [joinedGroup, setJoinedGroup] = useState('');
@@ -261,7 +261,7 @@ export default function RequestThingPage() {
         });
   // The free form (LEND/RENT with no fixed lengths) has two pickers, and each follows
   // the rules the server and the card use: the weekdays the collection allows at both
-  // ends (RW1), and the chained handovers of G8 — the pickup is out on [s, e) of a
+  // ends, and the chained handovers — the pickup is out on [s, e) of a
   // booking, the return is out when the stretch from the pickup runs over one. The
   // return is judged against the pickup chosen so far.
   const freePickupBlocked = (date) =>
@@ -356,8 +356,7 @@ export default function RequestThingPage() {
   // checks it names a collection this thing lives in: joining it as written
   // let a link like `/collections/<someone's PUBLIC group>/things/<a real
   // space>/request` join the reader to that group on one Reserve click, and
-  // hand its curator their email address in the roster (found in the
-  // 2026-09-18 security round). When the route names a collection the server
+  // hand its curator their email address in the roster. When the route names a collection the server
   // didn't resolve to, there is no join at all — the reason is shown instead.
   const joinableCollection = () => {
     const resolved = thing?.collection_code;
@@ -374,7 +373,7 @@ export default function RequestThingPage() {
   // already gated everything else, and a non-member reaches it only there —
   // so joining is always genuinely possible. Membership was never really a
   // choice being offered, so it isn't asked for: join, then retry the
-  // reservation, transparently (CA's call). `notMemberError` + the manual
+  // reservation, transparently. `notMemberError` + the manual
   // fallback button only ever show if this auto-join itself fails.
   const joinThenRetry = async (body, fallbackMessage) => {
     const collectionCode = joinableCollection();
@@ -909,7 +908,7 @@ export default function RequestThingPage() {
           <div className="spacer-xs" />
           <div className="form-grid">
             {/* Said before the press (DESIGN §6): whoever runs the thing is sent the
-                requester's name and email with the request (E1, CA 2026-10-05), so
+                requester's name and email with the request, so
                 the person finds it out here, not by being written to. The address
                 itself is not shown — the page does not hold the user, and does not
                 earn one more request for it. Only here: not in the join-the-group

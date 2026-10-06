@@ -1,20 +1,20 @@
-"""The requester's emails say where they will be written to (E2, CA 2026-10-05).
+"""The requester's emails say where they will be written to.
 
-E1 made the requester's address travel with the request to whoever manages the thing. The
-person it belongs to must not find that out by being written to: the three emails they
-receive about their own request say it, in one sentence each, in the words CA approved.
+The requester's address travels with the request to whoever manages the thing. The
+person it belongs to must not find that out by being written to: the emails they
+receive about their own request say it, in one sentence each, in the approved words.
 
 What is pinned:
 
 - **"request sent"** (``send_booking_confirmation_email``) says it right behind the
   sentence that tells them the curator was told, in the HTML and in the plain text, for
   every verb that waits for a decision;
-- **"accepted"** (``send_booking_decision_email``) is the email it was before this round,
-  and a refusal too: E2 gave it a sentence and E6 (CA, 2026-10-05) took it back out;
+- **"accepted"** (``send_booking_decision_email``) says nothing about it,
+  and neither does a refusal: a sentence about the hand-over was tried there and taken back out;
 - **"reservation confirmed"** (``send_reservation_confirmed_email``) says it;
 - none of the three **prints the address** — the email is already in that inbox;
 - the sentences are the approved ones in the three catalogues, and the managers' emails
-  (which E1 pinned) do not carry them.
+  do not carry them.
 """
 
 from datetime import date
@@ -27,7 +27,7 @@ from django.utils.html import escape
 from core.models import BookingPeriod
 from core.services import email_service
 
-# Letter by letter, as CA approved them (SONNET_TASKS.md, round E): the catalogues are held
+# Letter by letter: the catalogues are held
 # to this table, and the emails to the catalogues.
 APPROVED = {
     "contact_shared_request": {
@@ -45,7 +45,7 @@ APPROVED = {
     },
 }
 
-# What E2 put in the "accepted" email until E6 (CA, 2026-10-05) took it out: the words that
+# What the "accepted" email used to say and no longer does: the words that
 # must not come back, in the three languages.
 GONE_ACCEPTED = {
     "es": "Para quedar, te escribirán aquí, al correo con el que entras en OIUEEI.",
@@ -178,8 +178,8 @@ class TestRequestSent:
 
 @pytest.mark.django_db
 class TestDecision:
-    """E6 (CA, 2026-10-05): the decision email is the one it was before the round. E2 had
-    given the accepted copy a sentence about the hand-over; it is gone, and so is its key."""
+    """The decision email says nothing about being written to. The accepted copy once
+    had a sentence about the hand-over; it is gone, and so is its key."""
 
     @pytest.mark.parametrize("accepted", [True, False])
     @pytest.mark.parametrize("language", LANGUAGES)

@@ -80,7 +80,7 @@ class TestBulkCreate:
 
     def test_rejects_type_invalid_for_collection(self, auth_client, collection):
         """The owner's allowed_thing_types gates the bulk path too, not just the
-        one-by-one create — otherwise a CSV would be the way around it (L4)."""
+        one-by-one create — otherwise a CSV would be the way around it."""
         collection.allowed_thing_types = ["SELL_THING"]
         collection.save(update_fields=["allowed_thing_types"])
         res = auth_client.post(
@@ -178,7 +178,7 @@ class TestBulkCreate:
 
 
 class TestBulkFeeDecimalComma:
-    """Spanish/Catalan spreadsheet exports write decimals as a comma (S9)."""
+    """Spanish/Catalan spreadsheet exports write decimals as a comma."""
 
     def _fee_of(self, auth_client, collection, fee):
         rows = [{"type": "SELL_THING", "headline": "Priced item", "fee": fee}]
@@ -213,7 +213,7 @@ class TestBulkFeeDecimalComma:
 
 class TestBulkTagAlias:
     """A CSV tag may name a localized vocabulary entry in any of its
-    languages, not just the byte-identical canonical JSON (S10)."""
+    languages, not just the byte-identical canonical JSON."""
 
     LOCALIZED_TAG = '{"es": "Crianza", "ca": "Criança"}'
 

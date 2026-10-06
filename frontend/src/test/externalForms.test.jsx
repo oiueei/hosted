@@ -7,7 +7,7 @@ import ca from '../i18n/locales/ca.json';
 
 /**
  * The forms a deployment hosts elsewhere in the place of the app's own ways of writing
- * to the team (TL1, CA 2026-10-05): the footer's "Contact us", "Ideas and bugs" and
+ * to the team: the footer's "Contact us", "Ideas and bugs" and
  * "Request access". Core knows nothing about who hosts them: `deployment/externalForms`
  * is `{ contact, feedback, requestAccess }`, each `{ es, ca, en }`, and the page of the
  * reader's language is opened **as written** — no parameter added — in a new tab.

@@ -12,7 +12,7 @@ const collection = {
 };
 
 describe('CollectionLinkbox', () => {
-  test('renders no thumbnail, even when the collection has one (S8: full-width rows, no image)', () => {
+  test('renders no thumbnail, even when the collection has one (full-width rows, no image)', () => {
     const { container } = render(
       <MemoryRouter>
         <CollectionLinkbox collection={collection} showInfo />
@@ -32,7 +32,7 @@ describe('CollectionLinkbox', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', '/collections/COL001');
   });
 
-  test('a headline written once per language reads as words, never as raw JSON (O6)', () => {
+  test('a headline written once per language reads as words, never as raw JSON', () => {
     // The test i18n mock runs in English, so the English text is what shows.
     const bilingual = {
       ...collection,

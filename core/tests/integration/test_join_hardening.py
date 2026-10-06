@@ -118,7 +118,7 @@ class TestARealTargetStillWorks:
         joiner = User.objects.get(email="joiner@test.com")
         rsvp = RSVP.objects.get(user_code=joiner, target_code=public_collection.code)
         assert len(mail.outbox) == 1
-        # The address was only typed: the membership is made by the click (W1).
+        # The address was only typed: the membership is made by the click.
         assert not public_collection.invites.filter(code=joiner.code).exists()
 
         api_client.get(f"/api/v1/auth/verify/{rsvp.token}/")

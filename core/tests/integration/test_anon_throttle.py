@@ -223,7 +223,7 @@ def test_parse_rate_refuses_what_is_not_a_rate(rate):
 def test_the_shipped_default_is_three_hundred_a_minute():
     # A fresh interpreter, so the answer is what a deployment gets when it sets
     # nothing — not this test run's overrides — and no settings module is reloaded
-    # inside the suite. The number is CA's (2026-09-29).
+    # inside the suite. The number is a deliberate choice.
     env = {k: v for k, v in os.environ.items() if k != "ANON_API_RATE"}
     code = (
         "from config.settings import base;"

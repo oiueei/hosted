@@ -16,7 +16,7 @@ import StatusRegion from './StatusRegion';
  * person until they do**. The copy says so plainly: a member who thinks they
  * just sent an invitation would be misled.
  *
- * The button that opens this says "Invite someone" (CA, 2026-10-03) — it is the
+ * The button that opens this says "Invite someone" — it is the
  * word a member looks for — while everything in here says "Recommend" and that
  * the decision is not theirs, which is what keeps that promise honest: the verb
  * carries that you are putting your name behind this person, which the
@@ -33,10 +33,10 @@ import StatusRegion from './StatusRegion';
  * only one who decides and the copy names them (`{owner}`). With any, it is the
  * team — any of them can approve the recommendation and all of them read the
  * note — so the four sentences that named the founder have `_team` twins that
- * name the curators instead (CA, 2026-10-03; the same case as the "we have told
+ * name the curators instead (the same case as the "we have told
  * the curators" wording of the request emails). They promise only what is true
  * today: the server still notifies the founder alone (`create_proposal`, a
- * decision pending in `CA_TASKS.md`), so none of them says the curators were
+ * decision still pending), so none of them says the curators were
  * told or that anything was sent to them. `coOwnerCount` is how many
  * co-curators the page knows of (`collection.co_owners`, which members get).
  */

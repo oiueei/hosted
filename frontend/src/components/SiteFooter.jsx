@@ -5,20 +5,20 @@ import { aboutPath } from '../deployment';
 import { externalFormUrl } from '../utils/externalForms';
 
 /**
- * The colophon under every page (i14): "Made with ♥︎ in Zona Franca,
+ * The colophon under every page: "Made with ♥︎ in Zona Franca,
  * Barcelona…" after the doors below. From 768px it is **one line** — "What
  * OIUEEI is · Privacy & legal · Contact us · Made with ♥︎ in …" — and under 768px
- * the two lines it always was, the doors over the text (CA, 2026-10-03). Global (mounted once in App), painted with the viewer's theeeme
+ * the two lines it always was, the doors over the text. Global (mounted once in App), painted with the viewer's theeeme
  * `color_02` — the same token every `.form-page` uses as its background — so
  * there is no colour seam under the page. It sits at the bottom of the visible
- * screen on a short page and after the content on a long one (G7, CA 2026-10-05:
- * `#root` is a column as tall as the viewport, `<main>` takes what is left). `useLocation()` re-renders it
+ * screen on a short page and after the content on a long one (`#root` is a column as tall as the viewport, `<main>` takes what
+ * is left). `useLocation()` re-renders it
  * on navigation, which re-reads the theeeme after a login/profile change (the
  * pages get this for free by remounting; a permanent component must ask).
  * The heart is U+2665 + U+FE0E (text presentation) so it inherits the text
  * colour instead of turning into a red emoji.
  *
- * **The links, added in the 2026-08 design round.** `/legal` is the page the
+ * **The links.** `/legal` is the page the
  * privacy claims tell you to go and check, and a deployment's "what is this?"
  * page answers the question a stranger asks first — yet every link to either
  * sat behind a login (Home's empty state) or on a page only a joiner sees
@@ -27,16 +27,16 @@ import { externalFormUrl } from '../utils/externalForms';
  * text links: this is still a colophon, not the HDS `Footer` site-map OIUEEI
  * has no content for (DESIGN §3).
  *
- * **"Contact us" is the third door** (CA, 2026-10-04): it was a speech-bubble icon
+ * **"Contact us" is the third door**: it was a speech-bubble icon
  * in the corner of every hero ("too many icons up there"); it is `/contact` here,
  * on every page, in the reader's language — **or, where a deployment hosts a form of
- * its own for it (`deployment/externalForms.contact`, TL1, CA 2026-10-05), a plain
+ * its own for it (`deployment/externalForms.contact`), a plain
  * link to that form** in the reader's language, in a new tab and announced as one.
  * `/contact` and its page stay in the app either way (upstream uses them; elsewhere
  * they are reached only by typing the address). `/login` keeps its own "trouble signing
  * in?" line, which is a different link, in the content.
  *
- * **Aligned to the content column, not centred** (CA, 2026-10-04): the footer's own
+ * **Aligned to the content column, not centred**: the footer's own
  * background is the full width of the page, and `.site-footer-inner` inside it has
  * the column of the page (1248px, the same side padding as `.page-container`) with
  * `text-align: left`, so the first letter falls on the vertical of the headings and
@@ -58,7 +58,7 @@ export default function SiteFooter() {
   const { t, i18n } = useTranslation();
   const { tc } = useTheeeme();
   // Where "Contact us" goes: a form a deployment hosts elsewhere, in the reader's
-  // language and in a new tab, or the app's own `/contact` (TL1, CA 2026-10-05).
+  // language and in a new tab, or the app's own `/contact`.
   const contactUrl = externalFormUrl('contact', i18n.resolvedLanguage || i18n.language);
   return (
     <footer

@@ -149,7 +149,7 @@ def test_deciding_via_the_api_clears_the_owner_notification(
 def test_deciding_from_the_email_link_clears_the_owner_notification(
     owner, requester, gift_in_collection, quiet_emails
 ):
-    """The RSVP path is how CA hit the bug: accepted by email, notification stayed."""
+    """The RSVP path is how the bug showed: accepted by email, notification stayed."""
     thing, _ = gift_in_collection
     _client(requester).post(f"/api/v1/things/{thing.code}/request/", {}, format="json")
     booking = BookingPeriod.objects.get(thing_code=thing)

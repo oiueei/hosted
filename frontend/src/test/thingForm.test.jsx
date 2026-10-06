@@ -134,7 +134,7 @@ describe('AddThingPage — field visibility', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// AddThingPage — the (i) explaining the thing types (O2)
+// AddThingPage — the (i) explaining the thing types
 // ════════════════════════════════════════════════════════════════════════
 describe('AddThingPage — type explainer popover', () => {
   test('the (i) opens and describes each type the collection offers', async () => {
@@ -383,7 +383,7 @@ describe('AddThingPage — clearing a detail select', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// Deposit (S6) — LEND/RENT only, and never left ambiguous across an edit
+// Deposit — LEND/RENT only, and never left ambiguous across an edit
 // ════════════════════════════════════════════════════════════════════════
 
 describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {

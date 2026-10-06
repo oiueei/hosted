@@ -69,7 +69,7 @@ class TestCsrfEnforcement:
 
         Every unsafe request from that visitor's first page then failed CSRF
         with no cookie to send — worst for a magic link that drops someone
-        straight onto one thing (S13) with no earlier authenticated page (like
+        straight onto one thing with no earlier authenticated page (like
         Home) ever having made a *successful* call here to set it late."""
         client = APIClient(enforce_csrf_checks=True)
         res = client.get("/api/v1/auth/me/")

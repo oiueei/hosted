@@ -14,7 +14,7 @@ a presigned URL, and the storage provider refuses the upload — with
 - the **key** is generated here (``secrets.token_urlsafe(16)``), so a client
   cannot name its own object and overwrite somebody else's;
 - the **folder** is constrained to a known set, and forced in document mode, so
-  an image can never be written into the documents folder (S4);
+  an image can never be written into the documents folder;
 - the **content type** is picked from an allowlist and signed exactly. Raster
   photo types only — SVG is not among them, so an ``<img>``-rendered upload can
   never carry script — or ``application/pdf`` alone in document mode. Because it
@@ -120,7 +120,7 @@ class UploadTicketView(APIView):
 
         if is_document:
             # Document mode always uses the documents folder — an image-mode
-            # request may not choose it, keeping images out of it (S4).
+            # request may not choose it, keeping images out of it.
             folder = DOCUMENT_FOLDER
             allowed_types, max_bytes = DOCUMENT_TYPES, DOCUMENT_MAX_BYTES
         else:

@@ -44,7 +44,7 @@ TEXTS = {
     # Shared by every CTA (one button or two) that has to spell its link out below it.
     "ctas_fallback": "Si ho prefereixes, copia i enganxa aquests enllaços al navegador:",
     # The one-line "what is this" under the OIUEEI parent title, for the one
-    # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
+    # email a reader may open with no idea what OIUEEI is.
     "generic_parent_pitch": (
         "Comparteix el que tens amb la gent que t'envolta. Crea una col·lecció de coses "
         "per regalar, vendre, llogar, deixar o reservar — i convida la gent a "
@@ -168,9 +168,9 @@ TEXTS = {
         "Confirmar la sol·licitud: {accept} | Rebutjar la sol·licitud: {reject}"
     ),
     "booking_request_intro": "{requester} t'ha enviat una sol·licitud {action}:",
-    # The requester's address travels with the request to whoever manages the thing (E1,
-    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
-    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
+    # The requester's address travels with the request to whoever manages the thing:
+    # shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them.
     "requester_email_label": "Email",
     "hold_confirm_cta": "Confirmar la sol·licitud",
     "hold_cancel_cta": "Rebutjar la sol·licitud",
@@ -203,12 +203,12 @@ TEXTS = {
     ),
     "confirmation_intro": "La teva sol·licitud {action} s'ha enviat:",
     # Who was told: one person who runs the thing, or more than one (a team) — the
-    # person's name is not in it any more (CA, 2026-10-02).
+    # person's name is not in it any more.
     "confirmation_outro_one": "Hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
     "confirmation_outro_other": (
         "Hem avisat les persones que gestionen aquesta cosa — aviat et respondran."
     ),
-    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # Where the requester will be written to: the address they sign in with,
     # which the managers now hold. Said, never printed — the email already arrives there.
     "contact_shared_request": (
         "El teu email va amb la sol·licitud: si cal, t'escriuran aquí, al correu amb què entres a "

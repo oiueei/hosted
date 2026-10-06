@@ -1,11 +1,11 @@
 """
-Post-login landing (O3): where VerifyLinkView sends the user after a magic link.
+Post-login landing: where VerifyLinkView sends the user after a magic link.
 
 The destination used to be a client-side ``seenWelcome`` localStorage heuristic —
 and since logout clears that key, every re-login looked like a first visit and
 dumped returning users on the new-visitor page. It is now decided server-side from
 the RSVP's target, the page they were heading for and the user's collections —
-leaving out the demonstration ones (CA, 2026-10-04: one real group → that group,
+leaving out the demonstration ones (one real group → that group,
 anything else → Home, whichever door the link came in by).
 """
 
@@ -126,7 +126,7 @@ def _demo(owner, count=1):
 
 @pytest.mark.django_db
 class TestOnlyRealGroupsDecideTheLanding:
-    """One real group → that group; none, or several → Home (CA, 2026-10-04).
+    """One real group → that group; none, or several → Home.
 
     "Real" leaves out the demonstration collections (``is_onboarding``). The
     answer is the same whichever door the link came in by, so each case that is

@@ -96,7 +96,7 @@ describe('OwnerBookingsPage listing', () => {
   });
 
   test('the thing and its group are one column; who asked, when and the note are the next', async () => {
-    // CA, 2026-10-03: the first column used to hold six lines. "Thing" is the link
+    // The first column used to hold six lines. "Thing" is the link
     // and the group it is in; "Who and when" is who asked, the request date, the
     // dates (or "No dates") and, for a reservation, the project note.
     mockApi([
@@ -151,9 +151,9 @@ describe('OwnerBookingsPage listing', () => {
   });
 
   test('the type and the state sit in a status cell that sizes each label to its word', async () => {
-    // Same cell, same class as /my-bookings (CA, 2026-10-03); the rule is pinned
-    // in `tableCellStyles.test.js`. The type shows only in a table that mixes verbs
-    // (G9), so there are two of them.
+    // Same cell, same class as /my-bookings; the rule is pinned
+    // in `tableCellStyles.test.js`. The type shows only in a table that mixes verbs,
+    // so there are two of them.
     mockApi([
       {
         results: [
@@ -453,8 +453,7 @@ describe('OwnerBookingsPage pagination', () => {
 });
 
 /**
- * On a phone each request is a card instead of a row (`ResponsiveTable`, CA,
- * 2026-10-04): in a table every column was ~100px wide, the status labels were cut
+ * On a phone each request is a card instead of a row (`ResponsiveTable`): in a table every column was ~100px wide, the status labels were cut
  * off and the ✓ ⊗ buttons sat off the screen. The decisions are buttons with their
  * words on them now, and they must do exactly what the icons do — so these tests
  * press them and read the same requests the table's tests read.
@@ -467,7 +466,7 @@ describe('OwnerBookingsPage on a phone', () => {
   afterEach(() => media.restore());
 
   test('a request is a card holding the thing, who asked, when, both labels and both decisions', async () => {
-    // The verb's label is there because this table mixes verbs (G9).
+    // The verb's label is there because this table mixes verbs.
     mockApi([
       {
         results: [
@@ -580,7 +579,7 @@ describe('OwnerBookingsPage on a phone', () => {
 
 /**
  * The verb's label ("Rental", "Reservation"…) over the state in the status cell tells
- * rows apart only when a table mixes verbs (G9, CA 2026-10-05): many collections hold
+ * rows apart only when a table mixes verbs: many collections hold
  * one verb, and the label repeated the same word in every row. It is decided per table
  * — "waiting for your answer" and "already answered" — from that table's own rows, and
  * again whenever more rows are loaded. The state label is not part of it.
@@ -683,7 +682,7 @@ describe('OwnerBookingsPage — the verb’s label only where a table mixes verb
   });
 });
 
-// The thing's name is a bold link (G10, CA 2026-10-05): one rule in App.css for the
+// The thing's name is a bold link: one rule in App.css for the
 // text links inside the component's own class, `.responsive-table` — see
 // `test/tableLinkWeight.test.jsx`. These pin that this page's links are inside it, in
 // the table and in the cards.
@@ -723,8 +722,8 @@ describe('OwnerBookingsPage — the bold links of the table', () => {
   });
 });
 
-// E4 (CA, 2026-10-05). The request email already carries the requester's address to
-// every manager of the thing (E1) and the API sends it in `requester_email`; the page
+// The request email already carries the requester's address to
+// every manager of the thing and the API sends it in `requester_email`; the page
 // is the other place a manager looks for it, so it sits under "Asked by …" as a link
 // they can write from. Table and phone card are painted from the same cell, so one
 // test each says it.

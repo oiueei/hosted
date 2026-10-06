@@ -6,7 +6,7 @@ import { isOfferable } from '../hooks/useCapabilities';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
-// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// core test cannot assume what `deployment/` holds, so the
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
@@ -88,7 +88,7 @@ describe('a deployment that withholds something', () => {
     expect(screen.queryByText(/COMMUNITY/)).not.toBeInTheDocument();
   });
 
-  // "Request access" is a primary button (X8, CA 2026-10-04), not a text link ending
+  // "Request access" is a primary button, not a text link ending
   // in an arrow. It is built as `FeedbackLink` is: the real button CSS on one `<a>`.
   describe('where to ask is a primary button', () => {
     const withRequestUrl = () =>

@@ -55,7 +55,7 @@ class ThingTransferView(APIView):
         if current_transfer:
             current_holder = current_transfer.to_user_id
             # Bare name, not display_name — shown community-wide in the journey,
-            # so the email fallback would leak addresses (L2). A NULL user is a
+            # so the email fallback would leak addresses. A NULL user is a
             # deleted account: no code, no name (right to erasure).
             current_holder_name = (
                 current_transfer.to_user.name if current_transfer.to_user else None

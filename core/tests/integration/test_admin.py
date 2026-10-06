@@ -1,6 +1,6 @@
 """Django admin: the two places its default form gets a field wrong.
 
-`User.about` renders as a Textarea rather than a single-line input (S8), and
+`User.about` renders as a Textarea rather than a single-line input, and
 `Collection.share_token` is not editable at all — see each class below. Both go
 through the ModelAdmin/form layer directly: the full HTTP change-form view sits
 behind django-otp 2FA (config/urls.py's OTPAdminSite), so fighting that gate
@@ -8,7 +8,7 @@ would buy no extra coverage of the thing being tested.
 
 ---
 
-User.about renders as a Textarea, not a single-line input (S8).
+User.about renders as a Textarea, not a single-line input.
 
 A CharField renders in the admin as <input type="text"> by default. Pasting a
 multi-line Markdown bio into that widget silently strips every newline in the

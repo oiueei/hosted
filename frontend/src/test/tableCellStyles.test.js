@@ -2,12 +2,12 @@ import { describe, test, expect } from 'vitest';
 import { declarations } from './cssRules';
 
 /**
- * The contract of the table-cell classes in App.css (CA, 2026-10-03). jsdom does no
+ * The contract of the table-cell classes in App.css. jsdom does no
  * layout, so — in the manner of `heroCornerLayout.test.jsx` — what is pinned is
  * what the pages put in the DOM (their own tests: the class on the cell) and what
  * the rule declares, here. The rendering is for a browser.
  *
- *  - `.table-status-cell` (U13): the type `Tag` over the `StatusLabel`. In a bare
+ *  - `.table-status-cell`: the type `Tag` over the `StatusLabel`. In a bare
  *    column every child stretched to the column's width, so both labels filled it
  *    and `Tag`'s centred text and `StatusLabel`'s left text disagreed on screen.
  */
@@ -31,15 +31,15 @@ describe('.table-cell-lines', () => {
     expect(declarations('.table-cell-lines p', 'font-size')).toEqual(['var(--fontsize-body-s)']);
   });
 
-  test('a long address wraps instead of running off a phone’s card (E4)', () => {
+  test('a long address wraps instead of running off a phone’s card', () => {
     // An email is one word of up to 64 characters, and the requester's now sits in the
     // cell of /owner-bookings.
     expect(declarations('.table-cell-lines p', 'overflow-wrap')).toEqual(['anywhere']);
   });
 
   test('each kind of line has its grey, and the note its italic', () => {
-    // "Requested on …" and "No dates" have none: the cell's own black (CA,
-    // 2026-10-04) — their greys were under AA, which paletteContrast.test.js
+    // "Requested on …" and "No dates" have none: the cell's own black —
+    // their greys were under AA, which paletteContrast.test.js
     // now holds every line class to.
     expect(declarations('.table-cell-line--muted', 'color')).toEqual(['var(--color-black-60)']);
     expect(declarations('.table-cell-line--note', 'color')).toEqual(['var(--color-black-70)']);

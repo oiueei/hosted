@@ -78,7 +78,7 @@
     "sent": "Check your email",
     "sentBody": "We've sent you a magic link to join. Open it on this device to start taking part.",
     "error": "Something went wrong. Please try again.",
-    "alreadyHaveAccount": "Already have an account? Sign in"
+    "alreadyHaveAccount": "Already have an account?"
   },
   "visibility": {
     "publicLabel": "Public collection",
@@ -187,8 +187,8 @@
     "licence": "OIUEEI's code is open source under the EUPL-1.2, a strong copyleft licence. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there.",
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
-    "popIn": "New here? Pop in →",
-    "faqLink": "Questions about this site? →"
+    "popIn": "New here?",
+    "faqLink": "Questions about this site?"
   },
   "verify": {
     "declined": "Declined",
@@ -702,7 +702,8 @@
     "aboutHeading": "About",
     "photoAlt": "Photo of {{name}}",
     "myGroups": "My groups",
-    "myGroupsIntro": "Groups you're in. Leaving one removes your access to it.",
+    "myGroupsIntro": "Every group you're in, including the ones you run. Leaving one removes your access to it.",
+    "youRunIt": "You run it",
     "colGroup": "Group",
     "colTeam": "Run by"
   },
@@ -777,7 +778,7 @@
     "joining": "Sending…",
     "magicLinkSent": "Magic link sent! Check your inbox and click the link to join the group.",
     "errorSendingLink": "Error sending link.",
-    "alreadyHaveAccount": "Already have an account? Sign in →",
+    "alreadyHaveAccount": "Already have an account?",
     "joinSignedIn": "Join {{name}}",
     "joinSignedInGeneric": "Join this group",
     "useAnotherEmail": "Use another email instead",

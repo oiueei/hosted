@@ -10,7 +10,7 @@ export const PDF_MAX_BYTES = 5 * 1024 * 1024;
 /**
  * Upload a PDF straight to object storage through a short-lived server-issued
  * ticket — the same path as `uploadImage`, with `kind: 'document'` so the ticket
- * only permits a PDF and the server forces the documents folder (S4). No resize:
+ * only permits a PDF and the server forces the documents folder. No resize:
  * a document is not a photo. Returns `{ publicId, url }`.
  */
 export async function uploadPdf(file, folder = 'oiueei/documents') {

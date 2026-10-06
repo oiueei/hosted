@@ -1,5 +1,5 @@
 """
-Owner multilingual content (O6): a headline, description or tag label may hold
+Owner multilingual content: a headline, description or tag label may hold
 one text per language as inline JSON — ``{"es": "…", "ca": "…"}``.
 
 The parse is the whole feature, so it is pinned hard: everything it does *not*

@@ -136,7 +136,7 @@ class TestChangingTheTypeOfAThingThatCarriesOne:
 
 class TestTheCsvDoor:
     def test_a_spreadsheet_decimal_comma_is_understood(self):
-        # The one input path with no NumberInput in front of it (S9), so it
+        # The one input path with no NumberInput in front of it, so it
         # takes what a Spanish or Catalan spreadsheet actually exports.
         serializer = ThingBulkRowSerializer(
             data={"type": "RENT_THING", "headline": "A tent", "deposit": "50,00"}

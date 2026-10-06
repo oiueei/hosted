@@ -13,7 +13,7 @@ const SUPPORTED_CODES = SUPPORTED_LANGUAGES.map((entry) => entry.code);
  * language for anyone via `resolve_localized` (`utils/localized.js`)
  * regardless of who is looking.
  *
- * The hierarchy (CA, 2026-09-15, mirrors the email-side
+ * The hierarchy (mirrors the email-side
  * `resolve_email_language`): a signed-in visitor's own deliberately-saved
  * profile language always wins; failing that, the language of the collection
  * they are looking at; failing that, today's plain browser/localStorage
@@ -54,8 +54,7 @@ const SUPPORTED_CODES = SUPPORTED_LANGUAGES.map((entry) => entry.code);
  * translations: on a Catalan-language group whose owner had written every
  * headline in Spanish too, a Spanish browser with no saved preference — every
  * anonymous visitor, every member who never touched the profile's Select — was
- * shown the Catalan, with no way back short of an account (design round,
- * 2026-09-18; the hook had assumed owner text "already resolved per
+ * shown the Catalan, with no way back short of an account (the hook had assumed owner text "already resolved per
  * collection", which it never did). So `ownerTexts` — the raw values the page
  * is about to show (a headline, a description) — veto the override when one of
  * them is a `{lang: text}` map holding the reader's current language. What

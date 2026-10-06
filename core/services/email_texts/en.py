@@ -20,7 +20,7 @@ TEXTS = {
     # someone who is not entitled to their address. `User.display_name` falls
     # back to the email, and `name` is empty for everyone who joined by magic
     # link and never filled in their profile — so the fallback is the *default*
-    # state of a new member, not an edge case (L2). See `_member_name`.
+    # state of a new member, not an edge case. See `_member_name`.
     "a_member": "A member",
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
@@ -44,7 +44,7 @@ TEXTS = {
     # Shared by every CTA (one button or two) that has to spell its link out below it.
     "ctas_fallback": "If you'd rather, copy and paste these links into your browser:",
     # The one-line "what is this" under the OIUEEI parent title, for the one
-    # email a reader may open with no idea what OIUEEI is (CA, 2026-09-22).
+    # email a reader may open with no idea what OIUEEI is.
     "generic_parent_pitch": (
         "Share what you have with the people around you. Create a collection of things "
         "to gift, sell, rent, lend or reserve — and invite people to browse it and ask "
@@ -167,9 +167,9 @@ TEXTS = {
         "Confirm hold: {accept} | Decline hold: {reject}"
     ),
     "booking_request_intro": "{requester} has sent a {action} request:",
-    # The requester's address travels with the request to whoever manages the thing (E1,
-    # CA 2026-10-05): shared by the request email and the reservation notice. There is no
-    # sentence saying that "Reply" reaches them (E5, CA 2026-10-05).
+    # The requester's address travels with the request to whoever manages the thing:
+    # shared by the request email and the reservation notice. There is no
+    # sentence saying that "Reply" reaches them.
     "requester_email_label": "Email",
     "hold_confirm_cta": "Confirm hold",
     "hold_cancel_cta": "Decline hold",
@@ -197,14 +197,14 @@ TEXTS = {
     ),
     "confirmation_intro": "Your {action} request has been sent:",
     # Who was told: one person who runs the thing, or more than one (a team) — the
-    # person's name is not in it any more (CA, 2026-10-02).
+    # person's name is not in it any more.
     "confirmation_outro_one": (
         "We've let the person who runs it know — they'll get back to you soon."
     ),
     "confirmation_outro_other": (
         "We've let the people who run it know — they'll get back to you soon."
     ),
-    # Where the requester will be written to (E2, CA 2026-10-05): the address they sign in with,
+    # Where the requester will be written to: the address they sign in with,
     # which the managers now hold. Said, never printed — the email already arrives there.
     "contact_shared_request": (
         "Your email goes with the request: if needed, they'll write to you here, at the address "

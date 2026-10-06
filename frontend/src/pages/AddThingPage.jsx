@@ -139,7 +139,7 @@ export default function AddThingPage() {
       if (res.ok) {
         // The new thing's code rides along in the navigation state: on a phone the
         // collection page tells the person it worked and takes them to the card
-        // (V6, CA 2026-10-04) — the hero fills the screen and nothing of the upload
+        // — the hero fills the screen and nothing of the upload
         // is in sight. The page ignores it on a desktop. A response without a code
         // simply sends no state.
         const created = await res.json().catch(() => null);

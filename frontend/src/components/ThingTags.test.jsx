@@ -12,7 +12,7 @@ describe('ThingTags', () => {
     expect(screen.getByText('Vintage')).toBeInTheDocument();
   });
 
-  test('a tag written once per language reads as a word, not as raw JSON (O6)', () => {
+  test('a tag written once per language reads as a word, not as raw JSON', () => {
     // The raw string stays the value — it is what the collection vocabulary and
     // the subset check compare — so only the chip resolves. (Test i18n is English.)
     const label = '{"es": "Juguetes", "ca": "Joguines", "en": "Toys"}';

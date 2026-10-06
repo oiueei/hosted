@@ -115,7 +115,7 @@ class User(AbstractBaseUser):
     # exit harder than the entrance, not sensible defaults — and the exit here is
     # one link in the footer of the very email being complained about.
     #
-    # It defaulted OFF until the 2026-08 design round, which is why the digest
+    # It used to default OFF, which is why the digest
     # reached almost nobody: the owner had to find a buried per-collection
     # setting AND every reader had to have opted in to a switch labelled
     # "optional".

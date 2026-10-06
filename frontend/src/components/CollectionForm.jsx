@@ -7,7 +7,7 @@ import ApprovalNotice from './ApprovalNotice';
 
 /**
  * The shared identity cluster of the Create and Edit collection forms — the part
- * that stays visible above the "More options" accordion (O1): the visibility
+ * that stays visible above the "More options" accordion: the visibility
  * toggle and the allowed-thing-types multi-select (its "pick at least one" rule
  * must never hide).
  *

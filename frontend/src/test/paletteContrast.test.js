@@ -289,7 +289,7 @@ describe('the /login alpha warning stays readable', () => {
 // The request tables and "My groups" sit on HDS's white cell, whatever the
 // theeeme, and their lines are Body S — normal text, owing 4.5:1. "Requested
 // on …" and "No dates" were black-50 and black-40 there (3.9:1 and 2.8:1) until
-// CA had them turned black (2026-10-04). Every rule in App.css whose selector
+// they were turned black. Every rule in App.css whose selector
 // names a `.table-cell-line…` or `.table-cell-link…` class and sets a colour is
 // read out and judged, so a grey added later is judged too.
 function tableCellColours() {

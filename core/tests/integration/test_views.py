@@ -87,7 +87,7 @@ class TestAuthViews:
         assert response.data["user"]["code"] == user.code
         assert "access_token" in response.cookies
         assert "refresh_token" in response.cookies
-        # L11: auth is JWT-only — no shadow Django session is opened.
+        # Auth is JWT-only — no shadow Django session is opened.
         assert "sessionid" not in response.cookies
 
     def test_verify_link_invalid(self, api_client):
@@ -1858,7 +1858,7 @@ class TestAuthViewEdgeCases:
         assert response.data["action"] == "BOOKING_ACCEPT"
         booking.refresh_from_db()
         assert booking.status == "ACCEPTED"
-        # Single-action (H1): a booking token performs the action only — it must
+        # Single-action: a booking token performs the action only — it must
         # never authenticate the owner as a side effect (no auth cookies set).
         assert "access_token" not in response.cookies
         assert "refresh_token" not in response.cookies
@@ -1959,7 +1959,7 @@ class TestJoinView:
         That fallback was the demo, and it left with it. What remains is this:
         a collection you were pointed at, an account for the magic link to
         belong to, and the link on its way. Nobody is joined by *typing* an
-        address (W1, 2026-10-04); the click on the link does that, and the
+        address; the click on the link does that, and the
         tests of `test_public_join.py` and `test_share_link.py` press it.
         """
         from unittest.mock import patch

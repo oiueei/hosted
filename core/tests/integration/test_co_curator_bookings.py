@@ -3,7 +3,7 @@
 Commit 3 of co-curators: `faq.py` and `booking.py` move from `thing.is_owner`
 to `thing.can_manage`, so a co-curator answers questions and decides holds; and
 a reservation notice fans out to **every** curator (owner + co-curators), deduped
-and skipping whoever acted — CA's call, "avisos de reserva → a todos los curators".
+and skipping whoever acted.
 COMMUNITY is unchanged.
 """
 
@@ -122,7 +122,7 @@ class TestACoCuratorRunsTheBookings:
         assert booking.status == BookingPeriod.Status.CANCELLED
 
         # the member hears it; the founder (the other curator) hears it; the
-        # co-curator who did it keeps a record of their own (CA, 2026-09-29)
+        # co-curator who did it keeps a record of their own
         told = set(
             InAppNotification.objects.filter(
                 type=InAppNotification.Type.RESERVATION_CANCELLED
@@ -224,7 +224,7 @@ TEAM_ANSWER_SUBJECT = "A question about 'Sala polivalent' has been answered"
 
 
 class TestAnAnswerSettlesTheQuestionForTheWholeTeam:
-    """CA's production report (2026-09-28): a question warns EVERY manager, but
+    """A question warns EVERY manager, but
     the answer warned only the asker — so the co-curator's inbox kept a
     FAQ_QUESTION asking for a decision the founder had already made (and the
     other way round). One answer settles the question for the team: the others
@@ -492,8 +492,8 @@ class TestCommunityFaqsAreUnchanged:
 
 
 class TestAHoldRequestWarnsTheWholeTeam:
-    """A hold request is a question put to everyone who can answer it (CA,
-    2026-09-29). Since 2026-09 a PROPRIETARY collection's co-curators decide
+    """A hold request is a question put to everyone who can answer it.
+    Since 2026-09 a PROPRIETARY collection's co-curators decide
     holds and hear the decision (`BOOKING_DECIDED`), but the request itself
     reached only the thing's owner — so the first they heard of it was that the
     founder had already settled it."""
@@ -587,8 +587,7 @@ class TestAHoldRequestWarnsTheWholeTeam:
 
         assert self._holders(booking) == set()
         # The decision record is a different type and stays — for the founder, who
-        # did not decide. Whoever did gets none: they pressed the button themselves
-        # (CA, 2026-10-02).
+        # did not decide. Whoever did gets none: they pressed the button themselves.
         decided = InAppNotification.objects.filter(
             type=InAppNotification.Type.BOOKING_DECIDED, payload__booking_code=booking.code
         )
@@ -608,7 +607,7 @@ class TestAHoldRequestWarnsTheWholeTeam:
 
 class TestACuratorDecidingTheirOwnRequest:
     """A curator who asks for a thing of their own group may accept or reject that
-    request themselves — **on purpose** (CA, 2026-09-29), not by oversight.
+    request themselves — **on purpose**, not by oversight.
 
     `BookingActionView` lets anyone who `can_manage` the thing decide, and a
     curator of a PROPRIETARY collection manages every thing in it, so nothing

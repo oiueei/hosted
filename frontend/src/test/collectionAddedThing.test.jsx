@@ -14,7 +14,7 @@ import { apiFetch } from '../services/api';
 import CollectionPage from '../pages/CollectionPage';
 
 /**
- * After "Add thing", on a phone (V6, CA 2026-10-04): the hero fills the screen and
+ * After "Add thing", on a phone: the hero fills the screen and
  * nothing of the upload is in sight, which reads as if nothing happened. So the
  * collection page — handed the new thing's code in the navigation state — says it
  * worked, brings the page down to the card if it is not already in view, puts the

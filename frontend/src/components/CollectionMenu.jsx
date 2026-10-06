@@ -9,22 +9,22 @@ import StatusRegion from './StatusRegion';
 const PANEL_ID = 'collection-menu-panel';
 
 /**
- * The collection's own options, one click from its page (CA, 2026-10-03):
+ * The collection's own options, one click from its page:
  * "Add thing" and "Manage members" used to crowd the hero beside "Edit
  * collection", and the two data downloads lived at the foot of the settings
  * page — so a curator ran the group from three places at once. The hero row
- * holds "Edit collection" and "Add thing" (the latter since 2026-10-04, and it
- * stays here too); everything else is this menu, the second of the corner's
- * icons (`AccountMenu` · this · `ShareCollectionMenu`; the contact icon that was
- * a fourth left on 2026-10-04), shown to curators only (owner or co-owner,
+ * holds "Add thing" and "Edit collection" ("Add thing" stays here too);
+ * everything else is this menu, the second of the corner's icons (`AccountMenu` ·
+ * this · `ShareCollectionMenu`; there used to be a fourth, a contact icon), shown
+ * to curators only (owner or co-owner,
  * `is_curator` — the server's own word, the same gate the row uses). Its icon is
- * `IconDocumentGroup` (CA, 2026-10-04): the menu holds the group's things and
+ * `IconDocumentGroup`: the menu holds the group's things and
  * files, which a bare ⋯ (what it was drawn as at first) did not say.
  *
  * Its entries, in order: "Add thing", "Add several at once (CSV)", "Manage
- * members", "Invite many at once (CSV)" (G2, CA 2026-10-05: the CSV of invitations
- * left the members page for a page of its own), a divider, then the downloads. "Add thing" is also a button in the
- * hero row (CA, 2026-10-04, who chose to repeat it).
+ * members", "Invite many at once (CSV)" (the CSV of invitations has a page of its own, not
+ * a block of the members page), a divider, then the downloads. "Add thing" is also
+ * a button in the hero row (deliberately repeated here).
  *
  * The panel mixes links with the three download buttons, so it is a plain
  * `<div>` — not the account menu's `<nav>` (this is not all navigation)
@@ -37,13 +37,12 @@ const PANEL_ID = 'collection-menu-panel';
  * page calls once and hands here and to `CollectionDownloadsStatus`; the
  * calendar entry appears only where the group holds date-based things
  * (`hasDateThings`, the rule the hero button always used). The JSON
- * download is **direct, no warning** (CA, 2026-10-03): the privacy notice
+ * download is **direct, no warning**: the privacy notice
  * it used to carry at the settings page's foot went with it — whoever
  * runs a group should already know what its copy holds, and the place to
- * say so is a curator rights-and-obligations page that does not exist yet
- * (noted in `CA_TASKS.md`).
+ * say so is a curator rights-and-obligations page that does not exist yet.
  *
- * **A member has one too** (X2, CA 2026-10-04), in the same place of the corner
+ * **A member has one too**, in the same place of the corner
  * and with the same trigger, panel and dismissal — `isCurator={false}`. What a
  * member holds is theirs, not the group's: the welcome document (when there is
  * one: a link that opens in a new tab and says so, as "Ideas and bugs" does),
@@ -53,7 +52,7 @@ const PANEL_ID = 'collection-menu-panel';
  * document is the first entry of a curator's menu too: it no longer sits as a
  * loose link in the hero.
  *
- * **"Requests to me" is the first entry of both** (X4, CA 2026-10-04), for whoever can
+ * **"Requests to me" is the first entry of both**, for whoever can
  * receive requests, with a divider under it: it moved here from the account menu on
  * the pages that have this one. The same menu is the corner of a thing's page when it
  * is read through a collection.
@@ -80,7 +79,7 @@ export default function CollectionMenu({
   const buttonRef = useRef(null);
   useDismissable({ open, setOpen, wrapperRef, buttonRef });
   // "Requests to me" is the first entry, for whoever receives requests, on the
-  // collection's page and on a thing's (X4, CA 2026-10-04): moved from the account
+  // collection's page and on a thing's: moved from the account
   // menu, with the same question asked the same way when this panel opens.
   const receivesRequests = useReceivesRequests(open);
   const { calendar, stats, collectionExport } = downloads ?? {};
@@ -122,7 +121,7 @@ export default function CollectionMenu({
             </>
           )}
           {/* The group's welcome PDF, first for everyone who is served it. It was a
-              loose link in the hero until X2 (2026-10-04). A new tab, said out loud
+              loose link in the hero. A new tab, said out loud
               the way "Ideas and bugs" says it: the visible words first, then the
               sentence — not HDS's `openInNewTab`, which prints its label. */}
           {welcomeDocUrl && (
@@ -142,8 +141,8 @@ export default function CollectionMenu({
                 {t('collectionPage.addThing')}
               </Link>
               {/* The CSV import used to be a line under an empty group's phrase, then a
-                  section of the add page; it is a page of its own now (X5, CA
-                  2026-10-04) and this entry — curators only — is the way to it. */}
+                  section of the add page; it is a page of its own now
+                  and this entry — curators only — is the way to it. */}
               <Link to={`/collections/${code}/import`} onClick={close}>
                 {t('collectionPage.addManyCsv')}
               </Link>
@@ -151,8 +150,8 @@ export default function CollectionMenu({
                 {t('collectionPage.manageGuests')}
               </Link>
               {/* The CSV of invitations, like the CSV of things above: it was the last
-                  block of the members page, and it is a page of its own since G2
-                  (CA, 2026-10-05). Curators only, as the invitations are. */}
+                  block of the members page, and it is a page of its own.
+                  Curators only, as the invitations are. */}
               <Link to={`/collections/${code}/invites/import`} onClick={close}>
                 {t('bulkInvite.heading')}
               </Link>

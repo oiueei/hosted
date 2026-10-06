@@ -2,8 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
- * `/collections/:code/import` is a route of the app, protected like `/add` (X5, CA
- * 2026-10-04). The page's own tests render the page; only the whole App can say the
+ * `/collections/:code/import` is a route of the app, protected like `/add`. The page's own tests render the page; only the whole App can say the
  * route table has the entry and that it sits behind `RequireAuth`.
  */
 globalThis.fetch = vi.fn((url) => {

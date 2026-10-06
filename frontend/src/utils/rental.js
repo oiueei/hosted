@@ -215,15 +215,14 @@ export const rangeBlocked = (pickup, len, blockedPeriods) => {
 //   (`BookingPeriod.has_overlap`: s < end AND e > start). Both pickers used to grey
 //   out BOTH ends of every booking (the calendar *display* range), which blocked
 //   picking up on another booking's return day and returning on another's pickup day
-//   — two things the server allows (G8, CA 2026-10-05: a card saying "available from
+//   — two things the server allows (a card saying "available from
 //   06/10" with a calendar that began on the 7th).
 // - **The collection's weekdays** (`rental_weekdays`, Python's 0 = Monday; `[]` = any
 //   day). The server demands them at BOTH ends — `Collection.rental_violation` answers
 //   `rental_pickup_weekday` for the pickup and `rental_return_weekday` for the return —
 //   and it does so with or without fixed lengths. The fixed-length form already applied
 //   them (`isPickupDisabled`); the free form did not, so a Wednesday could be picked in
-//   a "Saturdays only" collection and the server refused it on send (RW1, CA
-//   2026-10-05). A day of the wrong weekday is out in both pickers, whatever the other
+//   a "Saturdays only" collection and the server refused it on send. A day of the wrong weekday is out in both pickers, whatever the other
 //   one holds: the return picker has no pickup to measure against until one is chosen,
 //   and the weekday does not depend on it.
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -366,7 +365,7 @@ const minutesRangeOverlaps = (start, end, ranges) =>
 // The duration choices to offer: every multiple of `minMinutes` from itself
 // up to `maxMinutes` (the collection's `reservation_min_minutes`/
 // `reservation_max_minutes`). The named presets this list once grew — "half
-// day" and "full day" — were removed 2026-09, CA's call: with minute-granular
+// day" and "full day" — were removed: with minute-granular
 // steps the plain multiples already say the same thing in numbers. The cost
 // is honest: a span crossing a gap between two blocks (the old "full day")
 // is no longer offered here, though the backend still accepts one sent by

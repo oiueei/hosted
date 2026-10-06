@@ -164,7 +164,7 @@ class CollectionViewSet(ModelViewSet):
         # remove_thing is intentionally NOT gated by IsCollectionOwner here: its
         # rule is broader (in COMMUNITY mode a thing's own owner may remove it), so
         # it is enforced inline in the action. It also fetches via get_object_or_404,
-        # so an object-level permission would never run for it anyway (the I3 footgun).
+        # so an object-level permission would never run for it anyway.
         #
         # destroy stays owner-only — deleting the collection is deliberately not
         # a co-owner power. update/partial_update widen to the curator tier.
@@ -194,7 +194,7 @@ class CollectionViewSet(ModelViewSet):
 
     def perform_destroy(self, instance):
         # Bare name — this rides an in-app notification to every member, and a
-        # member is never served their owner's address (L2).
+        # member is never served their owner's address.
         owner_name = instance.owner.name
         headline = instance.headline
         invitees = list(instance.invites.all())
@@ -300,7 +300,7 @@ class CollectionViewSet(ModelViewSet):
             )
 
         # The thing's type must be valid for this collection — same rules as
-        # create/update, so add-thing can't smuggle in a forbidden type (L4).
+        # create/update, so add-thing can't smuggle in a forbidden type.
         type_error = type_validity_error(thing.type, collection)
         if type_error:
             return Response({"error": type_error}, status=status.HTTP_400_BAD_REQUEST)
@@ -379,7 +379,7 @@ class CollectionViewSet(ModelViewSet):
 #
 # Coarse abuse prevention, not an exact quota: it also follows RATELIMIT_ENABLE
 # (the same switch the django-ratelimit decorators read, so dev and tests stay
-# consistent) and its DatabaseCache read-then-set shares base.py's I7
+# consistent) and its DatabaseCache read-then-set shares base.py's
 # non-atomicity note.
 class CollectionInviteView(APIView):
     """
@@ -496,7 +496,7 @@ class CollectionInviteView(APIView):
             # Notify the removed user — invited_user is already in hand (fetched
             # above), so there's no need to re-query and no DoesNotExist to guard.
             # Bare name — the person being removed is the last reader who
-            # should be handed the owner's address on the way out (L2).
+            # should be handed the owner's address on the way out.
             owner_name = request.user.name
             send_collection_revoke_email(
                 owner_name, collection.headline, invited_user.email, collection=collection
@@ -867,7 +867,7 @@ class CollectionProposeInviteView(APIView):
         # and the first of those is an email-membership oracle: a member could
         # test any address against the roster, 30 a day, and get a yes/no. The
         # roster a non-owner receives is `code` + `name` and no email precisely
-        # so that co-members' addresses stay the owner's to see (L2) — this
+        # so that co-members' addresses stay the owner's to see — this
         # endpoint handed the same fact back one guess at a time. Answering with
         # both possibilities keeps the proposer's real question answered ("do I
         # need to do anything? no") while confirming neither branch.
@@ -1003,7 +1003,7 @@ def _send_bulk_invites(inviter_name, headline, recipients, collection=None):
             except Exception:
                 # Per-email SMTP failures are already handled inside _send; anything
                 # reaching here is unexpected (e.g. a template/programming error).
-                # Log it (redacted per M5) instead of silently dropping the invite,
+                # Log it (redacted) instead of silently dropping the invite,
                 # but keep going so one bad row can't abort the rest of the batch.
                 logger.warning(
                     "Bulk invite email failed for %s", redact_email(email), exc_info=True
@@ -1136,7 +1136,7 @@ class CollectionBulkInviteView(APIView):
             if full:
                 return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
 
-        inviter_name = request.user.name  # bare name — invitees are third parties (L2)
+        inviter_name = request.user.name  # bare name — invitees are third parties
         invited = []
         recipients = []  # (email, accept_link, reject_link)
         with transaction.atomic():
@@ -1390,7 +1390,7 @@ class SharePreviewView(APIView):
     `CollectionSerializer` already serves any signed-in member.
 
     ``headline``/``description`` are returned raw: either may be a
-    ``{lang: text}`` map the SPA resolves against the reader's language (O6),
+    ``{lang: text}`` map the SPA resolves against the reader's language,
     exactly like every other collection read. ``language`` powers the SPA's
     `useCollectionLanguage` — this is the one join door (`/share/{token}`)
     reached before a stranger is a member of anything, so the collection's own

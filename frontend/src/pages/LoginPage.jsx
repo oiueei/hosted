@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { TextInput, Button, Notification, Koros } from 'hds-react';
 import { getCsrfToken } from '../services/api';
 import { safeNextPath } from '../utils/nextPath';
@@ -112,7 +112,7 @@ export default function LoginPage() {
               {message}
             </Notification>
             {/* The column and the full width of the form it replaces, so it is as wide as
-                "New here?" under it (CA, 2026-10-04: it used to hug its own text). */}
+                "New here?" under it (it used to hug its own text). */}
             <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
               <Button
                 variant="secondary"
@@ -221,20 +221,19 @@ export default function LoginPage() {
               one — upstream there is no FAQ content to link to, and a link to a
               404 is worse than one link fewer. It is a thing you go looking
               for deliberately, so it sits at the foot with nothing after it,
-              and not between someone and the field they came for (CA,
-              2026-09-21). Two lines used to follow it that no longer do: the
-              legal notice (CA, 2026-10-03: the site footer, on this same page,
+              and not between someone and the field they came for. Two lines used to follow it that no longer do: the
+              legal notice (the site footer, on this same page,
               already links /legal, which is where the art. 13 information has
               to be) and the locked-out user's lifeline, "Trouble signing in?
-              Tell us…", a link to /contact (CA, 2026-10-04: simpler). That way
+              Tell us…", a link to /contact (simpler without it). That way
               out is not gone, it moved: "Contact us" is the third door of the
               site footer, on every page and so on this one. */}
           {faqPath && (
-            <p className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
-              <Link to={faqPath} style={{ textDecoration: 'underline' }}>
+            <div className="measure" style={{ marginTop: 'var(--spacing-m)' }}>
+              <ButtonLink to={faqPath} fullWidth style={btnSecondaryStyle}>
                 {t('login.faqLink')}
-              </Link>
-            </p>
+              </ButtonLink>
+            </div>
           )}
         </div>
       </div>

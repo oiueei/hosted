@@ -1,5 +1,5 @@
 """
-Collection welcome & rules PDF (O4): uploaded by the owner, emailed once as a link
+Collection welcome & rules PDF: uploaded by the owner, emailed once as a link
 to every member the first time they join.
 """
 
@@ -119,7 +119,7 @@ class TestWelcomeDocOnJoin:
     def test_the_signed_in_door_sends_it_like_every_other(
         self, authenticated_client, user, user2, collection
     ):
-        """The fourth way in, added this round, and the one nothing checked.
+        """The fourth way in, and the one nothing checked.
 
         `POST /collections/{code}/join/` reaches `_join_collection` by import
         rather than by reimplementation, which is exactly why it is worth one

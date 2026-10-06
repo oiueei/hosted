@@ -196,7 +196,7 @@ class CollectionSerializer(serializers.ModelSerializer):
 
     def get_owner_name(self, obj):
         # Bare name, not display_name — guests see this, so the email fallback
-        # would leak the owner's address (L2).
+        # would leak the owner's address.
         return obj.owner.name
 
     def get_thumbnail_url(self, obj):
@@ -344,7 +344,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             # export answers the same question and the two must not drift; other
             # modes and non-curators never receive the demographics.
             return obj.owner_member_rows(members)
-        # Co-members' emails are curator-only (L2); logged-in guests get only
+        # Co-members' emails are curator-only; logged-in guests get only
         # code + name. An ANONYMOUS reader of a PUBLIC collection gets codes
         # alone — the member count survives for the card, but real names of a
         # group's members don't belong to the open web (early-adopter hardening).
@@ -438,14 +438,14 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
     # stored ISO list straight off the JSONField.
     closed_dates = serializers.CharField(required=False, allow_blank=True, write_only=True)
     home_page = serializers.URLField(max_length=128, required=False, allow_blank=True)
-    # Localized like every other owner text (D5): a deposit policy that could
+    # Localized like every other owner text: a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
     # stored — the same arithmetic as `description`.
     deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     # A note for anyone about to request anything from this collection — every
     # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy,
-    # wider (CA's call, 2026-09): 512 visible per language, 2048 stored — the
+    # wider: 512 visible per language, 2048 stored — the
     # storage cap has to be given explicitly since it no longer matches
     # LOCALIZED_TEXT_STORAGE's default (1024, sized for deposit_policy's 256).
     request_info = LocalizedTextField(
@@ -506,7 +506,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         # A collection is born PRIVATE, whatever its mode, when the client doesn't
-        # say otherwise; making it PUBLIC is an explicit decision (CA, 2026-09-29).
+        # say otherwise; making it PUBLIC is an explicit decision.
         # COMMUNITY used to be born PUBLIC "so a stranger can reach it", but the
         # person who contributes a thing to a group is not shown whether it is
         # public (the Public/Private tag is the curators' since 2026-09-21, and
@@ -752,14 +752,14 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
     # stored ISO list straight off the JSONField.
     closed_dates = serializers.CharField(required=False, allow_blank=True, write_only=True)
     home_page = serializers.URLField(max_length=128, required=False, allow_blank=True)
-    # Localized like every other owner text (D5): a deposit policy that could
+    # Localized like every other owner text: a deposit policy that could
     # only be written in one language would be the single piece of group prose
     # that a bilingual group cannot say twice. 256 visible per language, 1024
     # stored — the same arithmetic as `description`.
     deposit_policy = LocalizedTextField(max_length=256, required=False, allow_blank=True)
     # A note for anyone about to request anything from this collection — every
     # verb, not just RESERVE_THING. Same localized-text shape as deposit_policy,
-    # wider (CA's call, 2026-09): 512 visible per language, 2048 stored — the
+    # wider: 512 visible per language, 2048 stored — the
     # storage cap has to be given explicitly since it no longer matches
     # LOCALIZED_TEXT_STORAGE's default (1024, sized for deposit_policy's 256).
     request_info = LocalizedTextField(

@@ -63,8 +63,7 @@ beforeEach(() => {
 });
 
 /**
- * The cross-group page, `/shared`, left the app (CA, 2026-10-03: "it has to be
- * simpler"). Home used to end the list of groups with a quiet line that led to it.
+ * The cross-group page, `/shared`, left the app. Home used to end the list of groups with a quiet line that led to it.
  */
 describe('HomePage — no way to a page that no longer exists', () => {
   test('a member of several groups is not offered /shared under them', async () => {
@@ -117,7 +116,7 @@ describe('HomePage — which section leads', () => {
 /**
  * A co-curator is always on the group's invite list too, so the group they help
  * run came back from both reads and showed twice — under "My collections" and
- * under "Shared with me" (CA, 2026-10-02). It is theirs to run: it belongs to the
+ * under "Shared with me". It is theirs to run: it belongs to the
  * first section only, and a group they are a plain member of stays in the second.
  */
 describe('HomePage — a group you help run shows once', () => {
@@ -211,7 +210,7 @@ describe('HomePage — the hero holds one button', () => {
 });
 
 /**
- * "Create collection" in one place (CA, 2026-10-02): a new account saw the hero's
+ * "Create collection" in one place: a new account saw the hero's
  * button and, under "My collections", "Create your first collection" — two buttons
  * for the same thing. With any collection of their own the button is in the hero
  * and the list below is only the list; with none at all it is the invitation
@@ -401,7 +400,7 @@ describe('HomePage — invitations waiting for an answer', () => {
     );
   });
 
-  // RW2 (CA, 2026-10-05): the answer is two buttons, as everywhere else something is
+  // The answer is two buttons, as everywhere else something is
   // decided. They were two text links side by side. The destinations did not change.
   describe('the answer is two buttons', () => {
     const WITH_THEEEME = {

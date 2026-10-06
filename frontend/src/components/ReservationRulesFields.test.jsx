@@ -57,7 +57,7 @@ describe('ReservationRulesFields — the bounded day fields', () => {
   });
 
   test('a whole number is committed to the parent as soon as it is typed — no blur needed', () => {
-    // The bug (CA, 2026-09-21): the parent only heard a number when the field
+    // The bug: the parent only heard a number when the field
     // lost focus, so a save that came without one (the +/- stepper, a keyboard
     // Save) sent the loaded value while the screen showed the new one. Note the
     // absence of any `fireEvent.blur` below: that is the whole point.
@@ -73,8 +73,8 @@ describe('ReservationRulesFields — the bounded day fields', () => {
   ])(
     'the + stepper on %s reaches the parent with no focus change at all',
     (_n, field, setter, from, to) => {
-      // The buttons beside the number are what the owner actually presses (CA's
-      // screenshot, 2026-09-21). They take focus themselves and never touch the
+      // The buttons beside the number are what the owner actually presses.
+      // They take focus themselves and never touch the
       // input, so its blur never fires: whatever they change has to reach the
       // parent on its own, or a Save afterwards sends the loaded value.
       const { props } = renderFields();

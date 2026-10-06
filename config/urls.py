@@ -19,7 +19,7 @@ from django_ratelimit.decorators import ratelimit
 # (django-otp's own device-config UI needs a verified login to reach it).
 admin.site.__class__ = OTPAdminSite
 
-# Throttle admin login attempts (M3): wrap the admin site's login view with an
+# Throttle admin login attempts: wrap the admin site's login view with an
 # IP-keyed POST rate limit so the password form can't be brute-forced. Applied
 # before `admin.site.urls` is built below so get_urls() picks up the wrapper.
 # (django-ratelimit on top of django-otp — no django-axes. The admin path is

@@ -39,7 +39,7 @@ import ResponsiveTable from '../components/ResponsiveTable';
  * are the column showing who asked rather than who owns, and the actions being
  * accept/reject rather than cancel.
  *
- * On a phone each row is a card (`ResponsiveTable`, CA, 2026-10-04) and the
+ * On a phone each row is a card (`ResponsiveTable`) and the
  * decisions are buttons with their words on them, where the table has the ✓ and ⊗
  * icons that name themselves in a tooltip. Both faces call the same handlers
  * (`acceptRow`, `rejectRow`, `setCancelRow`), so the transfer-of-ownership
@@ -249,16 +249,17 @@ export default function OwnerBookingsPage() {
         <div className="table-cell-lines">
           {/* Always shown: a requester who never set a name arrives as '' from
               `requester_name` (the serializer never puts their address in the name's
-              place, L2), and dropping the line entirely loses "who asked".
+              place), and dropping the line entirely loses "who asked".
               `common.aMember` is the same stand-in the inbox and the cards use. */}
           <p>
             {t('ownerBookings.requestedBy', {
               name: row._requesterName || t('common.aMember'),
             })}
           </p>
-          {/* And the address itself, under the name, as a link (E4, CA 2026-10-05): the
+          {/* And the address itself, under the name, as a link: the
               reader runs this thing, and the request email already carries it to them
-              (E1) — L2's own exception, the reader holds it. It arrives in
+              — the exception to never naming anyone by their address, the reader holds
+              it. It arrives in
               `requester_email`; the line is left out when it comes empty. Not a card's
               own line: `ResponsiveTable` paints the card from this same cell. */}
           {row._requesterEmail && (
@@ -361,7 +362,7 @@ export default function OwnerBookingsPage() {
   ];
 
   // Each table decides on its own whether its rows carry the verb's label: only when
-  // it mixes verbs (G9).
+  // it mixes verbs.
   const pendingRows = markMixedVerbs(rows.filter((r) => r._status === 'PENDING'));
   const otherRows = markMixedVerbs(rows.filter((r) => r._status !== 'PENDING'));
   const tableTheme = tc.color_03
@@ -423,7 +424,7 @@ export default function OwnerBookingsPage() {
         <>
           <div className="spacer-s" />
           {/* A pager is a loose action button like any other: in a wide row, so on a
-              phone it is the width of the screen (CA, 2026-10-04). */}
+              phone it is the width of the screen. */}
           <div className="button-row-wide">
             <Button
               variant="secondary"

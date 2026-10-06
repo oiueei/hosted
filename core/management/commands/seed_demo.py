@@ -4,7 +4,7 @@ Seed demo data for OIUEEI (Lala, Lele, Lili, Lolo, Lulu and all their things).
 This command is idempotent — run it as many times as you like. The text content
 for each supported language lives in `core/management/commands/seed_data/`.
 
-**Collection and thing text is seeded in every language at once** (O6): each
+**Collection and thing text is seeded in every language at once**: each
 headline/description is stored as a localized ``{"es": …, "ca": …, "en": …}``
 map built from all the language files, so every reader sees the demo in their
 own language — one seeding serves every deployment. Tag labels are localized

@@ -1,6 +1,6 @@
 /**
- * The addresses in a line of text someone typed or pasted into the invitations field
- * (G6, CA 2026-10-05): one, or several separated by commas — `lalo@oiueei.com,
+ * The addresses in a line of text someone typed or pasted into the invitations field:
+ * one, or several separated by commas — `lalo@oiueei.com,
  * lelo@oiueei.com`. A semicolon separates too (what a mail client writes), and so does
  * any whitespace, line breaks included: an address cannot hold a space, and a browser
  * turns the line breaks of a column pasted into a one-line field into spaces, so
