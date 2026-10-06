@@ -17,6 +17,21 @@ import ButtonLink from '../components/ButtonLink';
 import ResponsiveTable from '../components/ResponsiveTable';
 import useTheeeme from '../hooks/useTheeeme';
 
+// The groups of the account, each once: the ones it runs first, then the ones it is
+// only a member of; each part keeps the order of its own list. What it runs is what
+// `/collections/` lists (the active ones — Home lists the archived apart) and, should
+// that list be missing, a co-curator's group from the other list, which says so in
+// `is_curator`: a co-curator is always on the invite list too.
+function groupRows(running, memberships) {
+  const all = [
+    ...running.filter((c) => c.status === 'ACTIVE').map((c) => ({ ...c, _runs: true })),
+    ...memberships.map((c) => ({ ...c, _runs: !!c.is_curator })),
+  ];
+  const seen = new Set();
+  const once = all.filter((c) => !seen.has(c.code) && seen.add(c.code));
+  return [...once.filter((c) => c._runs), ...once.filter((c) => !c._runs)];
+}
+
 export default function UserPage() {
   const { userCode: paramCode } = useParams();
   const { t, i18n } = useTranslation();
@@ -24,11 +39,15 @@ export default function UserPage() {
   const L = useLocalized();
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
-  // The groups I'm a *member* of — not the ones I own, which live on Home. This
-  // is where "Leave the group" moved to: it used to sit in the
-  // collection hero, third in a stack of unlabelled text links under the
-  // description, one of them destructive. Leaving is something you do to your
-  // own membership, so it belongs with the rest of your account.
+  // Every group the account is in, so the profile shows them all: the ones it
+  // runs, owner or co-curator (`/collections/`, the list Home calls "My
+  // collections"), and the ones it is only a member of (`/invited-collections/`).
+  // Each list is read on its own, so one failing costs only its half. Leaving is
+  // something you do to your own membership, so "Leave the group" is here, and
+  // only for a member: whoever runs a group cannot leave it (the server refuses
+  // it; a co-curator is demoted first), so those rows say so instead of offering
+  // a link that would fail.
+  const [running, setRunning] = useState([]);
   const [memberships, setMemberships] = useState([]);
 
   const userCode = paramCode || localStorage.getItem('userCode');
@@ -81,11 +100,15 @@ export default function UserPage() {
   useEffect(() => {
     if (!isOwnProfile) return undefined;
     const controller = new AbortController();
+    apiFetch('/api/v1/collections/', { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setRunning(Array.isArray(data?.results) ? data.results : []))
+      // A failed fetch only costs its half of the groups — it must never take the
+      // profile down with it.
+      .catch(() => {});
     apiFetch('/api/v1/invited-collections/', { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => setMemberships(Array.isArray(data) ? data : []))
-      // A failed fetch simply shows no groups section — it must never take the
-      // profile down with it.
       .catch(() => {});
     return () => controller.abort();
   }, [isOwnProfile]);
@@ -103,6 +126,8 @@ export default function UserPage() {
   if (!user) {
     return <LoadingSpinner />;
   }
+
+  const groups = groupRows(running, memberships);
 
   const heroContent = (
     <div
@@ -181,7 +206,7 @@ export default function UserPage() {
             <div className="spacer-l" />
           </>
         )}
-        {isOwnProfile && memberships.length > 0 && (
+        {isOwnProfile && groups.length > 0 && (
           <>
             <h2>{t('userPage.myGroups')}</h2>
             <div className="spacer-s" />
@@ -221,23 +246,30 @@ export default function UserPage() {
                   headerName: <span className="sr-only">{t('common.colActions')}</span>,
                   transform: (row) => (
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Link
-                        to={`/collections/${row._code}/leave`}
-                        state={{ headline: row._headline }}
-                        className="table-cell-link--muted"
-                      >
-                        {t('collectionPage.leaveGroup')}
-                      </Link>
+                      {row._runs ? (
+                        <div className="table-cell-lines">
+                          <p className="table-cell-line--muted">{t('userPage.youRunIt')}</p>
+                        </div>
+                      ) : (
+                        <Link
+                          to={`/collections/${row._code}/leave`}
+                          state={{ headline: row._headline }}
+                          className="table-cell-link--muted"
+                        >
+                          {t('collectionPage.leaveGroup')}
+                        </Link>
+                      )}
                     </div>
                   ),
                 },
               ]}
               caption={<span className="sr-only">{t('userPage.myGroups')}</span>}
-              rows={memberships.map((c) => ({
+              rows={groups.map((c) => ({
                 _id: c.code,
                 _code: c.code,
                 _headline: L(c.headline),
                 _team: teamText(c, t, i18n.resolvedLanguage || i18n.language),
+                _runs: c._runs,
               }))}
               indexKey="_id"
               renderIndexCol={false}

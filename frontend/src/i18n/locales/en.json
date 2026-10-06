@@ -702,7 +702,8 @@
     "aboutHeading": "About",
     "photoAlt": "Photo of {{name}}",
     "myGroups": "My groups",
-    "myGroupsIntro": "Groups you're in. Leaving one removes your access to it.",
+    "myGroupsIntro": "Every group you're in, including the ones you run. Leaving one removes your access to it.",
+    "youRunIt": "You run it",
     "colGroup": "Group",
     "colTeam": "Run by"
   },

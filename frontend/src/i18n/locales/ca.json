@@ -696,7 +696,8 @@
     "aboutHeading": "Sobre",
     "photoAlt": "Foto de {{name}}",
     "myGroups": "Els meus grups",
-    "myGroupsIntro": "Grups on ets. Si en deixes un, en perds l'accés.",
+    "myGroupsIntro": "Tots els grups on ets, també els que dinamitzes. Si en deixes un, en perds l'accés.",
+    "youRunIt": "El dinamitzes",
     "colGroup": "Grup",
     "colTeam": "Dinamització"
   },

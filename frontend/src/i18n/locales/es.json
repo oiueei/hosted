@@ -696,7 +696,8 @@
     "aboutHeading": "Acerca de",
     "photoAlt": "Foto de {{name}}",
     "myGroups": "Mis grupos",
-    "myGroupsIntro": "Grupos en los que estás. Si dejas uno, pierdes el acceso.",
+    "myGroupsIntro": "Todos los grupos en los que estás, también los que dinamizas. Si dejas uno, pierdes el acceso.",
+    "youRunIt": "Lo dinamizas",
     "colGroup": "Grupo",
     "colTeam": "Dinamización"
   },
