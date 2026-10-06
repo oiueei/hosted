@@ -58,7 +58,7 @@ class TestMagicLinkFlow:
 class TestInAppInvitationFlow:
     """Scenario: a logged-in user accepts a collection invite from the HomePage
     in-app banner. The codes my-invitations hands back must be resolvable by the
-    (token-only) verify endpoint — guards the H1 regression where it returned the
+    (token-only) verify endpoint — guards the regression where it returned the
     6-char PK and the in-app accept/decline links 401'd."""
 
     def test_my_invitations_codes_resolve_via_verify(self, api_client):

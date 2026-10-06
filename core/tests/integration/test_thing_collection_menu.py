@@ -1,4 +1,4 @@
-"""`collection_menu` on the thing endpoint (X4, CA 2026-10-04).
+"""`collection_menu` on the thing endpoint.
 
 The page of a thing read from inside a collection paints the same corner menu as
 the collection's own page, and needs a little of that collection to do it: whether

@@ -70,7 +70,7 @@ class TestCommunityWithAllowedTypes:
     ):
         """COMMUNITY's whole point is that members contribute — so the owner's
         allowlist has to reach them. Gating only the owner would mean the one
-        person it was written for can add anything (L4: no path bypasses it)."""
+        person it was written for can add anything (no path bypasses it)."""
         coll = Collection.objects.create(
             code="COLL12",
             owner=user,

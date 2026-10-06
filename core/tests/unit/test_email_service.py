@@ -59,7 +59,7 @@ def test_send_returns_false_on_socket_error():
 def test_public_send_does_not_raise_when_provider_is_down():
     """A mandatory email (magic link) must not raise when SMTP fails — the
     sign-in action it backs must not 500 because mail is temporarily down.
-    Needs DB access now (S2): the viral-line gate looks the recipient up."""
+    Needs DB access: the viral-line gate looks the recipient up."""
     with patch(
         "core.services.email_service.EmailMultiAlternatives.send",
         side_effect=smtplib.SMTPException("down"),
@@ -72,7 +72,7 @@ def test_public_send_does_not_raise_when_provider_is_down():
 
 @pytest.mark.django_db
 def test_html_email_embeds_logo_inline():
-    """An activity email carries the OIUEEI logo as a CID attachment (S5): one
+    """An activity email carries the OIUEEI logo as a CID attachment: one
     inline image attachment on the message, referenced from the HTML
     alternative, plain-text body untouched."""
     email_service.send_invite_rejected_email("Ana", "Ropa de invierno", "owner@example.com")
@@ -91,7 +91,7 @@ def test_html_email_embeds_logo_inline():
 def test_logo_send_uses_multipart_related():
     """The CID logo rides in multipart/related, not the default multipart/mixed,
     so Apple Mail renders it once inline instead of also appending a full-size
-    copy with a paperclip (S1). The multipart/alternative (plain + html) stays
+    copy with a paperclip. The multipart/alternative (plain + html) stays
     nested inside, and the logo keeps its Content-ID."""
     email_service.send_invite_rejected_email("Ana", "Ropa de invierno", "owner@example.com")
 
@@ -162,7 +162,7 @@ def test_the_legal_link_label_is_translated():
     assert ">Legal y privacidad<" in html
 
 
-# --- The magic link: greeting, button, fallback (CA, 2026-09-21) --------------
+# --- The magic link: greeting, button, fallback --------------
 
 
 @pytest.mark.django_db
@@ -171,7 +171,7 @@ def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     shows only the subject — the body opens with the same greeting, so the
     message stands on its own once opened (and says *what* was joined before
     asking for the click). The collection is also this email's <h1> parent
-    now (CA, 2026-09-22), so the name appears twice — once as the title, once
+    now, so the name appears twice — once as the title, once
     in the sentence beneath it."""
     email_service.send_magic_link_email(
         "someone@example.com",
@@ -193,8 +193,8 @@ def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     mail.outbox.clear()
     email_service.send_magic_link_email("someone@example.com", "http://x/verify/t")
     generic_html = mail.outbox[0].alternatives[0][0]
-    # No collection to be the parent: the mark itself leads as the <h1>
-    # (CA, 2026-09-22), not the literal word "OIUEEI".
+    # No collection to be the parent: the mark itself leads as the <h1>,
+    # not the literal word "OIUEEI".
     assert GENERIC_H1_LOGO_IMG in generic_html
     assert email_service.T("generic_parent_pitch", lang="en") in generic_html
     assert "Hello, welcome to OIUEEI!" in generic_html
@@ -208,7 +208,7 @@ def test_magic_link_action_is_a_button_with_the_link_spelled_out():
     """Email clients strip <form>/<button> and ignore CSS custom properties,
     so the CTA is an inline-styled anchor in the app's literal bus blue — and
     the raw link follows as text, because the one click this email exists for
-    is exactly what some clients refuse (CA, 2026-09-21)."""
+    is exactly what some clients refuse."""
     link = "http://localhost:3000/verify/tok"
     email_service.send_magic_link_email("someone@example.com", link)
     html = mail.outbox[0].alternatives[0][0]
@@ -259,18 +259,17 @@ def test_the_invitation_source_note_is_translated_too():
     assert "no tornes a rebre res nostre" in mail.outbox[0].body
 
 
-# The OIUEEI mark as the footer draws it (60x17, CA's own numbers, 2026-09-22
-# third review round) — the small size, wherever a non-generic email's footer
-# still carries it. The generic "OIUEEI" parent case is different: the mark
-# moves to the <h1>, bigger (see GENERIC_H1_LOGO_IMG / test_a_no_parent_email_...),
-# and the footer carries none.
+# The OIUEEI mark as the footer draws it (60x17) — the small size, wherever a
+# non-generic email's footer still carries it. The generic "OIUEEI" parent case
+# is different: the mark moves to the <h1>, bigger (see GENERIC_H1_LOGO_IMG /
+# test_a_no_parent_email_...), and the footer carries none.
 LOGO_IMG = (
     '<img src="cid:oiueei-logo" alt="OIUEEI" height="17" width="60" '
     'style="display:block;width:60px;height:17px;margin-bottom:15px;border:0;">'
 )
 
-# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — 162x46
-# (CA's own numbers), since the mark itself is the title there.
+# The mark as the <h1> draws it for a GENERIC_PARENT ("OIUEEI") email — 162x46,
+# since the mark itself is the title there.
 GENERIC_H1_LOGO_IMG = (
     '<img src="cid:oiueei-logo" alt="OIUEEI" height="46" width="162" '
     'style="display:block;width:162px;height:46px;border:0;">'
@@ -278,7 +277,7 @@ GENERIC_H1_LOGO_IMG = (
 
 
 def _assert_the_footer_order(html, generic=False):
-    """The bottom of every message, in one fixed order (CA, 2026-09-22): a
+    """The bottom of every message, in one fixed order: a
     rule, the OIUEEI mark, then whatever else applies (viral line, "manage
     your preferences", a sender-specific extra line), and always last the
     legal link. Checks the two fixed points — mark right after the rule,
@@ -301,7 +300,7 @@ def _assert_the_footer_order(html, generic=False):
     assert tail.strip() == "</a></p></div></div></html>"
 
 
-# --- The invitation: accept / decline as buttons (CA, 2026-09-21) -------------
+# --- The invitation: accept / decline as buttons -------------
 
 INVITE_ACCEPT = "http://localhost:3000/rsvp/accept"
 INVITE_REJECT = "http://localhost:3000/rsvp/reject"
@@ -378,7 +377,7 @@ def test_the_invitation_link_fallback_is_translated_too(lang, phrase):
     assert phrase in html
 
 
-# --- The hold request: confirm / cancel as buttons (CA, 2026-09-21) ----------
+# --- The hold request: confirm / cancel as buttons ----------
 
 HOLD_ACCEPT = "http://localhost:3000/rsvp/confirm"
 HOLD_REJECT = "http://localhost:3000/rsvp/cancel"
@@ -477,11 +476,11 @@ def test_the_hold_request_buttons_and_fallback_are_translated(
 def test_the_hold_request_buttons_say_request_and_decline_never_reservation_or_cancel(
     user, user2, thing, lang, confirm, decline, never
 ):
-    """A hold on a loan is a **request** (D2: "reservation" is only RESERVE_THING, which
+    """A hold on a loan is a **request** ("reservation" is only RESERVE_THING, which
     confirms itself and never comes through here), and the second button *declines* it:
-    it cancels nothing. The email said "Confirmar la reserva / Cancelar la reserva"
-    (CA, 2026-10-02), where the app's own button had said "Reject request" since the
-    R round. The buttons and the plain-text line that repeats them say the same."""
+    it cancels nothing. The email used to say "Confirmar la reserva / Cancelar la
+    reserva", where the app's own button said "Reject request". The buttons and the
+    plain-text line that repeats them say the same."""
     with override_settings(EMAIL_LANGUAGE=lang):
         msg = _hold_request(user, user2, thing)
     html = msg.alternatives[0][0]
@@ -494,7 +493,7 @@ def test_the_hold_request_buttons_say_request_and_decline_never_reservation_or_c
         assert never not in text.replace(thing.headline, "")
 
 
-# --- The house rule for action buttons (CA, 2026-09-21) ------------------------
+# --- The house rule for action buttons ------------------------
 #
 # The primary action of an email — sign in, open the group, look at the thing —
 # is a primary button, never a bare text link. Where an email asks a yes/no
@@ -516,8 +515,8 @@ def test_no_email_action_is_ever_a_bare_text_link():
     `_links` draws a row of plain text links. It used to have one allowed
     caller — the account-erasure confirmation, kept a text link on the
     reasoning that a destructive step was not obviously the place for the
-    app's friendliest control — until CA reviewed the real thing and asked for
-    it to be a button too (2026-09-22). `_links` now has NO callers left in
+    app's friendliest control — until it was made a button too.
+    `_links` now has NO callers left in
     the module; this fails the moment a new email reaches for it instead of
     `_cta` (one action) or `_ctas` (a yes/no pair)."""
     import ast
@@ -544,7 +543,7 @@ def test_no_email_action_is_ever_a_bare_text_link():
 def test_the_light_no_fallback_button_is_gone():
     """`_button` used to be a lighter `_cta`: a bare button, no "copy and paste
     this link" sentence, no raw URL under it. The house rule grew a second
-    clause (CA, 2026-09-22): EVERY CTA repeats its link as plain text now, not
+    clause: EVERY CTA repeats its link as plain text now, not
     only the ones whose whole job is one click — so the light variant has
     nothing left to be lighter than, and is deleted rather than kept unused."""
     assert not hasattr(email_service, "_button")
@@ -616,17 +615,17 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
     assert f">{approve}</a>" in html and f">{reject}</a>" in html
 
 
-# --- Email addresses shown as data (CA, 2026-09-22, second review round) -----
+# --- Email addresses shown as data -----
 #
 # An address the reader should notice but not click as an action — a proposed
 # guest, a contact form's sender, an operator alert's Owner — is bus blue,
 # underlined, and now a real `mailto:` link: a client's own auto-linkification
 # (Gmail, iOS/Android "data detectors") wraps a bare address that LOOKS like
 # one in its own default blue regardless of any inline style on a non-anchor
-# element around it, which is what CA kept seeing after the first pass added
-# `!important` everywhere else. Making it a real anchor, in our colour, up
+# element around it, which kept happening after `!important` was added
+# everywhere else. Making it a real anchor, in our colour, up
 # front removes the client's opening to re-wrap it its own way. None is bold —
-# `_email()` used to be; CA called that a second, unexplained treatment for
+# `_email()` used to be, which was a second, unexplained treatment for
 # the same kind of value `_field(email=True)` already rendered plainly.
 
 
@@ -658,9 +657,8 @@ def test_a_field_shown_as_an_address_is_a_plain_mailto_link():
 
 
 def test_a_named_email_field_keeps_the_name_plain_and_links_only_the_address():
-    """`_named_email_field()` — the capacity alarm's Owner row (CA, 2026-09-22,
-    third review round): the person's name is not itself a link, only their
-    parenthesised address is."""
+    """`_named_email_field()` — the capacity alarm's Owner row: the person's name is not itself a
+    link, only their parenthesised address is."""
     html = email_service._render_email(
         [email_service._named_email_field("Owner", "Lala", "lala@example.com")], lang="en"
     )
@@ -674,7 +672,7 @@ def test_a_named_email_field_keeps_the_name_plain_and_links_only_the_address():
 
 @pytest.mark.django_db
 def test_the_capacity_alarms_owner_row_has_no_angle_brackets():
-    """CA's report, 2026-09-22: 'Owner: Lala <lala.sample@example.com>' read as
+    """'Owner: Lala <lala.sample@example.com>' read as
     a stray, unstyled HTML tag next to the name — parentheses instead, and
     only the address itself is a link (the two rows above)."""
     from core.models import Collection, User
@@ -735,12 +733,12 @@ def test_a_sender_with_no_lang_in_scope_still_declares_the_deployment_default():
     assert '<html lang="es">' in html
 
 
-# --- The viral line is a highlighted callout (CA, 2026-09-22) ----------------
+# --- The viral line is a highlighted callout ----------------
 
 
 @pytest.mark.django_db
 def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
-    """CA, looking at the real thing: the growth line reads as one more grey
+    """In the real message the growth line reads as one more grey
     footer sentence otherwise. A pale-yellow background + padding sets it
     apart; its own text is black, not the footer's muted grey — only the CTA
     link inside keeps the bus-blue LINK_STYLE."""
@@ -753,11 +751,11 @@ def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
     )
 
 
-# --- The card gives up its own framing on a phone (CA, 2026-09-22) -----------
+# --- The card gives up its own framing on a phone -----------
 
 
 def test_the_card_and_page_shed_their_padding_below_480px():
-    """CA, opening a real message in the Gmail iOS app: the page's 40px
+    """Opening a real message in the Gmail iOS app: the page's 40px
     padding plus the card's own 24px stack to ~64px lost from each side on a
     phone-width screen, shrinking the reading column to almost nothing. Below
     480px both containers give up their framing (no grey/white split, no
@@ -825,8 +823,8 @@ def _phone_rules(css):
 
 def test_buttons_go_full_width_below_480px():
     """Every button carries the class its phone and hover rules are written against,
-    so on a phone all of them fill the width of the text column. CA, the same
-    real message: a button sized to its own label sits
+    so on a phone all of them fill the width of the text column. In the same
+    real message, a button sized to its own label sits
     narrower than the paragraphs around it once the card's own padding is gone
     too — full width, centred, aligned with the text column either side. The
     `ctas` pair's side margin (for the desktop side-by-side layout) has to be
@@ -906,16 +904,16 @@ def test_a_dated_booking_email_shows_the_dates_ddmmyyyy(user, user2, thing):
     assert "2026-03-05" not in body and "2026-03-05" not in html
 
 
-# --- "We've let the person who runs it know" (CA, 2026-10-02; CT1, 2026-10-05) ---
+# --- "We've let the person who runs it know" ---
 #
-# The "Your request was sent" email named the thing's owner ("Hemos avisado a Carlos
-# Alberto"), but with a team the request reaches everyone who runs the thing. It now
+# The "Your request was sent" email named the thing's owner ("Hemos avisado a
+# Lala"), but with a team the request reaches everyone who runs the thing. It now
 # says who was told by number — the person who runs it, or the people who run it — and
 # the verb follows ("responderá" / "responderán"), in the HTML paragraph and in both
 # plain-text sentences. How many were told is the request's fan-out: the thing's
-# managers bar the requester. CT1 took "dinamizador" / "curator" out of it (untrue in
-# a COMMUNITY, where whoever runs a thing is its owner) and put the request page's own
-# words in: letter by letter, as CA approved them (SONNET_TASKS.md, round CT).
+# managers bar the requester. It does not say "dinamizador" / "curator" (untrue in
+# a COMMUNITY, where whoever runs a thing is its owner) and uses the request page's own
+# words, letter by letter.
 
 TOLD = {
     "es": (
@@ -1000,7 +998,7 @@ def test_without_being_told_how_many_the_confirmation_counts_them_itself(
     assert TOLD["en"][0] in mail.outbox[0].body
 
 
-# --- A declined request is "declined", not "cancelled" (CA, 2026-10-02) ----------
+# --- A declined request is "declined", not "cancelled" ----------
 #
 # The manager presses "Decline request" and the requester's app says "Request
 # declined — X declined your request", but their email said the request "has been
@@ -1057,7 +1055,7 @@ def test_a_confirmed_request_email_still_says_confirmed(user, user2, thing, lang
     assert DECLINED[lang][0] not in msg.body
 
 
-# --- A booking for a single day says the day once (CA, 2026-10-02) ---------------
+# --- A booking for a single day says the day once ---------------
 #
 # "Tu solicitud está confirmada — Fechas: 13/10/2026 - 13/10/2026": a loan or a
 # rental that starts and ends the same day printed it twice, in the "Dates" line
@@ -1170,7 +1168,7 @@ def test_a_one_day_reservation_says_its_day_once_in_the_dates_line(user, user2, 
     assert "13/10/2026 - 13/10/2026" not in html
 
 
-# --- Every email names one parent, as its <h1> (CA, 2026-09-22) -------------
+# --- Every email names one parent, as its <h1> -------------
 #
 # A thing's own headline for thing-scoped mail (people recognise the drill,
 # the room, the listing — not a group name they may belong to several of), a
@@ -1182,8 +1180,8 @@ def test_a_one_day_reservation_says_its_day_once_in_the_dates_line(user, user2, 
 @pytest.mark.django_db
 def test_a_collection_scoped_email_leads_with_the_collection_name(user):
     """A genuinely collection-scoped email (no thing, no FAQ question involved)
-    still takes the collection's name as its <h1>, as it did before this
-    round — the invitation is one of these."""
+    still takes the collection's name as its <h1>, as it always did —
+    the invitation is one of these."""
     email_service.send_collection_invite_email(
         "Lala", "Chalmercadillo", "invitee@example.com", "http://x/a", "http://x/r"
     )
@@ -1201,7 +1199,7 @@ def test_a_collection_scoped_email_leads_with_the_collection_name(user):
 def test_a_thing_scoped_email_names_the_thing_not_its_collection(user, user2, thing):
     """The `thing` fixture ("Test Thing") lives in "Test Collection" — a
     reservation-style email about it now names the THING at the top, not the
-    group it happens to be in (CA, 2026-09-22; it used to be the collection's
+    group it happens to be in (it used to be the collection's
     name). The wordmark still closes the message, after the rule."""
     from datetime import date
 
@@ -1234,11 +1232,12 @@ def test_a_thing_scoped_email_names_the_thing_not_its_collection(user, user2, th
 
 @pytest.mark.django_db
 def test_the_reservation_notice_names_the_requesters_email(user, user2, thing):
-    """CA, 2026-09-22: the notice named who reserved but not how to reach
+    """The notice used to name who reserved but not how to reach
     them, leaving the owner with nothing to act on. The requester's address
-    is a legitimate one to show here (L2's own exception — the reader already
-    holds it, via BookingPeriodSerializer.requester_email in the app), so it
-    now rides the notice too, as a bus-blue mailto: link."""
+    is a legitimate one to show here (the exception to never naming anyone by
+    their address — the reader already holds it, via
+    BookingPeriodSerializer.requester_email in the app), so it now rides the
+    notice too, as a bus-blue mailto: link."""
     from datetime import date
 
     from core.models import BookingPeriod
@@ -1303,14 +1302,14 @@ def test_a_standalone_things_email_names_the_thing_too(user, user2):
 @pytest.mark.django_db
 def test_a_no_parent_email_still_gets_oiueei_as_its_h1(user):
     """Account-lifecycle mail (here: the erasure link) has no thing, no
-    collection, no question — "OIUEEI" is its <h1> (CA, 2026-09-22; it used to
+    collection, no question — "OIUEEI" is its <h1> (it used to
     grow no header at all), without the generic pitch (a destructive step is
     not a pitch moment — see GENERIC_PARENT's own docstring)."""
     email_service.send_account_delete_email(user, "http://x/confirm")
 
     html = mail.outbox[0].alternatives[0][0]
     # The mark itself is the <h1> now — double the footer size, no literal
-    # "OIUEEI" text (CA, 2026-09-22: "OIUEEI is the protagonist" of this kind
+    # "OIUEEI" text ("OIUEEI is the protagonist" of this kind
     # of email — the mark moves up rather than appearing twice).
     assert GENERIC_H1_LOGO_IMG in html
     assert html.count("cid:oiueei-logo") == 1  # once total: h1 only, footer none
@@ -1321,16 +1320,16 @@ def test_a_no_parent_email_still_gets_oiueei_as_its_h1(user):
 
 @pytest.mark.django_db
 def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
-    """The OIUEEI mark is 60x17 in the footer (CA, 2026-09-22, third review
-    round — CA's own numbers, up from 53x15) wherever the parent is a real
+    """The OIUEEI mark is 60x17 in the footer (up from 53x15)
+    wherever the parent is a real
     thing/collection/question — the erasure email now being a GENERIC_PARENT
     case (its mark leads as a bigger <h1> instead, see the test below), a
     collection-scoped send is what still exercises the small footer mark.
     Apple Mail ignored the width/height attributes and drew the old 212x60
     file at its natural size while Gmail honoured them, so the size is also
     declared as inline CSS regardless of the file's own pixels.
-    **The file itself is 1944x552** (a second Figma export, CA: "un poco mas
-    ligero de peso" — a lighter font weight, same display sizes), replacing
+    **The file itself is 1944x552** (a second Figma export, with a lighter font weight and
+    the same display sizes), replacing
     the earlier 106x30 (2x) and then 846x240 versions, both reported pixelated
     on a real screen: a client honouring the displayed 60x17 draws crisp,
     heavily-oversampled art; one that ignores both attributes and CSS — Apple
@@ -1355,7 +1354,7 @@ def test_every_logo_is_the_small_mark_and_the_file_cannot_be_drawn_giant(user):
 @pytest.mark.django_db
 def test_a_generic_parent_emails_mark_is_the_h1_bigger_than_the_footer(user):
     """The one exception: when "OIUEEI" is the parent, its own mark leads the
-    message as the <h1> (CA, 2026-09-22) — 162x46, bigger than the footer's
+    message as the <h1> — 162x46, bigger than the footer's
     60x17 — and the footer carries none, so the mark never appears twice."""
     email_service.send_account_delete_email(user, "http://x/confirm")
 

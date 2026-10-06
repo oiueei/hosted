@@ -1,5 +1,5 @@
 """
-Owner multilingual content (O6) end to end: the owner of a bilingual group writes
+Owner multilingual content end to end: the owner of a bilingual group writes
 one text per language as inline JSON, and each member — on the page and in their
 inbox — reads their own.
 

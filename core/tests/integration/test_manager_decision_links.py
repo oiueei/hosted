@@ -1,4 +1,4 @@
-"""Each manager decides a hold with their own emailed link (CA, 2026-09-29).
+"""Each manager decides a hold with their own emailed link.
 
 A hold request is emailed to every manager of the thing (its owner and the
 curators of a PROPRIETARY collection it sits in), each with **their own**
@@ -142,14 +142,14 @@ class TestEveryManagerGetsTheirOwnEmail:
 class TestTheRequesterIsToldHowManyWereWarned:
     """The "request sent" email says who was warned by number — "the person who runs
     it", or "the people who run it" — and that number is the request's own fan-out:
-    the thing's managers bar the requester (CA, 2026-10-02: it used to name the
-    owner, which was untrue once a team runs the thing; CT1, CA, 2026-10-05: nor
-    does it say "curator", which is untrue in a COMMUNITY, where whoever runs a
+    the thing's managers bar the requester (it used to name the
+    owner, which was untrue once a team runs the thing; nor does it say
+    "curator", which is untrue in a COMMUNITY, where whoever runs a
     thing is its owner, a member)."""
 
     ONE = "We've let the person who runs it know"
     MANY = "We've let the people who run it know"
-    # Letter by letter, as CA approved them (SONNET_TASKS.md, round CT), for one person.
+    # Letter by letter, for one person.
     RUNS_IT = {
         "es": "Hemos avisado a quien gestiona esta cosa — te responderá pronto.",
         "ca": "Hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
@@ -403,7 +403,7 @@ class TestAuthorityIsCheckedAtTheClick:
 
         assert res.status_code == 403
         # The sentence is what it always was, for a client that knows nothing more;
-        # the code is what lets the verify page say why (H9b).
+        # the code is what lets the verify page say why.
         assert res.data == {"error": "Not authorized", "code": "no_longer_manages"}
         booking.refresh_from_db()
         assert booking.status == BookingPeriod.Status.PENDING

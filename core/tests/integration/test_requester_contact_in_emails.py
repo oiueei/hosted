@@ -1,8 +1,8 @@
-"""The email of whoever asks for a thing reaches whoever manages it (E1, CA 2026-10-05).
+"""The email of whoever asks for a thing reaches whoever manages it.
 
-The first dogfooding is a public COMMUNITY collection selling things: whoever sells does
-not know whoever buys, and the request email said only "Lele sent you a request". CA's
-decision: the requester's address travels **with the request**, not when it is accepted,
+A public COMMUNITY collection selling things: whoever sells does
+not know whoever buys, and the request email said only "Lele sent you a request". So
+the requester's address travels **with the request**, not when it is accepted,
 so the seller can agree on price, place and time before committing the thing; it holds
 for every collection and every verb; and it goes **one way** — requester to manager. The
 manager's address is never shown to the requester, who will have it if they are written to.
@@ -13,7 +13,7 @@ What is pinned, for the two emails that tell a manager someone asked:
   the HTML and as ``Email: …`` in the plain text — in **each** manager's copy, not just the
   owner's;
 - **replying works**: ``Reply-To`` is the requester's address, so "Reply" reaches them. There
-  is no sentence saying so any more (E5, CA 2026-10-05): the field and the ``Reply-To`` are
+  is no sentence saying so any more: the field and the ``Reply-To`` are
   the whole of it;
 - it is **one way**: the requester's own emails carry no ``Reply-To``, and never the manager's
   address.
@@ -29,8 +29,8 @@ from core.models import BookingPeriod, Collection, User
 from core.services import email_service
 from core.services.booking_service import send_booking_request_notifications
 
-# The sentence that explained the Reply-To, in the three languages, until E5 (CA, 2026-10-05)
-# took it out. Kept here as the words that must not come back.
+# The sentence that used to explain the Reply-To, in the three languages. Kept here as the
+# words that must not come back.
 GONE_HINTS = {
     "es": "Para escribirle, responde a este correo.",
     "ca": "Per escriure-li, respon aquest correu.",
@@ -127,7 +127,7 @@ class TestTheRequestEmailEachManagerGets:
     def test_there_is_no_sentence_about_replying_in_any_language_but_reply_still_reaches_them(
         self, user, user2, thing, language
     ):
-        """E5 (CA, 2026-10-05): the line that explained the Reply-To is gone. The field and
+        """The line that explained the Reply-To is gone. The field and
         the Reply-To stay: "Reply" still goes to whoever asked."""
         user.language = language
         user.save(update_fields=["language"])
@@ -200,7 +200,7 @@ class TestTheReservationNotice:
     def test_it_has_the_address_and_no_sentence_about_replying_in_any_language(
         self, user, user2, thing, language
     ):
-        """E5 (CA, 2026-10-05): the Email field and the Reply-To stay, the sentence is gone."""
+        """The Email field and the Reply-To stay, the sentence is gone."""
         user.language = language
         user.save(update_fields=["language"])
         booking = self._reservation(user, user2, thing)

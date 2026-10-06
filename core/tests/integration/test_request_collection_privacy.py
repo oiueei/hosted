@@ -6,8 +6,8 @@ to both). A member of the public one requests it; the request names a
 collection (`collection_code`, whatever the client sent) or names none and the
 server approximates. Whatever it resolves to decides the owner's note in the
 requester's emails (`Collection.email_note`, written for that group's own
-members) and whose rental rules apply. Before the 2026-09-18 security round
-the private group could be that collection: named outright, or reached by the
+members) and whose rental rules apply. Before that was closed, the
+private group could be that collection: named outright, or reached by the
 fallbacks — first collection with rules, lowest code — which never asked
 whether the requester could open it.
 """

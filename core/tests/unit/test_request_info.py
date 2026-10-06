@@ -7,8 +7,8 @@ populated for every type regardless (see the test below), which is what keeps
 `ThingSerializer` from branching by type; the frontend is what decides whether
 to render it.
 
-Owner prose like every other (D5): localized (O6), 512 visible per language,
-2048 stored (CA's call, 2026-09: 256 was too short for this one) — the same
+Owner prose like every other: localized, 512 visible per language,
+2048 stored (256 was too short for this one) — the same
 shape and the same trap as `deposit_policy` (core/tests/unit/test_deposits.py),
 pinned again here rather than assumed.
 """

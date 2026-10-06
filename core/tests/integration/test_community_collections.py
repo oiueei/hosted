@@ -219,7 +219,7 @@ class TestCommunityRemoveThing:
         )
         assert response.status_code == 403
         # remove_thing's authz is the inline check, not IsCollectionOwner (which is
-        # inert here — the I3 footgun). Lock the inline {"error": ...} body so a
+        # inert here). Lock the inline {"error": ...} body so a
         # naive switch to the permission class (which returns {"detail": ...} and
         # would also wrongly deny community thing-owners) is caught.
         assert response.json() == {"error": "You do not have permission to remove this thing"}

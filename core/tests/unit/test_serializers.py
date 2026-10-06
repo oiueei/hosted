@@ -301,7 +301,7 @@ class TestThingSerializer:
     def test_owner_email_fallback_only_for_collection_owner(self):
         """On the community grid a no-name thing owner's email is shown to the
         collection owner (who already sees co-members' emails) but never to other
-        members or anonymous visitors (L2)."""
+        members or anonymous visitors."""
         from django.contrib.auth.models import AnonymousUser
         from rest_framework.test import APIRequestFactory
 

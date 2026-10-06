@@ -155,7 +155,7 @@ def _validated(data):
 
 
 def test_a_community_collection_is_born_private_like_any_other():
-    """CA's call (2026-09-29): making a group public is an explicit decision.
+    """Making a group public is an explicit decision.
 
     It used to be born PUBLIC, and whoever contributed a thing to it was never
     shown that — so a group of neighbours' families was readable by anyone.

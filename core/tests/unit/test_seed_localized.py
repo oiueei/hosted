@@ -1,4 +1,4 @@
-"""The multilingual demo seed (one seeding serves every reader — O6).
+"""The multilingual demo seed (one seeding serves every reader).
 
 Collection/thing headlines, descriptions and tag labels are seeded as localized
 ``{"es": …, "ca": …, "en": …}`` maps built from ALL the language files;

@@ -2,7 +2,7 @@
 
 A visitor who tries to act on a PUBLIC collection submits their email plus the
 collection code to the join endpoint and is emailed a magic link; **pressing the
-link** adds them to that collection's invitees (W1, 2026-10-04 — typing an
+link** adds them to that collection's invitees (typing an
 address is not proof it is yours, so nobody is joined on submit). The code only
 joins PUBLIC, ACTIVE collections — never a PRIVATE one — and an unknown/non-public
 code is silently ignored (same unified response, no enumeration oracle).
