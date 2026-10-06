@@ -25,7 +25,7 @@ Understand what changed. Which range depends on the shape Phase 7 will find:
   commits themselves with **`git diff @{push}..HEAD`**. The user drives every push in this
   repo, so "not yet pushed" *is* the work in flight — the same range `solid-testing` audits by
   default. **Not the last tag** (`$(git describe --tags --abbrev=0)..HEAD`): that is the whole
-  release round including work already pushed and reviewed, which is `/prerelease`'s range,
+  release cycle including work already pushed and reviewed, which is `/prerelease`'s range,
   not this one. **Not `main..HEAD`** either: `main` is a release branch, so where it sits says
   nothing about what this session did — it can coincide with the push ref, and equally can not.
 
@@ -140,7 +140,7 @@ value of `/ship` in this case — they are the verification, not the paperwork a
      AI-assistant: Claude Code (Claude Opus 5)
      ```
      Ask rather than guess if any part of the line is unclear.
-   - **No "Para revisar (CA)" block** — visual-QA notes go in the chat, never in the message.
+   - **No "Para revisar" block** — visual-QA notes go in the chat, never in the message.
 5. Run each commit using a HEREDOC to preserve formatting.
 6. Confirm with `git log --oneline -<n>`, where *n* is the number of commits just made.
 

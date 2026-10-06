@@ -2,8 +2,7 @@
 
 What the pipeline already guarantees, and the upgrades worth proposing. The
 workflow lives in `.github/workflows/tests.yml` — actions pinned by commit
-SHA, gitleaks checksummed (supply-chain hardening from the 2026-07 security
-round). Keep both properties when editing.
+SHA, gitleaks checksummed (supply-chain hardening). Keep both properties when editing.
 
 ## Already enforced — don't regress it
 
