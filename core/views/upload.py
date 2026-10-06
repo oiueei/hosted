@@ -111,7 +111,13 @@ class UploadTicketView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    # One ticket per photo, and a ZIP import of up to `ThingBulkCreateView.MAX_ROWS` (100)
+    # things uploads a photo for each row before it creates anything, so the hourly
+    # allowance has to cover a whole import with room to spare. A ticket is still good for
+    # one signed upload of at most `IMAGE_MAX_BYTES`: more tickets do not widen what any
+    # one of them permits. `UPLOADS_PER_HOUR` in frontend/src/utils/uploadImage.js mirrors
+    # this number.
+    @method_decorator(ratelimit(key="user", rate="120/h", method="POST", block=True))
     def post(self, request):
         body = body_dict(request)
         # Anything that isn't the one document kind is an image upload — an unknown

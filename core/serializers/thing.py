@@ -859,8 +859,8 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     """One row of a CSV bulk import (F-9).
 
     Reuses the project's safe text fields (HTML / line-break / unsafe-scheme
-    rejection) and adds a CSV-injection guard on each free-text field. Photos and
-    gallery can't be bulk-imported; tags can — a single
+    rejection) and adds a CSV-injection guard on each free-text field. A cover and a
+    gallery arrive as storage keys the client uploaded first; tags can — a single
     ``|``-separated cell, validated against the collection's vocabulary in the
     view (the serializer has no collection context).
     """
@@ -892,6 +892,15 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     # the client unzips, uploads each image to the bucket, and sends the resulting
     # public_id here (validated path-traversal-safe like the single-create path).
     thumbnail = ImageIdField(folder="oiueei/things", required=False, allow_blank=True)
+    # Extra photos (the carousel), in the order the row lists them: the same field as the
+    # single-create path, so a row accepts exactly what a form does — at most 8 keys, each
+    # bound to the things folder.
+    gallery = serializers.ListField(
+        child=ImageIdField(folder="oiueei/things", allow_blank=False),
+        max_length=8,
+        required=False,
+        allow_empty=True,
+    )
 
     class Meta:
         model = Thing
@@ -906,6 +915,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
             "condition",
             "tags",
             "thumbnail",
+            "gallery",
             "is_endless",
         ]
 

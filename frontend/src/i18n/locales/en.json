@@ -444,6 +444,7 @@
     "pdfView": "View the document",
     "pdfTooLarge": "The file is too large (max 5 MB).",
     "imageTooLarge": "The image is too large (max 10 MB). Try a photo the browser can resize.",
+    "rateLimited": "You've reached the limit of {{max}} photos an hour. Try again in a while.",
     "welcomeDocLabel": "Welcome document (PDF)",
     "welcomeDocHelper": "Optional. Everyone who joins the group receives it by email, once."
   },
@@ -855,7 +856,7 @@
   "bulkAdd": {
     "help": "Add multiple things from a CSV — or a ZIP with the photos included.",
     "formatTitle": "CSV/ZIP format",
-    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column.",
+    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column. Extra photos (the carousel) go in a \"photos\" column, separated by | (up to 8 per thing).",
     "fileLabel": "CSV or ZIP file",
     "empty": "No rows found in that file.",
     "tooMany": "You can import up to {{max}} items at once.",
@@ -868,8 +869,11 @@
     "rowErrors": "These rows couldn't be imported (check their columns): {{rows}}",
     "zipNoCsv": "The ZIP must contain a CSV file.",
     "zipMissingImages": "These photos are named in the CSV but missing from the ZIP: {{files}}",
+    "tooManyPhotos": "This ZIP has {{count}} photos and you can upload {{max}} an hour. Split it into several and upload them an hour apart.",
+    "galleryTooLong": "Each thing takes at most {{max}} extra photos in the \"photos\" column.",
     "zipError": "We couldn't read that ZIP. Check the file and try again.",
     "imageUploadError": "Some photos couldn't be uploaded. Check the images and try again.",
+    "uploadRateLimited": "You've reached the limit of {{max}} photos an hour, so nothing was added. Try again in a while.",
     "uploadingImages": "Uploading photos… ({{done}}/{{total}})",
     "formatBody": "Tags go in one cell separated by | (and must be defined in the collection — write the tag in any of its languages, e.g. \"Crianza\" or \"Criança\"). The fee and deposit columns both accept either 1.5 or 1,5, and deposit is only used for LEND/RENT rows — a value on any other type is rejected. For photos, zip the CSV together with the image files and name each photo in the \"photo\" column — like this:",
     "downloadExample": "Download example (ZIP)"
