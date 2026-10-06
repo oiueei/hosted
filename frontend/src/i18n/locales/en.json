@@ -778,7 +778,7 @@
     "joining": "Sending…",
     "magicLinkSent": "Magic link sent! Check your inbox and click the link to join the group.",
     "errorSendingLink": "Error sending link.",
-    "alreadyHaveAccount": "Already have an account? Sign in →",
+    "alreadyHaveAccount": "Already have an account?",
     "joinSignedIn": "Join {{name}}",
     "joinSignedInGeneric": "Join this group",
     "useAnotherEmail": "Use another email instead",

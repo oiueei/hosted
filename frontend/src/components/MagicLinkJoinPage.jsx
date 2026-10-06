@@ -45,7 +45,7 @@ import MarkdownText from './MarkdownText';
  *   invitation is one button rather than email, inbox, link, back. Without it the
  *   page is exactly what it was, which is what a deployment's own door relies on.
  * - `offerSignIn` (default `true`): whether the page offers a way to `/login` at
- *   all — **two things**: the secondary "already have an account? sign in →"
+ *   all — **two things**: the secondary "already have an account?"
  *   button that ends the page, and the "Sign in" icon of the
  *   hero's corner that a reader with no session otherwise gets on every page
  *   (`PageLayout` hands the prop to `AccountMenu`). `/share/:token` keeps both, and

@@ -772,7 +772,7 @@
     "joining": "Enviant…",
     "magicLinkSent": "Enllaç enviat! Revisa la safata d'entrada i fes clic a l'enllaç per unir-te al grup.",
     "errorSendingLink": "Error en enviar l'enllaç.",
-    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →",
+    "alreadyHaveAccount": "Ja tens un compte?",
     "joinSignedIn": "Unir-me a {{name}}",
     "joinSignedInGeneric": "Unir-me a aquest grup",
     "useAnotherEmail": "Fer servir un altre correu",
