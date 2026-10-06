@@ -59,7 +59,7 @@ export default function JoinToAct({
         <Notification autofocus label={t('joinToAct.sent')} type="success">
           {message}
         </Notification>
-        {/* Air between the notice and this line (CA, 2026-09-21): section-mt
+        {/* Air between the notice and this line: section-mt
             pinned it flush against the Notification above — same fix as
             MagicLinkJoinPage's, so the two doors end the same way. */}
         <p style={{ marginTop: 'var(--spacing-s)', marginBottom: 'var(--spacing-m)' }}>

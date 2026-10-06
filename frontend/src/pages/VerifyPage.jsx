@@ -153,7 +153,7 @@ export default function VerifyPage() {
           // taken from here: the app-wide effect that applies it (`App.jsx`) runs
           // once, when the app mounts, and opening a magic link mounts it *before*
           // there is a session — its `/auth/me/` answers 401 — so until a reload a
-          // person with a saved language saw the browser's (CA, 2026-10-02: "English"
+          // person with a saved language saw the browser's ("English"
           // saved, link opened on a phone, app in Spanish). A real preference, so a
           // proper `changeLanguage` that persists like the profile's own Select;
           // empty ("Automatic") or unknown leaves things alone. Awaited, so the page
@@ -164,14 +164,14 @@ export default function VerifyPage() {
           }
           // The backend decides where to land (`landing`): the collection the
           // link was for (or the one real group they have), the page they were
-          // heading for, else home. There is no "welcome" landing any more (CA,
-          // 2026-10-04): someone who comes in by an open door is answered like
+          // heading for, else home. There is no "welcome" landing any more:
+          // someone who comes in by an open door is answered like
           // anyone else, from the groups they actually have, so a landing this
           // page does not know falls through to home.
           const target = data.collection || data.invited_collection;
           if (data.landing === 'collection' && target) {
             // `data.thing` is set when the join came from a "Reserve" click on a
-            // specific thing (S13) — land them back on it, ready to act.
+            // specific thing — land them back on it, ready to act.
             navigate(
               data.thing ? `/collections/${target}/things/${data.thing}` : `/collections/${target}`
             );

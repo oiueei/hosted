@@ -38,7 +38,7 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
       {/* A distinct icon and a qualifying word, on purpose: a RENT thing shows
           both a price and a deposit, and without something to tell them apart
           "10 €" next to "50 €" reads as one 60 € cost instead of a rental fee
-          plus a guarantee that comes back (DEPOSIT_PLAN.md §10). */}
+          plus a guarantee that comes back. */}
       {thing.deposit && (
         <div className="thing-card-info-row">
           <IconLock size="m" aria-hidden="true" />

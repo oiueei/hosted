@@ -9,14 +9,13 @@ import { isDoorPath, loginPathFor } from '../utils/nextPath';
 const PANEL_ID = 'account-menu-panel';
 
 /**
- * The account's own pages, one click away from every hero (CA + an early
- * adopter, 2026-09-28): "My profile", "My requests", "Requests to me" and "Log
+ * The account's own pages, one click away from every hero: "My profile", "My requests", "Requests to me" and "Log
  * out", under "Home", used to live only on `/` and `/me` — hard to reach from
  * inside a collection, and **unreachable at all** from one whose owner set a
  * `home_page`, since that hero's own "Home" link leaves OIUEEI for the group's
  * own site.
  *
- * "Edit profile" and "Create collection" are not here (CA, 2026-10-02): the first
+ * "Edit profile" and "Create collection" are not here: the first
  * is reached from "My profile", the second from Home. And "Requests to me" is
  * shown only to someone who can receive requests — owns a thing, or runs a
  * PROPRIETARY collection — which only the server knows, so the menu asks
@@ -26,7 +25,7 @@ const PANEL_ID = 'account-menu-panel';
  * or if it cannot be had, the link is left out.
  *
  * **On a page that has a collection menu, "Requests to me" is that menu's first
- * entry, not this one's** (X4, CA 2026-10-04): `requestsInCollectionMenu` says so,
+ * entry, not this one's**: `requestsInCollectionMenu` says so,
  * and the menu then neither shows the link nor asks the server. That is a
  * collection's page and a thing's read through a collection, for whoever has the
  * collection menu there; everywhere else (Home, `/me`…) the link stays here — and
@@ -36,8 +35,7 @@ const PANEL_ID = 'account-menu-panel';
  * A plain navigation disclosure — a button that shows/hides a `<nav>` of
  * `Link`s — not `ShareCollectionMenu`'s HDS-`Select`-as-menu trick: every
  * option here is a **route**, not an action, and a `Select` announces itself
- * as a combobox to a screen reader (already flagged as an A1 risk in
- * `CA_TASKS.md`). No `role="menu"` either — that role expects arrow-key
+ * as a combobox to a screen reader (an accessibility risk). No `role="menu"` either — that role expects arrow-key
  * navigation between actions; this is `Tab`-navigable links, so the native
  * semantics already say what it is.
  *
@@ -48,16 +46,15 @@ const PANEL_ID = 'account-menu-panel';
  * **Session-gated, not page-gated**: it reads `userCode` itself, so it needs no
  * prop from any of its many call sites.
  *
- * **Signed out, the same icon in the same place is a link to sign in** (X3, CA
- * 2026-10-04): not a panel but a plain `<Link>` to `/login` that comes back to the
+ * **Signed out, the same icon in the same place is a link to sign in**: not a panel but a plain `<Link>` to `/login` that comes back to the
  * page the reader is on (`loginPathFor(location)`), named "Sign in". It was nothing
  * at all, so a visitor with no session had no corner. Not on `/login` (it would
  * lead to itself), `/logout` or `/verify/…` and its aliases, where it still paints
  * nothing — `isDoorPath`, the same list a login never returns to. On a public
- * collection it sat beside the hero's own "Sign in" button (W3), and CA accepted both
- * until G3 (2026-10-05): `CollectionPage` now passes `offerSignIn={false}` there, since
+ * collection it used to sit beside the hero's own "Sign in" button; `CollectionPage`
+ * now passes `offerSignIn={false}` there, since
  * the hero's button is the way in.
- * **`offerSignIn={false}` paints nothing signed out either** (Y1, CA 2026-10-04): a
+ * **`offerSignIn={false}` paints nothing signed out either**: a
  * door that does not want to send people to `/login` — the hosted `/popin`, which
  * dropped "Already have an account?" on purpose — says so through
  * `MagicLinkJoinPage`'s `offerSignIn`, which `PageLayout` hands down. It changes

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TAG_THEMES } from '../constants/things';
 import { useLocalized } from '../utils/localized';
 
-// "New" signal window (design round, S7): a stateless, privacy-clean
+// "New" signal window: a stateless, privacy-clean
 // "what's new" tag — no per-user tracking, matches the weekly digest cadence.
 export const NEW_THING_WINDOW_DAYS = 7;
 

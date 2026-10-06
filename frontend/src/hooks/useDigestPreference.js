@@ -5,7 +5,7 @@ import { apiFetch } from '../services/api';
  * A member silences — or turns back on — the summary email of this one group
  * (`POST /api/v1/collections/{code}/digest/ {"muted": true|false}`, members only).
  * It used to be reachable only from the footer of the email itself
- * (`DigestMutePage`); the collection menu offers it now (X2, CA 2026-10-04), and
+ * (`DigestMutePage`); the collection menu offers it now, and
  * the page that unsubscribes already promises it: "you can turn it back on from
  * the collection page".
  *

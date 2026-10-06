@@ -33,7 +33,7 @@ const SUCCESS_TYPES = new Set([
 ]);
 
 // The notices about a request or reservation say when they were registered
-// under their body — CA, 2026-09-29: reading "confirmed" with no idea of when
+// under their body: reading "confirmed" with no idea of when
 // that happened asked the member to trust a dateless sentence. The two
 // reservation notices additionally speak the booking's own field names
 // (start/end date and time), and a dated request or decision does too; a gift
@@ -56,8 +56,8 @@ const META_LINE_STYLE = {
   fontSize: 'var(--fontsize-body-s)',
 };
 
-// The owner said yes to a recommendation. Written as INVITE_PROPOSAL_APPROVED
-// since the 2026-08 design round; rows created before that are an
+// The owner said yes to a recommendation. Written as INVITE_PROPOSAL_APPROVED;
+// older rows are an
 // INVITE_PROPOSED carrying `approved: true`, and both must read the same.
 const isProposalApproved = (n) =>
   n.type === 'INVITE_PROPOSAL_APPROVED' || (n.type === 'INVITE_PROPOSED' && n.payload?.approved);
@@ -179,7 +179,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   // The name keys get a stand-in for the same reason `ThingLinkbox` has always
   // used one: the backend sends the bare `name`, never `display_name`, because
   // the fallback in `display_name` is the person's email address and the reader
-  // here is a co-member who is not entitled to it (L2). A person who never set a
+  // here is a co-member who is not entitled to it. A person who never set a
   // name therefore arrives as `''`, and every one of these strings interpolates
   // the name mid-sentence — so without this the body reads " has replied to your
   // question about:". One funnel, so a builder cannot forget.
@@ -482,7 +482,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
                 <p style={META_LINE_STYLE}>
                   {/* A reservation is "reserved for"; a loan or a rental is a request
                       for dates until it is settled, and "reserved" is not the word for
-                      it (D2). */}
+                      it. */}
                   {RESERVATION_TYPES.has(n.type)
                     ? t('home.reservationScheduledFor', { when: scheduledFor })
                     : t('home.requestedDates', { when: scheduledFor })}

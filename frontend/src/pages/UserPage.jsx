@@ -25,7 +25,7 @@ export default function UserPage() {
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
   // The groups I'm a *member* of — not the ones I own, which live on Home. This
-  // is where "Leave the group" moved to (design round): it used to sit in the
+  // is where "Leave the group" moved to: it used to sit in the
   // collection hero, third in a stack of unlabelled text links under the
   // description, one of them destructive. Leaving is something you do to your
   // own membership, so it belongs with the rest of your account.
@@ -187,10 +187,10 @@ export default function UserPage() {
             <div className="spacer-s" />
             <p className="text-muted">{t('userPage.myGroupsIntro')}</p>
             <div className="spacer-m" />
-            {/* The same table as the request pages (CA, 2026-10-03): the group, who
+            {/* The same table as the request pages: the group, who
                 runs it — the rule the collection's own hero follows, as plain
                 text — and the way out, on the right. On a phone each group is a
-                card (CA, 2026-10-04): the name on top, "Run by: …" under it and
+                card: the name on top, "Run by: …" under it and
                 the way out on the right, the same cells in the same order. */}
             <ResponsiveTable
               cols={[

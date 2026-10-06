@@ -36,7 +36,7 @@
  *   Same shape as `aboutPath`: a link to a 404 is worse than one link fewer.
  * @property {?{contact?: ?Object<string, string>, feedback?: ?Object<string, string>, requestAccess?: ?Object<string, string>}} externalForms
  *   Forms hosted elsewhere that take the place of the app's own ways of writing to
- *   the team (TL1, CA 2026-10-05), or `null` for none — which is upstream, where
+ *   the team, or `null` for none — which is upstream, where
  *   nothing changes: `/contact` is the app's own page, "Ideas and bugs" appears only
  *   if `VITE_FEEDBACK_URL` is set, and "Request access" goes where the server's
  *   `capabilities.request_url` says. Each of the three is `{ es, ca, en }`, one URL

@@ -46,12 +46,12 @@ import MarkdownText from './MarkdownText';
  *   page is exactly what it was, which is what a deployment's own door relies on.
  * - `offerSignIn` (default `true`): whether the page offers a way to `/login` at
  *   all — **two things**: the secondary "already have an account? sign in →"
- *   button that ends the page, and (Y1, CA 2026-10-04) the "Sign in" icon of the
+ *   button that ends the page, and the "Sign in" icon of the
  *   hero's corner that a reader with no session otherwise gets on every page
  *   (`PageLayout` hands the prop to `AccountMenu`). `/share/:token` keeps both, and
  *   so does any door that does not say otherwise. A deployment's own door turns
  *   them off with `false` when it already sends the people it does not want here
- *   to `/login` by another road (the hosted `/popin`, CA 2026-10-03): the
+ *   to `/login` by another road (the hosted `/popin`): the
  *   component is core's and has to be identical in both branches, so the switch is
  *   a prop rather than an edit. With `false` neither the button nor its row nor
  *   the corner icon renders; no caller in core passes it.
@@ -126,7 +126,7 @@ export default function MagicLinkJoinPage({
           >
             {message}
           </Notification>
-          {/* Air between the notice and this line (CA, 2026-09-21): section-mt
+          {/* Air between the notice and this line: section-mt
               pinned it flush against the Notification above. */}
           {status === 'success' && (
             <p style={{ marginTop: 'var(--spacing-s)', marginBottom: 'var(--spacing-m)' }}>

@@ -8,9 +8,9 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized } from '../utils/localized';
 
 /**
- * Add several things at once, from a CSV or a ZIP (X5, CA 2026-10-04). The tool
+ * Add several things at once, from a CSV or a ZIP. The tool
  * used to be a section at the foot of `/collections/:code/add` (`#bulk-add`), and
- * CA took it off that page ("it is already in the menu"): the collection menu's
+ * it left that page (it is already in the menu): the collection menu's
  * "Add several at once (CSV)" entry only links, so the tool needs a page of its
  * own. Protected like `/add` (`RequireAuth`), reached from a curator's menu only —
  * a member of a COMMUNITY group keeps adding one at a time.

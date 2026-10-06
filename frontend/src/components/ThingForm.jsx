@@ -18,7 +18,7 @@ import hdsLang from '../utils/hdsLang';
 
 /**
  * The shared field cluster of the Add and Edit thing forms: type selector (with
- * an (i) `InfoPopover` explaining each offered type — O2), the endless /
+ * an (i) `InfoPopover` explaining each offered type), the endless /
  * notify-group toggles, headline, description, fee, the
  * availability/condition/location detail fields, the per-thing tags select, the
  * thumbnail upload and gallery.
@@ -81,7 +81,7 @@ export default function ThingForm({
   // Fee: required + shown for SELL/RENT; shown but optional for RESERVE.
   const showFee = isFeeType || FEE_OPTIONAL_TYPES.includes(type);
   // Deposit is a guarantee that comes back, not part of the price — LEND/RENT
-  // only (D4). Its own gate, never showFee: RENT carries both, LEND only this.
+  // only. Its own gate, never showFee: RENT carries both, LEND only this.
   // A RESERVE thing never leaves the premises, so there is nothing to secure.
   const showDeposit = DATE_TYPES.includes(type) && type !== 'RESERVE_THING';
   const showSpacer = (showFee || showDeposit) && isDetailType;
@@ -121,7 +121,7 @@ export default function ThingForm({
           {/* One-word type names don't tell a first-timer that a "Share" transfers
               ownership on accept. The (i) explains each type the collection actually
               offers — built from typeOptions, already filtered, so it never lists
-              one the owner can't pick (O2). */}
+              one the owner can't pick. */}
           <div className="info-popover-row info-popover-row--end">
             <InfoPopover id={`${idPrefix}-type-info`} title={t('typeInfo.title')}>
               {typeOptions.map(({ label, value }) => (
