@@ -6,15 +6,17 @@ else in there. Nothing about this app weakens that.
 """
 
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import AdminTextareaWidget
 from django.utils import timezone
 
 from .emails import send_creator_validation_decision_email
 from .models import CreatorValidation
 
-# What the two free-text columns say for a row the operator creates by hand. The
-# request itself was written in a Tally form and lives there (see `tally.py`); the row
-# here exists to answer it, and an explicit marker reads better in the list and in the
-# edit form than two empty cells would — and needs no migration to allow them.
+# What the two free-text columns say for a row the operator creates by hand and leaves them
+# empty in. The request itself was written in a Tally form and lives there (see `tally.py`);
+# the operator may copy its two answers here, and when they do not, an explicit marker reads
+# better in the list and in the edit form than two empty cells would — and needs no
+# migration to allow them.
 SENT_THROUGH_TALLY = "(enviado por Tally)"
 
 
@@ -24,33 +26,57 @@ class CreatorValidationAdmin(admin.ModelAdmin):
 
     A request is written in a Tally form now, not in a page of ours, so there is nothing
     in this table until the operator makes a row for the person: **Add**, find the account
-    by its email (autocomplete: `core.UserAdmin` searches `email`), pick the status and,
-    if useful, a note. The row is the record the policy reads; the two questions stay in
-    Tally and the row says so (`SENT_THROUGH_TALLY`). The answer — the actions below, or
-    a status chosen on the form — is mailed to the person as it always was.
+    by its email (autocomplete: `core.UserAdmin` searches `email`), copy the two answers
+    from Tally into Who and Intent, pick the status and, if useful, a note. The row is the
+    record the policy reads, and the answers copied into it keep why each decision was
+    taken in the database and not only in a third party's service. Left empty they say
+    `SENT_THROUGH_TALLY`. They are the operator's copy, so they can be corrected afterwards
+    and the admin's History keeps each change; changing them mails nobody. The answer —
+    the actions below, or a status chosen on the form — is mailed to the person as it
+    always was.
     """
 
     list_display = ("user", "status", "created", "resolved")
     list_filter = ("status", "created")
     search_fields = ("user__email", "user__name", "who", "intent")
     autocomplete_fields = ("user",)
-    # Once a row exists, the two answers are the whole decision, and they are not
-    # editable here: this is a record of what somebody wrote, and an operator who could
-    # rewrite it would be deciding on a version of the request that was never sent.
-    # (A new row has no answers to protect: see `get_readonly_fields`.)
-    readonly_fields = ("user", "who", "intent", "created", "resolved")
+    # Once a row exists, the account and the two moments are its own and are not editable
+    # here. The two answers are: they are the operator's copy of what was written in Tally,
+    # a copy can have a typo, and the History of this admin records every change to it.
+    # (A new row has nothing to protect: see `get_readonly_fields`.)
+    readonly_fields = ("user", "created", "resolved")
     fields = ("user", "who", "intent", "status", "note", "created", "resolved")
     ordering = ("-created",)
     actions = ("approve", "reject")
 
     def get_fields(self, request, obj=None):
-        """A new row asks for the person, the answer and a note — nothing else.
+        """A new row asks for the person, the two answers, the status and a note.
 
-        The questions, the timestamps and the "when" are the row's own to fill.
+        The timestamps are the row's own to fill.
         """
         if obj is None:
-            return ("user", "status", "note")
+            return ("user", "who", "intent", "status", "note")
         return super().get_fields(request, obj)
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """The two answers are paragraphs, not a line: a textarea, with the column's limit."""
+        if db_field.name in ("who", "intent"):
+            kwargs["widget"] = AdminTextareaWidget(attrs={"rows": 3})
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+    def get_form(self, request, obj=None, **kwargs):
+        """On a new row the two answers are optional; once the row exists they are not.
+
+        The columns are not `blank=True` and no migration is made for it, so the
+        relaxation is the form's: left empty, they are filled in with
+        `SENT_THROUGH_TALLY` (`save_model`). An existing row's answers stay required, so a
+        correction cannot blank one by accident.
+        """
+        form = super().get_form(request, obj, **kwargs)
+        if obj is None:
+            for name in ("who", "intent"):
+                form.base_fields[name].required = False
+        return form
 
     def get_readonly_fields(self, request, obj=None):
         """Everything is editable on a new row (the person to choose), as before after it."""
@@ -61,8 +87,8 @@ class CreatorValidationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         """Fill a hand-made row in, and announce a decision made on the form.
 
-        A row created here has no answers of its own, so it is marked as sent through
-        Tally. And **a status chosen on the form is a decision like an action's**: it
+        A row created here with no answers typed in is marked as sent through Tally. And
+        **a status chosen on the form is a decision like an action's**: it
         stamps when, and the person is told — a new row made already approved, or a
         refusal turned into a yes. Changing only the note, or leaving the status as it
         was, is nobody's business but the operator's. Moving back to pending clears the

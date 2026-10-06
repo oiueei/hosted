@@ -130,16 +130,16 @@ class TestTheAdminActions:
         stamped = CreatorValidation.objects.exclude(resolved=None)
         assert stamped.count() == 2
 
-    def test_the_two_answers_a_person_wrote_cannot_be_edited_here(self):
-        """The record is what they sent, not what it was convenient to have sent."""
+    def test_the_account_and_the_moments_of_a_row_cannot_be_edited_here(self):
+        """Who it is about and when it was made and answered are the row's own; the two
+        answers are the operator's copy from Tally and can be corrected."""
         from django.contrib import admin as django_admin
 
         from hosted.admin import CreatorValidationAdmin
 
         model_admin = CreatorValidationAdmin(CreatorValidation, django_admin.site)
 
-        assert "who" in model_admin.readonly_fields
-        assert "intent" in model_admin.readonly_fields
+        assert set(model_admin.readonly_fields) == {"user", "created", "resolved"}
 
 
 def _resolve_through_the_admin(validation, action):

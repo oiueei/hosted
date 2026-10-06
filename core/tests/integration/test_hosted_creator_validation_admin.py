@@ -12,8 +12,11 @@ change-form view sits behind django-otp 2FA, `config/urls.py`'s `OTPAdminSite`; 
 
 - the account is **found by its email**, by autocomplete, and that setup passes Django's
   own admin checks (it needs the related admin to search the field);
-- a **new** row asks for the person, the status and a note, and nothing else; it records
-  that the request was sent through Tally; an account cannot have two rows;
+- a **new** row asks for the person, the two answers copied from Tally, the status and a
+  note; what is typed is kept as typed and what is left empty records that the request was
+  sent through Tally; an account cannot have two rows;
+- the **answers can be corrected afterwards, and doing so mails nobody**; the account and
+  the two moments cannot be edited;
 - **a decision made on the form is a decision**: it stamps when, the person is told, and
   the permission follows — for a new row made already approved, and for an edit that turns
   a refusal into a yes; a note on its own, or a status left as it was, tells nobody;
@@ -73,7 +76,9 @@ def add(model_admin, request, **data):
 
 
 def edit(model_admin, request, obj, **data):
-    """Submit the change form: only what is editable is posted."""
+    """Submit the change form the way a browser does: pre-filled, so the two answers come
+    back as they are unless the test changes them."""
+    data = {"who": obj.who, "intent": obj.intent, **data}
     form = model_admin.get_form(request, obj)(data=data, instance=obj)
     assert form.is_valid(), form.errors
     saved = form.save(commit=False)
@@ -117,26 +122,26 @@ class TestFindingTheAccountByItsEmail:
 
 @pytest.mark.django_db
 class TestTheFormForANewRow:
-    def test_it_asks_for_the_person_the_status_and_a_note_and_nothing_else(
+    def test_it_asks_for_the_person_the_two_answers_the_status_and_a_note_and_nothing_else(
         self, model_admin, request_as
     ):
-        assert tuple(model_admin.get_form(request_as).base_fields) == ("user", "status", "note")
-        assert model_admin.get_fields(request_as) == ("user", "status", "note")
+        expected = ("user", "who", "intent", "status", "note")
+
+        assert tuple(model_admin.get_form(request_as).base_fields) == expected
+        assert model_admin.get_fields(request_as) == expected
 
     def test_nothing_is_read_only_while_the_row_does_not_exist(self, model_admin, request_as):
         assert model_admin.get_readonly_fields(request_as) == ()
         assert model_admin.get_readonly_fields(request_as, None) == ()
 
-    def test_afterwards_the_person_and_both_answers_are_read_only_as_ever(
+    def test_afterwards_only_the_person_and_the_two_moments_are_read_only(
         self, model_admin, request_as, user
     ):
         row = CreatorValidation.objects.create(user=user, who="x" * 25, intent="y" * 25)
 
         readonly = model_admin.get_readonly_fields(request_as, row)
 
-        assert {"user", "who", "intent", "created", "resolved"} <= set(readonly)
-        assert "status" not in readonly
-        assert "note" not in readonly
+        assert set(readonly) == {"user", "created", "resolved"}
         assert model_admin.get_fields(request_as, row) == (
             "user",
             "who",
@@ -147,7 +152,68 @@ class TestTheFormForANewRow:
             "resolved",
         )
 
-    def test_a_new_row_is_marked_as_sent_through_tally(self, model_admin, request_as, user):
+    def test_the_answers_typed_are_kept_exactly_as_typed(self, model_admin, request_as, user):
+        row = add(
+            model_admin,
+            request_as,
+            user=user.pk,
+            who="Runs the Sants repair café",
+            intent="A lending shelf for tools",
+            status=STATUS.PENDING,
+            note="",
+        )
+
+        row = CreatorValidation.objects.get(pk=row.pk)
+        assert row.who == "Runs the Sants repair café"
+        assert row.intent == "A lending shelf for tools"
+
+    @pytest.mark.parametrize(
+        ("who", "intent", "expected"),
+        [
+            ("A neighbour", "", ("A neighbour", SENT_THROUGH_TALLY)),
+            ("", "Tools to lend", (SENT_THROUGH_TALLY, "Tools to lend")),
+            ("   ", "   ", (SENT_THROUGH_TALLY, SENT_THROUGH_TALLY)),
+        ],
+    )
+    def test_an_answer_left_empty_is_marked_and_the_other_is_kept(
+        self, model_admin, request_as, user, who, intent, expected
+    ):
+        row = add(
+            model_admin,
+            request_as,
+            user=user.pk,
+            who=who,
+            intent=intent,
+            status=STATUS.PENDING,
+            note="",
+        )
+
+        row = CreatorValidation.objects.get(pk=row.pk)
+        assert (row.who, row.intent) == expected
+
+    def test_the_two_answers_are_optional_on_a_new_row(self, model_admin, request_as):
+        fields = model_admin.get_form(request_as).base_fields
+
+        assert fields["who"].required is False
+        assert fields["intent"].required is False
+
+    @pytest.mark.parametrize(("field", "limit"), [("who", "512"), ("intent", "1024")])
+    def test_each_answer_is_a_textarea_with_the_limit_of_its_column(
+        self, model_admin, request_as, user, field, limit
+    ):
+        """A paragraph copied from Tally does not fit in a one-line input, and the browser
+        should stop at what the column takes rather than the database refusing it."""
+        row = CreatorValidation.objects.create(user=user, who="x" * 25, intent="y" * 25)
+
+        for obj in (None, row):
+            html = str(model_admin.get_form(request_as, obj)()[field])
+
+            assert "<textarea" in html
+            assert f'maxlength="{limit}"' in html
+
+    def test_a_new_row_with_no_answers_typed_is_marked_as_sent_through_tally(
+        self, model_admin, request_as, user
+    ):
         row = add(model_admin, request_as, user=user.pk, status=STATUS.PENDING, note="")
 
         row = CreatorValidation.objects.get(pk=row.pk)
@@ -217,6 +283,74 @@ class TestCreatingARowAndAnsweringIt:
 
 
 @pytest.mark.django_db
+class TestCorrectingTheAnswersAfterwards:
+    """The two answers are the operator's copy of what was written in Tally: a copy can
+    have a typo. Correcting it is not an answer to the person."""
+
+    @pytest.fixture
+    def row(self, user):
+        return CreatorValidation.objects.create(
+            user=user, who="Runs a repair cafe", intent="Tools to lend", status=STATUS.APPROVED
+        )
+
+    @pytest.mark.parametrize("field", ["who", "intent"])
+    def test_an_answer_can_be_changed_on_an_existing_row(self, model_admin, request_as, row, field):
+        saved = edit(
+            model_admin,
+            request_as,
+            row,
+            status="APPROVED",
+            note="",
+            **{field: "Corrected in the admin"},
+        )
+
+        assert getattr(saved, field) == "Corrected in the admin"
+
+    @pytest.mark.parametrize("field", ["who", "intent"])
+    def test_changing_an_answer_mails_nobody_and_stamps_nothing(
+        self, model_admin, request_as, row, field
+    ):
+        stamp = row.resolved
+
+        saved = edit(
+            model_admin,
+            request_as,
+            row,
+            status="APPROVED",
+            note="",
+            **{field: "Corrected in the admin"},
+        )
+
+        assert mail.outbox == []
+        assert saved.status == STATUS.APPROVED
+        assert saved.resolved == stamp
+
+    def test_the_other_answer_is_left_as_it_was(self, model_admin, request_as, row):
+        saved = edit(model_admin, request_as, row, status="APPROVED", note="", who="Corrected")
+
+        assert saved.who == "Corrected"
+        assert saved.intent == "Tools to lend"
+
+    @pytest.mark.parametrize("field", ["who", "intent"])
+    def test_an_answer_cannot_be_blanked_by_accident(self, model_admin, request_as, row, field):
+        """Optional on a new row, required once it exists: a correction that empties the
+        field is a slip, and the marker is only for a row opened with nothing to copy."""
+        data = {"who": row.who, "intent": row.intent, "status": "APPROVED", "note": "", field: ""}
+
+        form = model_admin.get_form(request_as, row)(data=data, instance=row)
+
+        assert not form.is_valid()
+        assert field in form.errors
+
+    def test_the_account_and_the_moments_are_not_in_the_change_form(
+        self, model_admin, request_as, row
+    ):
+        fields = model_admin.get_form(request_as, row).base_fields
+
+        assert set(fields) == {"who", "intent", "status", "note"}
+
+
+@pytest.mark.django_db
 class TestADecisionMadeOnTheForm:
     def test_a_new_row_made_approved_stamps_when_tells_them_and_grants(
         self, model_admin, request_as, user, authenticated_client
@@ -229,6 +363,27 @@ class TestADecisionMadeOnTheForm:
         assert row.note == "Known"
         assert [message.to for message in mail.outbox] == [[user.email]]
         assert can_create_a_community(authenticated_client)
+
+    def test_a_new_row_made_approved_with_the_answers_typed_mails_once_and_keeps_them(
+        self, model_admin, request_as, user
+    ):
+        row = add(
+            model_admin,
+            request_as,
+            user=user.pk,
+            who="Runs the Sants repair café",
+            intent="A lending shelf for tools",
+            status=STATUS.APPROVED,
+            note="",
+        )
+
+        row = CreatorValidation.objects.get(pk=row.pk)
+        assert [message.to for message in mail.outbox] == [[user.email]]
+        assert (row.who, row.intent) == ("Runs the Sants repair café", "A lending shelf for tools")
+        # The answers are the operator's, and they are not what the person is sent.
+        message = mail.outbox[0]
+        bodies = [message.body, *(content for content, _mime in message.alternatives)]
+        assert not any("repair café" in body or "lending shelf" in body for body in bodies)
 
     def test_a_new_row_made_rejected_tells_them_and_grants_nothing(
         self, model_admin, request_as, user, authenticated_client
