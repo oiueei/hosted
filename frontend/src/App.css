@@ -90,8 +90,7 @@ body {
   height: 60px;
 }
 
-/* The hero's top-right icon row (i8, S9, the account menu 2026-09-28 and the
-   collection menu 2026-10-03): AccountMenu, CollectionMenu and
+/* The hero's top-right icon row: AccountMenu, CollectionMenu and
    ShareCollectionMenu, where each applies, sit as flex items in
    ONE anchored row instead of each computing its own `right:` offset. That
    is what lets the row close its own gaps: a member's hero (no collection or
@@ -148,7 +147,7 @@ body {
   cursor: pointer;
 }
 
-/* Signed out, the trigger is a link (X3, 2026-10-04): the same size and colour,
+/* Signed out, the trigger is a link: the same size and colour,
    and no underline. */
 a.account-menu-trigger {
   text-decoration: none;
@@ -225,7 +224,7 @@ a.account-menu-trigger {
   margin: var(--spacing-2-xs) 0;
 }
 
-/* Share menu (S9, curator only): the ShareCollectionMenu Select restyled to a
+/* Share menu (curator only): the ShareCollectionMenu Select restyled to a
    single 44px icon trigger. HDS renders the trigger as one
    <button role="combobox"> holding an icon <span>, a text <div> and an arrow
    <div>; hiding the last two (both already aria-hidden) and clamping the box
@@ -291,7 +290,7 @@ a.account-menu-trigger {
   right: 0;
 }
 
-/* Title replacement (S9): the one hero <h1> whose text is the literal string
+/* Title replacement: the one hero <h1> whose text is the literal string
    "OIUEEI" (LoginPage — verified by grep; share/notFound's hero titles
    turned out to be different copy, not that exact string) renders the logo
    instead, coloured like the title text so it inherits --hero-text-color
@@ -428,7 +427,7 @@ a.account-menu-trigger {
 
 /* Photo hero, >=768px: the photo is an absolutely-positioned background across
    the right of the hero, and the collection's description — a full-width block
-   in the content column — ran straight over it (CA, 2026-09-21). Keep the text
+   in the content column — ran straight over it. Keep the text
    out of the photo's third. Percentages of padding resolve against the content
    column's width, so it scales with the hero rather than being a fixed gap.
    Below 768px the photo stacks under the text and there is nothing to avoid, so
@@ -440,7 +439,7 @@ a.account-menu-trigger {
     padding-right: 34%;
   }
 
-  /* The photo ends where the content column ends (CA, 2026-10-03). `.form-hero`
+  /* The photo ends where the content column ends. `.form-hero`
      spans the whole window, but from 1248px up the column (`.form-hero-content`,
      max-width 1248px) is centred and leaves margins, and the photo kept going to
      the window's edge — seen on a collection at ~2000px, where it ran well past
@@ -456,7 +455,7 @@ a.account-menu-trigger {
   }
 }
 
-/* The page is a column as tall as what is visible (G7, CA 2026-10-05), with the footer
+/* The page is a column as tall as what is visible, with the footer
    at the bottom of it: a short page has no scroll and the footer sits at the bottom
    of the screen; a long one has the footer after its content. It used to be
    `.form-page { min-height: 100vh }` with the footer AFTER `<main>`, so every page was
@@ -495,11 +494,11 @@ main > .page-container {
   background-color: var(--color-black-5);
 }
 
-/* The global colophon (i14): quiet, painted with the viewer's theeeme color_02
+/* The global colophon: quiet, painted with the viewer's theeeme color_02
    (inline, from SiteFooter) so it continues the page background with no seam —
    this is only the fallback. Icons-black rule (§11): the ♥︎ is a text glyph
    inheriting the text colour. Aligned to the left of the content column, not
-   centred (CA, 2026-10-04): the background is the whole width and
+   centred: the background is the whole width and
    `.site-footer-inner` has the page's own column, so the first letter falls on the
    vertical of the headings and the text above. */
 .site-footer {
@@ -538,7 +537,7 @@ main > .page-container {
   padding-left: 0;
 }
 
-/* The separator between the doors and the colophon text (CA, 2026-10-03). It
+/* The separator between the doors and the colophon text. It
    exists for the one-line footer, so it is hidden here — on two lines it would
    hang at the end of the first — and shown from 768px below. The padding is the
    next link's own, which the separator between two links gets for free from
@@ -591,7 +590,7 @@ div[class*='Linkbox-module_linkbox'] {
 }
 
 /* The card of the thing just uploaded, marked for a couple of seconds on a phone
-   (CollectionPage, V6): a ring in the theeeme's own colour. The fade out is a
+   (CollectionPage): a ring in the theeeme's own colour. The fade out is a
    transition on the card, only for a reader who has not asked for less motion. */
 .thing-card--just-added {
   box-shadow: 0 0 0 3px var(--just-added-color, var(--color-black-90));
@@ -843,7 +842,7 @@ body :focus-visible {
 
 /* Collections render as image-less full-width rows, one under another at
    every breakpoint — thing cards keep their thumbnail grid, so this is what
-   visually tells a collection row apart from a thing card (S8). Unlike a
+   visually tells a collection row apart from a thing card. Unlike a
    typical Linkbox grid this never goes multi-column. */
 .collections-grid {
   display: flex;
@@ -970,8 +969,8 @@ body :focus-visible {
 
 /* A <button> that acts rather than navigates, styled as the surrounding text so
    it reads as one sentence — the same quiet register as .invite-nudge. It was
-   the member's per-collection digest switch (removed from the hero, CA,
-   2026-09-21); SharePage's "use another email instead" is what still uses it,
+   the member's per-collection digest switch (removed from the hero);
+   SharePage's "use another email instead" is what still uses it,
    hence the name that no longer says what it is. */
 .digest-pref-button {
   padding: 0;
@@ -989,7 +988,7 @@ body :focus-visible {
 }
 
 /* The "Report" action in the ThingPage footer: a secondary button like the app's
-   others (CA, 2026-10-03), centred under the page. The confirm expands inline
+   others, centred under the page. The confirm expands inline
    below it (no modal). */
 .thing-report-footer {
   display: flex;
@@ -1187,7 +1186,7 @@ body :focus-visible {
 
 /* The things under the door — the licence and the no-cookie-banner claim, and
    where the deployment has one the link to its help page — read as ONE block at
-   ONE size (CA, 2026-09-21). They had drifted into three sizes and two greys, so
+   ONE size. They had drifted into three sizes and two greys, so
    the checkable claims looked like small print beside the slogan they replaced.
    Two more left: the legal link (2026-10-03) and "Trouble signing in? Tell us…"
    (2026-10-04) — the site footer carries /legal and "Contact us" on every page. */
@@ -1317,7 +1316,7 @@ body :focus-visible {
    tag role="button". HDS renders tags at 32px min-height — below the WCAG
    2.5.5 target — so bump these interactive ones to 44px (matching the
    deliberate .tag-chip / .weekday-chip targets). Scoped to role="button" so
-   the non-interactive label tags on cards keep their compact size. (O8) */
+   the non-interactive label tags on cards keep their compact size. */
 .tag-chip-row [role='button'] {
   min-height: 44px;
 }
@@ -1750,7 +1749,7 @@ figure[class*='Highlight-module_highlight'] {
 }
 
 /* On a phone each row of the request tables and of "My groups" is a card
-   (`ResponsiveTable`, CA, 2026-10-04): the component paints this list *instead of*
+   (`ResponsiveTable`): the component paints this list *instead of*
    the table, so there is no media query here — it only exists below 768px. White
    with a thin border, as the hero's other quiet boxes. */
 .table-cards {
@@ -1797,8 +1796,8 @@ figure[class*='Highlight-module_highlight'] {
    over its state (a StatusLabel), and the "expired" explanation where there is
    one. In a bare `flex-direction: column` every child stretches to the column's
    whole width, so both labels filled it — and since `Tag` centres its text and
-   `StatusLabel` does not, one read centred and the other left (CA's screenshot,
-   2026-10-03). `align-items: flex-start` sizes each to its own word, like the
+   `StatusLabel` does not, one read centred and the other left.
+   `align-items: flex-start` sizes each to its own word, like the
    hero's "Community" and "Private" tags. */
 .table-status-cell {
   display: flex;
@@ -1807,17 +1806,15 @@ figure[class*='Highlight-module_highlight'] {
   gap: var(--spacing-2-xs);
 }
 
-/* The lines of a text cell in the request tables and in "My groups" (CA,
-   2026-10-03). They used to carry a margin between one line and the next, set
-   inline on every paragraph, and the first column held everything; CA's
-   screenshot, with the margins taken out by hand in the browser, is the look:
-   the lines of a cell touch, and each table has the same few kinds of line —
+/* The lines of a text cell in the request tables and in "My groups". They used to carry a margin between one line and the next, set
+   inline on every paragraph, and the first column held everything; the look now
+   is that the lines of a cell touch, and each table has the same few kinds of line —
    so the size and the greys live here, once, and the pages only name which
    kind a line is. */
 .table-cell-lines p {
   margin: 0;
   font-size: var(--fontsize-body-s);
-  /* An address is one long word (up to 64 characters, E4): in a phone's card it
+  /* An address is one long word (up to 64 characters): in a phone's card it
      wraps instead of running off the screen. */
   overflow-wrap: anywhere;
 }
@@ -1829,7 +1826,7 @@ figure[class*='Highlight-module_highlight'] {
 }
 
 /* "Requested on …" and "No dates" have no class of their own: they are the cell's
-   own black (CA, 2026-10-04). They were black-50 and black-40 on the white cell —
+   own black. They were black-50 and black-40 on the white cell —
    3.9:1 and 2.8:1, both under WCAG AA's 4.5:1 for text this size. Every line
    class that does set a colour is held to AA in paletteContrast.test.js. */
 
@@ -1847,8 +1844,8 @@ figure[class*='Highlight-module_highlight'] {
 }
 
 /* The text links of the three tables — the thing's name in /my-bookings and
-   /owner-bookings, the group's name and "Leave the group" in "My groups" — are bold
-   (G10, CA 2026-10-05): they are what the eye looks for in a row. One rule for both
+   /owner-bookings, the group's name and "Leave the group" in "My groups" — are bold:
+   they are what the eye looks for in a row. One rule for both
    forms of `ResponsiveTable`, the desktop table and the phone's cards, hung from the
    component's own class so it reaches no other table (the guests' table of
    /invites is a plain HDS `Table` in a `.table-wrap`, not this). It leaves out
@@ -2107,8 +2104,8 @@ caption:has(> .sr-only:only-child) {
 }
 
 /* Room above the "Ideas and bugs" button (FeedbackLink) at the foot of Home. It
-   was a quiet line and this was its text style; it is a button now (CA,
-   2026-10-03) and only the gap is left. The wrapper exists whether or not the
+   was a quiet line and this was its text style; it is a button now and only
+   the gap is left. The wrapper exists whether or not the
    deployment has a feedback URL, so an empty one must not leave the gap. */
 .feedback-link {
   margin-top: var(--spacing-2-xl);
@@ -2129,7 +2126,7 @@ caption:has(> .sr-only:only-child) {
   color: var(--color-black-60);
 }
 
-/* The button under the sentence (X8, 2026-10-04): a little air above it. */
+/* The button under the sentence: a little air above it. */
 .approval-notice + .button-row-wide {
   margin-top: var(--spacing-xs);
 }
@@ -2160,8 +2157,8 @@ caption:has(> .sr-only:only-child) {
   color: var(--color-black-70);
 }
 
-/* The form a member's "Invite someone" button opens in the collection hero
-   (CA, 2026-10-03), under the button row. */
+/* The form a member's "Invite someone" button opens in the collection hero,
+   under the button row. */
 .recommend-box {
   margin-top: var(--spacing-s);
   padding: var(--spacing-s) var(--spacing-m);

@@ -69,7 +69,7 @@ describe('teamText', () => {
   });
 
   // The conjunction and the commas are the language's own (`Intl.ListFormat`), in the
-  // language that is on screen (CA, 2026-10-05).
+  // language that is on screen.
   test.each([
     ['en', 'Lili and Zoe', 'Lili, Zoe, and Abel'],
     ['es', 'Lili y Zoe', 'Lili, Zoe y Abel'],

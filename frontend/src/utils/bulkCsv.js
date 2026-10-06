@@ -12,7 +12,7 @@ export const MAX_ROWS = 100;
 
 // The plain text/scalar columns a CSV can carry. `tags` is a single
 // `|`-separated cell and `photo` is a filename — both handled separately.
-// `deposit` sits last on purpose (S6): a new column has to land at the end
+// `deposit` sits last on purpose: a new column has to land at the end
 // of the list, mirroring where it lands in EXAMPLE_CSV's header below — an
 // existing CSV missing it simply never sets `raw.deposit`, safely skipped by
 // the same `undefined` check every other column already gets.

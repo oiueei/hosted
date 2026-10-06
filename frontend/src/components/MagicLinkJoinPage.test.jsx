@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
+import i18n from '../i18n';
 import MagicLinkJoinPage from './MagicLinkJoinPage';
 
 // SharePage's real configuration — the variant that carries a share_token.
@@ -47,8 +48,8 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     expect(options.method).toBe('POST');
     // No `language` — sending the page's current UI language used to get it
     // stamped permanently onto the new member, outranking the collection's
-    // own language for every email to them from then on (CA's report,
-    // 2026-09-15). `share_token` targets the shared collection; the backend
+    // own language for every email to them from then on.
+    // `share_token` targets the shared collection; the backend
     // now resolves the newcomer's very first magic link from it instead.
     expect(JSON.parse(options.body)).toEqual({
       email: 'newcomer@example.com',
@@ -68,7 +69,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
 
     await screen.findByText(/Magic link sent! Check your inbox/);
     expect(screen.getByText(/You can close this tab now/)).toBeInTheDocument();
-    // Not flush against the notice above it (CA, 2026-09-21) — the line is
+    // Not flush against the notice above it — the line is
     // the message's quiet coda, not a footnote stapled to the box.
     expect(screen.getByText(/You can close this tab now/)).toHaveStyle({
       marginTop: 'var(--spacing-s)',
@@ -141,9 +142,9 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
   });
 });
 
-describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
+describe('MagicLinkJoinPage and the legal notice', () => {
   // The door used to carry its own "Legal notice & privacy" link, under the form
-  // and again after it was sent (art. 13 at the point of collection). CA took it
+  // and again after it was sent (art. 13 at the point of collection). It was taken
   // out: the site footer is on every page, this one included, and already links
   // /legal — so the information is still on the page where the address is typed,
   // once. These pin that the component does not bring a second copy back.
@@ -170,10 +171,10 @@ describe('MagicLinkJoinPage and the legal notice (CA, 2026-10-03)', () => {
 });
 
 describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way to /login out)', () => {
-  // `/share/:token` keeps "Already have an account? Sign in →"; the hosted
-  // `/popin` (CA, 2026-10-03) already leads people to /login another way and
-  // drops it. Since Y1 (CA, 2026-10-04) the same prop also leaves out the corner's
-  // own "Sign in" icon (X3), which every signed-out page otherwise has. The component
+  // `/share/:token` keeps "Already have an account?"; the hosted
+  // `/popin` already leads people to /login another way and
+  // drops it. The same prop also leaves out the corner's
+  // own "Sign in" icon, which every signed-out page otherwise has. The component
   // is core's and identical in both branches, so what turns it off is a prop that no
   // core caller passes.
   function renderDoor(props = {}) {
@@ -193,7 +194,7 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way t
   }
 
   // Two ways to /login a signed-out page has: the button ending its body, and the
-  // corner's icon (X3, 2026-10-04). `offerSignIn` decides both.
+  // corner's icon. `offerSignIn` decides both.
   const body = (container) => container.querySelector('.page-container');
   const corner = (container) => container.querySelector('.hero-corners');
 
@@ -201,7 +202,7 @@ describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way t
     const { container } = renderDoor();
 
     expect(body(container).querySelector('a[href="/login"]')).not.toBeNull();
-    expect(screen.getByRole('link', { name: 'Already have an account? Sign in →' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Already have an account?' })).toBeVisible();
     expect(corner(container).querySelector('a[href="/login"]')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Sign in' })).toBeVisible();
   });
@@ -358,8 +359,29 @@ describe('MagicLinkJoinPage presentation (the door matches the front door)', () 
     // ButtonLink (one <a>, one tab stop) carrying the secondary tokens, so the
     // two doors answer each other in the same shape.
     renderShareVariant();
-    const link = screen.getByRole('link', { name: 'Already have an account? Sign in →' });
+    const link = screen.getByRole('link', { name: 'Already have an account?' });
     expect(link).toHaveClass('button-link--full');
     expect(link).toHaveAttribute('href', '/login');
+  });
+
+  describe('the sign-in button reads as the question alone, in every language', () => {
+    afterEach(async () => {
+      await i18n.changeLanguage('en');
+      localStorage.removeItem('i18nextLng');
+    });
+
+    test.each([
+      ['en', 'Already have an account?'],
+      ['es', '¿Ya tienes cuenta?'],
+      ['ca', 'Ja tens un compte?'],
+    ])('in %s it reads "%s", with no "sign in" after it and no arrow', async (language, label) => {
+      localStorage.clear();
+      await i18n.changeLanguage(language);
+      renderShareVariant();
+
+      const link = screen.getByRole('link', { name: label });
+      expect(link).toHaveAttribute('href', '/login');
+      expect(link.textContent).toBe(label);
+    });
   });
 });

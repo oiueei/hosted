@@ -7,10 +7,10 @@ import BulkInviteCsv from '../components/BulkInviteCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 
 /**
- * Invite several people at once, from a CSV (G2, CA 2026-10-05). The tool was the
+ * Invite several people at once, from a CSV. The tool was the
  * last block of `/collections/:code/invites`, under the form that invites one
- * address at a time; CA took it off that page and put it in the collection menu, as
- * the CSV of things had been (X5, `ImportThingsPage`), and a menu entry only links,
+ * address at a time; it moved to the collection menu, as
+ * the CSV of things did (`ImportThingsPage`), and a menu entry only links,
  * so the tool needs a page of its own. Protected like `/invites` (`RequireAuth`),
  * reached from a curator's menu — "Invite many at once (CSV)", right after "Manage
  * members" — and the way back goes to "Manage members".

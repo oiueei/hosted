@@ -12,7 +12,7 @@ const MAX_LEN = 32;
  * it as a removable HDS Tag. Trims, dedupes (case-insensitive), caps at `max`
  * tags and `MAX_LEN` chars each — mirroring the backend `_normalize_tags`.
  *
- * A label may also carry one text per language (O6): `{"es": "Juguetes", "ca":
+ * A label may also carry one text per language, as `{"es": "Juguetes", "ca":
  * "Joguines"}`. The **raw string stays the value** — it is what the vocabulary
  * stores and what a thing's tags are checked against — so only the chip
  * resolves. The length rule is therefore mode-aware: 32 characters for a plain

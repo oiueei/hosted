@@ -194,7 +194,7 @@ describe('SharePage — a reader with no session', () => {
   });
 });
 
-describe('SharePage — naming the collection a /share link opens (S10)', () => {
+describe('SharePage — naming the collection a /share link opens', () => {
   test('asks the preview endpoint for this token on mount', async () => {
     apiFetch.mockReturnValue(preview({ headline: 'The Tool Library', description: '' }));
     renderShare();

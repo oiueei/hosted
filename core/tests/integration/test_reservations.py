@@ -650,7 +650,7 @@ def test_an_hourly_clash_is_a_409_and_leaves_the_rest_of_the_day_free(
 def test_a_full_day_hourly_reservation_is_refused_when_it_exceeds_the_hour_cap(
     hourly_reservations, authenticated_client2
 ):
-    """CA's call, made explicitly when this feature was scoped: the cap
+    """The cap
     applies to a full-day reservation too, no exception. Monday's full day is
     600 minutes (10:00-20:00 across the lunch gap); this collection's cap is
     180."""
@@ -1003,7 +1003,7 @@ def test_editing_the_numeric_rules_of_a_reservations_collection_persists_every_o
     """The edit form's PATCH lands in the database, field by field.
 
     Written when an owner reported that "how far ahead can they book" would not
-    stay saved (CA, 2026-09-21). The cause was in the frontend — the number
+    stay saved. The cause was in the frontend — the number
     field told the page about a value only on blur, so the PATCH carried the
     loaded number — and this pins the other half of that claim: given the
     number, the server keeps it. Each field is changed to something that is
@@ -1160,7 +1160,7 @@ def test_the_owner_can_cancel_a_members_reservation(
 def test_the_member_who_cancels_gets_their_own_confirmation(reservations, authenticated_client2):
     """The requester got "your reservation is confirmed" when they booked it;
     without a reply on cancelling, that email is the last word in their inbox,
-    describing a reservation that no longer stands. Since 2026-09-29 (CA) they
+    describing a reservation that no longer stands. Since 2026-09-29 they
     also keep an in-app record of their own: the reservation's whole story
     lives in the inbox, and theirs used to stop at the confirmation."""
     booking = _make_booking(reservations, authenticated_client2)

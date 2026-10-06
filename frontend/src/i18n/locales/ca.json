@@ -72,7 +72,7 @@
     "sent": "Comprova el teu correu",
     "sentBody": "T'hem enviat un enllaç màgic per unir-t'hi. Obre'l en aquest dispositiu per començar a participar.",
     "error": "Alguna cosa ha anat malament. Torna-ho a provar.",
-    "alreadyHaveAccount": "Ja tens un compte? Inicia la sessió"
+    "alreadyHaveAccount": "Ja tens un compte?"
   },
   "visibility": {
     "publicLabel": "Col·lecció pública",
@@ -181,8 +181,8 @@
     "licence": "El codi d'OIUEEI és obert, sota la llicència EUPL-1.2, un copyleft fort. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà.",
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
-    "popIn": "Nou per aquí? Passa →",
-    "faqLink": "Dubtes sobre aquest lloc? →"
+    "popIn": "Nou per aquí?",
+    "faqLink": "Dubtes sobre aquest lloc?"
   },
   "verify": {
     "declined": "Rebutjat",
@@ -696,7 +696,8 @@
     "aboutHeading": "Sobre",
     "photoAlt": "Foto de {{name}}",
     "myGroups": "Els meus grups",
-    "myGroupsIntro": "Grups on ets. Si en deixes un, en perds l'accés.",
+    "myGroupsIntro": "Tots els grups on ets, també els que dinamitzes. Si en deixes un, en perds l'accés.",
+    "youRunIt": "El dinamitzes",
     "colGroup": "Grup",
     "colTeam": "Dinamització"
   },
@@ -771,7 +772,7 @@
     "joining": "Enviant…",
     "magicLinkSent": "Enllaç enviat! Revisa la safata d'entrada i fes clic a l'enllaç per unir-te al grup.",
     "errorSendingLink": "Error en enviar l'enllaç.",
-    "alreadyHaveAccount": "Ja tens un compte? Inicia sessió →",
+    "alreadyHaveAccount": "Ja tens un compte?",
     "joinSignedIn": "Unir-me a {{name}}",
     "joinSignedInGeneric": "Unir-me a aquest grup",
     "useAnotherEmail": "Fer servir un altre correu",

@@ -47,7 +47,7 @@ def noti_user(db):
 def test_new_user_starts_subscribed_to_both_categories(db):
     """A new user receives both activity and news without opting in.
 
-    News (Cat. 3 — the digest) defaulted OFF until the 2026-08 design round, and
+    News (Cat. 3 — the digest) used to default OFF, and
     the digest consequently reached almost nobody. Turning it on is only
     compatible with DESIGN §6 because of the per-collection mute below: the way
     out of one group's summaries no longer costs you the transactional email you
@@ -430,8 +430,8 @@ def test_booking_accept_via_api_creates_in_app_notification(two_users, thing_wit
 def test_the_team_sees_a_co_curators_decision(two_users, thing_with_collection):
     """A hold request is a question put to whoever runs the thing, so its answer
     reaches the rest of them: the founder hears a co-curator's accept, the
-    co-curator who pressed it gets no card about their own call (CA, 2026-10-02:
-    "You confirmed…" was the reader being told what they had just done), and the
+    co-curator who pressed it gets no card about their own call ("You confirmed…"
+    was the reader being told what they had just done), and the
     requester gets their own BOOKING_ACCEPTED — not a "somebody decided" line about
     their own request."""
     owner, requester = two_users
@@ -481,7 +481,7 @@ def test_the_team_sees_a_co_curators_decision(two_users, thing_with_collection):
 def test_the_request_and_its_decision_call_the_requester_the_same_thing(
     two_users, thing_with_collection, who
 ):
-    """CA, 2026-10-02: "New request" showed the requester's email and "Request
+    """The inbox was inconsistent: "New request" showed the requester's email and "Request
     confirmed" called the same person "a member" — the request used their display
     name (name, else email) and the decision the bare name. Both readers manage the
     thing and the request already showed them the address, so the decision names

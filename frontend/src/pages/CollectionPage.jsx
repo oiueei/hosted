@@ -51,7 +51,7 @@ const CARDS_PER_PAGE = 24;
 // form it opens sits under.
 const RECOMMEND_BOX_ID = 'recommend-box';
 
-// How long the card of a thing just uploaded stays marked (V6).
+// How long the card of a thing just uploaded stays marked.
 const JUST_ADDED_MS = 2000;
 
 export default function CollectionPage() {
@@ -81,7 +81,7 @@ export default function CollectionPage() {
   // menu that offers it. One call owns the calendar, stats and JSON
   // downloads, and the page hands it to the menu and to the status zone.
   const downloads = useCollectionDownloads(code);
-  // A member's own switch for this group's summary email (X2, CA 2026-10-04), in the
+  // A member's own switch for this group's summary email, in the
   // collection menu. Called unconditionally too; the page learns the answer, so the
   // menu's wording is the server's word.
   const digestPref = useDigestPreference({
@@ -93,7 +93,7 @@ export default function CollectionPage() {
     ),
   });
 
-  // Arriving from "Add thing" with the new thing's code (V6, CA 2026-10-04). On a
+  // Arriving from "Add thing" with the new thing's code. On a
   // desktop the new card is the first of the grid and in plain sight; on a phone
   // the hero fills the screen and nothing of the upload shows, which reads as if
   // nothing happened. So, below 768px only: a green notice, the page brought down
@@ -279,7 +279,7 @@ export default function CollectionPage() {
   // the theeeme's primary-button colours (color_01/color_06) instead of a
   // fixed HDS token pair, matching every other themed surface on the page.
   // They are also the curators' own bookkeeping — how the group is set up, not
-  // something a member or a passer-by needs before the title (CA, 2026-09-21) —
+  // something a member or a passer-by needs before the title —
   // so both render for `isCurator` only.
   const tagTheme = tc.color_01
     ? {
@@ -308,7 +308,7 @@ export default function CollectionPage() {
   // whole form, photos uploaded and all, to collect a 403 at the end.
   const canAddThing = isCurator || (collection.mode === 'COMMUNITY' && !!collection.is_member);
   // Who may hand the group's link to someone: a curator, and — in a PUBLIC group
-  // — any member (CA, 2026-09-29). A PUBLIC group is shared by its own address,
+  // — any member. A PUBLIC group is shared by its own address,
   // with no token to mint, rotate or revoke, so a member can pass it on without
   // holding anything a curator would need to pull back; it is the cheapest way to
   // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
@@ -316,13 +316,13 @@ export default function CollectionPage() {
   const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
   // A rank-and-file member: signed in, `is_member` (false for a co-owner by design,
   // who is a curator and has the curator's menu). They get a menu of their own in
-  // the corner (X2, CA 2026-10-04) — the welcome document, the summary switch when
+  // the corner — the welcome document, the summary switch when
   // the group sends one, and "Leave the group".
   const isMember = isAuthenticated && !!collection.is_member && !isCurator;
   const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
   // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
-  // this group" and "Sign in" — whatever the mode and whether it holds things or not
-  // (CA, 2026-10-04). It used to be a line in the content that only a COMMUNITY or an
+  // this group" and "Sign in" — whatever the mode and whether it holds things or not.
+  // It used to be a line in the content that only a COMMUNITY or an
   // empty group showed, and a member without a session (the weekly digest's link is an
   // ordinary one) had no way in from here at all.
   const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
@@ -341,8 +341,8 @@ export default function CollectionPage() {
       : collection.things.some((thg) => DATE_TYPES.includes(thg.type));
 
   // When the owner has given the group its own web address, the hero's back
-  // link goes there instead of the OIUEEI home — but it still says "Home"
-  // (CA, 2026-09-21). `sanitizeUrl` returns "#" for anything that isn't
+  // link goes there instead of the OIUEEI home — but it still says "Home".
+  // `sanitizeUrl` returns "#" for anything that isn't
   // http(s), and we ignore that.
   const homePageUrl = collection.home_page ? sanitizeUrl(collection.home_page) : '';
   const backHref = homePageUrl && homePageUrl !== '#' ? homePageUrl : null;
@@ -363,17 +363,17 @@ export default function CollectionPage() {
           >
             <span className="hero-corners">
               {/* "Requests to me" is the collection menu's first entry where this page
-                  has one (X4, CA 2026-10-04): the account menu then leaves it out. */}
-              {/* Signed out, in a PUBLIC group the hero already offers "Sign in" (G3, CA
-                  2026-10-05), so the corner's icon to the same place is left out; with
+                  has one: the account menu then leaves it out. */}
+              {/* Signed out, in a PUBLIC group the hero already offers "Sign in",
+                  so the corner's icon to the same place is left out; with
                   a session `offerSignIn` changes nothing, and on every other page a
                   signed-out reader keeps the icon. */}
               <AccountMenu
                 requestsInCollectionMenu={isCurator || isMember}
                 offerSignIn={!showsSignedOutDoors}
               />
-              {/* The group's own options (CA, 2026-10-03), between the account menu
-                  and the share one: a curator's, and since X2 (2026-10-04) a
+              {/* The group's own options, between the account menu
+                  and the share one: a curator's, and a
                   member's, with what is theirs. Nothing for a reader who is
                   neither. */}
               {(isCurator || isMember) && (
@@ -395,7 +395,7 @@ export default function CollectionPage() {
                 />
               )}
             </span>
-            {/* Says "← Home" whatever it points at (CA, 2026-09-21): the group's own
+            {/* Says "← Home" whatever it points at: the group's own
                 `home_page` when it has one, the app's home otherwise. It used to be
                 worded "The group's site" with an external-link icon; the wording
                 and the icon went, the destination stayed. */}
@@ -455,11 +455,11 @@ export default function CollectionPage() {
                     </Link>
                   </p>
                 )}
-            {/* The group's welcome PDF is an entry of the collection menu (X2,
-                2026-10-04), first, for members and curators — the API serves its
+            {/* The group's welcome PDF is an entry of the collection menu,
+                first, for members and curators — the API serves its
                 URL to those two only. It was a loose link here. */}
-            {/* The hero's two doors for a signed-out reader (CA, 2026-10-04), in the
-              order CA put them on 2026-10-05: "Sign in" first and primary, to /login,
+            {/* The hero's two doors for a signed-out reader, in the
+              order: "Sign in" first and primary, to /login,
               which brings them back here — most people who open a public group
               without a session already have an account, and the member whose session
               expired (the weekly digest's link is an ordinary one) is one of them —
@@ -513,13 +513,13 @@ export default function CollectionPage() {
             {isCurator && (
               <>
                 <div className="spacer-m"></div>
-                {/* "Add thing" first and primary, then "Edit collection" (CA, 2026-10-05,
-                    after seeing a new collection): what a curator does most, and what
+                {/* "Add thing" first and primary, then "Edit collection":
+                    what a curator does most, and what
                     an empty group needs before anything else, is put things in it;
-                    editing the group is the second thing. It was the other way round
-                    from 2026-10-04 ("Edit collection" primary, "Add thing" joining it
-                    that day). Always there, with things or without, and still an
-                    entry of the collection menu (CA chose that knowing it repeats).
+                    editing the group is the second thing. It used to be the other way round
+                    ("Edit collection" primary, "Add thing" beside it). Always there,
+                    with things or without, and still an
+                    entry of the collection menu (deliberately repeated there).
                     "Manage members" and the downloads live only in the menu; the
                     outcome of a download lands right under the row. */}
                 <div className="button-row-wide">
@@ -529,12 +529,12 @@ export default function CollectionPage() {
                   <ButtonLink to={`/collections/${code}/edit`} style={btnSecondaryStyle}>
                     {t('collectionPage.editCollection')}
                   </ButtonLink>
-                  {/* The third button of the row (X6, CA 2026-10-04; it was a quiet line
+                  {/* The third button of the row (it was a quiet line
                       under the row, "Your collection is taking shape. Now invite your
                       circle →"): secondary, like "Edit collection", so the row keeps its
                       one primary. It was shown only while the group had things and
-                      nobody invited, and went with the first guest who accepted — CA
-                      invited people and the button was gone (G5, 2026-10-05). Now it is
+                      nobody invited, and went with the first guest who accepted — a curator
+                      who had invited people found the button gone. Now it is
                       always there for whoever runs the group, owner or co-curator, with
                       things or without and with members or without: inviting is not a
                       step of the beginning. */}
@@ -554,7 +554,7 @@ export default function CollectionPage() {
             {isAuthenticated && !isOwner && collection.is_member && (
               <>
                 <div className="spacer-m"></div>
-                {/* One row, each button on its own condition (CA, 2026-10-03):
+                {/* One row, each button on its own condition:
                 "Invite someone" first and primary — it opens the recommend form
                 below the row, and stays on screen while the form is open so the
                 same button closes it — then "Add thing", secondary. Neither:
@@ -603,10 +603,10 @@ export default function CollectionPage() {
                 {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only
                 destructive one of the three. It moved to the own profile's "My
-                groups" list (design round): leaving is something you do to your
+                groups" list: leaving is something you do to your
                 own membership, so it belongs with the rest of your account, next
-                to the other memberships you might weigh it against. Since X2
-                (2026-10-04) it is also the last entry of the member's collection
+                to the other memberships you might weigh it against. It is also
+                the last entry of the member's collection
                 menu, under a divider; the route (/collections/:code/leave) is
                 unchanged. */}
               </>
@@ -659,7 +659,7 @@ export default function CollectionPage() {
           </Notification>
         )}
 
-        {/* Visually hidden, still in the outline (CA, 2026-09-21). The cards
+        {/* Visually hidden, still in the outline. The cards
             below are <h3>s (ThingLinkbox's default) and rely on an <h2> above
             them: take this out and the page jumps from <h1> to <h3>, which axe's
             heading-order flags. It also stays a landmark a screen-reader user can
@@ -709,7 +709,7 @@ export default function CollectionPage() {
         {visibleThings.length === 0 ? (
           // Whoever can add a thing (a curator, or a member of a COMMUNITY group)
           // already has "Add thing" in the hero, so an empty group says nothing to
-          // them (CA, 2026-10-04): the phrase, "Add one" and the CSV link are gone,
+          // them: the phrase, "Add one" and the CSV link are gone,
           // the CSV one into the collection menu. Whoever cannot — a member of a
           // PROPRIETARY group, a reader with no session — is told, with no link.
           canAddThing ? null : (
@@ -741,7 +741,7 @@ export default function CollectionPage() {
               <>
                 <div className="spacer-m" />
                 {/* A pager is a loose action button like any other: in a wide row,
-                    so on a phone it is the width of the screen (CA, 2026-10-04). */}
+                    so on a phone it is the width of the screen. */}
                 <div className="button-row-wide">
                   <Button
                     variant="secondary"

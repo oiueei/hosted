@@ -12,8 +12,8 @@ clock everywhere.
 
 **Why .ics and not the CSV this used to be.** Google Calendar's CSV importer
 reads dates in the format of the *importing account* — an early adopter's
-day/month account read ``10/01/2026`` as the 10th of January (CA's production
-report, 2026-09-28; the 2026-09-10 "verified" import was against a US-locale
+day/month account read ``10/01/2026`` as the 10th of January (the earlier
+"verified" import was against a US-locale
 account, so the MM/DD/YYYY assumption was never true in general). iCalendar's
 dates are unambiguous and carry their timezone, and Google, Apple Calendar and
 Outlook all import them — on a phone, opening the file is enough.
@@ -54,7 +54,7 @@ and cancelled requests that *do* stay private never reach an ``.ics``.
 Everything user-written that reaches a TEXT property — a thing headline, a
 member name, a project note — is escaped per RFC 5545 §3.3.11 (backslash,
 semicolon, comma, newline), which replaces the spreadsheet-formula guard the
-CSV needed. Owner headlines that carry one text per language (inline JSON, O6)
+CSV needed. Owner headlines that carry one text per language (inline JSON)
 resolve to the collection's language.
 """
 

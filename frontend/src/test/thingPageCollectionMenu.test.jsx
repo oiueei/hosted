@@ -20,7 +20,7 @@ import ThingPage from '../pages/ThingPage';
 
 /**
  * The thing's page, read through a collection, has the same corner menu as the
- * collection's own page (X4, CA 2026-10-04): a curator's (Add thing, CSV, Manage
+ * collection's own page: a curator's (Add thing, CSV, Manage
  * members, the downloads) or a member's (the welcome document, the summary switch,
  * leaving), and "Requests to me" first in either, for whoever receives them. What
  * the page needs to know about its collection arrives in the thing's own payload

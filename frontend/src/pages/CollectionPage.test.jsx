@@ -7,8 +7,8 @@ import en from '../i18n/locales/en.json';
 
 expect.extend(toHaveNoViolations);
 
-// The busier hero (headline + tags + owner buttons + share menu) is what S8
-// adds a photo composition to on top of — HeroPhoto itself is unit-tested
+// The busier hero (headline + tags + owner buttons + share menu) is what the hero photo
+// composition is added on top of — HeroPhoto itself is unit-tested
 // separately (HeroPhoto.test.jsx); this checks the combination doesn't
 // introduce an axe violation the way the shared smoke.test.jsx fixture
 // (thumbnail_url: '') never exercises.
@@ -72,8 +72,8 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 
   /**
-   * The "Things" heading is visually hidden but still in the outline (CA,
-   * 2026-09-21). Every card below is an <h3> (ThingLinkbox's default) that counts
+   * The "Things" heading is visually hidden but still in the outline.
+   * Every card below is an <h3> (ThingLinkbox's default) that counts
    * on an <h2> above it, so deleting the heading — rather than hiding it — turns
    * the page into <h1> → <h3>, which axe's heading-order flags. Both halves are
    * pinned: that it is hidden, and that the outline it protects is intact.
@@ -131,8 +131,8 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 
   /**
-   * The description keeps out of the photo's third on wide screens (CA,
-   * 2026-09-21): the photo is an absolute background across the right of the
+   * The description keeps out of the photo's third on wide screens:
+   * the photo is an absolute background across the right of the
    * hero and the full-width description ran over it. jsdom does no layout, so
    * what can silently break — and what is pinned here — is the contract around
    * the rule: it still matches the real DOM, and it still sits behind the
@@ -248,7 +248,7 @@ describe('CollectionPage hero corners', () => {
     expect(contactInCorner()).toBeNull();
   });
 
-  // CA, 2026-09-29: a PUBLIC group is shared by its own address, so a member can
+  // A PUBLIC group is shared by its own address, so a member can
   // bring people in without holding anything a curator would have to pull back.
   test('a member of a PUBLIC group gets the share menu too — both controls, in the corner', async () => {
     renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
@@ -296,11 +296,11 @@ describe('CollectionPage hero corners', () => {
 describe('CollectionPage signed-out reader', () => {
   /**
    * The hero's "This group shares its things on OIUEEI. Join to take part →"
-   * line was removed (CA, 2026-09-21), a line in the content stood in for it from
-   * 2026-09-29, and CA brought the hero's join back on 2026-10-04 — with a pair, in
-   * a row, as on /welcome: `[Join this group]` primary and `[Sign in]` secondary at
-   * first, `[Sign in]` primary and `[Join this group]` secondary since G3 (CA,
-   * 2026-10-05), which also took the account icon out of the corner of this page.
+   * line was removed, a line in the content stood in for it for a while, and the
+   * hero's join came back as a pair, in a row, as on /welcome: `[Join this group]`
+   * primary and `[Sign in]` secondary at first, `[Sign in]` primary and `[Join this
+   * group]` secondary now, which also took the account icon out of the corner of
+   * this page.
    * The tests of every shape of group are further down (`the two doors of a
    * signed-out reader`); this one is the hero of a plain public group.
    *
@@ -443,11 +443,11 @@ describe('CollectionPage member hero', () => {
 
   /**
    * The per-group "You get a summary of what's new here — turn it off" line
-   * left the hero (CA, 2026-09-21): a sentence about email, in the one place a
+   * left the hero: a sentence about email, in the one place a
    * member comes to look at things. Muting a group is still one click from the
    * footer of every digest (`DigestMutePage`), and the endpoint behind the old
-   * switch is untouched, so this is only about what the page offers. Since X2
-   * (2026-10-04) a member has the switch again, as an entry of the collection menu
+   * switch is untouched, so this is only about what the page offers. A member has
+   * the switch again, as an entry of the collection menu
    * (`collectionMenu.test.jsx`): the hero still has none, and nothing is sent
    * until it is pressed.
    *
@@ -476,7 +476,7 @@ describe('CollectionPage member hero', () => {
   });
 
   /**
-   * Leaving moved out of this hero in the 2026-08 design round, to the own
+   * Leaving moved out of this hero to the own
    * profile's "My groups" list. Its new home is well covered (`myGroups.test`);
    * the place it left was not, so a resurrected link would put the one
    * destructive control back where it was third in a stack of unlabelled text
@@ -499,7 +499,7 @@ describe('CollectionPage member hero', () => {
 });
 
 /**
- * A member's two hero controls, in one row (CA, 2026-10-03): "Invite someone"
+ * A member's two hero controls, in one row: "Invite someone"
  * first, primary, and "Add thing" after it, secondary — each on its own
  * condition, no row when neither applies. "Invite someone" opens the recommend
  * form *below* the row and stays on screen while it is open, so the same button
@@ -640,7 +640,7 @@ describe('CollectionPage — the member row: "Invite someone" and "Add thing"', 
 /**
  * The Community / Public / Private tags after the title say how a group is set
  * up — bookkeeping for whoever runs it, not something a member or a passer-by
- * needs before they have read the name (CA, 2026-09-21). Community used to show
+ * needs before they have read the name. Community used to show
  * to everyone; Public/Private was already curator-only. Now both are.
  */
 describe('CollectionPage hero tags belong to the curators', () => {
@@ -828,8 +828,8 @@ describe('A signed-in visitor on a public group', () => {
   });
 
   // A signed-out reader of a PUBLIC group has a button to press on every card, and
-  // since CA's call of 2026-10-04 also a pair of doors in the hero: "Sign in" (primary
-  // since G3, CA 2026-10-05: to /login, which brings them back here) and "Join this
+  // also a pair of doors in the hero: "Sign in" (primary:
+  // to /login, which brings them back here) and "Join this
   // group" (secondary, to the group's join page, no ?thing= — there is no thing in it).
   // In every public group, COMMUNITY or PROPRIETARY, empty or not. The line in the
   // content that stood for them from 2026-09-29 — only in a COMMUNITY or an empty
@@ -925,8 +925,8 @@ describe('A signed-in visitor on a public group', () => {
 
       await screen.findByText(/No things in this collection yet/);
 
-      // The hero's button, the first of the row since G3 — and the only "Sign in" on
-      // the page: the corner icon (X3) that carried the same words is left out here.
+      // The hero's button, the first of the row — and the only "Sign in" on
+      // the page: the corner icon that carried the same words is left out here.
       const signIn = heroDoors()[0];
       const next = new URL(signIn.getAttribute('href'), 'https://oiueei.test').searchParams.get(
         'next'
@@ -934,8 +934,8 @@ describe('A signed-in visitor on a public group', () => {
       expect(next).toBe('/collections/COL001');
     });
 
-    // G3 (CA, 2026-10-05): the hero offers "Sign in" as its first button, so the
-    // account icon of the corner — X3's link to the same place — is left out of
+    // The hero offers "Sign in" as its first button, so the
+    // account icon of the corner — the link to the same place — is left out of
     // this page. A thing's page, the /legal page and the rest keep it (see
     // `test/signedOutCorner.test.jsx`).
     test('the corner has no account icon: the hero’s button is the only way to sign in', async () => {
@@ -983,7 +983,7 @@ describe('A signed-in visitor on a public group', () => {
     });
   });
 
-  // Whoever can add a thing has "Add thing" in their row (CA, 2026-10-04), so an
+  // Whoever can add a thing has "Add thing" in their row, so an
   // empty group no longer says a word to them: not the phrase, not "Add one" (gone)
   // and not the CSV link (it moved into the curators' menu).
   test('a member of an empty COMMUNITY group sees no "no things" block: their "Add thing" is the invitation', async () => {
@@ -1179,7 +1179,7 @@ describe('sending a message to the whole group', () => {
 });
 
 describe('a broadcast the server turns down', () => {
-  /* Separate from the round above because this one changed the page rather than
+  /* Separate from the cases above because this one changed the page rather than
      covering it. The daily cap (5/day, `key="user"`) is the only refusal an
      owner meets in practice, and it does not arrive in the shape this handler
      was reading: `@ratelimit(block=True)` raises, and `api_exception_handler`
@@ -1581,13 +1581,13 @@ describe('CollectionPage as a co-owner', () => {
     expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument();
   });
 
-  // The hero row holds "Add thing" and "Edit collection" (CA, 2026-10-05): the
+  // The hero row holds "Add thing" and "Edit collection": the
   // first primary, the second secondary — and "Invite your people", always, a third
-  // secondary one (G5, 2026-10-05; `test/inviteYourPeople.test.jsx` pins when it is
-  // there). It held "Edit collection" alone from 2026-10-03 — the rest of the
-  // curator's controls are in the collection menu, one click further — and then
-  // "Edit collection" primary with "Add thing" after it (2026-10-04): the thing a
-  // curator does most is put things in, so that is the button the eye lands on.
+  // secondary one (`test/inviteYourPeople.test.jsx` pins when it is there). It once
+  // held "Edit collection" alone — the rest of the curator's controls are in the
+  // collection menu, one click further — and then "Edit collection" primary with
+  // "Add thing" after it: the thing a curator does most is put things in, so that is
+  // the button the eye lands on.
   test('the curator hero row holds "Add thing" and then "Edit collection", the first primary, and "Invite your people"', async () => {
     apiFetch.mockImplementation((url) =>
       url.startsWith('/api/v1/inbox/')
@@ -1621,7 +1621,7 @@ describe('CollectionPage as a co-owner', () => {
     expect(inRow[2].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
   });
 
-  // The button is there with things or without (CA, 2026-10-04): an empty group
+  // The button is there with things or without: an empty group
   // had it only in the menu, and a group with things only there too.
   const KETTLE = {
     code: 'THG001',
@@ -1698,7 +1698,7 @@ describe('CollectionPage as a co-owner', () => {
 
     const line = (await screen.findByText(/Run by:/)).closest('p');
     // founder first, then each co-curator, all linked — written as English writes a
-    // list of three: commas, and the conjunction before the last (G4, CA 2026-10-05)
+    // list of three: commas, and the conjunction before the last
     expect(line).toHaveTextContent('Run by: The Founder, Me, and Nil');
     expect(within(line).getByRole('link', { name: 'The Founder' })).toHaveAttribute(
       'href',
@@ -1755,9 +1755,9 @@ describe('CollectionPage as a co-owner', () => {
     );
   };
 
-  // The API sends a co-curator's bare `name` — never the email in its place (L2) —
+  // The API sends a co-curator's bare `name` — never the email in its place —
   // so one who set none arrives as ''. Joined with commas that left "Oriol, ," on
-  // the page; whoever has no name is counted after the names instead (CA, 2026-10-02).
+  // the page; whoever has no name is counted after the names instead.
   describe('a co-curator with no name is counted at the end, not listed', () => {
     const nameless = (code) => ({ code, name: '' });
     const linked = (line) =>
@@ -1815,11 +1815,11 @@ describe('CollectionPage as a co-owner', () => {
   });
 
   // The label is one noun, "Dinamización:" — like a credit line, no gender, no
-  // number — for a team of one and a team of three (CA, 2026-10-02), so it is
+  // number — for a team of one and a team of three, so it is
   // the same word in both lines. Nothing but these pins the Spanish and Catalan
   // wording of the hero.
   //
-  // The names are joined with that language's own "and" (G4, CA 2026-10-05): "A y B",
+  // The names are joined with that language's own "and": "A y B",
   // "A, B y C" in Spanish, "A i B", "A, B i C" in Catalan; the count of those without
   // a name is the last element of the list, so its text carries no conjunction.
   describe.each([
@@ -1901,7 +1901,7 @@ describe('CollectionPage as a co-owner', () => {
 });
 
 /**
- * The hero's back link always SAYS "← Home" (CA, 2026-09-21), whatever it points
+ * The hero's back link always SAYS "← Home", whatever it points
  * at: the group's own `Collection.home_page` when the owner has set one, the
  * app's home otherwise. It used to say "The group's site" and carry an
  * external-link icon; the wording and the icon are gone, the destination stayed.
@@ -2021,8 +2021,7 @@ describe('CollectionPage — the owner wrote in the visitor’s language', () =>
 /**
  * A group's welcome PDF reached a member once, in the email sent when they
  * joined, and nowhere else: a member who had deleted it could not find it
- * again. The API serves `welcome_doc_url` to curators and members only (the
- * 2026-09-18 security round), so the page shows whatever it is given.
+ * again. The API serves `welcome_doc_url` to curators and members only, so the page shows whatever it is given.
  */
 describe('CollectionPage — the welcome document', () => {
   const renderWith = (collection) => {
@@ -2045,7 +2044,7 @@ describe('CollectionPage — the welcome document', () => {
       welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
     });
 
-    // In the collection menu since X2 (2026-10-04): it was a loose link in the hero.
+    // In the collection menu: it was a loose link in the hero.
     fireEvent.click(await screen.findByRole('button', { name: 'Collection options' }));
     const link = await screen.findByRole('link', { name: /welcome document \(PDF\)/ });
     expect(link).toHaveAttribute('href', 'https://bucket.example.com/oiueei/documents/welcome.pdf');

@@ -18,14 +18,14 @@ import { externalFormUrl } from '../utils/externalForms';
  * is left to conclude the feature does not exist — which for a deployment with
  * a request URL is not even true.
  *
- * **Where to ask is a primary button, "Request access"** (X8, CA 2026-10-04), not a
+ * **Where to ask is a primary button, "Request access"**, not a
  * link ending in an arrow: the sentence stays as it was, and under it a
  * `.button-row-wide` (the width of the screen on a phone) holds the button. It is
  * made as `FeedbackLink` is — HDS `Link` with `useButtonStyles`, the theeeme's
  * primary tokens, `target="_blank"` and the announcement of the new tab in the
  * `aria-label`, since HDS's own `openInNewTab` prints its label. Without a request
  * URL there is the sentence and no button, as before. These forms already have a
- * primary of their own ("Create" / "Save"); CA wants this one all the same.
+ * primary of their own ("Create" / "Save"); this one is wanted all the same.
  *
  * @param {'collection_modes'|'thing_types'} kind Which capability list to check.
  * @param {Array<{value: string, label: string}>} catalogue Every option the
@@ -47,7 +47,7 @@ export default function ApprovalNotice({ kind, catalogue }) {
 
   const list = withheld.map((option) => option.label).join(', ');
   // Where to ask: the deployment's own form for it, in the reader's language
-  // (`externalForms.requestAccess`, as written, TL1, CA 2026-10-05), or the address
+  // (`externalForms.requestAccess`, as written), or the address
   // the server gives (`capabilities.request_url`), as before. It opens in a new tab
   // either way.
   const requestUrl =

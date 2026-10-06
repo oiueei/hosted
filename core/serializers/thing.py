@@ -26,7 +26,7 @@ DEPOSIT_TYPES = (Thing.Type.LEND_THING, Thing.Type.RENT_THING)
 
 
 def validate_deposit_for_type(thing_type, deposit):
-    """Reject a deposit on a type with nothing to give back (D4).
+    """Reject a deposit on a type with nothing to give back.
 
     Enforced here rather than by hiding the input, because the JSON API and the
     CSV import are two more doors into the same column — `fee` has no such rule
@@ -206,7 +206,7 @@ class ThingComputedFieldsMixin(serializers.Serializer):
             return obj.owner.name
         # Bare name by default — never the email — because this is shown to
         # co-members in the community grid, where an email fallback would leak
-        # it (L2). Exception: the collection owner already sees co-members'
+        # it. Exception: the collection owner already sees co-members'
         # emails (owner-only `invites`), so when the viewer owns the collection
         # being serialised (``parent_collection`` is only set on the collection
         # grid) we fall back to the email for owners who haven't set a name.
@@ -512,7 +512,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         thing — served here regardless of type, but only ever rendered for
         LEND/RENT/RESERVE (not RESERVE_THING only): a GIFT/SELL claim submits
         straight from the card and never visits that page, so the note is
-        invisible to it however this field answers. Raw (possibly an O6
+        invisible to it however this field answers. Raw (possibly a
         `{lang: text}` map, like `headline`/`description`) — `RequestThingPage`
         resolves it client-side the same way. `""` when there is no viewable
         collection."""
@@ -546,8 +546,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         return self.context["_viewer_muted_collection_codes"]
 
     def get_collection_menu(self, obj):
-        """What the thing's own page needs to paint the collection menu (X4, CA
-        2026-10-04) — and nothing more, so the page never loads the collection
+        """What the thing's own page needs to paint the collection menu — and
+        nothing more, so the page never loads the collection
         itself (``GET /collections/{code}/`` carries every one of its things).
 
         Present only when the SPA reads the thing **through a collection**
@@ -722,7 +722,7 @@ class ThingCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
-    # Non-negative, bounded to the model's 10-digit / 2-decimal range (L7).
+    # Non-negative, bounded to the model's 10-digit / 2-decimal range.
     fee = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
     )
@@ -776,7 +776,7 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
-    # Non-negative, bounded to the model's 10-digit / 2-decimal range (L7).
+    # Non-negative, bounded to the model's 10-digit / 2-decimal range.
     fee = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
     )
@@ -831,7 +831,7 @@ class ThingUpdateSerializer(serializers.ModelSerializer):
 
 
 class LocaleDecimalField(serializers.DecimalField):
-    """A ``DecimalField`` that also accepts a decimal comma (bulk-CSV only, S9).
+    """A ``DecimalField`` that also accepts a decimal comma (bulk-CSV only).
 
     Spanish/Catalan spreadsheet exports write decimals as ``1,5``; a plain
     ``DecimalField`` 400s on that. When the input is a string with exactly one
@@ -875,7 +875,7 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
     location = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     # LocaleDecimalField (not the plain DecimalField the other Thing
     # serializers use): a CSV row is the one path with no NumberInput to
-    # normalise a locale decimal comma before it reaches the server (S9).
+    # normalise a locale decimal comma before it reaches the server.
     fee = LocaleDecimalField(
         max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
     )

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
 import ThingInfoRows from './ThingInfoRows';
 
-// The row that only the deposit exists to protect (DEPOSIT_PLAN.md §10, S6):
+// The row that only the deposit exists to protect:
 // a RENT thing with a price AND a deposit must not read as one number.
 
 describe('ThingInfoRows — deposit row', () => {

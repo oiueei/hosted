@@ -51,7 +51,7 @@ export default function ManageInvitesPage() {
   // co-owner. The founder is no longer a distinct client-side tier here.
   const [isCurator, setIsCurator] = useState(false);
   const [coOwnerCodes, setCoOwnerCodes] = useState(new Set());
-  // What is in the invitations field: one address or several, cut by commas (G6).
+  // What is in the invitations field: one address or several, cut by commas.
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   // The summary of the last batch the field sent (several addresses at once), in the
@@ -490,7 +490,7 @@ export default function ManageInvitesPage() {
         <>
           <div className="spacer-xl" />
           <div className="form-grid section-mt">
-            {/* One address or several, separated by commas (G6, CA 2026-10-05), so this is
+            {/* One address or several, separated by commas, so this is
                 a text field and not `type="email"`: the browser's email field strips
                 the line breaks of a pasted list (gluing two addresses into one), has
                 no place for `;`, and only takes commas with `multiple`. `inputMode`

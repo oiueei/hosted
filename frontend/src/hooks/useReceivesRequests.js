@@ -6,7 +6,7 @@ import { apiFetch } from '../services/api';
  * on `GET /auth/me/` — owns a thing, or founds or co-curates a PROPRIETARY
  * collection, which only the server knows. Shared by the two menus that can carry
  * the link (the account menu, and the collection menu on a collection's page and on
- * a thing's, X4, CA 2026-10-04), with one behaviour:
+ * a thing's), with one behaviour:
  *
  * - asked **when the panel opens** (`open` goes true), and again each time, so an
  *   account that has just got its first thing, or been made a curator, sees the link

@@ -8,7 +8,7 @@ import { mockMatchMedia, PHONE } from '../test/matchMedia';
 expect.extend(toHaveNoViolations);
 
 /**
- * A table on a desktop, one card per row on a phone (CA, 2026-10-04). The columns
+ * A table on a desktop, one card per row on a phone. The columns
  * are the pages' own shape in miniature: a first column that names the row, one
  * that wants its header in front, one that is null for some rows, and an actions
  * column with a different face in a card.

@@ -8,8 +8,8 @@ const EXAMPLE = '{"es": "Las cosas de mamá", "ca": "Les coses de mama"}';
 const TAGS_EXAMPLE = '{"es": "Juguetes", "ca": "Joguines"}';
 
 /**
- * The quiet hint + (i) that tells an owner they may write one text per language
- * (O6). Rendered under the description in the thing/collection forms
+ * The quiet hint + (i) that tells an owner they may write one text per language.
+ * Rendered under the description in the thing/collection forms
  * (`variant="text"`, covering headline *and* description) and under the tag
  * editor (`variant="tags"`).
  *
@@ -19,7 +19,7 @@ const TAGS_EXAMPLE = '{"es": "Juguetes", "ca": "Joguines"}';
  * the `right: 0`-anchored panel stays inside the viewport).
  *
  * Props: `id` (the popover panel's id), `variant` (`text` | `tags` | `policy` |
- * `requestInfo` | `emailNote`). `policy` (D5, 2026-08) is the deposit policy in
+ * `requestInfo` | `emailNote`). `policy` is the deposit policy in
  * RentalRulesFields — its own variant rather than reusing `text`, since that
  * hint specifically names "the title or the description" and a deposit
  * policy is neither. `requestInfo` (Collection.request_info, shown on

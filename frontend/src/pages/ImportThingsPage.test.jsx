@@ -16,9 +16,9 @@ import { apiFetch } from '../services/api';
 import ImportThingsPage from './ImportThingsPage';
 
 /**
- * The CSV import has a page of its own (X5, CA 2026-10-04). It was a section at the
- * foot of `/collections/:code/add`; CA took it off that page ("it is already in the
- * menu"), and a menu entry only links. The page is `PageLayout` — the way back, the
+ * The CSV import has a page of its own. It was a section at the
+ * foot of `/collections/:code/add`; it left that page (it is already in the
+ * menu), and a menu entry only links. The page is `PageLayout` — the way back, the
  * title — and `BulkAddCsv`, and after an import it goes back to the collection, as it
  * did from `/add`.
  */

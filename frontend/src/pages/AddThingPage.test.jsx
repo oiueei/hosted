@@ -71,7 +71,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 /**
- * The CSV import left this page (X5, CA 2026-10-04): it is `/collections/:code/import`
+ * The CSV import left this page: it is `/collections/:code/import`
  * now, reached from a curator's collection menu. This one is the form for one thing.
  */
 describe('AddThingPage — no CSV import any more', () => {
@@ -199,7 +199,7 @@ describe('AddThingPage — what the form sends', () => {
   });
 
   // On a phone the collection page tells the person it worked and takes them to the
-  // new card (V6, CA 2026-10-04); for that it needs to know which card. The code
+  // new card; for that it needs to know which card. The code
   // comes from the response of the POST, nowhere else.
   test('the new thing’s code, from the response, travels to the collection page', async () => {
     mockApi({ post: { ok: true, body: { code: 'NEW123', headline: 'Blue armchair' } } });

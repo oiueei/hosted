@@ -71,61 +71,19 @@ export default defineConfig(({ mode }) => ({
         'src/i18n/locales/**',
       ],
       // Ratchet floor: set ~2-3 points below the suite's current coverage so it
-      // guards against regression without blocking. Raise it as coverage grows.
-      // Bumped after the 2026-08 pre-release **testing** round (OwnerBookings,
-      // DigestMute, the four irreversible confirms, the guest-list
-      // recommendations, the collection digest switch, AddThing +
-      // EditCollection) lifted coverage to ~84.2 / 75.3 / 75.9 / 87.7.
+      // guards against regression without blocking. Raise it as coverage grows,
+      // once the slack on any metric drifts past ~3 points — a band wider than
+      // that lets a regression delete a chunk of the guard and still go green.
+      // Raise only on two agreeing runs: a metric that wobbles between runs is
+      // not a baseline.
       //
-      // Raised again at the close of that round, once the Phase B work (the
-      // shared-things pager, the inbox dismiss, the collection hero) took the
-      // suite to 84.9 / 77.0 / 77.2 / 88.3: branches and functions had drifted
-      // to ~4 points of slack, which is wider than this band is meant to be.
-      //
-      // Raised a third time at the close of the 2026-08 pre-release **testing**
-      // round, which took the suite to 85.6 / 77.9 / 78.4 / 88.8 (the i18n
-      // bootstrap, the thing-type edit door, the signed-in join). Functions had
-      // drifted to ~4.4 points of slack and branches to ~3.9 — the same widening
-      // that triggered the last raise. All four are back inside the band.
-      //
-      // Raised a fourth time after the 2026-08-21 round on the four files that
-      // were sitting under the ratchet — VerifyPage (the proposal decisions, the
-      // magic-link landing, the stall timeout), the collection broadcast and the
-      // ways a collection fails to load, the share menu's delivery half, and the
-      // two thing-form controls that carry logic. The suite reads 87.6 / 79.9 /
-      // 79.7 / 90.7, so every metric had drifted to 3.7-4.9 points of slack.
-      //
-      // Raised a fifth time at the close of the 2026-08 pre-release **frontend**
-      // review, which took the suite to 88.7 / 81.0 / 80.8 / 91.3: the WCAG
-      // 1.4.13 fix on InfoPopover (62.5 -> 100 across the board), the profile
-      // form's validation, payload and error paths (EditProfilePage 63.5 -> 92.7
-      // statements, 44.4 -> 66.7 functions), SharedThingsPage's axe sweep and
-      // heading outline, CollectionLinkbox's client-side navigation, and the
-      // first tests hdsLang has ever had. Statements and functions had drifted
-      // to 3.7-3.8 points of slack, which is wider than this band is meant to be.
-      //
-      // Raised a sixth time at the close of the 2026-08 pre-release **testing**
-      // round. The suite reads 88.8 / 81.4 / 81.0 / 91.5 — **unchanged by that
-      // round**, which is the point worth recording: it added tests for
+      // Coverage is a floor detector, not a bug detector: tests that pin
       // behaviour whose lines were already executed (a serializer's field list
       // pinned as a set instead of one forbidden name, the CSRF header on the
-      // silent token refresh), so it closed real gaps and moved no metric.
-      // Coverage is a floor detector; it was never going to find those.
+      // silent token refresh) close real gaps and move no metric.
       //
-      // What moved is the slack. The previous raise left 2.3-3.0 points; the
-      // frontend review before it had already lifted the suite, so statements
-      // sat at 2.9 and branches at 3.4 — wider than this band is meant to be.
-      //
-      // All four now sit 1.9-2.5 points under. Mirrored in CLAUDE.md, which
-      // quotes these numbers — they move together or the doc starts lying.
-      //
-      // Raised a seventh time at the close of the 2026-09-30 nice-to-have
-      // round (the two unpinned BOOKING_DECIDED corners, the i18n key sweep,
-      // the shared safe_next_path table). The suite reads 92.2 / 87.0 / 86.3 /
-      // 94.3 — twice, identically: the functions metric that wobbled with
-      // HomePage on 2026-09-29 held still on both runs, and two agreeing runs
-      // were the precondition for raising anything. All four sit 2.2-3.0
-      // points under.
+      // Mirrored in CLAUDE.md, which quotes these numbers — they move together or
+      // the doc starts lying.
       //
       // The floor is not the goal — it only catches a drop. New code still owes
       // tests that name a behaviour; a change that lands under this line means

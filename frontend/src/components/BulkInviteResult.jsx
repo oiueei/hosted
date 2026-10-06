@@ -15,7 +15,7 @@ const REASON_KEY = {
  * why — as `POST /collections/{code}/invite/bulk/` answers it (`{invited, skipped:
  * [{email, reason}]}`). Shared by the two ways of sending a batch: the CSV tool
  * (`BulkInviteCsv`) and the invitations field of `/invites` when it holds several
- * addresses (G6, CA 2026-10-05), so both say it in the same words and the same shape.
+ * addresses, so both say it in the same words and the same shape.
  *
  * It is a live region that is always rendered, with the notification inside it only when
  * there is a `result` (`StatusRegion`: a region added together with its content announces

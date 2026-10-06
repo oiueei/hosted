@@ -161,7 +161,7 @@ class TestProposing:
         address to this endpoint, 30 a day, and read a yes/no on whether it
         belongs to a co-member. The roster a non-owner receives carries `code`
         and `name` and no email precisely so those addresses stay the owner's to
-        see (L2), and this handed the same fact back one guess at a time. So the
+        see, and this handed the same fact back one guess at a time. So the
         two answers have to be byte-identical — a difference in wording, status
         or shape is the whole vulnerability.
         """
@@ -222,7 +222,7 @@ class TestDeciding:
     def test_a_nameless_proposer_is_not_outed_by_their_email_address(self, group, member):
         """`display_name` falls back to the email, and this message goes to a
         third party outside the group. A proposer who never set a name must lose
-        the line, not have their address forwarded to a stranger (L2)."""
+        the line, not have their address forwarded to a stranger."""
         member.name = ""
         member.save(update_fields=["name"])
         proposal = self._propose(group, member)
@@ -252,7 +252,7 @@ class TestDeciding:
         assert "a bit much" not in str(sent.alternatives)
 
     def test_declining_tells_the_proposer_and_never_the_proposed(self, group, member):
-        """CA's call: say no clearly, give no reason.
+        """Say no clearly, give no reason.
 
         Silence would leave the member waiting and asking again. A reason would
         either put words in the owner's mouth or turn a quiet no into an
@@ -426,7 +426,7 @@ class TestTheEmailLinks:
 class TestQuota:
     @patch("core.services.invitation_service.send_collection_invite_email")
     def test_an_approved_invitation_is_charged_to_the_owner(self, mock_send, group, member):
-        """CA's call, and the right one: the email leaves the owner's group under
+        """The email leaves the owner's group under
         the deployment's sending domain, so it is the owner's daily allowance it
         spends — not the member's, who cannot send anything on their own."""
         client_for(member).post(
@@ -735,7 +735,7 @@ def test_a_resend_clears_only_the_invitation_pair_it_is_replacing(group):
 
 @pytest.mark.django_db
 class TestANewCollectionAsksItsOwnerNothing:
-    """CA, 2026-10-02: ``allow_member_proposals`` is off for a new collection. Being
+    """``allow_member_proposals`` is off for a new collection. Being
     asked to approve strangers is something the person who runs a group chooses,
     not something every group is handed. Collections that already existed kept the
     value they had; only the default for new ones changed."""

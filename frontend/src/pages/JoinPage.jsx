@@ -25,7 +25,7 @@ export default function JoinPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   // The thing the visitor was trying to act on, if they came from a card/detail
-  // "Reserve" click (S13). Passed through to `/auth/join/` so the magic link
+  // "Reserve" click. Passed through to `/auth/join/` so the magic link
   // lands them back on it, not the collection index. A `/join` URL opened cold
   // simply has no `?thing=` and behaves as before.
   const thingCode = searchParams.get('thing') || undefined;
@@ -53,7 +53,7 @@ export default function JoinPage() {
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
 
-  // "Join {collection}", the words `/share/:token` already says (CA, 2026-10-04):
+  // "Join {collection}", the words `/share/:token` already says:
   // the page says which group the stranger is about to join, in the title and the
   // tab, once the name is known. Until then — a collection that cannot be read
   // keeps the generic copy rather than an invented name — the title of always.

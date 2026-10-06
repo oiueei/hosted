@@ -115,7 +115,7 @@ export default function CreateCollectionPage() {
     if (newMode === mode) return;
     setMode(newMode);
     // The mode does not touch visibility: a new group is private in either mode
-    // and only the switch makes it public (CA, 2026-09-29). Community used to turn
+    // and only the switch makes it public. Community used to turn
     // the switch on by itself — and again every time it was re-chosen, even after
     // the curator had switched it off — but whoever contributes to a group is
     // never shown whether it is public, so a group of families ended up readable
@@ -255,7 +255,7 @@ export default function CreateCollectionPage() {
         />
       </div>
       {/* Everything optional, with a safe default, folds away so the happy path
-            (title, mode, who can add) reads at a glance (DESIGN §3, O1). */}
+            (title, mode, who can add) reads at a glance (DESIGN §3). */}
       <Accordion
         heading={t('createCollection.advancedTitle')}
         language={hdsLang(i18n.language)}

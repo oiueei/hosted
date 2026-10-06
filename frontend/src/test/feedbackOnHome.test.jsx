@@ -14,13 +14,13 @@ import { apiFetch } from '../services/api';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
-// core test cannot assume what `deployment/` holds (U16, V9, round W §0.5), so the
+// core test cannot assume what `deployment/` holds, so the
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
 
 /**
- * "Ideas and bugs" at the foot of Home (CA, 2026-10-03): a secondary button, alone,
+ * "Ideas and bugs" at the foot of Home: a secondary button, alone,
  * in its own container — and only where the deployment sets `VITE_FEEDBACK_URL`,
  * read once when `FeedbackLink` loads, so each test stubs it and imports Home anew.
  */
@@ -66,7 +66,7 @@ describe('Home and the feedback button', () => {
 
   test('it sits in a wide row, so on a phone it is the width of the screen', async () => {
     // Alone, and still in a `.button-row-wide`: the row is what takes a loose
-    // action button to 100% under 768px (CA, 2026-10-04).
+    // action button to 100% under 768px.
     await renderHome('https://forms.example/feedback');
 
     const link = await screen.findByRole('link', { name: /^Ideas and bugs/ });

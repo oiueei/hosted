@@ -105,7 +105,7 @@ class TestMembershipEvents:
         They are separate rows because they answer separate questions — how many
         people arrived, and how many joins each collection got — and a join by
         someone who already had an account logs only the second. They are also
-        written at different moments (W1, 2026-10-04): the account when the
+        written at different moments: the account when the
         address is typed, because the magic link needs one, and the membership
         when the link is pressed, because only then is it somebody joining.
         """

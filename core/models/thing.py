@@ -72,7 +72,7 @@ class Thing(models.Model):
     # Markdown (a space, a machine, a piece of history can need a page), and the
     # real limit is the per-language one the serializer enforces
     # (LocalizedTextField, 2000 visible / language). The column is only a
-    # backstop, and O6 says the serializer is the guard.
+    # backstop; the serializer is the guard.
     description = models.TextField(blank=True, default="")
     thumbnail = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)

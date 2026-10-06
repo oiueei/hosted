@@ -20,19 +20,30 @@ const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promis
 
 const ME = {
   code: 'ME0001',
-  name: 'Carlos',
+  name: 'Lala',
   email: 'me@test.com',
   koro: 'basic',
   created: '2026-01-01',
 };
 const OTHER = { code: 'OTH001', name: 'Lili', created: '2026-01-01', shared_collections: [] };
 
-const setApi = ({ memberships = [], profile = ME, invitedOk = true } = {}) => {
+const refused = () => Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+
+// `memberships` is what `/invited-collections/` answers, `running` what `/collections/`
+// does (a page of results): the groups the account owns or co-curates.
+const setApi = ({
+  memberships = [],
+  running = [],
+  profile = ME,
+  invitedOk = true,
+  runningOk = true,
+} = {}) => {
   apiFetch.mockImplementation((url) => {
     if (url.startsWith('/api/v1/invited-collections/')) {
-      return invitedOk
-        ? ok(memberships)
-        : Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+      return invitedOk ? ok(memberships) : refused();
+    }
+    if (url.startsWith('/api/v1/collections/')) {
+      return runningOk ? ok({ count: running.length, results: running }) : refused();
     }
     return ok(profile);
   });
@@ -92,7 +103,7 @@ describe('UserPage — My groups', () => {
   });
 
   test('is a table of three columns: the group, who runs it, and a nameless one for the way out', async () => {
-    // The same HDS Table as the request pages (CA, 2026-10-03). The last header
+    // The same HDS Table as the request pages. The last header
     // is named for a screen reader only, so the column is not an empty <th>.
     setApi({ memberships: [{ code: 'COL001', headline: 'Bibliocoses' }] });
 
@@ -207,7 +218,7 @@ describe('UserPage — My groups', () => {
 
     renderOwn();
 
-    await screen.findByText(/Carlos/);
+    await screen.findByText(/Lala/);
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
   });
 
@@ -217,7 +228,7 @@ describe('UserPage — My groups', () => {
     renderOwn();
 
     // The profile still renders; only the groups list is absent.
-    expect(await screen.findByText(/Carlos/)).toBeInTheDocument();
+    expect(await screen.findByText(/Lala/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
   });
 
@@ -230,6 +241,201 @@ describe('UserPage — My groups', () => {
     await screen.findByText(/don't share any groups/i);
     expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Private business')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * "My groups" shows every active group the account is in, the ones it runs as well
+ * as the ones it is only a member of. The profile is where somebody goes to see all
+ * of them; Home lists the ones they run apart and the ones they are invited to apart.
+ *
+ * Only a member can leave: the server refuses the founder ("The owner can't leave")
+ * and a co-curator ("ask the owner to demote you first"), so those rows say they run
+ * the group in the cell where the way out would be, instead of a link that fails.
+ */
+describe('UserPage — My groups: every group the account is in', () => {
+  // A group the account owns, as `/collections/` lists it. A co-curator's group
+  // comes from the same list, with the account among `co_owners`.
+  const runs = (code, headline, over = {}) => ({
+    code,
+    headline,
+    status: 'ACTIVE',
+    is_curator: true,
+    owner: 'ME0001',
+    owner_name: 'Lala',
+    co_owners: [],
+    ...over,
+  });
+  const member = (code, headline, over = {}) => ({
+    code,
+    headline,
+    status: 'ACTIVE',
+    is_curator: false,
+    owner: 'OWN001',
+    owner_name: 'Lili',
+    co_owners: [],
+    ...over,
+  });
+  // A group the account co-curates: in `/collections/` and, as every co-curator is, in
+  // the invite list too, where it says `is_curator`.
+  const coCurated = (code, headline) =>
+    runs(code, headline, {
+      owner: 'OWN001',
+      owner_name: 'Lili',
+      co_owners: [{ code: 'ME0001', name: 'Lala' }],
+    });
+
+  const names = (table) =>
+    within(table)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell')[0].textContent);
+  const rowOf = (name) => screen.getByRole('link', { name }).closest('tr');
+  const actionsOf = (name) => within(rowOf(name)).getAllByRole('cell')[2];
+  const leaveLink = (cell) => within(cell).queryByRole('link', { name: /leave the group/i });
+
+  test('owner of two, co-curator of one, member of two: all of them, once each, the ones it runs first', async () => {
+    // Neither list is alphabetical on purpose, and the invite list holds the
+    // co-curated group between the two it is only a member of: the order of the
+    // table is "what it runs, then the rest", each part in the order of its own list.
+    const owned = runs('COL00Z', 'Zulu group');
+    const co = coCurated('COL00A', 'Alpha group');
+    setApi({
+      running: [owned, co],
+      memberships: [
+        member('COL00C', 'Mike club'),
+        { ...co, is_curator: true },
+        member('COL00D', 'Bravo club'),
+      ],
+    });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(names(table)).toEqual(['Zulu group', 'Alpha group', 'Mike club', 'Bravo club']);
+    expect(
+      screen.getByText(
+        "Every group you're in, including the ones you run. Leaving one removes your access to it."
+      )
+    ).toBeInTheDocument();
+    for (const name of ['Zulu group', 'Alpha group']) {
+      expect(within(actionsOf(name)).getByText('You run it')).toBeInTheDocument();
+      expect(leaveLink(actionsOf(name))).toBeNull();
+    }
+    for (const [name, code] of [
+      ['Mike club', 'COL00C'],
+      ['Bravo club', 'COL00D'],
+    ]) {
+      expect(within(actionsOf(name)).queryByText('You run it')).toBeNull();
+      expect(leaveLink(actionsOf(name))).toHaveAttribute('href', `/collections/${code}/leave`);
+    }
+    // No link to leave a group it runs anywhere on the page.
+    expect(screen.getAllByRole('link', { name: /leave the group/i })).toHaveLength(2);
+  });
+
+  test('the cell says it in the same grey the other muted lines of a table use', async () => {
+    setApi({ running: [runs('COL00Z', 'Zulu group')], memberships: [member('COL00C', 'Mike')] });
+
+    renderOwn();
+
+    await screen.findByRole('table', { name: 'My groups' });
+    const text = within(actionsOf('Zulu group')).getByText('You run it');
+    expect(text).toHaveClass('table-cell-line--muted');
+    // Right-aligned where the way out is, and as small as the rest of the cell's text.
+    expect(text.closest('.table-cell-lines').parentElement).toHaveStyle({
+      justifyContent: 'flex-end',
+    });
+  });
+
+  test('a group the account owns that is archived does not appear', async () => {
+    setApi({
+      running: [
+        runs('COL00Z', 'Zulu group'),
+        runs('COL00X', 'Archived group', { status: 'INACTIVE' }),
+      ],
+      memberships: [member('COL00C', 'Mike club')],
+    });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(names(table)).toEqual(['Zulu group', 'Mike club']);
+    expect(screen.queryByText('Archived group')).not.toBeInTheDocument();
+  });
+
+  test('somebody who only runs groups has the section too', async () => {
+    setApi({ running: [runs('COL00Z', 'Zulu group')] });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(names(table)).toEqual(['Zulu group']);
+  });
+
+  test('with the list of groups it runs down, the groups it is a member of still appear', async () => {
+    setApi({
+      runningOk: false,
+      memberships: [member('COL00C', 'Mike club'), member('COL00D', 'Bravo club')],
+    });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(names(table)).toEqual(['Mike club', 'Bravo club']);
+    expect(leaveLink(actionsOf('Mike club'))).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lala' })).toBeInTheDocument();
+  });
+
+  test('…and a co-curated group that comes only from the invite list still does not offer to leave', async () => {
+    // Its row says `is_curator`, so the page does not need the other list to know
+    // the group is not one the account can leave.
+    setApi({
+      runningOk: false,
+      memberships: [{ ...coCurated('COL00A', 'Alpha group') }, member('COL00C', 'Mike club')],
+    });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(names(table)).toEqual(['Alpha group', 'Mike club']);
+    expect(within(actionsOf('Alpha group')).getByText('You run it')).toBeInTheDocument();
+    expect(leaveLink(actionsOf('Alpha group'))).toBeNull();
+    expect(leaveLink(actionsOf('Mike club'))).toBeInTheDocument();
+  });
+
+  test('with the invite list down, the groups it runs still appear', async () => {
+    setApi({
+      invitedOk: false,
+      running: [runs('COL00Z', 'Zulu group'), coCurated('COL00A', 'Alpha group')],
+    });
+
+    renderOwn();
+
+    const table = await screen.findByRole('table', { name: 'My groups' });
+    expect(names(table)).toEqual(['Zulu group', 'Alpha group']);
+    expect(screen.queryByRole('link', { name: /leave the group/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Lala' })).toBeInTheDocument();
+  });
+
+  test('with both lists down there is no section, and the profile is still there', async () => {
+    setApi({ runningOk: false, invitedOk: false });
+
+    renderOwn();
+
+    expect(await screen.findByText('Lala')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /my groups/i })).not.toBeInTheDocument();
+  });
+
+  test('the table has no axe violations with a group it runs in it', async () => {
+    setApi({
+      running: [coCurated('COL00A', 'Alpha group')],
+      memberships: [member('COL00C', 'Mike club')],
+    });
+
+    const { container } = renderOwn();
+    await screen.findByRole('table', { name: 'My groups' });
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });
 
@@ -282,8 +488,7 @@ describe('UserPage — the hero action buttons carry the full theeeme', () => {
 });
 
 /**
- * On a phone each group is a card instead of a row (`ResponsiveTable`, CA,
- * 2026-10-04): in a table, "Leave the group" broke word by word down a 100px
+ * On a phone each group is a card instead of a row (`ResponsiveTable`): in a table, "Leave the group" broke word by word down a 100px
  * column. The same cells, in the same order, with "Run by:" in front of the team
  * (the table has it as a header) and the way out on the right.
  */
@@ -343,6 +548,33 @@ describe('My groups on a phone', () => {
     expect(within(list).getByRole('link', { name: /leave the group/i })).toBeInTheDocument();
   });
 
+  test('a group the account runs says so where the way out would be, in the same place and grey', async () => {
+    setApi({
+      running: [{ ...group, status: 'ACTIVE', is_curator: true }],
+      memberships: [{ ...group, code: 'COL002', headline: 'Otra' }],
+    });
+    renderOwn();
+
+    const cards = within(await screen.findByRole('list', { name: 'My groups' })).getAllByRole(
+      'listitem'
+    );
+    expect(cards).toHaveLength(2);
+    const [runCard, memberCard] = cards;
+    // The group it runs comes first, with the text and no way out…
+    expect(within(runCard).getByRole('link', { name: 'Bibliocoses' })).toBeInTheDocument();
+    const last = [...runCard.children].at(-1);
+    const text = within(last).getByText('You run it');
+    expect(text).toHaveClass('table-cell-line--muted');
+    expect(last.firstElementChild).toHaveStyle({ justifyContent: 'flex-end' });
+    expect(within(runCard).queryByRole('link', { name: /leave the group/i })).toBeNull();
+    // …the one it is a member of keeps its way out, in the same last place.
+    expect(within(memberCard).getByRole('link', { name: /leave the group/i })).toHaveAttribute(
+      'href',
+      '/collections/COL002/leave'
+    );
+    expect(within(memberCard).queryByText('You run it')).toBeNull();
+  });
+
   test('the cards have no axe violations', async () => {
     setApi({ memberships: [group, { ...group, code: 'COL002', headline: 'Otra' }] });
     const { container } = renderOwn();
@@ -353,7 +585,7 @@ describe('My groups on a phone', () => {
 });
 
 /**
- * The team of a group is written as the language writes a list (G4, CA 2026-10-05):
+ * The team of a group is written as the language writes a list:
  * "Lili y Lolo", "Lili, Lolo y 2 personas más" — the same line the collection's hero
  * has, without the links (`utils/team.js`). The count of those without a name is the
  * last element of the list, so its text carries no conjunction of its own.
@@ -429,9 +661,54 @@ describe('UserPage — My groups: the team in the language on screen', () => {
       expect(within(team).queryByRole('link')).toBeNull();
     }
   );
+
+  // The words of the intro and of the cell a group it runs has where the way out
+  // would be, in each language, letter by letter.
+  test.each([
+    [
+      'en',
+      "Every group you're in, including the ones you run. Leaving one removes your access to it.",
+      'You run it',
+    ],
+    [
+      'es',
+      'Todos los grupos en los que estás, también los que dinamizas. Si dejas uno, pierdes el acceso.',
+      'Lo dinamizas',
+    ],
+    [
+      'ca',
+      "Tots els grups on ets, també els que dinamitzes. Si en deixes un, en perds l'accés.",
+      'El dinamitzes',
+    ],
+  ])(
+    'in %s the intro and the cell of a group it runs read as written',
+    async (language, intro, cell) => {
+      const { default: i18n } = await import('../i18n');
+      await i18n.changeLanguage(language);
+      setApi({
+        running: [
+          {
+            code: 'COL001',
+            headline: 'Bibliocoses',
+            status: 'ACTIVE',
+            is_curator: true,
+            owner: 'ME0001',
+            owner_name: 'Lala',
+            co_owners: [],
+          },
+        ],
+      });
+
+      renderOwn();
+
+      const row = (await screen.findByRole('link', { name: 'Bibliocoses' })).closest('tr');
+      expect(screen.getByText(intro)).toBeInTheDocument();
+      expect(within(row).getAllByRole('cell')[2]).toHaveTextContent(new RegExp(`^${cell}$`));
+    }
+  );
 });
 
-// The group's name and "Leave the group" are bold links (G10, CA 2026-10-05): one rule
+// The group's name and "Leave the group" are bold links: one rule
 // in App.css for the text links inside the component's own class, `.responsive-table`
 // — see `test/tableLinkWeight.test.jsx`. "Leave the group" keeps its muted class (size
 // and grey) and is only bolder. These pin that both are inside it, in the table and in

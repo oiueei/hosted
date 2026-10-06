@@ -19,7 +19,7 @@ describe('ThingReportFooter (the anonymous report flow)', () => {
   });
 
   test('the trigger is an ordinary secondary button: theeeme tokens, normal size, no icon', () => {
-    // CA, 2026-10-03: it was a small supplementary button with an alert icon,
+    // It was a small supplementary button with an alert icon,
     // which reads as neither link nor button. The tokens are the secondary set
     // `useTheeeme` gives every other secondary — white fill, the theeeme's own
     // border — and themedButtons.test.js only checks that *a* style is present.

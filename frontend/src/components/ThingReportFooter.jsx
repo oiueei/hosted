@@ -7,8 +7,8 @@ import InlineConfirm from './InlineConfirm';
 /**
  * The "report this listing" footer on ThingPage, shown to logged-in non-owners:
  * a secondary button like any other in the app — theeeme tokens, normal size, no
- * icon (CA, 2026-10-03: it used to be a small supplementary one with an alert
- * icon, which read as neither a link nor a button, "es raro"). Clicking expands an
+ * icon (it used to be a small supplementary one with an alert
+ * icon, which read as neither a link nor a button). Clicking expands an
  * inline confirm right below the button (no modal, `aria-expanded`); confirming
  * POSTs the report. The owner is told *someone* reported it, never who — the
  * reporter stays server-side. Owns its own open/submitting state and reports

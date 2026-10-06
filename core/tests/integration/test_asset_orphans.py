@@ -83,8 +83,7 @@ def test_commit_deletes_only_orphans(user):
 def test_commit_without_naming_the_bucket_refuses_and_deletes_nothing():
     """A --commit that doesn't say which bucket it means would delete from
     whatever OBJECT_STORAGE_BUCKET resolves to — and with the wrong .env that
-    is somebody else's bucket (the local one once carried the production key,
-    BACKUP_TASKS §2)."""
+    is somebody else's bucket (the local one once carried the production key)."""
     orphans = [_asset("oiueei/things/orphan1")]
     with (
         patch("core.services.storage.iter_objects", return_value=iter(orphans)),

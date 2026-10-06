@@ -4,15 +4,14 @@
  * are named, those without are only counted — at the end.
  *
  * The API sends a person's bare `name`, never an email standing in for it (the
- * email is withheld from co-members, L2), so someone who set none arrives as
+ * email is withheld from co-members), so someone who set none arrives as
  * `''`. Listing them would leave a gap — "Oriol, ," — so they are counted
  * instead ("2 more people", `collectionPage.curatorsMore`), the founder
  * included. And with nobody named there is nothing to say at all.
  *
  * `CollectionPage`'s "Run by:" line (which links each name) and the "Run by"
  * column of "My groups" on the own profile (plain text) both read it, so the two
- * cannot come to disagree about who is on the team or how it is written
- * (CA, 2026-10-03).
+ * cannot come to disagree about who is on the team or how it is written.
  */
 export function collectionTeam(collection) {
   const team = [
@@ -36,15 +35,14 @@ function listFormatter(language) {
 }
 
 /**
- * The team as the pieces of one sentence, written as the language writes a list
- * (CA, 2026-10-05): "Carlos Alberto y Lula", "Carlos Alberto, Lula y Claude" in
- * Spanish, "A i B" / "A, B i C" in Catalan, "A and B" / "A, B, and C" in English.
+ * The team as the pieces of one sentence, written as the language writes a list:
+ * "Lala y Lele", "Lala, Lele y Lili" in Spanish, "A i B" / "A, B i C" in Catalan, "A and B" / "A, B, and C" in English.
  * The conjunction and the commas are the browser's own (`Intl.ListFormat`, in the
  * language that i18n has on screen), not ours: the Oxford comma of English, and the
  * Spanish "e" before a name that begins with "i", are written without us knowing.
  *
  * **Whoever has no name is the last element of the list**, so the sentence reads
- * "Carlos Alberto, Lula y 2 personas más" and the text of `curatorsMore` carries no
+ * "Lala, Lele y 2 personas más" and the text of `curatorsMore` carries no
  * conjunction of its own ("2 personas más", not "y 2 personas más" — it would say it
  * twice). With nobody named: `[]`.
  *

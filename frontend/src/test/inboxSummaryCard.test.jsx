@@ -16,8 +16,8 @@ import InboxNotifications from '../components/InboxNotifications';
 /**
  * Past three notices about requests and reservations — the ones that go to whoever
  * manages them — the inbox shows one card with the real figures instead of a card
- * per event (CA, 2026-10-02: the first early adopters said the inbox filled too
- * fast). The figures are the requests still waiting and the reservations still to
+ * per event (the inbox filled too
+ * fast for the first early adopters). The figures are the requests still waiting and the reservations still to
  * come, read from the owner-bookings list; never a count of notices, which would
  * say "5 pending" with four of them already confirmed.
  */

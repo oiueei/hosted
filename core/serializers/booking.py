@@ -10,7 +10,7 @@ from core.models.booking import BookingPeriod
 from core.validators import SafeTextField
 
 # Bookings/orders can't be placed more than ~3 months ahead — matches the
-# frontend's today+90 cap and the availability horizon (L7).
+# frontend's today+90 cap and the availability horizon.
 MAX_BOOKING_HORIZON_DAYS = 90
 
 
@@ -211,5 +211,5 @@ class MyBookingSerializer(serializers.ModelSerializer):
 
     def get_owner_name(self, obj):
         # Bare name only — never the email fallback (display_name): this is shown
-        # to the requester, a co-member, and L2 forbids leaking a member's email.
+        # to the requester, a co-member, and a member's email is never leaked.
         return obj.owner_code.name

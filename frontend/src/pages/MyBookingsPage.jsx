@@ -261,7 +261,7 @@ export default function MyBookingsPage() {
         <>
           {(() => {
             // Each table decides on its own whether its rows carry the verb's label:
-            // only when it mixes verbs (G9).
+            // only when it mixes verbs.
             const pendingRows = markMixedVerbs(
               rows.filter((r) => r._status === 'PENDING' || isFutureReservation(r))
             );
@@ -322,7 +322,7 @@ export default function MyBookingsPage() {
         <>
           <div className="spacer-s" />
           {/* A pager is a loose action button like any other: in a wide row, so on a
-              phone it is the width of the screen (CA, 2026-10-04). */}
+              phone it is the width of the screen. */}
           <div className="button-row-wide">
             <Button
               variant="secondary"

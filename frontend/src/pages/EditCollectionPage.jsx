@@ -220,7 +220,7 @@ export default function EditCollectionPage() {
       }
     };
     fetchData();
-    // Mount-once on purpose, like EditProfilePage's load (S7): `t` and `i18n` change
+    // Mount-once on purpose, like EditProfilePage's load: `t` and `i18n` change
     // whenever the language does, and `useCollectionLanguage` changes it as soon as
     // this very response lands — listing them re-ran the load, which *sets every
     // field of the form*, over anything typed in the meantime. The failure toasts
@@ -397,7 +397,7 @@ export default function EditCollectionPage() {
         />
       </div>
       {/* Everything optional, with a safe default, folds away so the happy path
-          (title, status, mode, who can add) reads at a glance (DESIGN §3, O1). */}
+          (title, status, mode, who can add) reads at a glance (DESIGN §3). */}
       <Accordion
         heading={t('createCollection.advancedTitle')}
         language={hdsLang(i18n.language)}

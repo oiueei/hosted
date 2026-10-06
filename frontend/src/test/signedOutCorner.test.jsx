@@ -3,9 +3,9 @@ import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 /**
- * The "Sign in" icon in the hero's corner (X3, CA 2026-10-04) is every signed-out
+ * The "Sign in" icon in the hero's corner is every signed-out
  * reader's, on almost every page — except where the hero already offers "Sign in" as
- * a button of its own: a PUBLIC collection (G3, CA 2026-10-05). These tests pin the
+ * a button of its own: a PUBLIC collection. These tests pin the
  * other side of that rule, which `CollectionPage.test.jsx` cannot: the page of a
  * *thing* in the same public group keeps the icon, and so does `/legal`, because
  * the switch (`AccountMenu`'s `offerSignIn`) is the collection page's, not the app's.

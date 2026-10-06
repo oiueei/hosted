@@ -221,7 +221,7 @@ export default function ThingFaqSection({
         <>
           <div className="spacer-s" />
           {/* A pager is a loose action button like any other: in a wide row, so on a
-              phone it is the width of the screen (CA, 2026-10-04). */}
+              phone it is the width of the screen. */}
           <div className="button-row-wide">
             <Button
               variant="secondary"

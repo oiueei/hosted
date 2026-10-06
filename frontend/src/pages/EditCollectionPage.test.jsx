@@ -212,7 +212,7 @@ describe('EditCollectionPage — the delete button', () => {
 
 describe('EditCollectionPage — no downloads', () => {
   // The calendar, the stats and the whole-collection export left the foot of
-  // this page for the collection menu (CA, 2026-10-03), with the two notes that
+  // this page for the collection menu, with the two notes that
   // went with them. A page that offered them again would be a second place to
   // run the group's data from, which is what the move was for.
   test('the page offers no download, and asks for no file', async () => {
@@ -227,7 +227,7 @@ describe('EditCollectionPage — no downloads', () => {
   });
 });
 
-describe('EditCollectionPage — the deposit policy (S6)', () => {
+describe('EditCollectionPage — the deposit policy', () => {
   test('a stored policy pre-fills the field, once "More options" is open', async () => {
     mockApi();
     apiFetch.mockImplementation((url, opts) => {

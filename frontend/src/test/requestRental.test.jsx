@@ -184,7 +184,7 @@ describe('RequestThingPage — pickup calendar disabling', () => {
   });
 
   test('a conflicting week is blocked, but back-to-back Wednesdays stay open', async () => {
-    // Existing booking occupies Wed 10 → Wed 17. Under strict overlap (O1):
+    // Existing booking occupies Wed 10 → Wed 17. Under strict overlap:
     //  - picking up 06-03 returns on 06-10 = the booking's pickup day → allowed
     //  - picking up 06-10 overlaps the interior → blocked
     //  - picking up 06-17 = the booking's return day → allowed (back-to-back)
@@ -207,7 +207,7 @@ describe('RequestThingPage — pickup calendar disabling', () => {
 // ── LEND/RENT with free dates (no fixed lengths) ─────────────────────────────
 //
 // The two pickers of the free form follow the rule of chained handovers the server and
-// the card use (G8, CA 2026-10-05): a booking [s, e] occupies the pickup on [s, e), its
+// the card use: a booking [s, e] occupies the pickup on [s, e), its
 // return day e is free for the next pickup, and a stretch is out only if it runs over a
 // booking. Both pickers used to grey out BOTH ends of every booking, so a card saying
 // "available from 06/10" came with a calendar that began on the 7th, and a request from
@@ -255,7 +255,7 @@ describe('RequestThingPage — free dates: the pickup calendar', () => {
     expect(dayEnabled('2026-06-11')).toBe(true);
   });
 
-  test('CA’s case: a booking 05→06 — the 06 can be picked up and the 05 cannot', async () => {
+  test('a booking 05→06 — the 06 can be picked up and the 05 cannot', async () => {
     free([{ start_date: '2026-06-05', end_date: '2026-06-06', status: 'ACCEPTED' }]);
     renderPage();
     await freeFormReady();
@@ -340,7 +340,7 @@ describe('RequestThingPage — free dates: the return calendar', () => {
   });
 });
 
-// RW1 (CA, 2026-10-05): the server demands the collection's weekdays at both ends of a loan
+// The server demands the collection's weekdays at both ends of a loan
 // or rental, with or without fixed lengths, and the free form did not apply them — a
 // Wednesday could be picked in a "Saturdays only" collection and was refused on send.
 // June 2026: the 6th, 13th and 20th are Saturdays; the 3rd and 10th are Wednesdays.
@@ -400,7 +400,7 @@ describe('RequestThingPage — free dates: only the weekdays the collection allo
     expect(dayEnabled('2026-06-07')).toBe(true);
   });
 
-  test('G8 still holds on an allowed weekday: the booking’s return day can be picked up, the days it occupies cannot', async () => {
+  test('chained handovers still hold on an allowed weekday: the booking’s return day can be picked up, the days it occupies cannot', async () => {
     free([{ start_date: '2026-06-13', end_date: '2026-06-20', status: 'ACCEPTED' }], SATURDAYS);
     renderPage();
     await freeFormReady();

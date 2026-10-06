@@ -14,8 +14,7 @@ function textOf(node) {
 
 /**
  * The request tables and "My groups" as one component: the HDS `Table` it always
- * was above 768px, and below it **one card per row** (CA, 2026-10-04, after
- * screenshots from an iPhone).
+ * was above 768px, and below it **one card per row**.
  *
  * On a phone each column of a `Table` is about 100px wide: names broke word by
  * word, the status labels were cut off on the right, and the ✓ ⊗ buttons sat off
@@ -42,7 +41,7 @@ function textOf(node) {
  *
  * **Its own class, `responsive-table`, on whichever form it paints** (the `.table-wrap`
  * of the table, the `<ul>` of the cards): a style that is only for these three tables
- * hangs from it — the bold text links (G10) — instead of from `.table-wrap`, which the
+ * hangs from it — the bold text links — instead of from `.table-wrap`, which the
  * guests' table of `/invites` shares.
  *
  * **One or the other, never both**: the card list replaces the table in the DOM

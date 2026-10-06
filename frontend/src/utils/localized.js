@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * Owner content that carries one text per language (O6).
+ * Owner content that carries one text per language.
  *
  * An owner of a bilingual group may write a headline, a description or a tag
  * label as inline JSON — `{"es": "Las cosas de mamá", "ca": "Les coses de mama"}` —

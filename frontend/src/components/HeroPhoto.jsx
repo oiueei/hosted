@@ -4,7 +4,7 @@ import { Koros } from 'hds-react';
  * The photo block for a `.form-hero.form-hero--photo` hero. Desktop (≥768px)
  * renders the layered angled-koros composition (photo full-bleed up to 1248px
  * — wider than that it ends at the edge of the content column, not the
- * window's, CA 2026-10-03 — a colour_03 diagonal wedge carving it so the hero
+ * window's — a colour_03 diagonal wedge carving it so the hero
  * text reads, the wave koros rotated 135deg as part of the wedge). Mobile (<768px, see App.css) hides
  * the wedge and stacks instead: the hero text flows above this block on the
  * colour_03 band, then `.hero-photo-top-koros` (biting the photo's top

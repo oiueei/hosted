@@ -23,7 +23,7 @@ import UserPage from '../pages/UserPage';
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const refused = (status) => Promise.resolve({ ok: false, status, json: async () => ({}) });
 
-const ME = { code: 'ME0001', name: 'Carlos', email: 'me@test.com', created: '2026-01-01' };
+const ME = { code: 'ME0001', name: 'Lala', email: 'me@test.com', created: '2026-01-01' };
 const OTHER = {
   code: 'OTH001',
   name: 'Lili',
@@ -69,7 +69,7 @@ describe('UserPage when the profile does not load', () => {
     renderAt('/OTH001');
 
     expect(await screen.findByText(message)).toBeInTheDocument();
-    // A dead end is not an answer: the way back is there (DESIGN A1).
+    // A dead end is not an answer: the way back is there.
     expect(screen.getByRole('link', { name: en.common.home })).toHaveAttribute('href', '/');
   });
 
@@ -88,7 +88,7 @@ describe('UserPage on /me without a stored userCode', () => {
 
     renderAt('/me');
 
-    expect(await screen.findByRole('heading', { name: 'Carlos' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Lala' })).toBeInTheDocument();
     // Everything else in the app finds "who is signed in" in this one key.
     expect(localStorage.getItem('userCode')).toBe('ME0001');
     // It is the own profile, so it carries the own-profile actions.

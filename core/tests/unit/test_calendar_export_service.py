@@ -181,7 +181,7 @@ class TestOneEventPerReservation:
     def test_a_weeks_loan_blocks_seven_days_and_leaves_the_return_day_open(
         self, group, owner, member
     ):
-        # CA's rule: pick up Monday the 14th, return Monday the 21st → the
+        # The rule: pick up Monday the 14th, return Monday the 21st → the
         # 14th–20th are blocked and the 21st is bookable again.
         thing = _thing(owner)
         group.things.add(thing)
@@ -267,7 +267,7 @@ class TestOneEventPerReservation:
 class TestHourlyReservation:
     @override_settings(TIME_ZONE="Europe/Madrid")
     def test_the_exact_production_bug_17_to_21_on_oct_1st(self, group, owner, member):
-        # CA's early adopter, 2026-09-28: the CSV rendered 01/10/2026 and a
+        # An early adopter's report: the CSV rendered 01/10/2026 and a
         # day/month Google account imported it as January the 10th. In .ics it
         # is 17:00–21:00 Europe/Madrid (UTC+2) = 15:00–19:00 UTC, and no
         # account's locale can read it any other way.

@@ -54,7 +54,7 @@ class ThingTransferSerializer(serializers.ModelSerializer):
 
     def get_from_user_name(self, obj):
         # Bare name, not display_name — the journey is shown community-wide, so
-        # the email fallback would leak addresses (L2). A null user is a deleted
+        # the email fallback would leak addresses. A null user is a deleted
         # account (SET_NULL, right to erasure): the hop stays, the name goes —
         # the frontend renders its own "former member" label for the empty value.
         # Signed-out readers get that same empty value (see `_may_read_names`).

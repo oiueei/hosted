@@ -70,7 +70,7 @@ beforeEach(() => {
 });
 
 /**
- * The profile form was carrying one behavioural test (the S7 language Select)
+ * The profile form was carrying one behavioural test (the language Select)
  * and the generic axe smoke pass, which left validation, the payload and every
  * error path unguarded on the page that holds a person's name, bio and the two
  * demographic fields. These name what the page owes its user.

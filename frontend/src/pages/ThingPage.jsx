@@ -48,8 +48,8 @@ export default function ThingPage() {
     document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
   }, [thing, headline, t]);
 
-  // The collection menu of the corner, when this page is read through a collection
-  // (X4, CA 2026-10-04): the same one the collection's own page has — a curator's
+  // The collection menu of the corner, when this page is read through a collection:
+  // the same one the collection's own page has — a curator's
   // (Add thing, CSV, Manage members, downloads) or a member's (document, summary,
   // leave) — plus "Requests to me". Both hooks are called here, unconditionally, and
   // only used when the server sent `collection_menu` (see ThingSerializer).
@@ -209,7 +209,7 @@ export default function ThingPage() {
   const holderLabel = (name) =>
     name || t(isAuthenticated ? 'common.formerMember' : 'common.aMember');
 
-  // Whoever runs the thing decides a request from the hero (CA, 2026-10-04): with
+  // Whoever runs the thing decides a request from the hero: with
   // one waiting, "Confirm hold" (primary) and "Decline hold" (secondary) are the
   // first thing under the way back, and Edit / Delete stay in the content where
   // they were. A member's "Reserve" is not here on purpose — they read the whole

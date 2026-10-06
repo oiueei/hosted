@@ -512,7 +512,7 @@ class TestSeedDemoCommand:
     def test_maps_tags_key(self):
         """Regression guard: _seed_collections and _seed_things must copy `tags`.
 
-        Tag labels are localized {lang: text} maps now (O6) — the stored value
+        Tag labels are localized {lang: text} maps now — the stored value
         is the serialized constant from seed_data/common.py, byte-identical
         between the vocabulary and the thing that wears it."""
         from core.management.commands.seed_data.common import TAG_CRIANZA, TAG_JARDIN
@@ -560,7 +560,7 @@ class TestSeedDemoCommand:
             assert {r[key] for r in en_rows} == {r[key] for r in es_rows}
 
     def test_merge_yields_structure_and_text(self):
-        """R17 + O6: merged rows carry skeleton fields plus text. Thing text is
+        """Merged rows carry skeleton fields plus text. Thing text is
         now a localized map identical whatever --lang says (every reader gets
         their language from the same row); --lang still picks the plain-column
         text, so the FAQ question genuinely differs between languages."""

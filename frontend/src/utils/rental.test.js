@@ -107,7 +107,7 @@ describe('isPickupBlocked', () => {
   });
 });
 
-// LEND/RENT with free dates (G8, CA 2026-10-05): the two pickers follow the rule the
+// LEND/RENT with free dates: the two pickers follow the rule the
 // server and the card use — chained handovers. A booking [s, e] occupies the pickup on
 // [s, e); its return day e is free for the next pickup, and a request [start, end]
 // conflicts only if it shares an interior day with one (`BookingPeriod.has_overlap`:
@@ -115,7 +115,7 @@ describe('isPickupBlocked', () => {
 describe('freePickupDisabled', () => {
   const booking05to06 = [{ start_date: '2026-10-05', end_date: '2026-10-06' }];
 
-  test('CA’s case: a booking 05→06 — the 06 can be picked up, the 05 cannot', () => {
+  test('a booking 05→06 — the 06 can be picked up, the 05 cannot', () => {
     const opts = { blockedPeriods: booking05to06 };
     expect(freePickupDisabled('2026-10-05', opts)).toBe(true);
     expect(freePickupDisabled('2026-10-06', opts)).toBe(false);
@@ -170,7 +170,7 @@ describe('freeReturnDisabled', () => {
     expect(freeReturnDisabled('2026-10-06', later)).toBe(false);
   });
 
-  test('CA’s case: a booking 05→06 and a pickup on the 6th — a return on the 8th is open', () => {
+  test('a booking 05→06 and a pickup on the 6th — a return on the 8th is open', () => {
     const opts = {
       pickup: '2026-10-06',
       blockedPeriods: [{ start_date: '2026-10-05', end_date: '2026-10-06' }],
@@ -233,7 +233,7 @@ describe('freeReturnDisabled', () => {
   });
 });
 
-// RW1 (CA, 2026-10-05): the free form follows the collection's weekdays too, as the server
+// The free form follows the collection's weekdays too, as the server
 // does at BOTH ends (`Collection.rental_violation`: `rental_pickup_weekday` for the pickup,
 // `rental_return_weekday` for the return), with or without fixed lengths. In October 2026
 // the 3rd is a Saturday, the 7th a Wednesday and the 10th a Saturday (Python weekday 5).
@@ -310,7 +310,7 @@ describe('the free form and the weekdays the collection allows', () => {
       }
     });
 
-    test('the chained handover of G8 holds on an allowed weekday: a return on another booking’s pickup stays open', () => {
+    test('the chained handover holds on an allowed weekday: a return on another booking’s pickup stays open', () => {
       // Pickup Saturday the 3rd; a booking from Saturday the 10th. A return on the 10th
       // lands on that pickup (open); one on the 17th runs over the booking (out).
       const opts = {
@@ -534,7 +534,7 @@ describe('formatBookingWhen', () => {
   });
 
   test('a loan or rental for a single day lists that day once', () => {
-    // 'Requested dates: 13/10/2026 — 13/10/2026' was the screenshot (CA, 2026-10-02).
+    // 'Requested dates: 13/10/2026 — 13/10/2026' was the symptom.
     for (const thing_type of ['LEND_THING', 'RENT_THING']) {
       expect(
         formatBookingWhen({ thing_type, start_date: '2026-10-13', end_date: '2026-10-13' })
@@ -595,7 +595,7 @@ describe('formatRequestedWhen', () => {
   });
 });
 
-// HOUR-unit RESERVE_THING: time-of-day helpers. CA's own example schedule —
+// HOUR-unit RESERVE_THING: time-of-day helpers. The example schedule —
 // Mon-Thu 10:00-14:00 & 16:00-20:00, Fri 10:00-14:00, weekend closed — used
 // throughout, mirroring the backend fixtures in
 // core/tests/unit/test_reservation_rules.py.

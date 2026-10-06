@@ -66,7 +66,7 @@ export default function useJoin({
         // current UI language onto a brand-new user, permanently, and it was
         // never a deliberate choice. It outranked the collection's own
         // language for every future email to that member forever, with no
-        // way back short of a profile edit (CA's report, 2026-09-15). The
+        // way back short of a profile edit. The
         // backend resolves this join's own magic link from the collection
         // instead, same as every later email once the member has nothing of
         // their own set.

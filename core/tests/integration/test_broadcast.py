@@ -203,7 +203,7 @@ class TestCollectionBroadcast:
         assert len(mail.outbox) == 2
 
     def test_broadcast_user_lookups_are_bulked_not_per_recipient(self):
-        """CODE B2: a broadcast resolves recipient prefs + footer tokens with two
+        """A broadcast resolves recipient prefs + footer tokens with two
         bulk User queries (``_filter_recipients`` + ``_lookup_users``), never a
         ``_lookup_user`` per recipient. The query count must be constant in the
         number of recipients — adding invitees adds zero queries."""

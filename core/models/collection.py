@@ -68,7 +68,7 @@ class Collection(models.Model):
         related_name="owned_collections",
     )
     created = models.DateTimeField(default=timezone.now)
-    # headline: 256 stored for the O6 {lang: text} map, 64 visible per language.
+    # headline: 256 stored for the {lang: text} map, 64 visible per language.
     headline = models.CharField(max_length=256)
     # TextField like Thing.description (2000 visible per language, serializer-
     # enforced): a group's description is long-form Markdown and the column is
@@ -79,7 +79,7 @@ class Collection(models.Model):
     visibility = models.CharField(
         max_length=7, choices=Visibility.choices, default=Visibility.PRIVATE
     )
-    # WEEKLY by default since the 2026-08 design round. It was NONE, which — with
+    # WEEKLY by default. It was NONE, which — with
     # `User.notify_news` also defaulting off — is why the digest reached almost
     # nobody: it needed an owner to find a setting inside an accordion *and* every
     # reader to have opted in.
@@ -106,7 +106,7 @@ class Collection(models.Model):
     # process may not want the question raised, and saying so once beats
     # declining the same suggestion over and over.
     #
-    # Default OFF (CA, 2026-10-02; it was ON): a new collection does not ask its
+    # Default OFF (it was ON): a new collection does not ask its
     # owner anything until the owner says so. The suggestion reaches only the
     # owner, but being asked is still something the person who runs a group
     # should choose rather than be handed, and a feature offered to everybody by
@@ -201,7 +201,7 @@ class Collection(models.Model):
     # those complete straight from the card and never visit that page, so a
     # note written here is invisible to them ("bring ID", "reservations must
     # be confirmed 24h ahead"...). Rendered as Markdown like `description`.
-    # 512/2048 (CA's call, 2026-09: 256 was too short for this one) — same
+    # 512/2048 (256 was too short for this one) — same
     # `deposit_policy` shape, wider: the visible limit is per language and the
     # column has to hold all three plus the JSON scaffolding.
     request_info = models.CharField(max_length=2048, blank=True, default="")
@@ -590,8 +590,7 @@ class Collection(models.Model):
         stance ``reservation_violation`` takes on days.
 
         ``reservation_max_minutes`` is a hard cap with **no exception for the
-        full-day form** — CA's own call (the alternative, exempting it, was
-        offered and turned down): a venue whose day adds up to more minutes
+        full-day form**: a venue whose day adds up to more minutes
         than the cap simply never offers "the whole day" as a choice; the
         owner raises the cap if they want it offered. ``reservation_min_
         minutes`` is the twin floor, configurable since 0150 (it used to be a

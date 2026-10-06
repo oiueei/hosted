@@ -1,6 +1,6 @@
 """`send_test_emails`: one sample of every email, to one address, leaving nothing behind.
 
-It exists so every email can be opened in a real client (CA, 2026-09-21: Apple Mail
+It exists so every email can be opened in a real client (Apple Mail
 drew a logo giant that Gmail drew small — no test can see that). What has to hold
 is what makes it safe to point at production: it can mail nobody but ``--to``, and
 it changes nothing. And because it drives every builder in every language, it is
@@ -180,8 +180,8 @@ def test_no_email_in_any_language_leaks_an_unfilled_placeholder():
 
 @pytest.mark.django_db
 def test_the_mark_sits_right_after_the_rule_in_every_html_email():
-    """The OIUEEI mark's place is a rule of the layout (CA, 2026-09-22): one
-    60x17 mark (CA's own numbers, third review round), right after the <hr>
+    """The OIUEEI mark's place is a rule of the layout: one
+    60x17 mark, right after the <hr>
     that opens the footer, ahead of whatever else applies (viral line,
     preferences, a digest's mute link) and always before the legal link,
     genuinely last. Checked here across every real email in every language —
@@ -229,8 +229,8 @@ def test_every_html_email_is_one_document_with_its_footer_inside_it():
 
 @pytest.mark.django_db
 def test_every_email_uses_exactly_the_three_named_sizes():
-    """Three sizes, never a fourth (CA, 2026-09-22, superseding the single
-    13px every-email size from a day earlier): EMAIL_BODY_SIZE (14px) for the
+    """Three sizes, never a fourth (superseding the single
+    13px every-email size of an earlier version): EMAIL_BODY_SIZE (14px) for the
     message's own words — paragraphs, buttons, a CTA's fallback link —
     EMAIL_HEADER_SIZE (18px) for the one <h1> parent title, EMAIL_FOOTER_SIZE
     (12px) for the rule-separated block at the foot. Checked on every real
@@ -295,7 +295,7 @@ def test_every_button_in_every_email_carries_the_class_its_phone_and_hover_rules
 
 @pytest.mark.django_db
 def test_every_email_is_the_white_rounded_card_on_the_grey_page():
-    """The container (CA, 2026-09-22, border colour corrected the next day):
+    """The container (its border colour was corrected after the first version):
     a white, rounded box — max-width 600px, a 1px #DDDDDD border, 10px radius
     — sitting on a #F9FAFB page with 40px padding. One card per email, every
     language, the operator's own mail included (it goes through the same
@@ -313,8 +313,8 @@ def test_every_email_is_the_white_rounded_card_on_the_grey_page():
 @pytest.mark.django_db
 def test_every_email_names_a_real_parent_or_oiueei():
     """Every one of the 35 has exactly one <h1> — the operator's own capacity
-    alarm too, since CA reviewed the real thing (2026-09-22) and asked for its
-    own explanation to lead as a title, closing the one exemption this system
+    alarm too, since its own
+    explanation leads as a title, closing the one exemption this system
     started with."""
     h1 = re.compile(r"<h1[^>]*>(.*?)</h1>", re.S)
 
@@ -327,7 +327,7 @@ def test_every_email_names_a_real_parent_or_oiueei():
 
 @pytest.mark.django_db
 def test_every_link_in_the_body_is_bus_blue_and_underlined():
-    """The design rule (CA, 2026-09-22): every plain text link — the CTA
+    """The design rule: every plain text link — the CTA
     fallback link, "manage your preferences", the legal link, the viral
     line's CTA — is bus blue and underlined, never the client's own default
     blue. Buttons are excluded on purpose: a button is not a text link (its

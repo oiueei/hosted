@@ -109,7 +109,7 @@ const CURATED = {
   co_owners: [],
 };
 
-describe('the corner of a reader with no session (X3)', () => {
+describe('the corner of a reader with no session', () => {
   test('holds one control — the "Sign in" link, with the icon trigger’s own class, so the same 44px', () => {
     localStorage.removeItem('userCode');
     const { container } = renderHero();
@@ -283,7 +283,7 @@ describe('the collection menu panel anchors to the corner row like the account m
 });
 
 /**
- * The hero photo on a wide screen (CA, 2026-10-03). jsdom does no layout, so what
+ * The hero photo on a wide screen. jsdom does no layout, so what
  * is pinned is the contract of the rule: `.hero-photo-wrap` is a background that
  * ran to the window's edge while the content column, centred from 1248px up, did
  * not; its right edge now comes in by the same centring sum `.hero-corners` uses.
@@ -324,8 +324,8 @@ describe('the hero photo ends at the content column on a wide screen', () => {
 });
 
 /**
- * The contact icon is not in any hero (CA, 2026-10-04: "there are too many icons up
- * there"): "Contact us" is the site footer's third door. Pinned on the two heroes
+ * The contact icon is not in any hero (there were too many icons up
+ * there): "Contact us" is the site footer's third door. Pinned on the two heroes
  * that paint the corner for everybody — `PageLayout` and a curator's collection,
  * the fullest one — by what is inside `.hero-corners` and by what a hero links at
  * all, and by the source: nothing in `src/` names the old component.

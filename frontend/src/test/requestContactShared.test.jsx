@@ -23,8 +23,8 @@ import RequestThingPage from '../pages/RequestThingPage';
 
 /**
  * The request page says, before the press, that whoever runs the thing is sent the
- * requester's name and email with the request (E3, CA 2026-10-05; E1 is the server
- * half). The words are CA's, approved letter by letter; the page does not show the
+ * requester's name and email with the request (the server's emails say the same from the
+ * other side). The words are fixed letter by letter; the page does not show the
  * address — it has no user and earns no extra request for it.
  */
 const APPROVED = {

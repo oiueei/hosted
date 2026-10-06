@@ -42,7 +42,7 @@ def redact_email(email):
     An HMAC-SHA256 (keyed by ``SECRET_KEY``) prefix — never the address — so ops
     can still correlate events for the same user (same email → same tag) without
     writing PII, and without the tag being recoverable via a dictionary attack on
-    a bare hash of a low-entropy email (M5). Tags change if ``SECRET_KEY`` rotates.
+    a bare hash of a low-entropy email. Tags change if ``SECRET_KEY`` rotates.
     """
     if not email:
         return "email#none"

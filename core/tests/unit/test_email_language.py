@@ -112,8 +112,7 @@ class TestEmailLanguage:
 
         email_service.send_booking_decision_email(FakeBooking(), FakeThing(), accepted=False)
         assert mail.outbox[0].subject == "Tu solicitud no ha salido adelante"
-        # "rechazada", not "cancelada": the manager declined it, nobody cancelled it
-        # (CA, 2026-10-02).
+        # "rechazada", not "cancelada": the manager declined it, nobody cancelled it.
         assert "ha sido rechazada" in mail.outbox[0].body
         assert "cancelada" not in mail.outbox[0].body
 
@@ -222,7 +221,7 @@ class TestCatalogueParity:
 
 @pytest.mark.django_db
 class TestViralLine:
-    """The growth CTA appended above the preferences footer (S3)."""
+    """The growth CTA appended above the preferences footer."""
 
     def _thing(self):
         class FakeCollections:
@@ -301,7 +300,7 @@ class TestViralLine:
         assert "/collections/new" in mail.outbox[0].body
 
     def test_line_present_on_magic_link_for_non_owner(self):
-        # S2: the magic link is the one email every user gets, so the growth
+        # The magic link is the one email every user gets, so the growth
         # CTA runs here too now — still gated by collection ownership.
         u = User.objects.create(code="GUEST2", email="magic@test.com", name="Guest")
         mail.outbox.clear()

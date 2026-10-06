@@ -61,7 +61,7 @@ def reservations_collection(db):
 
 @pytest.fixture
 def hourly_reservations_collection(db):
-    """CA's own example: Mon–Thu 10:00-14:00 & 16:00-20:00, Fri 10:00-14:00,
+    """Mon–Thu 10:00-14:00 & 16:00-20:00, Fri 10:00-14:00,
     weekend closed. Max 3 hours per reservation."""
     owner = User.objects.create(code="HRLOWN", email="hrlown@test.com", name="Ateneu")
     coll = Collection.objects.create(
@@ -89,7 +89,7 @@ def generous_hourly_reservations_collection(db):
     """Same weekly schedule as ``hourly_reservations_collection``, but a cap
     generous enough that a full-day span never runs into it — isolates the
     shape rule (inside one block, or exactly the full day) from the hour cap,
-    which by design (CA's call) applies to the full-day form too."""
+    which by design applies to the full-day form too."""
     owner = User.objects.create(code="GHRLOW", email="ghrlow@test.com", name="Ateneu")
     return Collection.objects.create(
         code="GHRLCO",
@@ -1065,7 +1065,7 @@ def test_reservation_hour_violation_accepts_the_exact_full_day_including_the_gap
     accepted as a full-day reservation when it fits under the cap (this
     fixture's cap is generous precisely so the shape rule, not the cap, is
     what's under test — see test_..._the_hour_cap_has_no_full_day_exception
-    for CA's call that the cap gets no such exemption in general)."""
+    for why the cap gets no such exemption in general)."""
     mon = _next_weekday(0)
     assert (
         generous_hourly_reservations_collection.reservation_hour_violation(
@@ -1104,9 +1104,9 @@ def test_reservation_hour_violation_on_a_single_block_day_full_day_equals_that_b
 def test_reservation_hour_violation_the_hour_cap_has_no_full_day_exception(
     hourly_reservations_collection,
 ):
-    """CA's call, made explicitly when this feature was scoped: a single
+    """A single
     ``reservation_max_minutes`` governs every reservation, full-day included —
-    exempting the full day was offered as an alternative and turned down. A
+    exempting the full day was considered and rejected. A
     venue whose day (or its only block) adds up to more minutes than the cap
     simply can't be booked for "the whole day"; the owner raises the cap
     instead of the product carving out a silent exception."""

@@ -92,7 +92,7 @@ const renderCollection = () =>
     </MemoryRouter>
   );
 
-describe('InboxNotifications (O1)', () => {
+describe('InboxNotifications', () => {
   test("the owner sees the collection's own notifications on its page", async () => {
     renderCollection();
 
@@ -222,8 +222,8 @@ describe('InboxNotifications — every type says something', () => {
     },
     {
       // The backend sends NO email for this (a deliberate v1 simplification),
-      // so this card is the whole notice. It fell through to the broadcast
-      // default and rendered blank until the design round.
+      // so this card is the whole notice. It used to fall through to the broadcast
+      // default and render blank.
       what: 'a promotion to co-curator says what the member can now do',
       notification: {
         code: 'NOTA06',
@@ -495,7 +495,7 @@ describe('InboxNotifications — dismissing', () => {
 });
 
 /**
- * L2: the backend sends the bare `name`, never `display_name`, because the
+ * The backend sends the bare `name`, never `display_name`, because the
  * fallback in `display_name` is the person's email address and the reader of an
  * inbox card is a co-member who is not entitled to it. So a person who never
  * filled in their profile arrives here as `''`.
@@ -593,8 +593,7 @@ describe('InboxNotifications — a person with no name still has a subject', () 
 });
 
 /**
- * A request or reservation notice says when (CA, 2026-09-28 for reservations,
- * 2026-09-29 for every request notice): under the body and its link, two quiet
+ * A request or reservation notice says when: under the body and its link, two quiet
  * lines — when the event the notice records happened (`created`, the
  * notification's own stamp: for a cancellation that is the cancellation's
  * moment, which is the fact being reported) and, when the payload carries
@@ -745,7 +744,7 @@ describe('InboxNotifications — a request or reservation notice says when', () 
       await screen.findByText(`Registered: ${localStamp('2026-09-29T06:38:00Z')}`)
     ).toBeInTheDocument();
     expect(screen.getByText('Requested dates: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
-    // A loan is not a reservation (D2): the reservation wording is for RESERVE_THING.
+    // A loan is not a reservation: the reservation wording is for RESERVE_THING.
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 
@@ -771,12 +770,12 @@ describe('InboxNotifications — a request or reservation notice says when', () 
       await screen.findByText(`Registered: ${localStamp('2026-09-29T08:12:00Z')}`)
     ).toBeInTheDocument();
     expect(screen.getByText('Requested dates: 01/10/2026 — 04/10/2026')).toBeInTheDocument();
-    // A loan is not a reservation (D2): the reservation wording is for RESERVE_THING.
+    // A loan is not a reservation: the reservation wording is for RESERVE_THING.
     expect(screen.queryByText(/^Reserved for: /)).not.toBeInTheDocument();
   });
 
   test('a loan for a single day shows that day once, in any notice about it', async () => {
-    // "Fecha y horario de reserva: 13/10/2026 — 13/10/2026" on a loan (CA, 2026-10-02).
+    // "Fecha y horario de reserva: 13/10/2026 — 13/10/2026" on a loan.
     const loanFor = (type, extra = {}) => ({
       code: `NOT-${type}`,
       type,
@@ -877,8 +876,8 @@ describe('InboxNotifications — a request or reservation notice says when', () 
 });
 
 /**
- * Whoever cancelled a reservation keeps an in-app record of their own (CA,
- * 2026-09-29): the reservation's whole story lives in the inbox, and the
+ * Whoever cancelled a reservation keeps an in-app record of their own:
+ * the reservation's whole story lives in the inbox, and the
  * canceller's copy used to stop at the email confirmation. Their record is in
  * the first person — and names whose reservation it was when it wasn't theirs.
  */
