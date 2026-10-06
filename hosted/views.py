@@ -38,7 +38,7 @@ from core.utils import get_client_ip, redact_email
 # in the only direction that is safe: the service layer depends on the product.
 from core.views.auth import _join_collection, _send_magic_link, email_ratelimit_key
 
-from .tally import browser_language, request_access_url
+from .tally import browser_language, contact_url, request_access_url
 
 security_logger = logging.getLogger("security")
 
@@ -148,3 +148,23 @@ class RequestAccessRedirect(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         return request_access_url(browser_language(self.request))
+
+
+@method_decorator(vary_on_headers("Accept-Language"), name="dispatch")
+class ContactRedirect(RedirectView):
+    """`/contact` — a page of core's — goes to the Tally form of "Contact us".
+
+    `/contact` is the support page core ships, but here the contact form is a Tally one
+    (`tally.py`; the site footer already goes to it), and the address is typed into the
+    browser or saved somewhere: a bookmark, whatever somebody was once sent. A link inside
+    the app would not reach this view — React Router answers it without asking the server —
+    so what arrives here is the address opened as a page of its own.
+
+    **302, not 301**, and ``Vary: Accept-Language``, for the reasons of
+    ``RequestAccessRedirect``: the form is a service's, in a language chosen from the browser.
+    """
+
+    permanent = False
+
+    def get_redirect_url(self, *args, **kwargs):
+        return contact_url(browser_language(self.request))

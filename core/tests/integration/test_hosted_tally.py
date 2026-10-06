@@ -19,6 +19,9 @@ browser language.
 
 And the two copies of the addresses (this module's and `frontend/src/deployment/index.js`)
 are read side by side so they cannot come apart.
+
+"Contact us" is covered the same way (`CONTACT`, `contact_url`), and so is `/contact`, a
+page of core's whose address redirects to that form.
 """
 
 import re
@@ -35,10 +38,18 @@ from core.services.email_service import resolve_email_language
 from hosted.emails import send_creator_validation_decision_email
 from hosted.models import CreatorValidation
 from hosted.policy import HostedCreatorPolicy
-from hosted.tally import DEFAULT_LANGUAGE, REQUEST_ACCESS, browser_language, request_access_url
+from hosted.tally import (
+    CONTACT,
+    DEFAULT_LANGUAGE,
+    REQUEST_ACCESS,
+    browser_language,
+    contact_url,
+    request_access_url,
+)
 
 POLICY = "hosted.policy.HostedCreatorPolicy"
 ES, CA, EN = (REQUEST_ACCESS[lang] for lang in ("es", "ca", "en"))
+CONTACT_ES, CONTACT_CA, CONTACT_EN = (CONTACT[lang] for lang in ("es", "ca", "en"))
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -81,15 +92,53 @@ class TestTheAddress:
         assert len(set(REQUEST_ACCESS.values())) == 3
 
 
+class TestTheContactAddress:
+    @pytest.mark.parametrize(
+        ("language", "expected"),
+        [
+            ("es", "https://tally.so/r/PdaOy1"),
+            ("ca", "https://tally.so/r/Gx2lye"),
+            ("en", "https://tally.so/r/Y5LagN"),
+        ],
+    )
+    def test_each_language_has_its_own_form(self, language, expected):
+        assert contact_url(language) == expected
+
+    @pytest.mark.parametrize("language", [None, "", "fr", "ES", "es-ES", "xx", 0])
+    def test_blank_or_unknown_is_the_spanish_one_and_never_an_error(self, language):
+        assert contact_url(language) == CONTACT_ES
+
+    def test_with_no_argument_it_is_the_spanish_one(self):
+        assert contact_url() == CONTACT_ES
+
+    def test_they_are_three_different_bare_tally_forms(self):
+        assert set(CONTACT) == {"es", "ca", "en"}
+        for url in CONTACT.values():
+            # Exactly as given, with nothing about the person added.
+            assert re.fullmatch(r"https://tally\.so/r/[A-Za-z0-9]+", url)
+        assert len(set(CONTACT.values())) == 3
+
+    def test_it_is_not_the_request_access_form(self):
+        """Two different forms: a request for access must not land in the contact inbox."""
+        assert set(CONTACT.values()).isdisjoint(REQUEST_ACCESS.values())
+
+    def test_it_speaks_the_languages_browser_language_chooses_from(self):
+        """`browser_language` is written against one dictionary and serves both."""
+        assert set(CONTACT) == set(REQUEST_ACCESS)
+
+
 class TestTheSameAddressesAsTheFrontend:
-    def test_requestAccess_in_externalForms_is_this_module(self):  # noqa: N802
+    @pytest.mark.parametrize(
+        ("form", "written_here"), [("requestAccess", REQUEST_ACCESS), ("contact", CONTACT)]
+    )
+    def test_each_form_in_externalForms_is_this_module(self, form, written_here):  # noqa: N802
         source = (ROOT / "frontend" / "src" / "deployment" / "index.js").read_text()
-        block = re.search(r"requestAccess:\s*\{(.*?)\}", source, re.DOTALL)
-        assert block, "externalForms.requestAccess not found in deployment/index.js"
+        block = re.search(rf"\b{form}:\s*\{{(.*?)\}}", source, re.DOTALL)
+        assert block, f"externalForms.{form} not found in deployment/index.js"
 
         written = dict(re.findall(r"(\w+):\s*'([^']+)'", block.group(1)))
 
-        assert written == REQUEST_ACCESS
+        assert written == written_here
 
 
 @pytest.mark.django_db
@@ -304,3 +353,67 @@ class TestTheOldAddressOfThePage:
         response = api_client.get(address, follow=False)
 
         assert b"Ask to run a group here" not in response.content
+
+
+@pytest.mark.django_db
+class TestTheContactPage:
+    """`/contact` is a page of core's; here its address goes to the "Contact us" form.
+
+    Without a route the address falls into the SPA's catch-all and shows core's own contact
+    page, a second contact channel next to the Tally form the footer points at.
+    """
+
+    ADDRESSES = ["/contact/", "/contact"]
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_it_redirects_with_a_302_and_not_a_permanent_move(self, api_client, address):
+        response = api_client.get(address)
+
+        assert response.status_code == status.HTTP_302_FOUND
+        assert response.status_code != status.HTTP_301_MOVED_PERMANENTLY
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_with_no_language_header_it_is_the_spanish_form(self, api_client, address):
+        assert api_client.get(address)["Location"] == CONTACT_ES
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    @pytest.mark.parametrize(
+        ("header", "expected"),
+        [
+            ("ca-ES", CONTACT_CA),
+            ("ca-ES,ca;q=0.9,en;q=0.8", CONTACT_CA),
+            ("en", CONTACT_EN),
+            ("en-GB,en;q=0.9", CONTACT_EN),
+        ],
+    )
+    def test_it_follows_the_language_of_the_browser(self, api_client, address, header, expected):
+        response = api_client.get(address, HTTP_ACCEPT_LANGUAGE=header)
+
+        assert response["Location"] == expected
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_a_language_without_a_form_is_the_spanish_one(self, api_client, address):
+        response = api_client.get(address, HTTP_ACCEPT_LANGUAGE="fr")
+
+        assert response["Location"] == CONTACT_ES
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_the_answer_depends_on_the_header_and_says_so(self, api_client, address):
+        """Whatever sits in front of the app must not hand the Catalan form to a
+        Spanish browser."""
+        assert "Accept-Language" in api_client.get(address)["Vary"]
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_it_is_the_contact_form_and_not_the_request_access_one(self, api_client, address):
+        assert api_client.get(address)["Location"] != ES
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_nobody_needs_to_be_signed_in(self, api_client, authenticated_client, address):
+        assert api_client.get(address).status_code == status.HTTP_302_FOUND
+        assert authenticated_client.get(address).status_code == status.HTTP_302_FOUND
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_it_is_this_apps_route_and_not_the_spa_catch_all(self, address):
+        """Both spellings are declared on purpose: the slash-less one resolves to the
+        catch-all otherwise, and Django's APPEND_SLASH never gets to fix it."""
+        assert resolve(address).app_name == "hosted"

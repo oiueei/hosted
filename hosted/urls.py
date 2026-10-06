@@ -6,7 +6,7 @@ upstream owns and evolves — is never edited here. See SELF_HOSTING.md §1.
 
 from django.urls import path
 
-from .views import PopInView, RequestAccessRedirect
+from .views import ContactRedirect, PopInView, RequestAccessRedirect
 
 app_name = "hosted"
 
@@ -25,4 +25,8 @@ urlpatterns = [
     # (config/urls.py::deployment_urlpatterns), so these win.
     path("request-access/", RequestAccessRedirect.as_view(), name="request-access"),
     path("request-access", RequestAccessRedirect.as_view(), name="request-access-no-slash"),
+    # `/contact`, a page of core's, goes to the Tally form of "Contact us": see the view. Both
+    # spellings, for the reason above: the slash-less one resolves to the SPA catch-all as well.
+    path("contact/", ContactRedirect.as_view(), name="contact"),
+    path("contact", ContactRedirect.as_view(), name="contact-no-slash"),
 ]
