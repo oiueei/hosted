@@ -9,9 +9,8 @@ import useTheeeme from '../../hooks/useTheeeme';
 import ButtonLink from '../../components/ButtonLink';
 import { faqPath } from '../index';
 
-// Every persona owns a demo collection since the 2026-08 seed round gave Lele and
-// Lulu one each — before that the two of them carried no link, and the comment
-// here said so. The render filters by accessibleCodes, so a persona whose group
+// Every persona owns a demo collection (the seed gives Lele and Lulu one each).
+// The render filters by accessibleCodes, so a persona whose group
 // the visitor cannot reach simply shows no link row: the two COMMUNITY groups are
 // PRIVATE, and a non-member sees the story without the link.
 const PERSONA_LINKS = {
@@ -103,8 +102,8 @@ export default function WelcomePage() {
           )}
           <h1 className="form-hero-title">{t('welcome.pageTitle')}</h1>
           {/* The hero has buttons only for someone who is already in: "Create
-              collection" (primary) and "Edit profile". A stranger's hero has none
-              (CA, 2026-10-05) — the title and the wave, and the doors are the last
+              collection" (primary) and "Edit profile". A stranger's hero has none —
+              the title and the wave, and the doors are the last
               row of the page, after the personas — so the gap under the title that
               the row's padding gave is kept with a spacer, not by an empty row. */}
           {isAuthenticated ? (
@@ -220,9 +219,9 @@ export default function WelcomePage() {
           </div>
         ))}
         <div className="spacer-xl" />
-        {/* One row at the end, after the personas (CA, 2026-10-03), the first
-            button the primary one and the rest secondary. Signed out (CA,
-            2026-10-05; the hero has no buttons for a stranger): "New here?" to
+        {/* One row at the end, after the personas, the first
+            button the primary one and the rest secondary. Signed out (the hero has
+            no buttons for a stranger): "New here?" to
             the open door, primary, then the FAQ, then "Already have an account?"
             back to /login — the question and its answer, the way they were in the
             hero, now the whole of the page's doors. No "Ideas and bugs" for a

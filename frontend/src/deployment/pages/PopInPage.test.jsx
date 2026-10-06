@@ -32,7 +32,7 @@ describe('PopInPage', () => {
   });
 
   test('asks the shared join page not to offer "Already have an account?"', () => {
-    // CA, 2026-10-03: /welcome offers it; /popin does not repeat it. The shared
+    // /welcome offers it; /popin does not repeat it. The shared
     // component is core's, so what turns the button off is this prop — and the
     // default (absent) would leave it on, which is why it is `false`, not unset.
     render(

@@ -1,7 +1,7 @@
 """Where "Request access" lives on this deployment: three forms on Tally.
 
 It used to be a Django page of our own, `/request-access/`, with two free-text questions
-and a model row per request. CA moved it to Tally (2026-10-05), as the footer's
+and a model row per request. It moved to Tally, as the footer's
 "Contact us" and "Ideas and bugs" already were (`frontend/src/deployment/index.js`,
 `externalForms`): one form per language, opened in a new tab, and the request lands in
 Tally instead of in a table. The answer is still given in the admin

@@ -79,7 +79,7 @@ describe('the app serves them', () => {
 
   test('/welcome links /legal exactly once, from the site footer', async () => {
     // The page used to repeat the footer's "Legal notice & privacy" link in the
-    // commitment section (CA took it out, 2026-10-03). Rendered whole — App, so
+    // commitment section (the footer's is the only one now). Rendered whole — App, so
     // the footer is there — because the page alone cannot say how many a
     // visitor sees.
     window.history.pushState({}, '', '/welcome');
@@ -98,7 +98,7 @@ describe('the app serves them', () => {
     '/welcome, %s: one link to /faq on the whole page, and no "Enter" button',
     async (_who, userCode) => {
       // The FAQ moved from a link in the commitment section to a button in the
-      // closing row (CA, 2026-10-03); rendered whole, so a stray second link
+      // closing row; rendered whole, so a stray second link
       // anywhere in the App — hero, footer, a leftover — would be counted.
       if (userCode) localStorage.setItem('userCode', userCode);
       window.history.pushState({}, '', '/welcome');
@@ -111,7 +111,7 @@ describe('the app serves them', () => {
   );
 
   test('/login\'s "new here?" button leads to /welcome, not straight to /popin', async () => {
-    // CA, 2026-10-03: someone new reads what this is before being asked for an
+    // Someone new reads what this is before being asked for an
     // email. The path is the deployment's `popInPath`, which LoginPage reads
     // without being edited — so this is what pins it end to end, in the page.
     window.history.pushState({}, '', '/login');

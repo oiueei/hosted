@@ -3,7 +3,7 @@
 **Tests code that is not in the standalone** (see `test_hosted_popin.py` for why the
 file sits here).
 
-It was a Django page of our own, `/request-access/`; CA moved it to Tally (2026-10-05),
+It was a Django page of our own, `/request-access/`; it moved to Tally,
 one form per language, opened in a new tab. The SPA knows the addresses through its own
 `externalForms.requestAccess`; the **server** needs them in three places the SPA does not
 render, and each is pinned here in the language of whoever it is for:

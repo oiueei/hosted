@@ -83,9 +83,9 @@ describe('WelcomePage example collections', () => {
   });
 
   /**
-   * Lele and Lulu owned no collection until the 2026-08 seed round gave them a
-   * COMMUNITY group each, and the page went on telling their story with nothing
-   * to click — the persona map still said they had none. Pinning all five keeps
+   * Lele and Lulu each own a COMMUNITY group in the seed. The persona map once
+   * said they had none, and the page told their story with nothing to click.
+   * Pinning all five keeps
    * the next persona that gains a group from going quietly linkless.
    */
   test('every persona links to their own group when the visitor can reach it', async () => {

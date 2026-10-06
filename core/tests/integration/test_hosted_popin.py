@@ -17,8 +17,8 @@ quietly become invite-only and nobody would notice until the sign-ups stopped.
 
 **The door does not weaken the product.** Someone arriving with a real
 collection in hand must be handled by the product's own view, unchanged: same
-membership — made when the magic link is pressed, not when the address is typed
-(W1, 2026-10-04) —, same `target_code`, same landing. The service layer wraps
+membership — made when the magic link is pressed, not when the address is typed —,
+same `target_code`, same landing. The service layer wraps
 OIUEEI; it must not fork it. The open door itself, with no collection, is this
 deployment's own and still joins the demonstration groups on submit.
 """
@@ -58,8 +58,8 @@ class TestTheOpenDoor:
         there is no collection in hand, and then the general rule answers, the
         same one a `/login` link gets: their one real ACTIVE collection when
         they have exactly one, else Home. The demonstration groups they were
-        just put in do not count, and there is no `landing: "welcome"` any more
-        (CA, 2026-10-04). The rule itself is core's, pinned in `test_landing.py`;
+        just put in do not count, and there is no `landing: "welcome"` any more.
+        The rule itself is core's, pinned in `test_landing.py`;
         what is this app's to hold is what it stamps on the link: the origin,
         and no target.
         """
@@ -135,7 +135,7 @@ class TestItDoesNotForkTheProduct:
     ):
         """The product's join, not the open door: the click joins, the typing does not.
 
-        Since W1 (2026-10-04) `JoinView` joins nobody when the address is typed — it
+        `JoinView` joins nobody when the address is typed — it
         may be somebody else's — and writes into the magic-link RSVP what the click
         needs: the collection, and `join_source`. This door delegates to it for a
         collection in hand, so it follows: nothing at all until the link is pressed,

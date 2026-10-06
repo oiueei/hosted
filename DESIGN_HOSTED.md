@@ -16,7 +16,7 @@ Two rules keep it that way:
 1. **This file adds, it never overrides.** This deployment only ever *adds* files the
    public repo does not have — that is what makes an upgrade a merge instead of an
    argument, and it is why there is no second `DESIGN.md`. Editing the canonical one
-   here would put a prose conflict in the path of every design round upstream.
+   here would put a prose conflict in the path of every design change upstream.
 2. **A contradiction is a bug upstream, not a local exception.** If a hosted surface
    ever seems to need a principle broken, the principle was written as universal when
    it isn't. Fix it in `DESIGN.md` — name the part that depends on the deployment —

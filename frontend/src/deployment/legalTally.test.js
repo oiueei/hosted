@@ -5,10 +5,10 @@ import en from '../legal/en';
 import { externalForms } from './index';
 
 /**
- * The privacy section of `/legal` names Tally, and says what it receives (TLH4, CA
- * 2026-10-05). It was the feedback form alone; "Contact us" and "Request access" are
+ * The privacy section of `/legal` names Tally, and says what it receives. It was the
+ * feedback form alone; "Contact us" and "Request access" are
  * Tally forms now too (`externalForms`), so the paragraph names all three. The wording
- * is CA's, approved word for word, and pinned as written: a rephrasing here is a change
+ * is the operator's own, and pinned as written: a rephrasing here is a change
  * to what the operator tells people it does with their data, not a copy edit.
  *
  * And the thing that makes it a guard and not a snapshot: **every host a form of this

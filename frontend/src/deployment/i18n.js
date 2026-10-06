@@ -45,8 +45,8 @@ export const deploymentI18n = {
         'The code is public and you can read all of it; this commitment is <1>written into our design rules</1>. OIUEEI is in alpha — much is still unfinished — but this is not the fine print, it is the starting point.',
       createCollection: 'Create collection',
       editProfile: 'Edit profile',
-      // The two buttons of the hero for someone with no session (CA, 2026-10-03):
-      // the primary opens the door, the secondary goes back to /login.
+      // The two doors for someone with no session, at the end of the page: the
+      // primary opens the door, the secondary goes back to /login.
       newHereCta: 'New here?',
       haveAccountCta: 'Already have an account?',
       whoUsesTitle: 'Who uses OIUEEI?',

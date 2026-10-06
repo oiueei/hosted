@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 // "Ideas and bugs" of the closing row is this deployment's own Tally form, in the
-// language on screen (`externalForms.feedback`, TL1/TLH1, CA 2026-10-05) — English
+// language on screen (`externalForms.feedback`) — English
 // here. `FeedbackLink` prefers it to the `VITE_FEEDBACK_URL` this file used to stub to
 // have a button at all, so the address expected is the deployment's, read from it.
 
@@ -77,7 +77,7 @@ describe('WelcomePage — readable without an account', () => {
     expect(hrefs).not.toContain('/');
   });
 
-  // CA, 2026-10-05: a stranger's hero has no buttons — the title and the wave. The two
+  // A stranger's hero has no buttons — the title and the wave. The two
   // doors it had ("New here?" primary, "Already have an account?") are the last row of
   // the page now, after the personas (see "the closing row of buttons" below). A
   // member's hero keeps "Create collection" and "Edit profile".
@@ -113,8 +113,8 @@ describe('WelcomePage — readable without an account', () => {
     ).toEqual([true, false]);
   });
 
-  // CA, 2026-10-04: the speech-bubble icon left every hero ("too many icons up
-  // there") and "Contact us" is the third door of the site footer, on every
+  // The speech-bubble icon left every hero (too many icons up
+  // there) and "Contact us" is the third door of the site footer, on every
   // page. This hero is deployment-only, so core's sweep over the hero corners
   // (`heroCornerLayout.test.jsx`) never reaches it — it imported the deleted
   // component, and the page stopped building, before anyone read what it drew.
@@ -139,8 +139,8 @@ describe('WelcomePage — readable without an account', () => {
 
   // This page is deployment-only, so the invariant wired into `smoke.test.jsx`
   // and `a11yInteractive.test.jsx` upstream never reaches it — and it is the page
-  // most first-time visitors land on. It carried five `<Link><Button>` pairs of
-  // its own until the 2026-08-30 round, two tab stops each, and nothing here
+  // most first-time visitors land on. It once carried five `<Link><Button>` pairs of
+  // its own, two tab stops each, and nothing here
   // would have said so: axe reports no violation for the shape.
   test.each([
     ['an anonymous visitor', null],
@@ -176,12 +176,12 @@ describe('WelcomePage — readable without an account', () => {
 });
 
 /**
- * The end of /welcome (CA, 2026-10-03): one row after the personas, the first
+ * The end of /welcome: one row after the personas, the first
  * button the primary one and the rest secondary. The FAQ used to be a link in
  * the commitment section, "Ideas and bugs" a line under the row, and a signed-in
  * visitor had an "Enter and see how it works" button that took them home.
  *
- * Since 2026-10-05 (GH1) a stranger's row is "New here?" · the FAQ · "Already have an
+ * A stranger's row is "New here?" · the FAQ · "Already have an
  * account?" — the two doors their hero used to have, which now has none — and no "Ideas
  * and bugs"; a member's is as it was: the FAQ (primary) and "Ideas and bugs".
  */
@@ -231,7 +231,7 @@ describe('WelcomePage — the closing row of buttons', () => {
   });
 
   test('signed out: no "Ideas and bugs" anywhere on the page, not even as the Tally link', async () => {
-    // A stranger is not sent to the feedback form (CA, 2026-10-05): not as a button
+    // A stranger is not sent to the feedback form: not as a button
     // and not as a link to it.
     const { container } = await renderSignedOut();
 

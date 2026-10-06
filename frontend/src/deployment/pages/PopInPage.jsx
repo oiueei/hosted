@@ -22,7 +22,7 @@ export default function PopInPage() {
       titleKey="popin.title"
       descriptionKey="popin.description"
       endpoint={POP_IN_ENDPOINT}
-      // No "Already have an account? Sign in →" under the form (CA, 2026-10-03):
+      // No "Already have an account? Sign in →" under the form:
       // /welcome, where /login now sends strangers, already offers it in its
       // hero. It is not a dead end for someone who has an account and lands here
       // anyway: typing their address gets them a magic link all the same —
@@ -32,9 +32,8 @@ export default function PopInPage() {
       // gained for this: the component is core's and identical on both branches.
       offerSignIn={false}
     >
-      {/* The fourth of the four FAQ links the August round asked for — the door
-          with the most first-time traffic. `MagicLinkJoinPage`'s `children`
-          slot renders it under the form. */}
+      {/* The FAQ, for the door with the most first-time traffic.
+          `MagicLinkJoinPage`'s `children` slot renders it under the form. */}
       {faqPath && (
         <p>
           <Link to={faqPath}>{t('popin.faqLink')}</Link>

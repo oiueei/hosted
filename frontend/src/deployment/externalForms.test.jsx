@@ -10,10 +10,10 @@ import FeedbackLink from '../components/FeedbackLink';
 import ApprovalNotice from '../components/ApprovalNotice';
 
 /**
- * The three ways of writing to the team are forms on Tally on this deployment (TL1 in
- * core, TLH1 here; CA, 2026-10-05): the footer's "Contact us", "Ideas and bugs" and
+ * The three ways of writing to the team are forms on Tally on this deployment: the
+ * footer's "Contact us", "Ideas and bugs" and
  * "Request access", in the language of whoever opens them and in a new tab, each address
- * exactly as CA gave it — no parameter, no return page. Core's own tests pin how the
+ * exactly as the operator wrote it — no parameter, no return page. Core's own tests pin how the
  * three places use `externalForms` with the module mocked; this file pins what THIS
  * deployment puts in it, and that the real module reaches the real places.
  */
@@ -36,7 +36,7 @@ const NINE = {
 };
 
 describe('what this deployment puts in externalForms', () => {
-  test('the nine addresses CA gave, exactly: three forms, three languages each', () => {
+  test('the nine addresses, exactly: three forms, three languages each', () => {
     expect(externalForms).toEqual(NINE);
   });
 

@@ -28,8 +28,9 @@ const LANGUAGES = [
   ['en', faqEn],
 ];
 
-// The question about getting in touch (CTH1, CA 2026-10-05), letter by letter as CA approved it
-// (SONNET_TASKS.md, round CT): who tells whom, and by what route.
+// The question about getting in touch — who tells whom, and by what route — pinned letter by
+// letter: its answer says what OIUEEI does and does not do between a requester and whoever
+// runs the thing, so a rephrasing is a change to that, not a copy edit.
 const CONTACTO = {
   es: {
     q: '¿Cómo se ponen en contacto quien pide una cosa y quien la gestiona?',
@@ -216,9 +217,9 @@ describe('the question about getting in touch', () => {
 });
 
 describe('the ways in', () => {
-  // Four doors were asked for; three are here. The fourth — a line under the
-  // form on /popin — would need `MagicLinkJoinPage` to accept a footer slot,
-  // and that component is upstream's. See the note in the commit.
+  // Three of the FAQ's doors are pinned here. The fourth — the entry under the form
+  // on /popin — is handed to `MagicLinkJoinPage`'s `children` slot, and
+  // `pages/PopInPage.test.jsx` pins that wiring.
   test('/login offers it, which is what faqPath is for', async () => {
     window.history.pushState({}, '', '/login');
     render(<App />);

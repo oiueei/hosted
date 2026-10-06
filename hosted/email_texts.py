@@ -2,7 +2,7 @@
 
 **A catalogue of its own, and deliberately not three new keys in
 `core/services/email_texts/`.** That directory is upstream's, it is merged from
-`development` on every round, and a key added here would be a conflict on every
+`development` on every release, and a key added here would be a conflict on every
 one of them for text the standalone has no sender for — there is no request to
 answer where there is no gate.
 
