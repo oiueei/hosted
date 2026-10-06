@@ -5,6 +5,11 @@ import { resizeImage } from './resizeImage';
 // signed and therefore the one that counts.
 export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
+// Mirrors the hourly allowance of `UploadTicketView` in `core/views/upload.py`, which is
+// the one that is enforced: every photo takes one ticket, and a ZIP import takes one per
+// photo. Keep the two numbers equal.
+export const UPLOADS_PER_HOUR = 120;
+
 /**
  * "This particular file is too big" — as opposed to every other upload failure,
  * which the caller can only describe as "it didn't work".
@@ -18,6 +23,29 @@ export class UploadTooLargeError extends Error {
     super('image_too_large');
     this.name = 'UploadTooLargeError';
   }
+}
+
+/**
+ * "The hour's allowance of photos is used up" — the ticket endpoint answered 429. It is
+ * not the file's fault and retrying now would fail again, so the person is told to wait
+ * rather than to check the images.
+ */
+export class UploadRateLimitedError extends Error {
+  constructor() {
+    super('upload_rate_limited');
+    this.name = 'UploadRateLimitedError';
+  }
+}
+
+/**
+ * The i18n key that says why an upload failed. The two failures a person can do
+ * something about are named; everything else is ours to apologise for. Callers
+ * interpolate `{ max: UPLOADS_PER_HOUR }`, which only the rate-limit text reads.
+ */
+export function uploadErrorKey(err) {
+  if (err instanceof UploadTooLargeError) return 'upload.imageTooLarge';
+  if (err instanceof UploadRateLimitedError) return 'upload.rateLimited';
+  return 'upload.uploadError';
 }
 
 /**
@@ -63,6 +91,7 @@ export async function uploadImage(original, folder = 'oiueei/things') {
       content_length: file.size,
     }),
   });
+  if (ticketRes.status === 429) throw new UploadRateLimitedError();
   if (!ticketRes.ok) throw new Error('signature_failed');
   const { url, method, headers, key, public_url: publicUrl } = await ticketRes.json();
 

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import Papa from 'papaparse';
-import { mapRow, validateRows, MAX_ROWS } from '../utils/bulkCsv';
+import { mapRow, photoNames, validateRows, MAX_ROWS } from '../utils/bulkCsv';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
 
 describe('mapRow', () => {
@@ -119,5 +119,26 @@ describe('CSV_PARSE_OPTIONS', () => {
     expect(captured.meta.delimiter).toBe(',');
     expect(captured.meta.fields).toEqual(['headline', 'type']);
     expect(captured.data).toEqual([{ headline: 'Cazo', type: 'GIFT_THING' }]);
+  });
+});
+
+describe('photoNames', () => {
+  test('lists each distinct filename once, in the order it first appears', () => {
+    const rows = [
+      { headline: 'A', photo: 'b.jpg' },
+      { headline: 'B', photo: 'a.jpg' },
+      { headline: 'C', photo: 'b.jpg' },
+    ];
+    expect(photoNames(rows)).toEqual(['b.jpg', 'a.jpg']);
+  });
+
+  test('skips the rows that name no photo', () => {
+    const rows = [{ headline: 'A' }, { headline: 'B', photo: 'a.jpg' }, { headline: 'C' }];
+    expect(photoNames(rows)).toEqual(['a.jpg']);
+  });
+
+  test('is empty when no row names one', () => {
+    expect(photoNames([{ headline: 'A' }])).toEqual([]);
+    expect(photoNames([])).toEqual([]);
   });
 });

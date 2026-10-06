@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
 import { apiFetch } from '../services/api';
-import { uploadImage } from '../utils/uploadImage';
-import { MAX_ROWS, mapRow, validateRows } from '../utils/bulkCsv';
+import { uploadImage, UploadRateLimitedError, UPLOADS_PER_HOUR } from '../utils/uploadImage';
+import { MAX_ROWS, mapRow, photoNames, validateRows } from '../utils/bulkCsv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
@@ -133,11 +133,16 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
             return;
           }
           // Every referenced photo must actually be in the ZIP.
-          const missing = [...new Set(parsed.filter((r) => r.photo).map((r) => r.photo))].filter(
-            (name) => !images.has(name.toLowerCase())
-          );
+          const names = photoNames(parsed);
+          const missing = names.filter((name) => !images.has(name.toLowerCase()));
           if (missing.length > 0) {
             setError(t('bulkAdd.zipMissingImages', { files: missing.join(', ') }));
+            return;
+          }
+          // Each one takes a ticket, and an hour allows `UPLOADS_PER_HOUR` of them: past that
+          // the import would stop half-way, so it is refused before the preview.
+          if (names.length > UPLOADS_PER_HOUR) {
+            setError(t('bulkAdd.tooManyPhotos', { count: names.length, max: UPLOADS_PER_HOUR }));
             return;
           }
           setZipImages(images);
@@ -152,7 +157,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
 
   // Upload every photo referenced by the rows once, returning filename → public_id.
   const uploadZipImages = async () => {
-    const names = [...new Set(rows.filter((r) => r.photo).map((r) => r.photo))];
+    const names = photoNames(rows);
     const idByName = new Map();
     setUploadProgress({ done: 0, total: names.length });
     for (const name of names) {
@@ -175,8 +180,12 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         let idByName;
         try {
           idByName = await uploadZipImages();
-        } catch {
-          setError(t('bulkAdd.imageUploadError'));
+        } catch (err) {
+          setError(
+            err instanceof UploadRateLimitedError
+              ? t('bulkAdd.uploadRateLimited', { max: UPLOADS_PER_HOUR })
+              : t('bulkAdd.imageUploadError')
+          );
           return;
         }
         // Swap the `photo` filename for the uploaded `thumbnail` public_id.

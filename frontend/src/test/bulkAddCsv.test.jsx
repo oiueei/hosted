@@ -5,10 +5,23 @@ import JSZip from 'jszip';
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 // The ticketed upload path is covered in src/utils/uploadImage.test.js; here it
 // only has to receive the right File and hand back a public_id.
-vi.mock('../utils/uploadImage', () => ({ uploadImage: vi.fn() }));
+// The real constants and error classes stay; only the upload is stubbed. `UPLOADS_PER_HOUR`
+// reads through `allowance` so one test can lower it: the real one (120) is above the 100
+// rows a file may hold, so with a cover photo per row it cannot be crossed.
+const allowance = vi.hoisted(() => ({ perHour: null }));
+vi.mock('../utils/uploadImage', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    uploadImage: vi.fn(),
+    get UPLOADS_PER_HOUR() {
+      return allowance.perHour ?? actual.UPLOADS_PER_HOUR;
+    },
+  };
+});
 
 import { apiFetch } from '../services/api';
-import { uploadImage } from '../utils/uploadImage';
+import { uploadImage, UploadRateLimitedError } from '../utils/uploadImage';
 import BulkAddCsv from '../components/BulkAddCsv';
 
 const fileInput = (container) => container.querySelector('input[type="file"]');
@@ -37,6 +50,7 @@ const renderBulkAdd = (onImported = vi.fn()) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  allowance.perHour = null;
   apiFetch.mockResolvedValue(jsonResponse({ created: 0 }));
 });
 
@@ -186,6 +200,78 @@ describe('BulkAddCsv — ZIP', () => {
     expect(
       await screen.findByText("Some photos couldn't be uploaded. Check the images and try again.")
     ).toBeInTheDocument();
+    expect(apiFetch).not.toHaveBeenCalled();
+    expect(onImported).not.toHaveBeenCalled();
+  });
+});
+
+// An hour allows `UPLOADS_PER_HOUR` tickets and every photo of a ZIP takes one.
+describe("BulkAddCsv — the hour's allowance of photos", () => {
+  const photosZip = (count) =>
+    zipFile({
+      'things.csv': `headline,photo\n${Array.from({ length: count }, (_, i) => `Thing ${i},p${i}.jpg`).join('\n')}`,
+      ...Object.fromEntries(Array.from({ length: count }, (_, i) => [`p${i}.jpg`, 'bytes'])),
+    });
+
+  test('a ZIP with more photos than an hour allows gets no preview and says how many', async () => {
+    allowance.perHour = 2;
+    const { container } = renderBulkAdd();
+
+    pick(container, await photosZip(3));
+
+    expect(
+      await screen.findByText(
+        'This ZIP has 3 photos and you can upload 2 an hour. Split it into several and upload them an hour apart.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Preview/)).toBeNull();
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('exactly the allowance is still imported', async () => {
+    allowance.perHour = 2;
+    const { container } = renderBulkAdd();
+
+    pick(container, await photosZip(2));
+
+    expect(await screen.findByText('Preview (2)')).toBeInTheDocument();
+  });
+
+  test('a photo used by several rows counts once', async () => {
+    allowance.perHour = 1;
+    const { container } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo\nA,same.jpg\nB,same.jpg\nC,same.jpg',
+        'same.jpg': 'bytes',
+      })
+    );
+
+    expect(await screen.findByText('Preview (3)')).toBeInTheDocument();
+  });
+
+  test('a ticket refused with a 429 mid-import says the hour is used up, and sends no bulk', async () => {
+    uploadImage.mockRejectedValue(new UploadRateLimitedError());
+    const { container, onImported } = renderBulkAdd();
+
+    pick(
+      container,
+      await zipFile({
+        'things.csv': 'headline,photo\nCazo,cazo.jpg',
+        'cazo.jpg': 'fake-jpeg-bytes',
+      })
+    );
+    fireEvent.click(await screen.findByText('Add 1 items'));
+
+    expect(
+      await screen.findByText(
+        "You've reached the limit of 120 photos an hour, so nothing was added. Try again in a while."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Some photos couldn't be uploaded/)).toBeNull();
     expect(apiFetch).not.toHaveBeenCalled();
     expect(onImported).not.toHaveBeenCalled();
   });

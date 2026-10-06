@@ -65,3 +65,12 @@ export function validateRows(parsed) {
   if (parsed.some((row) => !row.headline)) return 'headlineRequired';
   return null;
 }
+
+/**
+ * The distinct photo filenames the rows name, in the order they first appear: the files a
+ * ZIP import has to find and upload, one ticket each. A name used by several rows counts
+ * once.
+ */
+export function photoNames(rows) {
+  return [...new Set(rows.filter((row) => row.photo).map((row) => row.photo))];
+}

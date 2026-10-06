@@ -790,7 +790,7 @@ Both report shapes are understood: the legacy `{"csp-report": {...}}` and a `rep
 |---|---|
 | **Endpoint** | `POST /api/v1/upload/ticket/` |
 | **Permission** | `IsAuthenticated` |
-| **Rate limit** | 30 requests/hour per user |
+| **Rate limit** | 120 requests/hour per user — one ticket per photo, so a ZIP import of up to 100 things fits in one hour |
 
 Hands the browser a short-lived ticket to write **one** object to the media
 bucket, so the binary never routes through Django. That property is unchanged
