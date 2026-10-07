@@ -398,3 +398,49 @@ describe('markdownToHtml — headings', () => {
     expect(markdownToHtml('#arduino #maker')).not.toContain('<h');
   });
 });
+
+describe('markdownToHtml — lists, emphasis and line breaks', () => {
+  test.each([['-'], ['*'], ['+']])('a "%s " line is a bullet', (mark) => {
+    expect(markdownToHtml(`${mark} uno\n${mark} dos`)).toBe('<ul><li>uno</li><li>dos</li></ul>');
+  });
+
+  test('bullets with different marks are one list', () => {
+    expect(markdownToHtml('- a\n* b\n+ c')).toBe('<ul><li>a</li><li>b</li><li>c</li></ul>');
+  });
+
+  test('a * with no space after it is not a bullet', () => {
+    expect(markdownToHtml('*uno*')).toBe('<span><em>uno</em></span>');
+  });
+
+  test('an asterisk glued to the word inside is italics', () => {
+    expect(markdownToHtml('*así* y *otra cosa*')).toBe(
+      '<span><em>así</em> y <em>otra cosa</em></span>'
+    );
+  });
+
+  test('2 * 3 * 4 is arithmetic, not italics', () => {
+    const out = markdownToHtml('Son 2 * 3 * 4 piezas');
+    expect(out).not.toContain('<em>');
+    expect(out).toContain('2 * 3 * 4');
+  });
+
+  test('the closing mark must be glued to the word too', () => {
+    expect(markdownToHtml('un *error * grave')).not.toContain('<em>');
+    expect(markdownToHtml('un _error _ grave')).not.toContain('<em>');
+  });
+
+  test('the same rule holds for underscores', () => {
+    expect(markdownToHtml('_así_')).toBe('<span><em>así</em></span>');
+    expect(markdownToHtml('a _ b _ c')).not.toContain('<em>');
+  });
+
+  test('Windows line breaks do not break headings, lists or tables', () => {
+    const out = markdownToHtml(
+      '## Horario\r\n- lunes\r\n- martes\r\n| a | b |\r\n|---|---|\r\n| 1 | 2 |'
+    );
+    expect(out).toContain('<h4>Horario</h4>');
+    expect(out).toContain('<ul><li>lunes</li><li>martes</li></ul>');
+    expect(out).toContain('<table>');
+    expect(out).not.toContain('\r');
+  });
+});

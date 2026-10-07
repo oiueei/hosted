@@ -6,7 +6,7 @@ import { useNavigate, useInRouterContext } from 'react-router';
  * Supported syntax:
  *   **bold**           -> <strong>
  *   *italic* / _italic_ -> <em>
- *   - bullet           -> <ul><li>
+ *   - bullet (also `* ` and `+ `) -> <ul><li>
  *   1. numbered        -> <ol><li>
  *   [text](url)        -> <a> — http(s) (balanced parentheses allowed), `www.…`
  *     (read as https), `mailto:` and site paths (`/collections/…`); anything else
@@ -78,13 +78,14 @@ function anchor({ href, kind }, label) {
   return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 }
 
-// Bold and italics. On a card (`plain`) bold is only its text: the description
+// Bold and italics. An italic mark must be glued to the word on its inside:
+// `*like this*` is emphasis, `2 * 3 * 4` is arithmetic. On a card (`plain`) bold is only its text: the description
 // there is a few quiet lines and must not shout over the card's own title.
 function renderEmphasis(text, plain = false) {
   return text
     .replace(/\*\*(.+?)\*\*/g, plain ? '$1' : '<strong>$1</strong>')
-    .replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>')
-    .replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
+    .replace(/(?<!\w)\*(?=\S)(.+?)(?<=\S)\*(?!\w)/g, '<em>$1</em>')
+    .replace(/(?<!\w)_(?=\S)(.+?)(?<=\S)_(?!\w)/g, '<em>$1</em>');
 }
 
 // `[label](url)`, with balanced parentheses in the url (Wikipedia-style
@@ -168,7 +169,7 @@ function markdownToHtml(text, headingBase = 3, variant = 'default') {
   if (!text) return '';
   const plain = variant === 'card';
 
-  const lines = text.split('\n');
+  const lines = text.split(/\r?\n/);
   const output = [];
   let inUl = false;
   let inOl = false;
@@ -236,8 +237,8 @@ function markdownToHtml(text, headingBase = 3, variant = 'default') {
       continue;
     }
 
-    // Unordered list: - text
-    const ulMatch = line.match(/^- (.+)$/);
+    // Unordered list: - text, * text or + text
+    const ulMatch = line.match(/^[-*+] (.+)$/);
     if (ulMatch) {
       if (inOl) {
         output.push('</ol>');
