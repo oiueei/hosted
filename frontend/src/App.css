@@ -1721,17 +1721,21 @@ figure[class*='Highlight-module_highlight'] {
 }
 
 /* A heading is never smaller than the text around it: the browser's own h5 is
-   83% of it, which is what a `###` used to come out as. */
+   83% of it, which is what a `###` used to come out as. The sizes are in `em`,
+   relative to that text, not the HDS `rem` tokens: the hero (`.form-hero-text`)
+   and a bio (`.about-markdown`) set their text at 18px, where heading-xs is 18px
+   too, and h4 and h5 came out the same. Over 16px text these are the 24/20/18/16px
+   of heading-m/s/xs and the text itself; over 18px they grow with it. */
 .markdown-text h2 {
-  font-size: var(--fontsize-heading-m);
+  font-size: 1.5em;
 }
 
 .markdown-text h3 {
-  font-size: var(--fontsize-heading-s);
+  font-size: 1.25em;
 }
 
 .markdown-text h4 {
-  font-size: var(--fontsize-heading-xs);
+  font-size: 1.125em;
 }
 
 .markdown-text h5 {
