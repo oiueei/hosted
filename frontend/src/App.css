@@ -1711,6 +1711,41 @@ figure[class*='Highlight-module_highlight'] {
   line-height: 28px;
 }
 
+.markdown-text h2,
+.markdown-text h3,
+.markdown-text h4,
+.markdown-text h5 {
+  font-weight: 700;
+  line-height: 1.3;
+  margin: var(--spacing-s) 0 var(--spacing-2-xs);
+}
+
+/* A heading is never smaller than the text around it: the browser's own h5 is
+   83% of it, which is what a `###` used to come out as. */
+.markdown-text h2 {
+  font-size: var(--fontsize-heading-m);
+}
+
+.markdown-text h3 {
+  font-size: var(--fontsize-heading-s);
+}
+
+.markdown-text h4 {
+  font-size: var(--fontsize-heading-xs);
+}
+
+.markdown-text h5 {
+  font-size: 1em;
+}
+
+/* Nothing above a heading that opens the text. */
+.markdown-text > h2:first-child,
+.markdown-text > h3:first-child,
+.markdown-text > h4:first-child,
+.markdown-text > h5:first-child {
+  margin-top: 0;
+}
+
 .markdown-text ul,
 .markdown-text ol {
   margin: var(--spacing-2-xs) 0;

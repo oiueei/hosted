@@ -204,7 +204,10 @@ function markdownToHtml(text, headingBase = 3) {
     // The default base is 3 (a bio inside a page that already owns h1/h2);
     // a page whose markdown IS the content (LegalPage) passes base 2 so the
     // outline doesn't skip a level (axe heading-order).
-    const headingMatch = line.match(/^(#{1,6}) (.+)$/);
+    // Up to three spaces may precede the `#`s and a closing sequence of `#`s
+    // (`## Horario ##`) is not part of the title. `#Normas`, with no space, stays
+    // text: otherwise `#arduino #maker` would be a heading.
+    const headingMatch = line.match(/^ {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/);
     if (headingMatch) {
       if (inUl) {
         output.push('</ul>');

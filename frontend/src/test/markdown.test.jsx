@@ -377,3 +377,24 @@ describe('MarkdownText — following a link to this site', () => {
     expect(fireEvent.click(link)).toBe(true);
   });
 });
+
+describe('markdownToHtml — headings', () => {
+  test('the closing sequence is not part of the title', () => {
+    expect(markdownToHtml('## Horario ##')).toBe('<h4>Horario</h4>');
+    expect(markdownToHtml('# Horario #####  ')).toBe('<h3>Horario</h3>');
+  });
+
+  test('a # that is part of the title stays', () => {
+    expect(markdownToHtml('# Aprende C#')).toBe('<h3>Aprende C#</h3>');
+  });
+
+  test('up to three spaces may precede the #', () => {
+    expect(markdownToHtml('   ## Horario')).toBe('<h4>Horario</h4>');
+  });
+
+  test('four spaces are not a title, nor is a # glued to its word', () => {
+    expect(markdownToHtml('    ## Horario')).not.toContain('<h');
+    expect(markdownToHtml('#Normas')).toBe('<span>#Normas</span>');
+    expect(markdownToHtml('#arduino #maker')).not.toContain('<h');
+  });
+});
