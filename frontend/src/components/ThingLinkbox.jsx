@@ -175,7 +175,11 @@ function ThingLinkbox({
           </Link>
         </h3>
         {thing.description && (
-          <MarkdownText text={L(thing.description)} className="thing-card-description" />
+          <MarkdownText
+            text={L(thing.description)}
+            className="thing-card-description"
+            variant="card"
+          />
         )}
         <ThingTags thing={thing} isOwner={canManage} showType={false} />
         <ThingInfoRows thing={thing} isDateBased={isDateBased} hideType={hideType}>

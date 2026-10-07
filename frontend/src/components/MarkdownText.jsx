@@ -19,6 +19,10 @@ import { useNavigate, useInRouterContext } from 'react-router';
  *     the page around this component already owns h1/h2, so a bio can't
  *     outrank the page's own outline)
  *
+ * `variant="card"` (the description on a thing's card): titles come out as one
+ * line of ordinary text — no <hN>, no `#` — and `**x**` as x, without <strong>;
+ * italics and links stay. Anywhere else nothing changes.
+ *
  * All other content is HTML-escaped before processing.
  */
 
@@ -74,17 +78,18 @@ function anchor({ href, kind }, label) {
   return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 }
 
-// Bold and italics.
-function renderEmphasis(text) {
+// Bold and italics. On a card (`plain`) bold is only its text: the description
+// there is a few quiet lines and must not shout over the card's own title.
+function renderEmphasis(text, plain = false) {
   return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*\*(.+?)\*\*/g, plain ? '$1' : '<strong>$1</strong>')
     .replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>')
     .replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
 }
 
 // `[label](url)`, with balanced parentheses in the url (Wikipedia-style
 // addresses). Returns the text with every link replaced by `park(anchor)`.
-function replaceMarkdownLinks(text, park) {
+function replaceMarkdownLinks(text, park, plain) {
   let out = '';
   let from = 0;
   const open = /\[([^\]]+)\]\(/g;
@@ -99,7 +104,7 @@ function replaceMarkdownLinks(text, park) {
     if (depth > 0) continue; // never closed: plain text
     const link = resolveLink(text.slice(open.lastIndex, i - 1));
     out += text.slice(from, m.index);
-    out += link ? park(anchor(link, renderEmphasis(m[1]))) : renderEmphasis(m[1]);
+    out += link ? park(anchor(link, renderEmphasis(m[1], plain))) : renderEmphasis(m[1], plain);
     from = i;
     open.lastIndex = i;
   }
@@ -131,7 +136,7 @@ function replaceBareUrls(text, park) {
 // escapes again: doing so turned a `&` in a query string into `&amp;amp;`, and
 // the browser then resolved the href with a literal `&amp;` inside it —
 // `?a=1&b=2` became `?a=1&amp;b=2` and the link went somewhere else.
-function renderInline(text) {
+function renderInline(text, plain = false) {
   // Each generated anchor is parked behind a placeholder before the emphasis
   // passes run, so they cannot rewrite the inside of an href: a URL with a
   // `*…*` or `_…_` segment used to come back with an <em> spliced into it.
@@ -141,9 +146,9 @@ function renderInline(text) {
     links.push(html);
     return `\0LINK${links.length - 1}\0`;
   };
-  let result = replaceMarkdownLinks(text, park);
+  let result = replaceMarkdownLinks(text, park, plain);
   result = replaceBareUrls(result, park);
-  result = renderEmphasis(result);
+  result = renderEmphasis(result, plain);
   return result.replace(/\0LINK(\d+)\0/g, (match, i) => links[Number(i)] ?? match);
 }
 
@@ -159,8 +164,9 @@ const tableCells = (escapedLine) => {
     .map((c) => c.trim());
 };
 
-function markdownToHtml(text, headingBase = 3) {
+function markdownToHtml(text, headingBase = 3, variant = 'default') {
   if (!text) return '';
+  const plain = variant === 'card';
 
   const lines = text.split('\n');
   const output = [];
@@ -183,12 +189,14 @@ function markdownToHtml(text, headingBase = 3) {
         inOl = false;
       }
       const header = tableCells(line)
-        .map((c) => `<th>${renderInline(c)}</th>`)
+        .map((c) => `<th>${renderInline(c, plain)}</th>`)
         .join('');
       const bodyRows = [];
       let j = i + 2;
       while (j < lines.length && isTableRow(lines[j]) && !isTableSeparator(lines[j])) {
-        const cells = tableCells(escapeHtml(lines[j])).map((c) => `<td>${renderInline(c)}</td>`);
+        const cells = tableCells(escapeHtml(lines[j])).map(
+          (c) => `<td>${renderInline(c, plain)}</td>`
+        );
         bodyRows.push(`<tr>${cells.join('')}</tr>`);
         j++;
       }
@@ -217,6 +225,12 @@ function markdownToHtml(text, headingBase = 3) {
         output.push('</ol>');
         inOl = false;
       }
+      // On a card a title is one line of ordinary text: the card has its own
+      // <h3>, and a description cannot put headings in the page's outline.
+      if (plain) {
+        output.push(`<span>${renderInline(headingMatch[2], plain)}</span>`);
+        continue;
+      }
       const tag = `h${Math.min(headingMatch[1].length, 3) + headingBase - 1}`;
       output.push(`<${tag}>${renderInline(headingMatch[2])}</${tag}>`);
       continue;
@@ -233,7 +247,7 @@ function markdownToHtml(text, headingBase = 3) {
         output.push('<ul>');
         inUl = true;
       }
-      output.push(`<li>${renderInline(ulMatch[1])}</li>`);
+      output.push(`<li>${renderInline(ulMatch[1], plain)}</li>`);
       continue;
     }
 
@@ -248,7 +262,7 @@ function markdownToHtml(text, headingBase = 3) {
         output.push('<ol>');
         inOl = true;
       }
-      output.push(`<li>${renderInline(olMatch[1])}</li>`);
+      output.push(`<li>${renderInline(olMatch[1], plain)}</li>`);
       continue;
     }
 
@@ -265,7 +279,7 @@ function markdownToHtml(text, headingBase = 3) {
     if (line.trim() === '') {
       output.push('<br/>');
     } else {
-      output.push(`<span>${renderInline(line)}</span>`);
+      output.push(`<span>${renderInline(line, plain)}</span>`);
     }
   }
 
@@ -278,8 +292,8 @@ function markdownToHtml(text, headingBase = 3) {
 // eslint-disable-next-line react-refresh/only-export-components -- pure helpers co-located for unit tests (markdown.test.jsx) and reuse (sanitizeUrl on ThingPage)
 export { markdownToHtml, sanitizeUrl };
 
-function Markdown({ text, className, headingBase, navigate }) {
-  const html = markdownToHtml(text, headingBase);
+function Markdown({ text, className, headingBase, variant, navigate }) {
+  const html = markdownToHtml(text, headingBase, variant);
   // A link to this site is followed by the router — no reload — but only on a
   // plain left click: cmd/ctrl/shift/alt and the middle button stay the
   // browser's, as with `ButtonLink`.
@@ -306,9 +320,11 @@ function RoutedMarkdown(props) {
   return <Markdown {...props} navigate={useNavigate()} />;
 }
 
-export default function MarkdownText({ text, className = '', headingBase = 3 }) {
+export default function MarkdownText({ text, className = '', headingBase = 3, variant }) {
   const routed = useInRouterContext();
   if (!text) return null;
   const Component = routed ? RoutedMarkdown : Markdown;
-  return <Component text={text} className={className} headingBase={headingBase} />;
+  return (
+    <Component text={text} className={className} headingBase={headingBase} variant={variant} />
+  );
 }
