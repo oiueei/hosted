@@ -12,7 +12,8 @@ import { useNavigate, useInRouterContext } from 'react-router';
  *     (read as https), `mailto:` and site paths (`/collections/…`); anything else
  *     (`javascript:`, `data:`…) is not a link and shows its label as text.
  *     A bare `https://…` or `www.…` in the text is linked too.
- *     A link to this site (a path, or an absolute URL of this origin) opens in
+ *     A link to this site (a path or an absolute URL that, resolved against this
+ *     origin, stays on it — `/\evil.com` does not, and is no link) opens in
  *     the same tab through the router; any other http(s) link in a new one.
  *   | a | b | pipe tables (GFM: header row + |---|---| separator) -> <table>
  *   # / ## / ###+ heading -> <h3> / <h4> / <h5> (deeper levels cap at <h5> —
@@ -56,7 +57,18 @@ function sanitizeUrl(url) {
 // `sanitizeUrl`, exported below, keeps its own contract.
 function resolveLink(raw) {
   const url = raw.trim();
-  if (/^\/(?!\/)/.test(url)) return { href: url, kind: 'internal' };
+  // A path is internal only if, resolved against this origin, it stays here: the
+  // browser reads `\` as `/` and drops tabs, so `/\evil.com` and `/<tab>/evil.com`
+  // both land on another site. One that leaves is no link at all.
+  if (url.startsWith('/')) {
+    try {
+      const parsed = new URL(url, window.location.origin);
+      if (parsed.origin !== window.location.origin) return null;
+      return { href: `${parsed.pathname}${parsed.search}${parsed.hash}`, kind: 'internal' };
+    } catch {
+      return null;
+    }
+  }
   if (/^mailto:[^\s]+$/i.test(url)) return { href: url, kind: 'mailto' };
   const candidate = /^www\./i.test(url) ? `https://${url}` : url;
   if (!/^https?:\/\//i.test(candidate)) return null;

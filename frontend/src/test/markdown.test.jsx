@@ -305,6 +305,17 @@ describe('markdownToHtml — links', () => {
     expect(out).not.toContain('target=');
   });
 
+  // The browser reads `\` as `/` and drops tabs, so these two paths resolve to
+  // https://evil.com/. They are no link at all, not an "internal" one that leaves.
+  test.each([['/\\evil.com'], ['/\t/evil.com']])(
+    'a path that resolves to another site is no link: %j',
+    (target) => {
+      const out = html(`[aquí](${target})`);
+      expect(out).not.toContain('<a');
+      expect(out).toContain('aquí');
+    }
+  );
+
   test('another site is external: a new tab, no opener', () => {
     const out = html('[otra](https://elsewhere.example/x)');
     expect(out).toContain('target="_blank" rel="noopener noreferrer"');
