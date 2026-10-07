@@ -242,6 +242,17 @@ export default function CollectionPage() {
   // rather than patching `is_member` locally: joining changes several fields at
   // once (the member roster, the digest switch, what the cards may offer), and
   // the server is the only thing that knows all of them.
+  // The server's copy of the collection, as the reader is now: joined from a
+  // card, they are a member and the hero and the menu must say so.
+  const reloadCollection = async () => {
+    try {
+      const fresh = await apiFetch(`/api/v1/collections/${code}/`);
+      if (fresh.ok) setCollection(await fresh.json());
+    } catch {
+      // The request itself already went through; the page catches up on reload.
+    }
+  };
+
   const handleJoin = async () => {
     setJoining(true);
     setJoinError(false);
@@ -734,6 +745,7 @@ export default function CollectionPage() {
                   canAct={isAuthenticated}
                   loginToAct={!isAuthenticated}
                   onUpdateThing={handleUpdateThing}
+                  onJoinedGroup={reloadCollection}
                 />
               ))}
             </div>

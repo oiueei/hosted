@@ -106,6 +106,13 @@ export default function ThingPage() {
     setToast,
     activateSuccessMessage: t('thingPage.thingReactivated'),
     collectionCode,
+    // Only the collection the server resolved this thing to — never the route's
+    // code on its own (see RequestThingPage's `joinableCollection`).
+    joinCollectionCode:
+      thing?.collection_code && (!code || code === thing.collection_code)
+        ? thing.collection_code
+        : null,
+    joinedGroupName: L(thing?.collection_headline),
   });
 
   // The owner "Confirm hold" label, with its in-flight ("Confirming…") state. Shared

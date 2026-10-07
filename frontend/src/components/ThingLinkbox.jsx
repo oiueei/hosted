@@ -31,6 +31,7 @@ function ThingLinkbox({
   hideType = false,
   loginToAct = false,
   onUpdateThing,
+  onJoinedGroup,
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -72,6 +73,11 @@ function ThingLinkbox({
     initialActivePending: thing.pending_booking,
     fetchOnEndless: true,
     collectionCode: collectionCode || thing.collection_code,
+    // The group the page lists this card from: the card's payload carries no
+    // `collection_code` of its own, and the thing is in it by construction.
+    joinCollectionCode: collectionCode || null,
+    joinedGroupName: collectionHeadline,
+    onJoined: onJoinedGroup,
   });
 
   // Anonymous visitor (loginToAct): show the action buttons, but route each click

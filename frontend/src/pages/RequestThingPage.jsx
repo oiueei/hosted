@@ -369,7 +369,8 @@ export default function RequestThingPage() {
   // someone who already has an account.
   //
   // Only ever called for the backend's `code: "not_a_member"` marker (see
-  // handleSubmit), which can only fire on a PUBLIC collection — can_view
+  // handleSubmit) — every verb answers it now, since asking for anything is
+  // being part of the group — which can only fire on a PUBLIC collection — can_view
   // already gated everything else, and a non-member reaches it only there —
   // so joining is always genuinely possible. Membership was never really a
   // choice being offered, so it isn't asked for: join, then retry the
@@ -461,7 +462,7 @@ export default function RequestThingPage() {
         // unrelated error. And only when there is a collection it is safe to
         // join (`joinableCollection`, above).
         const data = await res.json();
-        if (isReservation && data.code === 'not_a_member' && joinableCollection()) {
+        if (data.code === 'not_a_member' && joinableCollection()) {
           await joinThenRetry(body, apiErrorMessage(data));
         } else {
           setToast({ type: 'error', message: apiErrorMessage(data) || t('request.errorSending') });
@@ -552,7 +553,9 @@ export default function RequestThingPage() {
       <StatusRegion>
         {joinedGroup && !success && (
           <Notification type="info" label={t('reservation.joinedLabel')}>
-            {t('reservation.joinedGroup', { group: joinedGroup })}
+            {t(isReservation ? 'reservation.joinedGroup' : 'request.joinedGroup', {
+              group: joinedGroup,
+            })}
           </Notification>
         )}
       </StatusRegion>
@@ -575,7 +578,9 @@ export default function RequestThingPage() {
             )}
             {joinedGroup && (
               <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
-                {t('reservation.joinedGroup', { group: joinedGroup })}
+                {t(isReservation ? 'reservation.joinedGroup' : 'request.joinedGroup', {
+                  group: joinedGroup,
+                })}
               </p>
             )}
           </Notification>
