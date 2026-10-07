@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, test, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
-import MarkdownText, { markdownToHtml } from '../components/MarkdownText';
+import MarkdownText, { markdownToHtml, sanitizeUrl } from '../components/MarkdownText';
 
 describe('markdownToHtml', () => {
   test('renders bold text', () => {
@@ -189,6 +189,21 @@ describe('markdownToHtml', () => {
     const result = markdownToHtml('#');
     expect(result).not.toContain('<h3>');
     expect(result).toContain('#');
+  });
+});
+
+// `sanitizeUrl` is exported for CollectionPage (the hero's link to the group's
+// own site) and keeps its own contract, apart from the Markdown links.
+describe('sanitizeUrl', () => {
+  test.each([['http://example.com/a?b=1'], ['https://example.com/a?b=1']])(
+    'an http(s) address comes back exactly as given: %s',
+    (url) => {
+      expect(sanitizeUrl(url)).toBe(url);
+    }
+  );
+
+  test.each([['ftp://x.org'], ['javascript:alert(1)']])('anything else is "#": %s', (url) => {
+    expect(sanitizeUrl(url)).toBe('#');
   });
 });
 

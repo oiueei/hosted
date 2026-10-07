@@ -313,7 +313,7 @@ function markdownToHtml(text, headingBase = 3, variant = 'default') {
   return output.join('');
 }
 
-// eslint-disable-next-line react-refresh/only-export-components -- pure helpers co-located for unit tests (markdown.test.jsx) and reuse (sanitizeUrl on ThingPage)
+// eslint-disable-next-line react-refresh/only-export-components -- pure helpers co-located for unit tests (markdown.test.jsx) and reuse (sanitizeUrl on CollectionPage)
 export { markdownToHtml, sanitizeUrl };
 
 function Markdown({ text, className, headingBase, variant, navigate }) {
