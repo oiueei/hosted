@@ -435,6 +435,33 @@ describe('markdownToHtml — lists, emphasis and line breaks', () => {
     expect(markdownToHtml('a _ b _ c')).not.toContain('<em>');
   });
 
+  // The italics are written without lookbehind (Safari < 16.4 cannot parse it):
+  // the outer edge is captured and given back. These are the shapes where that
+  // rewrite could read differently from the rule it replaced.
+  test.each([
+    ['*a* y *b*', '<span><em>a</em> y <em>b</em></span>'],
+    ['*a *b*', '<span><em>a *b</em></span>'],
+    ['(*a*)', '<span>(<em>a</em>)</span>'],
+    ['*a*.', '<span><em>a</em>.</span>'],
+    ['_a_b', '<span>_a_b</span>'],
+    ['a*b*c', '<span>a*b*c</span>'],
+    ['a*b* c', '<span>a*b* c</span>'],
+  ])('italics: %s', (input, expected) => {
+    expect(markdownToHtml(input)).toBe(expected);
+  });
+
+  test('a closing mark is not also the outer edge of the next italic', () => {
+    // The one case that differs from the lookbehind version, which gave
+    // <em>a</em><em>b</em>: accepted, and pinned so it stays a decision.
+    expect(markdownToHtml('*a**b*')).toBe('<span><em>a</em>*b*</span>');
+  });
+
+  test('an italic right after a link keeps the link whole', () => {
+    expect(markdownToHtml('[x](https://e.com)*a*')).toBe(
+      '<span><a href="https://e.com" target="_blank" rel="noopener noreferrer">x</a><em>a</em></span>'
+    );
+  });
+
   test('Windows line breaks do not break headings, lists or tables', () => {
     const out = markdownToHtml(
       '## Horario\r\n- lunes\r\n- martes\r\n| a | b |\r\n|---|---|\r\n| 1 | 2 |'

@@ -81,11 +81,22 @@ function anchor({ href, kind }, label) {
 // Bold and italics. An italic mark must be glued to the word on its inside:
 // `*like this*` is emphasis, `2 * 3 * 4` is arithmetic. On a card (`plain`) bold is only its text: the description
 // there is a few quiet lines and must not shout over the card's own title.
+//
+// No lookbehind anywhere in this file: Safari before 16.4 cannot parse a regular
+// expression literal that has one, so it fails to load this whole module, not
+// just the italics (test/markdownNoLookbehind.test.js keeps it out). The mark's
+// outer edge is captured instead (`(^|\W)`) and given back. The lazy `??` keeps
+// `*a* y *b*` two italics rather than one. A deliberate difference from the
+// lookbehind version: in `*a**b*` the `*` that closes the first italic cannot
+// also be the outer edge of a second, so only `*a*` is emphasis.
+const ITALIC_STAR = /(^|\W)\*(\S(?:.*?\S)??)\*(?!\w)/g;
+const ITALIC_UNDERSCORE = /(^|\W)_(\S(?:.*?\S)??)_(?!\w)/g;
+
 function renderEmphasis(text, plain = false) {
   return text
     .replace(/\*\*(.+?)\*\*/g, plain ? '$1' : '<strong>$1</strong>')
-    .replace(/(?<!\w)\*(?=\S)(.+?)(?<=\S)\*(?!\w)/g, '<em>$1</em>')
-    .replace(/(?<!\w)_(?=\S)(.+?)(?<=\S)_(?!\w)/g, '<em>$1</em>');
+    .replace(ITALIC_STAR, '$1<em>$2</em>')
+    .replace(ITALIC_UNDERSCORE, '$1<em>$2</em>');
 }
 
 // `[label](url)`, with balanced parentheses in the url (Wikipedia-style
