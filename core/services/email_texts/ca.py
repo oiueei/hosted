@@ -266,13 +266,21 @@ TEXTS = {
     "broadcast_plain": "Missatge de {owner}:\n\n{message}\n\nObrir el grup: {url}",
     "broadcast_intro": "{owner} ha enviat un missatge al grup:",
     "broadcast_open_cta": "Obrir el grup",
-    # Return reminder (to owner)
-    "reminder_subject": "Recordatori: una reserva acaba demà",
-    "reminder_plain": "Recordatori: la reserva de {requester} sobre '{thing}' acaba el {end}.",
-    "reminder_body": "Recordatori: la reserva de {requester} sobre {thing} acaba el {end}.",
+    # Return reminder (to owner). "Torna" names what a loan does — "reserva" is
+    # only RESERVE_THING, which never comes through this email.
+    "reminder_subject": "Recordatori: {thing} torna demà",
+    "reminder_plain": "Recordatori: {requester} t'ha de tornar '{thing}' el {end}.",
+    "reminder_body": "Recordatori: {requester} t'ha de tornar {thing} el {end}.",
     "return_due_subject": "Demà tornes {thing}",
     "return_due_plain": "Un recordatori amable: has de tornar '{thing}' a {owner} el {end}.",
     "return_due_body": "Un recordatori amable: has de tornar {thing} a {owner} el {end}.",
+    # Pickup reminders (LEND/RENT, start_date = tomorrow) — the day before the handover
+    "pickup_due_subject": "Demà reculls {thing}",
+    "pickup_due_plain": "Un recordatori amable: reculls '{thing}' de {owner} el {start}.",
+    "pickup_due_body": "Un recordatori amable: reculls {thing} de {owner} el {start}.",
+    "pickup_reminder_subject": "Demà lliures {thing}",
+    "pickup_reminder_plain": "Recordatori: {requester} recull '{thing}' el {start}.",
+    "pickup_reminder_body": "Recordatori: {requester} recull {thing} el {start}.",
     "view_thing_cta": "Veure la publicació",
     # Reserves d'espai (RESERVE_THING) — confirmació automàtica, sense decisió
     "reservation_confirmed_subject": "La teva reserva de '{thing}' està confirmada",

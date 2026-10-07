@@ -148,7 +148,7 @@ class TestSendRemindersCommand:
 
         # The owner is told somebody's hold is ending; nothing is asked of them.
         to_owner = by_recipient["rmowner@test.com"]
-        assert "ends tomorrow" in to_owner.subject
+        assert "comes back tomorrow" in to_owner.subject
         assert "Requester" in to_owner.body
 
         # The borrower is told what they must do, and who they owe it to.
@@ -345,6 +345,154 @@ class TestSendRemindersCommand:
 
         assert len(mail.outbox) == 0
         assert "Sent 0 reminder" in out.getvalue()
+
+    def test_a_pending_booking_starting_tomorrow_gets_no_pickup_reminder(self):
+        """A hold nobody has confirmed yet has no handover to remind about.
+
+        The pickup block filters on ACCEPTED for the same reason the arrival
+        one does: a PENDING loan's dates are still a request, and "tomorrow
+        you pick up" about a day the owner may yet decline is a promise the
+        app has no right to make.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RMOWN6", email="rmowner6@test.com")
+        requester = User.objects.create(code="RMREQ6", email="rmreq6@test.com")
+        thing = Thing.objects.create(
+            code="RMTHN6", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=2),
+            status="PENDING",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert mail.outbox == []
+        assert "Sent 0 reminder" in out.getvalue()
+
+    def test_pickup_reminder_reaches_both_sides_in_their_own_language(self):
+        """A loan starting tomorrow nudges both sides the day before the handover.
+
+        Until now the only pickup email was the acceptance, sent when the dates
+        were agreed — weeks can pass before the day, and nobody was told it had
+        arrived. Each side gets their own words, in their own language: the
+        borrower what they must do, the owner what is about to leave.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(
+            code="RMOWN7", email="rmowner7@test.com", name="Owner", language="ca"
+        )
+        requester = User.objects.create(
+            code="RMREQ7", email="rmreq7@test.com", name="Requester", language="es"
+        )
+        thing = Thing.objects.create(
+            code="RMTHN7", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=3),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert len(mail.outbox) == 2
+        by_recipient = {m.to[0]: m for m in mail.outbox}
+        assert set(by_recipient) == {"rmowner7@test.com", "rmreq7@test.com"}
+
+        # The borrower is told what they must do, and who they collect from —
+        # in their own language, with the date DD/MM/YYYY like the SPA.
+        to_borrower = by_recipient["rmreq7@test.com"]
+        assert to_borrower.subject == "Mañana recoges Drill"
+        assert "recoges 'Drill' de Owner" in to_borrower.body
+        assert tomorrow.strftime("%d/%m/%Y") in to_borrower.body
+        assert tomorrow.isoformat() not in to_borrower.body
+
+        # The owner is told who is coming for it — nothing is asked of them.
+        to_owner = by_recipient["rmowner7@test.com"]
+        assert to_owner.subject == "Demà lliures Drill"
+        assert "Requester recull 'Drill'" in to_owner.body
+        assert "Sent 2 reminder" in out.getvalue()
+
+    def test_a_reservation_starting_tomorrow_gets_no_pickup_reminders(self):
+        """RESERVE has its own arrival reminder; the pickup pair is not for it.
+
+        A reservation's "pickup" is the member turning up on the owner's
+        premises — exactly what `send_reservation_reminder_email` already says,
+        requester-only. The LEND/RENT pair would mail the owner a handover
+        that never happens.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RSVOW5", email="rsvowner5@test.com")
+        member = User.objects.create(code="RSVME5", email="rsvmember5@test.com")
+        thing = Thing.objects.create(
+            code="RSVTH5", owner=owner, headline="Sala", type="RESERVE_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=1),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        # One mail: the member's arrival reminder, and nothing to the owner.
+        assert [m.to[0] for m in mail.outbox] == ["rsvmember5@test.com"]
+        assert "Sala" in mail.outbox[0].subject
+        assert "Sent 1 reminder" in out.getvalue()
+
+    def test_a_single_day_loan_gets_one_reminder_per_person(self):
+        """A loan out and back the same day says the day once, not twice.
+
+        Its return day is its pickup day, so without the exclusion both blocks
+        fire and each person is mailed twice about one day — the second mail
+        answering a question the first already did.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RMOWN8", email="rmowner8@test.com", name="Owner")
+        requester = User.objects.create(code="RMREQ8", email="rmreq8@test.com", name="Requester")
+        thing = Thing.objects.create(
+            code="RMTHN8", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow,
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        # The pickup pair only — the day's one handover, said once per person.
+        assert sorted(m.to[0] for m in mail.outbox) == ["rmowner8@test.com", "rmreq8@test.com"]
+        by_recipient = {m.to[0]: m for m in mail.outbox}
+        assert "pick up" in by_recipient["rmreq8@test.com"].subject
+        assert "hand over" in by_recipient["rmowner8@test.com"].subject
+        assert "Sent 2 reminder" in out.getvalue()
 
 
 @pytest.mark.django_db

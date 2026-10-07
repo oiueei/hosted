@@ -2016,7 +2016,7 @@ def send_return_reminder_email(requester_name, thing, end_date, owner_email):
     T, L = _texts(lang), _local(lang)
     headline = L(thing.headline)
     header = headline
-    subject = T("reminder_subject")
+    subject = T("reminder_subject").format(thing=headline)
     end = _fmt_date(end_date)
     plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end)
     body = T("reminder_body").format(requester=requester_name, thing=headline, end=end)
@@ -2056,6 +2056,58 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
         lang=lang,
         header=header,
     )
+
+
+def send_pickup_due_email(owner_name, thing, start_date, requester_email):
+    """Remind the **borrower** they pick the thing up tomorrow (LEND/RENT).
+
+    The arrival nudge of a loan or rental: the only pickup email before this
+    was the acceptance, sent when the dates were agreed — weeks can pass
+    between that and the day, and the one person who has to be somewhere at a
+    time heard nothing meanwhile. The pickup twin of ``send_return_due_email``
+    (same reader, same CTA to the listing, the other end of the loan).
+    """
+    user, lang = _recipient(requester_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    thing_url = _thing_url(thing, reader=user)
+    subject = T("pickup_due_subject").format(thing=headline)
+    start = _fmt_date(start_date)
+    plain = T("pickup_due_plain").format(owner=owner_name, thing=headline, start=start)
+    body = T("pickup_due_body").format(owner=owner_name, thing=headline, start=start)
+    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
+def send_pickup_reminder_email(requester_name, thing, start_date, owner_email):
+    """Remind the owner they hand the thing over tomorrow (LEND/RENT).
+
+    The owner's half of the pickup nudge — the same reader the return reminder
+    reaches, told about the day the thing *leaves* rather than the day it comes
+    back. Nothing is asked of them (the requester is the one who has to turn
+    up), so like ``send_return_reminder_email`` there is no button.
+    """
+    user, lang = _recipient(owner_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    subject = T("pickup_reminder_subject").format(thing=headline)
+    start = _fmt_date(start_date)
+    plain = T("pickup_reminder_plain").format(requester=requester_name, thing=headline, start=start)
+    body = T("pickup_reminder_body").format(requester=requester_name, thing=headline, start=start)
+    html = _render_email([_para(body)], lang=lang, header=header)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
 def send_reservation_confirmed_email(requester, thing, booking, collection=None):

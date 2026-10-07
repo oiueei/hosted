@@ -257,13 +257,21 @@ TEXTS = {
     "broadcast_plain": "Message from {owner}:\n\n{message}\n\nOpen the group: {url}",
     "broadcast_intro": "{owner} sent a message to the group:",
     "broadcast_open_cta": "Open the group",
-    # Return reminder (to owner)
-    "reminder_subject": "Reminder: a hold ends tomorrow",
-    "reminder_plain": "Reminder: {requester}'s hold on '{thing}' ends {end}.",
-    "reminder_body": "Reminder: {requester}'s hold on {thing} ends {end}.",
+    # Return reminder (to owner). "Comes back" names what a loan does — a
+    # "reservation" is only RESERVE_THING, which never comes through this email.
+    "reminder_subject": "Reminder: {thing} comes back tomorrow",
+    "reminder_plain": "Reminder: {requester} is due to return '{thing}' to you on {end}.",
+    "reminder_body": "Reminder: {requester} is due to return {thing} to you on {end}.",
     "return_due_subject": "Tomorrow you take {thing} back",
     "return_due_plain": "A friendly nudge: you're due to return '{thing}' to {owner} on {end}.",
     "return_due_body": "A friendly nudge: you're due to return {thing} to {owner} on {end}.",
+    # Pickup reminders (LEND/RENT, start_date = tomorrow) — the day before the handover
+    "pickup_due_subject": "Tomorrow you pick up {thing}",
+    "pickup_due_plain": "A friendly nudge: you're picking up '{thing}' from {owner} on {start}.",
+    "pickup_due_body": "A friendly nudge: you're picking up {thing} from {owner} on {start}.",
+    "pickup_reminder_subject": "Tomorrow you hand over {thing}",
+    "pickup_reminder_plain": "Reminder: {requester} picks up '{thing}' on {start}.",
+    "pickup_reminder_body": "Reminder: {requester} picks up {thing} on {start}.",
     "view_thing_cta": "View the listing",
     # Reservations (RESERVE_THING) — auto-confirmed, so "confirmed", not "requested"
     "reservation_confirmed_subject": "Your reservation of '{thing}' is confirmed",

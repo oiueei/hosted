@@ -256,13 +256,21 @@ TEXTS = {
     "broadcast_plain": "Mensaje de {owner}:\n\n{message}\n\nAbrir el grupo: {url}",
     "broadcast_intro": "{owner} ha enviado un mensaje al grupo:",
     "broadcast_open_cta": "Abrir el grupo",
-    # Return reminder (to owner)
-    "reminder_subject": "Recordatorio: una reserva termina mañana",
-    "reminder_plain": "Recordatorio: la reserva de {requester} sobre '{thing}' termina el {end}.",
-    "reminder_body": "Recordatorio: la reserva de {requester} sobre {thing} termina el {end}.",
+    # Return reminder (to owner). "Vuelve" names what a loan does — "reserva" is
+    # only RESERVE_THING, which never comes through this email.
+    "reminder_subject": "Recordatorio: {thing} vuelve mañana",
+    "reminder_plain": "Recordatorio: {requester} tiene que devolverte '{thing}' el {end}.",
+    "reminder_body": "Recordatorio: {requester} tiene que devolverte {thing} el {end}.",
     "return_due_subject": "Mañana devuelves {thing}",
     "return_due_plain": "Un recordatorio amable: tienes que devolver '{thing}' a {owner} el {end}.",
     "return_due_body": "Un recordatorio amable: tienes que devolver {thing} a {owner} el {end}.",
+    # Pickup reminders (LEND/RENT, start_date = tomorrow) — the day before the handover
+    "pickup_due_subject": "Mañana recoges {thing}",
+    "pickup_due_plain": "Un recordatorio amable: recoges '{thing}' de {owner} el {start}.",
+    "pickup_due_body": "Un recordatorio amable: recoges {thing} de {owner} el {start}.",
+    "pickup_reminder_subject": "Mañana entregas {thing}",
+    "pickup_reminder_plain": "Recordatorio: {requester} recoge '{thing}' el {start}.",
+    "pickup_reminder_body": "Recordatorio: {requester} recoge {thing} el {start}.",
     "view_thing_cta": "Ver la publicación",
     # Reservas de espacio (RESERVE_THING) — confirmación automática, sin decisión
     "reservation_confirmed_subject": "Tu reserva de '{thing}' está confirmada",
