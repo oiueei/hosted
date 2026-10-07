@@ -1,3 +1,5 @@
+import { useNavigate, useInRouterContext } from 'react-router';
+
 /**
  * Renders a subset of Markdown as sanitised HTML.
  *
@@ -6,7 +8,12 @@
  *   *italic* / _italic_ -> <em>
  *   - bullet           -> <ul><li>
  *   1. numbered        -> <ol><li>
- *   [text](url)        -> <a> (http/https only)
+ *   [text](url)        -> <a> — http(s) (balanced parentheses allowed), `www.…`
+ *     (read as https), `mailto:` and site paths (`/collections/…`); anything else
+ *     (`javascript:`, `data:`…) is not a link and shows its label as text.
+ *     A bare `https://…` or `www.…` in the text is linked too.
+ *     A link to this site (a path, or an absolute URL of this origin) opens in
+ *     the same tab through the router; any other http(s) link in a new one.
  *   | a | b | pipe tables (GFM: header row + |---|---| separator) -> <table>
  *   # / ## / ###+ heading -> <h3> / <h4> / <h5> (deeper levels cap at <h5> —
  *     the page around this component already owns h1/h2, so a bio can't
@@ -37,27 +44,106 @@ function sanitizeUrl(url) {
   }
 }
 
+// What a link target means: a site path or an absolute URL of this origin is
+// **internal** (same tab, navigated by the router); any other http(s) address is
+// **external** (new tab); `mailto:` stays in the same tab; everything else
+// (`javascript:`, `data:`, a relative `foo`…) is no link at all. `url` arrives
+// HTML-escaped, and what comes back is still escaped — it goes into an href.
+// `sanitizeUrl`, exported below, keeps its own contract.
+function resolveLink(raw) {
+  const url = raw.trim();
+  if (/^\/(?!\/)/.test(url)) return { href: url, kind: 'internal' };
+  if (/^mailto:[^\s]+$/i.test(url)) return { href: url, kind: 'mailto' };
+  const candidate = /^www\./i.test(url) ? `https://${url}` : url;
+  if (!/^https?:\/\//i.test(candidate)) return null;
+  try {
+    const parsed = new URL(candidate);
+    if (!parsed.hostname) return null;
+    if (parsed.origin === window.location.origin) {
+      return { href: `${parsed.pathname}${parsed.search}${parsed.hash}`, kind: 'internal' };
+    }
+    return { href: candidate, kind: 'external' };
+  } catch {
+    return null;
+  }
+}
+
+function anchor({ href, kind }, label) {
+  if (kind === 'internal') return `<a href="${href}" data-internal>${label}</a>`;
+  if (kind === 'mailto') return `<a href="${href}">${label}</a>`;
+  return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+}
+
+// Bold and italics.
+function renderEmphasis(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>')
+    .replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
+}
+
+// `[label](url)`, with balanced parentheses in the url (Wikipedia-style
+// addresses). Returns the text with every link replaced by `park(anchor)`.
+function replaceMarkdownLinks(text, park) {
+  let out = '';
+  let from = 0;
+  const open = /\[([^\]]+)\]\(/g;
+  for (let m = open.exec(text); m; m = open.exec(text)) {
+    let depth = 1;
+    let i = open.lastIndex;
+    while (i < text.length && depth > 0) {
+      if (text[i] === '(') depth += 1;
+      else if (text[i] === ')') depth -= 1;
+      i += 1;
+    }
+    if (depth > 0) continue; // never closed: plain text
+    const link = resolveLink(text.slice(open.lastIndex, i - 1));
+    out += text.slice(from, m.index);
+    out += link ? park(anchor(link, renderEmphasis(m[1]))) : renderEmphasis(m[1]);
+    from = i;
+    open.lastIndex = i;
+  }
+  return out + text.slice(from);
+}
+
+// A bare address in running text: `https://…` or `www.…` after a word boundary.
+// The sentence's own punctuation does not belong to it (`see www.x.cat.`), nor
+// does a `)` it never opened, nor the `**` of bold around it.
+function replaceBareUrls(text, park) {
+  return text.replace(/\b(?:https?:\/\/|www\.)[^\s\0]+/gi, (found) => {
+    let url = found;
+    for (const stop of ['&lt;', '&gt;', '&quot;']) {
+      const at = url.indexOf(stop);
+      if (at !== -1) url = url.slice(0, at);
+    }
+    for (;;) {
+      const last = url.slice(-1);
+      const unopened = last === ')' && url.split('(').length < url.split(')').length;
+      if (/[.,;:!?*]/.test(last) || unopened) url = url.slice(0, -1);
+      else break;
+    }
+    const link = resolveLink(url);
+    return link ? park(anchor(link, url)) + found.slice(url.length) : found;
+  });
+}
+
 // `text` always arrives HTML-escaped from markdownToHtml, so nothing in here
 // escapes again: doing so turned a `&` in a query string into `&amp;amp;`, and
 // the browser then resolved the href with a literal `&amp;` inside it —
 // `?a=1&b=2` became `?a=1&amp;b=2` and the link went somewhere else.
 function renderInline(text) {
-  // Links: [text](url). Each generated anchor is parked behind a placeholder
-  // before the emphasis passes run, so they cannot rewrite the inside of an
-  // href: a URL with a `*…*` segment used to come back with an <em> spliced
-  // into it. Restored at the end, untouched.
+  // Each generated anchor is parked behind a placeholder before the emphasis
+  // passes run, so they cannot rewrite the inside of an href: a URL with a
+  // `*…*` or `_…_` segment used to come back with an <em> spliced into it.
+  // Restored at the end, untouched.
   const links = [];
-  let result = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
-    links.push(
-      `<a href="${sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
-    );
+  const park = (html) => {
+    links.push(html);
     return `\0LINK${links.length - 1}\0`;
-  });
-  // Bold: **text**
-  result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Italic: *text* or _text_
-  result = result.replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>');
-  result = result.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
+  };
+  let result = replaceMarkdownLinks(text, park);
+  result = replaceBareUrls(result, park);
+  result = renderEmphasis(result);
   return result.replace(/\0LINK(\d+)\0/g, (match, i) => links[Number(i)] ?? match);
 }
 
@@ -189,13 +275,37 @@ function markdownToHtml(text, headingBase = 3) {
 // eslint-disable-next-line react-refresh/only-export-components -- pure helpers co-located for unit tests (markdown.test.jsx) and reuse (sanitizeUrl on ThingPage)
 export { markdownToHtml, sanitizeUrl };
 
-export default function MarkdownText({ text, className = '', headingBase = 3 }) {
-  if (!text) return null;
+function Markdown({ text, className, headingBase, navigate }) {
   const html = markdownToHtml(text, headingBase);
+  // A link to this site is followed by the router — no reload — but only on a
+  // plain left click: cmd/ctrl/shift/alt and the middle button stay the
+  // browser's, as with `ButtonLink`.
+  const follow = (event) => {
+    if (!navigate || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest?.('a[data-internal]');
+    if (!link || !event.currentTarget.contains(link)) return;
+    event.preventDefault();
+    navigate(link.getAttribute('href'));
+  };
   return (
+    // The container only listens for clicks that bubble up from real links.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- a keyboard activates the <a> itself, and its click bubbles here
     <div
       className={`markdown-text ${className}`.trim()}
+      onClick={follow}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
+}
+
+function RoutedMarkdown(props) {
+  return <Markdown {...props} navigate={useNavigate()} />;
+}
+
+export default function MarkdownText({ text, className = '', headingBase = 3 }) {
+  const routed = useInRouterContext();
+  if (!text) return null;
+  const Component = routed ? RoutedMarkdown : Markdown;
+  return <Component text={text} className={className} headingBase={headingBase} />;
 }

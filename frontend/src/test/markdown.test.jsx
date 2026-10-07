@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import MarkdownText, { markdownToHtml } from '../components/MarkdownText';
 
 describe('markdownToHtml', () => {
@@ -63,15 +64,18 @@ describe('markdownToHtml', () => {
     expect(result).not.toContain('undefined');
   });
 
-  test('rejects javascript: URLs', () => {
+  test('a javascript: target is no link: the label shows as text', () => {
     const result = markdownToHtml('[Click](javascript:alert(1))');
-    expect(result).toContain('href="#"');
+    expect(result).not.toContain('<a');
     expect(result).not.toContain('javascript:');
+    expect(result).toContain('Click');
   });
 
-  test('rejects data: URLs', () => {
+  test('a data: target is no link either', () => {
     const result = markdownToHtml('[Click](data:text/html,<h1>XSS</h1>)');
-    expect(result).toContain('href="#"');
+    expect(result).not.toContain('<a');
+    expect(result).not.toContain('href');
+    expect(result).toContain('Click');
   });
 
   test('renders unordered lists', () => {
@@ -201,5 +205,175 @@ describe('MarkdownText component', () => {
   test('applies className prop', () => {
     const { container } = render(<MarkdownText text="Test" className="custom" />);
     expect(container.querySelector('.markdown-text.custom')).toBeTruthy();
+  });
+});
+
+// Links, as an owner writes them: bare, with parentheses, without a scheme, to the
+// site itself, to a mailbox. What is never allowed is a script.
+describe('markdownToHtml — links', () => {
+  const html = markdownToHtml;
+
+  test('a bare address is linked and reads as it was typed', () => {
+    const out = html('Mira https://example.com/a?b=1&c=2 ahora');
+    expect(out).toContain(
+      '<a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">https://example.com/a?b=1&amp;c=2</a>'
+    );
+  });
+
+  test('a bare www. address is linked as https and shows what was typed', () => {
+    const out = html('Web: www.x.cat');
+    expect(out).toContain('href="https://www.x.cat"');
+    expect(out).toContain('>www.x.cat</a>');
+  });
+
+  test.each([
+    ['See https://x.com.', 'https://x.com'],
+    ['See https://x.com, ok', 'https://x.com'],
+    ['Is it https://x.com?', 'https://x.com'],
+    ['(see https://x.com)', 'https://x.com'],
+    ['**https://x.com**', 'https://x.com'],
+  ])('punctuation around %s is not part of the address', (text, url) => {
+    const out = html(text);
+    expect(out).toContain(`href="${url}"`);
+    expect(out).toContain(`>${url}</a>`);
+  });
+
+  test('a ) the address opened itself stays in it', () => {
+    const url = 'https://es.wikipedia.org/wiki/Foo_(bar)';
+    expect(html(`Ver ${url}`)).toContain(`href="${url}"`);
+  });
+
+  test('a bare address is parked: _ and * inside it never become emphasis', () => {
+    const out = html('https://example.com/a_b_c/*d*/e_f_');
+    expect(out).not.toContain('<em>');
+    expect(out).toContain('href="https://example.com/a_b_c/*d*/e_f_"');
+  });
+
+  test('[text](url) takes balanced parentheses in the url', () => {
+    const url = 'https://es.wikipedia.org/wiki/Foo_(bar)';
+    const out = html(`[wiki](${url}) y más`);
+    expect(out).toContain(`href="${url}"`);
+    expect(out).toContain('>wiki</a> y más');
+  });
+
+  test('[text](www.…) has no scheme to lose: it becomes https', () => {
+    const out = html('[web](www.x.cat)');
+    expect(out).toContain('href="https://www.x.cat"');
+    expect(out).not.toContain('href="www.x.cat"');
+  });
+
+  test('mailto: is a link, in the same tab', () => {
+    const out = html('[escríbeme](mailto:lala@example.com)');
+    expect(out).toContain('<a href="mailto:lala@example.com">escríbeme</a>');
+  });
+
+  test('a label may carry bold and italics', () => {
+    const out = html('[**gran** _web_](https://example.com)');
+    expect(out).toContain('<strong>gran</strong> <em>web</em></a>');
+  });
+
+  test('a target that is not http(s), mailto or a site path is only its label', () => {
+    for (const target of [
+      'foo/bar',
+      '//evil.example',
+      '#top',
+      'ftp://x.org',
+      'javascript:alert(1)',
+    ]) {
+      const out = html(`[label](${target})`);
+      expect(out, target).not.toContain('<a');
+      expect(out, target).toContain('label');
+    }
+  });
+
+  test('a [text](url never closed is not a [text] link', () => {
+    const out = html('[a](https://x.com');
+    expect(out).toContain('[a](');
+    expect(out).not.toContain('>a</a>');
+  });
+
+  test('a site path is internal: same tab, marked for the router', () => {
+    const out = html('[la colección](/collections/ABC123?x=1&y=2)');
+    expect(out).toContain('<a href="/collections/ABC123?x=1&amp;y=2" data-internal>');
+    expect(out).not.toContain('target=');
+  });
+
+  test('an absolute address of this very site is reduced to its path', () => {
+    const out = html(`[aquí](${window.location.origin}/me?x=1#top)`);
+    expect(out).toContain('<a href="/me?x=1#top" data-internal>aquí</a>');
+    expect(out).not.toContain('target=');
+  });
+
+  test('another site is external: a new tab, no opener', () => {
+    const out = html('[otra](https://elsewhere.example/x)');
+    expect(out).toContain('target="_blank" rel="noopener noreferrer"');
+    expect(out).not.toContain('data-internal');
+  });
+});
+
+describe('MarkdownText — following a link to this site', () => {
+  function Where() {
+    return <div data-testid="where">{useLocation().pathname}</div>;
+  }
+  const renderIn = (text) =>
+    render(
+      <MemoryRouter initialEntries={['/start']}>
+        <Routes>
+          <Route path="*" element={<Where />} />
+        </Routes>
+        <MarkdownText text={text} />
+      </MemoryRouter>
+    );
+
+  test('a plain left click navigates with the router, not the browser', () => {
+    renderIn('[mi grupo](/collections/ABC123)');
+    const link = screen.getByRole('link', { name: 'mi grupo' });
+
+    const notPrevented = fireEvent.click(link);
+
+    expect(notPrevented).toBe(false);
+    expect(screen.getByTestId('where')).toHaveTextContent('/collections/ABC123');
+  });
+
+  test.each([['metaKey'], ['ctrlKey'], ['shiftKey'], ['altKey']])(
+    'a click with %s stays the browser’s',
+    (modifier) => {
+      renderIn('[mi grupo](/collections/ABC123)');
+
+      const notPrevented = fireEvent.click(screen.getByRole('link', { name: 'mi grupo' }), {
+        [modifier]: true,
+      });
+
+      expect(notPrevented).toBe(true);
+      expect(screen.getByTestId('where')).toHaveTextContent('/start');
+    }
+  );
+
+  test('the middle button stays the browser’s', () => {
+    renderIn('[mi grupo](/collections/ABC123)');
+
+    const notPrevented = fireEvent.click(screen.getByRole('link', { name: 'mi grupo' }), {
+      button: 1,
+    });
+
+    expect(notPrevented).toBe(true);
+    expect(screen.getByTestId('where')).toHaveTextContent('/start');
+  });
+
+  test('an external link is left alone', () => {
+    renderIn('[otra](https://elsewhere.example)');
+
+    const notPrevented = fireEvent.click(screen.getByRole('link', { name: 'otra' }));
+
+    expect(notPrevented).toBe(true);
+    expect(screen.getByTestId('where')).toHaveTextContent('/start');
+  });
+
+  test('outside a router it still renders, and an internal link is an ordinary one', () => {
+    render(<MarkdownText text="[mi grupo](/collections/ABC123)" />);
+
+    const link = screen.getByRole('link', { name: 'mi grupo' });
+    expect(link).toHaveAttribute('href', '/collections/ABC123');
+    expect(fireEvent.click(link)).toBe(true);
   });
 });
