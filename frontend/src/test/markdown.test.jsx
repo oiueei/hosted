@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, test, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
@@ -442,5 +443,18 @@ describe('markdownToHtml — lists, emphasis and line breaks', () => {
     expect(out).toContain('<ul><li>lunes</li><li>martes</li></ul>');
     expect(out).toContain('<table>');
     expect(out).not.toContain('\r');
+  });
+});
+
+// Shared with the email note's engine (core/tests/unit/test_email_note.py): the
+// two renderers of `[text](url)` must read every target alike, or an owner's link
+// works in the app and not in the email, or the other way round.
+describe('markdownToHtml — the cases shared with the email engine', () => {
+  const { cases } = JSON.parse(readFileSync('src/test/markdownLinkParity.json', 'utf8'));
+
+  test.each(cases.map((c) => [c.input, c.href]))('%s -> %s', (input, href) => {
+    const holder = document.createElement('div');
+    holder.innerHTML = markdownToHtml(input);
+    expect(holder.querySelector('a')?.getAttribute('href') ?? null).toBe(href);
   });
 });

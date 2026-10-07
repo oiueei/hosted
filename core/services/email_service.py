@@ -772,7 +772,7 @@ def _ctas(primary, secondary, fallback):
 # The owner's email note (Collection.email_note) renders a small Markdown subset
 # into an ``md`` block — the ONE block type whose html arrives pre-built and
 # mark_safe()d rather than autoescaped. See _note_blocks for the invariant.
-_MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+_MD_LINK_OPEN = re.compile(r"\[([^\]]+)\]\(")
 _MD_BOLD = re.compile(r"\*\*(.+?)\*\*")
 _MD_EM = re.compile(r"(?<!\w)\*(.+?)\*(?!\w)")
 _MD_BULLET = re.compile(r"^- ")
@@ -792,6 +792,47 @@ def _link_host(escaped_url):
         return host.encode("idna").decode("ascii") if host else None
     except (ValueError, UnicodeError):
         return None
+
+
+def _resolve_link(escaped_url):
+    """``(href, host)`` for the target of a ``[text](url)``, or ``None`` when it is
+    no link. The twin of the frontend's ``resolveLink`` (the two read the cases of
+    ``frontend/src/test/markdownLinkParity.json`` alike): ``www.…`` is read as
+    ``https://www.…``, ``mailto:`` is allowed (it has no host to name), anything
+    that is not http(s) with a host stays text. In an email every link is
+    external: there is no "internal" one.
+    """
+    url = escaped_url.strip()
+    if re.fullmatch(r"mailto:\S+", url, re.IGNORECASE):
+        return url, None
+    candidate = f"https://{url}" if re.match(r"www\.", url, re.IGNORECASE) else url
+    host = _link_host(candidate) if _MD_URL.match(candidate) else None
+    return (candidate, host) if host else None
+
+
+def _md_links(text, park):
+    """``[text](url)`` spans, the url taking **balanced parentheses** (an address
+    like ``…/wiki/Foo_(bar)`` used to be cut at the first ``)``). ``park`` turns a
+    link into its placeholder; anything that is not a link stays as written."""
+    out, start = [], 0
+    for opening in _MD_LINK_OPEN.finditer(text):
+        if opening.start() < start:
+            continue
+        depth, i = 1, opening.end()
+        while i < len(text) and depth:
+            depth += {"(": 1, ")": -1}.get(text[i], 0)
+            i += 1
+        if depth:
+            continue  # never closed
+        url = text[opening.end() : i - 1]
+        replaced = None if re.search(r"\s", url) else park(opening.group(1), url)
+        if replaced is None:
+            continue
+        out.append(text[start : opening.start()])
+        out.append(replaced)
+        start = i
+    out.append(text[start:])
+    return "".join(out)
 
 
 def _md_inline(escaped_text):
@@ -814,18 +855,18 @@ def _md_inline(escaped_text):
     text = escaped_text.replace("\x00", "")  # typed NUL can't forge a placeholder
     anchors = []
 
-    def park(match):
-        label, url = match.group(1), match.group(2)
-        host = _link_host(url) if _MD_URL.match(url) else None
-        if host:
-            anchor = f'<a href="{url}" style="{LINK_STYLE}">{label}</a>'
-            if html_unescape(label).strip() != html_unescape(url):
-                anchor += f" ({escape(host)})"
-            anchors.append(anchor)
-            return f"\x00{len(anchors) - 1}\x00"
-        return match.group(0)
+    def park(label, url):
+        resolved = _resolve_link(url)
+        if not resolved:
+            return None
+        href, host = resolved
+        anchor = f'<a href="{href}" style="{LINK_STYLE}">{label}</a>'
+        if host and html_unescape(label).strip() != html_unescape(url.strip()):
+            anchor += f" ({escape(host)})"
+        anchors.append(anchor)
+        return f"\x00{len(anchors) - 1}\x00"
 
-    text = _MD_LINK.sub(park, text)
+    text = _md_links(text, park)
     text = _MD_BOLD.sub(r"<strong>\1</strong>", text)
     text = _MD_EM.sub(r"<em>\1</em>", text)
     for index, anchor in enumerate(anchors):

@@ -14,6 +14,8 @@ Owner prose like every other: localized, 512 visible per language,
 """
 
 import json
+import re
+from pathlib import Path
 
 import pytest
 
@@ -86,3 +88,61 @@ def test_markdown_and_emojis_are_prose_not_html(collection):
     serializer = CollectionUpdateSerializer(collection, data={"email_note": note}, partial=True)
     assert serializer.is_valid(), serializer.errors
     assert serializer.save().email_note == note
+
+
+# --- The links, read as the app reads them --------------------------------------
+#
+# `frontend/src/test/markdownLinkParity.json` is read by the frontend's Markdown
+# test and by this one: an owner's `[text](url)` must mean the same in the app
+# and in the email. New cases go in the file, not here.
+
+_PARITY = json.loads(
+    (Path(__file__).resolve().parents[3] / "frontend/src/test/markdownLinkParity.json").read_text()
+)["cases"]
+
+
+@pytest.mark.parametrize("case", _PARITY, ids=[c["input"] for c in _PARITY])
+def test_a_link_target_means_what_it_means_in_the_app(case):
+    from html import unescape
+
+    from django.utils.html import escape
+
+    from core.services.email_service import _md_inline
+
+    found = re.search(r'<a href="([^"]*)"', _md_inline(escape(case["input"])))
+
+    assert (unescape(found.group(1)) if found else None) == case["href"]
+
+
+def test_an_address_with_parentheses_is_not_cut_at_the_first_one():
+    from django.utils.html import escape
+
+    from core.services.email_service import _md_inline
+
+    out = _md_inline(escape("[wiki](https://es.wikipedia.org/wiki/Foo_(bar)) y más"))
+
+    assert 'href="https://es.wikipedia.org/wiki/Foo_(bar)"' in out
+    assert "(es.wikipedia.org) y más" in out
+
+
+def test_www_is_read_as_https_and_a_mailbox_names_no_host():
+    from django.utils.html import escape
+
+    from core.services.email_service import _md_inline
+
+    assert 'href="https://www.x.cat"' in _md_inline(escape("[la web](www.x.cat)"))
+    assert "(www.x.cat)" in _md_inline(escape("[la web](www.x.cat)"))
+    mail = _md_inline(escape("[escríbeme](mailto:lala@example.com)"))
+    assert 'href="mailto:lala@example.com"' in mail
+    assert mail.endswith("escríbeme</a>")
+
+
+def test_a_link_whose_text_is_its_own_address_names_no_host_even_without_the_scheme():
+    from django.utils.html import escape
+
+    from core.services.email_service import _md_inline
+
+    out = _md_inline(escape("[www.x.cat](www.x.cat)"))
+
+    assert 'href="https://www.x.cat"' in out
+    assert out.count("www.x.cat") == 2  # the href host and the label, no "(host)" after
