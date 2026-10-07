@@ -315,6 +315,15 @@ class TestTwoRequestsForOneSlotAreSerialised:
         coll.things.add(thing)
         return coll, thing
 
+    def _group_of(self, owner, thing, code, *members):
+        """An ACTIVE group holding ``thing`` with ``members`` in it: asking for any
+        thing takes a seat in one of its groups, so the two requesters need one to
+        reach the lock at all."""
+        group = Collection.objects.create(code=code, owner=owner, headline="Neighbours")
+        group.invites.add(*members)
+        group.things.add(thing)
+        return group
+
     def test_a_reservation_clash_is_serialised_not_double_booked(self, monkeypatch, user, user2):
         """RESERVE auto-confirms with no owner step, so an unlocked clash is two
         members turning up to one room. The loser must get the 409, and exactly
@@ -360,6 +369,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
         thing = Thing.objects.create(
             code="RCEG01", type=Thing.Type.GIFT_THING, owner=user, headline="A lamp"
         )
+        self._group_of(user, thing, "RCEG03", user2, other)
         original = BookingPeriod.save
 
         def first(guard):
@@ -391,6 +401,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
         thing = Thing.objects.create(
             code="RCEL01", type=Thing.Type.LEND_THING, owner=user, headline="A drill"
         )
+        self._group_of(user, thing, "RCEL03", user2, other)
         start = date.today() + timedelta(days=3)
         end = start + timedelta(days=4)
         original = BookingPeriod.has_overlap
