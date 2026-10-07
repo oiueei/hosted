@@ -5,8 +5,13 @@ All email action links use RSVP codes as intermediaries.
 Accept/reject can also be done by the owner via authenticated API endpoints.
 """
 
-from django.db.models import Prefetch, Q
+from datetime import datetime, time
+
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -30,6 +35,7 @@ from core.services.booking_service import (
     cancel_reservation,
     finalize_booking_decision,
 )
+from core.services.email_service import send_return_overdue_email
 from core.services.team import managers_ready_collections
 from core.views._helpers import get_viewable_thing, viewer_code
 
@@ -104,10 +110,26 @@ class OwnerBookingsView(ListAPIView):
         curated = Q(thing_code__collections__mode=Collection.Mode.PROPRIETARY) & (
             Q(thing_code__collections__owner=user) | Q(thing_code__collections__co_owners=user)
         )
+        # "Has this thing been lent again since?" — the question behind the
+        # "remind them to return it" action, asked once per row inside the
+        # list query so a page of finished loans costs no query per row
+        # (`BookingPeriod.can_be_return_reminded` reads the annotation).
+        lent_again = BookingPeriod.objects.filter(
+            thing_code=OuterRef("thing_code"),
+            status=BookingPeriod.Status.ACCEPTED,
+            start_date__gt=OuterRef("start_date"),
+            start_date__lte=timezone.localdate(),
+        )
         return (
             BookingPeriod.objects.filter(Q(owner_code=user) | curated)
             .select_related("thing_code", "requester_code")
-            .prefetch_related("thing_code__collections")
+            # Manager-ready, because the serializer asks `can_manage` per row:
+            # the owner short-circuits, but a co-curator's rows walk every
+            # collection's curators.
+            .prefetch_related(
+                Prefetch("thing_code__collections", queryset=managers_ready_collections())
+            )
+            .annotate(lent_again=Exists(lent_again))
             .distinct()
             .order_by("-created")
         )
@@ -229,4 +251,57 @@ class BookingActionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
+class BookingRemindReturnView(APIView):
+    """
+    POST /api/v1/bookings/{booking_code}/remind-return/
+
+    "Remind them to return it": a manager of the thing nudges the borrower of a
+    loan or rental whose return date has passed. Only the **last** loan of each
+    thing qualifies (`BookingPeriod.can_be_return_reminded` says so, and the
+    /owner-bookings/ serializer reads the same method for `can_remind_return`);
+    one nudge per booking per day, so the button cannot turn into harassment.
+
+    The day is claimed with one conditional UPDATE before the email goes — two
+    presses at once cannot both match the row — and the email names whoever
+    pressed, with their address as `Reply-To`.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="POST", block=True))
+    def post(self, request, booking_code):
+        booking = get_object_or_404(
+            BookingPeriod.objects.select_related("thing_code", "requester_code").prefetch_related(
+                Prefetch("thing_code__collections", queryset=managers_ready_collections())
+            ),
+            code=booking_code,
+        )
+
+        if not booking.thing_code.can_manage(request.user.code):
+            return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        if not booking.can_be_return_reminded():
+            return Response(
+                {"error": "This booking is not waiting to be returned"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        start_of_today = timezone.make_aware(datetime.combine(timezone.localdate(), time.min))
+        claimed = (
+            BookingPeriod.objects.filter(code=booking.code)
+            .filter(Q(return_reminded_at__isnull=True) | Q(return_reminded_at__lt=start_of_today))
+            .update(return_reminded_at=timezone.now())
+        )
+        if not claimed:
+            return Response(
+                {"error": "You've already reminded them today", "code": "already_reminded_today"},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        send_return_overdue_email(
+            request.user, booking.thing_code, booking.end_date, booking.requester_code.email
+        )
         return Response({"status": "ok"}, status=status.HTTP_200_OK)

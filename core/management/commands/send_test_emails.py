@@ -372,6 +372,11 @@ def _(w):
     es.send_pickup_reminder_email("Lele", w.lend, w.start, w.to)
 
 
+@sample("return_overdue_to_borrower", "send_return_overdue_email")
+def _(w):
+    es.send_return_overdue_email(w.me, w.lend, w.end, w.to)
+
+
 @sample("reservation_confirmed", "send_reservation_confirmed_email")
 def _(w):
     es.send_reservation_confirmed_email(

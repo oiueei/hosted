@@ -604,7 +604,10 @@
     "captionPast": "Solicitudes que ya has respondido",
     "cancelReservation": "Cancelar la reserva",
     "reservationCancelled": "Reserva cancelada; hemos avisado al miembro.",
-    "cancelReservationConfirmBody": "Le avisaremos de que se ha cancelado, y quedará libre para que otra persona lo reserve. No se puede deshacer."
+    "cancelReservationConfirmBody": "Le avisaremos de que se ha cancelado, y quedará libre para que otra persona lo reserve. No se puede deshacer.",
+    "remindReturn": "Recordar la devolución",
+    "remindReturnSent": "Recordatorio enviado.",
+    "remindedOn": "Recordado el {{date}}"
   },
   "manageInvites": {
     "pageTitle": "Gestionar miembros",
@@ -1080,6 +1083,7 @@
     "testError": "No se ha podido enviar el correo de prueba. Inténtalo de nuevo."
   },
   "requestErrors": {
+    "already_reminded_today": "Ya se lo has recordado hoy.",
     "already_requested": "Ya lo has pedido: espera la respuesta de quien lo ofrece.",
     "cancel_forbidden": "No puedes cancelar esta reserva.",
     "co_owners_full_one": "La dinamización de este grupo ya suma 1 persona además de quien lo creó: es el máximo que permite.",

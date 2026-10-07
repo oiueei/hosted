@@ -227,6 +227,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/owner-bookings/` | Bookings on my things, plus every booking on a thing in a PROPRIETARY collection I curate (with requester name) |
 | POST | `/api/v1/bookings/{code}/accept/` | Accept a pending booking — a manager of the thing (owner or PROPRIETARY-collection curator) |
 | POST | `/api/v1/bookings/{code}/reject/` | Reject a pending booking — a manager of the thing |
+| POST | `/api/v1/bookings/{code}/remind-return/` | "Remind them to return it": a manager of the thing mails the borrower of an overdue loan or rental, once a day per booking (429 `already_reminded_today` after that) |
 | POST | `/api/v1/bookings/{code}/cancel/` | Cancel a booking. Own pending booking (requester); for a RESERVE_THING reservation that hasn't started, the requester or any curator (owner or co-curator) of the reservations collection |
 
 ### FAQ

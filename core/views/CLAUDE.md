@@ -913,6 +913,8 @@ Lists all booking requests made by the current user, ordered by `-created`.
 
 Lists booking requests on the current user's own things, **plus** (2026-09) every booking on a thing in a **PROPRIETARY** collection they curate (owner or co-curator) — `.distinct()` over `Q(owner_code=user) | Q(thing_code__collections__mode=PROPRIETARY, …owner=user) | Q(…co_owners=user)`, since a shared catalogue's `booking.owner_code` is the thing's owner, who may be another curator. Ordered `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`.
 
+Each row also says whether the reader may **remind the borrower to return it** (`can_remind_return`, from `BookingPeriod.can_be_return_reminded` plus `Thing.can_manage` of the reader) and when that last went (`return_reminded_at`). The question "has this thing been lent again since?" is a `lent_again` `Exists` annotation on the list query, and `thing_code__collections` is prefetched manager-ready (`managers_ready_collections`), so a page of finished loans costs no query per row — pinned in `test_return_reminder.py` for the owner and for a co-curator.
+
 ### BookingCancelView
 
 | | |
@@ -931,6 +933,20 @@ Allows the requester to cancel their own pending booking. Validates `booking.req
 | 400 | Booking expired / already processed / reservation already started / not a reservation |
 | 403 | Not the requester (or, for a reservation, not the requester or a curator) |
 | 404 | Booking not found |
+
+### BookingRemindReturnView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/bookings/{booking_code}/remind-return/` |
+| **Permission** | `IsAuthenticated` + a **manager** of the thing (`Thing.can_manage`: its owner, or a curator of a PROPRIETARY collection it sits in) |
+| **Rate limit** | 30 requests/hour per user |
+
+"Remind them to return it": a manager nudges the borrower of a loan or rental whose return date has passed, from `/owner-bookings`. The daily command only speaks the day *before* a return, so until this existed whoever lent a drill had no way to ask for it once the date had gone. The assumption that a loan comes back (`close_transfers` closes the transfer by itself when the date passes) is unchanged; this is only a button to say it aloud.
+
+Order of answers: **404** unknown booking, **403** not a manager, **400** when `BookingPeriod.can_be_return_reminded()` says no — not ACCEPTED, not LEND/RENT, the return date not **strictly** passed (the return day itself is still the borrower's: the day-before email has just gone), or a **later** ACCEPTED booking of the same thing has already started (the thing came back; only the last loan of each thing qualifies) — and **429** with `{"error", "code": "already_reminded_today"}` when `return_reminded_at` is already today. That cap is the **booking's**, not the person's: two curators pressing in turn cannot mail the same borrower twice a day. It is claimed with one conditional `UPDATE … WHERE return_reminded_at IS NULL OR < start of today` **before** the email goes, so two presses at once cannot both match the row; "today" is the calendar day of the server's `TIME_ZONE`, not the last 24 hours. The hourly rate limit has no body and so no code.
+
+`send_return_overdue_email` mails the borrower in their own language, naming **whoever pressed** (`display_name`) with their address as `Reply-To` — the borrower's natural answer ("I'll bring it tomorrow") goes to that person. That is a deliberate exception to the rule that a manager's address never reaches the requester (their request and acceptance emails carry no `Reply-To`): here the manager chose to write, in their own name. It does not record an event or an in-app notice, and a borrower who has switched activity email off simply receives nothing (the day is spent all the same).
 
 ### BookingActionView
 
@@ -1260,6 +1276,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/collections/{code}/share-link/` POST — 30 requests per hour per user
 - `/share/{token}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling, `COLLECTION_JOINS_PER_DAY`)
 - `/things/{code}/report/` POST — 10 requests per hour per user
+- `/bookings/{code}/remind-return/` POST — 30 requests per hour per user (plus the once-a-day cap per booking)
 - `/notifications/token/{t}/` — GET 20/min per IP, PATCH 10/min per IP
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
 - `/collections/` POST (single create) — 30 requests per hour per user

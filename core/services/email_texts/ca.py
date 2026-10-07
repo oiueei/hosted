@@ -281,6 +281,16 @@ TEXTS = {
     "pickup_reminder_subject": "Demà lliures {thing}",
     "pickup_reminder_plain": "Recordatori: {requester} recull '{thing}' el {start}.",
     "pickup_reminder_body": "Recordatori: {requester} recull {thing} el {start}.",
+    # Manual nudge from /owner-bookings: the return date has already passed
+    "return_overdue_subject": "Recordatori: tornar {thing}",
+    "return_overdue_plain": (
+        "{manager} et recorda que '{thing}' havia de tornar el {end}. "
+        "Si ja has fet la devolució, pots ignorar aquest correu."
+    ),
+    "return_overdue_body": (
+        "{manager} et recorda que {thing} havia de tornar el {end}. "
+        "Si ja has fet la devolució, pots ignorar aquest correu."
+    ),
     "view_thing_cta": "Veure la publicació",
     # Reserves d'espai (RESERVE_THING) — confirmació automàtica, sense decisió
     "reservation_confirmed_subject": "La teva reserva de '{thing}' està confirmada",

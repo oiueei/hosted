@@ -271,6 +271,16 @@ TEXTS = {
     "pickup_reminder_subject": "Mañana entregas {thing}",
     "pickup_reminder_plain": "Recordatorio: {requester} recoge '{thing}' el {start}.",
     "pickup_reminder_body": "Recordatorio: {requester} recoge {thing} el {start}.",
+    # Manual nudge from /owner-bookings: the return date has already passed
+    "return_overdue_subject": "Recordatorio: devolver {thing}",
+    "return_overdue_plain": (
+        "{manager} te recuerda que '{thing}' tenía que volver el {end}. "
+        "Si ya has hecho la devolución, puedes ignorar este correo."
+    ),
+    "return_overdue_body": (
+        "{manager} te recuerda que {thing} tenía que volver el {end}. "
+        "Si ya has hecho la devolución, puedes ignorar este correo."
+    ),
     "view_thing_cta": "Ver la publicación",
     # Reservas de espacio (RESERVE_THING) — confirmación automática, sin decisión
     "reservation_confirmed_subject": "Tu reserva de '{thing}' está confirmada",

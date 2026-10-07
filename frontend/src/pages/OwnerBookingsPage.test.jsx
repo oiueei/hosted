@@ -2,11 +2,17 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../services/api', () => ({
-  apiFetch: vi.fn(),
-  getCsrfToken: () => 'tok',
-  extractApiError: () => null,
-}));
+// `codedErrorMessage` is the real one: the 429 of "remind them to return it" is
+// worded by `requestErrors.<code>`, and a copy of it here would test the copy.
+vi.mock('../services/api', async (importOriginal) => {
+  const { codedErrorMessage } = await importOriginal();
+  return {
+    apiFetch: vi.fn(),
+    getCsrfToken: () => 'tok',
+    extractApiError: () => null,
+    codedErrorMessage,
+  };
+});
 
 import { apiFetch } from '../services/api';
 import OwnerBookingsPage from './OwnerBookingsPage';
@@ -38,12 +44,16 @@ const booking = (over = {}) => ({
   ...over,
 });
 
-/** GETs return `pages` in order; POSTs answer with `postOk`. */
-function mockApi(pages, { postOk = true } = {}) {
+/** GETs return `pages` in order; POSTs answer with `postOk` (a refusal says `postStatus` and `postBody`). */
+function mockApi(pages, { postOk = true, postStatus = 400, postBody = {} } = {}) {
   let page = 0;
   apiFetch.mockImplementation((url, opts) => {
     if (opts?.method === 'POST') {
-      return Promise.resolve({ ok: postOk, status: postOk ? 200 : 400, json: async () => ({}) });
+      return Promise.resolve({
+        ok: postOk,
+        status: postOk ? 200 : postStatus,
+        json: async () => postBody,
+      });
     }
     const body = pages[Math.min(page, pages.length - 1)];
     page += 1;
@@ -813,4 +823,257 @@ describe('OwnerBookingsPage — the requester’s address under the name', () =>
       expect(screen.getByText('Requested 01/08/2026')).toBeInTheDocument();
     }
   );
+});
+
+/**
+ * "Remind them to return it": a loan whose return date has passed and which has not
+ * been lent again since carries one more action — which of the rows is the
+ * server's call (`can_remind_return`), never the page's. It goes once a day per
+ * booking, so after a press the action waits for tomorrow and the row says when.
+ */
+describe('OwnerBookingsPage — reminding a late return', () => {
+  const ACTION = { name: 'Remind them to return it' };
+  const ANSWERED = 'Requests you have already answered';
+  const ENDPOINT = '/api/v1/bookings/LATE01/remind-return/';
+  const late = (over = {}) =>
+    booking({
+      code: 'LATE01',
+      status: 'ACCEPTED',
+      thing_headline: 'Drill',
+      end_date: '2026-10-05',
+      can_remind_return: true,
+      return_reminded_at: null,
+      ...over,
+    });
+  const page = (...results) => mockApi([{ results, next: null }], undefined);
+
+  // The browser's today, fixed: the page compares the day a reminder went with it.
+  // Only `Date` is faked, so testing-library's polling keeps its real timers.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T12:00:00'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const rowOf = (headline) =>
+    within(screen.getByRole('table', { name: ANSWERED }))
+      .getAllByRole('row')
+      .find((r) => within(r).queryByText(headline));
+
+  test('the action is on the rows the server marks and on no other', async () => {
+    page(
+      late(),
+      booking({
+        code: 'DONE01',
+        status: 'ACCEPTED',
+        thing_headline: 'Ladder',
+        can_remind_return: false,
+      }),
+      // A payload from before the field existed says nothing: no action.
+      booking({ code: 'OLD001', status: 'ACCEPTED', thing_headline: 'Tent' })
+    );
+    renderPage();
+
+    await screen.findByText('Drill');
+    expect(screen.getAllByRole('button', ACTION)).toHaveLength(1);
+    expect(within(rowOf('Drill')).getByRole('button', ACTION)).toBeInTheDocument();
+    expect(within(rowOf('Ladder')).queryByRole('button', ACTION)).toBeNull();
+    expect(within(rowOf('Tent')).queryByRole('button', ACTION)).toBeNull();
+  });
+
+  test('pressing it posts once, says so in a live region that was already there, and waits for tomorrow', async () => {
+    page(late());
+    renderPage();
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+    // The region is in the page before the message: a live region announces
+    // only what lands in one that already existed.
+    const region = within(row).getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+
+    fireEvent.click(within(row).getByRole('button', ACTION));
+
+    await waitFor(() => expect(postUrls()).toEqual([ENDPOINT]));
+    await waitFor(() => expect(region).toHaveTextContent('Reminder sent.'));
+    expect(within(row).getByText('Reminded on 07/10/2026')).toBeInTheDocument();
+    expect(within(row).getByRole('button', ACTION)).toBeDisabled();
+  });
+
+  test('what a press says, and the greying, belong to the row that was pressed', async () => {
+    page(late(), late({ code: 'LATE02', thing_headline: 'Saw' }));
+    renderPage();
+    await screen.findByText('Drill');
+    const [drill, saw] = [rowOf('Drill'), rowOf('Saw')];
+
+    fireEvent.click(within(drill).getByRole('button', ACTION));
+
+    await waitFor(() =>
+      expect(within(drill).getByRole('status')).toHaveTextContent('Reminder sent.')
+    );
+    expect(within(saw).getByRole('status')).toBeEmptyDOMElement();
+    expect(within(saw).getByRole('button', ACTION)).toBeEnabled();
+    expect(within(saw).queryByText(/Reminded on/)).toBeNull();
+  });
+
+  test('a reminder that went today keeps the action off until tomorrow', async () => {
+    page(late({ return_reminded_at: '2026-10-07T09:30:00' }));
+    renderPage();
+
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+    expect(within(row).getByText('Reminded on 07/10/2026')).toBeInTheDocument();
+    expect(within(row).getByRole('button', ACTION)).toBeDisabled();
+  });
+
+  test('one from yesterday is only a date: the action is back', async () => {
+    page(late({ return_reminded_at: '2026-10-06T09:30:00' }));
+    renderPage();
+
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+    expect(within(row).getByText('Reminded on 06/10/2026')).toBeInTheDocument();
+    expect(within(row).getByRole('button', ACTION)).toBeEnabled();
+  });
+
+  test('a loan nobody has reminded about says nothing of it', async () => {
+    page(late());
+    renderPage();
+
+    await screen.findByText('Drill');
+    expect(screen.queryByText(/Reminded on/)).toBeNull();
+    expect(screen.queryByText('Reminder sent.')).toBeNull();
+  });
+
+  test('the server saying it was already reminded today is worded by requestErrors, and nothing is marked', async () => {
+    mockApi([{ results: [late()], next: null }], {
+      postOk: false,
+      postStatus: 429,
+      postBody: { error: 'English from the server', code: 'already_reminded_today' },
+    });
+    renderPage();
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+
+    fireEvent.click(within(row).getByRole('button', ACTION));
+
+    expect(await screen.findByText("You've already reminded them today.")).toBeInTheDocument();
+    expect(screen.queryByText('English from the server')).toBeNull();
+    expect(screen.queryByText('Reminder sent.')).toBeNull();
+    expect(screen.queryByText(/Reminded on/)).toBeNull();
+    expect(within(row).getByRole('button', ACTION)).toBeEnabled();
+  });
+
+  test.each([
+    ['a refusal with no code', 403, { error: 'Not authorized' }],
+    ['the hourly limit, which has no code to read', 429, { detail: 'Too many requests.' }],
+    ['a code this client does not know', 400, { error: 'x', code: 'something_new' }],
+    ['a body that is not JSON', 502, null],
+  ])('%s is the page’s own generic line', async (_name, postStatus, postBody) => {
+    apiFetch.mockImplementation((url, opts) =>
+      opts?.method === 'POST'
+        ? Promise.resolve({
+            ok: false,
+            status: postStatus,
+            json: postBody
+              ? async () => postBody
+              : async () => Promise.reject(new Error('no json')),
+          })
+        : Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ results: [late()], next: null }),
+          })
+    );
+    renderPage();
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+
+    fireEvent.click(within(row).getByRole('button', ACTION));
+
+    expect(await screen.findByText(/Couldn't answer that request/i)).toBeInTheDocument();
+    expect(screen.queryByText('Reminder sent.')).toBeNull();
+    expect(screen.queryByText(/Reminded on/)).toBeNull();
+  });
+
+  test('a dropped connection is said as such, and the action stays', async () => {
+    apiFetch.mockImplementation((url, opts) =>
+      opts?.method === 'POST'
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ results: [late()], next: null }),
+          })
+    );
+    renderPage();
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+
+    fireEvent.click(within(row).getByRole('button', ACTION));
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(within(row).getByRole('button', ACTION)).toBeEnabled();
+  });
+
+  test('the table has no axe violations with the action on a row', async () => {
+    page(
+      late(),
+      late({ code: 'LATE02', thing_headline: 'Saw', return_reminded_at: '2026-10-07T09:30:00' })
+    );
+    const { container } = renderPage();
+    await screen.findByText('Drill');
+
+    expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
+  });
+
+  describe('on a phone', () => {
+    let media;
+    beforeEach(() => {
+      media = mockMatchMedia({ [PHONE]: true });
+    });
+    afterEach(() => media.restore());
+
+    test('the card has the action as a button with its words, in a wide row', async () => {
+      page(late(), booking({ code: 'DONE01', status: 'ACCEPTED', thing_headline: 'Ladder' }));
+      renderPage();
+
+      const list = await screen.findByRole('list', { name: ANSWERED });
+      const [drill, ladder] = within(list).getAllByRole('listitem');
+      const button = within(drill).getByRole('button', ACTION);
+      expect(button).toBeVisible();
+      expect(button.parentElement).toHaveClass('button-row-wide');
+      expect(within(ladder).queryByRole('button', ACTION)).toBeNull();
+    });
+
+    test('it sends the same request the table’s icon sends, and the card says so', async () => {
+      page(late());
+      renderPage();
+      const card = (await screen.findAllByRole('listitem'))[0];
+      const region = within(card).getByRole('status');
+
+      fireEvent.click(within(card).getByRole('button', ACTION));
+
+      await waitFor(() => expect(postUrls()).toEqual([ENDPOINT]));
+      await waitFor(() => expect(region).toHaveTextContent('Reminder sent.'));
+      expect(within(card).getByText('Reminded on 07/10/2026')).toBeInTheDocument();
+      expect(within(card).getByRole('button', ACTION)).toBeDisabled();
+    });
+
+    test('a card whose reminder went today has the action off', async () => {
+      page(late({ return_reminded_at: '2026-10-07T09:30:00' }));
+      renderPage();
+
+      const card = (await screen.findAllByRole('listitem'))[0];
+      expect(within(card).getByText('Reminded on 07/10/2026')).toBeInTheDocument();
+      expect(within(card).getByRole('button', ACTION)).toBeDisabled();
+    });
+
+    test('the cards have no axe violations with the action', async () => {
+      page(late());
+      const { container } = renderPage();
+      await screen.findByRole('list', { name: ANSWERED });
+
+      expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
+    });
+  });
 });

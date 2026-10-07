@@ -7,13 +7,15 @@ import {
   Notification,
   StatusLabel,
   Tag,
+  IconBell,
   IconCheck,
   IconCrossCircle,
 } from 'hds-react';
 import { DATE_TYPES } from '../constants/things';
-import { apiFetch } from '../services/api';
+import { apiFetch, codedErrorMessage } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
+import StatusRegion from '../components/StatusRegion';
 import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
 import useTheeeme from '../hooks/useTheeeme';
@@ -42,9 +44,14 @@ import ResponsiveTable from '../components/ResponsiveTable';
  * On a phone each row is a card (`ResponsiveTable`) and the
  * decisions are buttons with their words on them, where the table has the ✓ and ⊗
  * icons that name themselves in a tooltip. Both faces call the same handlers
- * (`acceptRow`, `rejectRow`, `setCancelRow`), so the transfer-of-ownership
- * dialog and the reservation-cancel dialog stand in front of a card exactly as
- * they stand in front of the icon.
+ * (`acceptRow`, `rejectRow`, `setCancelRow`, `handleRemindReturn`), so the
+ * transfer-of-ownership dialog and the reservation-cancel dialog stand in front
+ * of a card exactly as they stand in front of the icon.
+ *
+ * A loan or rental that is past its return date carries one more action,
+ * "remind them to return it" (`can_remind_return`, which the server decides:
+ * overdue, and not lent again since). It is one nudge a day per booking, so the
+ * action greys out once it has gone and the row says when.
  */
 const STATUS_TYPES = {
   PENDING: 'alert',
@@ -64,6 +71,10 @@ export default function OwnerBookingsPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [acting, setActing] = useState(null);
+  // The booking whose return reminder was just sent: its row says so in a live
+  // region, once. What stays is the grey "Reminded on …" line, which comes from
+  // the booking itself and survives a reload.
+  const [remindedNow, setRemindedNow] = useState(null);
   // The row whose acceptance would hand the thing over for good, pending
   // confirmation. Accepting a GIFT or SELL that isn't endless flips it INACTIVE,
   // adds the requester to `deal` and writes a ThingTransfer — the owner no
@@ -122,6 +133,37 @@ export default function OwnerBookingsPage() {
         });
       } else {
         setToast({ type: 'error', message: t('ownerBookings.errorActing') });
+      }
+    } catch {
+      setToast({ type: 'error', message: t('common.connectionError') });
+    } finally {
+      setActing(null);
+    }
+  };
+
+  // "Remind them to return it": mails the borrower of a loan that is overdue,
+  // in the name of whoever presses. The server allows one a day per booking and
+  // says so with a coded 429, which `requestErrors` words; anything else is the
+  // page's own generic line.
+  const handleRemindReturn = async (bookingCode) => {
+    setActing(bookingCode);
+    try {
+      const res = await apiFetch(`/api/v1/bookings/${bookingCode}/remind-return/`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.code === bookingCode ? { ...b, return_reminded_at: new Date().toISOString() } : b
+          )
+        );
+        setRemindedNow(bookingCode);
+      } else {
+        const data = await res.json().catch(() => null);
+        setToast({
+          type: 'error',
+          message: codedErrorMessage(data) || t('ownerBookings.errorActing'),
+        });
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });
@@ -205,6 +247,8 @@ export default function OwnerBookingsPage() {
     _when: formatBookingWhen(b),
     _created: b.created,
     _projectNote: b.project_note,
+    _canRemindReturn: !!b.can_remind_return,
+    _returnRemindedAt: b.return_reminded_at,
     _transfersOwnership: !DATE_TYPES.includes(b.thing_type) && !b.thing_is_endless,
   }));
 
@@ -217,6 +261,22 @@ export default function OwnerBookingsPage() {
   const acceptRow = (row) =>
     row._transfersOwnership ? setTransferRow(row) : handleAction(row._code, 'accept');
   const rejectRow = (row) => handleAction(row._code, 'reject');
+
+  // Reminded today, by the browser's calendar: the action waits for tomorrow.
+  // (The server's day is the one that decides; this only keeps a press the
+  // server would refuse from being offered.)
+  const remindedToday = (row) =>
+    !!row._returnRemindedAt && formatDate(row._returnRemindedAt) === formatDate(new Date());
+
+  // The live region under the action. It exists on every row that has the
+  // action, so the message is announced when it lands in it.
+  const remindStatus = (row) => (
+    <StatusRegion>
+      {remindedNow === row._code && (
+        <p className="table-cell-line--muted">{t('ownerBookings.remindReturnSent')}</p>
+      )}
+    </StatusRegion>
+  );
 
   const cols = [
     {
@@ -273,6 +333,11 @@ export default function OwnerBookingsPage() {
             })}
           </p>
           <p>{row._when || t('myBookings.noDates')}</p>
+          {row._returnRemindedAt && (
+            <p className="table-cell-line--muted">
+              {t('ownerBookings.remindedOn', { date: formatDate(row._returnRemindedAt) })}
+            </p>
+          )}
           {row._projectNote && (
             <p className="table-cell-line--note">
               {t('reservation.noteFrom', { note: row._projectNote })}
@@ -329,6 +394,19 @@ export default function OwnerBookingsPage() {
               {t('ownerBookings.cancelReservation')}
             </Button>
           </div>
+        ) : row._canRemindReturn ? (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <TooltipButton
+                tooltip={t('ownerBookings.remindReturn')}
+                onClick={() => handleRemindReturn(row._code)}
+                disabled={acting === row._code || remindedToday(row)}
+              >
+                <IconBell aria-hidden />
+              </TooltipButton>
+            </div>
+            {remindStatus(row)}
+          </div>
         ) : null,
       // The card's face: the same decisions as buttons that say what they do.
       cardTransform: (row) =>
@@ -357,6 +435,20 @@ export default function OwnerBookingsPage() {
               {t('ownerBookings.cancelReservation')}
             </Button>
           </div>
+        ) : row._canRemindReturn ? (
+          <>
+            <div className="button-row-wide">
+              <Button
+                variant="secondary"
+                style={btnSecondaryStyle}
+                onClick={() => handleRemindReturn(row._code)}
+                disabled={acting === row._code || remindedToday(row)}
+              >
+                {t('ownerBookings.remindReturn')}
+              </Button>
+            </div>
+            {remindStatus(row)}
+          </>
         ) : null,
     },
   ];

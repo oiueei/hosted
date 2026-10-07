@@ -604,7 +604,10 @@
     "captionPast": "Sol·licituds que ja has respost",
     "cancelReservation": "Cancel·lar la reserva",
     "reservationCancelled": "Reserva cancel·lada; n'hem avisat el membre.",
-    "cancelReservationConfirmBody": "L'avisarem que s'ha cancel·lat, i quedarà lliure perquè una altra persona el reservi. No es pot desfer."
+    "cancelReservationConfirmBody": "L'avisarem que s'ha cancel·lat, i quedarà lliure perquè una altra persona el reservi. No es pot desfer.",
+    "remindReturn": "Recordar la devolució",
+    "remindReturnSent": "Recordatori enviat.",
+    "remindedOn": "Recordat el {{date}}"
   },
   "manageInvites": {
     "pageTitle": "Gestionar membres",
@@ -1080,6 +1083,7 @@
     "testError": "No s'ha pogut enviar el correu de prova. Torna-ho a provar."
   },
   "requestErrors": {
+    "already_reminded_today": "Ja l'hi has recordat avui.",
     "already_requested": "Ja ho has demanat: espera la resposta de qui ho ofereix.",
     "cancel_forbidden": "No pots cancel·lar aquesta reserva.",
     "co_owners_full_one": "La dinamització d'aquest grup ja suma 1 persona a més de qui el va crear: és el màxim que permet.",

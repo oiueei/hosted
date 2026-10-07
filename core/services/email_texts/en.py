@@ -272,6 +272,16 @@ TEXTS = {
     "pickup_reminder_subject": "Tomorrow you hand over {thing}",
     "pickup_reminder_plain": "Reminder: {requester} picks up '{thing}' on {start}.",
     "pickup_reminder_body": "Reminder: {requester} picks up {thing} on {start}.",
+    # Manual nudge from /owner-bookings: the return date has already passed
+    "return_overdue_subject": "Reminder: please return {thing}",
+    "return_overdue_plain": (
+        "{manager} is reminding you that '{thing}' was due back on {end}. "
+        "If you've already returned it, you can ignore this email."
+    ),
+    "return_overdue_body": (
+        "{manager} is reminding you that {thing} was due back on {end}. "
+        "If you've already returned it, you can ignore this email."
+    ),
     "view_thing_cta": "View the listing",
     # Reservations (RESERVE_THING) — auto-confirmed, so "confirmed", not "requested"
     "reservation_confirmed_subject": "Your reservation of '{thing}' is confirmed",

@@ -23,6 +23,7 @@ from .views.auth import (
 from .views.booking import (
     BookingActionView,
     BookingCancelView,
+    BookingRemindReturnView,
     MyBookingsView,
     OwnerBookingsView,
     ThingCalendarView,
@@ -300,6 +301,11 @@ urlpatterns = [
         "bookings/<str:booking_code>/cancel/",
         BookingCancelView.as_view(),
         name="booking-cancel",
+    ),
+    path(
+        "bookings/<str:booking_code>/remind-return/",
+        BookingRemindReturnView.as_view(),
+        name="booking-remind-return",
     ),
     # FAQ
     path("things/<str:thing_code>/faq/", ThingFAQListView.as_view(), name="thing-faq-list"),

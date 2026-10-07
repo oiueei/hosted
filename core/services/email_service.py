@@ -2110,6 +2110,40 @@ def send_pickup_reminder_email(requester_name, thing, start_date, owner_email):
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
+def send_return_overdue_email(manager, thing, end_date, requester_email):
+    """Nudge the **borrower** whose loan or rental is past its return date.
+
+    The one return email that is sent by a person rather than by the daily
+    command: whoever manages the thing pressed "remind them to return it" on
+    ``/owner-bookings``, so the message names them and ``Reply-To`` is their
+    address — the borrower's natural answer ("I'll bring it tomorrow") goes
+    straight to the person who asked. The wording leaves room for a return that
+    simply was never recorded, since OIUEEI only assumes a loan comes back.
+    """
+    user, lang = _recipient(requester_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    thing_url = _thing_url(thing, reader=user)
+    subject = T("return_overdue_subject").format(thing=headline)
+    end = _fmt_date(end_date)
+    plain = T("return_overdue_plain").format(manager=manager.display_name, thing=headline, end=end)
+    body = T("return_overdue_body").format(manager=manager.display_name, thing=headline, end=end)
+    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        reply_to=[manager.email],
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
 def send_reservation_confirmed_email(requester, thing, booking, collection=None):
     """Tell the requester their on-site reservation is confirmed (RESERVE_THING).
 

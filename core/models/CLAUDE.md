@@ -311,6 +311,7 @@ The `BookingPeriod` model is the unified reservation/booking model for all thing
 | `end_date` | DateField | No | End date (LEND/RENT/RESERVE, same as `start_date`) |
 | `start_time` | TimeField | No | **`HOUR`-unit RESERVE_THING only.** `NULL` means "whole day" — true of every LEND/RENT/DAY-unit-RESERVE booking, always, and read that way by `has_overlap` (a whole-day row blocks any hour of that date). A `HOUR`-unit reservation still carries `end_date = start_date + 1` (it never spans midnight); this narrows that one day to a slot within it. |
 | `end_time` | TimeField | No | **`HOUR`-unit RESERVE_THING only.** Same `NULL`-means-whole-day rule as `start_time`. |
+| `return_reminded_at` | DateTimeField | No | When a manager last pressed "remind them to return it" (`POST /bookings/{code}/remind-return/`). `null` = never. The action is capped at one a day per booking, so this timestamp is what answers "was it already today?" — claimed with a conditional `UPDATE` in the view. LEND/RENT only in practice; every other row stays `null`. |
 | `status` | CharField(9) | No | Status: PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED. Indexed (`db_index=True`). **RESERVE bookings are born `ACCEPTED`** (auto-confirmed) and never touch the PENDING flow. |
 
 ### Thing Type Categories
@@ -344,6 +345,7 @@ notified.
 
 - `is_valid()` - Returns True if not expired and PENDING
 - `is_date_based()` / `is_single_use()` - Category checks
+- **`can_be_return_reminded(today=None)`** - Whether "remind them to return it" may be offered for this booking: ACCEPTED, LEND/RENT, `end_date` strictly before today (**not** on the return day itself — the day-before email covers it — but from the next day), **and no later ACCEPTED booking of the same thing has started** (`start_date` after this one's and not after today): a thing already handed to the next borrower has by definition come back, and "later" is what matters — an earlier loan, returned months ago, must not veto the overdue one. So the action sits on the last loan of each thing, not on every old loan of a busy one. Read by `BookingRemindReturnView` and by `BookingPeriodSerializer.can_remind_return`; the once-a-day cap is not part of it (`return_reminded_at` answers that). When the row comes from `OwnerBookingsView` it carries a `lent_again` annotation that answers the last question without a query; anywhere else the method asks.
 - `accept()` / `reject()` / `cancel()` / `expire()` - Status transitions
 
 ### Class Methods
