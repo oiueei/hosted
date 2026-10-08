@@ -14,6 +14,7 @@ Usage (from the repo root):
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,14 +24,29 @@ BACKEND_JSON = REPO / ".coverage-report.json"
 FRONTEND_SUMMARY = REPO / "frontend" / "coverage" / "coverage-summary.json"
 
 
-def run(cmd, cwd):
+def run(cmd, cwd, env=None):
     print(f"\n$ {' '.join(cmd)}")
-    return subprocess.run(cmd, cwd=cwd).returncode
+    return subprocess.run(cmd, cwd=cwd, env=env).returncode
+
+
+def backend_env():
+    """The environment the backend suite needs and CI sets for it.
+
+    `config/settings/base.py` refuses to start without `DJANGO_SECRET_KEY`; a
+    throwaway one is supplied only when none is set, as `tests.yml` does."""
+    env = dict(os.environ)
+    env.setdefault("DJANGO_SECRET_KEY", "coverage-report-only-not-a-secret")
+    return env
 
 
 def backend(worst_n):
+    # The suite runs under this interpreter, the one with the project's
+    # requirements installed, never whatever `pytest` happens to be first on PATH
+    # (a globally installed tool has none of them and fails at conftest import).
     rc = run(
         [
+            sys.executable,
+            "-m",
             "pytest",
             "-q",
             "--cov=core",
@@ -38,6 +54,7 @@ def backend(worst_n):
             "--cov-report=term:skip-covered",
         ],
         cwd=REPO,
+        env=backend_env(),
     )
     if not BACKEND_JSON.exists():
         print("backend: no coverage JSON produced", file=sys.stderr)
