@@ -634,3 +634,92 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
     expect(JSON.parse(patchCalls()[0][1].body).opening_hours).toEqual(HOURLY.opening_hours);
   });
 });
+
+/**
+ * Pausing is what stops every new request in the group, and resuming is what lets
+ * them in again: both are their own PATCH of `pause_message`, apart from Save.
+ * `collectionForm.test.jsx` pins which controls show in each state; these press them.
+ */
+describe('EditCollectionPage — pausing and resuming', () => {
+  const pauseCalls = () =>
+    apiFetch.mock.calls.filter(
+      (c) => c[1]?.method === 'PATCH' && 'pause_message' in JSON.parse(c[1].body)
+    );
+
+  function mockPausable({ collection = COLLECTION, patch } = {}) {
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'PATCH') return patch();
+      return Promise.resolve({ ok: true, status: 200, json: async () => collection });
+    });
+  }
+
+  const ok = () => Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+
+  test('nothing can be paused without a message for the members', async () => {
+    mockPausable({ patch: ok });
+    renderPage();
+    const pause = await screen.findByRole('button', { name: 'Pause collection' });
+
+    expect(pause).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Message to members'), { target: { value: '   ' } });
+    expect(pause).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Message to members'), {
+      target: { value: 'Back in a week' },
+    });
+    expect(pause).toBeEnabled();
+  });
+
+  test('pausing sends the message alone, trimmed, and shows it as the members will', async () => {
+    mockPausable({ patch: ok });
+    renderPage();
+    fireEvent.change(await screen.findByLabelText('Message to members'), {
+      target: { value: '  Back in a week  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Pause collection' }));
+
+    expect(await screen.findByText('Collection paused.')).toBeInTheDocument();
+    expect(pauseCalls()).toHaveLength(1);
+    const [url, opts] = pauseCalls()[0];
+    expect(url).toBe('/api/v1/collections/COL001/');
+    // Only the pause: an unsaved edit elsewhere on the form must not ride along.
+    expect(JSON.parse(opts.body)).toEqual({ pause_message: 'Back in a week' });
+    expect(screen.getByText('Back in a week').tagName).toBe('BLOCKQUOTE');
+    expect(screen.getByRole('button', { name: 'Resume collection' })).toBeEnabled();
+    expect(screen.queryByLabelText('Message to members')).toBeNull();
+  });
+
+  test('resuming clears the message and offers an empty field again', async () => {
+    mockPausable({
+      collection: { ...COLLECTION, is_paused: true, pause_message: 'Back in a week' },
+      patch: ok,
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume collection' }));
+
+    expect(await screen.findByText('Collection resumed.')).toBeInTheDocument();
+    expect(JSON.parse(pauseCalls()[0][1].body)).toEqual({ pause_message: '' });
+    expect(screen.getByLabelText('Message to members')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Pause collection' })).toBeDisabled();
+  });
+
+  test.each([
+    [
+      'a refusal',
+      () => Promise.resolve({ ok: false, status: 400, json: async () => ({}) }),
+      'Error',
+    ],
+    ['a dropped connection', () => Promise.reject(new TypeError('offline')), 'Connection error.'],
+  ])('%s leaves the group open and says so', async (_label, patch, message) => {
+    mockPausable({ patch });
+    renderPage();
+    fireEvent.change(await screen.findByLabelText('Message to members'), {
+      target: { value: 'Back in a week' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Pause collection' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(screen.queryByText('Collection paused.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Pause collection' })).toBeEnabled();
+    expect(screen.getByLabelText('Message to members')).toHaveValue('Back in a week');
+  });
+});
