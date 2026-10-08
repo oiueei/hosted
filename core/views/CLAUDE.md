@@ -1312,7 +1312,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `ThingViewSet` and `CollectionViewSet` use DRF `ModelViewSet` with `DefaultRouter`.
 - `ThingUpdateSerializer` has `status` as read-only to prevent direct status manipulation. `type` is editable. Use `POST /api/v1/things/{code}/activate/` to set status ACTIVE (from INACTIVE), and `POST /api/v1/things/{code}/hide/` to set status INACTIVE (from ACTIVE only).
 - `ThingSerializer` and `CollectionThingSummarySerializer` include `pending_booking` (first PENDING booking code, or null) and `pending_questions` (count of unanswered FAQs).
-- Accept/reject actions can be performed via the unified RSVP endpoint (`VerifyLinkView`) for email links — **a POST commits, GET only previews** (booking decisions never fire from a bare GET) — or via authenticated `BookingActionView` endpoints for in-app use. Both paths reuse the same `accept_booking()`/`reject_booking()` service functions.
+- Accept/reject actions can be performed via the unified RSVP endpoint (`VerifyLinkView`) for email links — **a POST commits, GET only previews** (booking decisions never fire from a bare GET) — or via authenticated `BookingActionView` endpoints for in-app use. Both paths converge on `finalize_booking_decision()`, which runs `accept_booking()`/`reject_booking()`.
 - All email links use RSVP codes as intermediaries to avoid exposing real object codes in URLs.
 - Security events are logged to the `security` logger with IP addresses.
 
@@ -1321,8 +1321,8 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 Business logic is extracted into `core/services/`:
 - `join_quota.py` — The per-collection daily cap on `POST /auth/join/` (`COLLECTION_JOINS_PER_DAY`), the one door that needs no account. Off by default.
 - `creator_policy.py` — Whether this deployment lets an account open a collection in a given mode or offer a thing under a given verb (`CREATOR_POLICY`; open to everyone in the standalone). Enforced at five doors — collection create/update, thing create/update, bulk import — and served to the SPA as `capabilities` on `GET /auth/me/`. Gates *initiating*, not a member *contributing* an owner-allow-listed type to a COMMUNITY collection they were invited to (`community_contribution_types`).
-- `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
-- `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.
+- `email_service.py` — All email HTML composition and sending (every `send_*` function; `send_test_emails` keeps a sample of each). Uses `django.utils.html.escape()`.
+- `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`; both decision paths (`BookingActionView` and `VerifyLinkView`) go through `finalize_booking_decision()`, which calls the first two. The reservation-**request** side lives here too: `request_date_based_booking()`, `request_standard_booking()` and `request_reservation()` (plus `require_a_seat()`, `resolve_rental_collection()`, `resolve_request_collection()` and the notification helpers). They raise `BookingRequestError(message, status_code, code=None, params=None)` on a rule violation; `ThingRequestView` catches it and returns `exc.as_body()`.
 
 ### Utilities
 

@@ -245,6 +245,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 |--------|-----|-------------|
 | GET | `/api/v1/inbox/` | List in-app notifications for the current user |
 | DELETE | `/api/v1/inbox/{code}/` | Dismiss an in-app notification |
+| DELETE | `/api/v1/inbox/?group=bookings[&collection={code}]` | Dismiss, in one call, the request and reservation notices that are for the team managing them (the set the inbox folds into one summary card) |
 | POST | `/api/v1/upload/ticket/` | Get a short-lived ticket to upload one file straight to object storage (rate limited: 120/h) |
 | GET | `/api/v1/theeemes/` | List all available theeemes |
 | POST | `/api/v1/contact/` | Support/contact form (anonymous on purpose — a locked-out user is the main case; rate limited: 5/h per IP). Forwards the message to the operator with the sender as Reply-To; `kind: support\|collab` labels the subject (the `/contact` page sends none, which is `support`; no page sends `collab` since 2026-10-04) |
