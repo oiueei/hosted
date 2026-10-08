@@ -174,9 +174,14 @@ a.account-menu-trigger {
   color: var(--color-black-90);
 }
 
+/* Each entry is a 44px tap target (DESIGN §4): the padding alone left them
+   about 40px tall. Flex centres the text in that height. */
 .account-menu-panel a,
 .collection-menu-panel a {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
   padding: var(--spacing-2-xs) var(--spacing-s);
   color: inherit;
   text-decoration: none;
@@ -185,7 +190,10 @@ a.account-menu-trigger {
 /* The collection menu's downloads are buttons next to the links; they take
    the links' own look, which the `a` rules above do not reach. */
 .collection-menu-panel button {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
   width: 100%;
   padding: var(--spacing-2-xs) var(--spacing-s);
   text-align: left;
@@ -971,8 +979,12 @@ body :focus-visible {
    it reads as one sentence — the same quiet register as .invite-nudge. It was
    the member's per-collection digest switch (removed from the hero);
    SharePage's "use another email instead" is what still uses it,
-   hence the name that no longer says what it is. */
+   hence the name that no longer says what it is. Text-styled, it is still a
+   44px tap target (DESIGN §4): with no padding it was only as tall as its line. */
 .digest-pref-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0;
   border: none;
   background: none;
@@ -2078,10 +2090,7 @@ caption:has(> .sr-only:only-child) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--color-black-60);
-}
-
-.info-popover-button:hover {
+  /* Icons are black (DESIGN §11); --color-black-40 is only for a disabled one. */
   color: var(--color-black-90);
 }
 
