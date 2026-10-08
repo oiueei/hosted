@@ -154,6 +154,20 @@ export default function CollectionPage() {
     }));
   }, []);
 
+  // The server's copy of the collection, as the reader is now: joined from a
+  // card, they are a member and the hero and the menu must say so.
+  // Stable for the same reason as `handleUpdateThing`: every active card gets it, and
+  // a new function on each render would undo their `memo` — up to 24 cards painted
+  // again for each key typed in the broadcast box.
+  const reloadCollection = useCallback(async () => {
+    try {
+      const fresh = await apiFetch(`/api/v1/collections/${code}/`);
+      if (fresh.ok) setCollection(await fresh.json());
+    } catch {
+      // The request itself already went through; the page catches up on reload.
+    }
+  }, [code]);
+
   useEffect(() => {
     // Guard against a fast A→B navigation: without aborting, collection A's
     // response can land after B's and render the wrong collection. Aborting on
@@ -734,6 +748,7 @@ export default function CollectionPage() {
                   canAct={isAuthenticated}
                   loginToAct={!isAuthenticated}
                   onUpdateThing={handleUpdateThing}
+                  onJoinedGroup={reloadCollection}
                 />
               ))}
             </div>

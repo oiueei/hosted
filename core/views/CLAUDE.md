@@ -682,7 +682,7 @@ Invites many guests at once from a client-parsed CSV (`{"invites": [{"email": ..
 | **Endpoint** | `GET /api/v1/collections/{collection_code}/stats/` |
 | **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 
-Curator usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only).
+Curator usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only). **A bracket or a postal code is named only when at least `STATS_MIN_GROUP` (3) members share it**: below that the figure is about a person ("Postal 48001: 1" in a group of two), so those members are summed into "Birth year shared by fewer than 3" / "Postal, other codes", and an empty bracket is left out too — were only the small ones missing, the gaps would name them. Same rule in every mode, since this file and the collection export that carries it travel. Pinned in `test_collection_stats.py`.
 
 The metrics themselves live in [`export_service.collection_stats_rows()`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); this view only wraps them in a CSV. The collection export renders the same rows as a dict, so the two can't drift.
 
@@ -790,7 +790,7 @@ Both report shapes are understood: the legacy `{"csp-report": {...}}` and a `rep
 |---|---|
 | **Endpoint** | `POST /api/v1/upload/ticket/` |
 | **Permission** | `IsAuthenticated` |
-| **Rate limit** | 120 requests/hour per user — one ticket per photo, so a ZIP import of up to 100 things fits in one hour |
+| **Rate limit** | 120 requests/hour per user — one ticket per photo, so a ZIP import of up to 100 things fits in one hour — and, of those, **10/hour for document tickets** (`DOCUMENT_TICKETS_PER_HOUR`). A welcome PDF is set a few times in a group's life; at the photos' 120 any account could put 600 MB of public PDFs an hour on the bucket, served from the operator's domain until the orphan sweep reaches them. Not gated on curating a collection: the create form uploads the PDF before the collection exists |
 
 Hands the browser a short-lived ticket to write **one** object to the media
 bucket, so the binary never routes through Django. That property is unchanged
@@ -913,6 +913,8 @@ Lists all booking requests made by the current user, ordered by `-created`.
 
 Lists booking requests on the current user's own things, **plus** (2026-09) every booking on a thing in a **PROPRIETARY** collection they curate (owner or co-curator) — `.distinct()` over `Q(owner_code=user) | Q(thing_code__collections__mode=PROPRIETARY, …owner=user) | Q(…co_owners=user)`, since a shared catalogue's `booking.owner_code` is the thing's owner, who may be another curator. Ordered `-created`. Consumed by the frontend's **`/owner-bookings`** page — the owner's mirror of `/my-bookings`.
 
+Each row also says whether the reader may **remind the borrower to return it** (`can_remind_return`, from `BookingPeriod.can_be_return_reminded` plus `Thing.can_manage` of the reader) and when that last went (`return_reminded_at`). The question "has this thing been lent again since?" is a `lent_again` `Exists` annotation on the list query, and `thing_code__collections` is prefetched manager-ready (`managers_ready_collections`), so a page of finished loans costs no query per row — pinned in `test_return_reminder.py` for the owner and for a co-curator.
+
 ### BookingCancelView
 
 | | |
@@ -931,6 +933,20 @@ Allows the requester to cancel their own pending booking. Validates `booking.req
 | 400 | Booking expired / already processed / reservation already started / not a reservation |
 | 403 | Not the requester (or, for a reservation, not the requester or a curator) |
 | 404 | Booking not found |
+
+### BookingRemindReturnView
+
+| | |
+|---|---|
+| **Endpoint** | `POST /api/v1/bookings/{booking_code}/remind-return/` |
+| **Permission** | `IsAuthenticated` + a **manager** of the thing (`Thing.can_manage`: its owner, or a curator of a PROPRIETARY collection it sits in) |
+| **Rate limit** | 30 requests/hour per user |
+
+"Remind them to return it": a manager nudges the borrower of a loan or rental whose return date has passed, from `/owner-bookings`. The daily command only speaks the day *before* a return, so until this existed whoever lent a drill had no way to ask for it once the date had gone. The assumption that a loan comes back (`close_transfers` closes the transfer by itself when the date passes) is unchanged; this is only a button to say it aloud.
+
+Order of answers: **404** unknown booking, **403** not a manager, **400** when `BookingPeriod.can_be_return_reminded()` says no — not ACCEPTED, not LEND/RENT, the return date not **strictly** passed (the return day itself is still the borrower's: the day-before email has just gone), or a **later** ACCEPTED booking of the same thing has already started (the thing came back; only the last loan of each thing qualifies), coded `{"error", "code": "not_awaiting_return"}` so the page says it in the reader's language — and **429** with `{"error", "code": "already_reminded_today"}` when `return_reminded_at` is already today. That cap is the **booking's**, not the person's: two curators pressing in turn cannot mail the same borrower twice a day. It is claimed with one conditional `UPDATE … WHERE return_reminded_at IS NULL OR < start of today` **before** the email goes, so two presses at once cannot both match the row; "today" is the calendar day of the server's `TIME_ZONE`, not the last 24 hours. The hourly rate limit has no body and so no code.
+
+`send_return_overdue_email` mails the borrower in their own language, naming **whoever pressed** (bare `name`, "A member" when there is none — never the address) with their address as `Reply-To` — the borrower's natural answer ("I'll bring it tomorrow") goes to that person. That is a deliberate exception to the rule that a manager's address never reaches the requester (their request and acceptance emails carry no `Reply-To`): here the manager chose to write, in their own name — and is told before pressing, by a line above the table on `/owner-bookings`. It does not record an event or an in-app notice, and a borrower who has switched activity email off simply receives nothing (the day is spent all the same).
 
 ### BookingActionView
 
@@ -967,7 +983,7 @@ Rejects a pending booking. Same permission and validation as accept.
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/things/{thing_code}/request/` |
-| **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner. For **RESERVE** the requester must also be a collection **member** (checked in `request_reservation`) — a login-to-act visitor joins first. |
+| **Permission** | `IsAuthenticated` + `thing.can_view()` + not owner + **a place in the group**: for every verb the requester must be in `invites` of, or a curator of, **at least one ACTIVE collection of the thing** (`booking_service.require_a_seat`; RESERVE checks its own reservations collection in `request_reservation`). Otherwise **403** `code: "not_a_member"` — the founder of a group is not in `invites` and in COMMUNITY may ask for a member's thing, so curators count. A reader who only browses a PUBLIC group is joined and asked again by the client (see `frontend/CLAUDE.md`). |
 | **Rate limit** | 10 requests/hour per user |
 
 Creates a reservation/booking request. The view is **thin**: it runs the shared guards (auth, own-thing, availability, INACTIVE/paused collection, owner email) and validates the type-specific serializers, then dispatches to the `request_*` functions in `core.services.booking_service` (`request_date_based_booking`, `request_standard_booking`, `request_reservation`) which own the locked create + status transition + email fan-out. A business-rule failure raises `BookingRequestError(message, status_code, code=None, params=None)`, which the view maps back with `exc.as_body()`: `{"error": message}` with the same status, plus top-level `"code"` and `"params"` keys when set. **Every rule refusal is coded** — the model's violations return a `core.utils.Refusal` (a `str` carrying `code` + `params`) that `BookingRequestError` picks up on its own, and the service's direct raises name theirs (`not_a_member`, `reservation_max_active` with `{max}`, `time_taken`/`dates_taken` on the 409, …). `core` has no gettext catalogue, so the English `error` sentence is what an unaware client shows; the SPA says the code in the reader's language (`requestErrors.<code>`, `apiErrorMessage` in `frontend/src/services/api.js`). `core/tests/unit/test_refusal_codes.py` reads the codes out of the source and fails if one has no string in any of the three locales. The membership code stays special beyond that: the frontend's auto-join tells that 403 apart from this same endpoint's *other* one (`get_viewable_thing`'s "not authorized", carrying no code) without pattern-matching English prose or treating every 403 alike. Routes based on thing type (RESERVE checked first, since it is also in `DATE_BASED_TYPES`):
@@ -1093,11 +1109,12 @@ Daily command (`python manage.py close_transfers`) that closes overdue transfers
 ### Management Command: `send_reminders`
 
 Daily command (`python manage.py send_reminders`) that sends reminder emails:
-- **Booking return reminders**: ACCEPTED bookings with `end_date = tomorrow` — notifies **both sides**, one email each: the owner (`send_return_reminder_email` — "somebody's hold ends tomorrow", nothing asked of them) and the **borrower** (`send_return_due_email` — "tomorrow you take it back", naming the owner they owe it to, with a link to the listing). **RESERVE_THING is excluded** (`.exclude(thing_type=RESERVE_THING)`) — nothing is carried anywhere, so "take it back" is nonsense for an on-site reservation.
+- **Booking return reminders**: ACCEPTED bookings with `end_date = tomorrow` — notifies **both sides**: the team that runs the thing, one email each (`Thing.managers()` minus the borrower — its owner and, in a PROPRIETARY collection, every curator, the people the request went to; `send_return_reminder_email` — "{thing} comes back tomorrow", nothing asked of them) and the **borrower** (`send_return_due_email` — "tomorrow you take it back", naming the owner they owe it to by their bare `name` — "a member" when there is none, never the address `display_name` falls back to — with a link to the listing). **RESERVE_THING is excluded** (`.exclude(thing_type=RESERVE_THING)`) — nothing is carried anywhere, so "take it back" is nonsense for an on-site reservation. **A single-day loan (start == end, tomorrow) is excluded too** — its return reminder is the pickup one, and one person is mailed once about the one day, not twice.
 - **Reservation arrival reminders**: ACCEPTED `RESERVE_THING` bookings with `start_date = tomorrow` — one email to the **member who booked the slot** (`send_reservation_reminder_email` — "your reservation starts tomorrow"). A reservation auto-confirms and can be booked up to a year ahead, so this is the *only* nudge between the confirmation and the day, and a no-show costs a real slot. Owner not pinged — nobody has to carry anything.
+- **Pickup reminders** (LEND/RENT): ACCEPTED `LEND/RENT` bookings with `start_date = tomorrow` — **both sides** again, the day before the handover: the borrower (`send_pickup_due_email` — "tomorrow you pick up {thing}", naming the owner by bare `name` as above, with a link to the listing) and the team that runs the thing, as above (`send_pickup_reminder_email` — "tomorrow you hand over {thing}", nothing asked of them). Until these existed the only pickup email was the acceptance, sent when the dates were agreed — weeks can pass before the day. RESERVE has its own arrival reminder above; GIFT/SELL have no dates.
 - The borrower's half used to be missing: only the owner was told a loan was ending, so the one person who actually had to do something — carry the drill back — heard nothing. A lending library runs on that message.
 - The fan-out is per recipient and swallows a failure with a warning on stderr, so one broken send costs neither the other side their reminder nor the rest of the run theirs (same reasoning as `send_digests`).
-- Outputs the total count of reminder emails sent (two per due loan, one per due reservation).
+- Outputs the total count of reminder emails sent (one for the borrower plus one per member of the team for each due loan/rental, one per due reservation).
 
 ### Management Command: `send_digests`
 
@@ -1259,6 +1276,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/collections/{code}/share-link/` POST — 30 requests per hour per user
 - `/share/{token}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling, `COLLECTION_JOINS_PER_DAY`)
 - `/things/{code}/report/` POST — 10 requests per hour per user
+- `/bookings/{code}/remind-return/` POST — 30 requests per hour per user (plus the once-a-day cap per booking)
 - `/notifications/token/{t}/` — GET 20/min per IP, PATCH 10/min per IP
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
 - `/collections/` POST (single create) — 30 requests per hour per user
@@ -1294,7 +1312,7 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `ThingViewSet` and `CollectionViewSet` use DRF `ModelViewSet` with `DefaultRouter`.
 - `ThingUpdateSerializer` has `status` as read-only to prevent direct status manipulation. `type` is editable. Use `POST /api/v1/things/{code}/activate/` to set status ACTIVE (from INACTIVE), and `POST /api/v1/things/{code}/hide/` to set status INACTIVE (from ACTIVE only).
 - `ThingSerializer` and `CollectionThingSummarySerializer` include `pending_booking` (first PENDING booking code, or null) and `pending_questions` (count of unanswered FAQs).
-- Accept/reject actions can be performed via the unified RSVP endpoint (`VerifyLinkView`) for email links — **a POST commits, GET only previews** (booking decisions never fire from a bare GET) — or via authenticated `BookingActionView` endpoints for in-app use. Both paths reuse the same `accept_booking()`/`reject_booking()` service functions.
+- Accept/reject actions can be performed via the unified RSVP endpoint (`VerifyLinkView`) for email links — **a POST commits, GET only previews** (booking decisions never fire from a bare GET) — or via authenticated `BookingActionView` endpoints for in-app use. Both paths converge on `finalize_booking_decision()`, which runs `accept_booking()`/`reject_booking()`.
 - All email links use RSVP codes as intermediaries to avoid exposing real object codes in URLs.
 - Security events are logged to the `security` logger with IP addresses.
 
@@ -1303,8 +1321,8 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 Business logic is extracted into `core/services/`:
 - `join_quota.py` — The per-collection daily cap on `POST /auth/join/` (`COLLECTION_JOINS_PER_DAY`), the one door that needs no account. Off by default.
 - `creator_policy.py` — Whether this deployment lets an account open a collection in a given mode or offer a thing under a given verb (`CREATOR_POLICY`; open to everyone in the standalone). Enforced at five doors — collection create/update, thing create/update, bulk import — and served to the SPA as `capabilities` on `GET /auth/me/`. Gates *initiating*, not a member *contributing* an owner-allow-listed type to a COMMUNITY collection they were invited to (`community_contribution_types`).
-- `email_service.py` — All email HTML composition and sending (21 `send_*` functions). Uses `django.utils.html.escape()`.
-- `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`. The reservation-**request** side lives here too: `request_share_booking()`, `request_date_based_booking()`, `request_standard_booking()`, and `request_swap_booking()` (plus `resolve_rental_collection()` and the `send_*_request_notifications()` email/notification helpers). They raise `BookingRequestError(message, status_code)` on a rule violation; `ThingRequestView` catches it and returns `{"error": message}`.
+- `email_service.py` — All email HTML composition and sending (every `send_*` function; `send_test_emails` keeps a sample of each). Uses `django.utils.html.escape()`.
+- `booking_service.py` — `accept_booking()`, `reject_booking()`, and `cancel_booking()` handle status transitions for Thing and BookingPeriod, wrapped in `transaction.atomic()`; both decision paths (`BookingActionView` and `VerifyLinkView`) go through `finalize_booking_decision()`, which calls the first two. The reservation-**request** side lives here too: `request_date_based_booking()`, `request_standard_booking()` and `request_reservation()` (plus `require_a_seat()`, `resolve_rental_collection()`, `resolve_request_collection()` and the notification helpers). They raise `BookingRequestError(message, status_code, code=None, params=None)` on a rule violation; `ThingRequestView` catches it and returns `exc.as_body()`.
 
 ### Utilities
 

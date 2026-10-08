@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
@@ -15,7 +15,7 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
-import { apiFetch } from '../services/api';
+import { apiFetch, extractApiError } from '../services/api';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
 import { dropHdsStyles } from './dropHdsStyles';
@@ -271,6 +271,122 @@ describe('CreateCollectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(createBody()?.home_page).toBe('https://ateneu.example/'));
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// CreateCollectionPage — what pressing "Create" leads to
+// ════════════════════════════════════════════════════════════════════════
+describe('CreateCollectionPage — what pressing "Create" leads to', () => {
+  // Where the page sends the reader, read off the router itself.
+  function Landed() {
+    return <div data-testid="landed">{useLocation().pathname}</div>;
+  }
+
+  function renderCreateWith(postResponse) {
+    apiFetch.mockImplementation((url, opts = {}) => {
+      if (url === '/api/v1/collections/' && opts.method === 'POST') return postResponse();
+      return Promise.resolve(mockResponse({}));
+    });
+    return render(
+      <MemoryRouter initialEntries={['/collections/new']}>
+        <Routes>
+          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="*" element={<Landed />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  const typeTheTitle = (container, headline) =>
+    fireEvent.change(container.querySelector('#create-collection-headline'), {
+      target: { value: headline },
+    });
+
+  async function pickGift(container) {
+    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
+  }
+
+  const posts = () =>
+    apiFetch.mock.calls.filter(([u, o]) => u === '/api/v1/collections/' && o?.method === 'POST');
+
+  test('a created collection opens on its own page', async () => {
+    const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'NEW001' })));
+    typeTheTitle(container, 'The street');
+    await pickGift(container);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByTestId('landed')).toHaveTextContent('/collections/NEW001');
+  });
+
+  test('a blank title sends nothing and says it is needed', async () => {
+    const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'X' })));
+    typeTheTitle(container, '   ');
+    await pickGift(container);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText('Title is required.')).toBeInTheDocument();
+    expect(posts()).toHaveLength(0);
+    expect(screen.queryByTestId('landed')).toBeNull();
+  });
+
+  test('with no type picked nothing is sent, and the reminder goes once one is picked', async () => {
+    const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'X' })));
+    typeTheTitle(container, 'The street');
+    // Not said before a first attempt: the form does not nag while it is filled in.
+    expect(screen.queryByText('Pick at least one type.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText('Pick at least one type.')).toBeInTheDocument();
+    expect(posts()).toHaveLength(0);
+
+    await pickGift(container);
+    await waitFor(() => expect(screen.queryByText('Pick at least one type.')).toBeNull());
+  });
+
+  // A refusal keeps the page and everything typed in it, says why, and lets the
+  // reader press Create again.
+  test.each([
+    [
+      'too many attempts',
+      () => Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({}) }),
+      null,
+      'Too many attempts — please wait a moment and try again.',
+    ],
+    [
+      'a refusal with a reason gives the server’s reason',
+      () => Promise.resolve(mockResponse({}, false)),
+      'You already run ten groups.',
+      'You already run ten groups.',
+    ],
+    [
+      'a refusal without one gives the page’s own words',
+      () => Promise.resolve(mockResponse({}, false)),
+      '',
+      'Error creating collection.',
+    ],
+    [
+      'a dropped connection',
+      () => Promise.reject(new TypeError('offline')),
+      null,
+      'Connection error.',
+    ],
+  ])('%s', async (_case, postResponse, serverReason, said) => {
+    if (serverReason !== null) extractApiError.mockResolvedValueOnce(serverReason);
+    const { container } = renderCreateWith(postResponse);
+    typeTheTitle(container, 'The street');
+    await pickGift(container);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText(said)).toBeInTheDocument();
+    expect(screen.queryByTestId('landed')).toBeNull();
+    expect(container.querySelector('#create-collection-headline')).toHaveValue('The street');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled());
   });
 });
 

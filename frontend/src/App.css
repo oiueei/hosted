@@ -174,9 +174,14 @@ a.account-menu-trigger {
   color: var(--color-black-90);
 }
 
+/* Each entry is a 44px tap target (DESIGN §4): the padding alone left them
+   about 40px tall. Flex centres the text in that height. */
 .account-menu-panel a,
 .collection-menu-panel a {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
   padding: var(--spacing-2-xs) var(--spacing-s);
   color: inherit;
   text-decoration: none;
@@ -185,7 +190,10 @@ a.account-menu-trigger {
 /* The collection menu's downloads are buttons next to the links; they take
    the links' own look, which the `a` rules above do not reach. */
 .collection-menu-panel button {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
   width: 100%;
   padding: var(--spacing-2-xs) var(--spacing-s);
   text-align: left;
@@ -647,7 +655,7 @@ div[class*='Linkbox-module_linkbox'] {
   line-height: 28px;
   color: var(--color-black-90);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -971,8 +979,12 @@ body :focus-visible {
    it reads as one sentence — the same quiet register as .invite-nudge. It was
    the member's per-collection digest switch (removed from the hero);
    SharePage's "use another email instead" is what still uses it,
-   hence the name that no longer says what it is. */
+   hence the name that no longer says what it is. Text-styled, it is still a
+   44px tap target (DESIGN §4): with no padding it was only as tall as its line. */
 .digest-pref-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0;
   border: none;
   background: none;
@@ -1711,6 +1723,45 @@ figure[class*='Highlight-module_highlight'] {
   line-height: 28px;
 }
 
+.markdown-text h2,
+.markdown-text h3,
+.markdown-text h4,
+.markdown-text h5 {
+  font-weight: 700;
+  line-height: 1.3;
+  margin: var(--spacing-s) 0 var(--spacing-2-xs);
+}
+
+/* A heading is never smaller than the text around it: the browser's own h5 is
+   83% of it, which is what a `###` used to come out as. The sizes are in `em`,
+   relative to that text, not the HDS `rem` tokens: the hero (`.form-hero-text`)
+   and a bio (`.about-markdown`) set their text at 18px, where heading-xs is 18px
+   too, and h4 and h5 came out the same. Over 16px text these are the 24/20/18/16px
+   of heading-m/s/xs and the text itself; over 18px they grow with it. */
+.markdown-text h2 {
+  font-size: 1.5em;
+}
+
+.markdown-text h3 {
+  font-size: 1.25em;
+}
+
+.markdown-text h4 {
+  font-size: 1.125em;
+}
+
+.markdown-text h5 {
+  font-size: 1em;
+}
+
+/* Nothing above a heading that opens the text. */
+.markdown-text > h2:first-child,
+.markdown-text > h3:first-child,
+.markdown-text > h4:first-child,
+.markdown-text > h5:first-child {
+  margin-top: 0;
+}
+
 .markdown-text ul,
 .markdown-text ol {
   margin: var(--spacing-2-xs) 0;
@@ -2039,10 +2090,7 @@ caption:has(> .sr-only:only-child) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--color-black-60);
-}
-
-.info-popover-button:hover {
+  /* Icons are black (DESIGN §11); --color-black-40 is only for a disabled one. */
   color: var(--color-black-90);
 }
 

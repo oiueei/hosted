@@ -646,6 +646,33 @@ def resolve_request_collection(thing, collection_code=None, requester=None):
     return min(active, key=lambda c: c.code, default=None)
 
 
+def require_a_seat(thing, requester):
+    """Asking for a thing is being part of the group that lists it.
+
+    Raises the same ``not_a_member`` 403 a reservation does when ``requester``
+    has no place in **any ACTIVE collection** of ``thing``. A place is being in
+    ``invites`` or being a curator: whoever founds a group is not in ``invites``
+    and, in COMMUNITY, may ask for a member's thing. One collection is enough.
+    Without this a signed-in reader of a PUBLIC group could ask for things
+    without being a member — so the person who runs the thing could not open
+    their profile and they never received the group's summary — whereas anyone
+    who arrived without a session ends up a member.
+    """
+    active = [c for c in thing.collections.all() if c.status == Collection.Status.ACTIVE]
+    invited_to = set(
+        requester.invited_to_collections.filter(code__in=[c.code for c in active]).values_list(
+            "code", flat=True
+        )
+    )
+    if any(c.code in invited_to or c.is_curator(requester.code) for c in active):
+        return
+    raise BookingRequestError(
+        "You need to be a member of this group to ask for this.",
+        status_code=403,
+        code="not_a_member",
+    )
+
+
 def request_date_based_booking(
     thing,
     requester,
@@ -655,6 +682,7 @@ def request_date_based_booking(
     collection_code=None,
 ):
     """LEND/RENT — date-based booking with rental-rules + overlap enforcement."""
+    require_a_seat(thing, requester)
     # Enforce the collection's rental rules (fixed durations + allowed pickup/
     # return weekdays). The frontend already prevents these — server-side backstop.
     if rental_collection:
@@ -693,6 +721,7 @@ def request_standard_booking(thing, requester, collection_code=None):
     # collections prefetched. The caller's ``thing`` is kept for the notices: the
     # view loaded it with its collections manager-ready, so fanning the request
     # out to the whole team (``thing.managers()``) costs no query per collection.
+    require_a_seat(thing, requester)
     with transaction.atomic():
         locked = Thing.objects.select_for_update().get(code=thing.code)
 

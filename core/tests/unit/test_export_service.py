@@ -403,13 +403,12 @@ class TestCollectionExport:
         assert b"age_range" not in raw
         assert b"postal_code" not in raw
         assert b"GEN_X" not in raw
-        # The aggregate age/postal breakdown inside `stats` is a different
-        # thing and stays: it is byte-for-byte the stats CSV this owner can
-        # already download for any collection mode (test_collection_stats.py
-        # pins that). Worth saying out loud rather than leaving the reader to
-        # infer it — in a group this small the aggregate is barely aggregate,
-        # which is a property of the stats feature, not of the export.
-        assert payload["stats"]["Postal 08001"] == 1
+        # Nor does the aggregate inside `stats` name them: a code or a bracket
+        # fewer than three members share is summed into "other", so in a group
+        # this small the one member's postal code is not in the file at all.
+        assert "Postal 08001" not in payload["stats"]
+        assert payload["stats"]["Postal, other codes"] == 1
+        assert b"08001" not in raw
 
     @pytest.mark.parametrize("mode", Collection.Mode.values)
     def test_the_export_shows_an_owner_exactly_what_the_guests_page_does(
@@ -466,7 +465,9 @@ class TestCollectionExport:
         assert payload["stats"] == dict(collection_stats_rows(world["mine"]))
         assert payload["stats"]["Members"] == 1
         assert payload["stats"]["Things total"] == 2
-        assert payload["stats"]["Born 1965-1980 (Gen X)"] == 1
+        # The one member's bracket is not named; it is counted.
+        assert "Born 1965-1980 (Gen X)" not in payload["stats"]
+        assert payload["stats"]["Birth year shared by fewer than 3"] == 1
 
 
 class TestCollectionExportStaysInsideTheGroup:

@@ -418,7 +418,8 @@
     "successMessage": "Ja hem avisat qui gestiona aquesta cosa — aviat et respondrà.",
     "backTo": "Tornar a {{label}}",
     "errorSending": "Error en enviar la sol·licitud.",
-    "contactShared": "Qui gestiona aquesta cosa veurà el teu nom i el teu email."
+    "contactShared": "Qui gestiona aquesta cosa veurà el teu nom i el teu email.",
+    "joinedGroup": "Per demanar aquí t'has unit a {{group}}. Pots sortir-ne des del teu perfil."
   },
   "datePicker": {
     "open": "Triar data",
@@ -439,6 +440,7 @@
     "pdfTooLarge": "El fitxer és massa gran (màxim 5 MB).",
     "imageTooLarge": "La imatge és massa gran (màxim 10 MB). Prova amb una foto que el navegador pugui redimensionar.",
     "rateLimited": "Has arribat al màxim de {{max}} fotos per hora. Torna-ho a provar d'aquí a una estona.",
+    "pdfRateLimited": "Has arribat al màxim de {{max}} documents per hora. Torna-ho a provar d'aquí a una estona.",
     "welcomeDocLabel": "Document de benvinguda (PDF)",
     "welcomeDocHelper": "Opcional. Qui entra al grup el rep per correu, una sola vegada."
   },
@@ -604,7 +606,11 @@
     "captionPast": "Sol·licituds que ja has respost",
     "cancelReservation": "Cancel·lar la reserva",
     "reservationCancelled": "Reserva cancel·lada; n'hem avisat el membre.",
-    "cancelReservationConfirmBody": "L'avisarem que s'ha cancel·lat, i quedarà lliure perquè una altra persona el reservi. No es pot desfer."
+    "cancelReservationConfirmBody": "L'avisarem que s'ha cancel·lat, i quedarà lliure perquè una altra persona el reservi. No es pot desfer.",
+    "remindReturn": "Recordar la devolució",
+    "remindReturnSent": "Recordatori enviat.",
+    "remindedOn": "Recordat el {{date}}",
+    "remindReturnNotice": "Quan recordes a algú que torni una cosa, et pot respondre directament: veurà la teva adreça de correu."
   },
   "manageInvites": {
     "pageTitle": "Gestionar membres",
@@ -1080,6 +1086,7 @@
     "testError": "No s'ha pogut enviar el correu de prova. Torna-ho a provar."
   },
   "requestErrors": {
+    "already_reminded_today": "Ja l'hi has recordat avui.",
     "already_requested": "Ja ho has demanat: espera la resposta de qui ho ofereix.",
     "cancel_forbidden": "No pots cancel·lar aquesta reserva.",
     "co_owners_full_one": "La dinamització d'aquest grup ja suma 1 persona a més de qui el va crear: és el màxim que permet.",
@@ -1087,6 +1094,7 @@
     "dates_taken": "Aquestes dates ja estan agafades.",
     "not_a_member": "Has de ser membre d'aquest grup per reservar.",
     "not_available": "Ara mateix no està disponible.",
+    "not_awaiting_return": "Això ja no està pendent de retorn.",
     "rental_length_not_allowed": "Aquesta col·lecció només permet períodes de {{allowed}} dies.",
     "rental_pickup_weekday": "Aquest dia de la setmana no es pot recollir.",
     "rental_return_weekday": "Aquest dia de la setmana no es pot retornar.",

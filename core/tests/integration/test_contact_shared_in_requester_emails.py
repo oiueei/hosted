@@ -282,8 +282,8 @@ class TestReservationConfirmed:
 
 @pytest.mark.django_db
 class TestItIsForTheRequesterOnly:
-    """E1's other half: the managers' emails say what they hold, not what the requester
-    is told — so the sentences about being written to are not in them."""
+    """The managers' emails say what they hold, not what the requester is told — so the
+    sentences about being written to are not in them."""
 
     def test_the_managers_request_email_does_not_carry_them(self, user, user2, thing):
         booking = a_booking(thing, user2, user)

@@ -1,4 +1,5 @@
 import { apiFetch } from '../services/api';
+import { UploadRateLimitedError } from './uploadImage';
 
 // The collection welcome doc: PDF only, 5 MB. This check is now a courtesy
 // rather than the cap — it exists so an oversized file is refused instantly,
@@ -6,6 +7,11 @@ import { apiFetch } from '../services/api';
 // limit is signed into the upload ticket by the server (`UploadTicketView`),
 // where a client cannot skip it. Keep the two numbers equal.
 export const PDF_MAX_BYTES = 5 * 1024 * 1024;
+
+// Document tickets have a small hourly allowance of their own on the server
+// (`DOCUMENT_TICKETS_PER_HOUR` in core/views/upload.py), apart from the photos'.
+// Only the refusal's wording reads it.
+export const PDF_UPLOADS_PER_HOUR = 10;
 
 /**
  * Upload a PDF straight to object storage through a short-lived server-issued
@@ -26,6 +32,7 @@ export async function uploadPdf(file, folder = 'oiueei/documents') {
       content_length: file.size,
     }),
   });
+  if (ticketRes.status === 429) throw new UploadRateLimitedError();
   if (!ticketRes.ok) throw new Error('signature_failed');
   const { url, method, headers, key, public_url: publicUrl } = await ticketRes.json();
 

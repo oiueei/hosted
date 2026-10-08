@@ -254,6 +254,24 @@ describe('PdfUpload', () => {
     expect(screen.getByRole('link', { name: 'View the document' })).toBeInTheDocument();
   });
 
+  test('a ticket refused for the hour says to wait, not that the file is wrong', async () => {
+    uploadPdf.mockRejectedValue(new UploadRateLimitedError());
+    const onChange = vi.fn();
+    const { container } = render(
+      <PdfUpload id="doc" label="Welcome document" onChange={onChange} />
+    );
+
+    pick(container, pdf(1024));
+
+    expect(
+      await screen.findByText(
+        "You've reached the limit of 10 documents an hour. Try again in a while."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Upload failed. Please try again.')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   test('a saved document shows the view link, and Remove clears it', () => {
     const onChange = vi.fn();
     const { container } = render(

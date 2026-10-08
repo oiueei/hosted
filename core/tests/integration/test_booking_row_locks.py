@@ -38,7 +38,10 @@ import time
 from datetime import date, timedelta
 
 import pytest
+from django.core import mail
 from django.db import connection, connections
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection, Thing, User
 from core.models.booking import BookingPeriod
@@ -62,7 +65,7 @@ def _postgres_or_skip():
 
     A ``skipif`` would keep the build green even where silence is the lie: if
     the CI job that owns this file ever lost its ``postgres`` service or its
-    ``DATABASE_URL``, the seven lock tests would quietly not run. That job
+    ``DATABASE_URL``, these lock tests would quietly not run. That job
     declares ``REQUIRE_POSTGRES_LOCK_TESTS=1`` next to its ``DATABASE_URL``
     (see ``tests.yml``), and under that promise a database without
     ``select_for_update`` fails the run instead of skipping it. Jobs without
@@ -315,6 +318,15 @@ class TestTwoRequestsForOneSlotAreSerialised:
         coll.things.add(thing)
         return coll, thing
 
+    def _group_of(self, owner, thing, code, *members):
+        """An ACTIVE group holding ``thing`` with ``members`` in it: asking for any
+        thing takes a seat in one of its groups, so the two requesters need one to
+        reach the lock at all."""
+        group = Collection.objects.create(code=code, owner=owner, headline="Neighbours")
+        group.invites.add(*members)
+        group.things.add(thing)
+        return group
+
     def test_a_reservation_clash_is_serialised_not_double_booked(self, monkeypatch, user, user2):
         """RESERVE auto-confirms with no owner step, so an unlocked clash is two
         members turning up to one room. The loser must get the 409, and exactly
@@ -360,6 +372,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
         thing = Thing.objects.create(
             code="RCEG01", type=Thing.Type.GIFT_THING, owner=user, headline="A lamp"
         )
+        self._group_of(user, thing, "RCEG03", user2, other)
         original = BookingPeriod.save
 
         def first(guard):
@@ -391,6 +404,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
         thing = Thing.objects.create(
             code="RCEL01", type=Thing.Type.LEND_THING, owner=user, headline="A drill"
         )
+        self._group_of(user, thing, "RCEL03", user2, other)
         start = date.today() + timedelta(days=3)
         end = start + timedelta(days=4)
         original = BookingPeriod.has_overlap
@@ -460,3 +474,68 @@ class TestTheCoCuratorCeilingIsAtomic:
         assert first_result is Collection.Promotion.ADDED
         assert second_result is Collection.Promotion.FULL, second_result
         assert group.co_owners.count() == Collection.MAX_CO_OWNERS
+
+
+# ── The return reminder: one nudge a day, even pressed twice at once ──────────
+# `BookingRemindReturnView` claims the day with one conditional UPDATE before the
+# email goes. There is no lock held across statements to block on, so this race
+# is not run through `_run_both`: both presses are let past every check and then
+# meet at the claim together.
+
+
+class TestTwoRemindersAtOnceSendOne:
+    def test_two_presses_together_mail_the_borrower_once(self, monkeypatch, user, user2):
+        """A double click, or two curators pressing in the same second. Both requests
+        load the booking and pass `can_be_return_reminded()` before either claims
+        the day — the barrier sees to it. The conditional UPDATE is evaluated by the
+        database against the row as the other request left it, so one matches and
+        one gets the 429. A claim written as "read `return_reminded_at` off the
+        loaded booking, then save" lets both through here and mails twice."""
+        group = Collection.objects.create(code="RMRC01", owner=user, headline="Taller")
+        group.invites.add(user2)
+        drill = Thing.objects.create(code="RMRT01", owner=user, headline="Drill", type="LEND_THING")
+        group.things.add(drill)
+        today = date.today()
+        booking = BookingPeriod.objects.create(
+            thing_code=drill,
+            thing_type=drill.type,
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+            start_date=today - timedelta(days=10),
+            end_date=today - timedelta(days=3),
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+        token = RefreshToken.for_user(user).access_token
+        both_checked = threading.Barrier(2, timeout=5)
+        original = BookingPeriod.can_be_return_reminded
+
+        def checked_then_wait(self):
+            answer = original(self)
+            both_checked.wait()
+            return answer
+
+        monkeypatch.setattr(BookingPeriod, "can_be_return_reminded", checked_then_wait)
+        statuses, errors = [], []
+
+        def press():
+            try:
+                client = APIClient()
+                client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+                response = client.post(f"/api/v1/bookings/{booking.code}/remind-return/")
+                statuses.append(response.status_code)
+            except BaseException as exc:  # noqa: BLE001 — reported below
+                errors.append(exc)
+            finally:
+                connections.close_all()
+
+        threads = [threading.Thread(target=press) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        assert not any(t.is_alive() for t in threads), "a press never came back"
+        assert not errors, f"a press raised instead of answering: {errors!r}"
+        assert sorted(statuses) == [200, 429], statuses
+        assert [m.to for m in mail.outbox] == [[user2.email]]

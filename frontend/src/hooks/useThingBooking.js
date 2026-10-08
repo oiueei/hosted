@@ -53,6 +53,9 @@ export default function useThingBooking(
     bookingKeepsStatus = false,
     activateSuccessMessage = null,
     collectionCode = null,
+    joinCollectionCode = null,
+    joinedGroupName = '',
+    onJoined = () => {},
   } = {}
 ) {
   const { t } = useTranslation();
@@ -136,26 +139,72 @@ export default function useThingBooking(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, status, isEndless, canManage, isDateBased, fetchOnEndless]);
 
+  const postRequest = () =>
+    apiFetch(`/api/v1/things/${code}/request/`, {
+      method: 'POST',
+      body: JSON.stringify(collectionCode ? { collection_code: collectionCode } : {}),
+    });
+
+  // What a refused request says; shared by the first attempt and the retry that
+  // follows an automatic join.
+  const showRequestError = async (res) => {
+    if (res.status === 429) {
+      setToast({ type: 'error', message: t('common.tooManyAttempts') });
+    } else if (res.status === 400) {
+      const detail = await extractApiError(res);
+      setToast({ type: 'error', message: detail || t('thingPage.invalidRequest') });
+    } else {
+      setToast({ type: 'error', message: t('thingPage.errorSendingRequest') });
+    }
+  };
+
+  // Asking for a thing is being part of the group that lists it: the server says
+  // `not_a_member` to someone who only reads a PUBLIC group, and — as the request
+  // page does for a loan — they are joined and the request is sent once more.
+  // Only for that marker (any other 403 never joins anybody), only into the
+  // collection the caller vouches for (`joinCollectionCode`), and if the join
+  // itself is refused (the day's joins, the member ceiling) its reason is shown
+  // and nothing is asked.
+  const joinThenRetry = async () => {
+    const joinRes = await apiFetch(`/api/v1/collections/${joinCollectionCode}/join/`, {
+      method: 'POST',
+    });
+    if (!joinRes.ok) {
+      const detail = await extractApiError(joinRes);
+      setToast({ type: 'error', message: detail || t('thingPage.errorSendingRequest') });
+      return;
+    }
+    onJoined(joinCollectionCode);
+    const retry = await postRequest();
+    if (retry.ok) {
+      setRequested(true);
+      setToast({
+        type: 'success',
+        message: `${t('thingPage.holdRequested')} ${t('request.joinedGroup', {
+          group: joinedGroupName || t('common.collection'),
+        })}`,
+      });
+    } else {
+      await showRequestError(retry);
+    }
+  };
+
   const handleRequest = async () => {
     if (requestLockRef.current) return;
     requestLockRef.current = true;
     setSubmitting(true);
     setToast(null);
     try {
-      const res = await apiFetch(`/api/v1/things/${code}/request/`, {
-        method: 'POST',
-        body: JSON.stringify(collectionCode ? { collection_code: collectionCode } : {}),
-      });
+      const res = await postRequest();
       if (res.ok) {
         setRequested(true);
         setToast({ type: 'success', message: t('thingPage.holdRequested') });
-      } else if (res.status === 429) {
-        setToast({ type: 'error', message: t('common.tooManyAttempts') });
-      } else if (res.status === 400) {
-        const detail = await extractApiError(res);
-        setToast({ type: 'error', message: detail || t('thingPage.invalidRequest') });
+      } else if (res.status === 403 && joinCollectionCode) {
+        const data = await res.json().catch(() => null);
+        if (data?.code === 'not_a_member') await joinThenRetry();
+        else await showRequestError(res);
       } else {
-        setToast({ type: 'error', message: t('thingPage.errorSendingRequest') });
+        await showRequestError(res);
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });

@@ -418,7 +418,8 @@
     "successMessage": "Ya hemos avisado a quien gestiona esta cosa — te responderá pronto.",
     "backTo": "Volver a {{label}}",
     "errorSending": "Error al enviar la solicitud.",
-    "contactShared": "Quien gestiona esta cosa verá tu nombre y tu email."
+    "contactShared": "Quien gestiona esta cosa verá tu nombre y tu email.",
+    "joinedGroup": "Para pedir aquí te has unido a {{group}}. Puedes salir desde tu perfil."
   },
   "datePicker": {
     "open": "Elegir fecha",
@@ -439,6 +440,7 @@
     "pdfTooLarge": "El archivo es demasiado grande (máximo 5 MB).",
     "imageTooLarge": "La imagen es demasiado grande (máximo 10 MB). Prueba con una foto que el navegador pueda redimensionar.",
     "rateLimited": "Has llegado al máximo de {{max}} fotos por hora. Vuelve a intentarlo dentro de un rato.",
+    "pdfRateLimited": "Has llegado al máximo de {{max}} documentos por hora. Vuelve a intentarlo dentro de un rato.",
     "welcomeDocLabel": "Documento de bienvenida (PDF)",
     "welcomeDocHelper": "Opcional. Quien entra en el grupo lo recibe por correo, una sola vez."
   },
@@ -604,7 +606,11 @@
     "captionPast": "Solicitudes que ya has respondido",
     "cancelReservation": "Cancelar la reserva",
     "reservationCancelled": "Reserva cancelada; hemos avisado al miembro.",
-    "cancelReservationConfirmBody": "Le avisaremos de que se ha cancelado, y quedará libre para que otra persona lo reserve. No se puede deshacer."
+    "cancelReservationConfirmBody": "Le avisaremos de que se ha cancelado, y quedará libre para que otra persona lo reserve. No se puede deshacer.",
+    "remindReturn": "Recordar la devolución",
+    "remindReturnSent": "Recordatorio enviado.",
+    "remindedOn": "Recordado el {{date}}",
+    "remindReturnNotice": "Cuando recuerdas a alguien que devuelva una cosa, puede responderte directamente: verá tu dirección de correo."
   },
   "manageInvites": {
     "pageTitle": "Gestionar miembros",
@@ -1080,6 +1086,7 @@
     "testError": "No se ha podido enviar el correo de prueba. Inténtalo de nuevo."
   },
   "requestErrors": {
+    "already_reminded_today": "Ya se lo has recordado hoy.",
     "already_requested": "Ya lo has pedido: espera la respuesta de quien lo ofrece.",
     "cancel_forbidden": "No puedes cancelar esta reserva.",
     "co_owners_full_one": "La dinamización de este grupo ya suma 1 persona además de quien lo creó: es el máximo que permite.",
@@ -1087,6 +1094,7 @@
     "dates_taken": "Esas fechas ya están cogidas.",
     "not_a_member": "Tienes que ser miembro de este grupo para reservar.",
     "not_available": "Ahora mismo no está disponible.",
+    "not_awaiting_return": "Esto ya no está pendiente de devolución.",
     "rental_length_not_allowed": "Esta colección solo permite periodos de {{allowed}} días.",
     "rental_pickup_weekday": "Ese día de la semana no se puede recoger.",
     "rental_return_weekday": "Ese día de la semana no se puede devolver.",

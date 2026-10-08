@@ -1,9 +1,13 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 
 import { apiFetch } from '../services/api';
-import { uploadPdf, PDF_MAX_BYTES } from './uploadPdf';
+import { uploadPdf, PDF_MAX_BYTES, PDF_UPLOADS_PER_HOUR } from './uploadPdf';
+import { UploadRateLimitedError } from './uploadImage';
 
 // Document-mode ticket (core/views/upload.py): the folder is forced server-side
 // and the only content type it will sign is application/pdf.
@@ -72,11 +76,19 @@ describe('uploadPdf', () => {
     expect(fetchMock.mock.calls[0][1].headers['Content-Type']).toBe('application/pdf');
   });
 
-  test('the client cap matches the one the server signs', async () => {
+  test('the client cap matches the one the server signs', () => {
     // PdfUpload refuses an oversized file before this runs, as a courtesy. The
-    // real limit is DOCUMENT_MAX_BYTES in core/views/upload.py; if the two ever
-    // disagree, one of them is lying to somebody.
-    expect(PDF_MAX_BYTES).toBe(5 * 1024 * 1024);
+    // real limit is DOCUMENT_MAX_BYTES in core/views/upload.py, read from there so
+    // the two cannot disagree: a lower client cap refuses files the server takes,
+    // a higher one lets a file through to a refusal after the upload.
+    const serverSource = readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
+      'utf8'
+    );
+    const mb = serverSource.match(/^DOCUMENT_MAX_BYTES = (\d+) \* 1024 \* 1024$/m);
+
+    expect(mb).not.toBeNull();
+    expect(PDF_MAX_BYTES).toBe(Number(mb[1]) * 1024 * 1024);
   });
 
   test('throws signature_failed and uploads nothing when the server refuses a ticket', async () => {
@@ -90,5 +102,25 @@ describe('uploadPdf', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 403 });
 
     await expect(uploadPdf(pdf())).rejects.toThrow('upload_failed');
+  });
+});
+
+describe('the hourly allowance of documents', () => {
+  test('a 429 from the ticket is the allowance running out, not a broken file', async () => {
+    apiFetch.mockResolvedValue({ ok: false, status: 429, json: () => Promise.resolve({}) });
+
+    await expect(uploadPdf(pdf())).rejects.toBeInstanceOf(UploadRateLimitedError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('is the allowance the server rations document tickets at', () => {
+    const serverSource = readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
+      'utf8'
+    );
+    const rate = serverSource.match(/^DOCUMENT_TICKETS_PER_HOUR = (\d+)$/m);
+
+    expect(rate).not.toBeNull();
+    expect(PDF_UPLOADS_PER_HOUR).toBe(Number(rate[1]));
   });
 });

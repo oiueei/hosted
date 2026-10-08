@@ -326,6 +326,28 @@ class TestWhatItCosts:
         assert self._count(member, thing, group.code) == small_member
         assert self._count(user, thing, group.code) == small_curator
 
+    def test_a_list_read_through_the_collection_asks_the_calendar_question_once(
+        self, group, thing, user
+    ):
+        """The SPA never lists through `?collection=`, but the API takes it: the
+        calendar question is about the collection, so a page of its things asks it
+        once, not once per thing."""
+        assert group.allowed_thing_types == []
+        group.things.add(*ThingFactory.create_batch(5, owner=user))
+        client = _client(user)
+        client.get("/api/v1/auth/me/")
+
+        with CaptureQueriesContext(connection) as queries:
+            response = client.get(f"/api/v1/things/?collection={group.code}")
+        assert response.status_code == 200
+        menus = [row["collection_menu"] for row in response.data["results"]]
+        assert len(menus) == 6 and all(m and m["is_curator"] for m in menus)
+
+        calendar_questions = [
+            q for q in queries if "collection_things" in q["sql"] and "RESERVE_THING" in q["sql"]
+        ]
+        assert len(calendar_questions) == 1, [q["sql"] for q in calendar_questions]
+
     def test_the_curator_check_is_asked_once_for_can_manage_and_the_menu(
         self, group, thing, co_curator
     ):

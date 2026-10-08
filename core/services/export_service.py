@@ -75,6 +75,10 @@ COLLECTION_FORMAT = "oiueei-collection-export/1"
 # two renderings (CSV for the owner's spreadsheet, a dict inside the export).
 STATS_WINDOW_DAYS = 90
 
+# The fewest members a birth-year bracket or a postal code must hold to be named
+# in the stats. Below it the figure is about a person, not a group.
+STATS_MIN_GROUP = 3
+
 AGE_LABELS = {
     "PRE_1946": "Born 1945 or earlier",
     "BOOMER": "Born 1946-1964 (Boomers)",
@@ -826,16 +830,32 @@ def collection_stats_rows(collection):
     )
     rows.append([f"Active members ({win}d)", len(active)])
 
+    # A bracket or a postal code shared by fewer than STATS_MIN_GROUP members is
+    # not named: in a group of two, "Postal 48001: 1" is one person's postal code.
+    # The rows it would have had are summed into one "smaller groups" row, and a
+    # bracket nobody is in is left out as well — were only the small ones missing,
+    # the absent row would name them.
     age_counts = Counter(member.age_range for member in members if member.age_range)
     for age_code, label in AGE_LABELS.items():
-        rows.append([label, age_counts.get(age_code, 0)])
+        if age_counts.get(age_code, 0) >= STATS_MIN_GROUP:
+            rows.append([label, age_counts[age_code]])
+    rows.append(
+        [
+            f"Birth year shared by fewer than {STATS_MIN_GROUP}",
+            sum(count for count in age_counts.values() if count < STATS_MIN_GROUP),
+        ]
+    )
     rows.append(["Birth year not specified", sum(1 for member in members if not member.age_range)])
 
     postal_counts = Counter(member.postal_code for member in members if member.postal_code)
-    for postal, count in postal_counts.most_common(10):
+    named = [(p, c) for p, c in postal_counts.most_common(10) if c >= STATS_MIN_GROUP]
+    for postal, count in named:
         # The code follows the literal "Postal " label, so the cell never
         # starts with =, +, - or @ — no spreadsheet-formula injection.
         rows.append([f"Postal {postal}", count])
+    # Everyone who gave a code that is not named above: the small groups, and any
+    # code past the ten most common.
+    rows.append(["Postal, other codes", sum(postal_counts.values()) - sum(c for _, c in named)])
     rows.append(["Postal not specified", sum(1 for member in members if not member.postal_code)])
     return rows
 

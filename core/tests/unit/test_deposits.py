@@ -234,15 +234,28 @@ class TestWhatAReservationRemembers:
     snapshot sits beside it.
     """
 
+    def _in_a_group(self, thing):
+        """Asking for a thing is being part of the group that lists it."""
+        group = Collection.objects.create(code="DEPCOL", owner=thing.owner, headline="Taller")
+        group.invites.add(self.requester)
+        group.things.add(thing)
+        return thing
+
     def _lent_thing(self, owner, deposit="50.00"):
-        return Thing.objects.create(
-            code="RENT01",
-            owner=owner,
-            headline="A projector",
-            type=Thing.Type.RENT_THING,
-            fee="10.00",
-            deposit=deposit,
+        return self._in_a_group(
+            Thing.objects.create(
+                code="RENT01",
+                owner=owner,
+                headline="A projector",
+                type=Thing.Type.RENT_THING,
+                fee="10.00",
+                deposit=deposit,
+            )
         )
+
+    @pytest.fixture(autouse=True)
+    def _requester(self, user2):
+        self.requester = user2
 
     def _book(self, thing, requester):
         return request_date_based_booking(
@@ -273,8 +286,10 @@ class TestWhatAReservationRemembers:
         assert booking.deposit_amount is None
 
     def test_a_gift_carries_none_through_the_other_reservation_path(self, user, user2):
-        gift = Thing.objects.create(
-            code="GIFT01", owner=user, headline="A lamp", type=Thing.Type.GIFT_THING
+        gift = self._in_a_group(
+            Thing.objects.create(
+                code="GIFT01", owner=user, headline="A lamp", type=Thing.Type.GIFT_THING
+            )
         )
 
         booking = request_standard_booking(gift, user2)

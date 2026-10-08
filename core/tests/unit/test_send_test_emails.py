@@ -312,7 +312,7 @@ def test_every_email_is_the_white_rounded_card_on_the_grey_page():
 
 @pytest.mark.django_db
 def test_every_email_names_a_real_parent_or_oiueei():
-    """Every one of the 35 has exactly one <h1> — the operator's own capacity
+    """Every one of the 37 has exactly one <h1> — the operator's own capacity
     alarm too, since its own
     explanation leads as a title, closing the one exemption this system
     started with."""

@@ -32,6 +32,10 @@ SINGLE_USE_TYPES = ["GIFT_THING", "SELL_THING"]
 # written on the booking (nothing changes hands).
 ON_SITE_TYPES = ["RESERVE_THING"]
 
+# Date-based types whose thing is carried away and has to come back: a loan or a
+# rental. The ones a return can be due on (and so reminded about).
+RETURNABLE_TYPES = [t for t in DATE_BASED_TYPES if t not in ON_SITE_TYPES]
+
 
 class BookingPeriod(models.Model):
     """
@@ -105,6 +109,11 @@ class BookingPeriod(models.Model):
     # spans midnight); these two narrow that one day to a slot within it.
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
+    # When whoever manages the thing last pressed "remind them to return it"
+    # (`/bookings/{code}/remind-return/`). Null = never reminded. The action
+    # is capped at one nudge a day, so this is the timestamp that answers
+    # "was it already today?" — see `can_be_return_reminded`.
+    return_reminded_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=9, choices=Status.choices, default=Status.PENDING, db_index=True
     )
@@ -141,6 +150,40 @@ class BookingPeriod(models.Model):
         expiry_hours = getattr(settings, "BOOKING_EXPIRY_HOURS", 72)
         expiry_time = self.created + timedelta(hours=expiry_hours)
         return timezone.now() < expiry_time and self.status == self.Status.PENDING
+
+    def can_be_return_reminded(self, today=None):
+        """Whether the "remind them to return it" action may fire for this booking.
+
+        True only for an ACCEPTED loan or rental whose return date has already
+        passed — strictly: not on the return day itself, which the day-before
+        automatic reminder already covers, but from the day after — and only
+        while no **later** ACCEPTED booking of the same thing has started: a
+        thing already handed to the next borrower has by definition come back,
+        and without that check the button would sit on every old loan of a busy
+        thing instead of the latest overdue one. "Later" is what matters: an
+        earlier loan that was returned months ago must not veto this one.
+        Read by the remind-return endpoint and the /owner-bookings/ serializer
+        (`can_remind_return`); the once-a-day cap is answered separately by
+        `return_reminded_at`.
+
+        The list view annotates each row with `lent_again` (the same question
+        as one subquery) so a page of twenty finished loans costs no query per
+        row; anywhere else the question is asked here.
+        """
+        if self.status != self.Status.ACCEPTED or self.thing_type not in RETURNABLE_TYPES:
+            return False
+        today = today or timezone.localdate()
+        if not self.start_date or not self.end_date or self.end_date >= today:
+            return False
+        lent_again = getattr(self, "lent_again", None)
+        if lent_again is None:
+            lent_again = BookingPeriod.objects.filter(
+                thing_code=self.thing_code_id,
+                status=self.Status.ACCEPTED,
+                start_date__gt=self.start_date,
+                start_date__lte=today,
+            ).exists()
+        return not lent_again
 
     def accept(self):
         """Accept the booking request."""
