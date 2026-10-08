@@ -494,6 +494,87 @@ class TestSendRemindersCommand:
         assert "hand over" in by_recipient["rmowner8@test.com"].subject
         assert "Sent 2 reminder" in out.getvalue()
 
+    @pytest.mark.parametrize(
+        "start_offset, end_offset",
+        [(1, 3), (-3, 1)],
+        ids=["pickup", "return"],
+    )
+    def test_the_borrower_never_reads_the_owners_address(self, start_offset, end_offset):
+        """An owner who never set a name is "a member" to the borrower, not their email.
+
+        ``display_name`` falls back to the address, and every account made by a magic
+        link or an invitation has no name — so passing it put the owner's email in the
+        borrower's pickup and return reminders, in the HTML and the plain text alike.
+        """
+        today = date.today()
+        owner = User.objects.create(code="RMOWN9", email="nameless.owner@test.com")
+        requester = User.objects.create(code="RMREQ9", email="rmreq9@test.com", name="Requester")
+        thing = Thing.objects.create(
+            code="RMTHN9", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=today + timedelta(days=start_offset),
+            end_date=today + timedelta(days=end_offset),
+            status="ACCEPTED",
+        )
+
+        call_command("send_reminders", stdout=StringIO())
+
+        to_borrower = next(m for m in mail.outbox if m.to == ["rmreq9@test.com"])
+        html = to_borrower.alternatives[0][0]
+        assert "nameless.owner@test.com" not in to_borrower.body
+        assert "nameless.owner@test.com" not in html
+        assert "A member" in to_borrower.body
+
+    @pytest.mark.parametrize(
+        "start_offset, end_offset, subject",
+        [(1, 3, "hand over"), (-3, 1, "comes back tomorrow")],
+        ids=["pickup", "return"],
+    )
+    def test_the_whole_team_that_runs_the_thing_is_reminded(
+        self, start_offset, end_offset, subject
+    ):
+        """In a PROPRIETARY collection the request went to every curator, so the
+        handover and the return reach every curator too — not only whoever is
+        recorded as the thing's owner. A curator who borrows is told once, as the
+        borrower."""
+        today = date.today()
+        founder = User.objects.create(code="RMFND1", email="founder@test.com", name="Founder")
+        cocurator = User.objects.create(code="RMCOC1", email="cocurator@test.com", name="Co")
+        borrower = User.objects.create(code="RMBOR1", email="borrower@test.com", name="Co2")
+        collection = Collection.objects.create(
+            code="RMCOL1", owner=founder, headline="Library", mode=Collection.Mode.PROPRIETARY
+        )
+        collection.invites.add(cocurator, borrower)
+        collection.co_owners.add(cocurator, borrower)
+        thing = Thing.objects.create(
+            code="RMTHNA", owner=founder, headline="Drill", type="LEND_THING"
+        )
+        collection.things.add(thing)
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=borrower,
+            requester_email=borrower.email,
+            owner_code=founder,
+            start_date=today + timedelta(days=start_offset),
+            end_date=today + timedelta(days=end_offset),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        team = sorted(m.to[0] for m in mail.outbox if subject in m.subject)
+        assert team == ["cocurator@test.com", "founder@test.com"]
+        assert [m.to[0] for m in mail.outbox].count("borrower@test.com") == 1
+        assert "Sent 3 reminder" in out.getvalue()
+
 
 @pytest.mark.django_db
 class TestSendDigestsCommand:

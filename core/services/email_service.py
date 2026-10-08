@@ -2074,10 +2074,13 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     lending library runs on this message.
 
     It names the owner rather than "the owner": returning something is a promise
-    made to a person, and the borrower may be in several groups at once.
+    made to a person, and the borrower may be in several groups at once. The
+    caller passes the owner's bare ``name``: the borrower does not hold the
+    owner's address, so an owner with no name is "a member", never their email.
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
+    owner_name = _member_name(owner_name, lang)
     headline = L(thing.headline)
     header = headline
     thing_url = _thing_url(thing, reader=user)
@@ -2106,10 +2109,12 @@ def send_pickup_due_email(owner_name, thing, start_date, requester_email):
     was the acceptance, sent when the dates were agreed — weeks can pass
     between that and the day, and the one person who has to be somewhere at a
     time heard nothing meanwhile. The pickup twin of ``send_return_due_email``
-    (same reader, same CTA to the listing, the other end of the loan).
+    (same reader, same CTA to the listing, the other end of the loan), and the
+    same rule for the owner's name: bare ``name``, "a member" when there is none.
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
+    owner_name = _member_name(owner_name, lang)
     headline = L(thing.headline)
     header = headline
     thing_url = _thing_url(thing, reader=user)
