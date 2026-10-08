@@ -61,6 +61,9 @@
     "@eslint/eslintrc": {
       "js-yaml": "4.3.2"
     },
-    "postcss": "^8.5.25"
+    "postcss": "^8.5.25",
+    "hds-react": {
+      "postcss-nesting": "13.0.2"
+    }
   }
 }
