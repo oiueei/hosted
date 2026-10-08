@@ -15,7 +15,13 @@ import pytest
 from django.core.cache import caches
 from django.test import override_settings
 
-from core.views.upload import DOCUMENT_MAX_BYTES, DOCUMENT_TICKETS_PER_HOUR, IMAGE_MAX_BYTES
+from core.views.things import ThingBulkCreateView
+from core.views.upload import (
+    DOCUMENT_MAX_BYTES,
+    DOCUMENT_TICKETS_PER_HOUR,
+    IMAGE_MAX_BYTES,
+    TICKETS_PER_HOUR,
+)
 
 URL = "/api/v1/upload/ticket/"
 
@@ -328,16 +334,16 @@ class TestTicketsAreRationedPerUser:
             }
         },
     )
-    def test_the_hundred_and_twentieth_ticket_of_the_hour_is_issued_and_the_next_is_refused(
+    def test_the_last_ticket_of_the_hour_is_issued_and_the_next_is_refused(
         self, authenticated_client
     ):
         caches["default"].clear()
 
         statuses = [
             authenticated_client.post(URL, image_body(), format="json").status_code
-            for _ in range(120)
+            for _ in range(TICKETS_PER_HOUR)
         ]
-        assert statuses == [200] * 120
+        assert statuses == [200] * TICKETS_PER_HOUR
 
         refused = authenticated_client.post(URL, image_body(), format="json")
 
@@ -371,5 +377,13 @@ class TestTicketsAreRationedPerUser:
         # Running out of documents costs the photos nothing.
         assert authenticated_client.post(URL, image_body(), format="json").status_code == 200
 
-    def test_the_document_allowance_is_a_few_not_the_photos_hundred(self):
-        assert DOCUMENT_TICKETS_PER_HOUR == 10
+    def test_an_hour_of_tickets_covers_a_whole_zip_import(self):
+        """A ZIP import takes one ticket per row's photo before it creates anything; an
+        allowance under the import's row cap stops a legal import half-way."""
+        assert TICKETS_PER_HOUR >= ThingBulkCreateView.MAX_ROWS
+
+    def test_documents_get_a_small_share_of_the_photos_allowance(self):
+        """The one document is a welcome PDF set a few times in a group's life. An
+        allowance near the photos' would let any account fill the bucket with public
+        PDFs at the rate a ZIP import needs for photos."""
+        assert DOCUMENT_TICKETS_PER_HOUR * 10 <= TICKETS_PER_HOUR

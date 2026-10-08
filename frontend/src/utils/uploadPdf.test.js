@@ -76,11 +76,19 @@ describe('uploadPdf', () => {
     expect(fetchMock.mock.calls[0][1].headers['Content-Type']).toBe('application/pdf');
   });
 
-  test('the client cap matches the one the server signs', async () => {
+  test('the client cap matches the one the server signs', () => {
     // PdfUpload refuses an oversized file before this runs, as a courtesy. The
-    // real limit is DOCUMENT_MAX_BYTES in core/views/upload.py; if the two ever
-    // disagree, one of them is lying to somebody.
-    expect(PDF_MAX_BYTES).toBe(5 * 1024 * 1024);
+    // real limit is DOCUMENT_MAX_BYTES in core/views/upload.py, read from there so
+    // the two cannot disagree: a lower client cap refuses files the server takes,
+    // a higher one lets a file through to a refusal after the upload.
+    const serverSource = readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
+      'utf8'
+    );
+    const mb = serverSource.match(/^DOCUMENT_MAX_BYTES = (\d+) \* 1024 \* 1024$/m);
+
+    expect(mb).not.toBeNull();
+    expect(PDF_MAX_BYTES).toBe(Number(mb[1]) * 1024 * 1024);
   });
 
   test('throws signature_failed and uploads nothing when the server refuses a ticket', async () => {

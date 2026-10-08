@@ -73,6 +73,14 @@ DOCUMENT_TYPES = {"application/pdf"}
 DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
 IMAGE_MAX_BYTES = 10 * 1024 * 1024
 
+# One ticket per photo, and a ZIP import of up to `ThingBulkCreateView.MAX_ROWS` (100)
+# things uploads a photo for each row before it creates anything, so the hourly
+# allowance has to cover a whole import with room to spare. A ticket is still good for
+# one signed upload of at most `IMAGE_MAX_BYTES`: more tickets do not widen what any
+# one of them permits. `UPLOADS_PER_HOUR` in frontend/src/utils/uploadImage.js mirrors
+# this number.
+TICKETS_PER_HOUR = 120
+
 # Document tickets have an allowance of their own, well under the photos'. The
 # one document is a collection's welcome PDF, set a handful of times in a group's
 # life; the 120 an hour photos need (a ZIP import) would otherwise let any
@@ -123,13 +131,9 @@ class UploadTicketView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    # One ticket per photo, and a ZIP import of up to `ThingBulkCreateView.MAX_ROWS` (100)
-    # things uploads a photo for each row before it creates anything, so the hourly
-    # allowance has to cover a whole import with room to spare. A ticket is still good for
-    # one signed upload of at most `IMAGE_MAX_BYTES`: more tickets do not widen what any
-    # one of them permits. `UPLOADS_PER_HOUR` in frontend/src/utils/uploadImage.js mirrors
-    # this number.
-    @method_decorator(ratelimit(key="user", rate="120/h", method="POST", block=True))
+    @method_decorator(
+        ratelimit(key="user", rate=f"{TICKETS_PER_HOUR}/h", method="POST", block=True)
+    )
     def post(self, request):
         body = body_dict(request)
         # Anything that isn't the one document kind is an image upload — an unknown
