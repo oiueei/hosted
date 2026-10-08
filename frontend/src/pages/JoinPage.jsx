@@ -41,7 +41,6 @@ export default function JoinPage() {
   // itself. Public and ACTIVE by definition (login-to-act only exists there), so
   // an anonymous GET resolves; a private or missing one simply 403/404s and we
   // keep the generic copy rather than inventing a name.
-  const [headline, setHeadline] = useState(location.state?.collectionHeadline || '');
   const [collectionLanguage, setCollectionLanguage] = useState('');
   // What a member can do there — the door's first line names exactly that. The
   // API gives both to an anonymous reader of a PUBLIC collection.
@@ -49,9 +48,14 @@ export default function JoinPage() {
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   // The collection's own photo, so the door looks like the page it leads to.
   const [thumbnailUrl, setThumbnailUrl] = useState('');
-  // The raw headline, per-language map and all, for the hook to read.
+  // The raw headline, per-language map and all: the hook reads it, and it is resolved
+  // here, at render, in whatever language the page is in by then. It used to be
+  // resolved once, when the response landed, and kept as words — so when
+  // `useCollectionLanguage` then switched the page to the group's language, the name
+  // stayed in the one before. Until it arrives, the name the card handed over.
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
+  const headline = ownerHeadline ? L(ownerHeadline) : location.state?.collectionHeadline || '';
 
   // "Join {collection}", the words `/share/:token` already says:
   // the page says which group the stranger is about to join, in the title and the
@@ -70,7 +74,6 @@ export default function JoinPage() {
     apiFetch(`/api/v1/collections/${code}/`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        if (data?.headline) setHeadline(L(data.headline));
         setCollectionLanguage(data?.language || '');
         setMode(data?.mode || '');
         setAllowedThingTypes(data?.allowed_thing_types || []);
@@ -79,9 +82,6 @@ export default function JoinPage() {
       })
       .catch(() => {});
     return () => controller.abort();
-    // `L` is rebuilt on every language change; re-running for that would only
-    // re-fetch to resolve the same map again, and the copy already re-renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
   return (

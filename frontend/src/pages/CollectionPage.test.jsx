@@ -796,6 +796,35 @@ describe('A signed-in visitor on a public group', () => {
     ).toBe(true);
   });
 
+  test('asking for a thing from a card joins the group, and the hero stops offering to', async () => {
+    const withAGift = {
+      ...PUBLIC_COMMUNITY,
+      things: [{ code: 'THG001', headline: 'Lamp', type: 'GIFT_THING', status: 'ACTIVE' }],
+    };
+    let asked = 0;
+    apiFetch.mockImplementation((url, options) => {
+      const json = (data, status = 200) =>
+        Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(data) });
+      if (/\/things\/THG001\/request\/$/.test(url) && options?.method === 'POST') {
+        asked += 1;
+        return asked === 1 ? json({ error: 'x', code: 'not_a_member' }, 403) : json({}, 201);
+      }
+      if (/\/join\/$/.test(url)) return json({});
+      // The reload after the join sees the membership it created.
+      return json({ ...withAGift, is_member: asked > 0 });
+    });
+
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Join this group' })).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Claim' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Join this group' })).not.toBeInTheDocument()
+    );
+    expect(screen.getByText('Add thing')).toBeInTheDocument();
+  });
+
   test('a member is not asked to join again', async () => {
     apiFetch.mockImplementation(() =>
       Promise.resolve({

@@ -20,6 +20,9 @@ import useThingBooking from './useThingBooking';
  *                       should route to the collection's `/join` page.
  * - `collectionOwner` — explicit collection owner code (ThingLinkbox prop);
  *                       falls back to `thing.collection_owner`.
+ * - `joinCollectionCode` / `joinedGroupName` / `onJoined` — forwarded to
+ *   {@link useThingBooking}: the one group a refused "not a member" request may
+ *   join the reader to before asking again.
  * - `onThingChange` / `setToast` / `initialActivePending` / `initialRequested`
  *   / `fetchOnEndless` / `activateSuccessMessage` / `collectionCode` — forwarded to
  *   {@link useThingBooking} (card vs page seeds differ).
@@ -54,6 +57,9 @@ export default function useThingActions(
     fetchOnEndless = false,
     activateSuccessMessage = null,
     collectionCode = null,
+    joinCollectionCode = null,
+    joinedGroupName = '',
+    onJoined,
   } = {}
 ) {
   const { t } = useTranslation();
@@ -91,6 +97,9 @@ export default function useThingActions(
     bookingKeepsStatus,
     activateSuccessMessage,
     collectionCode,
+    joinCollectionCode,
+    joinedGroupName,
+    onJoined,
   });
   const { submitting, requested, bookings } = booking;
 

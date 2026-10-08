@@ -1,0 +1,27 @@
+{
+  "_about": "Cases of `[text](url)` read by BOTH Markdown engines: frontend/src/test/markdown.test.jsx (MarkdownText) and core/tests/unit/test_email_note.py (the email note's _md_inline). `href` is the target of the first link once HTML entities are decoded, or null when the target is no link. Only cases both engines answer alike belong here: a site path or an absolute URL of this site is internal in the browser and external in an email, and a bare address is linked only by the browser. New cases go in this file, not in either test.",
+  "cases": [
+    { "input": "[a](https://example.com)", "href": "https://example.com" },
+    { "input": "[a](HTTP://Example.com/x)", "href": "HTTP://Example.com/x" },
+    { "input": "[a](https://example.com/?a=1&b=2)", "href": "https://example.com/?a=1&b=2" },
+    {
+      "input": "[a](https://es.wikipedia.org/wiki/Foo_(bar))",
+      "href": "https://es.wikipedia.org/wiki/Foo_(bar)"
+    },
+    {
+      "input": "[a](https://example.com/f(a(b))c)",
+      "href": "https://example.com/f(a(b))c"
+    },
+    { "input": "[a](https://example.com/*b*/c_d_)", "href": "https://example.com/*b*/c_d_" },
+    { "input": "[a](www.x.cat)", "href": "https://www.x.cat" },
+    { "input": "[a](WWW.x.cat/p)", "href": "https://WWW.x.cat/p" },
+    { "input": "[a](mailto:lala@example.com)", "href": "mailto:lala@example.com" },
+    { "input": "[a](javascript:alert(1))", "href": null },
+    { "input": "[a](data:text/html,x)", "href": null },
+    { "input": "[a](ftp://x.org)", "href": null },
+    { "input": "[a](foo/bar)", "href": null },
+    { "input": "[a](//evil.example)", "href": null },
+    { "input": "[a](https://)", "href": null },
+    { "input": "[a](mailto:)", "href": null }
+  ]
+}

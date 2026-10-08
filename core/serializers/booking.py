@@ -33,6 +33,12 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
     # so a co-curator of two groups needs to see which one each row is about.
     collection_code = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
+    # Whether the "remind them to return it" action is on offer for *this reader*
+    # on this row: a manager of the thing, and the model's rule
+    # (`BookingPeriod.can_be_return_reminded` — overdue, and not lent again
+    # since). The once-a-day cap is not in it: `return_reminded_at` says when it
+    # last went and the client greys the action out until tomorrow.
+    can_remind_return = serializers.SerializerMethodField()
 
     class Meta:
         model = BookingPeriod
@@ -55,7 +61,15 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "end_time",
             "status",
             "project_note",
+            "can_remind_return",
+            "return_reminded_at",
         ]
+
+    def get_can_remind_return(self, obj):
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return False
+        return obj.thing_code.can_manage(request.user.code) and obj.can_be_return_reminded()
 
     def _collection(self, obj):
         # A thing can sit in several collections; this takes the first (the view

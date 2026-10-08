@@ -2,6 +2,7 @@
 Unit tests for OIUEEI management commands.
 """
 
+import contextlib
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
@@ -13,6 +14,8 @@ import time_machine
 from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from core.models import RSVP, Collection, Thing, User
@@ -148,7 +151,7 @@ class TestSendRemindersCommand:
 
         # The owner is told somebody's hold is ending; nothing is asked of them.
         to_owner = by_recipient["rmowner@test.com"]
-        assert "ends tomorrow" in to_owner.subject
+        assert "comes back tomorrow" in to_owner.subject
         assert "Requester" in to_owner.body
 
         # The borrower is told what they must do, and who they owe it to.
@@ -345,6 +348,304 @@ class TestSendRemindersCommand:
 
         assert len(mail.outbox) == 0
         assert "Sent 0 reminder" in out.getvalue()
+
+    def test_a_pending_booking_starting_tomorrow_gets_no_pickup_reminder(self):
+        """A hold nobody has confirmed yet has no handover to remind about.
+
+        The pickup block filters on ACCEPTED for the same reason the arrival
+        one does: a PENDING loan's dates are still a request, and "tomorrow
+        you pick up" about a day the owner may yet decline is a promise the
+        app has no right to make.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RMOWN6", email="rmowner6@test.com")
+        requester = User.objects.create(code="RMREQ6", email="rmreq6@test.com")
+        thing = Thing.objects.create(
+            code="RMTHN6", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=2),
+            status="PENDING",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert mail.outbox == []
+        assert "Sent 0 reminder" in out.getvalue()
+
+    def test_pickup_reminder_reaches_both_sides_in_their_own_language(self):
+        """A loan starting tomorrow nudges both sides the day before the handover.
+
+        Until now the only pickup email was the acceptance, sent when the dates
+        were agreed — weeks can pass before the day, and nobody was told it had
+        arrived. Each side gets their own words, in their own language: the
+        borrower what they must do, the owner what is about to leave.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(
+            code="RMOWN7", email="rmowner7@test.com", name="Owner", language="ca"
+        )
+        requester = User.objects.create(
+            code="RMREQ7", email="rmreq7@test.com", name="Requester", language="es"
+        )
+        thing = Thing.objects.create(
+            code="RMTHN7", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=3),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        assert len(mail.outbox) == 2
+        by_recipient = {m.to[0]: m for m in mail.outbox}
+        assert set(by_recipient) == {"rmowner7@test.com", "rmreq7@test.com"}
+
+        # The borrower is told what they must do, and who they collect from —
+        # in their own language, with the date DD/MM/YYYY like the SPA.
+        to_borrower = by_recipient["rmreq7@test.com"]
+        assert to_borrower.subject == "Mañana recoges Drill"
+        assert "recoges 'Drill' de Owner" in to_borrower.body
+        assert tomorrow.strftime("%d/%m/%Y") in to_borrower.body
+        assert tomorrow.isoformat() not in to_borrower.body
+
+        # The owner is told who is coming for it — nothing is asked of them.
+        to_owner = by_recipient["rmowner7@test.com"]
+        assert to_owner.subject == "Demà lliures Drill"
+        assert "Requester recull 'Drill'" in to_owner.body
+        assert "Sent 2 reminder" in out.getvalue()
+
+    def test_a_reservation_starting_tomorrow_gets_no_pickup_reminders(self):
+        """RESERVE has its own arrival reminder; the pickup pair is not for it.
+
+        A reservation's "pickup" is the member turning up on the owner's
+        premises — exactly what `send_reservation_reminder_email` already says,
+        requester-only. The LEND/RENT pair would mail the owner a handover
+        that never happens.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RSVOW5", email="rsvowner5@test.com")
+        member = User.objects.create(code="RSVME5", email="rsvmember5@test.com")
+        thing = Thing.objects.create(
+            code="RSVTH5", owner=owner, headline="Sala", type="RESERVE_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="RESERVE_THING",
+            requester_code=member,
+            requester_email=member.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow + timedelta(days=1),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        # One mail: the member's arrival reminder, and nothing to the owner.
+        assert [m.to[0] for m in mail.outbox] == ["rsvmember5@test.com"]
+        assert "Sala" in mail.outbox[0].subject
+        assert "Sent 1 reminder" in out.getvalue()
+
+    def test_a_single_day_loan_gets_one_reminder_per_person(self):
+        """A loan out and back the same day says the day once, not twice.
+
+        Its return day is its pickup day, so without the exclusion both blocks
+        fire and each person is mailed twice about one day — the second mail
+        answering a question the first already did.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        owner = User.objects.create(code="RMOWN8", email="rmowner8@test.com", name="Owner")
+        requester = User.objects.create(code="RMREQ8", email="rmreq8@test.com", name="Requester")
+        thing = Thing.objects.create(
+            code="RMTHN8", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=tomorrow,
+            end_date=tomorrow,
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        # The pickup pair only — the day's one handover, said once per person.
+        assert sorted(m.to[0] for m in mail.outbox) == ["rmowner8@test.com", "rmreq8@test.com"]
+        by_recipient = {m.to[0]: m for m in mail.outbox}
+        assert "pick up" in by_recipient["rmreq8@test.com"].subject
+        assert "hand over" in by_recipient["rmowner8@test.com"].subject
+        assert "Sent 2 reminder" in out.getvalue()
+
+    @pytest.mark.parametrize(
+        "start_offset, end_offset",
+        [(1, 3), (-3, 1)],
+        ids=["pickup", "return"],
+    )
+    def test_the_borrower_never_reads_the_owners_address(self, start_offset, end_offset):
+        """An owner who never set a name is "a member" to the borrower, not their email.
+
+        ``display_name`` falls back to the address, and every account made by a magic
+        link or an invitation has no name — so passing it put the owner's email in the
+        borrower's pickup and return reminders, in the HTML and the plain text alike.
+        """
+        today = date.today()
+        owner = User.objects.create(code="RMOWN9", email="nameless.owner@test.com")
+        requester = User.objects.create(code="RMREQ9", email="rmreq9@test.com", name="Requester")
+        thing = Thing.objects.create(
+            code="RMTHN9", owner=owner, headline="Drill", type="LEND_THING"
+        )
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=requester,
+            requester_email=requester.email,
+            owner_code=owner,
+            start_date=today + timedelta(days=start_offset),
+            end_date=today + timedelta(days=end_offset),
+            status="ACCEPTED",
+        )
+
+        call_command("send_reminders", stdout=StringIO())
+
+        to_borrower = next(m for m in mail.outbox if m.to == ["rmreq9@test.com"])
+        html = to_borrower.alternatives[0][0]
+        assert "nameless.owner@test.com" not in to_borrower.body
+        assert "nameless.owner@test.com" not in html
+        assert "A member" in to_borrower.body
+
+    @pytest.mark.parametrize(
+        "start_offset, end_offset, subject",
+        [(1, 3, "hand over"), (-3, 1, "comes back tomorrow")],
+        ids=["pickup", "return"],
+    )
+    def test_the_whole_team_that_runs_the_thing_is_reminded(
+        self, start_offset, end_offset, subject
+    ):
+        """In a PROPRIETARY collection the request went to every curator, so the
+        handover and the return reach every curator too — not only whoever is
+        recorded as the thing's owner. A curator who borrows is told once, as the
+        borrower."""
+        today = date.today()
+        founder = User.objects.create(code="RMFND1", email="founder@test.com", name="Founder")
+        cocurator = User.objects.create(code="RMCOC1", email="cocurator@test.com", name="Co")
+        borrower = User.objects.create(code="RMBOR1", email="borrower@test.com", name="Co2")
+        collection = Collection.objects.create(
+            code="RMCOL1", owner=founder, headline="Library", mode=Collection.Mode.PROPRIETARY
+        )
+        collection.invites.add(cocurator, borrower)
+        collection.co_owners.add(cocurator, borrower)
+        thing = Thing.objects.create(
+            code="RMTHNA", owner=founder, headline="Drill", type="LEND_THING"
+        )
+        collection.things.add(thing)
+        BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type="LEND_THING",
+            requester_code=borrower,
+            requester_email=borrower.email,
+            owner_code=founder,
+            start_date=today + timedelta(days=start_offset),
+            end_date=today + timedelta(days=end_offset),
+            status="ACCEPTED",
+        )
+
+        out = StringIO()
+        call_command("send_reminders", stdout=out)
+
+        team = sorted(m.to[0] for m in mail.outbox if subject in m.subject)
+        assert team == ["cocurator@test.com", "founder@test.com"]
+        assert [m.to[0] for m in mail.outbox].count("borrower@test.com") == 1
+        assert "Sent 3 reminder" in out.getvalue()
+
+    @pytest.mark.parametrize(
+        "start_offset, end_offset", [(1, 3), (-3, 1)], ids=["pickup", "return"]
+    )
+    def test_the_run_costs_the_same_queries_however_many_loans_are_due(
+        self, start_offset, end_offset
+    ):
+        """Each loan's team is read from rows prefetched with the bookings, so a
+        morning with six handovers in six groups asks the database what a morning
+        with two does. The senders are stubbed: what they look up for their own
+        email is theirs, and this counts what the command asks to know whom to tell."""
+        today = date.today()
+
+        def due_loans(count, start):
+            for n in range(start, start + count):
+                founder = User.objects.create(code=f"RQF{n:03d}", email=f"f{n}@test.com")
+                cocurator = User.objects.create(code=f"RQC{n:03d}", email=f"c{n}@test.com")
+                borrower = User.objects.create(code=f"RQB{n:03d}", email=f"b{n}@test.com")
+                group = Collection.objects.create(
+                    code=f"RQG{n:03d}",
+                    owner=founder,
+                    headline="Taller",
+                    mode=Collection.Mode.PROPRIETARY,
+                )
+                group.invites.add(cocurator, borrower)
+                group.co_owners.add(cocurator)
+                thing = Thing.objects.create(
+                    code=f"RQT{n:03d}", owner=founder, headline="Drill", type="LEND_THING"
+                )
+                group.things.add(thing)
+                BookingPeriod.objects.create(
+                    thing_code=thing,
+                    thing_type="LEND_THING",
+                    requester_code=borrower,
+                    requester_email=borrower.email,
+                    owner_code=founder,
+                    start_date=today + timedelta(days=start_offset),
+                    end_date=today + timedelta(days=end_offset),
+                    status="ACCEPTED",
+                )
+
+        module = "core.management.commands.send_reminders"
+        senders = [
+            "send_pickup_due_email",
+            "send_pickup_reminder_email",
+            "send_return_due_email",
+            "send_return_reminder_email",
+        ]
+
+        def run():
+            with contextlib.ExitStack() as stack:
+                mocks = {n: stack.enter_context(patch(f"{module}.{n}")) for n in senders}
+                with CaptureQueriesContext(connection) as queries:
+                    call_command("send_reminders", stdout=StringIO())
+            team = (
+                "send_pickup_reminder_email" if start_offset > 0 else "send_return_reminder_email"
+            )
+            told = sorted(c.kwargs["owner_email"] for c in mocks[team].call_args_list)
+            return len(queries), told
+
+        due_loans(2, 0)
+        small, told_small = run()
+        due_loans(4, 2)
+        big, told_big = run()
+
+        # Not vacuous: every founder and every co-curator was told, in both runs.
+        assert told_small == sorted(f"{who}{n}@test.com" for who in "cf" for n in range(2))
+        assert told_big == sorted(f"{who}{n}@test.com" for who in "cf" for n in range(6))
+        assert big == small, f"a query per loan: {small} for 2 due, {big} for 6"
 
 
 @pytest.mark.django_db

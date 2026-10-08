@@ -772,7 +772,7 @@ def _ctas(primary, secondary, fallback):
 # The owner's email note (Collection.email_note) renders a small Markdown subset
 # into an ``md`` block — the ONE block type whose html arrives pre-built and
 # mark_safe()d rather than autoescaped. See _note_blocks for the invariant.
-_MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+_MD_LINK_OPEN = re.compile(r"\[([^\]]+)\]\(")
 _MD_BOLD = re.compile(r"\*\*(.+?)\*\*")
 _MD_EM = re.compile(r"(?<!\w)\*(.+?)\*(?!\w)")
 _MD_BULLET = re.compile(r"^- ")
@@ -792,6 +792,47 @@ def _link_host(escaped_url):
         return host.encode("idna").decode("ascii") if host else None
     except (ValueError, UnicodeError):
         return None
+
+
+def _resolve_link(escaped_url):
+    """``(href, host)`` for the target of a ``[text](url)``, or ``None`` when it is
+    no link. The twin of the frontend's ``resolveLink`` (the two read the cases of
+    ``frontend/src/test/markdownLinkParity.json`` alike): ``www.…`` is read as
+    ``https://www.…``, ``mailto:`` is allowed (it has no host to name), anything
+    that is not http(s) with a host stays text. In an email every link is
+    external: there is no "internal" one.
+    """
+    url = escaped_url.strip()
+    if re.fullmatch(r"mailto:\S+", url, re.IGNORECASE):
+        return url, None
+    candidate = f"https://{url}" if re.match(r"www\.", url, re.IGNORECASE) else url
+    host = _link_host(candidate) if _MD_URL.match(candidate) else None
+    return (candidate, host) if host else None
+
+
+def _md_links(text, park):
+    """``[text](url)`` spans, the url taking **balanced parentheses** (an address
+    like ``…/wiki/Foo_(bar)`` used to be cut at the first ``)``). ``park`` turns a
+    link into its placeholder; anything that is not a link stays as written."""
+    out, start = [], 0
+    for opening in _MD_LINK_OPEN.finditer(text):
+        if opening.start() < start:
+            continue
+        depth, i = 1, opening.end()
+        while i < len(text) and depth:
+            depth += {"(": 1, ")": -1}.get(text[i], 0)
+            i += 1
+        if depth:
+            continue  # never closed
+        url = text[opening.end() : i - 1]
+        replaced = None if re.search(r"\s", url) else park(opening.group(1), url)
+        if replaced is None:
+            continue
+        out.append(text[start : opening.start()])
+        out.append(replaced)
+        start = i
+    out.append(text[start:])
+    return "".join(out)
 
 
 def _md_inline(escaped_text):
@@ -814,18 +855,18 @@ def _md_inline(escaped_text):
     text = escaped_text.replace("\x00", "")  # typed NUL can't forge a placeholder
     anchors = []
 
-    def park(match):
-        label, url = match.group(1), match.group(2)
-        host = _link_host(url) if _MD_URL.match(url) else None
-        if host:
-            anchor = f'<a href="{url}" style="{LINK_STYLE}">{label}</a>'
-            if html_unescape(label).strip() != html_unescape(url):
-                anchor += f" ({escape(host)})"
-            anchors.append(anchor)
-            return f"\x00{len(anchors) - 1}\x00"
-        return match.group(0)
+    def park(label, url):
+        resolved = _resolve_link(url)
+        if not resolved:
+            return None
+        href, host = resolved
+        anchor = f'<a href="{href}" style="{LINK_STYLE}">{label}</a>'
+        if host and html_unescape(label).strip() != html_unescape(url.strip()):
+            anchor += f" ({escape(host)})"
+        anchors.append(anchor)
+        return f"\x00{len(anchors) - 1}\x00"
 
-    text = _MD_LINK.sub(park, text)
+    text = _md_links(text, park)
     text = _MD_BOLD.sub(r"<strong>\1</strong>", text)
     text = _MD_EM.sub(r"<em>\1</em>", text)
     for index, anchor in enumerate(anchors):
@@ -2016,7 +2057,7 @@ def send_return_reminder_email(requester_name, thing, end_date, owner_email):
     T, L = _texts(lang), _local(lang)
     headline = L(thing.headline)
     header = headline
-    subject = T("reminder_subject")
+    subject = T("reminder_subject").format(thing=headline)
     end = _fmt_date(end_date)
     plain = T("reminder_plain").format(requester=requester_name, thing=headline, end=end)
     body = T("reminder_body").format(requester=requester_name, thing=headline, end=end)
@@ -2033,10 +2074,13 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     lending library runs on this message.
 
     It names the owner rather than "the owner": returning something is a promise
-    made to a person, and the borrower may be in several groups at once.
+    made to a person, and the borrower may be in several groups at once. The
+    caller passes the owner's bare ``name``: the borrower does not hold the
+    owner's address, so an owner with no name is "a member", never their email.
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
+    owner_name = _member_name(owner_name, lang)
     headline = L(thing.headline)
     header = headline
     thing_url = _thing_url(thing, reader=user)
@@ -2052,6 +2096,100 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
         plain,
         html,
         CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
+def send_pickup_due_email(owner_name, thing, start_date, requester_email):
+    """Remind the **borrower** they pick the thing up tomorrow (LEND/RENT).
+
+    The arrival nudge of a loan or rental: the only pickup email before this
+    was the acceptance, sent when the dates were agreed — weeks can pass
+    between that and the day, and the one person who has to be somewhere at a
+    time heard nothing meanwhile. The pickup twin of ``send_return_due_email``
+    (same reader, same CTA to the listing, the other end of the loan), and the
+    same rule for the owner's name: bare ``name``, "a member" when there is none.
+    """
+    user, lang = _recipient(requester_email)
+    T, L = _texts(lang), _local(lang)
+    owner_name = _member_name(owner_name, lang)
+    headline = L(thing.headline)
+    header = headline
+    thing_url = _thing_url(thing, reader=user)
+    subject = T("pickup_due_subject").format(thing=headline)
+    start = _fmt_date(start_date)
+    plain = T("pickup_due_plain").format(owner=owner_name, thing=headline, start=start)
+    body = T("pickup_due_body").format(owner=owner_name, thing=headline, start=start)
+    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=header,
+    )
+
+
+def send_pickup_reminder_email(requester_name, thing, start_date, owner_email):
+    """Remind the owner they hand the thing over tomorrow (LEND/RENT).
+
+    The owner's half of the pickup nudge — the same reader the return reminder
+    reaches, told about the day the thing *leaves* rather than the day it comes
+    back. Nothing is asked of them (the requester is the one who has to turn
+    up), so like ``send_return_reminder_email`` there is no button.
+    """
+    user, lang = _recipient(owner_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    subject = T("pickup_reminder_subject").format(thing=headline)
+    start = _fmt_date(start_date)
+    plain = T("pickup_reminder_plain").format(requester=requester_name, thing=headline, start=start)
+    body = T("pickup_reminder_body").format(requester=requester_name, thing=headline, start=start)
+    html = _render_email([_para(body)], lang=lang, header=header)
+    _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
+
+
+def send_return_overdue_email(manager, thing, end_date, requester_email):
+    """Nudge the **borrower** whose loan or rental is past its return date.
+
+    The one return email that is sent by a person rather than by the daily
+    command: whoever manages the thing pressed "remind them to return it" on
+    ``/owner-bookings``, so the message names them (by bare ``name``, through
+    ``_member_name`` — never the address ``display_name`` falls back to) and
+    ``Reply-To`` is their address, which ``/owner-bookings`` says before the
+    press — the borrower's natural answer ("I'll bring it tomorrow") goes
+    straight to the person who asked. The wording leaves room for a return that
+    simply was never recorded, since OIUEEI only assumes a loan comes back.
+    """
+    user, lang = _recipient(requester_email)
+    T, L = _texts(lang), _local(lang)
+    headline = L(thing.headline)
+    header = headline
+    thing_url = _thing_url(thing, reader=user)
+    subject = T("return_overdue_subject").format(thing=headline)
+    end = _fmt_date(end_date)
+    # The bare name: `display_name` falls back to the address. The address does
+    # reach the borrower — as `Reply-To`, which the page tells the manager before
+    # they press — but it is no name to put in a sentence.
+    name = _member_name(manager.name, lang)
+    plain = T("return_overdue_plain").format(manager=name, thing=headline, end=end)
+    body = T("return_overdue_body").format(manager=name, thing=headline, end=end)
+    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
+    html = _render_email(blocks, lang=lang, header=header)
+    _send(
+        requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        reply_to=[manager.email],
         user=user,
         lang=lang,
         header=header,

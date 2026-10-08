@@ -424,7 +424,8 @@
     "successMessage": "We've let the people who run it know — they'll get back to you soon.",
     "backTo": "Back to {{label}}",
     "errorSending": "Error sending request.",
-    "contactShared": "Whoever runs this thing will see your name and email."
+    "contactShared": "Whoever runs this thing will see your name and email.",
+    "joinedGroup": "To ask here you've joined {{group}}. You can leave it from your profile."
   },
   "datePicker": {
     "open": "Choose date",
@@ -445,6 +446,7 @@
     "pdfTooLarge": "The file is too large (max 5 MB).",
     "imageTooLarge": "The image is too large (max 10 MB). Try a photo the browser can resize.",
     "rateLimited": "You've reached the limit of {{max}} photos an hour. Try again in a while.",
+    "pdfRateLimited": "You've reached the limit of {{max}} documents an hour. Try again in a while.",
     "welcomeDocLabel": "Welcome document (PDF)",
     "welcomeDocHelper": "Optional. Everyone who joins the group receives it by email, once."
   },
@@ -610,7 +612,11 @@
     "captionPast": "Requests you have already answered",
     "cancelReservation": "Cancel reservation",
     "reservationCancelled": "Reservation cancelled — the member has been told.",
-    "cancelReservationConfirmBody": "We'll tell them it's been cancelled, and the slot opens up for someone else to book. This can't be undone."
+    "cancelReservationConfirmBody": "We'll tell them it's been cancelled, and the slot opens up for someone else to book. This can't be undone.",
+    "remindReturn": "Remind them to return it",
+    "remindReturnSent": "Reminder sent.",
+    "remindedOn": "Reminded on {{date}}",
+    "remindReturnNotice": "When you remind someone to return a thing, they can reply to you directly: they'll see your email address."
   },
   "manageInvites": {
     "pageTitle": "Manage members",
@@ -1080,6 +1086,7 @@
     "testError": "Couldn't send the test email. Please try again."
   },
   "requestErrors": {
+    "already_reminded_today": "You've already reminded them today.",
     "already_requested": "You've already asked for this — wait for the owner's answer.",
     "cancel_forbidden": "You can't cancel this reservation.",
     "co_owners_full_one": "This group's team already has 1 person besides the founder — the most it allows.",
@@ -1087,6 +1094,7 @@
     "dates_taken": "Those dates are already taken.",
     "not_a_member": "You need to be a member of this group to reserve.",
     "not_available": "This isn't available right now.",
+    "not_awaiting_return": "This isn't waiting to be returned any more.",
     "rental_length_not_allowed": "This collection only allows periods of {{allowed}} days.",
     "rental_pickup_weekday": "Pickup isn't possible on that day of the week.",
     "rental_return_weekday": "Return isn't possible on that day of the week.",

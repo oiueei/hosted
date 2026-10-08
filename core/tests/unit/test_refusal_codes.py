@@ -23,6 +23,7 @@ SOURCES = [
     ROOT / "core" / "models" / "collection.py",
     ROOT / "core" / "services" / "booking_service.py",
     ROOT / "core" / "views" / "collections.py",
+    ROOT / "core" / "views" / "booking.py",
 ]
 LOCALES = ROOT / "frontend" / "src" / "i18n" / "locales"
 

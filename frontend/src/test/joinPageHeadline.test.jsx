@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
@@ -7,6 +7,7 @@ vi.mock('../services/api', () => ({
   getCsrfToken: () => 'tok',
 }));
 
+import i18n from 'i18next';
 import { apiFetch } from '../services/api';
 import JoinPage from '../pages/JoinPage';
 
@@ -70,6 +71,40 @@ describe('JoinPage — the collection is named', () => {
     // The test i18n runs in English, so the raw map must never reach the screen.
     expect(await screen.findByText(/^Join to borrow in Tool Library\./)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\{"en"/);
+  });
+
+  // `useCollectionLanguage` switches this page to the group's own language once the
+  // collection has loaded — which is after the name arrived. The name used to be
+  // resolved at that moment and kept as words, so the title stayed in the language
+  // before the switch. It has to follow the page into the new one.
+  test('the name follows the page into another language after it has loaded', async () => {
+    i18n.addResourceBundle('ca', 'translation', { common: { done: 'Fet' } });
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline: JSON.stringify({ en: 'Tool Library', ca: "Biblioteca d'eines" }),
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+        }),
+    });
+
+    try {
+      renderJoin(undefined);
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Join Tool Library' })
+      ).toBeInTheDocument();
+
+      await act(() => i18n.changeLanguage('ca'));
+
+      expect(
+        await screen.findByRole('heading', { level: 1, name: "Join Biblioteca d'eines" })
+      ).toBeInTheDocument();
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+      i18n.removeResourceBundle('ca', 'translation');
+    }
   });
 
   test('a collection it cannot read leaves the generic copy, not a broken name', async () => {

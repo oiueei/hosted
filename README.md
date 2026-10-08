@@ -227,6 +227,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/owner-bookings/` | Bookings on my things, plus every booking on a thing in a PROPRIETARY collection I curate (with requester name) |
 | POST | `/api/v1/bookings/{code}/accept/` | Accept a pending booking — a manager of the thing (owner or PROPRIETARY-collection curator) |
 | POST | `/api/v1/bookings/{code}/reject/` | Reject a pending booking — a manager of the thing |
+| POST | `/api/v1/bookings/{code}/remind-return/` | "Remind them to return it": a manager of the thing mails the borrower of an overdue loan or rental, once a day per booking (429 `already_reminded_today` after that) |
 | POST | `/api/v1/bookings/{code}/cancel/` | Cancel a booking. Own pending booking (requester); for a RESERVE_THING reservation that hasn't started, the requester or any curator (owner or co-curator) of the reservations collection |
 
 ### FAQ
@@ -244,7 +245,8 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 |--------|-----|-------------|
 | GET | `/api/v1/inbox/` | List in-app notifications for the current user |
 | DELETE | `/api/v1/inbox/{code}/` | Dismiss an in-app notification |
-| POST | `/api/v1/upload/ticket/` | Get a short-lived ticket to upload one file straight to object storage (rate limited: 120/h) |
+| DELETE | `/api/v1/inbox/?group=bookings[&collection={code}]` | Dismiss, in one call, the request and reservation notices that are for the team managing them (the set the inbox folds into one summary card) |
+| POST | `/api/v1/upload/ticket/` | Get a short-lived ticket to upload one file straight to object storage (rate limited: 120/h, of which 10/h for PDFs) |
 | GET | `/api/v1/theeemes/` | List all available theeemes |
 | POST | `/api/v1/contact/` | Support/contact form (anonymous on purpose — a locked-out user is the main case; rate limited: 5/h per IP). Forwards the message to the operator with the sender as Reply-To; `kind: support\|collab` labels the subject (the `/contact` page sends none, which is `support`; no page sends `collab` since 2026-10-04) |
 | GET | `/api/v1/health/` | Health check: verifies app **and** database (`SELECT 1`) — 200 ok / 503 degraded. Point your uptime monitor here (rate limited: 60/min per IP, GET and HEAD — far above any real monitor's cadence) |
@@ -323,7 +325,7 @@ python manage.py set_bucket_cors --show     # what the bucket allows right now
 python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
-python manage.py send_reminders    # loan return reminders (both sides) + reservation arrival reminders (daily)
+python manage.py send_reminders    # loan pickup and return reminders (both sides) + reservation arrival reminders (daily)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
 # Look at every email in a real mail client — sample data, every builder, one address.
@@ -353,7 +355,7 @@ python manage.py backfill_events
 Backend `pytest` + `pytest-django`, frontend `vitest` + Testing Library + `jest-axe`.
 Coverage floors are **ratchets, not targets** — they sit a couple of points under
 the suite's real coverage so a regression is visible, and CI enforces both:
-backend 96%, frontend 90/84/84/92 (statements/branches/functions/lines).
+backend 96%, frontend 92/87/86/93 (statements/branches/functions/lines).
 
 **CI runs the backend suite against PostgreSQL, not SQLite.** That is not parity
 for its own sake. On SQLite, Django reports `has_select_for_update = False` and

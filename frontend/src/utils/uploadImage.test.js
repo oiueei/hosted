@@ -186,6 +186,22 @@ describe('uploadImage', () => {
   });
 });
 
+describe('IMAGE_MAX_BYTES', () => {
+  test('is the size the server signs into an image ticket', () => {
+    // The courtesy check after the resize refuses a file before its round trip; a
+    // number that drifts from `core/views/upload.py` either refuses photos the
+    // server would sign or sends ones it refuses.
+    const serverSource = readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
+      'utf8'
+    );
+    const mb = serverSource.match(/^IMAGE_MAX_BYTES = (\d+) \* 1024 \* 1024$/m);
+
+    expect(mb).not.toBeNull();
+    expect(IMAGE_MAX_BYTES).toBe(Number(mb[1]) * 1024 * 1024);
+  });
+});
+
 describe('UPLOADS_PER_HOUR', () => {
   test('is the allowance the server rations tickets at', () => {
     // The client counts the photos of a ZIP against this before it uploads any, so a
@@ -195,7 +211,7 @@ describe('UPLOADS_PER_HOUR', () => {
       path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
       'utf8'
     );
-    const rate = serverSource.match(/ratelimit\(key="user", rate="(\d+)\/h"/);
+    const rate = serverSource.match(/^TICKETS_PER_HOUR = (\d+)$/m);
 
     expect(rate).not.toBeNull();
     expect(UPLOADS_PER_HOUR).toBe(Number(rate[1]));

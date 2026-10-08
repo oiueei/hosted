@@ -14,7 +14,7 @@ so that can be done for every email in one sitting.
 way out — recipient forced to ``--to``, Cc/Bcc dropped — so it does not matter how
 a builder works out its recipients (the capacity alarm mails the superusers, the
 contact form the operator): none of it can reach anyone else. Each subject is
-prefixed ``[TEST 07/34 booking_request]`` so the messages sort and tell
+prefixed ``[TEST 07/37 booking_request]`` so the messages sort and tell
 themselves apart.
 
 **It leaves nothing behind.** The sample users, collections, things and bookings
@@ -29,7 +29,7 @@ carry sample tokens, so they will not do anything when clicked. What is being
 tested is how the message looks and reads, not what its links do.
 
 Sending for real (an SMTP backend) needs ``--yes``, so a typo in ``--to`` cannot
-send 34 emails by accident; the console backend needs nothing.
+send 37 emails by accident; the console backend needs nothing.
 """
 
 import time
@@ -360,6 +360,21 @@ def _(w):
 @sample("return_due_to_borrower", "send_return_due_email")
 def _(w):
     es.send_return_due_email("Lala", w.lend, w.end, w.to)
+
+
+@sample("pickup_due_to_borrower", "send_pickup_due_email")
+def _(w):
+    es.send_pickup_due_email("Lala", w.lend, w.start, w.to)
+
+
+@sample("pickup_reminder_to_owner", "send_pickup_reminder_email")
+def _(w):
+    es.send_pickup_reminder_email("Lele", w.lend, w.start, w.to)
+
+
+@sample("return_overdue_to_borrower", "send_return_overdue_email")
+def _(w):
+    es.send_return_overdue_email(w.me, w.lend, w.end, w.to)
 
 
 @sample("reservation_confirmed", "send_reservation_confirmed_email")

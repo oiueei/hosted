@@ -545,6 +545,22 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             )
         return self.context["_viewer_muted_collection_codes"]
 
+    def _collection_has_date_things(self, collection):
+        """The calendar entry's rule: the allowlist when the owner set one, else
+        whether the group holds a thing booked by date. Cached per collection on
+        the shared context, so a list read through a collection asks once, not
+        once per thing."""
+        cache = self.context.setdefault("_date_things_by_collection", {})
+        if collection.code not in cache:
+            allowed = collection.allowed_thing_types or []
+            if allowed:
+                cache[collection.code] = any(kind in DATE_BASED_TYPES for kind in allowed)
+            else:
+                cache[collection.code] = collection.things.filter(
+                    type__in=DATE_BASED_TYPES
+                ).exists()
+        return cache[collection.code]
+
     def get_collection_menu(self, obj):
         """What the thing's own page needs to paint the collection menu — and
         nothing more, so the page never loads the collection
@@ -586,13 +602,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         is_digest_muted = (
             is_member and sends_digest and collection.code in self._viewer_muted_collection_codes()
         )
-        has_date_things = False
-        if is_curator:
-            allowed = collection.allowed_thing_types or []
-            if allowed:
-                has_date_things = any(kind in DATE_BASED_TYPES for kind in allowed)
-            else:
-                has_date_things = collection.things.filter(type__in=DATE_BASED_TYPES).exists()
+        has_date_things = is_curator and self._collection_has_date_things(collection)
 
         return {
             "is_curator": is_curator,
