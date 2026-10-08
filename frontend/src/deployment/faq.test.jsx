@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import i18n from 'i18next';
@@ -238,15 +238,17 @@ describe('the ways in', () => {
     window.history.pushState({}, '', '/legal');
     render(<App />);
 
-    // Written inside the legal Markdown, so `MarkdownText` renders it — which
-    // means this one *does* open in a new tab, unlike the links on the help
-    // page itself. Deliberate here: a reader sent to the plain-language answer
-    // keeps the full text open behind them.
+    // Written inside the legal Markdown, so `MarkdownText` renders it: a path on
+    // this site, so it opens in the same tab and a plain click is followed by the
+    // router, like the links on the help page itself.
     const link = await waitFor(() => {
       const found = document.querySelector('a[href="/faq"]');
       expect(found).not.toBeNull();
       return found;
     });
-    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('target')).toBeNull();
+
+    fireEvent.click(link);
+    await waitFor(() => expect(window.location.pathname).toBe('/faq'));
   });
 });
