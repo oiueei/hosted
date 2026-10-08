@@ -32,6 +32,10 @@ SINGLE_USE_TYPES = ["GIFT_THING", "SELL_THING"]
 # written on the booking (nothing changes hands).
 ON_SITE_TYPES = ["RESERVE_THING"]
 
+# Date-based types whose thing is carried away and has to come back: a loan or a
+# rental. The ones a return can be due on (and so reminded about).
+RETURNABLE_TYPES = [t for t in DATE_BASED_TYPES if t not in ON_SITE_TYPES]
+
 
 class BookingPeriod(models.Model):
     """
@@ -166,10 +170,7 @@ class BookingPeriod(models.Model):
         as one subquery) so a page of twenty finished loans costs no query per
         row; anywhere else the question is asked here.
         """
-        if self.status != self.Status.ACCEPTED or self.thing_type not in (
-            "LEND_THING",
-            "RENT_THING",
-        ):
+        if self.status != self.Status.ACCEPTED or self.thing_type not in RETURNABLE_TYPES:
             return False
         today = today or timezone.localdate()
         if not self.start_date or not self.end_date or self.end_date >= today:

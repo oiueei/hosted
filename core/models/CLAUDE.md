@@ -320,6 +320,7 @@ The `BookingPeriod` model is the unified reservation/booking model for all thing
 DATE_BASED_TYPES = ["LEND_THING", "RENT_THING", "RESERVE_THING"]  # Require dates
 SINGLE_USE_TYPES = ["GIFT_THING", "SELL_THING"]  # Thing becomes INACTIVE after acceptance
 ON_SITE_TYPES = ["RESERVE_THING"]  # Auto-confirmed, no ThingTransfer (nothing changes hands)
+RETURNABLE_TYPES = ["LEND_THING", "RENT_THING"]  # Derived: DATE_BASED minus ON_SITE — carried away, so a return is due
 ```
 
 **RESERVE_THING** is date-based (it gets the strict-overlap conflict check and
