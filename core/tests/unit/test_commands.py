@@ -2,6 +2,7 @@
 Unit tests for OIUEEI management commands.
 """
 
+import contextlib
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
@@ -13,6 +14,8 @@ import time_machine
 from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from core.models import RSVP, Collection, Thing, User
@@ -574,6 +577,75 @@ class TestSendRemindersCommand:
         assert team == ["cocurator@test.com", "founder@test.com"]
         assert [m.to[0] for m in mail.outbox].count("borrower@test.com") == 1
         assert "Sent 3 reminder" in out.getvalue()
+
+    @pytest.mark.parametrize(
+        "start_offset, end_offset", [(1, 3), (-3, 1)], ids=["pickup", "return"]
+    )
+    def test_the_run_costs_the_same_queries_however_many_loans_are_due(
+        self, start_offset, end_offset
+    ):
+        """Each loan's team is read from rows prefetched with the bookings, so a
+        morning with six handovers in six groups asks the database what a morning
+        with two does. The senders are stubbed: what they look up for their own
+        email is theirs, and this counts what the command asks to know whom to tell."""
+        today = date.today()
+
+        def due_loans(count, start):
+            for n in range(start, start + count):
+                founder = User.objects.create(code=f"RQF{n:03d}", email=f"f{n}@test.com")
+                cocurator = User.objects.create(code=f"RQC{n:03d}", email=f"c{n}@test.com")
+                borrower = User.objects.create(code=f"RQB{n:03d}", email=f"b{n}@test.com")
+                group = Collection.objects.create(
+                    code=f"RQG{n:03d}",
+                    owner=founder,
+                    headline="Taller",
+                    mode=Collection.Mode.PROPRIETARY,
+                )
+                group.invites.add(cocurator, borrower)
+                group.co_owners.add(cocurator)
+                thing = Thing.objects.create(
+                    code=f"RQT{n:03d}", owner=founder, headline="Drill", type="LEND_THING"
+                )
+                group.things.add(thing)
+                BookingPeriod.objects.create(
+                    thing_code=thing,
+                    thing_type="LEND_THING",
+                    requester_code=borrower,
+                    requester_email=borrower.email,
+                    owner_code=founder,
+                    start_date=today + timedelta(days=start_offset),
+                    end_date=today + timedelta(days=end_offset),
+                    status="ACCEPTED",
+                )
+
+        module = "core.management.commands.send_reminders"
+        senders = [
+            "send_pickup_due_email",
+            "send_pickup_reminder_email",
+            "send_return_due_email",
+            "send_return_reminder_email",
+        ]
+
+        def run():
+            with contextlib.ExitStack() as stack:
+                mocks = {n: stack.enter_context(patch(f"{module}.{n}")) for n in senders}
+                with CaptureQueriesContext(connection) as queries:
+                    call_command("send_reminders", stdout=StringIO())
+            team = (
+                "send_pickup_reminder_email" if start_offset > 0 else "send_return_reminder_email"
+            )
+            told = sorted(c.kwargs["owner_email"] for c in mocks[team].call_args_list)
+            return len(queries), told
+
+        due_loans(2, 0)
+        small, told_small = run()
+        due_loans(4, 2)
+        big, told_big = run()
+
+        # Not vacuous: every founder and every co-curator was told, in both runs.
+        assert told_small == sorted(f"{who}{n}@test.com" for who in "cf" for n in range(2))
+        assert told_big == sorted(f"{who}{n}@test.com" for who in "cf" for n in range(6))
+        assert big == small, f"a query per loan: {small} for 2 due, {big} for 6"
 
 
 @pytest.mark.django_db
