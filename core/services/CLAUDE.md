@@ -387,6 +387,8 @@ Until 2026-10-02 only a delete freed anything: a replaced or removed photo staye
 - **`update_fields` is honoured.** A column left out of it was not written, so it neither drops a key nor becomes the new baseline — the next real write drops the key the row actually held.
 - **The remembered keys are a copy**, so `thing.gallery.remove(k); thing.save()` still reads as a change.
 
+**Left open on purpose:** two requests that both load a row and save it in full can race — the first replaces a key and destroys the old object, the second writes the old key back, and the row names an object that is gone (a broken photo, the same lost update a concurrent full save already causes to every other column). Closing it would mean locking every edit of a thing, collection or profile; re-uploading the photo mends it.
+
 Anything that bypasses `save()` (`QuerySet.update`, `bulk_update`) bypasses this too — none writes an asset column today. What it misses is left for the orphan sweep, which is the net, not the mechanism.
 
 #### A key another record still holds is never destroyed (2026-10-02)

@@ -24,6 +24,15 @@ to be handled only by ``seed_demo --reset`` suspending the whole mechanism,
 which left the admin as an open trapdoor; the skip below closes it, and
 ``suspended()`` stays for what it is actually for.
 
+**One race it does not close.** Two requests that load the same row and both
+save it in full: the first replaces a key and destroys the old object; the
+second, still holding the old key in memory, writes it back. The row then names
+an object that is gone — a broken photo, not a leak, and the same lost update
+any concurrent full save already causes to the row's other columns. Closing it
+would mean locking every edit of a thing, a collection or a profile for a case
+two people editing the same row at the same second can produce; it is left
+open on purpose, and re-uploading the photo mends it.
+
 **A key another row still holds is never destroyed either** (2026-10-02). A
 row does not own its keys: a key is the path of its public URL, and
 ``ImageIdField`` binds it to a folder, not to an uploader. So a member who
