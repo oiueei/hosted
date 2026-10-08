@@ -109,7 +109,18 @@ class TestSomeoneWithASeat:
         group.invites.add(stranger)
         thing = thing_in(group, contributor, kind, "MBTH03")
 
-        assert ask(stranger, thing).status_code == 201
+        response = ask(stranger, thing)
+
+        assert response.status_code == 201
+        booking = BookingPeriod.objects.get(thing_code=thing)
+        assert booking.requester_code == stranger
+        assert booking.status == BookingPeriod.Status.PENDING
+        # A gift or a sale is held for the one who asked; a loan stays open to dates.
+        thing.refresh_from_db()
+        expected = (
+            Thing.Status.ACTIVE if kind in ("LEND_THING", "RENT_THING") else Thing.Status.TAKEN
+        )
+        assert thing.status == expected
 
     def test_whoever_founded_a_community_group_may_ask_for_a_members_thing(
         self, group, founder, contributor
