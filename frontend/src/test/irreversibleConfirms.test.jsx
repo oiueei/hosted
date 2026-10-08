@@ -272,6 +272,65 @@ describe('RemoveGuestPage', () => {
 
     expect(mutations()).toEqual([]);
   });
+
+  // A removal the server refused, or one that never reached it, keeps the page and
+  // the guest's name, says so, and lets the curator press Remove again.
+  test.each([
+    [
+      'refused',
+      () => Promise.resolve({ ok: false, status: 400, json: async () => ({}) }),
+      'Error removing member.',
+    ],
+    ['never arrived', () => Promise.reject(new TypeError('offline')), 'Connection error.'],
+  ])('a removal that was %s keeps the page and says so', async (_case, deleteResponse, said) => {
+    apiFetch.mockImplementation((url, opts) =>
+      opts?.method === 'DELETE'
+        ? deleteResponse()
+        : Promise.resolve({ ok: true, status: 200, json: async () => COLLECTION })
+    );
+    renderPage();
+    await screen.findByText(/lose access immediately/i);
+    navigate.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+    expect(await screen.findByText(said)).toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled());
+  });
+
+  // Opened by hand, or after a reload, the page has no guest to remove: it goes
+  // back to the members list rather than offering a button that would remove nobody.
+  test('with no guest to remove it goes back to the members list', async () => {
+    mockApi({}, COLLECTION);
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001/invites/remove']}>
+        <Routes>
+          <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/collections/COL001/invites'));
+    expect(mutations()).toEqual([]);
+  });
+
+  test('a guest with no name is named as a member, not left blank', async () => {
+    mockApi({}, COLLECTION);
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/collections/COL001/invites/remove', state: { guestCode: 'GST001' } },
+        ]}
+      >
+        <Routes>
+          <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Remove: A member' })).toBeInTheDocument();
+  });
 });
 
 describe('LeaveCollectionPage', () => {
@@ -329,5 +388,50 @@ describe('LeaveCollectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(mutations()).toEqual([]);
+  });
+  test.each([
+    [
+      'refused',
+      () => Promise.resolve({ ok: false, status: 400, json: async () => ({}) }),
+      "Couldn't leave the group. Please try again.",
+    ],
+    ['never arrived', () => Promise.reject(new TypeError('offline')), 'Connection error.'],
+  ])(
+    'a leave that was %s keeps the membership page and says so',
+    async (_case, postResponse, said) => {
+      apiFetch.mockImplementation((url, opts) =>
+        opts?.method === 'POST'
+          ? postResponse()
+          : Promise.resolve({ ok: true, status: 200, json: async () => COLLECTION })
+      );
+      renderPage();
+      await screen.findByText(/unless the owner invites you again/i);
+      navigate.mockClear();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Leave the group' }));
+
+      expect(await screen.findByText(said)).toBeInTheDocument();
+      expect(navigate).not.toHaveBeenCalled();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Leave the group' })).toBeEnabled()
+      );
+    }
+  );
+
+  // Reached with no navigation state (typed, or after a reload) it has no name to
+  // give the group, and says "this collection" rather than an empty pair of quotes.
+  test('with no name for the group it still asks a whole question', async () => {
+    mockApi({}, COLLECTION);
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001/leave']}>
+        <Routes>
+          <Route path="/collections/:code/leave" element={<LeaveCollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Leave this collection?' })
+    ).toBeInTheDocument();
   });
 });
