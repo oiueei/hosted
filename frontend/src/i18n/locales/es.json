@@ -608,7 +608,8 @@
     "cancelReservationConfirmBody": "Le avisaremos de que se ha cancelado, y quedará libre para que otra persona lo reserve. No se puede deshacer.",
     "remindReturn": "Recordar la devolución",
     "remindReturnSent": "Recordatorio enviado.",
-    "remindedOn": "Recordado el {{date}}"
+    "remindedOn": "Recordado el {{date}}",
+    "remindReturnNotice": "Cuando recuerdas a alguien que devuelva una cosa, puede responderte directamente: verá tu dirección de correo."
   },
   "manageInvites": {
     "pageTitle": "Gestionar miembros",

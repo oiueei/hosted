@@ -2161,8 +2161,10 @@ def send_return_overdue_email(manager, thing, end_date, requester_email):
 
     The one return email that is sent by a person rather than by the daily
     command: whoever manages the thing pressed "remind them to return it" on
-    ``/owner-bookings``, so the message names them and ``Reply-To`` is their
-    address — the borrower's natural answer ("I'll bring it tomorrow") goes
+    ``/owner-bookings``, so the message names them (by bare ``name``, through
+    ``_member_name`` — never the address ``display_name`` falls back to) and
+    ``Reply-To`` is their address, which ``/owner-bookings`` says before the
+    press — the borrower's natural answer ("I'll bring it tomorrow") goes
     straight to the person who asked. The wording leaves room for a return that
     simply was never recorded, since OIUEEI only assumes a loan comes back.
     """
@@ -2173,8 +2175,12 @@ def send_return_overdue_email(manager, thing, end_date, requester_email):
     thing_url = _thing_url(thing, reader=user)
     subject = T("return_overdue_subject").format(thing=headline)
     end = _fmt_date(end_date)
-    plain = T("return_overdue_plain").format(manager=manager.display_name, thing=headline, end=end)
-    body = T("return_overdue_body").format(manager=manager.display_name, thing=headline, end=end)
+    # The bare name: `display_name` falls back to the address. The address does
+    # reach the borrower — as `Reply-To`, which the page tells the manager before
+    # they press — but it is no name to put in a sentence.
+    name = _member_name(manager.name, lang)
+    plain = T("return_overdue_plain").format(manager=name, thing=headline, end=end)
+    body = T("return_overdue_body").format(manager=name, thing=headline, end=end)
     blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(

@@ -614,7 +614,8 @@
     "cancelReservationConfirmBody": "We'll tell them it's been cancelled, and the slot opens up for someone else to book. This can't be undone.",
     "remindReturn": "Remind them to return it",
     "remindReturnSent": "Reminder sent.",
-    "remindedOn": "Reminded on {{date}}"
+    "remindedOn": "Reminded on {{date}}",
+    "remindReturnNotice": "When you remind someone to return a thing, they can reply to you directly: they'll see your email address."
   },
   "manageInvites": {
     "pageTitle": "Manage members",

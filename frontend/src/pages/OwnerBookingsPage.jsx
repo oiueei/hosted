@@ -498,6 +498,15 @@ export default function OwnerBookingsPage() {
               <div className="spacer-xl" />
               <h2>{t('myBookings.pastRequests')}</h2>
               <div className="spacer-s" />
+              {/* The reminder goes out with the presser's address as Reply-To, the
+                  one place a manager's address reaches a borrower — so it is said
+                  before the press, as the broadcast box says it. */}
+              {otherRows.some((r) => r._canRemindReturn) && (
+                <>
+                  <p className="text-muted">{t('ownerBookings.remindReturnNotice')}</p>
+                  <div className="spacer-s" />
+                </>
+              )}
               <ResponsiveTable
                 cols={cols}
                 caption={<span className="sr-only">{t('ownerBookings.captionPast')}</span>}

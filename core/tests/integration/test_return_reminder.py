@@ -205,6 +205,24 @@ class TestRemindReturnEndpoint:
         assert "Lolo is reminding you" in sent.body
         assert "Lala" not in sent.body
 
+    def test_a_manager_with_no_name_is_a_member_in_the_sentence_not_an_address(
+        self, drill, group, co_curator, borrower
+    ):
+        """`display_name` falls back to the email. The address reaches the borrower
+        as `Reply-To` (the page says so before the press); in the sentence that
+        names who is asking it would be a name nobody chose."""
+        co_curator.name = ""
+        co_curator.save()
+        booking = lend(drill, borrower, TODAY - timedelta(days=5), YESTERDAY)
+
+        remind(co_curator, booking)
+
+        sent = mail.outbox[0]
+        assert sent.reply_to == ["lolo@test.com"]
+        assert "A member is reminding you" in sent.body
+        assert "lolo@test.com" not in sent.body
+        assert "lolo@test.com" not in sent.alternatives[0][0]
+
     @pytest.mark.parametrize(
         ("language", "subject", "sentence"),
         [

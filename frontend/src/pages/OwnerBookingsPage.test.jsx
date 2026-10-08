@@ -18,6 +18,7 @@ import { apiFetch } from '../services/api';
 import OwnerBookingsPage from './OwnerBookingsPage';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { mockMatchMedia, PHONE } from '../test/matchMedia';
+import en from '../i18n/locales/en.json';
 
 expect.extend(toHaveNoViolations);
 
@@ -879,6 +880,36 @@ describe('OwnerBookingsPage — reminding a late return', () => {
     expect(within(rowOf('Drill')).getByRole('button', ACTION)).toBeInTheDocument();
     expect(within(rowOf('Ladder')).queryByRole('button', ACTION)).toBeNull();
     expect(within(rowOf('Tent')).queryByRole('button', ACTION)).toBeNull();
+  });
+
+  // The reminder goes out with the presser's address as Reply-To — the one place a
+  // manager's address reaches a borrower — so the page says it before the press.
+  const NOTICE = en.ownerBookings.remindReturnNotice;
+
+  test('the page says the borrower will see your address, above the table, before any press', async () => {
+    page(late());
+    renderPage();
+
+    await screen.findByText('Drill');
+    const notice = screen.getByText(NOTICE);
+    const table = screen.getByRole('table', { name: ANSWERED });
+    expect(notice.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(postUrls()).toEqual([]);
+  });
+
+  test('with nothing to remind, there is nothing to say about it', async () => {
+    page(
+      booking({
+        code: 'DONE01',
+        status: 'ACCEPTED',
+        thing_headline: 'Ladder',
+        can_remind_return: false,
+      })
+    );
+    renderPage();
+
+    await screen.findByText('Ladder');
+    expect(screen.queryByText(NOTICE)).toBeNull();
   });
 
   test('pressing it posts once, says so in a live region that was already there, and waits for tomorrow', async () => {

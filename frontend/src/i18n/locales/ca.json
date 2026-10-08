@@ -608,7 +608,8 @@
     "cancelReservationConfirmBody": "L'avisarem que s'ha cancel·lat, i quedarà lliure perquè una altra persona el reservi. No es pot desfer.",
     "remindReturn": "Recordar la devolució",
     "remindReturnSent": "Recordatori enviat.",
-    "remindedOn": "Recordat el {{date}}"
+    "remindedOn": "Recordat el {{date}}",
+    "remindReturnNotice": "Quan recordes a algú que torni una cosa, et pot respondre directament: veurà la teva adreça de correu."
   },
   "manageInvites": {
     "pageTitle": "Gestionar membres",
