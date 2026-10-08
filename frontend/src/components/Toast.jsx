@@ -7,6 +7,12 @@ import { useTranslation } from 'react-i18next';
  * it must not read `t`, or it runs again whenever `t` changes identity (see
  * `useCollectionLanguage`), and a message it had translated on the way in would
  * stay in the language that happened to be current when the load failed.
+ *
+ * **Only a success closes by itself.** An error stays until its close button is
+ * pressed: it says why something did not happen and often what to do next, and
+ * someone who reads slowly, or hears it through a screen reader, can lose it in
+ * six seconds (WCAG 2.2.1, Timing Adjustable). A success only confirms what the
+ * page already shows, so letting it go costs nothing.
  */
 export default function Toast({ toast, onClose }) {
   const { t } = useTranslation();
@@ -16,7 +22,7 @@ export default function Toast({ toast, onClose }) {
   return (
     <Notification
       position="top-right"
-      autoClose
+      autoClose={toast.type === 'success'}
       autoCloseDuration={6000}
       aria-live="polite"
       label={toast.type === 'success' ? t('common.done') : t('common.error')}
