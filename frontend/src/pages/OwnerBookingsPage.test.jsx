@@ -963,6 +963,25 @@ describe('OwnerBookingsPage — reminding a late return', () => {
     expect(within(row).getByRole('button', ACTION)).toBeEnabled();
   });
 
+  test('the server saying the loan is no longer overdue is worded by requestErrors', async () => {
+    mockApi([{ results: [late()], next: null }], {
+      postOk: false,
+      postStatus: 400,
+      postBody: { error: 'English from the server', code: 'not_awaiting_return' },
+    });
+    renderPage();
+    await screen.findByText('Drill');
+    const row = rowOf('Drill');
+
+    fireEvent.click(within(row).getByRole('button', ACTION));
+
+    expect(
+      await screen.findByText("This isn't waiting to be returned any more.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText('English from the server')).toBeNull();
+    expect(screen.queryByText('Reminder sent.')).toBeNull();
+  });
+
   test.each([
     ['a refusal with no code', 403, { error: 'Not authorized' }],
     ['the hourly limit, which has no code to read', 429, { detail: 'Too many requests.' }],

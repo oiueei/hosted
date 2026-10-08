@@ -285,7 +285,10 @@ class BookingRemindReturnView(APIView):
 
         if not booking.can_be_return_reminded():
             return Response(
-                {"error": "This booking is not waiting to be returned"},
+                {
+                    "error": "This booking is not waiting to be returned",
+                    "code": "not_awaiting_return",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

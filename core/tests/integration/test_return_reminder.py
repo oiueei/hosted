@@ -312,6 +312,8 @@ class TestRemindReturnEndpoint:
         response = remind(owner, booking)
 
         assert response.status_code == 400
+        # Coded, so the page says why in the reader's language rather than its generic error.
+        assert response.data["code"] == "not_awaiting_return"
         assert mail.outbox == []
         booking.refresh_from_db()
         assert booking.return_reminded_at is None

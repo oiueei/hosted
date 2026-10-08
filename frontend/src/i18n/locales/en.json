@@ -1092,6 +1092,7 @@
     "dates_taken": "Those dates are already taken.",
     "not_a_member": "You need to be a member of this group to reserve.",
     "not_available": "This isn't available right now.",
+    "not_awaiting_return": "This isn't waiting to be returned any more.",
     "rental_length_not_allowed": "This collection only allows periods of {{allowed}} days.",
     "rental_pickup_weekday": "Pickup isn't possible on that day of the week.",
     "rental_return_weekday": "Return isn't possible on that day of the week.",
