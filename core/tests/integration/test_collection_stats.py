@@ -43,8 +43,11 @@ class TestCollectionStats:
         assert f"{coll.code}-stats.csv" in res["Content-Disposition"]
         data = _csv_dict(res)
         assert data["Members"] == "1"
-        assert data["Born 1997-2012 (Gen Z)"] == "1"
-        assert data["Postal 48001"] == "1"
+        # One member: naming their bracket or their code would be naming them.
+        assert "Born 1997-2012 (Gen Z)" not in data
+        assert "Postal 48001" not in data
+        assert data["Birth year shared by fewer than 3"] == "1"
+        assert data["Postal, other codes"] == "1"
 
     def test_csv_counts_and_demographics(self, authenticated_client, user, user2):
         coll = self._community(user)
@@ -73,7 +76,32 @@ class TestCollectionStats:
         assert data["Things total"] == "2"
         assert data["Things active"] == "1"
         assert data["Things reserved"] == "1"
-        assert data["Born 1997-2012 (Gen Z)"] == "1"
+        assert "Born 1997-2012 (Gen Z)" not in data
+        assert data["Birth year shared by fewer than 3"] == "1"
         assert data["Birth year not specified"] == "1"
-        assert data["Postal 48001"] == "1"
+        assert "Postal 48001" not in data
+        assert data["Postal, other codes"] == "1"
         assert data["Postal not specified"] == "1"
+
+    def test_a_bracket_or_a_code_is_named_from_three_members_up(self, authenticated_client, user):
+        """Below three the figure is about a person; from three it is about a group.
+        A bracket nobody is in is left out too, or the missing rows would name the
+        small ones."""
+        coll = self._community(user)
+        for i, (age, postal) in enumerate(
+            [("GEN_Z", "48001"), ("GEN_Z", "48001"), ("GEN_Z", "48001"), ("GEN_X", "08001")]
+        ):
+            coll.invites.add(
+                User.objects.create(
+                    code=f"MIN00{i}", email=f"m{i}@example.com", age_range=age, postal_code=postal
+                )
+            )
+
+        data = _csv_dict(authenticated_client.get(URL.format(code=coll.code)))
+
+        assert data["Born 1997-2012 (Gen Z)"] == "3"
+        assert data["Postal 48001"] == "3"
+        assert data["Birth year shared by fewer than 3"] == "1"
+        assert data["Postal, other codes"] == "1"
+        assert not any(label in data for label in ("Born 1965-1980 (Gen X)", "Postal 08001"))
+        assert "Born 1981-1996 (Millennials)" not in data

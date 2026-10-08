@@ -682,7 +682,7 @@ Invites many guests at once from a client-parsed CSV (`{"invites": [{"email": ..
 | **Endpoint** | `GET /api/v1/collections/{collection_code}/stats/` |
 | **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 
-Curator usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only).
+Curator usage statistics for a collection, returned as a `metric,value` CSV download: a snapshot (members, pending invitations, things total/active) plus a 90-day activity window, and an aggregate age-range/postal-code breakdown (member demographics stay COMMUNITY-only and per-member on the guests page — this endpoint is aggregate-only). **A bracket or a postal code is named only when at least `STATS_MIN_GROUP` (3) members share it**: below that the figure is about a person ("Postal 48001: 1" in a group of two), so those members are summed into "Birth year shared by fewer than 3" / "Postal, other codes", and an empty bracket is left out too — were only the small ones missing, the gaps would name them. Same rule in every mode, since this file and the collection export that carries it travel. Pinned in `test_collection_stats.py`.
 
 The metrics themselves live in [`export_service.collection_stats_rows()`](../services/CLAUDE.md#export_servicepy--data-portability-right-to-a-copy); this view only wraps them in a CSV. The collection export renders the same rows as a dict, so the two can't drift.
 
