@@ -446,6 +446,7 @@
     "pdfTooLarge": "The file is too large (max 5 MB).",
     "imageTooLarge": "The image is too large (max 10 MB). Try a photo the browser can resize.",
     "rateLimited": "You've reached the limit of {{max}} photos an hour. Try again in a while.",
+    "pdfRateLimited": "You've reached the limit of {{max}} documents an hour. Try again in a while.",
     "welcomeDocLabel": "Welcome document (PDF)",
     "welcomeDocHelper": "Optional. Everyone who joins the group receives it by email, once."
   },

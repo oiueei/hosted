@@ -1,9 +1,13 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 
 import { apiFetch } from '../services/api';
-import { uploadPdf, PDF_MAX_BYTES } from './uploadPdf';
+import { uploadPdf, PDF_MAX_BYTES, PDF_UPLOADS_PER_HOUR } from './uploadPdf';
+import { UploadRateLimitedError } from './uploadImage';
 
 // Document-mode ticket (core/views/upload.py): the folder is forced server-side
 // and the only content type it will sign is application/pdf.
@@ -90,5 +94,25 @@ describe('uploadPdf', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 403 });
 
     await expect(uploadPdf(pdf())).rejects.toThrow('upload_failed');
+  });
+});
+
+describe('the hourly allowance of documents', () => {
+  test('a 429 from the ticket is the allowance running out, not a broken file', async () => {
+    apiFetch.mockResolvedValue({ ok: false, status: 429, json: () => Promise.resolve({}) });
+
+    await expect(uploadPdf(pdf())).rejects.toBeInstanceOf(UploadRateLimitedError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('is the allowance the server rations document tickets at', () => {
+    const serverSource = readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../core/views/upload.py'),
+      'utf8'
+    );
+    const rate = serverSource.match(/^DOCUMENT_TICKETS_PER_HOUR = (\d+)$/m);
+
+    expect(rate).not.toBeNull();
+    expect(PDF_UPLOADS_PER_HOUR).toBe(Number(rate[1]));
   });
 });

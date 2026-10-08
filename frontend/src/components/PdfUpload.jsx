@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FileInput, Button } from 'hds-react';
 import { useTranslation } from 'react-i18next';
-import { uploadPdf, PDF_MAX_BYTES } from '../utils/uploadPdf';
+import { uploadPdf, PDF_MAX_BYTES, PDF_UPLOADS_PER_HOUR } from '../utils/uploadPdf';
+import { UploadRateLimitedError } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 
@@ -65,8 +66,13 @@ export default function PdfUpload({
       const { publicId, url } = await uploadPdf(file, folder);
       setDocUrl(url);
       onChange(publicId);
-    } catch {
-      setError(t('upload.uploadError'));
+    } catch (err) {
+      // A refused ticket for the hour is "wait", not "check the file".
+      setError(
+        err instanceof UploadRateLimitedError
+          ? t('upload.pdfRateLimited', { max: PDF_UPLOADS_PER_HOUR })
+          : t('upload.uploadError')
+      );
     } finally {
       setUploading(false);
     }

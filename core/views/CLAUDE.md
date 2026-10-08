@@ -790,7 +790,7 @@ Both report shapes are understood: the legacy `{"csp-report": {...}}` and a `rep
 |---|---|
 | **Endpoint** | `POST /api/v1/upload/ticket/` |
 | **Permission** | `IsAuthenticated` |
-| **Rate limit** | 120 requests/hour per user — one ticket per photo, so a ZIP import of up to 100 things fits in one hour |
+| **Rate limit** | 120 requests/hour per user — one ticket per photo, so a ZIP import of up to 100 things fits in one hour — and, of those, **10/hour for document tickets** (`DOCUMENT_TICKETS_PER_HOUR`). A welcome PDF is set a few times in a group's life; at the photos' 120 any account could put 600 MB of public PDFs an hour on the bucket, served from the operator's domain until the orphan sweep reaches them. Not gated on curating a collection: the create form uploads the PDF before the collection exists |
 
 Hands the browser a short-lived ticket to write **one** object to the media
 bucket, so the binary never routes through Django. That property is unchanged

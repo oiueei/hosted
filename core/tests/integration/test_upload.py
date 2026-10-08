@@ -15,7 +15,7 @@ import pytest
 from django.core.cache import caches
 from django.test import override_settings
 
-from core.views.upload import DOCUMENT_MAX_BYTES, IMAGE_MAX_BYTES
+from core.views.upload import DOCUMENT_MAX_BYTES, DOCUMENT_TICKETS_PER_HOUR, IMAGE_MAX_BYTES
 
 URL = "/api/v1/upload/ticket/"
 
@@ -342,3 +342,34 @@ class TestTicketsAreRationedPerUser:
         refused = authenticated_client.post(URL, image_body(), format="json")
 
         assert refused.status_code == 429
+
+    @override_settings(
+        RATELIMIT_ENABLE=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "upload-document-ratelimit-test",
+            }
+        },
+    )
+    def test_documents_have_a_small_allowance_of_their_own_and_photos_keep_theirs(
+        self, authenticated_client
+    ):
+        """A welcome PDF is set a few times in a group's life. With the photos' 120 an
+        hour any account could put 600 MB of public PDFs an hour on the bucket."""
+        caches["default"].clear()
+
+        statuses = [
+            authenticated_client.post(URL, document_body(), format="json").status_code
+            for _ in range(DOCUMENT_TICKETS_PER_HOUR)
+        ]
+        assert statuses == [200] * DOCUMENT_TICKETS_PER_HOUR
+
+        refused = authenticated_client.post(URL, document_body(), format="json")
+        assert refused.status_code == 429
+
+        # Running out of documents costs the photos nothing.
+        assert authenticated_client.post(URL, image_body(), format="json").status_code == 200
+
+    def test_the_document_allowance_is_a_few_not_the_photos_hundred(self):
+        assert DOCUMENT_TICKETS_PER_HOUR == 10

@@ -31,7 +31,9 @@ a presigned URL, and the storage provider refuses the upload — with
 import secrets
 
 from django.utils.decorators import method_decorator
+from django_ratelimit.core import is_ratelimited
 from django_ratelimit.decorators import ratelimit
+from django_ratelimit.exceptions import Ratelimited
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -70,6 +72,16 @@ DOCUMENT_TYPES = {"application/pdf"}
 # hundreds of kilobytes and this is a backstop against abuse, not a UX limit.
 DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
 IMAGE_MAX_BYTES = 10 * 1024 * 1024
+
+# Document tickets have an allowance of their own, well under the photos'. The
+# one document is a collection's welcome PDF, set a handful of times in a group's
+# life; the 120 an hour photos need (a ZIP import) would otherwise let any
+# account put 600 MB of PDFs an hour on the operator's bucket, public and served
+# from its domain until the orphan sweep reaches them a day later. It is not
+# gated on curating a collection: the create form uploads the PDF before the
+# collection exists. Document tickets count against the shared 120 too.
+# `PDF_UPLOADS_PER_HOUR` in frontend/src/utils/uploadPdf.js mirrors this number.
+DOCUMENT_TICKETS_PER_HOUR = 10
 
 
 class UploadTicketView(APIView):
@@ -123,6 +135,15 @@ class UploadTicketView(APIView):
         # Anything that isn't the one document kind is an image upload — an unknown
         # value can only ever narrow to the (unchanged) image defaults.
         is_document = body.get("kind") == "document"
+
+        if is_document and is_ratelimited(
+            request,
+            group="core.views.upload.document",
+            key="user",
+            rate=f"{DOCUMENT_TICKETS_PER_HOUR}/h",
+            increment=True,
+        ):
+            raise Ratelimited()
 
         if is_document:
             # Document mode always uses the documents folder — an image-mode
