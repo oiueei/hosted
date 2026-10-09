@@ -88,7 +88,7 @@ Every email belongs to one of three categories. Each function routes through the
 **Both flags default to ON, and Cat. 3 has a second, narrower switch.** `notify_news` used to default to `False`, which — combined with `Collection.digest_frequency` defaulting to `NONE` — meant the digest reached almost nobody: an owner had to find a setting buried in an accordion *and* every reader had to have opted in to a toggle labelled "optional". Both now default on, together with the control that makes it honest rather than a pre-ticked opt-in (DESIGN §6): **`Collection.digest_muted`**, a per-group mute.
 
 - A member silences one group without losing anything else — the booking, question and reminder emails are Cat. 2 and untouched. There is no "all or nothing" any more.
-- Two ways out, both one click: the toggle in the collection hero (`is_digest_muted` on `CollectionSerializer`, `POST /collections/{code}/digest/`) and the link in the footer of the digest itself (`POST /digest/mute/{token}/`, no login — see the signed tokens below).
+- Two ways out, both one click: the entry in a member's collection menu ("Mute the summary"; `is_digest_muted` on `CollectionSerializer`, `POST /collections/{code}/digest/`) and the link in the footer of the digest itself (`POST /digest/mute/{token}/`, no login — see the signed tokens below).
 - **The mute is scoped to CATEGORY_NEWS only.** `_should_send`/`_filter_recipients` take a `collection` and consult it for news alone, so silencing a chatty group never suppresses the notice that your own hold there was confirmed.
 - If the mute is ever removed, `notify_news` has to go back to defaulting `False` — pinned by `test_new_user_starts_subscribed_to_both_categories`.
 
@@ -213,6 +213,41 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 - **Reply-To header**: `send_broadcast_email()` uses `EmailMultiAlternatives` with `reply_to` so invitees can respond directly to the collection owner (routed through `_send(..., reply_to=[owner_email])`). The visible body links to the collection (`/collections/{code}`) — the object that originated the message — rather than promising an email reply. **The owner is told before they send**: the broadcast box's helper line says that whoever receives it can reply directly and will see their address (`broadcast.replyToNotice`). It is the one place in the product where a member learns an address the API takes care never to serve them, and it is the owner's own — so the answer is disclosure, not a switch: dropping the header would turn a group message into a megaphone whose replies land on a noreply.
 - **Digest emails**: `send_digest_email()` lists new thing headlines in both plain text (bulleted) and HTML (`<ul>/<li>`) formats.
 - **Direct collection links**: `send_digest_email()` links straight to `{frontend_base}/collections/{code}`. Per DESIGN.md §9 we do not track email engagement — links are never wrapped in a redirect or tracking pixel.
+
+#### The digest — what it says today, and what it could say
+
+The digest is the one message that reaches a member **between** their own events: every
+other email answers something they did (a request, a question, a reminder), so for most
+members it is the whole of what brings them back to a group. That makes its content a
+product decision, written down here so the next change to it starts from the same page.
+
+**What it sends today** (`send_digests` → `send_digest_email`):
+- **When:** the daily scheduler job runs it; it acts on Mondays for `WEEKLY` collections
+  (the 7 days before) and on the 1st for `MONTHLY` ones (the month before). `digest_frequency`
+  defaults to `WEEKLY`; `NONE` sends nothing.
+- **What:** the headlines of the things **created** in that window that are `ACTIVE` or
+  `TAKEN`, as a list, plus one button to the collection. Headlines resolve per reader's
+  language. Nothing else: no questions, no handovers, no members.
+- **Whom:** every member (`invites`) except those with `notify_news` off or who muted this
+  group (`digest_muted`). The owner gets none for their own group.
+- **Skipped** when nothing was created in the window, or the group has no members. A quiet
+  group therefore sends nothing at all — honest, but it also means a group whose life is
+  loans rather than new things never reaches its members this way.
+
+**What a good digest would add** — candidates, none built; each must pass DESIGN §9 (would a
+member be surprised to read it, and does it say anything about a person they could not
+already see in the app?):
+- **Questions answered** on the group's things in the window — the question and the thing,
+  never who asked (the app shows the asker's name only on the thing's own page).
+- **What comes back soon** — things on loan or rent in this group due back in the next
+  days, so a member waiting for one knows; by thing, never by borrower.
+- **New members**, as a count ("3 people joined"), not names: a name list is a roster mailed
+  to everyone, which the members table deliberately keeps for whoever runs the group.
+- **Nothing new is not nothing:** with no new things but some of the above, send; with none
+  of it, keep skipping — a digest that says "nothing happened" teaches people to ignore it.
+
+Any of these changes `send_digests`' selection, `send_digest_email`'s compose, the three
+`email_texts` catalogues and `test_commands.py::TestSendDigestsCommand`.
 - **Preference pipeline**: every send goes through `_send()` → `_should_send()` + `_with_viral_line()` + `_with_footer()`. Never build an `EmailMultiAlternatives` directly from outside this module — the preference check, viral CTA, footer and logo attachment would all be bypassed.
 
 ---
