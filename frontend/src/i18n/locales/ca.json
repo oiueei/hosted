@@ -1025,7 +1025,7 @@
     "joinedLabel": "T'has unit al grup",
     "joinedGroup": "Per reservar aquí t'has unit a {{group}}. Pots sortir-ne des del teu perfil.",
     "dateSummary": "Reservat del {{start}} al {{end}}.",
-    "contactShared": "Qui gestiona aquest espai veurà el teu nom i el teu email.",
+    "contactShared": "Qui gestiona això veurà el teu nom i el teu email.",
     "dateRange": "Tria una data entre avui i d'aquí a {{days}} dies.",
     "noteFrom": "El seu missatge: {{note}}",
     "maxDaysLabel": "Reserva més llarga (dies)",

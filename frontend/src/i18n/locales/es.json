@@ -1025,7 +1025,7 @@
     "joinedLabel": "Te has unido al grupo",
     "joinedGroup": "Para reservar aquí te has unido a {{group}}. Puedes salir desde tu perfil.",
     "dateSummary": "Reservado del {{start}} al {{end}}.",
-    "contactShared": "Quien gestiona este espacio verá tu nombre y tu email.",
+    "contactShared": "Quien gestiona esto verá tu nombre y tu email.",
     "dateRange": "Elige una fecha entre hoy y dentro de {{days}} días.",
     "noteFrom": "Su mensaje: {{note}}",
     "maxDaysLabel": "Reserva más larga (días)",
