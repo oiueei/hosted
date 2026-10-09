@@ -788,6 +788,13 @@ is a deprecated React alias. HDS's own documentation site renders the identical
 markup, so this is theirs, not a misuse. **Not worked around** — the only fix is to
 stop using the component, which costs more than the defect. Affects the collection
 grids on `HomePage` and `UserPage` (`CollectionLinkbox`).
+Still the latest release on 2026-10-08 (6.0.5), so still carried. **One more thing the
+same design does, which we do work around**: the region's own `onClick` answers any click
+inside it with `link.click()` — a fresh click with no modifier keys — so a ctrl/cmd/shift/alt
+click on a row would open the new tab *and* move the current one. `CollectionLinkbox`
+leaves such a click to the browser and stops it from reaching the region
+(`stopPropagation`); a plain left click routes in-app as before. Pinned in
+`CollectionLinkbox.test.jsx`.
 
 **2. A deletable `Tag` has no name for what it does.** v6 makes the *whole chip* the
 control — one `<div role="button">` named from its own text — and there is no
