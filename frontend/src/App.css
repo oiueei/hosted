@@ -1090,6 +1090,28 @@ body :focus-visible {
   color: var(--color-black-60);
 }
 
+/* The opening hours in words, under their JSON field: one quiet line per day. */
+.opening-hours-preview {
+  margin-top: var(--spacing-xs);
+  font-size: var(--fontsize-body-s);
+}
+
+.opening-hours-preview p {
+  margin: 0 0 var(--spacing-3-xs);
+}
+
+.opening-hours-preview ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.opening-hours-preview-day {
+  display: inline-block;
+  min-width: 3.5em;
+  font-weight: 700;
+}
+
 .button-row-wide {
   display: flex;
   gap: var(--spacing-s);

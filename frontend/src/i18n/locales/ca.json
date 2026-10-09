@@ -1063,7 +1063,9 @@
     "label": "Horari setmanal",
     "helper": "En JSON: una clau per dia de la setmana (\"0\" dilluns … \"6\" diumenge), cadascuna amb una llista de trams [\"HH:MM\",\"HH:MM\"] — p. ex. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deixa un dia fora, o posa-hi una llista buida, perquè quedi tancat.",
     "invalidJson": "Això no és JSON vàlid — revisa les claus i les cometes.",
-    "invalidOnSave": "No s'ha desat res: l'horari setmanal (a «Més opcions») no és JSON vàlid. Corregeix-lo i torna a desar."
+    "invalidOnSave": "No s'ha desat res: l'horari setmanal (a «Més opcions») no és JSON vàlid. Corregeix-lo i torna a desar.",
+    "previewLabel": "Es llegeix així:",
+    "closed": "tancat"
   },
   "homePage": {
     "label": "Pàgina web",
