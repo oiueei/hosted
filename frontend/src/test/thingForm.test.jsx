@@ -513,3 +513,29 @@ describe('EditThingPage — deposit follows the type, explicitly', () => {
     });
   });
 });
+
+describe('a text that opens like a language map and is not one', () => {
+  // A map that parses already shows in the counter ("es 4/64 · ca 2/64"); a broken
+  // one counted like prose and then showed on the card with its braces, and nothing
+  // on the form said so.
+  test('the headline and description say they will read as plain text', async () => {
+    const { container } = renderAdd({ collection: { allowed_thing_types: ['GIFT_THING'] } });
+    const headline = await waitFor(() => {
+      const el = container.querySelector('input[id$="-headline"]');
+      expect(el).not.toBeNull();
+      return el;
+    });
+    const description = container.querySelector('textarea[id$="-description"]');
+    const warning = /Read as plain text/;
+
+    fireEvent.change(headline, { target: { value: '{"es": "Taladro", "ca": "Trepant",}' } });
+    expect(screen.getByText(warning)).toBeInTheDocument();
+
+    fireEvent.change(headline, { target: { value: '{"es": "Taladro", "ca": "Trepant"}' } });
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+    expect(screen.getByText('es 7/64 · ca 7/64')).toBeInTheDocument();
+
+    fireEvent.change(description, { target: { value: '{"es": "Funciona"' } });
+    expect(screen.getByText(warning)).toBeInTheDocument();
+  });
+});

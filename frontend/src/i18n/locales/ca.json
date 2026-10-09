@@ -932,7 +932,8 @@
     "requestInfoInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu.",
     "emailNoteHint": "L'avís del correu també admet un text per idioma.",
     "emailNoteInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu al correu.",
-    "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
+    "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit.",
+    "readAsPlain": "Es llegeix com a text normal: per escriure'n un per idioma, revisa les cometes i els codis es, ca, en."
   },
   "deleteAccount": {
     "pageTitle": "Esborrar el teu compte",

@@ -932,7 +932,8 @@
     "requestInfoInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo.",
     "emailNoteHint": "El aviso del correo también admite un texto por idioma.",
     "emailNoteInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo en el correo.",
-    "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
+    "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste.",
+    "readAsPlain": "Se lee como texto normal: para escribir uno por idioma, revisa las comillas y los códigos es, ca, en."
   },
   "deleteAccount": {
     "pageTitle": "Borrar tu cuenta",
