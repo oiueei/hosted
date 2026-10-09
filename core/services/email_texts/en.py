@@ -160,19 +160,19 @@ TEXTS = {
     "booking_request_subject": "You have a pending {action} request",
     "booking_request_plain_dated": (
         "{requester} has sent a {action} request for '{thing}' {when}. "
-        "Confirm hold: {accept} | Decline hold: {reject}"
+        "Confirm request: {accept} | Decline request: {reject}"
     ),
     "booking_request_plain": (
         "{requester} has sent a {action} request for '{thing}'. "
-        "Confirm hold: {accept} | Decline hold: {reject}"
+        "Confirm request: {accept} | Decline request: {reject}"
     ),
     "booking_request_intro": "{requester} has sent a {action} request:",
     # The requester's address travels with the request to whoever manages the thing:
     # shared by the request email and the reservation notice. There is no
     # sentence saying that "Reply" reaches them.
     "requester_email_label": "Email",
-    "hold_confirm_cta": "Confirm hold",
-    "hold_cancel_cta": "Decline hold",
+    "hold_confirm_cta": "Confirm request",
+    "hold_cancel_cta": "Decline request",
     # Booking decision (to requester)
     "decision_subject_confirmed": "Your request is confirmed",
     "decision_subject_cancelled": "Your request didn't go through",

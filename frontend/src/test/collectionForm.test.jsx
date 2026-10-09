@@ -812,3 +812,25 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
     expect(body).not.toHaveProperty('reservation_max_days');
   });
 });
+
+describe('collection texts that open like a language map and are not one', () => {
+  test('the headline says it will read as plain text, and stops once it parses', () => {
+    renderCreate();
+    const headline = document.querySelector('#create-collection-headline');
+    const warning = /Read as plain text/;
+
+    fireEvent.change(headline, { target: { value: '{"es": "Las cosas de mamá", "fr": "x"}' } });
+    expect(screen.getByText(warning)).toBeInTheDocument();
+
+    fireEvent.change(headline, { target: { value: '{"es": "Las cosas de mamá"}' } });
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+  });
+
+  test('prose that starts some other way never trips it', () => {
+    renderCreate();
+    fireEvent.change(document.querySelector('#create-collection-headline'), {
+      target: { value: 'Herramientas {del taller}' },
+    });
+    expect(screen.queryByText(/Read as plain text/)).not.toBeInTheDocument();
+  });
+});

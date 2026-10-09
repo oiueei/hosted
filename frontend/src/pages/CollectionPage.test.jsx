@@ -1532,7 +1532,7 @@ describe("CollectionPage — a COMMUNITY member's own things and notifications",
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('New hold request')).toBeInTheDocument();
+    expect(await screen.findByText('New request')).toBeInTheDocument();
     expect(screen.getByText('Someone Else requested My contributed gift.')).toBeInTheDocument();
   });
 

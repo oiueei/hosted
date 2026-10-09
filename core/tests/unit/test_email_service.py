@@ -406,7 +406,7 @@ def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, use
     """The owner's whole job in this email is one of two clicks, so it gets the
     invitation's shape: confirming is the filled bus-blue button and cancelling
     the outlined one, as inline-styled anchors (email clients strip <button>).
-    They used to be two equal text links, "Confirm hold | Cancel hold"."""
+    They used to be two equal text links side by side."""
     html = _hold_request(user, user2, thing).alternatives[0][0]
 
     primary = (
@@ -420,11 +420,11 @@ def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, use
     )
     assert primary in html
     assert secondary in html
-    assert ">Confirm hold</a>" in html
-    assert ">Decline hold</a>" in html
+    assert ">Confirm request</a>" in html
+    assert ">Decline request</a>" in html
     assert html.index(primary) < html.index(secondary)
     # The old equal-weight row is gone.
-    assert f'<a href="{HOLD_ACCEPT}">Confirm hold</a>' not in html
+    assert f'<a href="{HOLD_ACCEPT}">Confirm request</a>' not in html
 
 
 @pytest.mark.django_db
@@ -440,7 +440,7 @@ def test_the_hold_request_spells_both_links_out_under_the_buttons(user, user2, t
     reject_text = f">{HOLD_REJECT}</a>"
     assert accept_text in html
     assert reject_text in html
-    assert html.index("Decline hold</a>") < html.index("copy and paste these links")
+    assert html.index("Decline request</a>") < html.index("copy and paste these links")
     assert html.index(accept_text) < html.index(reject_text)
     assert HOLD_ACCEPT in msg.body
     assert HOLD_REJECT in msg.body
@@ -470,7 +470,7 @@ def test_the_hold_request_buttons_and_fallback_are_translated(
     [
         ("es", "Confirmar la solicitud", "Rechazar la solicitud", "reserva"),
         ("ca", "Confirmar la sol·licitud", "Rebutjar la sol·licitud", "reserva"),
-        ("en", "Confirm hold", "Decline hold", "Cancel"),
+        ("en", "Confirm request", "Decline request", "Cancel"),
     ],
 )
 def test_the_hold_request_buttons_say_request_and_decline_never_reservation_or_cancel(

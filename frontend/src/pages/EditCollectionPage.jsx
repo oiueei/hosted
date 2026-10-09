@@ -19,7 +19,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
-import { useLocalized, localizedCounter } from '../utils/localized';
+import { useLocalized, localizedCounter, localizedHelper } from '../utils/localized';
 import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import EmailNoteTest from '../components/EmailNoteTest';
@@ -351,7 +351,7 @@ export default function EditCollectionPage() {
           required
           invalid={!!errors.headline}
           errorText={errors.headline}
-          helperText={localizedCounter(headline, 64).text}
+          helperText={localizedHelper(headline, 64, t)}
         />
         <TextArea
           id="edit-collection-description"
@@ -360,7 +360,7 @@ export default function EditCollectionPage() {
           onChange={(e) => setDescription(e.target.value)}
           invalid={!!errors.description}
           errorText={errors.description}
-          helperText={localizedCounter(description, 2000).text}
+          helperText={localizedHelper(description, 2000, t)}
         />
         <LocalizedInfo id="edit-collection-localized-info" />
         <Select
@@ -467,7 +467,7 @@ export default function EditCollectionPage() {
               errorText={
                 localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
               }
-              helperText={localizedCounter(requestInfo, 512).text}
+              helperText={localizedHelper(requestInfo, 512, t)}
             />
             <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
           </div>
@@ -482,7 +482,7 @@ export default function EditCollectionPage() {
               errorText={
                 localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined
               }
-              helperText={localizedCounter(emailNote, 512).text}
+              helperText={localizedHelper(emailNote, 512, t)}
             />
             <LocalizedInfo id="edit-collection-email-note-info" variant="emailNote" />
             <EmailNoteTest collectionCode={code} note={emailNote} buttonStyle={btnSecondaryStyle} />

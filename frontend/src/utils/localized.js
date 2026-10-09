@@ -80,11 +80,30 @@ export function useLocalized() {
 export function localizedCounter(value, limit) {
   const localized = parseLocalized(value);
   if (!localized) {
-    return { text: `${(value || '').length}/${limit}`, over: (value || '').length > limit };
+    return {
+      text: `${(value || '').length}/${limit}`,
+      over: (value || '').length > limit,
+      // Opens like a map and is not one — a missing quote, a comma too many, a
+      // language code we do not read. It will show exactly as typed, braces and
+      // all, and nothing else would tell the owner so. Prose that starts some
+      // other way never trips it.
+      unreadMap: typeof value === 'string' && value.trim().startsWith('{'),
+    };
   }
   const entries = Object.entries(localized);
   return {
     text: entries.map(([lang, text]) => `${lang} ${text.length}/${limit}`).join(' · '),
     over: entries.some(([, text]) => text.length > limit),
   };
+}
+
+/**
+ * The helper line under a field the owner may localize: the counter, and — when
+ * the text opens like a `{lang: text}` map but is not one — a word that it will be
+ * shown as plain text. A map that parses already says so through the counter
+ * ("es 18/64 · ca 17/64"); this covers the one case the counter cannot.
+ */
+export function localizedHelper(value, limit, t) {
+  const counter = localizedCounter(value, limit);
+  return counter.unreadMap ? `${counter.text} — ${t('localized.readAsPlain')}` : counter.text;
 }

@@ -115,7 +115,7 @@ export default function ThingPage() {
     joinedGroupName: L(thing?.collection_headline),
   });
 
-  // The owner "Confirm hold" label, with its in-flight ("Confirming…") state. Shared
+  // The owner "Confirm request" label, with its in-flight ("Confirming…") state. Shared
   // by the plain accept Button and the ownership-transfer <InlineConfirm> trigger.
   const acceptLabel =
     bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');
@@ -217,7 +217,7 @@ export default function ThingPage() {
     name || t(isAuthenticated ? 'common.formerMember' : 'common.aMember');
 
   // Whoever runs the thing decides a request from the hero: with
-  // one waiting, "Confirm hold" (primary) and "Decline hold" (secondary) are the
+  // one waiting, "Confirm request" (primary) and "Decline request" (secondary) are the
   // first thing under the way back, and Edit / Delete stay in the content where
   // they were. A member's "Reserve" is not here on purpose — they read the whole
   // page before they ask. Two cases, as in the content they came from: a loan or
@@ -340,7 +340,7 @@ export default function ThingPage() {
           thingType={thing.type}
         />
 
-        {/* Owner actions. With a request waiting, "Confirm hold" and "Decline hold"
+        {/* Owner actions. With a request waiting, "Confirm request" and "Decline request"
             are in the hero (see `decisionActions`); Edit and Delete stay here. */}
         {canManage && thing.status === 'ACTIVE' && (
           <div className="button-col">
@@ -364,7 +364,7 @@ export default function ThingPage() {
           </div>
         )}
 
-        {/* A taken thing's "Confirm hold" and "Decline hold" are in the hero. */}
+        {/* A taken thing's "Confirm request" and "Decline request" are in the hero. */}
         {canManage && thing.status === 'TAKEN' && (
           <div className="button-col">
             <ButtonLink to={editPath} fullWidth style={btnSecondaryStyle}>

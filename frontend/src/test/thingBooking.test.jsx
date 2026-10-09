@@ -227,7 +227,7 @@ describe('ThingLinkbox — owner button matrix', () => {
     expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reactivate' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Confirm hold' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirm request' })).toBeNull();
   });
 
   test('INACTIVE shows Reactivate + Edit + Delete', () => {
@@ -239,23 +239,23 @@ describe('ThingLinkbox — owner button matrix', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  test('TAKEN shows Confirm hold + Decline hold + Edit', async () => {
+  test('TAKEN shows Confirm request + Decline request + Edit', async () => {
     const thing = makeThing({ status: 'TAKEN' });
     renderLinkbox({ thing, userCode: 'OWNER1' });
 
-    expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Decline hold' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Confirm request' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline request' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
   });
 
   // The pending booking arrives from the /calendar/ fetch (date-based type).
-  test('ACTIVE date-based with a pending booking shows Confirm/Decline hold', async () => {
+  test('ACTIVE date-based with a pending booking shows Confirm/Decline request', async () => {
     const thing = makeThing({ type: 'LEND_THING', status: 'ACTIVE' });
     setApi({ calendar: [{ code: 'BK1', status: 'PENDING', end_date: '2099-12-31' }] });
     renderLinkbox({ thing, userCode: 'OWNER1' });
 
-    expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Decline hold' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Confirm request' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline request' })).toBeInTheDocument();
     // The Delete button is suppressed while a pending hold exists.
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
   });
@@ -322,20 +322,20 @@ describe('ThingPage — owner button matrix', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  test('TAKEN shows Confirm hold + Decline hold + Edit', async () => {
+  test('TAKEN shows Confirm request + Decline request + Edit', async () => {
     localStorage.setItem('userCode', 'OWNER1');
     setApi({ thing: makeThing({ status: 'TAKEN', owner: 'OWNER1' }) });
     renderThingPage();
 
-    expect(await screen.findByRole('button', { name: 'Confirm hold' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Decline hold' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Confirm request' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline request' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
   });
 });
 
 // ════════════════════════════════════════════════════════════════════════
 // ThingPage — the decision about a request sits in the hero
-// Whoever runs the thing sees "Confirm hold" (primary) and "Decline hold"
+// Whoever runs the thing sees "Confirm request" (primary) and "Decline request"
 // (secondary) as the first thing under the way back, in a wide row; Edit and
 // Delete stay in the content. A member's "Reserve" stays in the content too: they
 // are meant to read the whole page before they ask.
@@ -358,17 +358,17 @@ describe('ThingPage — the decision about a request sits in the hero', () => {
     });
     const { container } = renderThingPage();
 
-    const confirm = await screen.findByRole('button', { name: 'Confirm hold' });
-    const decline = screen.getByRole('button', { name: 'Decline hold' });
+    const confirm = await screen.findByRole('button', { name: 'Confirm request' });
+    const decline = screen.getByRole('button', { name: 'Decline request' });
 
     const row = heroRow(container);
     expect(row).toHaveClass('button-row-wide');
-    expect(labels(row)).toEqual(['Confirm hold', 'Decline hold']);
+    expect(labels(row)).toEqual(['Confirm request', 'Decline request']);
     expect(confirm.style.getPropertyValue('--background-color')).toBe(PRIMARY);
     expect(decline.style.getPropertyValue('--background-color')).toBe(SECONDARY);
     // Nothing is painted twice, and what is not a decision stays where it was.
-    expect(screen.getAllByRole('button', { name: 'Confirm hold' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: 'Decline hold' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Confirm request' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Decline request' })).toHaveLength(1);
     expect(content(container)).not.toContainElement(confirm);
     expect(content(container)).toContainElement(screen.getByRole('link', { name: 'Edit' }));
     // Delete is not offered while a request is waiting — in the hero or anywhere.
@@ -380,13 +380,13 @@ describe('ThingPage — the decision about a request sits in the hero', () => {
     setApi({ thing: makeThing({ status: 'TAKEN', owner: 'OWNER1' }), calendar: PENDING });
     const { container } = renderThingPage();
 
-    const confirm = await screen.findByRole('button', { name: 'Confirm hold' });
+    const confirm = await screen.findByRole('button', { name: 'Confirm request' });
     const row = heroRow(container);
-    expect(labels(row)).toEqual(['Confirm hold', 'Decline hold']);
+    expect(labels(row)).toEqual(['Confirm request', 'Decline request']);
     expect(confirm.style.getPropertyValue('--background-color')).toBe(PRIMARY);
     expect(
       screen
-        .getByRole('button', { name: 'Decline hold' })
+        .getByRole('button', { name: 'Decline request' })
         .style.getPropertyValue('--background-color')
     ).toBe(SECONDARY);
     expect(content(container)).toContainElement(screen.getByRole('link', { name: 'Edit' }));
@@ -398,7 +398,7 @@ describe('ThingPage — the decision about a request sits in the hero', () => {
     const panel = (await screen.findByText(/transfers the item/i)).closest('.thing-report-confirm');
     expect(row).toContainElement(panel);
     expect(content(container).querySelector('.thing-report-confirm')).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Confirm hold' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Confirm request' })).toHaveLength(1);
   });
 
   test.each([
@@ -430,7 +430,7 @@ describe('ThingPage — the decision about a request sits in the hero', () => {
 });
 
 describe('ThingPage — a co-curator demoted since the page loaded', () => {
-  test('pressing Confirm hold says why, reloads the thing, and the controls that are no longer theirs go', async () => {
+  test('pressing Confirm request says why, reloads the thing, and the controls that are no longer theirs go', async () => {
     localStorage.setItem('userCode', 'CURATOR1');
     // A loan, not a gift: accepting a gift asks to confirm the handover first.
     const asCurator = makeThing({
@@ -461,7 +461,7 @@ describe('ThingPage — a co-curator demoted since the page loaded', () => {
     });
     renderThingPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
     expect(
       await screen.findByText(
@@ -470,9 +470,9 @@ describe('ThingPage — a co-curator demoted since the page loaded', () => {
     ).toBeInTheDocument();
     expect(reads).toBe(2);
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Confirm hold' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Confirm request' })).not.toBeInTheDocument()
     );
-    expect(screen.queryByRole('button', { name: 'Decline hold' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Decline request' })).not.toBeInTheDocument();
   });
 });
 
@@ -620,7 +620,7 @@ describe('useThingBooking — the owner decides a hold', () => {
   test('accepting a gift retires the thing', async () => {
     const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BK1/accept/', { method: 'POST' })
@@ -629,13 +629,13 @@ describe('useThingBooking — the owner decides a hold', () => {
       status: 'INACTIVE',
       pending_booking: null,
     });
-    expect(await screen.findByText('Hold confirmed.')).toBeInTheDocument();
+    expect(await screen.findByText('Request confirmed.')).toBeInTheDocument();
   });
 
   test('rejecting a gift puts it back on offer', async () => {
     const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Decline hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline request' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BK1/reject/', { method: 'POST' })
@@ -644,14 +644,14 @@ describe('useThingBooking — the owner decides a hold', () => {
       status: 'ACTIVE',
       pending_booking: null,
     });
-    expect(await screen.findByText('Hold declined.')).toBeInTheDocument();
+    expect(await screen.findByText('Request declined.')).toBeInTheDocument();
   });
 
   // LEND/RENT (bookingKeepsStatus true): the thing keeps circulating, so a
   // decision may only move which request is waiting — never the status.
   test.each([
-    ['accepting', 'Confirm hold', 'accept'],
-    ['rejecting', 'Decline hold', 'reject'],
+    ['accepting', 'Confirm request', 'accept'],
+    ['rejecting', 'Decline request', 'reject'],
   ])('%s a rental leaves the thing active', async (_name, label, action) => {
     const onUpdateThing = renderOwner(makeThing({ type: 'LEND_THING', status: 'ACTIVE' }));
 
@@ -672,14 +672,14 @@ describe('useThingBooking — the owner decides a hold', () => {
       ],
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
     await waitFor(() =>
       expect(onUpdateThing).toHaveBeenCalledWith('THG001', { pending_booking: 'BK2' })
     );
 
     // The buttons now act on the second request, with no reload in between.
-    fireEvent.click(screen.getByRole('button', { name: 'Decline hold' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decline request' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BK2/reject/', { method: 'POST' })
@@ -696,7 +696,7 @@ describe('useThingBooking — the owner decides a hold', () => {
       ],
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/bookings/BKNOW/accept/', { method: 'POST' })
@@ -704,8 +704,8 @@ describe('useThingBooking — the owner decides a hold', () => {
   });
 
   test.each([
-    ['confirm', 'Confirm hold', 'Error confirming hold.'],
-    ['decline', 'Decline hold', 'Error declining hold.'],
+    ['confirm', 'Confirm request', 'Error confirming the request.'],
+    ['decline', 'Decline request', 'Error declining the request.'],
   ])(
     'a failed %s says which way it failed and leaves the thing alone',
     async (_n, label, message) => {
@@ -721,15 +721,15 @@ describe('useThingBooking — the owner decides a hold', () => {
   );
 
   // A co-curator demoted in another tab kept the card's "Confirm
-  // hold / Decline hold" on screen; pressing one, the server refused (correctly)
-  // and the page said only "Error confirming hold." — no why, no way forward.
+  // hold / Decline request" on screen; pressing one, the server refused (correctly)
+  // and the page said only "Error confirming the request." — no why, no way forward.
   // A 403 now says why and reloads the thing, so what is no longer theirs goes.
   const NO_LONGER =
     "You can no longer decide this request. We've reloaded it so you can see where it stands.";
 
   test.each([
-    ['confirm', 'Confirm hold'],
-    ['decline', 'Decline hold'],
+    ['confirm', 'Confirm request'],
+    ['decline', 'Decline request'],
   ])('a refused %s (403) says why and reloads the thing', async (_n, label) => {
     const demoted = makeThing({ type: 'GIFT_THING', status: 'TAKEN', can_manage: false });
     const onUpdateThing = renderOwner(makeThing({ type: 'GIFT_THING', status: 'TAKEN' }), {
@@ -751,9 +751,9 @@ describe('useThingBooking — the owner decides a hold', () => {
       booking: () => Promise.resolve(mockResponse({}, false, 500)),
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
-    expect(await screen.findByText('Error confirming hold.')).toBeInTheDocument();
+    expect(await screen.findByText('Error confirming the request.')).toBeInTheDocument();
     expect(screen.queryByText(NO_LONGER)).not.toBeInTheDocument();
     expect(apiFetch).not.toHaveBeenCalledWith('/api/v1/things/THG001/');
     expect(onUpdateThing).not.toHaveBeenCalled();
@@ -778,9 +778,9 @@ describe('useThingBooking — the owner decides a hold', () => {
       onUpdateThing,
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
-    expect(await screen.findByText('Error confirming hold.')).toBeInTheDocument();
+    expect(await screen.findByText('Error confirming the request.')).toBeInTheDocument();
     expect(screen.queryByText(NO_LONGER)).not.toBeInTheDocument();
     expect(onUpdateThing).not.toHaveBeenCalled();
   });
@@ -790,7 +790,7 @@ describe('useThingBooking — the owner decides a hold', () => {
       booking: () => Promise.reject(new Error('network down')),
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
     expect(await screen.findByText('Connection error.')).toBeInTheDocument();
   });

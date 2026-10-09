@@ -34,9 +34,9 @@ const APPROVED = {
     en: 'Whoever runs this thing will see your name and email.',
   },
   reservation: {
-    es: 'Quien gestiona este espacio verá tu nombre y tu email.',
-    ca: 'Qui gestiona aquest espai veurà el teu nom i el teu email.',
-    en: 'Whoever runs this space will see your name and email.',
+    es: 'Quien gestiona esto verá tu nombre y tu email.',
+    ca: 'Qui gestiona això veurà el teu nom i el teu email.',
+    en: 'Whoever runs this will see your name and email.',
   },
 };
 

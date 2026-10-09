@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { RENTAL_DURATION_PRESETS, durationLabel } from '../utils/rental';
 import WeekdayChips from './WeekdayChips';
 import LocalizedInfo from './LocalizedInfo';
-import { localizedCounter } from '../utils/localized';
+import { localizedHelper } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
 
 /**
@@ -77,7 +77,7 @@ export default function RentalRulesFields({
         label={t('rental.depositPolicyLabel')}
         value={depositPolicy}
         onChange={(e) => setDepositPolicy(e.target.value)}
-        helperText={localizedCounter(depositPolicy, 256).text}
+        helperText={localizedHelper(depositPolicy, 256, t)}
       />
       <LocalizedInfo id={`${idPrefix}-deposit-policy-localized-info`} variant="policy" />
     </>
