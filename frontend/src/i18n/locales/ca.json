@@ -27,7 +27,7 @@
   },
   "communityProfile": {
     "heading": "Dades demogràfiques (opcional)",
-    "helper": "Opcional. Només ho poden veure els propietaris de les col·leccions on participes — mai és públic.",
+    "helper": "Opcional. Només ho poden veure els propietaris dels grups on participes — mai és públic.",
     "ageLabel": "Any de naixement",
     "ageUnset": "Prefereixo no dir-ho",
     "postalLabel": "Codi postal"
@@ -191,7 +191,7 @@
     "rejected": "Rebutjat",
     "oops": "Vaja",
     "verifying": "Verificant…",
-    "invitationDeclined": "Invitació rebutjada. S'ha notificat al propietari de la col·lecció.",
+    "invitationDeclined": "Invitació rebutjada. S'ha avisat el propietari del grup.",
     "holdConfirmed": "La sol·licitud ha estat confirmada!",
     "holdRejected": "La sol·licitud ha estat rebutjada.",
     "invalidOrExpired": "Enllaç no vàlid o caducat.",
@@ -239,7 +239,7 @@
     "broadcastBody": "{{message}}",
     "collectionDeletedLabel": "Col·lecció eliminada",
     "collectionDeletedBody": "\"{{collection_headline}}\" ha estat eliminada per {{owner_name}}.",
-    "collectionRevokedLabel": "Eliminat de la col·lecció",
+    "collectionRevokedLabel": "Eliminat del grup",
     "collectionRevokedBody": "{{owner_name}} t'ha eliminat de «{{collection_headline}}».",
     "bookingAcceptedLabel": "Sol·licitud confirmada",
     "bookingAcceptedBody": "{{owner_name}} ha confirmat la teva sol·licitud de {{thing_headline}}.",
@@ -300,7 +300,7 @@
     "allTags": "Tots",
     "noThingsForTag": "No hi ha coses amb aquesta etiqueta.",
     "communityTag": "Comunitària",
-    "noPermission": "No tens accés a aquesta col·lecció. Pot estar inactiva, o el teu accés pot haver canviat — revisa les teves invitacions, o contacta amb el propietari.",
+    "noPermission": "No tens accés a aquesta col·lecció. Pot estar inactiva, o el teu accés pot haver canviat — revisa les teves invitacions, o pregunta a qui gestiona el grup.",
     "notFound": "Col·lecció no trobada.",
     "errorLoading": "Error en carregar la col·lecció.",
     "curator": "Dinamització:",
@@ -637,8 +637,8 @@
     "errorSending": "Error en enviar la invitació.",
     "multipleHelper": "Pots convidar diverses persones alhora: separa els correus amb comes.",
     "errorLoading": "Error en carregar la col·lecció.",
-    "noPermission": "No tens accés als membres d'aquesta col·lecció.",
-    "caption": "Membres d'aquesta col·lecció"
+    "noPermission": "No tens accés als membres d'aquest grup.",
+    "caption": "Membres d'aquest grup"
   },
   "recommend": {
     "openButton": "Convidar algú",

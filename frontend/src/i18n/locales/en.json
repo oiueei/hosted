@@ -27,7 +27,7 @@
   },
   "communityProfile": {
     "heading": "Demographics (optional)",
-    "helper": "Optional. Only owners of collections you're in can see this — it's never public.",
+    "helper": "Optional. Only owners of the groups you're in can see this — it's never public.",
     "ageLabel": "Birth year",
     "ageUnset": "Prefer not to say",
     "postalLabel": "Postal code"
@@ -197,7 +197,7 @@
     "rejected": "Rejected",
     "oops": "Oops",
     "verifying": "Verifying…",
-    "invitationDeclined": "Invitation declined. The collection owner has been notified.",
+    "invitationDeclined": "Invitation declined. The owner of the group has been told.",
     "holdConfirmed": "The request has been confirmed!",
     "holdRejected": "The request has been declined.",
     "invalidOrExpired": "Invalid or expired link.",
@@ -245,7 +245,7 @@
     "broadcastBody": "{{message}}",
     "collectionDeletedLabel": "Collection deleted",
     "collectionDeletedBody": "\"{{collection_headline}}\" has been deleted by {{owner_name}}.",
-    "collectionRevokedLabel": "Removed from collection",
+    "collectionRevokedLabel": "Removed from the group",
     "collectionRevokedBody": "You have been removed from \"{{collection_headline}}\" by {{owner_name}}.",
     "bookingAcceptedLabel": "Request confirmed",
     "bookingAcceptedBody": "{{owner_name}} confirmed your request for {{thing_headline}}.",
@@ -306,7 +306,7 @@
     "allTags": "All",
     "noThingsForTag": "No things with this tag.",
     "communityTag": "Community",
-    "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask the owner.",
+    "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask whoever runs the group.",
     "notFound": "Collection not found.",
     "errorLoading": "Error loading collection.",
     "curator": "Run by:",
@@ -643,8 +643,8 @@
     "errorSending": "Error sending invitation.",
     "multipleHelper": "You can invite several people at once: separate the emails with commas.",
     "errorLoading": "Error loading collection.",
-    "noPermission": "You do not have access to this collection's members.",
-    "caption": "Members of this collection"
+    "noPermission": "You do not have access to this group's members.",
+    "caption": "Members of this group"
   },
   "recommend": {
     "openButton": "Invite someone",

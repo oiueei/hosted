@@ -485,7 +485,7 @@ describe('declining an invitation from the email', () => {
     renderVerify();
 
     expect(
-      await screen.findByText('Invitation declined. The collection owner has been notified.')
+      await screen.findByText('Invitation declined. The owner of the group has been told.')
     ).toBeInTheDocument();
     expect(screen.getByText('Declined')).toBeInTheDocument();
     expect(postCalls(globalThis.fetch)).toHaveLength(0);
