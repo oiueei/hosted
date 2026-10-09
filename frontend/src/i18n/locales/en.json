@@ -27,7 +27,7 @@
   },
   "communityProfile": {
     "heading": "Demographics (optional)",
-    "helper": "Optional. Only owners of collections you're in can see this — it's never public.",
+    "helper": "Optional. Only owners of the groups you're in can see this — it's never public.",
     "ageLabel": "Birth year",
     "ageUnset": "Prefer not to say",
     "postalLabel": "Postal code"
@@ -188,6 +188,7 @@
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
     "popIn": "New here?",
+    "inviteOnly": "OIUEEI works by invitation: ask whoever runs your group to invite you.",
     "faqLink": "Questions about this site?"
   },
   "verify": {
@@ -196,9 +197,9 @@
     "rejected": "Rejected",
     "oops": "Oops",
     "verifying": "Verifying…",
-    "invitationDeclined": "Invitation declined. The collection owner has been notified.",
-    "holdConfirmed": "The hold has been confirmed!",
-    "holdRejected": "The hold has been rejected.",
+    "invitationDeclined": "Invitation declined. The owner of the group has been told.",
+    "holdConfirmed": "The request has been confirmed!",
+    "holdRejected": "The request has been declined.",
     "invalidOrExpired": "Invalid or expired link.",
     "noLongerManages": "You no longer run this thing, so this link can no longer decide the request.",
     "expiredHelp": "If your link has expired, ask the person who invited you to send a new one, or request a new magic link.",
@@ -244,17 +245,17 @@
     "broadcastBody": "{{message}}",
     "collectionDeletedLabel": "Collection deleted",
     "collectionDeletedBody": "\"{{collection_headline}}\" has been deleted by {{owner_name}}.",
-    "collectionRevokedLabel": "Removed from collection",
+    "collectionRevokedLabel": "Removed from the group",
     "collectionRevokedBody": "You have been removed from \"{{collection_headline}}\" by {{owner_name}}.",
-    "bookingAcceptedLabel": "Hold confirmed",
-    "bookingAcceptedBody": "{{owner_name}} confirmed your hold on {{thing_headline}}.",
+    "bookingAcceptedLabel": "Request confirmed",
+    "bookingAcceptedBody": "{{owner_name}} confirmed your request for {{thing_headline}}.",
     "bookingDecidedAcceptedByYouBody": "You confirmed {{requester_name}}'s request for {{thing_headline}}.",
     "bookingDecidedRejectedByYouBody": "You declined {{requester_name}}'s request for {{thing_headline}}.",
     "bookingDecidedAcceptedBody": "{{decider_name}} confirmed {{requester_name}}'s request for {{thing_headline}}.",
     "bookingDecidedRejectedBody": "{{decider_name}} declined {{requester_name}}'s request for {{thing_headline}}.",
-    "bookingRejectedLabel": "Hold declined",
-    "bookingRejectedBody": "{{owner_name}} declined your hold on {{thing_headline}}.",
-    "bookingRequestedLabel": "New hold request",
+    "bookingRejectedLabel": "Request declined",
+    "bookingRejectedBody": "{{owner_name}} declined your request for {{thing_headline}}.",
+    "bookingRequestedLabel": "New request",
     "bookingRequestedBody": "{{requester_name}} requested {{thing_headline}}.",
     "faqQuestionLabel": "New question",
     "faqQuestionBody": "{{questioner_name}} asked a question about {{thing_headline}}.",
@@ -305,7 +306,7 @@
     "allTags": "All",
     "noThingsForTag": "No things with this tag.",
     "communityTag": "Community",
-    "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask the owner.",
+    "noPermission": "You do not have access to this collection. It may be inactive, or your access may have changed — check your invitations, or ask whoever runs the group.",
     "notFound": "Collection not found.",
     "errorLoading": "Error loading collection.",
     "curator": "Run by:",
@@ -325,7 +326,7 @@
     "doneLabel": "Done",
     "done": "You won't get summaries from this group any more.",
     "doneNamed": "You won't get summaries from “{{collection}}” any more.",
-    "stillGet": "You'll still hear about your own holds, questions and replies — only this group's round-up has stopped. You can turn it back on from the collection page whenever you like.",
+    "stillGet": "You'll still hear about your own requests, reservations, questions and replies — only this group's round-up has stopped. You can turn it back on from the collection page whenever you like.",
     "error": "This link is invalid or has expired. You can change this from the collection page instead."
   },
   "thingPage": {
@@ -351,11 +352,11 @@
     "errorSendingRequest": "Error sending request.",
     "thingReactivated": "Thing reactivated.",
     "errorReactivatingThing": "Error reactivating thing.",
-    "holdConfirmed": "Hold confirmed.",
-    "holdCancelled": "Hold declined.",
+    "holdConfirmed": "Request confirmed.",
+    "holdCancelled": "Request declined.",
     "noLongerDecides": "You can no longer decide this request. We've reloaded it so you can see where it stands.",
-    "errorConfirmingHold": "Error confirming hold.",
-    "errorCancellingHold": "Error declining hold.",
+    "errorConfirmingHold": "Error confirming the request.",
+    "errorCancellingHold": "Error declining the request.",
     "questionSent": "Question sent.",
     "errorSendingQuestion": "Error sending question.",
     "answerSent": "Answer sent.",
@@ -378,8 +379,8 @@
     "reportError": "Sorry, we couldn't send your report. Please try again."
   },
   "thingCard": {
-    "confirmHold": "Confirm hold",
-    "cancelHold": "Decline hold",
+    "confirmHold": "Confirm request",
+    "cancelHold": "Decline request",
     "reactivate": "Reactivate",
     "confirming": "Confirming...",
     "cancelling": "Declining...",
@@ -391,11 +392,8 @@
     "waitingForConfirmation": "Waiting for confirmation",
     "confirmed": "Confirmed",
     "pending": "Pending",
-    "qty": "qty",
     "notAvailable": "Not available",
     "paused": "Paused",
-    "needMoreItems_one": "Need {{count}} more item",
-    "needMoreItems_other": "Need {{count}} more items",
     "action": {
       "GIFT_THING": "Claim",
       "SELL_THING": "Buy",
@@ -491,7 +489,7 @@
     "pageTitle": "Delete: {{headline}}",
     "warning": "This cannot be undone. Deleting this collection destroys everything that lived only here — yours and everyone else's.",
     "whatGoesTitle": "What is deleted:",
-    "goesThings": "Every thing in the collection, the ones your members added included, with their photos, holds and journey history.",
+    "goesThings": "Every thing in the collection, the ones your members added included, with their photos, requests and journey history.",
     "goesFaq": "Every question and answer asked about those things.",
     "goesGuests": "The member list. Members are told the collection is gone; none of them can get any of it back.",
     "staysShared": "One thing survives: anything that also belongs to another collection stays there — it simply leaves this one.",
@@ -645,8 +643,8 @@
     "errorSending": "Error sending invitation.",
     "multipleHelper": "You can invite several people at once: separate the emails with commas.",
     "errorLoading": "Error loading collection.",
-    "noPermission": "You do not have access to this collection's members.",
-    "caption": "Members of this collection"
+    "noPermission": "You do not have access to this group's members.",
+    "caption": "Members of this group"
   },
   "recommend": {
     "openButton": "Invite someone",
@@ -765,7 +763,6 @@
     "lentOn": "Lent on {{date}}",
     "returnedOn": "Returned on {{date}}",
     "to": "to",
-    "noTransfers": "No transfers yet.",
     "changesCount_one": "{{count}} change",
     "changesCount_other": "{{count}} changes",
     "lendCount_one": "{{count}} loan",
@@ -792,7 +789,7 @@
     "linkGone": "This invitation link no longer works — ask whoever sent it for a new one."
   },
   "endless": {
-    "label": "Endless — multiple people can hold at the same time, thing stays active forever"
+    "label": "Endless — several people can ask for it at the same time, thing stays active forever"
   },
   "broadcast": {
     "heading": "Messages to the group",
@@ -819,7 +816,7 @@
   },
   "pause": {
     "sectionHeading": "Pause",
-    "sectionHelper": "While paused, the collection is visible but members cannot place new hold requests.",
+    "sectionHelper": "While paused, the collection is visible but members cannot make new requests.",
     "messageLabel": "Message to members",
     "messageHelper": "Let members know why the collection is paused. Maximum 256 characters.",
     "pauseButton": "Pause collection",
@@ -838,8 +835,8 @@
     "copy": "Copy invite link",
     "whatsapp": "WhatsApp",
     "emailSubject": "I'm inviting you to {{headline}} on OIUEEI",
-    "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI.\n\nYou can join here: {{url}}",
-    "whatsappText": "I'm inviting you to \"{{headline}}\" on OIUEEI: {{url}}",
+    "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI, where a group shares its things among its members.\n\nYou can join here: {{url}}",
+    "whatsappText": "I'm inviting you to \"{{headline}}\" on OIUEEI, where a group shares its things among its members: {{url}}",
     "copied": "Invite link copied to clipboard.",
     "copyError": "We couldn't copy the link. Try again or use one of the other options.",
     "linkError": "We couldn't generate the invite link. Please try again.",
@@ -935,7 +932,8 @@
     "requestInfoInfoBody": "It works the same way — write it as a small map and each member reads their own.",
     "emailNoteHint": "The email note can hold one text per language too.",
     "emailNoteInfoBody": "It works the same way — write it as a small map and each member reads their own in the email.",
-    "infoFallback": "Languages: es (Spanish), ca (Catalan), en (English). Write in one only if you prefer — anything that isn't a map is shown exactly as you typed it."
+    "infoFallback": "Languages: es (Spanish), ca (Catalan), en (English). Write in one only if you prefer — anything that isn't a map is shown exactly as you typed it.",
+    "readAsPlain": "Read as plain text — to write one per language, check the quotes and the codes es, ca, en."
   },
   "deleteAccount": {
     "pageTitle": "Delete your account",
@@ -1024,7 +1022,7 @@
     "joinedLabel": "You've joined the group",
     "joinedGroup": "To reserve here you've joined {{group}}. You can leave it from your profile.",
     "dateSummary": "Reserved from {{start}} to {{end}}.",
-    "contactShared": "Whoever runs this space will see your name and email.",
+    "contactShared": "Whoever runs this will see your name and email.",
     "dateRange": "Pick a date between today and {{days}} days from now.",
     "noteFrom": "Their note: {{note}}",
     "maxDaysLabel": "Longest reservation (days)",
@@ -1066,7 +1064,9 @@
     "label": "Weekly opening hours",
     "helper": "As JSON: one key per weekday (\"0\" Monday … \"6\" Sunday), each a list of [\"HH:MM\",\"HH:MM\"] ranges — e.g. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Leave a day out, or give it an empty list, to keep it closed.",
     "invalidJson": "That's not valid JSON — check the brackets and quotes.",
-    "invalidOnSave": "Nothing was saved: the weekly opening hours (under “More options”) aren't valid JSON. Fix them and save again."
+    "invalidOnSave": "Nothing was saved: the weekly opening hours (under “More options”) aren't valid JSON. Fix them and save again.",
+    "previewLabel": "Reads as:",
+    "closed": "closed"
   },
   "homePage": {
     "label": "Home page",

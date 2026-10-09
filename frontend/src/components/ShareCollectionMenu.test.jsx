@@ -294,6 +294,32 @@ describe('handing the link over', () => {
     expect(body).not.toMatch(/Founder Person/);
   });
 
+  // The person who receives the link may never have heard of OIUEEI; the draft is
+  // all they have before deciding to press it. One clause says what it is —
+  // neutral on purpose, since a PUBLIC group's link is not a private invitation.
+  test('the email draft says what OIUEEI is, and still ends at the link', async () => {
+    render(<ShareCollectionMenu {...props} isPublic />);
+
+    pick('Email');
+
+    await waitFor(() => expect(window.location.href).toMatch(/^mailto:\?subject=/));
+    const body = decodeURIComponent(window.location.href.split('&body=')[1]);
+    expect(body).toContain('on OIUEEI, where a group shares its things among its members.');
+    expect(body.endsWith('http://localhost:3000/collections/COL001')).toBe(true);
+  });
+
+  test('the WhatsApp text says what OIUEEI is, before the link', async () => {
+    render(<ShareCollectionMenu {...props} isPublic />);
+
+    pick('WhatsApp');
+
+    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    const text = decodeURIComponent(openSpy.mock.calls[0][0].split('?text=')[1]);
+    expect(text).toMatch(
+      /on OIUEEI, where a group shares its things among its members: http:\/\/localhost:3000\/collections\/COL001$/
+    );
+  });
+
   test('the WhatsApp hand-off carries the link and cannot reach back', async () => {
     // `noopener` is the load-bearing argument: without it the opened page gets a
     // handle on this one through `window.opener`.

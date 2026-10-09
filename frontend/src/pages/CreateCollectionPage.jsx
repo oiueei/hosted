@@ -15,7 +15,7 @@ import PdfUpload from '../components/PdfUpload';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import TagInput from '../components/TagInput';
 import LocalizedInfo from '../components/LocalizedInfo';
-import { localizedCounter } from '../utils/localized';
+import { localizedCounter, localizedHelper } from '../utils/localized';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
@@ -221,7 +221,7 @@ export default function CreateCollectionPage() {
           required
           invalid={!!errors.headline}
           errorText={errors.headline}
-          helperText={localizedCounter(headline, 64).text}
+          helperText={localizedHelper(headline, 64, t)}
         />
         <TextArea
           id="create-collection-description"
@@ -230,7 +230,7 @@ export default function CreateCollectionPage() {
           onChange={(e) => setDescription(e.target.value)}
           invalid={!!errors.description}
           errorText={errors.description}
-          helperText={localizedCounter(description, 2000).text}
+          helperText={localizedHelper(description, 2000, t)}
         />
         <LocalizedInfo id="create-collection-localized-info" />
         <CollectionModeField
@@ -329,7 +329,7 @@ export default function CreateCollectionPage() {
               errorText={
                 localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
               }
-              helperText={localizedCounter(requestInfo, 512).text}
+              helperText={localizedHelper(requestInfo, 512, t)}
             />
             <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
           </div>
@@ -344,7 +344,7 @@ export default function CreateCollectionPage() {
               errorText={
                 localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined
               }
-              helperText={localizedCounter(emailNote, 512).text}
+              helperText={localizedHelper(emailNote, 512, t)}
             />
             <LocalizedInfo id="create-collection-email-note-info" variant="emailNote" />
           </div>

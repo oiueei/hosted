@@ -206,6 +206,72 @@ describe('the open-door button follows popInPath', () => {
   });
 });
 
+describe('without an open door, /login says that it works by invitation', () => {
+  const noDoor = () => ({
+    deploymentRoutes: [],
+    popInPath: null,
+    aboutPath: null,
+    faqPath: null,
+    deploymentI18n: {},
+    externalForms: null,
+  });
+
+  test('the line stands where the button would be, after the form', async () => {
+    vi.doMock('../deployment', noDoor);
+    const { default: LoginPage } = await import('../pages/LoginPage');
+    const { default: en } = await import('../i18n/locales/en.json');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    // Read from en.json, so rewording it costs no test — but a raw key or an
+    // empty string would fail.
+    const line = screen.getByText(en.login.inviteOnly);
+    expect(en.login.inviteOnly).toMatch(/invitation/);
+    const form = document.querySelector('form');
+    expect(form.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('it stays after the email is sent, when nothing may arrive', async () => {
+    // The server answers an unknown address exactly as a known one, so the
+    // moment the line matters most is after "If this email is registered…".
+    vi.doMock('../deployment', noDoor);
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    const { default: LoginPage } = await import('../pages/LoginPage');
+    const { default: en } = await import('../i18n/locales/en.json');
+    const { fireEvent } = await import('@testing-library/react');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'lala@mail.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByText(en.login.magicLinkSent)).toBeInTheDocument();
+    expect(screen.getByText(en.login.inviteOnly)).toBeInTheDocument();
+  });
+
+  test('a deployment with an open door shows its button instead, not both', async () => {
+    vi.doMock('../deployment', () => ({ ...noDoor(), popInPath: '/join-us' }));
+    const { default: LoginPage } = await import('../pages/LoginPage');
+    const { default: en } = await import('../i18n/locales/en.json');
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('link', { name: 'New here?' })).toBeInTheDocument();
+    expect(screen.queryByText(en.login.inviteOnly)).not.toBeInTheDocument();
+  });
+});
+
 describe('the faq link follows faqPath', () => {
   test('is not rendered at all when the deployment has no help page', async () => {
     vi.doMock('../deployment', () => ({

@@ -27,7 +27,7 @@
   },
   "communityProfile": {
     "heading": "Datos demográficos (opcional)",
-    "helper": "Opcional. Solo lo pueden ver los propietarios de las colecciones en las que estás — nunca es público.",
+    "helper": "Opcional. Solo lo pueden ver los propietarios de los grupos en los que estás — nunca es público.",
     "ageLabel": "Año de nacimiento",
     "ageUnset": "Prefiero no decirlo",
     "postalLabel": "Código postal"
@@ -182,6 +182,7 @@
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
     "operator": "",
     "popIn": "¿Nuevo por aquí?",
+    "inviteOnly": "OIUEEI funciona por invitación: pide a quien gestiona tu grupo que te invite.",
     "faqLink": "¿Dudas sobre este sitio?"
   },
   "verify": {
@@ -190,7 +191,7 @@
     "rejected": "Rechazado",
     "oops": "Vaya",
     "verifying": "Verificando…",
-    "invitationDeclined": "Invitación rechazada. Se ha notificado al propietario de la colección.",
+    "invitationDeclined": "Invitación rechazada. Se ha avisado al propietario del grupo.",
     "holdConfirmed": "¡La solicitud ha sido confirmada!",
     "holdRejected": "La solicitud ha sido rechazada.",
     "invalidOrExpired": "Enlace inválido o caducado.",
@@ -238,7 +239,7 @@
     "broadcastBody": "{{message}}",
     "collectionDeletedLabel": "Colección eliminada",
     "collectionDeletedBody": "\"{{collection_headline}}\" ha sido eliminada por {{owner_name}}.",
-    "collectionRevokedLabel": "Eliminado de la colección",
+    "collectionRevokedLabel": "Eliminado del grupo",
     "collectionRevokedBody": "{{owner_name}} te ha eliminado de «{{collection_headline}}».",
     "bookingAcceptedLabel": "Solicitud confirmada",
     "bookingAcceptedBody": "{{owner_name}} ha confirmado tu solicitud de {{thing_headline}}.",
@@ -299,7 +300,7 @@
     "allTags": "Todos",
     "noThingsForTag": "No hay cosas con este tag.",
     "communityTag": "Comunitaria",
-    "noPermission": "No tienes acceso a esta colección. Puede estar inactiva, o tu acceso puede haber cambiado — revisa tus invitaciones, o contacta con el dueño.",
+    "noPermission": "No tienes acceso a esta colección. Puede estar inactiva, o tu acceso puede haber cambiado — revisa tus invitaciones, o pregunta a quien gestiona el grupo.",
     "notFound": "Colección no encontrada.",
     "errorLoading": "Error al cargar la colección.",
     "curator": "Dinamización:",
@@ -385,11 +386,8 @@
     "waitingForConfirmation": "Esperando confirmación",
     "confirmed": "Confirmado",
     "pending": "Pendiente",
-    "qty": "uds",
     "notAvailable": "No disponible",
     "paused": "Pausada",
-    "needMoreItems_one": "Necesitas {{count}} cosa más",
-    "needMoreItems_other": "Necesitas {{count}} cosas más",
     "action": {
       "GIFT_THING": "Pedir",
       "SELL_THING": "Comprar",
@@ -639,8 +637,8 @@
     "errorSending": "Error al enviar la invitación.",
     "multipleHelper": "Puedes invitar a varias personas a la vez: separa los correos con comas.",
     "errorLoading": "Error al cargar la colección.",
-    "noPermission": "No tienes acceso a los miembros de esta colección.",
-    "caption": "Miembros de esta colección"
+    "noPermission": "No tienes acceso a los miembros de este grupo.",
+    "caption": "Miembros de este grupo"
   },
   "recommend": {
     "openButton": "Invitar a alguien",
@@ -759,7 +757,6 @@
     "lentOn": "Prestado el {{date}}",
     "returnedOn": "Devuelto el {{date}}",
     "to": "a",
-    "noTransfers": "Sin transferencias aún.",
     "changesCount_one": "{{count}} cambio",
     "changesCount_other": "{{count}} cambios",
     "lendCount_one": "{{count}} préstamo",
@@ -832,8 +829,8 @@
     "copy": "Copiar enlace de invitación",
     "whatsapp": "WhatsApp",
     "emailSubject": "Te invito a {{headline}} en OIUEEI",
-    "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI.\n\nPuedes unirte aquí: {{url}}",
-    "whatsappText": "Te invito a \"{{headline}}\" en OIUEEI: {{url}}",
+    "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI, donde un grupo comparte sus cosas entre sus miembros.\n\nPuedes unirte aquí: {{url}}",
+    "whatsappText": "Te invito a \"{{headline}}\" en OIUEEI, donde un grupo comparte sus cosas entre sus miembros: {{url}}",
     "copied": "Enlace copiado al portapapeles.",
     "copyError": "No hemos podido copiar el enlace. Inténtalo de nuevo o usa otra opción.",
     "linkError": "No hemos podido generar el enlace. Inténtalo de nuevo.",
@@ -935,7 +932,8 @@
     "requestInfoInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo.",
     "emailNoteHint": "El aviso del correo también admite un texto por idioma.",
     "emailNoteInfoBody": "Funciona igual: escríbelo como un pequeño mapa y cada miembro leerá el suyo en el correo.",
-    "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste."
+    "infoFallback": "Idiomas: es (español), ca (catalán), en (inglés). Puedes escribir en uno solo si lo prefieres: todo lo que no sea un mapa se muestra tal cual lo escribiste.",
+    "readAsPlain": "Se lee como texto normal: para escribir uno por idioma, revisa las comillas y los códigos es, ca, en."
   },
   "deleteAccount": {
     "pageTitle": "Borrar tu cuenta",
@@ -1024,7 +1022,7 @@
     "joinedLabel": "Te has unido al grupo",
     "joinedGroup": "Para reservar aquí te has unido a {{group}}. Puedes salir desde tu perfil.",
     "dateSummary": "Reservado del {{start}} al {{end}}.",
-    "contactShared": "Quien gestiona este espacio verá tu nombre y tu email.",
+    "contactShared": "Quien gestiona esto verá tu nombre y tu email.",
     "dateRange": "Elige una fecha entre hoy y dentro de {{days}} días.",
     "noteFrom": "Su mensaje: {{note}}",
     "maxDaysLabel": "Reserva más larga (días)",
@@ -1066,7 +1064,9 @@
     "label": "Horario semanal",
     "helper": "En JSON: una clave por día de la semana (\"0\" lunes … \"6\" domingo), cada una con una lista de tramos [\"HH:MM\",\"HH:MM\"] — p. ej. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deja un día fuera, o ponle una lista vacía, para que quede cerrado.",
     "invalidJson": "Eso no es JSON válido — revisa las llaves y las comillas.",
-    "invalidOnSave": "No se ha guardado nada: el horario semanal (en «Más opciones») no es JSON válido. Corrígelo y vuelve a guardar."
+    "invalidOnSave": "No se ha guardado nada: el horario semanal (en «Más opciones») no es JSON válido. Corrígelo y vuelve a guardar.",
+    "previewLabel": "Se lee así:",
+    "closed": "cerrado"
   },
   "homePage": {
     "label": "Página web",

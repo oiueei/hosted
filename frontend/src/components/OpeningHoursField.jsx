@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TextArea } from 'hds-react';
 import { useTranslation } from 'react-i18next';
+import { openingHoursWeek } from '../utils/rental';
 
 /**
  * The weekly opening-hours editor for an HOUR-unit reservations collection:
@@ -73,7 +74,7 @@ export default function OpeningHoursField({
   onChange = noop,
   onValidityChange = noop,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [draft, setDraft] = useState(() => JSON.stringify(value));
   const [error, setError] = useState('');
   const [syncedJson, setSyncedJson] = useState(() => JSON.stringify(value));
@@ -111,16 +112,39 @@ export default function OpeningHoursField({
     onChange(parsed);
   };
 
+  // What the saved value says, in words: the owner checks the week without
+  // reading the JSON back. It follows `value` — what Save would send — so a
+  // draft that does not parse leaves the last good week on screen, under the
+  // field's own error. Nothing is shown while no day is set.
+  const week = Object.keys(value).length ? openingHoursWeek(value, i18n.language) : null;
+
   return (
-    <TextArea
-      id={id}
-      label={t('openingHours.label')}
-      helperText={t('openingHours.helper')}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      invalid={!!error}
-      errorText={error}
-    />
+    <>
+      <TextArea
+        id={id}
+        label={t('openingHours.label')}
+        helperText={t('openingHours.helper')}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        invalid={!!error}
+        errorText={error}
+      />
+      {week && (
+        <div className="opening-hours-preview">
+          <p className="text-muted" id={`${id}-preview-label`}>
+            {t('openingHours.previewLabel')}
+          </p>
+          <ul aria-labelledby={`${id}-preview-label`}>
+            {week.map(({ day, name, ranges }) => (
+              <li key={day}>
+                <span className="opening-hours-preview-day">{name}</span>{' '}
+                {ranges.length ? ranges.join(', ') : t('openingHours.closed')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
   );
 }

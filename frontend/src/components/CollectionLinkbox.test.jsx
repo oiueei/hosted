@@ -73,6 +73,34 @@ describe('CollectionLinkbox', () => {
     expect(screen.getByText('Collection page')).toBeInTheDocument();
   });
 
+  test.each([
+    ['ctrl', { ctrlKey: true }],
+    ['cmd', { metaKey: true }],
+    ['shift', { shiftKey: true }],
+    ['alt', { altKey: true }],
+  ])(
+    'with %s held, a click is left to the browser: a new tab, not an in-app jump',
+    (_, modifier) => {
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route path="/" element={<CollectionLinkbox collection={collection} showInfo />} />
+            <Route path="/collections/:code" element={<p>Collection page</p>} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Calling preventDefault here is what stopped "open in new tab" from working
+      // on every collection row: the browser never got the click.
+      const link = screen.getByRole('link');
+      const click = createEvent.click(link, modifier);
+      fireEvent(link, click);
+
+      expect(click.defaultPrevented).toBe(false);
+      expect(screen.queryByText('Collection page')).not.toBeInTheDocument();
+    }
+  );
+
   test('the profile grid omits the counts line the Home grids show', () => {
     render(
       <MemoryRouter>

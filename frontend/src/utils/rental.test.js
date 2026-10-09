@@ -26,6 +26,7 @@ import {
   freeStartTimes,
   earliestStartMinutes,
   isHourlyPickupDisabled,
+  openingHoursWeek,
 } from './rental';
 
 // Run in a UTC-negative timezone so a regression to UTC date parsing
@@ -900,5 +901,48 @@ describe('isHourlyPickupDisabled', () => {
   test('a whole-day booking (start_time null) disables the day', () => {
     const blockedPeriods = [{ start_date: '2024-01-01', end_date: '2024-01-02', start_time: null }];
     expect(isHourlyPickupDisabled(MON, { ...baseArgs, blockedPeriods })).toBe(true);
+  });
+});
+
+describe('openingHoursWeek', () => {
+  test('one row per weekday from Monday, each with its ranges as written', () => {
+    const week = openingHoursWeek(
+      {
+        0: [
+          ['09:00', '13:00'],
+          ['16:00', '20:00'],
+        ],
+        4: [['10:00', '14:00']],
+      },
+      'en'
+    );
+    expect(week.map((d) => d.day)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(week[0]).toEqual({ day: 0, name: 'Mon', ranges: ['09:00–13:00', '16:00–20:00'] });
+    expect(week[4]).toEqual({ day: 4, name: 'Fri', ranges: ['10:00–14:00'] });
+  });
+
+  test('a day missing or given an empty list has no ranges: closed', () => {
+    const week = openingHoursWeek({ 1: [] }, 'en');
+    expect(week[1].ranges).toEqual([]);
+    expect(week[6].ranges).toEqual([]);
+  });
+
+  test('names the days in the language asked for', () => {
+    expect(openingHoursWeek({}, 'es')[0].name).toMatch(/^lun/);
+    expect(openingHoursWeek({}, 'ca')[6].name).toMatch(/^dg/);
+  });
+
+  test('reads a half-right paste without throwing, leaving out what it cannot read', () => {
+    const week = openingHoursWeek(
+      { 0: 'all day', 1: [['09:00'], ['10:00', 12], ['10:00', '12:00']], 9: [['01:00', '02:00']] },
+      'en'
+    );
+    expect(week[0].ranges).toEqual([]);
+    expect(week[1].ranges).toEqual(['10:00–12:00']);
+    expect(week).toHaveLength(7);
+  });
+
+  test('no map at all is a closed week', () => {
+    expect(openingHoursWeek(null, 'en').every((d) => d.ranges.length === 0)).toBe(true);
   });
 });

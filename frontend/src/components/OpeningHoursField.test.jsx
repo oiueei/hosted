@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
 import OpeningHoursField from './OpeningHoursField';
 
@@ -176,5 +176,46 @@ describe('OpeningHoursField', () => {
     );
 
     expect(field()).toHaveValue(JSON.stringify({ 2: [['09:00', '17:00']] }));
+  });
+
+  describe('the week in words under the field', () => {
+    const preview = () => screen.getByRole('list', { name: 'Reads as:' });
+
+    test('says each day of the saved value, a closed one as closed', () => {
+      renderField({
+        value: {
+          0: [
+            ['09:00', '13:00'],
+            ['16:00', '20:00'],
+          ],
+        },
+      });
+      const items = within(preview()).getAllByRole('listitem');
+      expect(items).toHaveLength(7);
+      expect(items[0]).toHaveTextContent('Mon 09:00–13:00, 16:00–20:00');
+      expect(items[1]).toHaveTextContent('Tue closed');
+    });
+
+    test('is absent while no day is set', () => {
+      renderField({ value: {} });
+      expect(screen.queryByRole('list', { name: 'Reads as:' })).not.toBeInTheDocument();
+    });
+
+    test('follows a new value, and keeps the last good week under a broken draft', () => {
+      const { rerender, onChange } = renderField({ value: { 0: [['09:00', '13:00']] } });
+      rerender(
+        <OpeningHoursField
+          id="edit-collection-opening-hours"
+          value={{ 2: [['10:00', '12:00']] }}
+          onChange={onChange}
+        />
+      );
+      expect(within(preview()).getAllByRole('listitem')[2]).toHaveTextContent('Wed 10:00–12:00');
+
+      fireEvent.change(field(), { target: { value: '{"2": [["10:00","12:00"],' } });
+      fireEvent.blur(field());
+      expect(screen.getByText(/not valid JSON/)).toBeInTheDocument();
+      expect(within(preview()).getAllByRole('listitem')[2]).toHaveTextContent('Wed 10:00–12:00');
+    });
   });
 });

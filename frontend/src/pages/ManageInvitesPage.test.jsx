@@ -138,9 +138,7 @@ describe('ManageInvitesPage (the guest list)', () => {
   test('the guest table carries a name', async () => {
     renderPage();
 
-    expect(
-      await screen.findByRole('table', { name: 'Members of this collection' })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Members of this group' })).toBeInTheDocument();
   });
 
   test('a rejected invite surfaces the backend detail, not a generic error', async () => {
@@ -318,7 +316,7 @@ describe('ManageInvitesPage load failures', () => {
     renderPage();
 
     expect(
-      await screen.findByText(/do not have access to this collection's members/i)
+      await screen.findByText(/do not have access to this group's members/i)
     ).toBeInTheDocument();
   });
 

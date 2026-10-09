@@ -25,6 +25,16 @@ export default function CollectionLinkbox({ collection, showInfo = false }) {
     <Linkbox
       href={`/collections/${collection.code}`}
       onClick={(e) => {
+        // A plain left click routes in-app; any click that means "somewhere
+        // else, not here" — a new tab or window, a download — is the browser's,
+        // which is why the href is real. The same rule `ButtonLink` keeps. It
+        // must also stop here: HDS's Linkbox listens on its outer region and
+        // answers any click there with a fresh `.click()` on this link, with no
+        // modifier keys — which would open the new tab *and* move this one.
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+          e.stopPropagation();
+          return;
+        }
         e.preventDefault();
         navigate(`/collections/${collection.code}`);
       }}

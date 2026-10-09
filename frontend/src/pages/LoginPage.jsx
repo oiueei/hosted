@@ -153,13 +153,20 @@ export default function LoginPage() {
         {/* Only when this deployment has an open door (frontend/src/deployment).
             Without one there is nowhere for the button to go, and offering it
             would send a stranger to a 404 instead of telling them the truth:
-            you get in here by invitation. */}
-        {popInPath && (
+            you get in here by invitation. So that is what the page says in its
+            place — before and after the email is sent, since the server answers
+            an unknown address exactly as it answers a known one and nothing will
+            arrive. */}
+        {popInPath ? (
           <div className="measure" style={{ marginTop: 'var(--spacing-s)' }}>
             <ButtonLink to={popInPath} fullWidth style={btnSecondaryStyle}>
               {t('login.popIn')}
             </ButtonLink>
           </div>
+        ) : (
+          <p className="measure text-muted" style={{ marginTop: 'var(--spacing-s)' }}>
+            {t('login.inviteOnly')}
+          </p>
         )}
         {/* The one expectation this screen owes a newcomer, in brick and at a
             size that is read rather than skimmed past — directly under the

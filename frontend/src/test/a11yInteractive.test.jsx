@@ -138,7 +138,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
   });
 
   // The populated card grid is where the `<Link><Button>` pairs live: an owner
-  // sees Edit / Delete / Confirm hold on every thing, and the smoke sweep renders
+  // sees Edit / Delete / Confirm request on every thing, and the smoke sweep renders
   // this collection empty, so none of them reach it. axe reports nothing for the
   // shape (verified), which is how they accumulated.
   test('no tab stop on a populated card grid contains another', async () => {
