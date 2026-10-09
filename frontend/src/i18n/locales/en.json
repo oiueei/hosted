@@ -188,6 +188,7 @@
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
     "operator": "",
     "popIn": "New here?",
+    "inviteOnly": "OIUEEI works by invitation: ask whoever runs your group to invite you.",
     "faqLink": "Questions about this site?"
   },
   "verify": {
