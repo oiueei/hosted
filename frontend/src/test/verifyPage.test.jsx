@@ -47,7 +47,7 @@ describe('VerifyPage auto-commit', () => {
 
     renderVerify();
 
-    expect(await screen.findByText('The hold has been confirmed!')).toBeInTheDocument();
+    expect(await screen.findByText('The request has been confirmed!')).toBeInTheDocument();
     expect(screen.getByText('Confirmed!')).toBeInTheDocument();
 
     // One preview GET + exactly one committing POST — nothing more.
@@ -65,7 +65,7 @@ describe('VerifyPage auto-commit', () => {
 
     renderVerify();
 
-    expect(await screen.findByText('The hold has been rejected.')).toBeInTheDocument();
+    expect(await screen.findByText('The request has been declined.')).toBeInTheDocument();
     expect(screen.getByText('Rejected')).toBeInTheDocument();
     expect(postCalls(globalThis.fetch)).toHaveLength(1);
   });
@@ -125,7 +125,7 @@ describe('VerifyPage auto-commit', () => {
 
     renderVerify(true);
 
-    expect(await screen.findByText('The hold has been confirmed!')).toBeInTheDocument();
+    expect(await screen.findByText('The request has been confirmed!')).toBeInTheDocument();
     // The preview GET ran twice (proving the double-invoke actually happened,
     // so this test is not vacuous) …
     expect(getCalls(globalThis.fetch)).toHaveLength(2);

@@ -369,17 +369,17 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
     });
   };
 
-  test('Confirm hold accepts that booking', async () => {
+  test('Confirm request accepts that booking', async () => {
     pendingLoan();
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm request' }));
 
     await waitFor(() => expect(postsTo(/\/bookings\/BK1\/accept\//)).toHaveLength(1));
     expect(postsTo(/\/reject\//)).toHaveLength(0);
   });
 
-  test('Decline hold rejects it, and says so while it does', async () => {
+  test('Decline request rejects it, and says so while it does', async () => {
     let settle;
     setApi({
       thing: makeThing({ type: 'LEND_THING', status: 'ACTIVE' }),
@@ -388,21 +388,21 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Decline hold' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline request' }));
 
     // In flight: the label says what is happening and neither button can be pressed again.
     // It is the manager *declining* a request, in the words es/ca already used
     // ("Rechazando..."); "Cancelling..." said it was the requester withdrawing one.
     const cancelling = await screen.findByRole('button', { name: 'Declining...' });
     expect(cancelling).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Confirm hold' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Confirm request' })).toBeDisabled();
     expect(postsTo(/\/bookings\/BK1\/reject\//)).toHaveLength(1);
     settle(await respond({}));
   });
 });
 
 describe('ThingPage — a requested gift or sale', () => {
-  test('Decline hold puts the request back to the requester, rejecting that booking', async () => {
+  test('Decline request puts the request back to the requester, rejecting that booking', async () => {
     setApi({
       thing: makeThing({ type: 'GIFT_THING', status: 'TAKEN' }),
       calendar: [{ code: 'BK2', status: 'PENDING', requester_name: 'Guest One' }],
@@ -412,7 +412,7 @@ describe('ThingPage — a requested gift or sale', () => {
     // with the calendar. Pressed before that they would answer for nobody.
     await screen.findByText(/Guest One/);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Decline hold' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decline request' }));
 
     await waitFor(() => expect(postsTo(/\/bookings\/BK2\/reject\//)).toHaveLength(1));
     expect(postsTo(/\/accept\//)).toHaveLength(0);
