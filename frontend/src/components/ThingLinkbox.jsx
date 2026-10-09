@@ -90,7 +90,7 @@ function ThingLinkbox({
     navigate(joinPath, {
       state: { collectionHeadline: collectionHeadline || L(thing.collection_headline) },
     });
-  // The owner "Confirm hold" label, with its in-flight ("Confirming…") state. Shared
+  // The owner "Confirm request" label, with its in-flight ("Confirming…") state. Shared
   // by the plain accept Button and the ownership-transfer <InlineConfirm> trigger.
   const acceptLabel =
     bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');

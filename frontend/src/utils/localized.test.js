@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLocalized, localizedText, localizedCounter } from './localized';
+import { parseLocalized, localizedText, localizedCounter, localizedHelper } from './localized';
 
 /**
  * The twin of core/tests/unit/test_localized.py. Both sides must agree on what
@@ -69,7 +69,7 @@ describe('localizedText', () => {
 
 describe('localizedCounter', () => {
   it('counts plain text as it always did', () => {
-    expect(localizedCounter('hola', 64)).toEqual({ text: '4/64', over: false });
+    expect(localizedCounter('hola', 64)).toEqual({ text: '4/64', over: false, unreadMap: false });
   });
 
   it('flags plain text over the limit', () => {
@@ -87,6 +87,28 @@ describe('localizedCounter', () => {
   });
 
   it('treats an empty value as zero', () => {
-    expect(localizedCounter('', 64)).toEqual({ text: '0/64', over: false });
+    expect(localizedCounter('', 64)).toEqual({ text: '0/64', over: false, unreadMap: false });
+  });
+});
+
+describe('localizedHelper — when a text opens like a map and is not one', () => {
+  const t = (key) => `[${key}]`;
+
+  it('a map that parses: the counter alone, per language', () => {
+    expect(localizedHelper('{"es": "hola", "ca": "ei"}', 64, t)).toBe('es 4/64 · ca 2/64');
+  });
+
+  it('prose: the counter alone', () => {
+    expect(localizedHelper('Las cosas de mamá', 64, t)).toBe('17/64');
+    expect(localizedHelper('', 64, t)).toBe('0/64');
+  });
+
+  it.each([
+    ['a missing quote', '{"es": "hola, "ca": "ei"}'],
+    ['a trailing comma', '{"es": "hola",}'],
+    ['a code we do not read', '{"es": "hola", "fr": "salut"}'],
+    ['leading spaces', '   {"es": "hola"'],
+  ])('%s: says it will read as plain text', (_, value) => {
+    expect(localizedHelper(value, 64, t)).toBe(`${value.length}/64 — [localized.readAsPlain]`);
   });
 });

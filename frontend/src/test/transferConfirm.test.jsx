@@ -188,7 +188,7 @@ describe('ThingPage — the confirm that was never shown', () => {
     renderThing(takenGift);
     await screen.findByText('Blue armchair');
     await screen.findByText(/Lele/); // same seed race as the test below
-    fireEvent.click(await screen.findByRole('button', { name: /Confirm hold/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Confirm request/i }));
 
     expect(await screen.findByText(/transfers the item/i)).toBeInTheDocument();
     expect(postCalls()).toEqual([]);
@@ -208,7 +208,7 @@ describe('ThingPage — the confirm that was never shown', () => {
     // flaked in CI on exactly that window, and passed locally every time.
     await screen.findByText(/Lele/);
 
-    fireEvent.click(await screen.findByRole('button', { name: /Confirm hold/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Confirm request/i }));
 
     await waitFor(() => expect(postCalls()).toEqual(['/api/v1/bookings/BKG001/accept/']));
     expect(screen.queryByText(/transfers the item/i)).toBeNull();

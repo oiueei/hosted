@@ -30,6 +30,29 @@ export const weekdayLabel = (pyWeekday, lang) =>
 export const weekdayNarrow = (pyWeekday, lang) =>
   new Date(2024, 0, 1 + pyWeekday).toLocaleDateString(lang, { weekday: 'narrow' });
 
+// Short weekday name (es → "lun", en → "Mon"), for the opening-hours preview.
+export const weekdayShort = (pyWeekday, lang) =>
+  new Date(2024, 0, 1 + pyWeekday).toLocaleDateString(lang, { weekday: 'short' });
+
+// The week an `opening_hours` map describes, one row per weekday from Monday, as
+// the owner wrote it: `[{ day: 0, name: 'Mon', ranges: ['09:00–13:00', …] }]`.
+// A day missing, or with an empty list, has no ranges — closed. It reads the
+// value as typed and does not judge it (the server does, `_validate_opening_hours`):
+// a pair that is not two strings is left out, and so is anything that is not a
+// list, so a half-right paste shows what was understood rather than throwing.
+export const openingHoursWeek = (hours, lang) =>
+  WEEKDAY_VALUES.map((day) => {
+    const raw = (hours || {})[String(day)];
+    const ranges = Array.isArray(raw)
+      ? raw
+          .filter(
+            (p) => Array.isArray(p) && p.length === 2 && p.every((x) => typeof x === 'string')
+          )
+          .map(([start, end]) => `${start}–${end}`)
+      : [];
+    return { day, name: weekdayShort(day, lang), ranges };
+  });
+
 // JS Date.getDay() (0=Sun … 6=Sat) → Python weekday (0=Mon … 6=Sun).
 export const jsToPyWeekday = (jsDay) => (jsDay + 6) % 7;
 

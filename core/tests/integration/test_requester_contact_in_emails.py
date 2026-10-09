@@ -104,7 +104,7 @@ class TestTheRequestEmailEachManagerGets:
         # The two decisions are links with the manager's own RSVP tokens, in both halves.
         assert body.count("/rsvp/") == 2
         assert html.count("/rsvp/") >= 2
-        assert "Confirm hold" in body and "Decline hold" in body
+        assert "Confirm request" in body and "Decline request" in body
         assert (
             message.subject == "You have a pending rental request" or "request" in message.subject
         )

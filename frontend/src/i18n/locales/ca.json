@@ -27,7 +27,7 @@
   },
   "communityProfile": {
     "heading": "Dades demogràfiques (opcional)",
-    "helper": "Opcional. Només ho poden veure els propietaris de les col·leccions on participes — mai és públic.",
+    "helper": "Opcional. Només ho poden veure els propietaris dels grups on participes — mai és públic.",
     "ageLabel": "Any de naixement",
     "ageUnset": "Prefereixo no dir-ho",
     "postalLabel": "Codi postal"
@@ -182,6 +182,7 @@
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
     "operator": "",
     "popIn": "Nou per aquí?",
+    "inviteOnly": "OIUEEI funciona per invitació: demana a qui gestiona el teu grup que et convidi.",
     "faqLink": "Dubtes sobre aquest lloc?"
   },
   "verify": {
@@ -190,7 +191,7 @@
     "rejected": "Rebutjat",
     "oops": "Vaja",
     "verifying": "Verificant…",
-    "invitationDeclined": "Invitació rebutjada. S'ha notificat al propietari de la col·lecció.",
+    "invitationDeclined": "Invitació rebutjada. S'ha avisat el propietari del grup.",
     "holdConfirmed": "La sol·licitud ha estat confirmada!",
     "holdRejected": "La sol·licitud ha estat rebutjada.",
     "invalidOrExpired": "Enllaç no vàlid o caducat.",
@@ -238,7 +239,7 @@
     "broadcastBody": "{{message}}",
     "collectionDeletedLabel": "Col·lecció eliminada",
     "collectionDeletedBody": "\"{{collection_headline}}\" ha estat eliminada per {{owner_name}}.",
-    "collectionRevokedLabel": "Eliminat de la col·lecció",
+    "collectionRevokedLabel": "Eliminat del grup",
     "collectionRevokedBody": "{{owner_name}} t'ha eliminat de «{{collection_headline}}».",
     "bookingAcceptedLabel": "Sol·licitud confirmada",
     "bookingAcceptedBody": "{{owner_name}} ha confirmat la teva sol·licitud de {{thing_headline}}.",
@@ -299,7 +300,7 @@
     "allTags": "Tots",
     "noThingsForTag": "No hi ha coses amb aquesta etiqueta.",
     "communityTag": "Comunitària",
-    "noPermission": "No tens accés a aquesta col·lecció. Pot estar inactiva, o el teu accés pot haver canviat — revisa les teves invitacions, o contacta amb el propietari.",
+    "noPermission": "No tens accés a aquesta col·lecció. Pot estar inactiva, o el teu accés pot haver canviat — revisa les teves invitacions, o pregunta a qui gestiona el grup.",
     "notFound": "Col·lecció no trobada.",
     "errorLoading": "Error en carregar la col·lecció.",
     "curator": "Dinamització:",
@@ -385,11 +386,8 @@
     "waitingForConfirmation": "Esperant confirmació",
     "confirmed": "Confirmat",
     "pending": "Pendent",
-    "qty": "ut",
     "notAvailable": "No disponible",
     "paused": "Pausada",
-    "needMoreItems_one": "Necessites {{count}} cosa més",
-    "needMoreItems_other": "Necessites {{count}} coses més",
     "action": {
       "GIFT_THING": "Demanar",
       "SELL_THING": "Comprar",
@@ -639,8 +637,8 @@
     "errorSending": "Error en enviar la invitació.",
     "multipleHelper": "Pots convidar diverses persones alhora: separa els correus amb comes.",
     "errorLoading": "Error en carregar la col·lecció.",
-    "noPermission": "No tens accés als membres d'aquesta col·lecció.",
-    "caption": "Membres d'aquesta col·lecció"
+    "noPermission": "No tens accés als membres d'aquest grup.",
+    "caption": "Membres d'aquest grup"
   },
   "recommend": {
     "openButton": "Convidar algú",
@@ -759,7 +757,6 @@
     "lentOn": "Prestat el {{date}}",
     "returnedOn": "Retornat el {{date}}",
     "to": "a",
-    "noTransfers": "Sense transferències encara.",
     "changesCount_one": "{{count}} canvi",
     "changesCount_other": "{{count}} canvis",
     "lendCount_one": "{{count}} préstec",
@@ -832,8 +829,8 @@
     "copy": "Copia l'enllaç d'invitació",
     "whatsapp": "WhatsApp",
     "emailSubject": "T'invito a {{headline}} a OIUEEI",
-    "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI.\n\nPots unir-t'hi aquí: {{url}}",
-    "whatsappText": "T'invito a \"{{headline}}\" a OIUEEI: {{url}}",
+    "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI, on un grup comparteix les seves coses entre els seus membres.\n\nPots unir-t'hi aquí: {{url}}",
+    "whatsappText": "T'invito a \"{{headline}}\" a OIUEEI, on un grup comparteix les seves coses entre els seus membres: {{url}}",
     "copied": "Enllaç copiat al porta-retalls.",
     "copyError": "No hem pogut copiar l'enllaç. Torna-ho a provar o fes servir una altra opció.",
     "linkError": "No hem pogut generar l'enllaç. Torna-ho a provar.",
@@ -935,7 +932,8 @@
     "requestInfoInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu.",
     "emailNoteHint": "L'avís del correu també admet un text per idioma.",
     "emailNoteInfoBody": "Funciona igual: escriu-lo com un petit mapa i cada membre llegirà el seu al correu.",
-    "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit."
+    "infoFallback": "Idiomes: es (castellà), ca (català), en (anglès). Pots escriure només en un si ho prefereixes: tot el que no sigui un mapa es mostra tal com ho has escrit.",
+    "readAsPlain": "Es llegeix com a text normal: per escriure'n un per idioma, revisa les cometes i els codis es, ca, en."
   },
   "deleteAccount": {
     "pageTitle": "Esborrar el teu compte",
@@ -1024,7 +1022,7 @@
     "joinedLabel": "T'has unit al grup",
     "joinedGroup": "Per reservar aquí t'has unit a {{group}}. Pots sortir-ne des del teu perfil.",
     "dateSummary": "Reservat del {{start}} al {{end}}.",
-    "contactShared": "Qui gestiona aquest espai veurà el teu nom i el teu email.",
+    "contactShared": "Qui gestiona això veurà el teu nom i el teu email.",
     "dateRange": "Tria una data entre avui i d'aquí a {{days}} dies.",
     "noteFrom": "El seu missatge: {{note}}",
     "maxDaysLabel": "Reserva més llarga (dies)",
@@ -1066,7 +1064,9 @@
     "label": "Horari setmanal",
     "helper": "En JSON: una clau per dia de la setmana (\"0\" dilluns … \"6\" diumenge), cadascuna amb una llista de trams [\"HH:MM\",\"HH:MM\"] — p. ex. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deixa un dia fora, o posa-hi una llista buida, perquè quedi tancat.",
     "invalidJson": "Això no és JSON vàlid — revisa les claus i les cometes.",
-    "invalidOnSave": "No s'ha desat res: l'horari setmanal (a «Més opcions») no és JSON vàlid. Corregeix-lo i torna a desar."
+    "invalidOnSave": "No s'ha desat res: l'horari setmanal (a «Més opcions») no és JSON vàlid. Corregeix-lo i torna a desar.",
+    "previewLabel": "Es llegeix així:",
+    "closed": "tancat"
   },
   "homePage": {
     "label": "Pàgina web",

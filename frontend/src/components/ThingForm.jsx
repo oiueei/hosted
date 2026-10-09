@@ -13,7 +13,7 @@ import GalleryUpload from './GalleryUpload';
 import LocalizedInfo from './LocalizedInfo';
 import InfoPopover from './InfoPopover';
 import ApprovalNotice from './ApprovalNotice';
-import { useLocalized, localizedCounter } from '../utils/localized';
+import { useLocalized, localizedHelper } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
 
 /**
@@ -154,7 +154,7 @@ export default function ThingForm({
         required
         invalid={!!errors.headline}
         errorText={errors.headline}
-        helperText={localizedCounter(headline, 64).text}
+        helperText={localizedHelper(headline, 64, t)}
       />
       <TextArea
         id={`${idPrefix}-description`}
@@ -163,7 +163,7 @@ export default function ThingForm({
         onChange={(e) => setDescription(e.target.value)}
         invalid={!!errors.description}
         errorText={errors.description}
-        helperText={localizedCounter(description, 2000).text}
+        helperText={localizedHelper(description, 2000, t)}
       />
       <LocalizedInfo id={`${idPrefix}-localized-info`} />
       {showFee && (
