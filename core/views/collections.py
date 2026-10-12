@@ -9,7 +9,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -195,9 +195,14 @@ class CollectionViewSet(ModelViewSet):
         headline = instance.headline
         invitees = list(instance.invites.all())
 
-        orphaned_things = instance.things.annotate(col_count=Count("collections")).filter(
-            col_count=1
+        # Only what lives nowhere else. Counting with `instance.things.annotate(
+        # Count("collections"))` reuses the join the related manager already
+        # filtered by this collection and always says 1, so a thing in another
+        # collection too would go with this one.
+        in_another = Collection.things.through.objects.filter(thing=OuterRef("pk")).exclude(
+            collection=instance
         )
+        orphaned_things = Thing.objects.filter(collections=instance).filter(~Exists(in_another))
         with transaction.atomic(), deleting_as(self.request.user):
             orphaned_things.delete()
             instance.delete()

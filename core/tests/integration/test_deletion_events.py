@@ -15,6 +15,7 @@ from django.db import transaction
 from core.models import Collection, Event, Thing, User
 from core.services.account_service import delete_account
 from core.services.deletion_events import deleting_as, deletion_events_suppressed
+from core.tests.factories import also_in
 
 KINDS = [Event.Kind.COLLECTION_DELETED, Event.Kind.THING_REMOVED, Event.Kind.MEMBER_LEFT]
 
@@ -42,6 +43,11 @@ class TestDeletingThroughTheApi:
         doomed = Collection.objects.create(code="EVDEL1", owner=user, headline="Doomed")
         make_thing("EVORP1", user, doomed, type="LEND_THING")
         make_thing("EVORP2", user, doomed)
+        kept = Collection.objects.create(code="EVKEP1", owner=user, headline="Kept")
+        shared = make_thing("EVSHR1", user, doomed)
+        # The product keeps a thing in one collection; this case is built around the
+        # guard to pin what the delete does if it ever meets one.
+        also_in(kept, shared)
 
         response = authenticated_client.delete("/api/v1/collections/EVDEL1/")
 
@@ -49,6 +55,8 @@ class TestDeletingThroughTheApi:
         deleted = Event.objects.get(kind=Event.Kind.COLLECTION_DELETED)
         assert (deleted.actor_code, deleted.collection_code) == (user.code, "EVDEL1")
         removed = Event.objects.filter(kind=Event.Kind.THING_REMOVED)
+        # The thing that still lives in another collection is not removed, nor deleted.
+        assert Thing.objects.filter(code="EVSHR1").exists()
         assert {(e.thing_code, e.thing_type, e.actor_code) for e in removed} == {
             ("EVORP1", "LEND_THING", user.code),
             ("EVORP2", "GIFT_THING", user.code),
