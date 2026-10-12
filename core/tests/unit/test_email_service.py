@@ -1562,12 +1562,12 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     the operator's own domain — so text that looks like the operator's sign-in
     link must not be all the reader sees."""
     _, blocks = email_service._note_blocks(
-        "[https://www.oiueei.com/verify/abc](https://elsewhere.example/verify)"
+        "[https://www.your-domain.test/verify/abc](https://elsewhere.example/verify)"
     )
     html = str(blocks[0]["html"])
     assert html == (
         '<p><a href="https://elsewhere.example/verify" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">https://www.oiueei.com/verify/abc</a>'
+        'style="color:#0000bf !important;text-decoration:underline !important;">https://www.your-domain.test/verify/abc</a>'
         " (elsewhere.example)</p>"
     )
 

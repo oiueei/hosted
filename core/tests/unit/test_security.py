@@ -330,7 +330,7 @@ class TestRedactEmail:
         assert tag.startswith("email#")
         # The address (local part + domain) never appears.
         assert "lala" not in tag.lower()
-        assert "disroot" not in tag.lower()
+        assert "your-domain" not in tag.lower()
         # Stable + case/whitespace-insensitive, so events for one user correlate.
         assert tag == redact_email(" lala@your-domain.test ")
         # Distinct emails produce distinct tags; empty is handled.

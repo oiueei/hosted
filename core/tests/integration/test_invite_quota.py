@@ -170,7 +170,7 @@ def test_no_cap_configured_means_unlimited(
 
     The cap is operator policy — it protects a particular deployment's sending
     reputation — so a self-hosted instance must not inherit a number chosen for
-    www.oiueei.com. This is the case that regresses silently: reinstate a
+    another deployment. This is the case that regresses silently: reinstate a
     module-level default and every self-hoster starts getting 429s they never
     configured, on a limit they cannot find in their settings.
     """

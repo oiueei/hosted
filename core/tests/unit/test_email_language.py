@@ -1,6 +1,6 @@
 """EMAIL_LANGUAGE: the per-deployment language for all outbound email.
 
-The standalone repo defaults to English; www.oiueei.com sets EMAIL_LANGUAGE=es.
+The standalone repo defaults to English; a deployment may set EMAIL_LANGUAGE=es.
 These tests pin the default, the Spanish deployment, the unknown-code fallback,
 and the en/{es,ca} catalogue parity (the email analogue of i18nParity.test.js).
 """

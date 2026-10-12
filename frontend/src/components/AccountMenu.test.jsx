@@ -358,7 +358,7 @@ describe('AccountMenu — signed out', () => {
 
   test('with offerSignIn={false} it paints nothing at all, on any page', () => {
     // A door that does not want to send people to /login — the
-    // hosted /popin — says so, and PageLayout hands it down.
+    // deployment's own open door — says so, and PageLayout hands it down.
     localStorage.removeItem('userCode');
     const { container } = render(
       <MemoryRouter initialEntries={['/collections/COL001']}>

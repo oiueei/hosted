@@ -285,7 +285,7 @@ ANON_API_RATE = os.environ.get("ANON_API_RATE", "300/m")
 # not a product rule**: it protects the deployment's own sending domain and
 # reputation, and only the operator knows what their provider tolerates. The
 # standalone default is therefore **unlimited** — a self-hoster decides for
-# their own instance — while www.oiueei.com sets the config var explicitly.
+# their own instance — while a deployment sets the config var explicitly.
 #
 # 0 (or unset) means no limit. Also gated by RATELIMIT_ENABLE, which switches
 # the whole rate-limiting layer off in development and tests.
@@ -362,7 +362,7 @@ CREATOR_POLICY = os.environ.get("CREATOR_POLICY", "core.services.creator_policy.
 #
 # Nothing here happens on its own: `python manage.py purge_expired_data` is what
 # enforces them, and it has to be scheduled (see README §Scheduled jobs). The
-# defaults are the ones www.oiueei.com decided in its retention table, and they
+# defaults are the ones one deployment decided in its retention table, and they
 # are shipped ON because a period that protects the people in the database is a
 # better default than "forever" — but they are still **operator policy**, and a
 # deployment under a different regime overrides any of them. **0 means keep

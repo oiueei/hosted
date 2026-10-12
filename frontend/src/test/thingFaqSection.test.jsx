@@ -199,7 +199,7 @@ describe('ThingFaqSection — Load more', () => {
   test('the pager sits in a wide row, so on a phone it is the width of the screen', async () => {
     setApi({
       faqs: [faq({ code: 'FAQ001', question: 'First page question' })],
-      next: 'https://www.oiueei.com/api/v1/things/THG001/faq/?page=2',
+      next: 'https://www.your-domain.test/api/v1/things/THG001/faq/?page=2',
     });
     renderFaq();
 
@@ -210,7 +210,7 @@ describe('ThingFaqSection — Load more', () => {
   test('appends the next page and then retires the button', async () => {
     setApi({
       faqs: [faq({ code: 'FAQ001', question: 'First page question' })],
-      next: 'https://www.oiueei.com/api/v1/things/THG001/faq/?page=2',
+      next: 'https://www.your-domain.test/api/v1/things/THG001/faq/?page=2',
       routes: {
         '?page=2': () =>
           jsonResponse({

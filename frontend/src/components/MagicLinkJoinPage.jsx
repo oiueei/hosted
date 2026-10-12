@@ -37,7 +37,7 @@ import MarkdownText from './MarkdownText';
  *   door passes its own.
  * - `children`: rendered just under the form, above the "already have an
  *   account?" button. Upstream `SharePage` passes none; a deployment's door uses it for
- *   its own footer link (the hosted `/popin` points it at its `/faq`).
+ *   its own footer link (a deployment can point it at its own FAQ, `faqPath`).
  * - `signedInAction`: optional. When set it takes the place of everything below
  *   the hero — the intro (which asks for an email), the form, and the rows that
  *   only make sense with one ("already have an account?").
@@ -51,7 +51,7 @@ import MarkdownText from './MarkdownText';
  *   (`PageLayout` hands the prop to `AccountMenu`). `/share/:token` keeps both, and
  *   so does any door that does not say otherwise. A deployment's own door turns
  *   them off with `false` when it already sends the people it does not want here
- *   to `/login` by another road (the hosted `/popin`): the
+ *   to `/login` by another road (a deployment's own `popInPath` door): the
  *   component is core's and has to be identical in both branches, so the switch is
  *   a prop rather than an edit. With `false` neither the button nor its row nor
  *   the corner icon renders; no caller in core passes it.

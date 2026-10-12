@@ -171,8 +171,8 @@ describe('MagicLinkJoinPage and the legal notice', () => {
 });
 
 describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way to /login out)', () => {
-  // `/share/:token` keeps "Already have an account?"; the hosted
-  // `/popin` already leads people to /login another way and
+  // `/share/:token` keeps "Already have an account?"; a deployment's
+  // own door can lead people to /login another way and
   // drops it. The same prop also leaves out the corner's
   // own "Sign in" icon, which every signed-out page otherwise has. The component
   // is core's and identical in both branches, so what turns it off is a prop that no
@@ -250,7 +250,7 @@ describe('MagicLinkJoinPage footer children (a deployment door adds its own link
     renderShareVariant();
     expect(screen.queryByRole('link', { name: 'A deployment link' })).not.toBeInTheDocument();
 
-    // A deployment's door — e.g. the hosted /popin pointing at its /faq.
+    // A deployment's door — e.g. a deployment's own door pointing at its own FAQ.
     render(
       <MemoryRouter>
         <MagicLinkJoinPage

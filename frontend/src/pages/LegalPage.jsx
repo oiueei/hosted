@@ -13,8 +13,8 @@ const CONTENT = { es: legalEs, ca: legalCa, en: legalEn };
  * instance/operator identification, privacy, and basic terms — in the reader's
  * language. The content lives in `src/legal/{lang}.js` as Markdown so a
  * deployment can carry its own version: the standalone repo ships a generic
- * operator-neutral text, and the official www.oiueei.com deploy branch
- * replaces those files with the full RGPD/LSSI version of its owner.
+ * operator-neutral text, and a deployment can replace those files with its
+ * own legal text.
  */
 export default function LegalPage() {
   const { t, i18n } = useTranslation();

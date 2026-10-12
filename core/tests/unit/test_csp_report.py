@@ -17,7 +17,7 @@ from core.views.csp import MAX_REPORT_BYTES
 
 REPORT = {
     "csp-report": {
-        "document-uri": "https://www.oiueei.com/collections/ABC123",
+        "document-uri": "https://www.your-domain.test/collections/ABC123",
         "violated-directive": "script-src 'self'",
         "blocked-uri": "inline",
         "script-sample": "alert(1)",

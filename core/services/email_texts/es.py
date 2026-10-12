@@ -1,4 +1,4 @@
-"""Spanish email texts (www.oiueei.com — ``EMAIL_LANGUAGE=es``).
+"""Spanish email texts (``EMAIL_LANGUAGE=es``).
 
 Same keys as ``en.py`` (guarded by the parity test); informal, warm tone,
 matching the app's Spanish UI vocabulary (reservar, pedido, intercambio)."""

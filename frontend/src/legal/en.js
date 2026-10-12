@@ -2,8 +2,8 @@
 // Every OIUEEI deployment has its own operator, and that operator is the data
 // controller: if you self-host OIUEEI, edit the "Who operates this instance"
 // section with your identity and contact details.
-// (The official deployment at www.oiueei.com replaces this file on its deploy
-// branch with the full version carrying its owner's real details.)
+// (A deployment can replace this file with its own text, carrying its owner's
+// real details.)
 export default `
 # Our commitment
 

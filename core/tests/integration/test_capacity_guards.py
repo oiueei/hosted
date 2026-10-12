@@ -8,7 +8,7 @@ settings and the standalone default is off; these tests set their own.
 
 The property that matters most, and the one every test here leans on: with no
 thresholds configured NOTHING changes. A self-hosted instance must not inherit
-www.oiueei.com's abuse posture.
+another deployment's abuse posture.
 """
 
 from unittest.mock import patch

@@ -92,7 +92,7 @@ def health_check(request):
     the database means the one outage this endpoint exists to report is also the
     outage that stops the limiter working: as a decorator it ran *before* the
     body, so a refused Postgres connection surfaced from the limiter as an
-    unhandled exception and the monitor got a 500 with a traceback in Sentry,
+    unhandled exception and the monitor got a 500 with a traceback in the error tracker,
     never the 503 below (production, 2026-09-16 23:33 CEST — UptimeRobot's HEAD
     probe). A limiter that cannot reach its counter must not be able to veto the
     answer; the outage it failed on is the answer. Pinned by

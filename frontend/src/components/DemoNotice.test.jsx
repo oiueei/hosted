@@ -37,7 +37,7 @@ describe('DemoNotice', () => {
     render(<DemoNotice />);
 
     expect(screen.getByText('This is a demo')).toBeInTheDocument();
-    // Both beats DESIGN_HOSTED §1 wants: what IS demo, and what is not.
+    // Both beats the copy owes: what IS demo, and what is not.
     expect(
       screen.getByText('The example collections are shared and reset from time to time.')
     ).toBeInTheDocument();
