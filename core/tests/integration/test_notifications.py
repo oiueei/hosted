@@ -40,7 +40,7 @@ from core.services.email_service import (
 @pytest.fixture
 def noti_user(db):
     return User.objects.create(
-        code="NOTI01", email="noti1@test.com", name="Prefs User", notify_news=True
+        code="NOTI01", email="lala1@your-domain.test", name="Prefs User", notify_news=True
     )
 
 
@@ -53,7 +53,7 @@ def test_new_user_starts_subscribed_to_both_categories(db):
     out of one group's summaries no longer costs you the transactional email you
     need. If that mute is ever removed, this default has to go back to False.
     """
-    fresh = User.objects.create(code="NEW01", email="new@test.com", name="Fresh")
+    fresh = User.objects.create(code="NEW01", email="lele@your-domain.test", name="Fresh")
     assert fresh.notify_news is True
     assert fresh.notify_activity is True
 
@@ -67,7 +67,7 @@ def test_new_collection_sends_a_weekly_digest_by_default(db):
     has to show the field (it didn't) so an owner isn't mailing their members
     without knowing.
     """
-    owner = User.objects.create(code="DGDEF1", email="dgdef@test.com", name="Owner")
+    owner = User.objects.create(code="DGDEF1", email="lele1@your-domain.test", name="Owner")
     collection = Collection.objects.create(code="DGDEF2", owner=owner, headline="Fresh")
     assert collection.digest_frequency == Collection.DigestFrequency.WEEKLY
 
@@ -79,7 +79,7 @@ def test_muting_one_collection_stops_only_that_digest(db, noti_user):
     is asserted on both sides: the muted collection sends nothing, an unmuted
     one still lands in the same person's inbox.
     """
-    owner = User.objects.create(code="DGOWN1", email="dgown@test.com", name="Owner")
+    owner = User.objects.create(code="DGOWN1", email="lili@your-domain.test", name="Owner")
     noisy = Collection.objects.create(code="DGNOI1", owner=owner, headline="Noisy")
     quiet = Collection.objects.create(code="DGQUI1", owner=owner, headline="Quiet")
     for col in (noisy, quiet):
@@ -100,7 +100,7 @@ def test_muting_a_collection_leaves_its_activity_email_alone(db, noti_user):
     A member who silences the weekly summary still has to hear that their own
     hold was decided — the whole point of keeping the two categories apart.
     """
-    owner = User.objects.create(code="DGOWN2", email="dgown2@test.com", name="Owner")
+    owner = User.objects.create(code="DGOWN2", email="lolo@your-domain.test", name="Owner")
     collection = Collection.objects.create(code="DGCOL2", owner=owner, headline="Group")
     collection.invites.add(noti_user)
     collection.digest_muted.add(noti_user)
@@ -126,8 +126,8 @@ def test_should_send_respects_activity_and_news(db, noti_user):
 
 
 def test_should_send_unknown_email_defaults_to_true(db):
-    assert _should_send("stranger@nowhere.test", CATEGORY_ACTIVITY) is True
-    assert _should_send("stranger@nowhere.test", CATEGORY_NEWS) is True
+    assert _should_send("lolo1@your-domain.test", CATEGORY_ACTIVITY) is True
+    assert _should_send("lolo1@your-domain.test", CATEGORY_NEWS) is True
 
 
 def test_magic_link_always_sent_even_when_opted_out(db, noti_user):
@@ -135,12 +135,12 @@ def test_magic_link_always_sent_even_when_opted_out(db, noti_user):
     noti_user.notify_news = False
     noti_user.save()
     mail.outbox.clear()
-    send_magic_link_email(noti_user.email, "http://example.com/magic/ABC123")
+    send_magic_link_email(noti_user.email, "http://your-domain.test/magic/ABC123")
     assert len(mail.outbox) == 1
 
 
 def test_activity_email_skipped_when_opted_out(db, noti_user):
-    owner = User.objects.create(code="OWN001", email="owner@test.com", name="Owner")
+    owner = User.objects.create(code="OWN001", email="lala@your-domain.test", name="Owner")
     collection = Collection.objects.create(code="COL001", owner=owner, headline="Club")
     thing = Thing.objects.create(code="THG001", owner=owner, headline="Item")
     collection.things.add(thing)
@@ -169,16 +169,16 @@ def test_invite_rejected_email_content(db):
     """Previously only asserted through mocks in test_views.py/test_notifications.py
     — never verified a real message reached mail.outbox with the right content."""
     mail.outbox.clear()
-    send_invite_rejected_email("Jamie", "Book Club", "owner3@test.com")
+    send_invite_rejected_email("Jamie", "Book Club", "lala2@your-domain.test")
     assert len(mail.outbox) == 1
-    assert mail.outbox[0].to == ["owner3@test.com"]
+    assert mail.outbox[0].to == ["lala2@your-domain.test"]
     assert "Jamie" in mail.outbox[0].body
     assert "Book Club" in mail.outbox[0].body
 
 
 def test_news_email_skipped_when_opted_out(db, noti_user):
     second = User.objects.create(
-        code="NOTI02", email="noti2@test.com", name="Second", notify_news=True
+        code="NOTI02", email="lulu@your-domain.test", name="Second", notify_news=True
     )
     noti_user.notify_news = False
     noti_user.save()
@@ -196,7 +196,7 @@ def test_member_can_mute_and_unmute_a_collection_digest(db, noti_user):
     mute the API accepted but the read endpoint denied would leave the member
     clicking a control that springs back on every reload.
     """
-    owner = User.objects.create(code="DGOWN3", email="dgown3@test.com", name="Owner")
+    owner = User.objects.create(code="DGOWN3", email="lala3@your-domain.test", name="Owner")
     collection = Collection.objects.create(
         code="DGCOL3", owner=owner, headline="Group", visibility=Collection.Visibility.PUBLIC
     )
@@ -227,7 +227,7 @@ def test_digest_pref_rejects_a_body_without_a_boolean(db, noti_user):
     falling through to `else: remove()` would quietly re-subscribe someone who
     asked to be left alone.
     """
-    owner = User.objects.create(code="DGOWN6", email="dgown6@test.com", name="Owner")
+    owner = User.objects.create(code="DGOWN6", email="lele2@your-domain.test", name="Owner")
     collection = Collection.objects.create(code="DGCOL6", owner=owner, headline="Group")
     collection.invites.add(noti_user)
     collection.digest_muted.add(noti_user)
@@ -249,7 +249,7 @@ def test_non_member_cannot_mute_a_collection_digest(db, noti_user):
     The endpoint is unguarded by any object permission class, so membership is
     the only thing standing between an arbitrary code and a write.
     """
-    owner = User.objects.create(code="DGOWN4", email="dgown4@test.com", name="Owner")
+    owner = User.objects.create(code="DGOWN4", email="lili1@your-domain.test", name="Owner")
     collection = Collection.objects.create(
         code="DGCOL4", owner=owner, headline="Not yours", visibility=Collection.Visibility.PUBLIC
     )
@@ -271,7 +271,7 @@ def test_digest_footer_link_mutes_that_collection_without_a_login(db, noti_user)
     one-click exit needed a login it would be harder to leave than to be
     enrolled, which is the DESIGN §6 line.
     """
-    owner = User.objects.create(code="DGOWN5", email="dgown5@test.com", name="Owner")
+    owner = User.objects.create(code="DGOWN5", email="lolo2@your-domain.test", name="Owner")
     collection = Collection.objects.create(code="DGCOL5", owner=owner, headline="Group")
     collection.invites.add(noti_user)
 
@@ -388,8 +388,8 @@ def _make_booking(owner, requester, thing, thing_type="GIFT_THING", start_date=N
 
 @pytest.fixture
 def two_users(db):
-    owner = User.objects.create(code="OWN001", email="owner@test.com", name="Owner")
-    requester = User.objects.create(code="REQ001", email="requester@test.com", name="Requester")
+    owner = User.objects.create(code="OWN001", email="lala@your-domain.test", name="Owner")
+    requester = User.objects.create(code="REQ001", email="lili2@your-domain.test", name="Requester")
     return owner, requester
 
 
@@ -436,7 +436,9 @@ def test_the_team_sees_a_co_curators_decision(two_users, thing_with_collection):
     their own request."""
     owner, requester = two_users
     thing, collection = thing_with_collection
-    co_curator = User.objects.create(code="COC002", email="co@test.com", name="Co-Curator")
+    co_curator = User.objects.create(
+        code="COC002", email="lala11@your-domain.test", name="Co-Curator"
+    )
     collection.invites.add(co_curator)
     collection.co_owners.add(co_curator)
     start = datetime.date.today() + datetime.timedelta(days=2)
@@ -491,7 +493,9 @@ def test_the_request_and_its_decision_call_the_requester_the_same_thing(
     if who == "unnamed":
         requester.name = ""
         requester.save(update_fields=["name"])
-    co_curator = User.objects.create(code="COC004", email="co4@test.com", name="Co-Curator")
+    co_curator = User.objects.create(
+        code="COC004", email="lulu1@your-domain.test", name="Co-Curator"
+    )
     collection.invites.add(co_curator)
     collection.co_owners.add(co_curator)
 
@@ -610,7 +614,9 @@ def test_the_decision_record_outlives_the_cleared_request(two_users, thing_with_
     co-curator's record of the owner's decision would vanish with the question."""
     owner, requester = two_users
     thing, collection = thing_with_collection
-    co_curator = User.objects.create(code="COC003", email="co3@test.com", name="Co-Curator")
+    co_curator = User.objects.create(
+        code="COC003", email="lala4@your-domain.test", name="Co-Curator"
+    )
     collection.invites.add(co_curator)
     collection.co_owners.add(co_curator)
 
@@ -669,7 +675,9 @@ def test_a_co_curators_decision_is_signed_by_the_co_curator(two_users, thing_wit
     a request she never saw."""
     owner, requester = two_users
     thing, collection = thing_with_collection
-    co_curator = User.objects.create(code="COC001", email="co@test.com", name="Co-Curator")
+    co_curator = User.objects.create(
+        code="COC001", email="lala11@your-domain.test", name="Co-Curator"
+    )
     collection.invites.add(co_curator)
     collection.co_owners.add(co_curator)
     booking = _make_booking(owner, requester, thing)

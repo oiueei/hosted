@@ -27,17 +27,17 @@ def client_for(user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
+    return User.objects.create(code="OWNR01", email="lala@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def co_curator(db):
-    return User.objects.create(code="COCU01", email="cocurator@test.com", name="Lele")
+    return User.objects.create(code="COCU01", email="lala2@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def outsider(db):
-    return User.objects.create(code="OUTS01", email="outsider@test.com", name="Lolo")
+    return User.objects.create(code="OUTS01", email="lolo@your-domain.test", name="Lolo")
 
 
 @pytest.fixture
@@ -121,9 +121,13 @@ class TestACoCuratorRunsTheProprietaryCatalogue:
 
 class TestCommunityIsUnchanged:
     def test_a_community_co_curator_still_cannot_edit_a_members_thing(self, db):
-        owner = User.objects.create(code="COWN01", email="cowner@test.com", name="Owner")
-        co_curator = User.objects.create(code="CCUR02", email="ccur2@test.com", name="Curator")
-        contributor = User.objects.create(code="CONTR1", email="contr@test.com", name="Member")
+        owner = User.objects.create(code="COWN01", email="lala9@your-domain.test", name="Owner")
+        co_curator = User.objects.create(
+            code="CCUR02", email="lala1@your-domain.test", name="Curator"
+        )
+        contributor = User.objects.create(
+            code="CONTR1", email="lele@your-domain.test", name="Member"
+        )
         group = Collection.objects.create(
             code="COM001", owner=owner, headline="The street", mode=Collection.Mode.COMMUNITY
         )
@@ -142,9 +146,13 @@ class TestCommunityIsUnchanged:
         assert members_thing.headline == "My ladder"
 
     def test_the_card_does_not_offer_management_of_a_community_members_thing(self, db):
-        owner = User.objects.create(code="COWN02", email="cowner2@test.com", name="Owner")
-        co_curator = User.objects.create(code="CCUR03", email="ccur3@test.com", name="Curator")
-        contributor = User.objects.create(code="CONTR2", email="contr2@test.com", name="Member")
+        owner = User.objects.create(code="COWN02", email="lala3@your-domain.test", name="Owner")
+        co_curator = User.objects.create(
+            code="CCUR03", email="lili@your-domain.test", name="Curator"
+        )
+        contributor = User.objects.create(
+            code="CONTR2", email="lolo1@your-domain.test", name="Member"
+        )
         group = Collection.objects.create(
             code="COM002", owner=owner, headline="The block", mode=Collection.Mode.COMMUNITY
         )
@@ -162,9 +170,11 @@ class TestCommunityIsUnchanged:
 
 class TestReachDoesNotBleedAcrossCollections:
     def test_a_curator_of_one_space_cannot_manage_a_thing_that_lives_only_in_another(self, db):
-        owner_a = User.objects.create(code="OWNA01", email="ownera@test.com", name="A")
-        owner_b = User.objects.create(code="OWNB01", email="ownerb@test.com", name="B")
-        curator_a = User.objects.create(code="CURA01", email="cura@test.com", name="CuratorA")
+        owner_a = User.objects.create(code="OWNA01", email="lala4@your-domain.test", name="A")
+        owner_b = User.objects.create(code="OWNB01", email="lala5@your-domain.test", name="B")
+        curator_a = User.objects.create(
+            code="CURA01", email="lele10@your-domain.test", name="CuratorA"
+        )
 
         space_a = Collection.objects.create(
             code="SPCA01", owner=owner_a, headline="Space A", mode=Collection.Mode.PROPRIETARY

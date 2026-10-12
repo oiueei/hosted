@@ -205,7 +205,7 @@ class TestTheSafetyRails:
             "RETENTION_REPORT_MONTHS",
         ):
             setattr(settings, name, 0)
-        guest = User.objects.create(code="OFFGH1", email="offgh1@example.com")
+        guest = User.objects.create(code="OFFGH1", email="lala@your-domain.test")
         User.objects.filter(pk=guest.pk).update(created=months_ago(9).date())
         event = _aged(
             Event, "created", 99, code="OFFEV1", kind=Event.Kind.THING_ADDED, actor_code=user.code
@@ -236,7 +236,7 @@ class TestTheGuestsWhoNeverCameIn:
     """
 
     def _guest(self, code, days_old=90, **kwargs):
-        guest = User.objects.create(code=code, email=f"{code.lower()}@example.com", **kwargs)
+        guest = User.objects.create(code=code, email=f"{code.lower()}@your-domain.test", **kwargs)
         User.objects.filter(pk=guest.pk).update(
             created=(timezone.now() - timedelta(days=days_old)).date()
         )
@@ -330,7 +330,7 @@ class TestTheWarningThatComesFirst:
     """
 
     def _dormant(self, code, months=30, **kwargs):
-        person = User.objects.create(code=code, email=f"{code.lower()}@example.com", **kwargs)
+        person = User.objects.create(code=code, email=f"{code.lower()}@your-domain.test", **kwargs)
         User.objects.filter(pk=person.pk).update(
             last_activity=months_ago(months).date(), created=months_ago(months + 1).date()
         )
@@ -452,7 +452,7 @@ class TestTheErasureTheWarningAnnounced:
     except the first is a way of not doing it."""
 
     def _warned(self, code, warned_days_ago=40, inactive_months=30, **kwargs):
-        person = User.objects.create(code=code, email=f"{code.lower()}@example.com", **kwargs)
+        person = User.objects.create(code=code, email=f"{code.lower()}@your-domain.test", **kwargs)
         User.objects.filter(pk=person.pk).update(
             last_activity=months_ago(inactive_months).date(),
             created=months_ago(inactive_months + 1).date(),
@@ -509,7 +509,7 @@ class TestTheErasureTheWarningAnnounced:
 
     def test_somebody_who_was_never_warned_is_never_erased(self):
         # No stamp, no clock: the email is not optional.
-        person = User.objects.create(code="NOTLD1", email="notold@example.com")
+        person = User.objects.create(code="NOTLD1", email="lele@your-domain.test")
         User.objects.filter(pk=person.pk).update(last_activity=months_ago(30).date())
 
         _run(commit=True)
@@ -557,7 +557,9 @@ class TestTheWarningsAreSpreadOverRuns:
 
     def _dormant_crowd(self, how_many):
         for index in range(how_many):
-            person = User.objects.create(code=f"D{index:05d}", email=f"dormant{index}@example.com")
+            person = User.objects.create(
+                code=f"D{index:05d}", email=f"lele{index}@your-domain.test"
+            )
             User.objects.filter(pk=person.pk).update(
                 last_activity=months_ago(30).date(), created=months_ago(31).date()
             )

@@ -28,17 +28,17 @@ def get_client(user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="OWN001", email="owner@example.com", name="Owner")
+    return User.objects.create(code="OWN001", email="lala1@your-domain.test", name="Owner")
 
 
 @pytest.fixture
 def guest1(db):
-    return User.objects.create(code="GST001", email="guest1@example.com", name="Guest 1")
+    return User.objects.create(code="GST001", email="lele@your-domain.test", name="Guest 1")
 
 
 @pytest.fixture
 def guest2(db):
-    return User.objects.create(code="GST002", email="guest2@example.com", name="Guest 2")
+    return User.objects.create(code="GST002", email="lele1@your-domain.test", name="Guest 2")
 
 
 @pytest.fixture

@@ -25,7 +25,7 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = User
 
-    email = factory.Sequence(lambda n: f"user{n}@example.com")
+    email = factory.Sequence(lambda n: f"lala.{n}@your-domain.test")
     name = factory.Sequence(lambda n: f"User {n}")
 
 

@@ -38,7 +38,11 @@ from core.models import Collection, User
 class TestUserAdminAboutField:
     def _superuser(self):
         return User.objects.create(
-            code="ADMIN1", email="admin@test.com", name="Admin", is_staff=True, is_superuser=True
+            code="ADMIN1",
+            email="lala1@your-domain.test",
+            name="Admin",
+            is_staff=True,
+            is_superuser=True,
         )
 
     def _form_class(self, obj=None):
@@ -49,7 +53,7 @@ class TestUserAdminAboutField:
         assert isinstance(self._form_class().base_fields["about"].widget, forms.Textarea)
 
     def test_a_multiline_bio_round_trips_through_the_admin_form(self):
-        target = User.objects.create(code="BIOUSR", email="bio@test.com")
+        target = User.objects.create(code="BIOUSR", email="lala2@your-domain.test")
         multiline = "# Comuna Llum\n\nUna colla de coses per compartir.\n\nGràcies!"
         # password has no admin-facing validation here (plain CharField, not
         # the special ReadOnlyPasswordHashField) — model_to_dict returns '' for
@@ -78,13 +82,13 @@ class TestCollectionAdminShareToken:
 
     def _form_class(self, obj=None):
         superuser = User.objects.create(
-            code="ADMIN2", email="admin2@test.com", is_staff=True, is_superuser=True
+            code="ADMIN2", email="lala3@your-domain.test", is_staff=True, is_superuser=True
         )
         request = type("FakeRequest", (), {"user": superuser})()
         return CollectionAdmin(Collection, admin.site).get_form(request, obj=obj)
 
     def _collection(self):
-        owner = User.objects.create(code="OWNR01", email="owner@test.com", name="Owner")
+        owner = User.objects.create(code="OWNR01", email="lala@your-domain.test", name="Owner")
         return Collection.objects.create(
             code="COLL01", owner=owner, headline="Les coses", share_token="a" * 22
         )

@@ -71,11 +71,11 @@ class TestMembershipEvents:
     def test_invite_new_email_logs_user_joined(self, authenticated_client, collection):
         response = authenticated_client.post(
             f"/api/v1/collections/{collection.code}/invite/",
-            {"email": "brandnew@test.com"},
+            {"email": "lele@your-domain.test"},
             format="json",
         )
         assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED)
-        new_user = User.objects.get(email="brandnew@test.com")
+        new_user = User.objects.get(email="lele@your-domain.test")
         assert Event.objects.filter(kind=Event.Kind.USER_JOINED, actor_code=new_user.code).exists()
 
     def test_accept_invite_logs_member_joined(self, api_client, user2, collection):
@@ -111,12 +111,12 @@ class TestMembershipEvents:
         """
         response = api_client.post(
             "/api/v1/auth/join/",
-            {"email": "joiner@test.com", "collection_code": public_collection.code},
+            {"email": "lele7@your-domain.test", "collection_code": public_collection.code},
             format="json",
         )
 
         assert response.status_code == status.HTTP_200_OK
-        new_user = User.objects.get(email="joiner@test.com")
+        new_user = User.objects.get(email="lele7@your-domain.test")
         assert Event.objects.filter(kind=Event.Kind.USER_JOINED, actor_code=new_user.code).exists()
         assert not Event.objects.filter(
             kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code

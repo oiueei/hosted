@@ -45,7 +45,7 @@ TEXTS = {lang: import_module(f"core.services.email_texts.{lang}").TEXTS for lang
 def team(user, user2, thing, collection):
     """``thing`` in a PROPRIETARY group run by two people — the owner (``user``) and a
     co-curator — asked for by ``user2``, a member. Two managers, two copies."""
-    co_curator = User.objects.create(code="CURA01", email="curator@example.com", name="Cura")
+    co_curator = User.objects.create(code="CURA01", email="lala@your-domain.test", name="Cura")
     collection.mode = Collection.Mode.PROPRIETARY
     collection.save(update_fields=["mode"])
     collection.invites.add(user2, co_curator)

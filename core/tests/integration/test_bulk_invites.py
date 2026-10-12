@@ -32,7 +32,10 @@ class _SyncThread:
 class TestBulkInvite:
     @patch("core.views.collections.send_collection_invite_email")
     def test_invites_new_emails_and_presets_name(self, mock_send, authenticated_client, collection):
-        invites = [{"email": "alice@example.com"}, {"email": "BOB@example.com", "name": "Bob"}]
+        invites = [
+            {"email": "lele9@your-domain.test"},
+            {"email": "LILI1@your-domain.test", "name": "Bob"},
+        ]
         res = authenticated_client.post(
             URL.format(code=collection.code), {"invites": invites}, format="json"
         )
@@ -48,16 +51,16 @@ class TestBulkInvite:
             == 2
         )
         # Email lower-cased and the optional name pre-set on the new user.
-        bob = User.objects.get(email="bob@example.com")
+        bob = User.objects.get(email="lili1@your-domain.test")
         assert bob.name == "Bob"
         # One invitation email per invited address.
         assert mock_send.call_count == 2
 
     @patch("core.views.collections.send_collection_invite_email")
     def test_best_effort_classifies_each_row(self, mock_send, authenticated_client, collection):
-        member = User.objects.create(code="MEMBR1", email="member@example.com", name="M")
+        member = User.objects.create(code="MEMBR1", email="lele2@your-domain.test", name="M")
         collection.invites.add(member)
-        pending = User.objects.create(code="PEND01", email="pending@example.com")
+        pending = User.objects.create(code="PEND01", email="lili2@your-domain.test")
         RSVP.objects.create(
             user_code=pending,
             user_email=pending.email,
@@ -65,11 +68,11 @@ class TestBulkInvite:
             target_code=collection.code,
         )
         invites = [
-            {"email": "new@example.com"},
-            {"email": "new@example.com"},  # duplicate within the batch
+            {"email": "lele3@your-domain.test"},
+            {"email": "lele3@your-domain.test"},  # duplicate within the batch
             {"email": "notanemail"},  # invalid
-            {"email": "member@example.com"},  # already a member
-            {"email": "pending@example.com"},  # already invited (pending RSVP)
+            {"email": "lele2@your-domain.test"},  # already a member
+            {"email": "lili2@your-domain.test"},  # already invited (pending RSVP)
         ]
         res = authenticated_client.post(
             URL.format(code=collection.code), {"invites": invites}, format="json"
@@ -77,10 +80,10 @@ class TestBulkInvite:
         assert res.status_code == 200
         assert res.data["invited"] == 1
         reasons = {s["email"]: s["reason"] for s in res.data["skipped"]}
-        assert reasons["new@example.com"] == "duplicate"
+        assert reasons["lele3@your-domain.test"] == "duplicate"
         assert reasons["notanemail"] == "invalid"
-        assert reasons["member@example.com"] == "already_member"
-        assert reasons["pending@example.com"] == "already_invited"
+        assert reasons["lele2@your-domain.test"] == "already_member"
+        assert reasons["lili2@your-domain.test"] == "already_invited"
         assert mock_send.call_count == 1
 
     @patch("core.views.collections.send_collection_invite_email")
@@ -89,26 +92,26 @@ class TestBulkInvite:
     ):
         res = authenticated_client.post(
             URL.format(code=collection.code),
-            {"invites": [{"email": "c@example.com", "name": "<script>x</script>"}]},
+            {"invites": [{"email": "lolo3@your-domain.test", "name": "<script>x</script>"}]},
             format="json",
         )
         assert res.status_code == 200
         assert res.data["invited"] == 1
-        carol = User.objects.get(email="c@example.com")
+        carol = User.objects.get(email="lolo3@your-domain.test")
         assert not carol.name  # malformed name dropped, not stored
         assert mock_send.call_count == 1
 
     def test_non_owner_is_forbidden(self, authenticated_client2, collection):
         res = authenticated_client2.post(
             URL.format(code=collection.code),
-            {"invites": [{"email": "x@example.com"}]},
+            {"invites": [{"email": "lulu1@your-domain.test"}]},
             format="json",
         )
         assert res.status_code == 403
         assert not RSVP.objects.filter(target_code=collection.code).exists()
 
     def test_too_many_rows_rejected(self, authenticated_client, collection):
-        invites = [{"email": f"u{i}@example.com"} for i in range(101)]
+        invites = [{"email": f"lele{i}@your-domain.test"} for i in range(101)]
         res = authenticated_client.post(
             URL.format(code=collection.code), {"invites": invites}, format="json"
         )
@@ -131,10 +134,10 @@ class TestBulkInvite:
         with patch("core.views.collections.threading.Thread", _SyncThread):
             res = authenticated_client.post(
                 URL.format(code=collection.code),
-                {"invites": [{"email": "async@example.com"}]},
+                {"invites": [{"email": "lala@your-domain.test"}]},
                 format="json",
             )
         assert res.status_code == 200
         assert res.data["invited"] == 1
         assert len(mail.outbox) == 1
-        assert mail.outbox[0].to == ["async@example.com"]
+        assert mail.outbox[0].to == ["lala@your-domain.test"]

@@ -19,10 +19,12 @@ from core.services.email_service import send_broadcast_email
 @pytest.fixture
 def broadcast_setup(db):
     """Create owner, invitees, and collection for broadcast tests."""
-    owner = User.objects.create(code="BROWN1", email="browner@test.com", name="Owner")
-    invitee1 = User.objects.create(code="BRINV1", email="brinv1@test.com", name="Invitee One")
-    invitee2 = User.objects.create(code="BRINV2", email="brinv2@test.com", name="Invitee Two")
-    stranger = User.objects.create(code="BRSTR1", email="brstr@test.com", name="Stranger")
+    owner = User.objects.create(code="BROWN1", email="lala@your-domain.test", name="Owner")
+    invitee1 = User.objects.create(
+        code="BRINV1", email="lala1@your-domain.test", name="Invitee One"
+    )
+    invitee2 = User.objects.create(code="BRINV2", email="lele@your-domain.test", name="Invitee Two")
+    stranger = User.objects.create(code="BRSTR1", email="lili@your-domain.test", name="Stranger")
 
     collection = Collection.objects.create(code="BRCOL1", owner=owner, headline="Broadcast Club")
     collection.invites.add(invitee1, invitee2)
@@ -73,7 +75,7 @@ class TestCollectionBroadcast:
         # Subject is auto-generated as "Hey! {collection}" (no user-provided subject)
         email = mail.outbox[0]
         assert email.subject == "Hey! Broadcast Club"
-        assert email.reply_to == ["browner@test.com"]
+        assert email.reply_to == ["lala@your-domain.test"]
 
     def test_invitee_cannot_broadcast(self, broadcast_setup):
         """Only the owner can send broadcasts — and a denial sends nothing."""
@@ -207,9 +209,9 @@ class TestCollectionBroadcast:
         bulk User queries (``_filter_recipients`` + ``_lookup_users``), never a
         ``_lookup_user`` per recipient. The query count must be constant in the
         number of recipients — adding invitees adds zero queries."""
-        owner = User.objects.create(code="BRBKO1", email="brbko@test.com", name="Owner")
+        owner = User.objects.create(code="BRBKO1", email="lolo@your-domain.test", name="Owner")
         first = [
-            User.objects.create(code=f"BRBK0{i}", email=f"brbk{i}@test.com", name=f"Inv{i}")
+            User.objects.create(code=f"BRBK0{i}", email=f"lala{i}@your-domain.test", name=f"Inv{i}")
             for i in range(1, 3)
         ]
 
@@ -220,7 +222,7 @@ class TestCollectionBroadcast:
         assert len(mail.outbox) == 2
 
         rest = [
-            User.objects.create(code=f"BRBK0{i}", email=f"brbk{i}@test.com", name=f"Inv{i}")
+            User.objects.create(code=f"BRBK0{i}", email=f"lala{i}@your-domain.test", name=f"Inv{i}")
             for i in range(3, 7)
         ]
         with CaptureQueriesContext(connection) as big:

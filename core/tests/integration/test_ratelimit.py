@@ -24,7 +24,9 @@ def test_rate_limited_endpoint_returns_429(db, api_client):
     # request-link is limited to 5/min by IP; the 6th within the window blocks.
     caches["default"].clear()
     responses = [
-        api_client.post("/api/v1/auth/request-link/", {"email": "rl@example.com"}, format="json")
+        api_client.post(
+            "/api/v1/auth/request-link/", {"email": "lala@your-domain.test"}, format="json"
+        )
         for _ in range(6)
     ]
     assert responses[0].status_code == 200

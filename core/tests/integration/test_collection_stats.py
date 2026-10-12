@@ -54,7 +54,7 @@ class TestCollectionStats:
         user2.age_range = "GEN_Z"
         user2.postal_code = "48001"
         user2.save()
-        m2 = User.objects.create(code="MEM002", email="m2@example.com")  # no demographics
+        m2 = User.objects.create(code="MEM002", email="lala@your-domain.test")  # no demographics
         coll.invites.add(user2, m2)
 
         t1 = Thing.objects.create(
@@ -87,7 +87,12 @@ class TestCollectionStats:
         """Add one member per ``(age_range, postal_code)`` pair."""
         coll.invites.add(
             *User.objects.bulk_create(
-                User(code=f"MIN{i:03d}", email=f"m{i}@example.com", age_range=age, postal_code=p)
+                User(
+                    code=f"MIN{i:03d}",
+                    email=f"lele{i}@your-domain.test",
+                    age_range=age,
+                    postal_code=p,
+                )
                 for i, (age, p) in enumerate(people)
             )
         )

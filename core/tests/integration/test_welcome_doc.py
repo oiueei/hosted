@@ -75,13 +75,13 @@ class TestWelcomeDocOnJoin:
         collection.save()
         join = {"collection_code": collection.code}
 
-        self._type_the_address_and_press_the_link(api_client, "joiner@test.com", **join)
+        self._type_the_address_and_press_the_link(api_client, "lele7@your-domain.test", **join)
         assert len(_doc_emails()) == 1
 
-        self._type_the_address_and_press_the_link(api_client, "joiner@test.com", **join)
+        self._type_the_address_and_press_the_link(api_client, "lele7@your-domain.test", **join)
 
         assert len(_doc_emails()) == 1
-        assert collection.invites.filter(email="joiner@test.com").exists()
+        assert collection.invites.filter(email="lele7@your-domain.test").exists()
 
     def test_share_token_join_sends_the_document_when_the_link_is_pressed(
         self, api_client, collection
@@ -91,13 +91,13 @@ class TestWelcomeDocOnJoin:
         collection.save()
 
         self._type_the_address_and_press_the_link(
-            api_client, "shared@test.com", share_token=collection.share_token
+            api_client, "lala@your-domain.test", share_token=collection.share_token
         )
 
         sent = _doc_emails()
         assert len(sent) == 1
-        assert sent[0].to == ["shared@test.com"]
-        assert User.objects.filter(email="shared@test.com").exists()
+        assert sent[0].to == ["lala@your-domain.test"]
+        assert User.objects.filter(email="lala@your-domain.test").exists()
 
     def test_typing_an_address_sends_the_document_to_nobody(self, api_client, collection):
         """Somebody else's address, typed: they get a magic link to a page they never
@@ -109,12 +109,12 @@ class TestWelcomeDocOnJoin:
 
         api_client.post(
             JOIN_URL,
-            {"email": "victim@test.com", "share_token": collection.share_token},
+            {"email": "lele@your-domain.test", "share_token": collection.share_token},
             format="json",
         )
 
         assert _doc_emails() == []
-        assert not collection.invites.filter(email="victim@test.com").exists()
+        assert not collection.invites.filter(email="lele@your-domain.test").exists()
 
     def test_the_signed_in_door_sends_it_like_every_other(
         self, authenticated_client, user, user2, collection

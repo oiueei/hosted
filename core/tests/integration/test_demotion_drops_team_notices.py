@@ -34,17 +34,17 @@ def client_for(user):
 
 @pytest.fixture
 def lala(db):
-    return User.objects.create(code="LALA01", email="lala@test.com", name="Lala")
+    return User.objects.create(code="LALA01", email="lala4@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def lele(db):
-    return User.objects.create(code="LELE01", email="lele@test.com", name="Lele")
+    return User.objects.create(code="LELE01", email="lele6@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def lili(db):
-    return User.objects.create(code="LILI01", email="lili@test.com", name="Lili")
+    return User.objects.create(code="LILI01", email="lili4@your-domain.test", name="Lili")
 
 
 def _group(code, owner, mode, *people, co_curators=()):

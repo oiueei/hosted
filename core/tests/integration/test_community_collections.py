@@ -279,7 +279,9 @@ class TestCommunityInactiveThingVisibility:
         from core.models import User
 
         coll, thing = self._community_with_member_thing(user, user2)
-        other = User.objects.create(code="TEST03", email="test3@example.com", name="Test User 3")
+        other = User.objects.create(
+            code="TEST03", email="lele1@your-domain.test", name="Test User 3"
+        )
         coll.invites.add(other)
         from rest_framework.test import APIClient
         from rest_framework_simplejwt.tokens import RefreshToken

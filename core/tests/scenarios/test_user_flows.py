@@ -21,7 +21,7 @@ class TestMagicLinkFlow:
 
     def test_complete_magic_link_flow(self, api_client):
         """Test complete magic link authentication flow for existing user."""
-        email = "inviteduser@example.com"
+        email = "lele@your-domain.test"
 
         # Pre-condition: User must exist (was invited to a collection)
         user = User.objects.create(email=email)
@@ -64,8 +64,8 @@ class TestInAppInvitationFlow:
     def test_my_invitations_codes_resolve_via_verify(self, api_client):
         from core.models import Collection
 
-        owner = User.objects.create(email="owner@example.com", name="Owner")
-        invitee = User.objects.create(email="invitee@example.com", name="Guest")
+        owner = User.objects.create(email="lala1@your-domain.test", name="Owner")
+        invitee = User.objects.create(email="lele14@your-domain.test", name="Guest")
         collection = Collection.objects.create(owner=owner, headline="Shared list")
         RSVP.objects.create(
             user_code=invitee,
@@ -162,7 +162,7 @@ class TestShareCollectionFlow:
         # Create owner
         owner = User.objects.create(
             code="OWNER1",
-            email="owner@example.com",
+            email="lala1@your-domain.test",
             name="Owner",
         )
         owner_token = RefreshToken.for_user(owner)
@@ -170,7 +170,7 @@ class TestShareCollectionFlow:
         # Create friend
         friend = User.objects.create(
             code="FRND01",
-            email="friend@example.com",
+            email="lele15@your-domain.test",
             name="Friend",
         )
         friend_token = RefreshToken.for_user(friend)
@@ -199,7 +199,7 @@ class TestShareCollectionFlow:
         # Step 3: Owner invites friend
         response = client.post(
             f"/api/v1/collections/{collection_code}/invite/",
-            {"email": "friend@example.com"},
+            {"email": "lele15@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
@@ -207,7 +207,7 @@ class TestShareCollectionFlow:
         # Step 3.5: Friend accepts invitation by verifying RSVP
         from core.models import RSVP
 
-        rsvp = RSVP.objects.get(user_email="friend@example.com", action="COLLECTION_INVITE")
+        rsvp = RSVP.objects.get(user_email="lele15@your-domain.test", action="COLLECTION_INVITE")
         response = client.get(f"/api/v1/auth/verify/{rsvp.token}/")
         assert response.status_code == status.HTTP_200_OK
 
@@ -269,7 +269,7 @@ class TestFAQFlow:
         # Create owner
         owner = User.objects.create(
             code="OWNER2",
-            email="owner2@example.com",
+            email="lala13@your-domain.test",
             name="Owner",
         )
         owner_token = RefreshToken.for_user(owner)
@@ -277,7 +277,7 @@ class TestFAQFlow:
         # Create friend
         friend = User.objects.create(
             code="FRND02",
-            email="friend2@example.com",
+            email="lele1@your-domain.test",
             name="Friend",
         )
         friend_token = RefreshToken.for_user(friend)
@@ -306,12 +306,12 @@ class TestFAQFlow:
         # Owner invites friend
         client.post(
             f"/api/v1/collections/{collection_code}/invite/",
-            {"email": "friend2@example.com"},
+            {"email": "lele1@your-domain.test"},
             format="json",
         )
 
         # Friend accepts invitation by verifying RSVP
-        rsvp = RSVP.objects.get(user_email="friend2@example.com", action="COLLECTION_INVITE")
+        rsvp = RSVP.objects.get(user_email="lele1@your-domain.test", action="COLLECTION_INVITE")
         client.get(f"/api/v1/auth/verify/{rsvp.token}/")
 
         # Step 1: Friend asks question
@@ -359,12 +359,12 @@ class TestCompleteUserJourney:
         # === Alice signs up and creates a wishlist ===
 
         # Alice was invited earlier (user must exist first in invite-only system)
-        alice = User.objects.create(email="alice@example.com")
+        alice = User.objects.create(email="lele9@your-domain.test")
 
         # Alice requests magic link
         response = client.post(
             "/api/v1/auth/request-link/",
-            {"email": "alice@example.com"},
+            {"email": "lele9@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
@@ -419,25 +419,25 @@ class TestCompleteUserJourney:
 
         response = client.post(
             f"/api/v1/collections/{wishlist_code}/invite/",
-            {"email": "bob@example.com"},
+            {"email": "lili1@your-domain.test"},
             format="json",
         )
-        bob = User.objects.get(email="bob@example.com")
+        bob = User.objects.get(email="lili1@your-domain.test")
 
         response = client.post(
             f"/api/v1/collections/{wishlist_code}/invite/",
-            {"email": "charlie@example.com"},
+            {"email": "lala@your-domain.test"},
             format="json",
         )
-        charlie = User.objects.get(email="charlie@example.com")
+        charlie = User.objects.get(email="lala@your-domain.test")
 
         # === Bob and Charlie accept invitations ===
 
-        bob_rsvp = RSVP.objects.get(user_email="bob@example.com", action="COLLECTION_INVITE")
+        bob_rsvp = RSVP.objects.get(user_email="lili1@your-domain.test", action="COLLECTION_INVITE")
         client.get(f"/api/v1/auth/verify/{bob_rsvp.token}/")
 
         charlie_rsvp = RSVP.objects.get(
-            user_email="charlie@example.com", action="COLLECTION_INVITE"
+            user_email="lala@your-domain.test", action="COLLECTION_INVITE"
         )
         client.get(f"/api/v1/auth/verify/{charlie_rsvp.token}/")
 

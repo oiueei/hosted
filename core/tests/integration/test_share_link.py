@@ -18,8 +18,8 @@ from core.models import RSVP, Collection, Event, User
 
 @pytest.fixture
 def share_link_setup(db):
-    owner = User.objects.create(code="SHOWN1", email="shown@test.com", name="Owner")
-    stranger = User.objects.create(code="SHSTR1", email="shstr@test.com", name="Stranger")
+    owner = User.objects.create(code="SHOWN1", email="lele13@your-domain.test", name="Owner")
+    stranger = User.objects.create(code="SHSTR1", email="lala@your-domain.test", name="Stranger")
 
     collection = Collection.objects.create(
         code="SHCOL1", owner=owner, headline="Share Club", status="ACTIVE"
@@ -169,9 +169,9 @@ class TestJoinWithShareToken:
         collection = share_link_setup["collection"]
         mail.outbox.clear()
 
-        _, rsvp = self._send(share_link_setup, "newjoiner@test.com")
+        _, rsvp = self._send(share_link_setup, "lele@your-domain.test")
 
-        new_user = User.objects.get(email="newjoiner@test.com")
+        new_user = User.objects.get(email="lele@your-domain.test")
         assert len(mail.outbox) == 1
         assert rsvp.target_code == collection.code
         assert not collection.invites.filter(code=new_user.code).exists()
@@ -181,21 +181,21 @@ class TestJoinWithShareToken:
 
     def test_pressing_the_link_joins_and_lands_on_the_collection(self, share_link_setup):
         collection = share_link_setup["collection"]
-        _, rsvp = self._send(share_link_setup, "pressed@test.com")
+        _, rsvp = self._send(share_link_setup, "lili7@your-domain.test")
 
         resp = self._press(rsvp)
 
         assert resp.status_code == 200
         assert resp.data["landing"] == "collection"
         assert resp.data["collection"] == collection.code
-        new_user = User.objects.get(email="pressed@test.com")
+        new_user = User.objects.get(email="lili7@your-domain.test")
         assert collection.invites.filter(code=new_user.code).exists()
         # The join is logged when it happens, with the door it came through.
         joined = Event.objects.get(kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code)
         assert joined.source == Event.Source.SHARE
 
     def test_the_link_stores_the_token_it_was_sent_with(self, share_link_setup):
-        token, rsvp = self._send(share_link_setup, "stored@test.com")
+        token, rsvp = self._send(share_link_setup, "lele1@your-domain.test")
 
         assert rsvp.context == {"join_source": "SHARE", "share_token": token}
 
@@ -204,7 +204,7 @@ class TestJoinWithShareToken:
         in force when the address was typed is gone by the time it is pressed, and
         pressing must not honour it — nor land them on a group that would answer 403."""
         collection = share_link_setup["collection"]
-        _, rsvp = self._send(share_link_setup, "rotated@test.com")
+        _, rsvp = self._send(share_link_setup, "lili@your-domain.test")
         share_link_setup["owner_client"].post(
             URL.format(collection.code), {"rotate": True}, format="json"
         )
@@ -212,7 +212,7 @@ class TestJoinWithShareToken:
         resp = self._press(rsvp)
 
         assert resp.status_code == 200
-        new_user = User.objects.get(email="rotated@test.com")
+        new_user = User.objects.get(email="lili@your-domain.test")
         assert not collection.invites.filter(code=new_user.code).exists()
         assert not Event.objects.filter(
             kind=Event.Kind.MEMBER_JOINED, actor_code=new_user.code
@@ -224,24 +224,24 @@ class TestJoinWithShareToken:
 
     def test_a_token_revoked_before_the_click_joins_nobody(self, share_link_setup):
         collection = share_link_setup["collection"]
-        _, rsvp = self._send(share_link_setup, "revokedlater@test.com")
+        _, rsvp = self._send(share_link_setup, "lolo@your-domain.test")
         share_link_setup["owner_client"].delete(URL.format(collection.code))
 
         resp = self._press(rsvp)
 
-        new_user = User.objects.get(email="revokedlater@test.com")
+        new_user = User.objects.get(email="lolo@your-domain.test")
         assert not collection.invites.filter(code=new_user.code).exists()
         assert resp.data["landing"] == "home"
 
     def test_a_collection_made_inactive_before_the_click_joins_nobody(self, share_link_setup):
         collection = share_link_setup["collection"]
-        _, rsvp = self._send(share_link_setup, "archivedlater@test.com")
+        _, rsvp = self._send(share_link_setup, "lulu@your-domain.test")
         collection.status = "INACTIVE"
         collection.save(update_fields=["status"])
 
         resp = self._press(rsvp)
 
-        new_user = User.objects.get(email="archivedlater@test.com")
+        new_user = User.objects.get(email="lulu@your-domain.test")
         assert not collection.invites.filter(code=new_user.code).exists()
         assert resp.data["landing"] == "home"
 
@@ -251,13 +251,13 @@ class TestJoinWithShareToken:
         collection = share_link_setup["collection"]
         collection.share_token = "sharetoken1234567890ab"
         collection.save(update_fields=["share_token"])
-        _, rsvp = self._send(share_link_setup, "odd@test.com")
+        _, rsvp = self._send(share_link_setup, "lala1@your-domain.test")
         rsvp.context = {"join_source": "SOMETHING", "share_token": collection.share_token}
         rsvp.save(update_fields=["context"])
 
         resp = self._press(rsvp)
 
-        new_user = User.objects.get(email="odd@test.com")
+        new_user = User.objects.get(email="lala1@your-domain.test")
         assert not collection.invites.filter(code=new_user.code).exists()
         assert resp.data["landing"] == "home"
 
@@ -266,7 +266,7 @@ class TestJoinWithShareToken:
         is the one where both sides are empty: a revoked link (the collection has no
         token) whose RSVP has none either must not read as "they match"."""
         collection = share_link_setup["collection"]
-        _, rsvp = self._send(share_link_setup, "notoken@test.com")
+        _, rsvp = self._send(share_link_setup, "lele2@your-domain.test")
         share_link_setup["owner_client"].delete(URL.format(collection.code))
         rsvp.context = {"join_source": "SHARE"}
         rsvp.save(update_fields=["context"])
@@ -275,7 +275,7 @@ class TestJoinWithShareToken:
 
         resp = self._press(rsvp)
 
-        new_user = User.objects.get(email="notoken@test.com")
+        new_user = User.objects.get(email="lele2@your-domain.test")
         assert not collection.invites.filter(code=new_user.code).exists()
         assert resp.data["landing"] == "home"
 
@@ -283,7 +283,7 @@ class TestJoinWithShareToken:
         """A link sent before the join moved to the click lives 24 hours: its person
         was joined when it was sent, so it lands them and decides nothing."""
         collection = share_link_setup["collection"]
-        member = User.objects.create(code="SHOLD1", email="old@test.com", name="Old")
+        member = User.objects.create(code="SHOLD1", email="lili1@your-domain.test", name="Old")
         collection.invites.add(member)
         rsvp = RSVP.objects.create(
             user_code=member,
@@ -313,13 +313,13 @@ class TestJoinWithShareToken:
         """
         resp = share_link_setup["anon_client"].post(
             JOIN_URL,
-            {"email": "probe@test.com", "share_token": "definitely-not-a-real-token"},
+            {"email": "lulu3@your-domain.test", "share_token": "definitely-not-a-real-token"},
             format="json",
         )
 
         assert resp.status_code == 200
-        assert not User.objects.filter(email="probe@test.com").exists()
-        assert not RSVP.objects.filter(user_email="probe@test.com").exists()
+        assert not User.objects.filter(email="lulu3@your-domain.test").exists()
+        assert not RSVP.objects.filter(user_email="lulu3@your-domain.test").exists()
 
     def test_revoked_token_does_not_grant_access(self, share_link_setup):
         collection = share_link_setup["collection"]
@@ -330,7 +330,7 @@ class TestJoinWithShareToken:
 
         resp = share_link_setup["anon_client"].post(
             JOIN_URL,
-            {"email": "afterrevoke@test.com", "share_token": token},
+            {"email": "lolo1@your-domain.test", "share_token": token},
             format="json",
         )
 
@@ -338,8 +338,8 @@ class TestJoinWithShareToken:
         # Revoking is what the owner reaches for when a link has escaped, so a
         # token they killed must buy nothing whatsoever — not membership, and
         # not the account that used to come with it.
-        assert not User.objects.filter(email="afterrevoke@test.com").exists()
-        assert not collection.invites.filter(email="afterrevoke@test.com").exists()
+        assert not User.objects.filter(email="lolo1@your-domain.test").exists()
+        assert not collection.invites.filter(email="lolo1@your-domain.test").exists()
 
     def test_inactive_collection_token_does_not_grant_access(self, share_link_setup):
         collection = share_link_setup["collection"]
@@ -351,13 +351,13 @@ class TestJoinWithShareToken:
 
         resp = share_link_setup["anon_client"].post(
             JOIN_URL,
-            {"email": "inactive@test.com", "share_token": token},
+            {"email": "lulu4@your-domain.test", "share_token": token},
             format="json",
         )
 
         assert resp.status_code == 200
-        assert not User.objects.filter(email="inactive@test.com").exists()
-        assert not collection.invites.filter(email="inactive@test.com").exists()
+        assert not User.objects.filter(email="lulu4@your-domain.test").exists()
+        assert not collection.invites.filter(email="lulu4@your-domain.test").exists()
 
     def test_existing_user_can_join_via_share_token(self, share_link_setup):
         collection = share_link_setup["collection"]
@@ -365,11 +365,13 @@ class TestJoinWithShareToken:
             share_link_setup["owner_client"].post(URL.format(collection.code)).data["share_token"]
         )
 
-        existing = User.objects.create(code="SHEXST", email="existing@test.com", name="Existing")
+        existing = User.objects.create(
+            code="SHEXST", email="lulu1@your-domain.test", name="Existing"
+        )
 
         resp = share_link_setup["anon_client"].post(
             JOIN_URL,
-            {"email": "existing@test.com", "share_token": token},
+            {"email": "lulu1@your-domain.test", "share_token": token},
             format="json",
         )
 
@@ -388,10 +390,10 @@ class TestJoinWithShareToken:
         )
         share_link_setup["anon_client"].post(
             JOIN_URL,
-            {"email": "redirshare@test.com", "share_token": token},
+            {"email": "lala2@your-domain.test", "share_token": token},
             format="json",
         )
-        user = User.objects.get(email="redirshare@test.com")
+        user = User.objects.get(email="lala2@your-domain.test")
         rsvp = RSVP.objects.get(user_code=user, action=RSVP.Action.MAGIC_LINK)
         assert rsvp.target_code == collection.code
 
@@ -409,7 +411,7 @@ class TestJoinWithShareToken:
         mail.outbox.clear()
         share_link_setup["anon_client"].post(
             JOIN_URL,
-            {"email": "sharesubj@test.com", "share_token": token},
+            {"email": "lele3@your-domain.test", "share_token": token},
             format="json",
         )
         assert "Share Club" in mail.outbox[0].subject
@@ -523,7 +525,7 @@ class TestStaleCookieAuth:
     --reset`` in dev) must not 401 the AllowAny onboarding endpoints."""
 
     def _stale_cookie_client(self):
-        ghost = User.objects.create(code="GHOST1", email="ghost@test.com", name="Ghost")
+        ghost = User.objects.create(code="GHOST1", email="lala12@your-domain.test", name="Ghost")
         token = str(RefreshToken.for_user(ghost).access_token)
         ghost.delete()  # token stays cryptographically valid, the user is gone
         client = APIClient()
@@ -544,15 +546,15 @@ class TestStaleCookieAuth:
         )
 
         resp = self._stale_cookie_client().post(
-            JOIN_URL, {"email": "freshstart@test.com", "share_token": token}, format="json"
+            JOIN_URL, {"email": "lili2@your-domain.test", "share_token": token}, format="json"
         )
 
         assert resp.status_code == 200
-        assert User.objects.filter(email="freshstart@test.com").exists()
+        assert User.objects.filter(email="lili2@your-domain.test").exists()
 
     def test_request_link_works_with_stale_cookie_for_deleted_user(self):
         resp = self._stale_cookie_client().post(
-            "/api/v1/auth/request-link/", {"email": "freshstart@test.com"}, format="json"
+            "/api/v1/auth/request-link/", {"email": "lili2@your-domain.test"}, format="json"
         )
 
         assert resp.status_code == 200

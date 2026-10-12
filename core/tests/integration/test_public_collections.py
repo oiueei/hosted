@@ -241,7 +241,7 @@ def test_the_anonymous_calendar_says_when_not_who(api_client, user, user2):
         thing_code=thing,
         thing_type=thing.type,
         requester_code=user2,
-        requester_email="borrower@example.com",
+        requester_email="lili6@your-domain.test",
         owner_code=user,
         start_date=start,
         end_date=end,
@@ -263,7 +263,7 @@ def test_the_anonymous_calendar_says_when_not_who(api_client, user, user2):
     ]
     # Against the raw bytes, so a field added under any name is caught by what
     # it carries rather than by what it is called.
-    assert "borrower@example.com" not in res.content.decode()
+    assert "lili6@your-domain.test" not in res.content.decode()
     assert user2.code not in res.content.decode()
 
 

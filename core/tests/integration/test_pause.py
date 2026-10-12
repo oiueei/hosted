@@ -27,8 +27,8 @@ def _make_client(user):
 
 @pytest.fixture
 def pause_users(db):
-    owner = User.objects.create(code="POWN01", email="powner@test.com", name="Pause Owner")
-    member = User.objects.create(code="PMEM01", email="pmember@test.com", name="Pause Member")
+    owner = User.objects.create(code="POWN01", email="lala@your-domain.test", name="Pause Owner")
+    member = User.objects.create(code="PMEM01", email="lele@your-domain.test", name="Pause Member")
     return owner, member
 
 

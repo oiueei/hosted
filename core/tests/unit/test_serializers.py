@@ -24,9 +24,9 @@ class TestRequestLinkSerializer:
 
     def test_valid_email(self):
         """Should accept valid email."""
-        serializer = RequestLinkSerializer(data={"email": "test@example.com"})
+        serializer = RequestLinkSerializer(data={"email": "lala3@your-domain.test"})
         assert serializer.is_valid()
-        assert serializer.validated_data["email"] == "test@example.com"
+        assert serializer.validated_data["email"] == "lala3@your-domain.test"
 
     def test_invalid_email(self):
         """Should reject invalid email."""
@@ -43,14 +43,14 @@ class TestUserSerializer:
         """Should serialize user with all fields."""
         user = User.objects.create(
             code="ABC123",
-            email="test@example.com",
+            email="lala3@your-domain.test",
             name="Test User",
         )
         serializer = UserSerializer(user)
         data = serializer.data
 
         assert data["code"] == "ABC123"
-        assert data["email"] == "test@example.com"
+        assert data["email"] == "lala3@your-domain.test"
         assert data["name"] == "Test User"
 
 
@@ -72,7 +72,7 @@ class TestUserPublicSerializer:
         """
         user = User.objects.create(
             code="ABC123",
-            email="test@example.com",
+            email="lala3@your-domain.test",
             name="Test User",
             age_range=User.AgeRange.GEN_X,
             postal_code="08001",
@@ -92,7 +92,7 @@ class TestUserPublicSerializer:
         """
         user = User.objects.create(
             code="XYZ789",
-            email="private@example.com",
+            email="lala@your-domain.test",
             name="Somebody",
             age_range=User.AgeRange.GEN_X,
             postal_code="08001",
@@ -101,7 +101,7 @@ class TestUserPublicSerializer:
 
         assert User.AgeRange.GEN_X.value not in rendered
         assert "08001" not in rendered
-        assert "private@example.com" not in rendered
+        assert "lala@your-domain.test" not in rendered
 
     def test_the_profile_photo_is_served_as_a_url_not_a_storage_key(self):
         """A reader gets somewhere to fetch the photo from; the key is ours.
@@ -111,7 +111,7 @@ class TestUserPublicSerializer:
         was reached by nothing at all.
         """
         user = User.objects.create(
-            code="PHO001", email="p@example.com", name="P", photo="oiueei/users/abc123"
+            code="PHO001", email="lele@your-domain.test", name="P", photo="oiueei/users/abc123"
         )
 
         photo_url = UserPublicSerializer(user).data["photo_url"]
@@ -120,7 +120,7 @@ class TestUserPublicSerializer:
         assert photo_url.startswith("http")
 
     def test_a_member_with_no_photo_gets_no_url_rather_than_a_broken_one(self):
-        user = User.objects.create(code="PHO002", email="q@example.com", name="Q")
+        user = User.objects.create(code="PHO002", email="lili8@your-domain.test", name="Q")
 
         assert UserPublicSerializer(user).data["photo_url"] is None
 
@@ -131,7 +131,7 @@ class TestCollectionSerializer:
 
     def test_serialize_collection(self):
         """Should serialize collection with all fields."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         collection = Collection.objects.create(
             code="COLL01",
             owner=user,
@@ -151,10 +151,10 @@ class TestCollectionSerializer:
         from django.contrib.auth.models import AnonymousUser
         from rest_framework.test import APIRequestFactory
 
-        owner = User.objects.create(code="OWNR02", email="owner2@example.com", name="Owner")
-        co_owner = User.objects.create(code="COOW02", email="coowner2@example.com", name="Co")
-        member = User.objects.create(code="MEMB02", email="member2@example.com", name="Member")
-        stranger = User.objects.create(code="STRA02", email="stranger2@example.com", name="S")
+        owner = User.objects.create(code="OWNR02", email="lala13@your-domain.test", name="Owner")
+        co_owner = User.objects.create(code="COOW02", email="lala2@your-domain.test", name="Co")
+        member = User.objects.create(code="MEMB02", email="lele1@your-domain.test", name="Member")
+        stranger = User.objects.create(code="STRA02", email="lolo8@your-domain.test", name="S")
         collection = Collection.objects.create(
             code="CURA01",
             owner=owner,
@@ -190,7 +190,7 @@ class TestCollectionSerializer:
         """The SPA needs to know a collection is a seed/demo one to show the
         demo notice — but `is_onboarding` is set by `seed_demo`, never by a
         user, so no create/update path may set it."""
-        owner = User.objects.create(code="ONBD01", email="onbd@example.com")
+        owner = User.objects.create(code="ONBD01", email="lili@your-domain.test")
         demo = Collection.objects.create(
             code="DEMO01", owner=owner, headline="Demo", is_onboarding=True
         )
@@ -236,7 +236,7 @@ class TestCollectionCreateSerializer:
     def test_home_page_is_capped_at_128_chars(self):
         """The column is 128 and CI runs Postgres — the serializer must reject
         an over-long address before it reaches the DB."""
-        long_url = "https://example.com/" + "a" * 120
+        long_url = "https://your-domain.test/" + "a" * 120
         serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": long_url})
         assert not serializer.is_valid()
         assert "home_page" in serializer.errors
@@ -275,7 +275,7 @@ class TestThingSerializer:
 
     def test_serialize_thing(self):
         """Should serialize thing with all fields."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         thing = Thing.objects.create(
             code="THNG01",
             owner=user,
@@ -292,11 +292,11 @@ class TestThingSerializer:
     def test_owner_name_does_not_leak_email(self):
         """L2: owner_name uses the bare name, never the email fallback — it's
         shown to co-members, so a no-name owner must not expose their address."""
-        owner = User.objects.create(code="NMLES1", email="nameless@example.com", name="")
+        owner = User.objects.create(code="NMLES1", email="lolo@your-domain.test", name="")
         thing = Thing.objects.create(code="THNG09", owner=owner, headline="Y")
         data = ThingSerializer(thing).data
         assert data["owner_name"] == ""
-        assert "nameless@example.com" not in str(data)
+        assert "lolo@your-domain.test" not in str(data)
 
     def test_owner_email_fallback_only_for_collection_owner(self):
         """On the community grid a no-name thing owner's email is shown to the
@@ -305,8 +305,8 @@ class TestThingSerializer:
         from django.contrib.auth.models import AnonymousUser
         from rest_framework.test import APIRequestFactory
 
-        owner = User.objects.create(code="GRDOWN", email="owner@example.com", name="Owner")
-        nameless = User.objects.create(code="GHOST1", email="ghost@example.com", name="")
+        owner = User.objects.create(code="GRDOWN", email="lala1@your-domain.test", name="Owner")
+        nameless = User.objects.create(code="GHOST1", email="lala4@your-domain.test", name="")
         collection = Collection.objects.create(
             code="GRID01",
             owner=owner,
@@ -323,16 +323,16 @@ class TestThingSerializer:
             return data["things"][0]["owner_name"]
 
         # The collection owner gets the email fallback for a no-name owner.
-        assert owner_name_seen_by(owner) == "ghost@example.com"
+        assert owner_name_seen_by(owner) == "lala4@your-domain.test"
         # A different member never sees the email.
-        other = User.objects.create(code="OTHER1", email="other@example.com", name="Other")
+        other = User.objects.create(code="OTHER1", email="lolo1@your-domain.test", name="Other")
         assert owner_name_seen_by(other) == ""
         # Neither does an anonymous visitor (PUBLIC collections are public-readable).
         assert owner_name_seen_by(AnonymousUser()) == ""
 
     def test_serialize_thing_with_collection(self):
         """Should include collection_code and collection_headline."""
-        user = User.objects.create(code="OWN001", email="owner@example.com")
+        user = User.objects.create(code="OWN001", email="lala1@your-domain.test")
         thing = Thing.objects.create(
             code="THNG02",
             owner=user,
@@ -353,7 +353,7 @@ class TestThingSerializer:
 
     def test_serialize_thing_without_collection(self):
         """Should return None for collection fields when thing has no collection."""
-        user = User.objects.create(code="OWN002", email="owner2@example.com")
+        user = User.objects.create(code="OWN002", email="lala13@your-domain.test")
         thing = Thing.objects.create(
             code="THNG03",
             owner=user,
@@ -372,7 +372,7 @@ class TestThingSerializer:
         resolution as `collection_code` — so a thing shared into a demo group
         is flagged, one in a real group is not, and (no request context = sees
         everything) the first row decides."""
-        user = User.objects.create(code="OWN003", email="owner3@example.com")
+        user = User.objects.create(code="OWN003", email="lala5@your-domain.test")
         demo_thing = Thing.objects.create(code="THNG04", owner=user, headline="In demo")
         real_thing = Thing.objects.create(code="THNG05", owner=user, headline="In real")
         demo = Collection.objects.create(
@@ -388,8 +388,8 @@ class TestThingSerializer:
     def test_pending_questions_excludes_hidden_faqs(self):
         """A question the owner hid is dealt with, not pending — the badge
         must not keep nagging about it forever."""
-        owner = User.objects.create(code="PQOWN1", email="pqowner@example.com")
-        questioner = User.objects.create(code="PQASK1", email="pqasker@example.com")
+        owner = User.objects.create(code="PQOWN1", email="lala6@your-domain.test")
+        questioner = User.objects.create(code="PQASK1", email="lili1@your-domain.test")
         thing = Thing.objects.create(code="PQTH01", owner=owner, headline="Pending Q")
 
         visible_unanswered = FAQ.objects.create(
@@ -490,9 +490,9 @@ class TestFAQSerializer:
     """Tests for FAQSerializer."""
 
     def _faq(self):
-        owner = User.objects.create(code="OWNER1", email="owner@example.com")
+        owner = User.objects.create(code="OWNER1", email="lala1@your-domain.test")
         thing = Thing.objects.create(code="THNG01", owner=owner, headline="Thing")
-        questioner = User.objects.create(code="USR001", email="usr001@example.com", name="Ana")
+        questioner = User.objects.create(code="USR001", email="lolo10@your-domain.test", name="Ana")
         return FAQ.objects.create(
             code="FAQ001",
             thing=thing,
@@ -624,8 +624,8 @@ class TestCoMemberNameLeak:
         from core.models.booking import BookingPeriod
         from core.serializers import MyBookingSerializer
 
-        owner = User.objects.create(code="OWNNML", email="owner-nameless@example.com", name="")
-        requester = User.objects.create(code="REQ001", email="req@example.com", name="Req")
+        owner = User.objects.create(code="OWNNML", email="lala7@your-domain.test", name="")
+        requester = User.objects.create(code="REQ001", email="lili9@your-domain.test", name="Req")
         thing = Thing.objects.create(code="BTH001", owner=owner, headline="Lent thing")
         booking = BookingPeriod.objects.create(
             thing_code=thing,
@@ -637,7 +637,7 @@ class TestCoMemberNameLeak:
 
         data = MyBookingSerializer(booking).data
         assert data["owner_name"] == ""
-        assert "owner-nameless@example.com" not in str(data)
+        assert "lala7@your-domain.test" not in str(data)
 
 
 @pytest.mark.django_db
@@ -683,8 +683,8 @@ class TestJourneyNamesFailClosed:
         ).data
 
     def test_a_serializer_with_no_request_names_nobody(self):
-        lender = User.objects.create(code="JLEND1", email="lender@example.com", name="Lila")
-        borrower = User.objects.create(code="JBORR1", email="borrower@example.com", name="Bea")
+        lender = User.objects.create(code="JLEND1", email="lulu@your-domain.test", name="Lila")
+        borrower = User.objects.create(code="JBORR1", email="lili6@your-domain.test", name="Bea")
 
         data = self._stats(lender, borrower)
 
@@ -698,8 +698,8 @@ class TestJourneyNamesFailClosed:
     def test_the_journey_itself_still_comes_through(self):
         """Withholding the people must not withhold the story — the counts and
         the codes are what the public journey is for."""
-        lender = User.objects.create(code="JLEND2", email="lender2@example.com", name="Lila")
-        borrower = User.objects.create(code="JBORR2", email="borrower2@example.com", name="Bea")
+        lender = User.objects.create(code="JLEND2", email="lala8@your-domain.test", name="Lila")
+        borrower = User.objects.create(code="JBORR2", email="lili2@your-domain.test", name="Bea")
 
         data = self._stats(lender, borrower)
 

@@ -96,7 +96,7 @@ def user(db):
     """Create a test user."""
     return User.objects.create(
         code="TEST01",
-        email="test@example.com",
+        email="lala3@your-domain.test",
         name="Test User",
         # Explicit so the fixtures don't flip when the notify_news model default
         # changes (Cat. 3/news is opt-in for real new users — DESIGN §6).
@@ -109,7 +109,7 @@ def user2(db):
     """Create a second test user."""
     return User.objects.create(
         code="TEST02",
-        email="test2@example.com",
+        email="lolo2@your-domain.test",
         name="Test User 2",
         notify_news=True,
     )

@@ -35,7 +35,7 @@ def _fill_things(collection, owner, n):
 
 
 def _fill_members(collection, n):
-    members = [User.objects.create(email=f"member{i}@example.com") for i in range(n)]
+    members = [User.objects.create(email=f"lele{i}@your-domain.test") for i in range(n)]
     collection.invites.add(*members)
     return members
 
@@ -236,7 +236,7 @@ def test_a_full_things_counter_does_not_block_invitations(
     _fill_things(collection, user, 5)
 
     res = authenticated_client.post(
-        INVITE_URL.format(code=collection.code), {"email": "guest@example.com"}, format="json"
+        INVITE_URL.format(code=collection.code), {"email": "lele4@your-domain.test"}, format="json"
     )
 
     assert res.status_code == 200, res.data
@@ -249,12 +249,12 @@ def test_invitations_refused_at_the_member_ceiling(mock_send, authenticated_clie
     _fill_members(collection, 2)
 
     res = authenticated_client.post(
-        INVITE_URL.format(code=collection.code), {"email": "guest@example.com"}, format="json"
+        INVITE_URL.format(code=collection.code), {"email": "lele4@your-domain.test"}, format="json"
     )
 
     assert res.status_code == 400
     # Refused before any User row or invitation email exists.
-    assert not User.objects.filter(email="guest@example.com").exists()
+    assert not User.objects.filter(email="lele4@your-domain.test").exists()
     assert mock_send.call_count == 0
 
 
@@ -263,7 +263,7 @@ def test_invitations_refused_at_the_member_ceiling(mock_send, authenticated_clie
 @patch("core.views.collections.send_collection_invite_email")
 def test_bulk_invite_checks_the_whole_batch(mock_send, authenticated_client, collection):
     _fill_members(collection, 4)
-    invites = [{"email": f"guest{i}@example.com"} for i in range(3)]
+    invites = [{"email": f"lili{i}@your-domain.test"} for i in range(3)]
 
     res = authenticated_client.post(
         BULK_INVITE_URL.format(code=collection.code), {"invites": invites}, format="json"
@@ -307,7 +307,7 @@ def test_bulk_counts_only_the_newcomers_against_the_ceiling(
 ):
     """9 members + 5 rows, 4 of them already members: exactly one seat is needed."""
     members = _fill_members(collection, 9)
-    invites = [{"email": m.email} for m in members[:4]] + [{"email": "new@example.com"}]
+    invites = [{"email": m.email} for m in members[:4]] + [{"email": "lolo@your-domain.test"}]
 
     res = authenticated_client.post(
         BULK_INVITE_URL.format(code=collection.code), {"invites": invites}, format="json"
@@ -326,7 +326,9 @@ def test_bulk_still_refuses_when_the_newcomers_alone_cross_it(
 ):
     """The relaxation must not defeat the guard: 9 members + 2 real newcomers."""
     members = _fill_members(collection, 9)
-    invites = [{"email": members[0].email}] + [{"email": f"new{i}@example.com"} for i in range(2)]
+    invites = [{"email": members[0].email}] + [
+        {"email": f"lili{i}@your-domain.test"} for i in range(2)
+    ]
 
     res = authenticated_client.post(
         BULK_INVITE_URL.format(code=collection.code), {"invites": invites}, format="json"
@@ -364,11 +366,11 @@ def test_single_invite_of_a_newcomer_still_hits_the_ceiling(
     _fill_members(collection, 2)
 
     res = authenticated_client.post(
-        INVITE_URL.format(code=collection.code), {"email": "newcomer@example.com"}, format="json"
+        INVITE_URL.format(code=collection.code), {"email": "lele@your-domain.test"}, format="json"
     )
 
     assert res.status_code == 400
-    assert not User.objects.filter(email="newcomer@example.com").exists()
+    assert not User.objects.filter(email="lele@your-domain.test").exists()
     assert mock_send.call_count == 0
 
 
@@ -398,7 +400,7 @@ def test_a_no_op_batch_is_not_refused_by_a_ceiling_already_crossed(
     # A real newcomer is still refused — the counter is over its line.
     refused = authenticated_client.post(
         BULK_INVITE_URL.format(code=collection.code),
-        {"invites": [{"email": "newcomer@example.com"}]},
+        {"invites": [{"email": "lele@your-domain.test"}]},
         format="json",
     )
     assert refused.status_code == 400
@@ -469,7 +471,7 @@ def test_the_alarm_goes_to_the_superusers_and_never_to_the_owner(collection, use
     somebody probing the endpoint exactly where the line sits. Only the hard
     ceiling is ever user-visible, and only once it bites.
     """
-    admin = User.objects.create(email="admin@example.com", is_superuser=True)
+    admin = User.objects.create(email="lala8@your-domain.test", is_superuser=True)
     mail.outbox.clear()
 
     send_collection_capacity_alarm(collection, "things", 42, 40)
@@ -483,8 +485,8 @@ def test_the_alarm_goes_to_the_superusers_and_never_to_the_owner(collection, use
 def test_every_superuser_gets_their_own_copy(collection, user):
     """One send per address: `_send` takes a single recipient, and a per-recipient
     send keeps one bad address from costing the others their alert."""
-    first = User.objects.create(email="admin1@example.com", is_superuser=True)
-    second = User.objects.create(email="admin2@example.com", is_superuser=True)
+    first = User.objects.create(email="lala@your-domain.test", is_superuser=True)
+    second = User.objects.create(email="lulu@your-domain.test", is_superuser=True)
     mail.outbox.clear()
 
     send_collection_capacity_alarm(collection, "invites", 100, 80)
@@ -497,12 +499,12 @@ def test_a_superuser_without_an_email_is_not_mailed_into_the_void(collection, mo
     """An abuse signal that silently goes nowhere is worse than no signal, so an
     installation whose superusers have no address still reaches the operator."""
     User.objects.create(email="", is_superuser=True)
-    monkeypatch.setenv("CONTACT_EMAIL", "ops@example.com")
+    monkeypatch.setenv("CONTACT_EMAIL", "lala2@your-domain.test")
     mail.outbox.clear()
 
     send_collection_capacity_alarm(collection, "things", 42, 40)
 
-    assert [m.to for m in mail.outbox] == [["ops@example.com"]]
+    assert [m.to for m in mail.outbox] == [["lala2@your-domain.test"]]
 
 
 @pytest.mark.django_db
@@ -510,12 +512,12 @@ def test_with_no_operator_address_configured_it_falls_back_to_the_from_address(
     collection, settings, monkeypatch
 ):
     monkeypatch.delenv("CONTACT_EMAIL", raising=False)
-    settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
+    settings.DEFAULT_FROM_EMAIL = "lala3@your-domain.test"
     mail.outbox.clear()
 
     send_collection_capacity_alarm(collection, "things", 42, 40)
 
-    assert [m.to for m in mail.outbox] == [["noreply@example.com"]]
+    assert [m.to for m in mail.outbox] == [["lala3@your-domain.test"]]
 
 
 @pytest.mark.django_db
@@ -523,7 +525,7 @@ def test_the_alarm_names_everything_needed_to_judge_it(collection, user):
     """The operator has to decide whether this volume is wrong for this account
     without opening the admin, so the mail carries the account, not just a count.
     """
-    User.objects.create(email="admin@example.com", is_superuser=True)
+    User.objects.create(email="lala8@your-domain.test", is_superuser=True)
     mail.outbox.clear()
 
     send_collection_capacity_alarm(collection, "things", 42, 40)

@@ -32,7 +32,7 @@ class TestAuthViews:
         """Should return 200 with unified message for non-existent user (no enumeration)."""
         response = api_client.post(
             "/api/v1/auth/request-link/",
-            {"email": "lala@oiueei.org"},
+            {"email": "lala@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
@@ -120,8 +120,8 @@ class TestAuthViews:
         from core.views.auth import email_ratelimit_key
 
         assert (
-            email_ratelimit_key(None, SimpleNamespace(data={"email": " Lala@Oiueei.ORG "}))
-            == "lala@oiueei.org"
+            email_ratelimit_key(None, SimpleNamespace(data={"email": " Lala@Your-Domain.TEST "}))
+            == "lala@your-domain.test"
         )
         assert email_ratelimit_key(None, SimpleNamespace(data={})) == ""
         assert email_ratelimit_key(None, SimpleNamespace(data={"email": None})) == ""
@@ -370,7 +370,7 @@ class TestCollectionViews:
         collection.add_invite(user2.code)
         RSVP.objects.create(
             user_code=user2,
-            user_email="pending@oiueei.org",
+            user_email="lili@your-domain.test",
             action=RSVP.Action.COLLECTION_INVITE,
             target_code=collection.code,
         )
@@ -409,11 +409,11 @@ class TestCollectionViews:
         """Should invite user to collection."""
         response = authenticated_client.post(
             f"/api/v1/collections/{collection.code}/invite/",
-            {"email": "lele@oiueei.org"},
+            {"email": "lele@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["email"] == "lele@oiueei.org"
+        assert response.data["email"] == "lele@your-domain.test"
 
     def test_invite_to_collection_denied_for_non_owner(self, user, user2, collection):
         """Should deny invite for non-owner of collection."""
@@ -427,7 +427,7 @@ class TestCollectionViews:
 
         response = client2.post(
             f"/api/v1/collections/{collection.code}/invite/",
-            {"email": "someone@oiueei.org"},
+            {"email": "lele2@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -449,13 +449,13 @@ class TestCollectionViews:
 
         response = authenticated_client.post(
             f"/api/v1/collections/{collection.code}/invite/",
-            {"email": "newuser@oiueei.org"},
+            {"email": "lele3@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
 
         # Verify RSVP was created with target_code
-        rsvp = RSVP.objects.filter(user_email="newuser@oiueei.org").first()
+        rsvp = RSVP.objects.filter(user_email="lele3@your-domain.test").first()
         assert rsvp is not None
         assert rsvp.target_code == collection.code
 
@@ -467,13 +467,13 @@ class TestCollectionViews:
 
         response = authenticated_client.post(
             f"/api/v1/collections/{collection.code}/invite/",
-            {"email": "pending@oiueei.org"},
+            {"email": "lili@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
 
         # User should NOT be in invites yet
-        invited_user = User.objects.get(email="pending@oiueei.org")
+        invited_user = User.objects.get(email="lili@your-domain.test")
         collection.refresh_from_db()
         assert not collection.invites.filter(code=invited_user.code).exists()
 
@@ -484,7 +484,7 @@ class TestCollectionViews:
         # Create a user and RSVP with target_code and COLLECTION_INVITE action
         invited_user = User.objects.create(
             code="INVTD1",
-            email="invited@oiueei.org",
+            email="lele4@your-domain.test",
         )
         rsvp = RSVP.objects.create(
             user_code=invited_user,
@@ -828,7 +828,7 @@ class TestThingViews:
         from core.models import Thing, User
 
         # user3 is the collection owner; thing belongs to user (invited)
-        user3 = User.objects.create(email="colowner@test.com", code="COL003")
+        user3 = User.objects.create(email="lala1@your-domain.test", code="COL003")
         col_owner_col = collection.__class__.objects.create(
             code="COWNC1", owner=user3, headline="Col Owner Collection"
         )
@@ -888,7 +888,7 @@ class TestThingViews:
 
         from core.models import User
 
-        user3 = User.objects.create(email="invited3@test.com", code="INV003")
+        user3 = User.objects.create(email="lele5@your-domain.test", code="INV003")
         collection.invites.add(user3)
 
         client3 = APIClient()
@@ -1307,7 +1307,7 @@ class TestSecurityRestrictions:
 
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
             name="Test User 3",
         )
 
@@ -1324,7 +1324,9 @@ class TestSecurityRestrictions:
         faq.is_visible = False
         faq.save()
 
-        user3 = User.objects.create(code="TEST04", email="test4@example.com", name="Test User 4")
+        user3 = User.objects.create(
+            code="TEST04", email="lala2@your-domain.test", name="Test User 4"
+        )
         collection.add_invite(user3.code)
 
         client3 = self._get_client_for_user(user3)
@@ -1348,7 +1350,7 @@ class TestSecurityRestrictions:
 
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
             name="Test User 3",
         )
 
@@ -1720,7 +1722,7 @@ class TestSecurityAuth:
         """New users get same response as existing users (no enumeration)."""
         response = api_client.post(
             "/api/v1/auth/request-link/",
-            {"email": "newuser@example.com"},
+            {"email": "lele6@your-domain.test"},
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
@@ -1967,12 +1969,12 @@ class TestJoinView:
         with patch("core.views.auth.send_magic_link_email") as mock_email:
             response = api_client.post(
                 "/api/v1/auth/join/",
-                {"email": "newperson@example.com", "collection_code": public_collection.code},
+                {"email": "lele7@your-domain.test", "collection_code": public_collection.code},
                 format="json",
             )
 
         assert response.status_code == status.HTTP_200_OK
-        new_user = User.objects.get(email="newperson@example.com")
+        new_user = User.objects.get(email="lele7@your-domain.test")
         assert not public_collection.invites.filter(code=new_user.code).exists()
         assert RSVP.objects.filter(user_code=new_user, action="MAGIC_LINK").exists()
         mock_email.assert_called_once()
@@ -2015,7 +2017,7 @@ class TestJoinView:
         with patch("core.views.auth.send_magic_link_email"):
             response = api_client.post(
                 "/api/v1/auth/join/",
-                {"email": "anyone@example.com"},
+                {"email": "lele8@your-domain.test"},
                 format="json",
             )
 

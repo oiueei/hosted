@@ -35,17 +35,17 @@ def _next_weekday(weekday):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
+    return User.objects.create(code="OWNR01", email="lala@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def co_curator(db):
-    return User.objects.create(code="COCU01", email="cocurator@test.com", name="Lele")
+    return User.objects.create(code="COCU01", email="lala2@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def member(db):
-    return User.objects.create(code="MEMB01", email="member@test.com", name="Lili")
+    return User.objects.create(code="MEMB01", email="lele@your-domain.test", name="Lili")
 
 
 @pytest.fixture
@@ -194,10 +194,14 @@ class TestACoCuratorRunsTheBookings:
         assert {owner.email, co_curator.email} <= {m.to[0] for m in mail.outbox}
 
     def test_a_community_question_still_reaches_only_the_thing_owner(self, db):
-        owner = User.objects.create(code="QOWN01", email="qowner@test.com", name="Owner")
-        co_curator = User.objects.create(code="QCUR01", email="qcur@test.com", name="Curator")
-        contributor = User.objects.create(code="QCON01", email="qcon@test.com", name="Member")
-        asker = User.objects.create(code="QASK01", email="qask@test.com", name="Asker")
+        owner = User.objects.create(code="QOWN01", email="lala1@your-domain.test", name="Owner")
+        co_curator = User.objects.create(
+            code="QCUR01", email="lala3@your-domain.test", name="Curator"
+        )
+        contributor = User.objects.create(
+            code="QCON01", email="lele1@your-domain.test", name="Member"
+        )
+        asker = User.objects.create(code="QASK01", email="lili@your-domain.test", name="Asker")
         group = Collection.objects.create(
             code="QCOM01", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
         )
@@ -294,8 +298,10 @@ class TestAnAnswerSettlesTheQuestionForTheWholeTeam:
     def test_a_community_answer_sends_no_team_email(self, db):
         # In COMMUNITY the managers of a thing are its owner alone, and they
         # answered — there is no team left to tell.
-        contributor = User.objects.create(code="ACON01", email="acon@test.com", name="Member")
-        asker = User.objects.create(code="AASK01", email="aask@test.com", name="Asker")
+        contributor = User.objects.create(
+            code="ACON01", email="lolo@your-domain.test", name="Member"
+        )
+        asker = User.objects.create(code="AASK01", email="lulu@your-domain.test", name="Asker")
         group = Collection.objects.create(
             code="ACOM01", owner=asker, headline="Street", mode=Collection.Mode.COMMUNITY
         )
@@ -380,8 +386,10 @@ class TestHidingSettlesTheQuestionForTheWholeTeam:
     def test_a_community_hide_sends_no_team_email(self, db):
         # In COMMUNITY the managers of a thing are its owner alone, and they
         # hid it — there is no team left to tell.
-        contributor = User.objects.create(code="HCON01", email="hcon@test.com", name="Member")
-        asker = User.objects.create(code="HASK01", email="hask@test.com", name="Asker")
+        contributor = User.objects.create(
+            code="HCON01", email="lala4@your-domain.test", name="Member"
+        )
+        asker = User.objects.create(code="HASK01", email="lele2@your-domain.test", name="Asker")
         group = Collection.objects.create(
             code="HCOM01", owner=asker, headline="Street", mode=Collection.Mode.COMMUNITY
         )
@@ -437,9 +445,11 @@ class TestHidingSettlesTheQuestionForTheWholeTeam:
 
 class TestACoCuratorDecidesHolds:
     def test_a_co_curator_accepts_a_hold_on_a_lend_thing(self, db):
-        owner = User.objects.create(code="LOWN01", email="lowner@test.com", name="Owner")
-        co_curator = User.objects.create(code="LCUR01", email="lcur@test.com", name="Curator")
-        member = User.objects.create(code="LMEM01", email="lmem@test.com", name="Member")
+        owner = User.objects.create(code="LOWN01", email="lala5@your-domain.test", name="Owner")
+        co_curator = User.objects.create(
+            code="LCUR01", email="lili1@your-domain.test", name="Curator"
+        )
+        member = User.objects.create(code="LMEM01", email="lolo1@your-domain.test", name="Member")
         space = Collection.objects.create(
             code="LSPC01", owner=owner, headline="Tool room", mode=Collection.Mode.PROPRIETARY
         )
@@ -469,9 +479,13 @@ class TestACoCuratorDecidesHolds:
 
 class TestCommunityFaqsAreUnchanged:
     def test_a_community_co_curator_cannot_answer_a_faq_on_a_members_thing(self, db):
-        owner = User.objects.create(code="COWN01", email="cowner@test.com", name="Owner")
-        co_curator = User.objects.create(code="CCUR01", email="ccur@test.com", name="Curator")
-        contributor = User.objects.create(code="CONT01", email="cont@test.com", name="Member")
+        owner = User.objects.create(code="COWN01", email="lala9@your-domain.test", name="Owner")
+        co_curator = User.objects.create(
+            code="CCUR01", email="lulu1@your-domain.test", name="Curator"
+        )
+        contributor = User.objects.create(
+            code="CONT01", email="lala6@your-domain.test", name="Member"
+        )
         group = Collection.objects.create(
             code="COM001", owner=owner, headline="The street", mode=Collection.Mode.COMMUNITY
         )
@@ -560,8 +574,10 @@ class TestAHoldRequestWarnsTheWholeTeam:
         assert self._holders(booking) == {owner.code}
 
     def test_in_a_community_group_only_the_things_owner_is_asked(self, db, owner, co_curator):
-        contributor = User.objects.create(code="CONT01", email="contrib@test.com", name="Lolo")
-        asker = User.objects.create(code="ASKR01", email="asker@test.com", name="Lulu")
+        contributor = User.objects.create(
+            code="CONT01", email="lala10@your-domain.test", name="Lolo"
+        )
+        asker = User.objects.create(code="ASKR01", email="lili3@your-domain.test", name="Lulu")
         group = Collection.objects.create(
             code="COMM01", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
         )

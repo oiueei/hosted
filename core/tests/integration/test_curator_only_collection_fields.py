@@ -30,12 +30,12 @@ def _client(user=None):
 
 @pytest.fixture
 def member(db):
-    return User.objects.create(code="MEMB01", email="member@example.com", name="Member")
+    return User.objects.create(code="MEMB01", email="lele2@your-domain.test", name="Member")
 
 
 @pytest.fixture
 def co_owner(db):
-    return User.objects.create(code="COOW01", email="cocurator@example.com", name="Co")
+    return User.objects.create(code="COOW01", email="lala@your-domain.test", name="Co")
 
 
 @pytest.fixture
@@ -122,7 +122,7 @@ class TestTheWelcomeDocument:
 
     @pytest.fixture
     def outsider(self, db):
-        return User.objects.create(code="OUTS01", email="outsider@example.com", name="Out")
+        return User.objects.create(code="OUTS01", email="lolo4@your-domain.test", name="Out")
 
     def test_an_anonymous_reader_gets_neither_key_nor_link(self, with_doc):
         data = _read(_client(), with_doc)

@@ -46,12 +46,12 @@ def inbox_of(user):
 
 @pytest.fixture
 def lala(db):
-    return User.objects.create(code="LALA01", email="lala@test.com", name="Lala")
+    return User.objects.create(code="LALA01", email="lala4@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def lele(db):
-    return User.objects.create(code="LELE01", email="lele@test.com", name="Lele")
+    return User.objects.create(code="LELE01", email="lele6@your-domain.test", name="Lele")
 
 
 class TestTheGroupFollowsTheSharedTable:
@@ -136,7 +136,7 @@ def _next_weekday(weekday):
 @pytest.fixture
 def team(db, lala, lele):
     """A reservations collection run by Lala and Lele (co-curator), and a member."""
-    member = User.objects.create(code="MEMB01", email="member@test.com", name="Lili")
+    member = User.objects.create(code="MEMB01", email="lele@your-domain.test", name="Lili")
     collection = Collection.objects.create(
         code="RSVC01",
         owner=lala,
@@ -214,7 +214,7 @@ class TestAgainstWhatTheServiceReallyWrites:
     def test_a_request_and_a_decision_are_the_teams_and_the_requesters_answer_is_not(
         self, lala, lele
     ):
-        member = User.objects.create(code="MEMB02", email="m2@test.com", name="Lili")
+        member = User.objects.create(code="MEMB02", email="lala@your-domain.test", name="Lili")
         collection = Collection.objects.create(
             code="HOLD01", owner=lala, headline="Tools", mode=Collection.Mode.PROPRIETARY
         )

@@ -26,7 +26,7 @@ def client_for(user):
 
 
 def make_user(code, name):
-    return User.objects.create(code=code, email=f"{name.lower()}@test.com", name=name)
+    return User.objects.create(code=code, email=f"{name.lower()}@your-domain.test", name=name)
 
 
 @pytest.fixture

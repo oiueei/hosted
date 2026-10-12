@@ -17,7 +17,7 @@ class TestEventLog:
     """The ``Event.log()`` convenience wrapper used at every instrumentation site."""
 
     def test_log_from_model_instances_snapshots_codes(self):
-        owner = User.objects.create(code="EVOWN1", email="evown1@test.com")
+        owner = User.objects.create(code="EVOWN1", email="lala@your-domain.test")
         collection = Collection.objects.create(code="EVCOL1", owner=owner, headline="C")
         thing = Thing.objects.create(code="EVTHN1", owner=owner, headline="T", type="GIFT_THING")
 
@@ -48,7 +48,7 @@ class TestEventLog:
         assert event.thing_type == ""
 
     def test_log_explicit_thing_type_overrides_instance(self):
-        owner = User.objects.create(code="EVOWN2", email="evown2@test.com")
+        owner = User.objects.create(code="EVOWN2", email="lele@your-domain.test")
         thing = Thing.objects.create(code="EVTHN2", owner=owner, headline="T", type="GIFT_THING")
         event = Event.log(Event.Kind.HOLD_REQUESTED, thing=thing, thing_type="RENT_THING")
         assert event.thing_type == "RENT_THING"
@@ -68,10 +68,10 @@ class TestBackfillEvents:
     """The one-off ``backfill_events`` command seeds history idempotently."""
 
     def _seed_domain(self):
-        owner = User.objects.create(code="BFOWN1", email="bfown@test.com")
+        owner = User.objects.create(code="BFOWN1", email="lili@your-domain.test")
         owner.created = date(2025, 1, 1)
         owner.save(update_fields=["created"])
-        requester = User.objects.create(code="BFREQ1", email="bfreq@test.com")
+        requester = User.objects.create(code="BFREQ1", email="lili1@your-domain.test")
 
         collection = Collection.objects.create(code="BFCOL1", owner=owner, headline="Backfill")
         collection.created = datetime(2025, 2, 1, 9, 0, tzinfo=dt_timezone.utc)
@@ -162,13 +162,14 @@ class TestJoinDoorIsRecorded:
 
     def _collection(self, **kwargs):
         owner = User.objects.create(
-            code=kwargs.pop("owner_code", "JDOWN1"), email=kwargs.pop("owner_email", "jd@test.com")
+            code=kwargs.pop("owner_code", "JDOWN1"),
+            email=kwargs.pop("owner_email", "lolo@your-domain.test"),
         )
         return Collection.objects.create(owner=owner, headline="Group", **kwargs)
 
     def test_a_share_token_join_is_recorded_as_the_share_door(self):
         collection = self._collection(share_token="sharetok")
-        user = User.objects.create(code="JDUSR1", email="jd1@test.com")
+        user = User.objects.create(code="JDUSR1", email="lulu@your-domain.test")
 
         _join_collection(collection, user, source=Event.Source.SHARE)
 
@@ -176,7 +177,7 @@ class TestJoinDoorIsRecorded:
         assert event.source == Event.Source.SHARE
 
     def test_each_door_lands_in_its_own_bucket(self):
-        collection = self._collection(owner_code="JDOWN2", owner_email="jd2@test.com")
+        collection = self._collection(owner_code="JDOWN2", owner_email="lala1@your-domain.test")
         for i, source in enumerate(
             [
                 Event.Source.INVITE,
@@ -185,7 +186,7 @@ class TestJoinDoorIsRecorded:
                 Event.Source.ONBOARDING,
             ]
         ):
-            user = User.objects.create(code=f"JDU{i:03d}", email=f"door{i}@test.com")
+            user = User.objects.create(code=f"JDU{i:03d}", email=f"lele{i}@your-domain.test")
             _join_collection(collection, user, source=source)
 
         recorded = set(
@@ -195,8 +196,8 @@ class TestJoinDoorIsRecorded:
 
     def test_a_re_join_by_an_existing_member_records_nothing(self):
         """The idempotent M2M add must not inflate a door's count."""
-        collection = self._collection(owner_code="JDOWN3", owner_email="jd3@test.com")
-        user = User.objects.create(code="JDUSR3", email="jd3u@test.com")
+        collection = self._collection(owner_code="JDOWN3", owner_email="lele1@your-domain.test")
+        user = User.objects.create(code="JDUSR3", email="lili2@your-domain.test")
 
         _join_collection(collection, user, source=Event.Source.PUBLIC)
         _join_collection(collection, user, source=Event.Source.PUBLIC)
@@ -204,7 +205,7 @@ class TestJoinDoorIsRecorded:
         assert Event.objects.filter(kind=Event.Kind.MEMBER_JOINED).count() == 1
 
     def test_the_source_is_meaningless_on_other_kinds_and_stays_blank(self):
-        user = User.objects.create(code="JDUSR4", email="jd4@test.com")
+        user = User.objects.create(code="JDUSR4", email="lolo1@your-domain.test")
 
         Event.log(Event.Kind.USER_JOINED, actor=user)
 

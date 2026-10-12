@@ -43,9 +43,10 @@ class TestAssetUrl:
     """
 
     def test_a_key_becomes_a_url_containing_it(self, settings):
-        settings.MEDIA_PUBLIC_BASE_URL = "https://bucket.example.com"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://bucket.your-domain.test"
         assert (
-            asset_url("oiueei/things/abc123") == "https://bucket.example.com/oiueei/things/abc123"
+            asset_url("oiueei/things/abc123")
+            == "https://bucket.your-domain.test/oiueei/things/abc123"
         )
 
     def test_an_unset_field_has_no_url(self):
@@ -54,9 +55,10 @@ class TestAssetUrl:
 
     def test_a_document_key_resolves_the_same_way(self, settings):
         """Same answer as asset_url today; separate function, so pin both."""
-        settings.MEDIA_PUBLIC_BASE_URL = "https://bucket.example.com"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://bucket.your-domain.test"
         assert (
-            doc_asset_url("oiueei/documents/w") == "https://bucket.example.com/oiueei/documents/w"
+            doc_asset_url("oiueei/documents/w")
+            == "https://bucket.your-domain.test/oiueei/documents/w"
         )
         assert doc_asset_url("") is None
 
@@ -67,23 +69,23 @@ class TestUserModel:
 
     def test_create_user(self):
         """Should create a user with generated ID."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert len(user.code) == 6
-        assert user.email == "test@example.com"
+        assert user.email == "lala3@your-domain.test"
         assert user.is_active is True
 
     def test_user_str(self):
         """Should return readable string representation."""
         user = User.objects.create(
             code="ABC123",
-            email="test@example.com",
+            email="lala3@your-domain.test",
         )
         assert "ABC123" in str(user)
-        assert "test@example.com" in str(user)
+        assert "lala3@your-domain.test" in str(user)
 
     def test_user_reverse_relations_empty(self):
         """User reverse relations should be empty by default."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.owned_collections.count() == 0
         assert user.invited_to_collections.count() == 0
         assert user.owned_things.count() == 0
@@ -97,7 +99,7 @@ class TestUserModel:
         Time is frozen so the assertion compares against a fixed date, not a
         ``date.today()`` re-evaluated after a possible midnight rollover.
         """
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.last_activity is None
         user.update_last_activity()
         assert user.last_activity == date(2026, 6, 15)
@@ -110,7 +112,7 @@ class TestUserModel:
         four times per page load — so an unconditional save is that many `UPDATE`s
         on the user row for a value that already reads correctly.
         """
-        user = User.objects.create(email="repeat@example.com")
+        user = User.objects.create(email="lala@your-domain.test")
         user.update_last_activity()
 
         with django_assert_num_queries(0):
@@ -122,7 +124,7 @@ class TestUserModel:
     @time_machine.travel(date(2026, 6, 15))
     def test_a_stale_date_is_still_refreshed(self):
         """The guard skips a write that changes nothing — never one that does."""
-        user = User.objects.create(email="stale@example.com", last_activity=date(2026, 6, 1))
+        user = User.objects.create(email="lele@your-domain.test", last_activity=date(2026, 6, 1))
 
         user.update_last_activity()
 
@@ -139,7 +141,7 @@ class TestUserModel:
         leave them queued for erasure after doing exactly what the email asked.
         """
         user = User.objects.create(
-            email="warned@example.com",
+            email="lili@your-domain.test",
             last_activity=date(2026, 6, 15),
             inactivity_notified=date(2026, 6, 15),
         )
@@ -154,9 +156,9 @@ class TestUserModel:
         """Duplicate email should raise IntegrityError."""
         from django.db import IntegrityError
 
-        User.objects.create(email="duplicate@example.com")
+        User.objects.create(email="lolo@your-domain.test")
         with pytest.raises(IntegrityError):
-            User.objects.create(email="duplicate@example.com")
+            User.objects.create(email="lolo@your-domain.test")
 
     def test_user_email_is_required(self):
         """Creating user without email should raise ValueError."""
@@ -165,13 +167,13 @@ class TestUserModel:
 
     def test_optional_fields_can_be_empty(self):
         """Optional fields (headline) default to empty strings."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.headline == ""
 
     def test_optional_fields_can_be_set(self):
         """Optional fields can be populated."""
         user = User.objects.create(
-            email="test@example.com",
+            email="lala3@your-domain.test",
             headline="My headline",
         )
         assert user.headline == "My headline"
@@ -180,12 +182,12 @@ class TestUserModel:
     def test_user_created_date_persisted(self):
         """Creation date should be persisted automatically (frozen for a stable
         assertion across midnight)."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.created == date(2026, 6, 15)
 
     def test_user_name_is_optional(self):
         """User name should default to empty string."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.name == ""
 
 
@@ -195,29 +197,29 @@ class TestRSVPModel:
 
     def test_create_rsvp(self):
         """Should create an RSVP with generated code."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         rsvp = RSVP.objects.create(
             user_code=user,
-            user_email="test@example.com",
+            user_email="lala3@your-domain.test",
         )
         assert len(rsvp.code) == 6
-        assert rsvp.user_email == "test@example.com"
+        assert rsvp.user_email == "lala3@your-domain.test"
 
     def test_rsvp_is_valid(self):
         """New RSVP should be valid."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         rsvp = RSVP.objects.create(
             user_code=user,
-            user_email="test@example.com",
+            user_email="lala3@your-domain.test",
         )
         assert rsvp.is_valid() is True
 
     def test_rsvp_expired(self):
         """Old RSVP should be invalid."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         rsvp = RSVP.objects.create(
             user_code=user,
-            user_email="test@example.com",
+            user_email="lala3@your-domain.test",
         )
         rsvp.created = timezone.now() - timedelta(hours=25)
         rsvp.save()
@@ -226,10 +228,10 @@ class TestRSVPModel:
     def test_rsvp_booking_link_outlives_24h(self):
         """A booking accept/reject link stays valid for the full 72h PENDING window
         (it used to 401 after 24h, mid-way through the booking's life)."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         rsvp = RSVP.objects.create(
             user_code=user,
-            user_email="test@example.com",
+            user_email="lala3@your-domain.test",
             action=RSVP.Action.BOOKING_ACCEPT,
         )
         rsvp.created = timezone.now() - timedelta(hours=30)
@@ -241,10 +243,10 @@ class TestRSVPModel:
 
     def test_rsvp_invite_link_outlives_24h(self):
         """A pending collection invitation lingers far beyond 24h (~30 days)."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         rsvp = RSVP.objects.create(
             user_code=user,
-            user_email="test@example.com",
+            user_email="lala3@your-domain.test",
             action=RSVP.Action.COLLECTION_INVITE,
         )
         rsvp.created = timezone.now() - timedelta(hours=48)
@@ -295,7 +297,7 @@ class TestCollectionModel:
     """Tests for Collection model."""
 
     def _create_user(self, code="ABC123"):
-        return User.objects.create(code=code, email=f"{code}@example.com")
+        return User.objects.create(code=code, email=f"{code}@your-domain.test")
 
     def test_create_collection(self):
         """Should create a collection with generated code."""
@@ -335,7 +337,7 @@ class TestCollectionModel:
     def test_add_invite(self):
         """Should add user to invites."""
         user = self._create_user()
-        User.objects.create(code="USR001", email="usr001@example.com")
+        User.objects.create(code="USR001", email="lolo10@your-domain.test")
         collection = Collection.objects.create(
             owner=user,
             headline="My Collection",
@@ -356,7 +358,7 @@ class TestCollectionModel:
     def test_can_view(self):
         """Should check view permission correctly."""
         user = self._create_user()
-        invited = User.objects.create(code="USR001", email="usr001@example.com")
+        invited = User.objects.create(code="USR001", email="lolo10@your-domain.test")
         collection = Collection.objects.create(
             owner=user,
             headline="My Collection",
@@ -369,8 +371,8 @@ class TestCollectionModel:
     def test_remove_invite(self):
         """Should remove user from invites."""
         user = self._create_user()
-        u1 = User.objects.create(code="USR001", email="usr001@example.com")
-        u2 = User.objects.create(code="USR002", email="usr002@example.com")
+        u1 = User.objects.create(code="USR001", email="lolo10@your-domain.test")
+        u2 = User.objects.create(code="USR002", email="lulu@your-domain.test")
         collection = Collection.objects.create(
             owner=user,
             headline="My Collection",
@@ -383,7 +385,7 @@ class TestCollectionModel:
     def test_is_invited(self):
         """Should check if user is invited."""
         user = self._create_user()
-        invited = User.objects.create(code="USR001", email="usr001@example.com")
+        invited = User.objects.create(code="USR001", email="lolo10@your-domain.test")
         collection = Collection.objects.create(
             owner=user,
             headline="My Collection",
@@ -396,8 +398,8 @@ class TestCollectionModel:
     def test_is_curator(self):
         """Owner and co-owner are curators; a plain member or a stranger are not."""
         user = self._create_user()
-        co_owner = User.objects.create(code="USR001", email="usr001@example.com")
-        member = User.objects.create(code="USR002", email="usr002@example.com")
+        co_owner = User.objects.create(code="USR001", email="lolo10@your-domain.test")
+        member = User.objects.create(code="USR002", email="lulu@your-domain.test")
         collection = Collection.objects.create(
             owner=user,
             headline="My Collection",
@@ -457,7 +459,7 @@ class TestCollectionModel:
     def test_add_invite_idempotent(self):
         """Adding same invite twice should not duplicate."""
         user = self._create_user()
-        User.objects.create(code="USR001", email="usr001@example.com")
+        User.objects.create(code="USR001", email="lolo10@your-domain.test")
         collection = Collection.objects.create(
             owner=user,
             headline="My Collection",
@@ -472,7 +474,7 @@ class TestThingModel:
     """Tests for Thing model."""
 
     def _create_user(self, code="ABC123"):
-        return User.objects.create(code=code, email=f"{code}@example.com")
+        return User.objects.create(code=code, email=f"{code}@your-domain.test")
 
     def test_create_thing(self):
         """Should create a thing with generated code."""
@@ -488,7 +490,7 @@ class TestThingModel:
     def test_reserve(self):
         """Should add user to deal M2M."""
         user = self._create_user()
-        User.objects.create(code="USR001", email="usr001@example.com")
+        User.objects.create(code="USR001", email="lolo10@your-domain.test")
         thing = Thing.objects.create(
             owner=user,
             headline="My Thing",
@@ -499,7 +501,7 @@ class TestThingModel:
     def test_release(self):
         """Should remove user from deal M2M."""
         user = self._create_user()
-        reserver = User.objects.create(code="USR001", email="usr001@example.com")
+        reserver = User.objects.create(code="USR001", email="lolo10@your-domain.test")
         thing = Thing.objects.create(
             owner=user,
             headline="My Thing",
@@ -514,7 +516,7 @@ class TestFAQModel:
     """Tests for FAQ model."""
 
     def _create_user(self, code="USR001"):
-        return User.objects.create(code=code, email=f"{code}@example.com")
+        return User.objects.create(code=code, email=f"{code}@your-domain.test")
 
     def _create_thing(self, owner, code="THNG01"):
         return Thing.objects.create(code=code, owner=owner, headline="Thing")
@@ -580,7 +582,7 @@ class TestBookingPeriodModel:
     """Tests for BookingPeriod model."""
 
     def _create_user(self, code="ABC123"):
-        return User.objects.create(code=code, email=f"{code}@example.com")
+        return User.objects.create(code=code, email=f"{code}@your-domain.test")
 
     def _create_thing(self, owner, code="THNG01", thing_type="GIFT_THING"):
         return Thing.objects.create(code=code, owner=owner, headline="Thing", type=thing_type)
@@ -595,7 +597,7 @@ class TestBookingPeriodModel:
             thing_code=thing,
             thing_type="LEND_THING",
             requester_code=self._create_user("REQ001"),
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
             start_date="2026-03-01",
             end_date="2026-03-10",
@@ -614,7 +616,7 @@ class TestBookingPeriodModel:
             thing_code=thing,
             thing_type="GIFT_THING",
             requester_code=self._create_user("REQ001"),
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
         )
         result = str(booking)
@@ -642,7 +644,7 @@ class TestBookingPeriodModel:
             thing_code=thing,
             thing_type=thing_type,
             requester_code=self._create_user("REQ001"),
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
         )
         assert booking.is_date_based() is date_based
@@ -658,7 +660,7 @@ class TestBookingPeriodModel:
             thing_code=thing,
             thing_type="GIFT_THING",
             requester_code=self._create_user("REQ001"),
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
         )
         assert booking.status == "PENDING"
@@ -676,7 +678,7 @@ class TestBookingPeriodModel:
             thing_code=thing,
             thing_type="LEND_THING",
             requester_code=self._create_user("REQ001"),
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
             start_date="2026-03-01",
             end_date="2026-03-10",
@@ -704,7 +706,7 @@ class TestBookingPeriodModel:
             thing_code=thing,
             thing_type="LEND_THING",
             requester_code=self._create_user("REQ001"),
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
             start_date="2026-03-01",
             end_date="2026-03-10",
@@ -726,13 +728,13 @@ class TestPromoteCoOwner:
 
     def _group(self, co_owners):
         """A group holding ``co_owners`` co-curators, and one more plain member."""
-        owner = User.objects.create(code="PCOOWN", email="pcoown@example.com")
+        owner = User.objects.create(code="PCOOWN", email="lala@your-domain.test")
         group = Collection.objects.create(code="PCOGRP", owner=owner, headline="Group")
         for i in range(co_owners):
-            curator = User.objects.create(code=f"PCOC{i:02d}", email=f"pcoc{i}@example.com")
+            curator = User.objects.create(code=f"PCOC{i:02d}", email=f"lele{i}@your-domain.test")
             group.invites.add(curator)
             group.co_owners.add(curator)
-        newcomer = User.objects.create(code="PCONEW", email="pconew@example.com")
+        newcomer = User.objects.create(code="PCONEW", email="lili@your-domain.test")
         group.invites.add(newcomer)
         return group, newcomer
 
@@ -778,7 +780,7 @@ class TestCollectionModelEdgeCases:
     """Tests for Collection model DoesNotExist branches."""
 
     def _create_user(self, code="ABC123"):
-        return User.objects.create(code=code, email=f"{code}@example.com")
+        return User.objects.create(code=code, email=f"{code}@your-domain.test")
 
     def test_collection_str(self):
         """Should return readable string representation."""
@@ -822,7 +824,7 @@ class TestThingModelEdgeCases:
     """Tests for Thing model DoesNotExist branches."""
 
     def _create_user(self, code="ABC123"):
-        return User.objects.create(code=code, email=f"{code}@example.com")
+        return User.objects.create(code=code, email=f"{code}@your-domain.test")
 
     def test_thing_str(self):
         """Should return readable string representation."""
@@ -867,7 +869,7 @@ class TestUserModelEdgeCases:
             color_05="white",
         )
         for i in range(20):
-            user = User.objects.create(email=f"c9-{i}@example.com")
+            user = User.objects.create(email=f"lele{i}@your-domain.test")
             assert user.theeeme_id == "ZZZ999"
 
     def test_random_theeeme_falls_back_when_table_empty(self):
@@ -895,28 +897,28 @@ class TestUserModelEdgeCases:
 
     def test_create_superuser(self):
         """Should create a superuser."""
-        user = User.objects.create_superuser(email="admin@example.com")
+        user = User.objects.create_superuser(email="lala8@your-domain.test")
         assert user.is_staff is True
         assert user.is_superuser is True
 
     def test_has_perm_regular_user(self):
         """Regular user should not have any perms."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.has_perm("any_perm") is False
 
     def test_has_perm_superuser(self):
         """Superuser should have all perms."""
-        user = User.objects.create_superuser(email="admin@example.com")
+        user = User.objects.create_superuser(email="lala8@your-domain.test")
         assert user.has_perm("any_perm") is True
 
     def test_has_module_perms_regular_user(self):
         """Regular user should not have module perms."""
-        user = User.objects.create(email="test@example.com")
+        user = User.objects.create(email="lala3@your-domain.test")
         assert user.has_module_perms("core") is False
 
     def test_has_module_perms_superuser(self):
         """Superuser should have module perms."""
-        user = User.objects.create_superuser(email="admin@example.com")
+        user = User.objects.create_superuser(email="lala8@your-domain.test")
         assert user.has_module_perms("core") is True
 
 
@@ -926,34 +928,34 @@ class TestRSVPModelEdgeCases:
 
     def test_rsvp_str(self):
         """Should return readable string representation."""
-        user = User.objects.create(code="ABC123", email="test@example.com")
+        user = User.objects.create(code="ABC123", email="lala3@your-domain.test")
         rsvp = RSVP.objects.create(
             user_code=user,
-            user_email="test@example.com",
+            user_email="lala3@your-domain.test",
             action="COLLECTION_INVITE",
         )
         result = str(rsvp)
         assert rsvp.code in result
         assert "COLLECTION_INVITE" in result
-        assert "test@example.com" in result
+        assert "lala3@your-domain.test" in result
 
     def test_create_for_booking(self):
         """Should create RSVP with booking context."""
         from core.models.booking import BookingPeriod
 
-        owner = User.objects.create(code="OWNER1", email="owner@example.com")
-        requester = User.objects.create(code="REQ001", email="req@example.com")
+        owner = User.objects.create(code="OWNER1", email="lala1@your-domain.test")
+        requester = User.objects.create(code="REQ001", email="lili9@your-domain.test")
         thing = Thing.objects.create(code="THNG01", owner=owner, headline="Thing")
         booking = BookingPeriod.objects.create(
             thing_code=thing,
             thing_type="GIFT_THING",
             requester_code=requester,
-            requester_email="req@example.com",
+            requester_email="lili9@your-domain.test",
             owner_code=owner,
         )
         rsvp = RSVP.create_for_booking("BOOKING_ACCEPT", booking, owner)
         assert rsvp.action == "BOOKING_ACCEPT"
         assert rsvp.target_code == booking.code
         assert rsvp.user_code_id == owner.code
-        assert rsvp.user_email == "owner@example.com"
+        assert rsvp.user_email == "lala1@your-domain.test"
         assert rsvp.context["thing_code"] == thing.code
