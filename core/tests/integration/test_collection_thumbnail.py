@@ -18,7 +18,7 @@ def get_client(user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="THB001", email="owner@example.com", name="Owner")
+    return User.objects.create(code="THB001", email="lala1@your-domain.test", name="Owner")
 
 
 @pytest.fixture

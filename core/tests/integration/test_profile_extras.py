@@ -11,7 +11,7 @@ class TestProfileAbout:
     def test_update_about_persists(self, authenticated_client, user):
         res = authenticated_client.put(
             f"/api/v1/users/{user.code}/",
-            {"about": "Find me at [my site](https://example.com)\n- one\n- two"},
+            {"about": "Find me at [my site](https://your-domain.test)\n- one\n- two"},
             format="json",
         )
         assert res.status_code == 200

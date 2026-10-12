@@ -277,7 +277,7 @@ class TestLoginReturnsToWhereTheyWereGoing:
     def test_the_answer_is_byte_for_byte_the_same_with_and_without_a_next(self, user):
         """A ``next`` must not turn request-link into a probe: not for a registered
         address, not for an unregistered one, and not for a bad value."""
-        for email in (user.email, "nobody@test.com"):
+        for email in (user.email, "lolo6@your-domain.test"):
             plain, _ = _request_link(email)
             with_next, _ = _request_link(email, next="/collections/AbC123")
             with_bad_next, _ = _request_link(email, next="//evil.com")
@@ -286,11 +286,11 @@ class TestLoginReturnsToWhereTheyWereGoing:
             assert plain.content == with_next.content == with_bad_next.content
 
     def test_an_unregistered_email_with_a_next_creates_nothing(self):
-        response, rsvp = _request_link("nobody@test.com", next="/collections/AbC123")
+        response, rsvp = _request_link("lolo6@your-domain.test", next="/collections/AbC123")
 
         assert response.status_code == 200
         assert rsvp is None
-        assert not User.objects.filter(email="nobody@test.com").exists()
+        assert not User.objects.filter(email="lolo6@your-domain.test").exists()
 
     def test_a_bad_next_written_straight_into_the_database_is_not_followed(self, user, collection):
         # Not through request-link: a `context` written by some other route. The
@@ -361,11 +361,11 @@ class TestOriginIsStamped:
 
         api_client.post(
             "/api/v1/auth/join/",
-            {"email": "fresh@test.com", "collection_code": public.code},
+            {"email": "lala@your-domain.test", "collection_code": public.code},
             format="json",
         )
 
-        rsvp = RSVP.objects.get(user_email="fresh@test.com", action=RSVP.Action.MAGIC_LINK)
+        rsvp = RSVP.objects.get(user_email="lala@your-domain.test", action=RSVP.Action.MAGIC_LINK)
         assert rsvp.origin == RSVP.Origin.POPIN
 
 

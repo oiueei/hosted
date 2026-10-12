@@ -31,12 +31,12 @@ def _client(user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="IOWN01", email="ioowner@test.com", name="Owner")
+    return User.objects.create(code="IOWN01", email="lala@your-domain.test", name="Owner")
 
 
 @pytest.fixture
 def requester(db):
-    return User.objects.create(code="IREQ01", email="ioreq@test.com", name="Requester")
+    return User.objects.create(code="IREQ01", email="lili@your-domain.test", name="Requester")
 
 
 @pytest.fixture

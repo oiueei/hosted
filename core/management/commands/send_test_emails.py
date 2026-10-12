@@ -1,7 +1,7 @@
 """Send one sample of every email OIUEEI can send to an address you choose.
 
-    python manage.py send_test_emails --to you@example.com
-    python manage.py send_test_emails --to you@example.com --lang ca --only booking
+    python manage.py send_test_emails --to lulu@your-domain.test
+    python manage.py send_test_emails --to lulu@your-domain.test --lang ca --only booking
     python manage.py send_test_emails --list
 
 Why it exists: an email is the one part of the product that cannot be looked at
@@ -117,8 +117,8 @@ class World:
         self.me.notify_news = True
         self.me.save()
 
-        self.owner = User.objects.create(email="lala.sample@example.com", name="Lala")
-        self.member = User.objects.create(email="lele.sample@example.com", name="Lele")
+        self.owner = User.objects.create(email="lala@your-domain.test", name="Lala")
+        self.member = User.objects.create(email="lele@your-domain.test", name="Lele")
 
         self.collection = Collection.objects.create(
             owner=self.owner,
@@ -260,7 +260,7 @@ def _(w):
         w.to,
         "Lele",
         "Chalmercadillo",
-        "amiga.de.lele@example.com",
+        "lili@your-domain.test",
         "Vive en mi escalera y le encantaría participar.",
         w.link("rsvp"),
         w.link("rsvp"),
@@ -271,7 +271,7 @@ def _(w):
 @sample("proposal_declined", "send_proposal_declined_email")
 def _(w):
     es.send_proposal_declined_email(
-        w.to, "Lala", "Chalmercadillo", "amiga.de.lele@example.com", collection=w.collection
+        w.to, "Lala", "Chalmercadillo", "lili@your-domain.test", collection=w.collection
     )
 
 
@@ -475,13 +475,13 @@ def _(w):
 
 @sample("contact_form", "send_contact_email")
 def _(w):
-    es.send_contact_email("Lele", "lele.sample@example.com", "No consigo entrar en mi cuenta.")
+    es.send_contact_email("Lele", "lele@your-domain.test", "No consigo entrar en mi cuenta.")
 
 
 @sample("collaboration_form", "send_contact_email")
 def _(w):
     es.send_contact_email(
-        "Lele", "lele.sample@example.com", "Me gustaría colaborar con el diseño.", kind="collab"
+        "Lele", "lele@your-domain.test", "Me gustaría colaborar con el diseño.", kind="collab"
     )
 
 

@@ -1,36 +1,38 @@
 # OIUEEI - Development Guide
 
-## Repositories and branches
+## Deployments built on this repository
 
-OIUEEI ships as **two public repos from one working copy**:
+This repository is the whole product: a fresh checkout runs, tests and deploys on its own, with
+`CREATOR_POLICY` at `OpenCreatorPolicy` (no gate) and `frontend/src/deployment/` exporting empty
+stubs. A deployment that adds a service layer (an open sign-up door, vetting, pages of its own, its
+operator's legal identity) does so **only through the extension points in `SELF_HOSTING.md`**, in
+an app and files of its own, in its own repository. `core/` never imports from a deployment, and
+nothing here names one: no deployment's domain, forms, providers or decisions in code, tests,
+comments or docs.
 
-- **`oiueei/standalone`** — the product, everything a self-hoster gets. Branches
-  `development` (work here) and `main`, both pushing to `origin`. `core/` only;
-  `frontend/src/deployment/` exports empty stubs; `CREATOR_POLICY` defaults to
-  `OpenCreatorPolicy` (no gate).
-- **`oiueei/hosted`** — the www.oiueei.com service layer (branch `hosted` →
-  `hosted/main`). It only ever **adds**: the `hosted/` Django app (open sign-up
-  door, creator vetting, weekly operator report), the real
-  `frontend/src/deployment/` pages, the operator's `/legal` identity, Sentry.
-  `core/` never imports from `hosted/`. See `SELF_HOSTING.md` (the extension
-  points) and `hosted/README.md` (what this deployment did with them).
+**A product fix always lands here first**, on `development`, even when a deployment surfaced it;
+the deployment then takes it by merging. A `core/` change made in a deployment's repository is
+invisible to this one and has to be re-applied by hand forever.
 
-**Flow:** `development` → merge into `main` → merge `main` into `hosted` →
-pushing `hosted` to `oiueei/hosted:main` **is the deploy** — Heroku is
-GitHub-connected with auto-deploy + wait-for-checks, so a red CI holds the
-previous release and there is no `git push` to a dyno.
+**Verify the current branch before editing.** `development` is where work happens; `main` is what
+releases are cut from.
 
-**A product fix always starts on `development`**, even when a hosted-only
-scenario surfaced it: commit on `development`, merge to `main` and `hosted`,
-*then* it reaches production. A `core/` change committed straight on `hosted` is
-invisible to the sync and has to be re-applied by hand forever
-(`hosted/README.md` §"Where a fix belongs"). **Verify the current branch before
-editing** — legal text (`frontend/src/legal/`) and deployment settings diverge,
-and the working copy may be left on any of the three branches.
+## Agent sessions (local or cloud)
+
+- **The git author is the maintainer, never the model.** An environment where an agent commits —
+  a cloud sandbox included — is configured with the maintainer's `user.name` / `user.email`
+  before the first commit. The model appears only in the `AI-assistant:` trailer (see Commit
+  attribution): a model cannot hold copyright, and the author field is the one every tool reads.
+- **An agent commits on a branch and stops there**: pushes, merges, tags and deploys are the
+  maintainer's.
+- **A session works with the repository it was given.** It never brings another repository's
+  history into this one (no pushing a deployment's branch here so a session can read it): that
+  repository is connected to the session instead.
+- **One session per branch or worktree**: two agents in one working tree overwrite each other.
 
 ## Project Conventions
 
-- **Single Django app**: all product code lives in `core/` (the `hosted` branch adds one service-layer app, `hosted/` — see Repositories and branches above)
+- **Single Django app**: all product code lives in `core/`.
 - **Settings**: Split into `base.py`, `development.py`, `production.py` under `config/settings/`
 - **Code style**: Ruff (100-char lines) — `ruff check` (lint + import sort) and `ruff format`; replaces black/isort/flake8. Pre-commit hooks in `.pre-commit-config.yaml` (run `pre-commit install`).
 - **Test structure**: `core/tests/unit/`, `core/tests/integration/`, `core/tests/scenarios/`. Four fixtures are **shared with the frontend**: `frontend/src/test/hourlyGridParity.json` holds the hourly-reservation cases both `core/tests/unit/test_hourly_grid_parity.py` and `frontend/src/utils/hourlyGridParity.test.js` read, so the starts the request page offers and the ones the server accepts cannot drift apart; `frontend/src/test/nextPathParity.json` holds the accepted/rejected `safe_next_path` tables both `core/tests/unit/test_safe_next_path.py` and `frontend/src/utils/nextPath.test.js` read, so the server's open-redirect gate and the browser's defence in depth stay one rule; `frontend/src/test/inboxGroupParity.json` holds which in-app notices the inbox folds into its summary card, which both `core/tests/integration/test_inbox_group_dismiss.py` (the server's `DELETE /inbox/?group=bookings`) and `frontend/src/utils/inboxGroups.test.js` read, so the card never shows a notice the server keeps or hides one it deletes; `frontend/src/test/markdownLinkParity.json` holds `[text](url)` cases with the target each should give (or `null` when it is no link), which both `frontend/src/test/markdown.test.jsx` (the app's Markdown) and `core/tests/unit/test_email_note.py` (the email note's engine) read, so a link means the same in the app and in the email. Moving or renaming any of them breaks a suite on each side; new cases go in the file, not in either test.
@@ -139,9 +141,8 @@ When in doubt about how to compose the line, ask rather than decide.
 The repositories are public, and whoever reads them later was not in the conversation that produced a change.
 Write for them.
 
-- **What changed and why, impersonally**, as a fact about the code or the product: "Access requests now go
-  through one Tally form per language; the server keeps the three addresses to name them in its 403s." Not who
-  asked for it.
+- **What changed and why, impersonally**, as a fact about the code or the product: "Request emails now carry
+  the requester's address as Reply-To, so a manager's reply reaches them." Not who asked for it.
 - **Never name the people who asked for, approved or decided a change** — no "CA", no "the user" meaning whoever
   gave the instructions, no "X approved the wording", no "X moved it to Y". The roles inside the product
   (requester, owner, member, manager, operator) are fine, and so are the demo personas (Lala…Lulu) where the seed

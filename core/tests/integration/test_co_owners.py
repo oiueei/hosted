@@ -34,22 +34,22 @@ def client_for(user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
+    return User.objects.create(code="OWNR01", email="lala@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def co_owner(db):
-    return User.objects.create(code="COOW01", email="coowner@test.com", name="Lele")
+    return User.objects.create(code="COOW01", email="lala1@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def member(db):
-    return User.objects.create(code="MEMB01", email="member@test.com", name="Lili")
+    return User.objects.create(code="MEMB01", email="lele@your-domain.test", name="Lili")
 
 
 @pytest.fixture
 def stranger(db):
-    return User.objects.create(code="STRA01", email="stranger@test.com", name="Lolo")
+    return User.objects.create(code="STRA01", email="lolo1@your-domain.test", name="Lolo")
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ class TestACoOwnerHasOwnerLevelPowers:
         mail.outbox.clear()
         res = client_for(co_owner).post(
             f"/api/v1/collections/{group.code}/invite/",
-            {"email": "friend@test.com"},
+            {"email": "lele11@your-domain.test"},
             format="json",
         )
         assert res.status_code == 200
@@ -84,11 +84,11 @@ class TestACoOwnerHasOwnerLevelPowers:
         # on, and the email carrying it. 200 alone said only "the endpoint let
         # the co-owner in", not "a stranger was invited".
         assert RSVP.objects.filter(
-            user_email="friend@test.com",
+            user_email="lele11@your-domain.test",
             target_code=group.code,
             action=RSVP.Action.COLLECTION_INVITE,
         ).exists()
-        assert [m.to[0] for m in mail.outbox] == ["friend@test.com"]
+        assert [m.to[0] for m in mail.outbox] == ["lele11@your-domain.test"]
         assert "The street" in mail.outbox[0].body
 
     def test_a_co_owner_can_revoke_a_member(self, group, co_owner, member):
@@ -150,10 +150,10 @@ class TestACoOwnerHasOwnerLevelPowers:
         # member proposes someone (member is still invited at this point)
         client_for(member).post(
             f"/api/v1/collections/{group.code}/invite/propose/",
-            {"email": "suggested@test.com"},
+            {"email": "lala2@your-domain.test"},
             format="json",
         )
-        proposal = InvitationProposal.objects.get(collection=group, email="suggested@test.com")
+        proposal = InvitationProposal.objects.get(collection=group, email="lala2@your-domain.test")
         mail.outbox.clear()
 
         res = client_for(co_owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
@@ -165,11 +165,11 @@ class TestACoOwnerHasOwnerLevelPowers:
         proposal.refresh_from_db()
         assert proposal.status == InvitationProposal.Status.APPROVED
         assert RSVP.objects.filter(
-            user_email="suggested@test.com",
+            user_email="lala2@your-domain.test",
             target_code=group.code,
             action=RSVP.Action.COLLECTION_INVITE,
         ).exists()
-        assert [m.to[0] for m in mail.outbox] == ["suggested@test.com"]
+        assert [m.to[0] for m in mail.outbox] == ["lala2@your-domain.test"]
 
 
 class TestACoOwnerIsNotTheOwner:
@@ -186,7 +186,7 @@ class TestACoOwnerIsNotTheOwner:
     def test_a_co_owner_cannot_propose_to_their_own_group(self, group, co_owner):
         res = client_for(co_owner).post(
             f"/api/v1/collections/{group.code}/invite/propose/",
-            {"email": "someone@test.com"},
+            {"email": "lele1@your-domain.test"},
             format="json",
         )
         assert res.status_code == 400
@@ -196,7 +196,7 @@ class TestAPlainMemberOrStrangerHasNoCuratorPower:
     def test_a_plain_member_cannot_invite(self, group, member):
         res = client_for(member).post(
             f"/api/v1/collections/{group.code}/invite/",
-            {"email": "friend@test.com"},
+            {"email": "lele11@your-domain.test"},
             format="json",
         )
         assert res.status_code == 403
@@ -271,11 +271,11 @@ class TestPromotingACoOwner:
         )
         for i in range(Collection.MAX_CO_OWNERS):
             co_curator = User.objects.create(
-                code=f"COOF{i:02d}", email=f"full{i}@test.com", name=f"F{i}"
+                code=f"COOF{i:02d}", email=f"lele{i}@your-domain.test", name=f"F{i}"
             )
             collection.invites.add(co_curator)
             collection.co_owners.add(co_curator)
-        outsider = User.objects.create(code="OUTS01", email="outsider@test.com", name="Lulu")
+        outsider = User.objects.create(code="OUTS01", email="lolo@your-domain.test", name="Lulu")
         collection.invites.add(outsider)
         return collection
 
@@ -343,7 +343,7 @@ class TestPromotingACoOwner:
         proprietary = Collection.objects.create(
             code="PROP02", owner=owner, headline="Space", mode=Collection.Mode.PROPRIETARY
         )
-        second = User.objects.create(code="SECND1", email="second@test.com", name="Nil")
+        second = User.objects.create(code="SECND1", email="lele5@your-domain.test", name="Nil")
         proprietary.invites.add(member, second)
         proprietary.co_owners.add(member)
 

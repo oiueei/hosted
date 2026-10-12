@@ -32,10 +32,10 @@ describe('BulkInviteResult', () => {
           invited: 1,
           skipped: [
             { email: 'bad', reason: 'invalid' },
-            { email: 'dup@x.com', reason: 'duplicate' },
-            { email: 'ana@x.com', reason: 'already_member' },
-            { email: 'pen@x.com', reason: 'already_invited' },
-            { email: 'late@x.com', reason: 'daily_limit' },
+            { email: 'lala@your-domain.test', reason: 'duplicate' },
+            { email: 'lele@your-domain.test', reason: 'already_member' },
+            { email: 'lili@your-domain.test', reason: 'already_invited' },
+            { email: 'lolo@your-domain.test', reason: 'daily_limit' },
           ],
         }}
       />
@@ -44,19 +44,21 @@ describe('BulkInviteResult', () => {
     expect(screen.getByText('5 skipped:')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       'bad — invalid email',
-      'dup@x.com — duplicate',
-      'ana@x.com — already a member',
-      'pen@x.com — already invited',
-      'late@x.com — daily invitation limit reached',
+      'lala@your-domain.test — duplicate',
+      'lele@your-domain.test — already a member',
+      'lili@your-domain.test — already invited',
+      'lolo@your-domain.test — daily invitation limit reached',
     ]);
   });
 
   test('a reason it does not know reads as an invalid address', () => {
     render(
-      <BulkInviteResult result={{ invited: 0, skipped: [{ email: 'x@y.com', reason: '??' }] }} />
+      <BulkInviteResult
+        result={{ invited: 0, skipped: [{ email: 'lulu@your-domain.test', reason: '??' }] }}
+      />
     );
 
-    expect(screen.getByText('x@y.com — invalid email')).toBeInTheDocument();
+    expect(screen.getByText('lulu@your-domain.test — invalid email')).toBeInTheDocument();
   });
 
   test('nobody invited is a plain (info) notice, somebody invited a success one', () => {

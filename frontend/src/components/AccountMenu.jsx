@@ -55,8 +55,8 @@ const PANEL_ID = 'account-menu-panel';
  * now passes `offerSignIn={false}` there, since
  * the hero's button is the way in.
  * **`offerSignIn={false}` paints nothing signed out either**: a
- * door that does not want to send people to `/login` — the hosted `/popin`, which
- * dropped "Already have an account?" on purpose — says so through
+ * door that does not want to send people to `/login` — a deployment's own
+ * open door (`popInPath`), which drops "Already have an account?" on purpose — says so through
  * `MagicLinkJoinPage`'s `offerSignIn`, which `PageLayout` hands down. It changes
  * nothing for a signed-in reader, and where nobody passes it (`/share`, `/join`, the
  * 404…) the icon stays.

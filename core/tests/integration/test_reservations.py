@@ -182,7 +182,7 @@ def test_a_non_member_cannot_reserve(reservations, api_client):
     `test_a_signed_in_non_member_of_a_public_collection_gets_the_not_a_member_code`
     for the one that does — the two must stay tellable apart, since the
     frontend's auto-join only ever fires for the latter."""
-    stranger = User.objects.create(code="STRNGR", email="stranger@test.com")
+    stranger = User.objects.create(code="STRNGR", email="lolo1@your-domain.test")
     client = _member_client(api_client, stranger)
     resp = client.post(
         REQUEST_URL.format(reservations["thing"].code),
@@ -203,7 +203,7 @@ def test_a_signed_in_non_member_of_a_public_collection_gets_the_not_a_member_cod
     `code` the test above's `can_view` 403 does not."""
     reservations["collection"].visibility = Collection.Visibility.PUBLIC
     reservations["collection"].save(update_fields=["visibility"])
-    stranger = User.objects.create(code="STRNG2", email="stranger2@test.com")
+    stranger = User.objects.create(code="STRNG2", email="lolo@your-domain.test")
     client = _member_client(api_client, stranger)
 
     resp = client.post(
@@ -266,7 +266,7 @@ def test_a_clash_is_a_409_and_blocks_only_its_days(reservations, authenticated_c
     assert first.status_code == status.HTTP_201_CREATED
 
     # a second member, same days → clash
-    other = User.objects.create(code="MEMB03", email="m3@test.com")
+    other = User.objects.create(code="MEMB03", email="lala@your-domain.test")
     reservations["collection"].invites.add(other)
     clash = _member_client(api_client, other).post(
         REQUEST_URL.format(thing.code),
@@ -630,7 +630,7 @@ def test_an_hourly_clash_is_a_409_and_leaves_the_rest_of_the_day_free(
     )
     assert first.status_code == status.HTTP_201_CREATED
 
-    other = User.objects.create(code="HMEMB2", email="hm2@test.com")
+    other = User.objects.create(code="HMEMB2", email="lele@your-domain.test")
     hourly_reservations["collection"].invites.add(other)
     clash = _member_client(api_client, other).post(
         REQUEST_URL.format(thing.code),
@@ -1212,7 +1212,7 @@ def test_a_co_curator_who_cancels_sees_their_own_record_too(
     booking = _make_booking(reservations, authenticated_client2)
     mail.outbox.clear()
 
-    co = User.objects.create(code="COCR01", email="co@test.com", name="Co-Curator")
+    co = User.objects.create(code="COCR01", email="lala11@your-domain.test", name="Co-Curator")
     reservations["collection"].invites.add(co)
     reservations["collection"].co_owners.add(co)
 
@@ -1236,7 +1236,7 @@ def test_a_co_curator_who_cancels_sees_their_own_record_too(
 
 def test_an_unrelated_user_cannot_cancel(reservations, authenticated_client2, api_client):
     booking = _make_booking(reservations, authenticated_client2)
-    other = User.objects.create(code="NOSY01", email="nosy@test.com")
+    other = User.objects.create(code="NOSY01", email="lili@your-domain.test")
     resp = _member_client(api_client, other).post(CANCEL_URL.format(booking.code))
     assert resp.status_code == status.HTTP_403_FORBIDDEN
 

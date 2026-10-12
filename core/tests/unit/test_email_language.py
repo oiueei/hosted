@@ -1,6 +1,6 @@
 """EMAIL_LANGUAGE: the per-deployment language for all outbound email.
 
-The standalone repo defaults to English; www.oiueei.com sets EMAIL_LANGUAGE=es.
+The standalone repo defaults to English; a deployment may set EMAIL_LANGUAGE=es.
 These tests pin the default, the Spanish deployment, the unknown-code fallback,
 and the en/{es,ca} catalogue parity (the email analogue of i18nParity.test.js).
 """
@@ -19,13 +19,13 @@ from core.services.email_texts import T, ca, en, es
 @pytest.mark.django_db
 class TestEmailLanguage:
     def test_default_is_english(self):
-        email_service.send_magic_link_email("a@example.com", "http://x/verify/tok")
+        email_service.send_magic_link_email("lili@your-domain.test", "http://x/verify/tok")
         assert mail.outbox[0].subject == "Hello, welcome to OIUEEI!"
         assert "Click the link to sign in" in mail.outbox[0].body
 
     @override_settings(EMAIL_LANGUAGE="es")
     def test_spanish_deployment(self):
-        email_service.send_magic_link_email("a@example.com", "http://x/verify/tok")
+        email_service.send_magic_link_email("lili@your-domain.test", "http://x/verify/tok")
         assert mail.outbox[0].subject == "¡Hola, te damos la bienvenida a OIUEEI!"
         assert "iniciar sesión" in mail.outbox[0].body
         html = mail.outbox[0].alternatives[0][0]
@@ -33,7 +33,7 @@ class TestEmailLanguage:
 
     @override_settings(EMAIL_LANGUAGE="xx")
     def test_unknown_language_falls_back_to_english(self):
-        email_service.send_magic_link_email("a@example.com", "http://x/verify/tok")
+        email_service.send_magic_link_email("lili@your-domain.test", "http://x/verify/tok")
         assert mail.outbox[0].subject == "Hello, welcome to OIUEEI!"
 
     @override_settings(EMAIL_LANGUAGE="es")
@@ -50,7 +50,9 @@ class TestEmailLanguage:
             code = "THG123"
             collections = FakeCollections()
 
-        email_service.send_faq_answer_email("Lala", FakeThing(), "¿Sigue?", "Sí", "q@example.com")
+        email_service.send_faq_answer_email(
+            "Lala", FakeThing(), "¿Sigue?", "Sí", "lili8@your-domain.test"
+        )
         assert "Gestiona tus preferencias de correo" in mail.outbox[0].body
         # The thing headline is now the link label in both formats.
         assert "Tienda" in mail.outbox[0].body
@@ -61,7 +63,7 @@ class TestEmailLanguage:
         class FakeBooking:
             start_date = None
             end_date = None
-            requester_email = "r@example.com"
+            requester_email = "lala1@your-domain.test"
 
         class FakeCollections:
             def first(self):
@@ -95,7 +97,7 @@ class TestEmailLanguage:
         class FakeBooking:
             start_date = None
             end_date = None
-            requester_email = "r@example.com"
+            requester_email = "lala1@your-domain.test"
 
         class FakeCollections:
             def first(self):
@@ -137,7 +139,7 @@ class TestEmailLanguage:
             end_date = None
 
         class FakeRequester:
-            email = "r@example.com"
+            email = "lala1@your-domain.test"
 
         mail.outbox.clear()
         # `informed` is what the request's fan-out tells the email (how many people it
@@ -214,7 +216,7 @@ class TestCatalogueParity:
     @override_settings(EMAIL_LANGUAGE="ca")
     def test_ca_smoke(self):
         # The Catalan catalogue is wired end-to-end via the lazy import.
-        email_service.send_magic_link_email("a@example.com", "http://x/verify/tok")
+        email_service.send_magic_link_email("lili@your-domain.test", "http://x/verify/tok")
         assert mail.outbox[0].subject == "Hola, et donem la benvinguda a OIUEEI!"
         assert "iniciar sessió" in mail.outbox[0].body
 
@@ -240,14 +242,14 @@ class TestViralLine:
 
     def test_line_present_for_non_owner(self):
         # A registered user with no collection is exactly the target audience.
-        u = User.objects.create(code="GUEST1", email="guest@test.com", name="Guest")
+        u = User.objects.create(code="GUEST1", email="lele12@your-domain.test", name="Guest")
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", u.email)
         assert "/collections/new" in mail.outbox[0].body
         assert "/collections/new" in mail.outbox[0].alternatives[0][0]
 
     def test_line_absent_for_collection_owner(self):
-        owner = User.objects.create(code="OWNR1", email="owner@test.com", name="Owner")
+        owner = User.objects.create(code="OWNR1", email="lala@your-domain.test", name="Owner")
         Collection.objects.create(code="OWNC1", owner=owner, headline="Mine", status="ACTIVE")
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", owner.email)
@@ -259,8 +261,8 @@ class TestViralLine:
         somebody who already runs one. In production (2026-09-28) the FAQ
         notice reached the co-curator WITH the line and the owner without it —
         same email, two curators, one wrongly addressed."""
-        founder = User.objects.create(code="OWNR3", email="founder@test.com", name="Founder")
-        co = User.objects.create(code="COOWN1", email="co-curator@test.com", name="Co")
+        founder = User.objects.create(code="OWNR3", email="lala5@your-domain.test", name="Founder")
+        co = User.objects.create(code="COOWN1", email="lala2@your-domain.test", name="Co")
         collection = Collection.objects.create(
             code="COCUR1", owner=founder, headline="Ours", status="ACTIVE"
         )
@@ -273,8 +275,8 @@ class TestViralLine:
         # The bulk lookup resolves the same flag in one query for the whole
         # list (broadcast is the shape that reaches it) — the suppression must
         # survive that path too, not only the per-recipient lookup.
-        founder = User.objects.create(code="OWNR4", email="founder2@test.com", name="Founder")
-        co = User.objects.create(code="COOWN2", email="co-curator2@test.com", name="Co")
+        founder = User.objects.create(code="OWNR4", email="lala3@your-domain.test", name="Founder")
+        co = User.objects.create(code="COOWN2", email="lala4@your-domain.test", name="Co")
         collection = Collection.objects.create(
             code="COCUR2", owner=founder, headline="Ours", status="ACTIVE"
         )
@@ -289,8 +291,8 @@ class TestViralLine:
     def test_a_plain_member_still_gets_the_line(self):
         # Being IN a collection is not curating one — the rank-and-file member
         # is exactly the audience the growth line addresses.
-        owner = User.objects.create(code="OWNR5", email="owner5@test.com", name="Owner")
-        member = User.objects.create(code="MEMB1", email="member@test.com", name="Member")
+        owner = User.objects.create(code="OWNR5", email="lala6@your-domain.test", name="Owner")
+        member = User.objects.create(code="MEMB1", email="lele@your-domain.test", name="Member")
         collection = Collection.objects.create(
             code="MEMC1", owner=owner, headline="Theirs", status="ACTIVE"
         )
@@ -302,7 +304,7 @@ class TestViralLine:
     def test_line_present_on_magic_link_for_non_owner(self):
         # The magic link is the one email every user gets, so the growth
         # CTA runs here too now — still gated by collection ownership.
-        u = User.objects.create(code="GUEST2", email="magic@test.com", name="Guest")
+        u = User.objects.create(code="GUEST2", email="lele1@your-domain.test", name="Guest")
         mail.outbox.clear()
         email_service.send_magic_link_email(u.email, "http://x/verify/tok")
         assert "/collections/new" in mail.outbox[0].body
@@ -311,11 +313,11 @@ class TestViralLine:
         # Not-yet-registered invitees (JoinView, before the User row exists
         # at send time in some callers) are exactly the growth target too.
         mail.outbox.clear()
-        email_service.send_magic_link_email("not-yet-registered@test.com", "http://x/verify/tok")
+        email_service.send_magic_link_email("lili1@your-domain.test", "http://x/verify/tok")
         assert "/collections/new" in mail.outbox[0].body
 
     def test_line_absent_on_magic_link_for_collection_owner(self):
-        owner = User.objects.create(code="OWNR2", email="magicowner@test.com", name="Owner")
+        owner = User.objects.create(code="OWNR2", email="lala7@your-domain.test", name="Owner")
         Collection.objects.create(code="OWNC2", owner=owner, headline="Mine", status="ACTIVE")
         mail.outbox.clear()
         email_service.send_magic_link_email(owner.email, "http://x/verify/tok")
@@ -328,11 +330,11 @@ class TestViralLine:
         summary, which used to be this test's example, is a deployment's own
         concern and left with its command.
         """
-        owner = User.objects.create(code="ALRMOW", email="alarmowner@test.com", name="Owner")
+        owner = User.objects.create(code="ALRMOW", email="lala8@your-domain.test", name="Owner")
         collection = Collection.objects.create(
             code="ALRMC1", owner=owner, headline="Busy", status="ACTIVE"
         )
-        User.objects.create(code="ALRMSU", email="root@test.com", is_superuser=True)
+        User.objects.create(code="ALRMSU", email="lolo@your-domain.test", is_superuser=True)
         mail.outbox.clear()
 
         email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
@@ -340,7 +342,7 @@ class TestViralLine:
         assert "/collections/new" not in mail.outbox[0].body
 
     def test_footer_still_after_viral_line(self):
-        u = User.objects.create(code="GUEST3", email="foot@test.com", name="Guest")
+        u = User.objects.create(code="GUEST3", email="lulu@your-domain.test", name="Guest")
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", u.email)
         body = mail.outbox[0].body

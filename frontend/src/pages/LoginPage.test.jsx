@@ -12,7 +12,7 @@ function renderLogin(url = '/login') {
   );
 }
 
-function submitEmail(email = 'lala@example.com') {
+function submitEmail(email = 'lala3@your-domain.test') {
   fireEvent.change(screen.getByLabelText(/Email/), { target: { value: email } });
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 }
@@ -32,13 +32,13 @@ describe('LoginPage magic-link request (the front door)', () => {
     });
     renderLogin();
 
-    submitEmail('lala@example.com');
+    submitEmail('lala3@your-domain.test');
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     const [url, options] = globalThis.fetch.mock.calls[0];
     expect(url).toBe('/api/v1/auth/request-link/');
     expect(options.method).toBe('POST');
-    expect(JSON.parse(options.body)).toEqual({ email: 'lala@example.com' });
+    expect(JSON.parse(options.body)).toEqual({ email: 'lala3@your-domain.test' });
 
     expect(
       await screen.findByText(/If this email is registered, your magic link is on its way/)
@@ -81,10 +81,10 @@ describe('LoginPage magic-link request (the front door)', () => {
     });
     renderLogin('/login?next=%2Fme%2Fedit');
 
-    submitEmail('lala@example.com');
+    submitEmail('lala3@your-domain.test');
 
     expect(JSON.parse(globalThis.fetch.mock.calls[0][1].body)).toEqual({
-      email: 'lala@example.com',
+      email: 'lala3@your-domain.test',
       next: '/me/edit',
     });
     await screen.findByText(/your magic link is on its way/);
@@ -102,10 +102,10 @@ describe('LoginPage magic-link request (the front door)', () => {
     });
     renderLogin(url);
 
-    submitEmail('lala@example.com');
+    submitEmail('lala3@your-domain.test');
 
     expect(JSON.parse(globalThis.fetch.mock.calls[0][1].body)).toEqual({
-      email: 'lala@example.com',
+      email: 'lala3@your-domain.test',
     });
     await screen.findByText(/your magic link is on its way/);
   });

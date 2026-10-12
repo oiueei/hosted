@@ -35,7 +35,7 @@ def _member_joined(collection, user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="SHOWN1", email="shown@test.com", name="Owner")
+    return User.objects.create(code="SHOWN1", email="lele13@your-domain.test", name="Owner")
 
 
 @pytest.fixture

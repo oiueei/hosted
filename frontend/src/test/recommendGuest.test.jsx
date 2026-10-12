@@ -61,7 +61,7 @@ describe('RecommendGuest', () => {
     renderRecommend();
 
     fireEvent.change(screen.getByLabelText(/Their email/i), {
-      target: { value: 'lili@example.com' },
+      target: { value: 'lili@your-domain.test' },
     });
     fireEvent.change(screen.getByLabelText(/should know/i), {
       target: { value: 'my downstairs neighbour' },
@@ -72,7 +72,7 @@ describe('RecommendGuest', () => {
     const [url, opts] = apiFetch.mock.calls[0];
     expect(url).toBe('/api/v1/collections/COL001/invite/propose/');
     expect(JSON.parse(opts.body)).toEqual({
-      email: 'lili@example.com',
+      email: 'lili@your-domain.test',
       note: 'my downstairs neighbour',
     });
   });
@@ -81,7 +81,7 @@ describe('RecommendGuest', () => {
     apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     renderRecommend();
     fireEvent.change(screen.getByLabelText(/Their email/i), {
-      target: { value: 'lili@example.com' },
+      target: { value: 'lili@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Recommend' }));
 
@@ -108,7 +108,7 @@ describe('RecommendGuest', () => {
     apiFetch.mockResolvedValue({ ok: false, status: 400, json: () => Promise.resolve({}) });
     renderRecommend();
     fireEvent.change(screen.getByLabelText(/Their email/i), {
-      target: { value: 'lili@example.com' },
+      target: { value: 'lili@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Recommend' }));
 
@@ -145,7 +145,7 @@ describe('RecommendGuest — a group run by a team', () => {
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Their email/i), {
-      target: { value: 'lili@example.com' },
+      target: { value: 'lili@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Recommend' }));
     expect(
@@ -160,7 +160,7 @@ describe('RecommendGuest — a group run by a team', () => {
     apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     renderRecommend(vi.fn(), { coOwnerCount: 1 });
     fireEvent.change(screen.getByLabelText(/Their email/i), {
-      target: { value: 'lili@example.com' },
+      target: { value: 'lili@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Recommend' }));
 

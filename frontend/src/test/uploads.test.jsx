@@ -48,7 +48,7 @@ describe('ImageUpload', () => {
   test('a picked image is uploaded, previewed, and its public_id reported', async () => {
     uploadImage.mockResolvedValue({
       publicId: 'oiueei/things/abc',
-      url: 'https://bucket.example.com/abc.jpg',
+      url: 'https://bucket.your-domain.test/abc.jpg',
     });
     const onChange = vi.fn();
     const { container } = render(
@@ -61,7 +61,7 @@ describe('ImageUpload', () => {
     expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'oiueei/things');
 
     const preview = await screen.findByAltText('Image preview');
-    expect(preview).toHaveAttribute('src', 'https://bucket.example.com/abc.jpg');
+    expect(preview).toHaveAttribute('src', 'https://bucket.your-domain.test/abc.jpg');
     // The picker gives way to the preview — you replace by removing first.
     expect(fileInput(container)).toBeNull();
   });
@@ -72,13 +72,13 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={vi.fn()}
-        currentUrl="https://bucket.example.com/saved.jpg"
+        currentUrl="https://bucket.your-domain.test/saved.jpg"
       />
     );
 
     expect(screen.getByAltText('Image preview')).toHaveAttribute(
       'src',
-      'https://bucket.example.com/saved.jpg'
+      'https://bucket.your-domain.test/saved.jpg'
     );
     expect(uploadImage).not.toHaveBeenCalled();
     expect(fileInput(container)).toBeNull();
@@ -91,7 +91,7 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={onChange}
-        currentUrl="https://bucket.example.com/saved.jpg"
+        currentUrl="https://bucket.your-domain.test/saved.jpg"
       />
     );
 
@@ -117,12 +117,12 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={vi.fn()}
-        currentUrl="https://bucket.example.com/first.jpg"
+        currentUrl="https://bucket.your-domain.test/first.jpg"
       />
     );
     expect(screen.getByAltText('Image preview')).toHaveAttribute(
       'src',
-      'https://bucket.example.com/first.jpg'
+      'https://bucket.your-domain.test/first.jpg'
     );
 
     rerender(
@@ -130,12 +130,12 @@ describe('ImageUpload', () => {
         id="thumb"
         label="Thumbnail"
         onChange={vi.fn()}
-        currentUrl="https://bucket.example.com/second.jpg"
+        currentUrl="https://bucket.your-domain.test/second.jpg"
       />
     );
     expect(screen.getByAltText('Image preview')).toHaveAttribute(
       'src',
-      'https://bucket.example.com/second.jpg'
+      'https://bucket.your-domain.test/second.jpg'
     );
   });
 
@@ -147,7 +147,7 @@ describe('ImageUpload', () => {
       id: 'thumb',
       label: 'Thumbnail',
       onChange: vi.fn(),
-      currentUrl: 'https://bucket.example.com/saved.jpg',
+      currentUrl: 'https://bucket.your-domain.test/saved.jpg',
     };
     const { rerender, container } = render(<ImageUpload {...props} />);
 
@@ -240,7 +240,7 @@ describe('PdfUpload', () => {
   test('a file exactly at the cap is accepted', async () => {
     uploadPdf.mockResolvedValue({
       publicId: 'oiueei/documents/abc',
-      url: 'https://bucket.example.com/abc.pdf',
+      url: 'https://bucket.your-domain.test/abc.pdf',
     });
     const onChange = vi.fn();
     const { container } = render(
@@ -279,13 +279,13 @@ describe('PdfUpload', () => {
         id="doc"
         label="Welcome document"
         onChange={onChange}
-        currentUrl="https://bucket.example.com/welcome.pdf"
+        currentUrl="https://bucket.your-domain.test/welcome.pdf"
       />
     );
 
     expect(screen.getByRole('link', { name: 'View the document' })).toHaveAttribute(
       'href',
-      'https://bucket.example.com/welcome.pdf'
+      'https://bucket.your-domain.test/welcome.pdf'
     );
     expect(fileInput(container)).toBeNull();
 
@@ -301,22 +301,22 @@ describe('PdfUpload', () => {
       id: 'doc',
       label: 'Welcome document',
       onChange: vi.fn(),
-      currentUrl: 'https://bucket.example.com/first.pdf',
+      currentUrl: 'https://bucket.your-domain.test/first.pdf',
     };
     const { rerender } = render(<PdfUpload {...props} />);
     expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
       'href',
-      'https://bucket.example.com/first.pdf'
+      'https://bucket.your-domain.test/first.pdf'
     );
 
-    rerender(<PdfUpload {...props} currentUrl="https://bucket.example.com/second.pdf" />);
+    rerender(<PdfUpload {...props} currentUrl="https://bucket.your-domain.test/second.pdf" />);
     expect(screen.getByRole('link', { name: /view/i })).toHaveAttribute(
       'href',
-      'https://bucket.example.com/second.pdf'
+      'https://bucket.your-domain.test/second.pdf'
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    rerender(<PdfUpload {...props} currentUrl="https://bucket.example.com/second.pdf" />);
+    rerender(<PdfUpload {...props} currentUrl="https://bucket.your-domain.test/second.pdf" />);
     expect(screen.queryByRole('link', { name: /view/i })).toBeNull();
   });
 
@@ -338,12 +338,12 @@ describe('PdfUpload', () => {
 // GalleryUpload — a thing's extra photos, max 8
 // ════════════════════════════════════════════════════════════════════════
 describe('GalleryUpload', () => {
-  const item = (n) => ({ publicId: `p${n}`, url: `https://bucket.example.com/p${n}.jpg` });
+  const item = (n) => ({ publicId: `p${n}`, url: `https://bucket.your-domain.test/p${n}.jpg` });
 
   test('an added photo is appended to the existing items', async () => {
     uploadImage.mockResolvedValue({
       publicId: 'p2',
-      url: 'https://bucket.example.com/p2.jpg',
+      url: 'https://bucket.your-domain.test/p2.jpg',
     });
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[item(1)]} onChange={onChange} />);
@@ -375,7 +375,7 @@ describe('GalleryUpload', () => {
   test('a selection over the cap uploads only what fits and flags the cap', async () => {
     uploadImage.mockResolvedValue({
       publicId: 'p8',
-      url: 'https://bucket.example.com/p8.jpg',
+      url: 'https://bucket.your-domain.test/p8.jpg',
     });
     const items = Array.from({ length: 7 }, (_, i) => item(i));
     const onChange = vi.fn();
@@ -392,7 +392,7 @@ describe('GalleryUpload', () => {
   // user doesn't lose good photos to one bad one.
   test('a mid-batch failure keeps the photos that made it and shows the error', async () => {
     uploadImage
-      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.your-domain.test/p1.jpg' })
       .mockRejectedValueOnce(new Error('upload_failed'));
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
@@ -408,7 +408,7 @@ describe('GalleryUpload', () => {
     // it are kept — and the message has to name the size, because that is the
     // one failure the person can fix by picking a different file.
     uploadImage
-      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.your-domain.test/p1.jpg' })
       .mockRejectedValueOnce(new UploadTooLargeError());
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);
@@ -422,7 +422,7 @@ describe('GalleryUpload', () => {
 
   test("the hour's allowance running out mid-batch keeps the photos that made it and says to wait", async () => {
     uploadImage
-      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.example.com/p1.jpg' })
+      .mockResolvedValueOnce({ publicId: 'p1', url: 'https://bucket.your-domain.test/p1.jpg' })
       .mockRejectedValueOnce(new UploadRateLimitedError());
     const onChange = vi.fn();
     const { container } = render(<GalleryUpload items={[]} onChange={onChange} />);

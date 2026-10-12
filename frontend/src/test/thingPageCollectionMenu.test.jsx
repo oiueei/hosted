@@ -27,7 +27,7 @@ import ThingPage from '../pages/ThingPage';
  * (`collection_menu`) — it never loads the collection, which carries every one of
  * its things. `/things/:code`, with no collection, has no menu and nothing moved.
  */
-const DOC = 'https://bucket.example.com/oiueei/documents/welcome.pdf';
+const DOC = 'https://bucket.your-domain.test/oiueei/documents/welcome.pdf';
 
 const THING = {
   code: 'THG001',

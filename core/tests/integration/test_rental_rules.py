@@ -28,8 +28,8 @@ def _next_weekday(weekday):
 
 @pytest.fixture
 def rental_setup(db):
-    owner = User.objects.create(code="RNOWN1", email="rnown@test.com", name="Owner")
-    renter = User.objects.create(code="RNTER1", email="rnter@test.com", name="Renter")
+    owner = User.objects.create(code="RNOWN1", email="lala@your-domain.test", name="Owner")
+    renter = User.objects.create(code="RNTER1", email="lele@your-domain.test", name="Renter")
     # Fixed lengths 3 and 7 days; pickup/return only Mon–Fri (0–4).
     collection = Collection.objects.create(
         code="RCOL01",
@@ -103,7 +103,7 @@ def test_week_rental_single_weekday_is_satisfiable(rental_setup):
 
 
 def test_no_rules_never_violates(db):
-    owner = User.objects.create(code="NRUL01", email="nrul@test.com", name="O")
+    owner = User.objects.create(code="NRUL01", email="lili@your-domain.test", name="O")
     coll = Collection.objects.create(code="NRUL02", owner=owner, headline="Free")
     assert not coll.has_rental_rules()
     today = date.today()
@@ -122,7 +122,7 @@ def _future(base_weekday, weeks_ahead=1):
 
 def test_closure_day_blocks_pickup_and_return_only(db):
     """Only the handoff days matter for a loan — an interior closure stops nothing."""
-    owner = User.objects.create(code="CLOS01", email="clos@test.com", name="O")
+    owner = User.objects.create(code="CLOS01", email="lolo@your-domain.test", name="O")
     mon = _future(0)
     coll = Collection.objects.create(
         code="CLOS02",
@@ -144,7 +144,7 @@ def test_closure_day_blocks_pickup_and_return_only(db):
 
 
 def test_a_reservation_cannot_span_a_closure_day(db):
-    owner = User.objects.create(code="CLOS03", email="clos3@test.com", name="O")
+    owner = User.objects.create(code="CLOS03", email="lulu@your-domain.test", name="O")
     wed = _future(2)
     coll = Collection.objects.create(
         code="CLOS04",

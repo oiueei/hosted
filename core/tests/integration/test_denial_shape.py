@@ -23,7 +23,7 @@ from core.models import Collection, Thing, User
 @pytest.fixture
 def someone_elses_thing(db):
     """A thing in a private collection the second user is not invited to."""
-    owner = User.objects.create(code="DOWN01", email="denyowner@test.com", name="Lala")
+    owner = User.objects.create(code="DOWN01", email="lala@your-domain.test", name="Lala")
     collection = Collection.objects.create(code="DENY01", owner=owner, headline="Private")
     thing = Thing.objects.create(code="DENYT1", owner=owner, headline="A drill", type="LEND_THING")
     collection.things.add(thing)

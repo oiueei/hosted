@@ -248,7 +248,7 @@ class TestSecurityHeadersMiddleware:
         because the images already in the bucket go on loading through the CDN
         while every new upload dies in the browser.
         """
-        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.your-domain.test"
         settings.OBJECT_STORAGE_PUBLIC_URL = "https://a-bucket.fsn1.example-storage.com"
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
 
@@ -256,7 +256,7 @@ class TestSecurityHeadersMiddleware:
         assert "https://a-bucket.fsn1.example-storage.com" in connect, (
             "connect-src must name the bucket the presigned PUT actually goes to"
         )
-        assert "https://media.example.com" in connect
+        assert "https://media.your-domain.test" in connect
 
     def test_csp_does_not_let_the_bucket_serve_images_a_cdn_is_fronting(self, settings):
         """The other half: `img-src` follows the reads, and only the reads.
@@ -265,12 +265,12 @@ class TestSecurityHeadersMiddleware:
         nothing is asked to render from — the "while we're in here" habit that
         turns a CSP into decoration.
         """
-        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.your-domain.test"
         settings.OBJECT_STORAGE_PUBLIC_URL = "https://a-bucket.fsn1.example-storage.com"
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
 
         img = next(d for d in csp.split(";") if d.strip().startswith("img-src"))
-        assert "https://media.example.com" in img
+        assert "https://media.your-domain.test" in img
         assert "a-bucket" not in img
 
     def test_csp_names_one_host_once_when_reads_and_writes_share_it(self, settings):
@@ -285,10 +285,10 @@ class TestSecurityHeadersMiddleware:
 
     def test_csp_takes_the_origin_only_not_a_path(self, settings):
         """A path is not something CSP matches on; leaving one in widens nothing but lies."""
-        settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org/media/v2"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.your-domain.test/media/v2"
         settings.OBJECT_STORAGE_PUBLIC_URL = ""
         csp = self.middleware(self.factory.get("/"))["Content-Security-Policy"]
-        assert "https://cdn.example.org;" in csp or "https://cdn.example.org " in csp
+        assert "https://cdn.your-domain.test;" in csp or "https://cdn.your-domain.test " in csp
         assert "/media/v2" not in csp
 
     def test_csp_names_no_host_when_none_is_configured(self, settings):
@@ -326,15 +326,15 @@ class TestRedactEmail:
     """M5: emails are reduced to a stable, non-reversible tag for logs."""
 
     def test_redacts_to_stable_non_reversible_tag(self):
-        tag = redact_email("Lala@Disroot.ORG")
+        tag = redact_email("Lala@Your-Domain.TEST")
         assert tag.startswith("email#")
         # The address (local part + domain) never appears.
         assert "lala" not in tag.lower()
-        assert "disroot" not in tag.lower()
+        assert "your-domain" not in tag.lower()
         # Stable + case/whitespace-insensitive, so events for one user correlate.
-        assert tag == redact_email(" lala@disroot.org ")
+        assert tag == redact_email(" lala@your-domain.test ")
         # Distinct emails produce distinct tags; empty is handled.
-        assert tag != redact_email("other@disroot.org")
+        assert tag != redact_email("lolo@your-domain.test")
         assert redact_email("") == "email#none"
 
 
@@ -363,7 +363,7 @@ class TestAuthCookiesFollowTheProjectsCookieSwitch:
     def _login(self, client):
         from core.models import RSVP, User
 
-        user = User.objects.create(code="CKY001", email="cookie@example.com")
+        user = User.objects.create(code="CKY001", email="lala1@your-domain.test")
         rsvp = RSVP.objects.create(user_code=user, user_email=user.email)
         return client.get(f"/api/v1/auth/verify/{rsvp.token}/")
 

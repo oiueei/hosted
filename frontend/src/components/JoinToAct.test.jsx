@@ -20,7 +20,7 @@ function renderJoin(props = {}) {
   );
 }
 
-function submitEmail(email = 'visitor@example.com') {
+function submitEmail(email = 'lele2@your-domain.test') {
   fireEvent.change(screen.getByLabelText(/Email/), { target: { value: email } });
   fireEvent.click(screen.getByRole('button', { name: 'Send me a magic link' }));
 }
@@ -43,7 +43,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
 
     // The intro names the collection the visitor is about to join.
     expect(screen.getByText(/Tool Library/)).toBeInTheDocument();
-    submitEmail('visitor@example.com');
+    submitEmail('lele2@your-domain.test');
 
     await screen.findByText(/We've sent you a magic link to join/);
     const [url, options] = globalThis.fetch.mock.calls[0];
@@ -54,7 +54,7 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     // The backend now resolves their very first magic link from
     // the collection instead.
     expect(JSON.parse(options.body)).toEqual({
-      email: 'visitor@example.com',
+      email: 'lele2@your-domain.test',
       collection_code: 'PUB001',
     });
   });

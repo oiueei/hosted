@@ -63,11 +63,10 @@ frontend/.claude/
 mutants/
 .mutmut-cache
 
-# Local working documents — planning notes, task and fix lists, and the source
-# of the deploy branch's full legal text. None of these are project code and
-# none belong in a public repo: a *_FIXES.md is a map of what is not fixed yet,
-# and LEGAL_HEROKU.md is the www.oiueei.com legal text, which the standalone
-# deliberately ships in a generic operator-neutral form instead.
+# Local working documents — planning notes, task and fix lists, the reports an
+# agent session leaves behind, and local instructions for Claude Code. None of
+# these are project code and none belong in a public repo: a *_FIXES.md is a
+# map of what is not fixed yet.
 #
 # They were only ever protected by .git/info/exclude, which lives inside .git
 # and travels with no clone — so on any second machine there was nothing
@@ -75,11 +74,12 @@ mutants/
 #
 # `oiueei_*.md` covers the product, deployment, legal and glossary notes that
 # live in the author's own documents folder and get copied in here to be worked
-# on. They carry the operator's legal identity and the commercial reasoning that
-# the public repository deliberately has no version of — and unlike the files
-# above, they arrive by a plain `cp`, so nothing about them looks temporary to a
-# `git add -A` run three commits later.
+# on. Unlike the files above, they arrive by a plain `cp`, so nothing about them
+# looks temporary to a `git add -A` run three commits later.
 *_TASKS.md
 *_FIXES.md
 LEGAL_HEROKU.md
 oiueei_*.md
+CLAUDE.local.md
+*_REPORT.md
+*_REVIEW_*.md

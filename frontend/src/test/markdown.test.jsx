@@ -18,8 +18,8 @@ describe('markdownToHtml', () => {
   });
 
   test('renders links with safe URLs', () => {
-    const result = markdownToHtml('[Click here](https://example.com)');
-    expect(result).toContain('href="https://example.com"');
+    const result = markdownToHtml('[Click here](https://your-domain.test)');
+    expect(result).toContain('href="https://your-domain.test"');
     expect(result).toContain('>Click here</a>');
   });
 
@@ -28,29 +28,29 @@ describe('markdownToHtml', () => {
     // second time produced `&amp;amp;` — which the browser then resolves to a
     // literal `&amp;` in the href, sending the reader to a different URL than
     // the owner wrote. Owner descriptions and user bios are full of such links.
-    const result = markdownToHtml('[Docs](https://example.com/?a=1&b=2)');
-    expect(result).toContain('href="https://example.com/?a=1&amp;b=2"');
+    const result = markdownToHtml('[Docs](https://your-domain.test/?a=1&b=2)');
+    expect(result).toContain('href="https://your-domain.test/?a=1&amp;b=2"');
     expect(result).not.toContain('&amp;amp;');
   });
 
   test('an asterisk inside a URL is not turned into emphasis', () => {
     // The bold/italic passes run over the whole string after links are built,
     // so an unprotected href could come back with an <em> spliced into it.
-    const result = markdownToHtml('[Photo](https://example.com/a/*b*/c)');
-    expect(result).toContain('href="https://example.com/a/*b*/c"');
+    const result = markdownToHtml('[Photo](https://your-domain.test/a/*b*/c)');
+    expect(result).toContain('href="https://your-domain.test/a/*b*/c"');
     expect(result).not.toContain('<em>');
   });
 
   test('emphasis around a link still renders, and the link stays intact', () => {
     // The placeholder must not cost us the ordinary case.
-    const result = markdownToHtml('**See [the docs](https://example.com) now**');
+    const result = markdownToHtml('**See [the docs](https://your-domain.test) now**');
     expect(result).toContain('<strong>');
-    expect(result).toContain('href="https://example.com"');
+    expect(result).toContain('href="https://your-domain.test"');
     expect(result).toContain('>the docs</a>');
   });
 
   test('a link label keeps its ampersand readable', () => {
-    const result = markdownToHtml('[Tom & Jerry](https://example.com)');
+    const result = markdownToHtml('[Tom & Jerry](https://your-domain.test)');
     // Escaped exactly once: renders as "Tom & Jerry", not "Tom &amp; Jerry".
     expect(result).toContain('>Tom &amp; Jerry</a>');
     expect(result).not.toContain('&amp;amp;');
@@ -195,7 +195,7 @@ describe('markdownToHtml', () => {
 // `sanitizeUrl` is exported for CollectionPage (the hero's link to the group's
 // own site) and keeps its own contract, apart from the Markdown links.
 describe('sanitizeUrl', () => {
-  test.each([['http://example.com/a?b=1'], ['https://example.com/a?b=1']])(
+  test.each([['http://your-domain.test/a?b=1'], ['https://your-domain.test/a?b=1']])(
     'an http(s) address comes back exactly as given: %s',
     (url) => {
       expect(sanitizeUrl(url)).toBe(url);
@@ -230,9 +230,9 @@ describe('markdownToHtml — links', () => {
   const html = markdownToHtml;
 
   test('a bare address is linked and reads as it was typed', () => {
-    const out = html('Mira https://example.com/a?b=1&c=2 ahora');
+    const out = html('Mira https://your-domain.test/a?b=1&c=2 ahora');
     expect(out).toContain(
-      '<a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">https://example.com/a?b=1&amp;c=2</a>'
+      '<a href="https://your-domain.test/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">https://your-domain.test/a?b=1&amp;c=2</a>'
     );
   });
 
@@ -260,9 +260,9 @@ describe('markdownToHtml — links', () => {
   });
 
   test('a bare address is parked: _ and * inside it never become emphasis', () => {
-    const out = html('https://example.com/a_b_c/*d*/e_f_');
+    const out = html('https://your-domain.test/a_b_c/*d*/e_f_');
     expect(out).not.toContain('<em>');
-    expect(out).toContain('href="https://example.com/a_b_c/*d*/e_f_"');
+    expect(out).toContain('href="https://your-domain.test/a_b_c/*d*/e_f_"');
   });
 
   test('[text](url) takes balanced parentheses in the url', () => {
@@ -279,12 +279,12 @@ describe('markdownToHtml — links', () => {
   });
 
   test('mailto: is a link, in the same tab', () => {
-    const out = html('[escríbeme](mailto:lala@example.com)');
-    expect(out).toContain('<a href="mailto:lala@example.com">escríbeme</a>');
+    const out = html('[escríbeme](mailto:lala3@your-domain.test)');
+    expect(out).toContain('<a href="mailto:lala3@your-domain.test">escríbeme</a>');
   });
 
   test('a label may carry bold and italics', () => {
-    const out = html('[**gran** _web_](https://example.com)');
+    const out = html('[**gran** _web_](https://your-domain.test)');
     expect(out).toContain('<strong>gran</strong> <em>web</em></a>');
   });
 

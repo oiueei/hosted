@@ -30,7 +30,7 @@ describe('BulkInviteCsv', () => {
   test('the send button sits in a wide row, so on a phone it is the width of the screen', async () => {
     const { container } = renderBulkInvite();
 
-    pick(container, csvFile('email,name\nlala@mail.com,\nlele@mail.com,LeLe'));
+    pick(container, csvFile('email,name\nlala@your-domain.test,\nlele@your-domain.test,LeLe'));
 
     const send = await screen.findByRole('button', { name: 'Send 2 invitations' });
     expect(send.parentElement).toHaveClass('button-row-wide');
@@ -40,11 +40,11 @@ describe('BulkInviteCsv', () => {
     apiFetch.mockResolvedValue(jsonResponse({ invited: 2, skipped: [] }));
     const { container, onInvited } = renderBulkInvite();
 
-    pick(container, csvFile('email,name\nlala@mail.com,\nlele@mail.com,LeLe'));
+    pick(container, csvFile('email,name\nlala@your-domain.test,\nlele@your-domain.test,LeLe'));
 
     expect(await screen.findByText('Preview (2)')).toBeInTheDocument();
-    expect(screen.getByText('lala@mail.com')).toBeInTheDocument();
-    expect(screen.getByText('lele@mail.com — LeLe')).toBeInTheDocument();
+    expect(screen.getByText('lala@your-domain.test')).toBeInTheDocument();
+    expect(screen.getByText('lele@your-domain.test — LeLe')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Send 2 invitations'));
 
@@ -52,7 +52,10 @@ describe('BulkInviteCsv', () => {
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/COL001/invite/bulk/', {
       method: 'POST',
       body: JSON.stringify({
-        invites: [{ email: 'lala@mail.com' }, { email: 'lele@mail.com', name: 'LeLe' }],
+        invites: [
+          { email: 'lala@your-domain.test' },
+          { email: 'lele@your-domain.test', name: 'LeLe' },
+        ],
       }),
     });
     // The preview clears once sent, so the list can't be sent twice by accident.
@@ -67,42 +70,47 @@ describe('BulkInviteCsv', () => {
         invited: 1,
         skipped: [
           { email: 'nope', reason: 'invalid' },
-          { email: 'lala@mail.com', reason: 'already_member' },
-          { email: 'lele@mail.com', reason: 'already_invited' },
-          { email: 'lili@mail.com', reason: 'duplicate' },
-          { email: 'lulu@mail.com', reason: 'daily_limit' },
+          { email: 'lala@your-domain.test', reason: 'already_member' },
+          { email: 'lele@your-domain.test', reason: 'already_invited' },
+          { email: 'lili@your-domain.test', reason: 'duplicate' },
+          { email: 'lulu@your-domain.test', reason: 'daily_limit' },
         ],
       })
     );
     const { container } = renderBulkInvite();
 
-    pick(container, csvFile('email\nlolo@mail.com'));
+    pick(container, csvFile('email\nlolo@your-domain.test'));
     fireEvent.click(await screen.findByText('Send 1 invitations'));
 
     expect(await screen.findByText(/1 invitations sent\./)).toBeInTheDocument();
     expect(screen.getByText('5 skipped:')).toBeInTheDocument();
     expect(screen.getByText('nope — invalid email')).toBeInTheDocument();
-    expect(screen.getByText('lala@mail.com — already a member')).toBeInTheDocument();
-    expect(screen.getByText('lele@mail.com — already invited')).toBeInTheDocument();
-    expect(screen.getByText('lili@mail.com — duplicate')).toBeInTheDocument();
-    expect(screen.getByText('lulu@mail.com — daily invitation limit reached')).toBeInTheDocument();
+    expect(screen.getByText('lala@your-domain.test — already a member')).toBeInTheDocument();
+    expect(screen.getByText('lele@your-domain.test — already invited')).toBeInTheDocument();
+    expect(screen.getByText('lili@your-domain.test — duplicate')).toBeInTheDocument();
+    expect(
+      screen.getByText('lulu@your-domain.test — daily invitation limit reached')
+    ).toBeInTheDocument();
   });
 
   test('an unknown skip reason falls back to "invalid email" rather than a blank', async () => {
     apiFetch.mockResolvedValue(
-      jsonResponse({ invited: 0, skipped: [{ email: 'nope@mail.com', reason: 'something_new' }] })
+      jsonResponse({
+        invited: 0,
+        skipped: [{ email: 'lala1@your-domain.test', reason: 'something_new' }],
+      })
     );
     const { container } = renderBulkInvite();
 
-    pick(container, csvFile('email\nlolo@mail.com'));
+    pick(container, csvFile('email\nlolo@your-domain.test'));
     fireEvent.click(await screen.findByText('Send 1 invitations'));
 
-    expect(await screen.findByText('nope@mail.com — invalid email')).toBeInTheDocument();
+    expect(await screen.findByText('lala1@your-domain.test — invalid email')).toBeInTheDocument();
   });
 
   test('refuses more than 100 rows', async () => {
     const { container } = renderBulkInvite();
-    const rows = Array.from({ length: 101 }, (_, i) => `guest${i}@mail.com`).join('\n');
+    const rows = Array.from({ length: 101 }, (_, i) => `lele${i}@your-domain.test`).join('\n');
 
     pick(container, csvFile(`email\n${rows}`));
 
@@ -114,7 +122,7 @@ describe('BulkInviteCsv', () => {
   test('refuses a row with no email', async () => {
     const { container } = renderBulkInvite();
 
-    pick(container, csvFile('email,name\nlala@mail.com,Lala\n,Lele'));
+    pick(container, csvFile('email,name\nlala@your-domain.test,Lala\n,Lele'));
 
     expect(await screen.findByText('Every row needs an email.')).toBeInTheDocument();
     expect(screen.queryByText(/^Preview/)).toBeNull();
@@ -132,7 +140,7 @@ describe('BulkInviteCsv', () => {
     apiFetch.mockResolvedValue(jsonResponse({ error: 'This collection is inactive.' }, false));
     const { container, onInvited } = renderBulkInvite();
 
-    pick(container, csvFile('email\nlala@mail.com'));
+    pick(container, csvFile('email\nlala@your-domain.test'));
     fireEvent.click(await screen.findByText('Send 1 invitations'));
 
     expect(await screen.findByText('This collection is inactive.')).toBeInTheDocument();
@@ -143,7 +151,7 @@ describe('BulkInviteCsv', () => {
     apiFetch.mockResolvedValue(jsonResponse({}, false, 429));
     const { container } = renderBulkInvite();
 
-    pick(container, csvFile('email\nlala@mail.com'));
+    pick(container, csvFile('email\nlala@your-domain.test'));
     fireEvent.click(await screen.findByText('Send 1 invitations'));
 
     expect(
@@ -155,7 +163,7 @@ describe('BulkInviteCsv', () => {
     apiFetch.mockRejectedValue(new Error('network down'));
     const { container } = renderBulkInvite();
 
-    pick(container, csvFile('email\nlala@mail.com'));
+    pick(container, csvFile('email\nlala@your-domain.test'));
     fireEvent.click(await screen.findByText('Send 1 invitations'));
 
     expect(await screen.findByText('Connection error.')).toBeInTheDocument();

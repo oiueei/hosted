@@ -21,7 +21,7 @@ Runtime (single gunicorn process):
 - A Heroku account
 - **Three external services** the app cannot run without:
   - **PostgreSQL** — the database (added as a Heroku add-on below)
-  - **An S3-compatible object store** — image and document uploads. OIUEEI's own deployment uses [Hetzner Object Storage](https://www.hetzner.com/storage/object-storage/) (Falkenstein), which keeps the files inside the EU
+  - **An S3-compatible object store** — image and document uploads. One option is [Hetzner Object Storage](https://www.hetzner.com/storage/object-storage/) (Falkenstein), which keeps the files inside the EU
   - **An SMTP provider** — magic-link sign-in emails, e.g. Mailgun or SendGrid
 
 ## Font Notice
@@ -117,7 +117,7 @@ heroku config:set \
 
 > Set `MEDIA_PUBLIC_BASE_URL` only if you put a CDN or a custom domain in front; it defaults to the bucket's own URL. It says where files are **read** from and nothing else — an upload is a `PUT` to a presigned URL, which is always signed for the bucket, so the Content-Security-Policy names both hosts and a CDN does not break uploading. A wrong value shows up as images that silently refuse to load.
 
-> **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://tally.so/r/xxxxx' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. **No default any more**: without it the component renders nothing rather than quietly forwarding your users' feedback to the upstream project's own form, which they'd have had no way to know about or to name as a processor in their own legal text.
+> **Optional — feedback form:** `VITE_FEEDBACK_URL` points the in-app feedback link (foot of Home) at your own form, e.g. `heroku config:set VITE_FEEDBACK_URL='https://<your-form-service>/<your-form>' -a your-app-name`. It is baked into the frontend at build time (config vars are visible to the Heroku build), so changing it requires a redeploy. **No default any more**: without it the component renders nothing rather than quietly forwarding your users' feedback to the upstream project's own form, which they'd have had no way to know about or to name as a processor in their own legal text.
 
 > **Recommended — invitation-email cap:** `INVITE_EMAILS_PER_DAY` caps the invitation emails one
 > account may send per day (single + bulk combined), e.g. `heroku config:set INVITE_EMAILS_PER_DAY=150
@@ -323,9 +323,9 @@ Sign-in uses magic links, so a working SMTP provider is **mandatory** — withou
 heroku config:set \
   EMAIL_HOST='smtp.mailgun.org' \
   EMAIL_PORT=587 \
-  EMAIL_HOST_USER='postmaster@your-domain.com' \
+  EMAIL_HOST_USER='postmaster@<your-domain>' \
   EMAIL_HOST_PASSWORD='<your SMTP password or API key>' \
-  DEFAULT_FROM_EMAIL='noreply@your-domain.com' \
+  DEFAULT_FROM_EMAIL='noreply@<your-domain>' \
   -a your-app-name
 ```
 
@@ -349,7 +349,7 @@ rc=0; python manage.py expire_bookings || rc=1; python manage.py cleanup_rsvps |
 
 **Why not `&&`.** It was `&&`, and the shape is wrong for this chain: `&&` stops at the first failure, so a transient error in `expire_bookings` silently cancels the five behind it — `purge_expired_data` included, which is the command that keeps the retention policy true rather than aspirational. A plain `;` runs them all but reports the **last** command's status, so the job exits 0 and scheduler-monitor never says a word. The form above does both jobs: every command runs, `rc` remembers that one of them failed, and `exit $rc` is what Heroku sees — so a broken stage still turns the run red.
 
-⚠️ **Read this before you paste the last one.** `purge_expired_data` deletes real rows, and it is the command that turns the retention policy from a paragraph into something true — a deployment that never arms it keeps everything forever, which is not a valid answer to "how long do you keep this?". But the periods it enforces are the `RETENTION_*` settings, and their defaults are **what www.oiueei.com decided**, not a law you inherit: set them for your own regime first (`0` keeps a category indefinitely — see the retention section of `README.md`). Then run it **by hand, without the flag**, and read what it says it would do:
+⚠️ **Read this before you paste the last one.** `purge_expired_data` deletes real rows, and it is the command that turns the retention policy from a paragraph into something true — a deployment that never arms it keeps everything forever, which is not a valid answer to "how long do you keep this?". But the periods it enforces are the `RETENTION_*` settings, and their defaults are **one deployment's decisions**, not a law you inherit: set them for your own regime first (`0` keeps a category indefinitely — see the retention section of `README.md`). Then run it **by hand, without the flag**, and read what it says it would do:
 
 ```bash
 heroku run --app <app> "python manage.py purge_expired_data"
@@ -383,10 +383,10 @@ python manage.py cleanup_orphan_images --bucket <bucket> --commit
 
 `<bucket>` is the **real name of your bucket**, the value of `OBJECT_STORAGE_BUCKET`, not the placeholder: the command refuses to run with `--commit` unless `--bucket` names the very bucket the app has configured, and refuses a mismatched name even on a dry-run, so a wrong name is a refusal and never a deletion from another deployment's storage. It is a job of its own because it is the one command here that deletes from the **bucket** rather than from the database: if it fails (a storage hiccup) it must not cancel the chain behind it, and a failing chain must not hide it — each job reports its own status. (Quote the inner command if you run it by hand, or the Heroku CLI eats the flags: `heroku run --app <app> "python manage.py cleanup_orphan_images --bucket <bucket> --commit"`.)
 
-**Why it is safe to schedule now.** It was run by hand until 2026-10-02, when the work it used to share moved to the moment it happens: a photo that a save replaces or removes is deleted from the bucket by that very save, and a key another row still holds is never deleted (`core/services/asset_cleanup.py`). What is left for the sweep is only the uploads whose form was never submitted. And it keeps its own rails:
+**Why it is safe to schedule now.** The work it used to share happens at the moment it matters: a photo that a save replaces or removes is deleted from the bucket by that very save, and a key another row still holds is never deleted (`core/services/asset_cleanup.py`). What is left for the sweep is only the uploads whose form was never submitted. And it keeps its own rails:
 
 - **A window, not the whole bucket.** It only considers objects between `--min-age-hours` (24 by default, so an upload in the middle of a form is never mistaken for an orphan) and `--max-age-days` (30 by default). A daily run catches each orphan well inside it.
-- **Only the upload folders** (`oiueei/things`, `/collections`, `/users`, `/documents`) — anything else in the bucket is out by construction, not by exception: the 2026-09-28 dry-run over the whole `oiueei/` tree listed the build's own Curiosa font (`oiueei/assets/`, downloaded by `heroku-postbuild`, not in git), and deleting it would have broken every deploy after it. A `--prefix` outside the upload folders is refused before anything is listed.
+- **Only the upload folders** (`oiueei/things`, `/collections`, `/users`, `/documents`) — anything else in the bucket is out by construction, not by exception: a dry-run over the whole `oiueei/` tree lists the build's own Curiosa font (`oiueei/assets/`, downloaded by `heroku-postbuild`, not in git), and deleting it would have broken every deploy after it. A `--prefix` outside the upload folders is refused before anything is listed.
 - **Keys in use are kept.** Every asset field in the database (thing photos and galleries, profile photos, collection covers and welcome documents) is cross-referenced before anything is deleted.
 - **`--bucket` is mandatory** with `--commit`, as above.
 

@@ -59,7 +59,7 @@ class TestSendersSpeakTheRightLanguage:
         collection.save()
 
         send_collection_invite_email(
-            "Lala", collection.headline, "invitee@test.com", "a", "r", collection=collection
+            "Lala", collection.headline, "lele@your-domain.test", "a", "r", collection=collection
         )
 
         assert "Tienes una invitación" in mail.outbox[0].subject
@@ -119,8 +119,8 @@ class TestSendersSpeakTheRightLanguage:
     def test_a_bilingual_group_gets_one_broadcast_per_language(self, user, collection):
         collection.language = Language.ES
         collection.save()
-        catalan = User.objects.create(email="ca@test.com", language=Language.CA)
-        spanish = User.objects.create(email="es@test.com")  # inherits the collection's
+        catalan = User.objects.create(email="lili5@your-domain.test", language=Language.CA)
+        spanish = User.objects.create(email="lolo5@your-domain.test")  # inherits the collection's
         collection.invites.add(catalan, spanish)
 
         send_broadcast_email(
@@ -134,8 +134,8 @@ class TestSendersSpeakTheRightLanguage:
         )
 
         by_recipient = {m.to[0]: m for m in mail.outbox}
-        assert "Ei!" in by_recipient["ca@test.com"].subject
-        assert "¡Hey!" in by_recipient["es@test.com"].subject
+        assert "Ei!" in by_recipient["lili5@your-domain.test"].subject
+        assert "¡Hey!" in by_recipient["lolo5@your-domain.test"].subject
 
 
 @pytest.mark.django_db
@@ -158,11 +158,15 @@ class TestLanguagePreferences:
 
         api_client.post(
             "/api/v1/auth/join/",
-            {"email": "nou@test.com", "language": "es", "collection_code": public_collection.code},
+            {
+                "email": "lala@your-domain.test",
+                "language": "es",
+                "collection_code": public_collection.code,
+            },
             format="json",
         )
 
-        assert User.objects.get(email="nou@test.com").language == ""
+        assert User.objects.get(email="lala@your-domain.test").language == ""
         # The very first magic link speaks the *collection's* language — not
         # the "es" the request tried to set.
         assert "benvinguda" in mail.outbox[0].subject

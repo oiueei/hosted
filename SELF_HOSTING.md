@@ -81,7 +81,7 @@ class VettedCreatorPolicy(CreatorPolicy):
         return Capabilities(
             collection_modes=(Collection.Mode.PROPRIETARY,),
             thing_types=(Thing.Type.GIFT_THING, Thing.Type.SELL_THING),
-            request_url="https://example.org/request-access/",
+            request_url="https://your-domain.test/request-access/",
         )
 ```
 

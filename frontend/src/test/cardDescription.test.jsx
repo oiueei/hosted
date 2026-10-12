@@ -12,7 +12,7 @@ vi.mock('../services/api', () => ({
 import MarkdownText, { markdownToHtml } from '../components/MarkdownText';
 import ThingLinkbox from '../components/ThingLinkbox';
 
-const DESCRIPTION = '# Normas\n**Importante**: trae *tu* caja. [más](https://example.com)';
+const DESCRIPTION = '# Normas\n**Importante**: trae *tu* caja. [más](https://your-domain.test)';
 
 const thing = {
   code: 'THG001',
@@ -52,7 +52,7 @@ describe('the description on a thing’s card', () => {
     expect(description.querySelector('em')).toHaveTextContent('tu');
     expect(screen.getByRole('link', { name: 'más' })).toHaveAttribute(
       'href',
-      'https://example.com'
+      'https://your-domain.test'
     );
   });
 

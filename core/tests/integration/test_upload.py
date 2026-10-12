@@ -245,9 +245,9 @@ class TestTheTicketIsUsableAsGiven:
     def test_the_public_url_follows_the_media_base_not_the_bucket(
         self, authenticated_client, settings
     ):
-        settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://cdn.your-domain.test"
         res = authenticated_client.post(URL, image_body(), format="json")
-        assert res.data["public_url"].startswith("https://cdn.example.org/")
+        assert res.data["public_url"].startswith("https://cdn.your-domain.test/")
         assert res.data["url"].startswith("https://test-bucket.")
 
     def test_no_cloudinary_parameters_survive_in_the_response(self, authenticated_client):
@@ -295,13 +295,13 @@ class TestTheBrowserIsActuallyAllowedToUseTheTicket:
 
     def test_it_still_is_when_reads_go_through_a_cdn(self, authenticated_client, settings):
         """The configuration README and HEROKU.md invite, and the one that broke."""
-        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.your-domain.test"
 
         res = authenticated_client.post(URL, image_body(), format="json")
 
         assert res.status_code == 200
         upload_origin = self._origin(res.data["url"])
-        assert upload_origin != "https://media.example.com", (
+        assert upload_origin != "https://media.your-domain.test", (
             "the presigned PUT does not follow the CDN — if it ever does, this test is moot"
         )
         assert upload_origin in self._connect_src(res)
@@ -309,10 +309,10 @@ class TestTheBrowserIsActuallyAllowedToUseTheTicket:
         img = next(
             d for d in res["Content-Security-Policy"].split(";") if d.strip().startswith("img-src")
         )
-        assert "https://media.example.com" in img
+        assert "https://media.your-domain.test" in img
 
     def test_the_document_ticket_too(self, authenticated_client, settings):
-        settings.MEDIA_PUBLIC_BASE_URL = "https://media.example.com"
+        settings.MEDIA_PUBLIC_BASE_URL = "https://media.your-domain.test"
 
         res = authenticated_client.post(URL, document_body(), format="json")
 

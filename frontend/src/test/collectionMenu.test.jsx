@@ -690,7 +690,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
  * in the footer of the email, the document a loose link in the hero.
  */
 describe('the collection menu for a member', () => {
-  const DOC = 'https://bucket.example.com/oiueei/documents/welcome.pdf';
+  const DOC = 'https://bucket.your-domain.test/oiueei/documents/welcome.pdf';
   const MEMBER = {
     ...COLLECTION,
     owner: 'OTHER1',

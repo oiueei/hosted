@@ -60,7 +60,7 @@ LOCALIZED_HEADLINE = '{"es": "Las cosas de mamá", "ca": "Les coses de mama"}'
 @pytest.fixture
 def stranger(db):
     """Somebody who shares a group with the exporter but has no dealings with them."""
-    return User.objects.create(code="STRN01", email="stranger@example.com", name="Stranger")
+    return User.objects.create(code="STRN01", email="lolo7@your-domain.test", name="Stranger")
 
 
 @pytest.fixture
@@ -154,11 +154,11 @@ def world(user, user2, stranger):
         code="PRPMD1",
         collection=theirs,
         proposer=user,
-        email="friend@example.com",
+        email="lele15@your-domain.test",
         note="She would love this",
     )
     InvitationProposal.objects.create(
-        code="PRPRC1", collection=mine, proposer=user2, email="cousin@example.com"
+        code="PRPRC1", collection=mine, proposer=user2, email="lala@your-domain.test"
     )
 
     InAppNotification.objects.create(
@@ -187,7 +187,7 @@ def world(user, user2, stranger):
     RSVP.objects.create(
         code="RSVIN1",
         user_code=stranger,
-        user_email="pending@example.com",
+        user_email="lili2@your-domain.test",
         action=RSVP.Action.COLLECTION_INVITE,
         target_code=mine.code,
         token="pending-invite-token-01",
@@ -295,10 +295,13 @@ class TestAccountExportOmissions:
 
         # The same list the guests page already shows this owner.
         assert owned["members"] == [
-            {"code": "TEST02", "name": "Test User 2", "email": "test2@example.com"}
+            {"code": "TEST02", "name": "Test User 2", "email": "lolo2@your-domain.test"}
         ]
         assert owned["pending_invitations"] == [
-            {"email": "pending@example.com", "created": owned["pending_invitations"][0]["created"]}
+            {
+                "email": "lili2@your-domain.test",
+                "created": owned["pending_invitations"][0]["created"],
+            }
         ]
 
     def test_a_co_members_email_stays_out_of_a_group_you_merely_joined(self, user, world):
@@ -309,7 +312,7 @@ class TestAccountExportOmissions:
         assert joined["member_count"] == 2
         assert "members" not in joined
         # Stranger shares that group with them and appears nowhere.
-        assert b"stranger@example.com" not in export_bytes(payload)
+        assert b"lolo7@your-domain.test" not in export_bytes(payload)
 
     def test_another_members_demographics_stay_out_of_the_account_copy(self, user, world):
         raw = export_bytes(build_account_export(user))
@@ -380,7 +383,7 @@ class TestCollectionExport:
             {
                 "code": "TEST02",
                 "name": "Test User 2",
-                "email": "test2@example.com",
+                "email": "lolo2@your-domain.test",
                 "age_range": "GEN_X",
                 "postal_code": "08001",
             }
@@ -397,7 +400,7 @@ class TestCollectionExport:
 
         payload = build_collection_export(private)
         assert payload["members"] == [
-            {"code": "TEST02", "name": "Test User 2", "email": "test2@example.com"}
+            {"code": "TEST02", "name": "Test User 2", "email": "lolo2@your-domain.test"}
         ]
         raw = export_bytes(payload)
         assert b"age_range" not in raw
@@ -442,7 +445,7 @@ class TestCollectionExport:
         assert b"sh4re-t0ken-01" not in raw
         assert b"pending-invite-token-01" not in raw
         # The pending invitation itself is here — it is the owner's to manage.
-        assert b"pending@example.com" in raw
+        assert b"lili2@your-domain.test" in raw
 
     def test_reports_are_absent_in_both_directions(self, user, world):
         raw = export_bytes(build_collection_export(world["mine"]))
@@ -484,7 +487,7 @@ class TestCollectionExportStaysInsideTheGroup:
     @pytest.fixture
     def cousin(self, db):
         """Somebody in a second group that holds a member's thing — not in MINE01."""
-        return User.objects.create(code="CUSN01", email="cousin@example.com", name="Cousin Out")
+        return User.objects.create(code="CUSN01", email="lala@your-domain.test", name="Cousin Out")
 
     @pytest.fixture
     def family(self, world, user2, cousin):
@@ -497,7 +500,9 @@ class TestCollectionExportStaysInsideTheGroup:
     @pytest.fixture
     def member(self, world):
         """A second member of MINE01, so a request can be made *inside* the group."""
-        member = User.objects.create(code="MEMB02", email="member@example.com", name="Member Two")
+        member = User.objects.create(
+            code="MEMB02", email="lele2@your-domain.test", name="Member Two"
+        )
         world["mine"].invites.add(member)
         return member
 

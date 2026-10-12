@@ -24,7 +24,7 @@ from core.models import RSVP, Collection, Thing, User
 from core.models.booking import BookingPeriod
 from core.models.notification import InAppNotification
 
-NAMELESS = "nameless-owner@example.com"
+NAMELESS = "lala@your-domain.test"
 
 
 def _bodies():
@@ -62,7 +62,7 @@ class TestTheAskerIsNotIdentifiedByTheirAddress:
         the one thing that does."""
         from rest_framework_simplejwt.tokens import RefreshToken
 
-        asker = User.objects.create(code="ASKNON", email="asker@example.com", name="")
+        asker = User.objects.create(code="ASKNON", email="lili@your-domain.test", name="")
         collection.invites.add(asker)  # a co-member, which is who asks questions
         refresh = RefreshToken.for_user(asker)
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
@@ -73,9 +73,9 @@ class TestTheAskerIsNotIdentifiedByTheirAddress:
         )
         assert res.status_code == 201
 
-        assert "asker@example.com" not in _bodies()
+        assert "lili@your-domain.test" not in _bodies()
         payload = InAppNotification.objects.get(user=user, type="FAQ_QUESTION").payload
-        assert payload["questioner_name"] != "asker@example.com"
+        assert payload["questioner_name"] != "lili@your-domain.test"
 
 
 @pytest.mark.django_db
@@ -130,7 +130,7 @@ class TestTheGroupOwnerIsNotIdentifiedByTheirAddress:
 
         res = nameless_client.post(
             f"/api/v1/collections/{collection.code}/invite/",
-            {"email": "stranger@example.com"},
+            {"email": "lolo7@your-domain.test"},
             format="json",
         )
         assert res.status_code == 200
@@ -149,7 +149,7 @@ class TestTheGroupOwnerIsNotIdentifiedByTheirAddress:
 
         res = nameless_client.post(
             f"/api/v1/collections/{collection.code}/invite/bulk/",
-            {"invites": [{"email": "stranger2@example.com"}]},
+            {"invites": [{"email": "lolo8@your-domain.test"}]},
             format="json",
         )
         assert res.status_code == 200
@@ -235,7 +235,7 @@ class TestTheGroupOwnerIsNotIdentifiedByTheirAddress:
         )
         collection.invites.add(user2)
         proposal = InvitationProposal.objects.create(
-            collection=collection, proposer=user2, email="suggested@example.com"
+            collection=collection, proposer=user2, email="lala1@your-domain.test"
         )
         mail.outbox.clear()
 

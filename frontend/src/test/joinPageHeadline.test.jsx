@@ -130,7 +130,7 @@ describe('JoinPage — the collection is named', () => {
     renderJoin(undefined, '?thing=THG001');
 
     fireEvent.change(await screen.findByLabelText(/Email/), {
-      target: { value: 'visitor@example.com' },
+      target: { value: 'lele2@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send me a magic link' }));
 
@@ -154,7 +154,7 @@ describe('JoinPage — the collection is named', () => {
     renderJoin(undefined);
 
     fireEvent.change(await screen.findByLabelText(/Email/), {
-      target: { value: 'visitor@example.com' },
+      target: { value: 'lele2@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send me a magic link' }));
 
@@ -246,7 +246,7 @@ describe('JoinPage — the title names the collection', () => {
  * `thumbnail_url` to an anonymous reader of a PUBLIC collection.
  */
 describe('JoinPage — the hero carries the collection’s photo', () => {
-  const PHOTO = 'https://bucket.example.com/oiueei/collections/cover.jpg';
+  const PHOTO = 'https://bucket.your-domain.test/oiueei/collections/cover.jpg';
 
   beforeEach(() => {
     localStorage.clear();

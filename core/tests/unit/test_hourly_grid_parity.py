@@ -50,8 +50,8 @@ def _next_monday():
 @pytest.fixture
 def space(request):
     case = request.param
-    owner = User.objects.create(code="GRDOWN", email="grdown@test.com")
-    member = User.objects.create(code="GRDMEM", email="grdmem@test.com")
+    owner = User.objects.create(code="GRDOWN", email="lala@your-domain.test")
+    member = User.objects.create(code="GRDMEM", email="lele@your-domain.test")
     collection = Collection.objects.create(
         code="GRDCOL",
         owner=owner,

@@ -29,17 +29,17 @@ def client_for(user):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
+    return User.objects.create(code="OWNR01", email="lala@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def co_curator(db):
-    return User.objects.create(code="COCU01", email="cocurator@test.com", name="Lele")
+    return User.objects.create(code="COCU01", email="lala2@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def member(db):
-    return User.objects.create(code="MEMB01", email="member@test.com", name="Lili")
+    return User.objects.create(code="MEMB01", email="lele@your-domain.test", name="Lili")
 
 
 @pytest.fixture
@@ -119,8 +119,10 @@ class TestEveryManagerGetsTheirOwnEmail:
     def test_in_a_community_group_a_curator_who_is_not_the_owner_gets_no_links(
         self, db, owner, co_curator
     ):
-        contributor = User.objects.create(code="CONT01", email="contrib@test.com", name="Lolo")
-        asker = User.objects.create(code="ASKR01", email="asker@test.com", name="Lulu")
+        contributor = User.objects.create(
+            code="CONT01", email="lala10@your-domain.test", name="Lolo"
+        )
+        asker = User.objects.create(code="ASKR01", email="lili3@your-domain.test", name="Lulu")
         group = Collection.objects.create(
             code="COMM01", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
         )
@@ -203,7 +205,9 @@ class TestTheRequesterIsToldHowManyWereWarned:
         # In a COMMUNITY the one who runs a thing is its owner — a member, not whoever
         # curates the group — so the email may not say "dinamizador" / "dinamitzador" /
         # "curator", in any language, and says what the request page says.
-        contributor = User.objects.create(code="CONT02", email="contrib2@test.com", name="Lolo")
+        contributor = User.objects.create(
+            code="CONT02", email="lala1@your-domain.test", name="Lolo"
+        )
         group = Collection.objects.create(
             code="COMM02", owner=owner, headline="Street", mode=Collection.Mode.COMMUNITY
         )

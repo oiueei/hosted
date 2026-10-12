@@ -35,7 +35,7 @@ class TestSubscribeExistingUsersToDigests:
     def test_an_account_from_before_the_change_ends_up_subscribed(self):
         """The whole point: without this the digest goes on reaching nobody,
         because 0126 rewrote no existing row."""
-        old = User.objects.create(code="OLD001", email="old@example.com", notify_news=False)
+        old = User.objects.create(code="OLD001", email="lala@your-domain.test", notify_news=False)
 
         MIGRATION.subscribe_existing(live_apps, None)
 
@@ -48,7 +48,7 @@ class TestSubscribeExistingUsersToDigests:
         both columns are booleans on the same row."""
         user = User.objects.create(
             code="OLD002",
-            email="old2@example.com",
+            email="lele@your-domain.test",
             notify_news=False,
             notify_activity=False,
         )
@@ -73,8 +73,8 @@ class TestSubscribeExistingUsersToDigests:
         sweep them back up. That limit is now written into the migration; this
         test pins the half that actually holds.
         """
-        User.objects.create(code="OLD003", email="old3@example.com", notify_news=False)
-        User.objects.create(code="OLD004", email="old4@example.com", notify_news=False)
+        User.objects.create(code="OLD003", email="lili@your-domain.test", notify_news=False)
+        User.objects.create(code="OLD004", email="lolo@your-domain.test", notify_news=False)
 
         MIGRATION.subscribe_existing(live_apps, None)
 

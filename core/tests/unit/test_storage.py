@@ -77,8 +77,8 @@ class TestPublicUrlsComeFromTheSetting:
 
     def test_a_cdn_override_wins_over_the_bucket(self, configured):
         """The whole point of the setting: a CDN in front is config, not a patch."""
-        configured.MEDIA_PUBLIC_BASE_URL = "https://cdn.example.org/"
-        assert storage.public_url("k") == "https://cdn.example.org/k"
+        configured.MEDIA_PUBLIC_BASE_URL = "https://cdn.your-domain.test/"
+        assert storage.public_url("k") == "https://cdn.your-domain.test/k"
 
     def test_an_empty_key_has_no_url(self):
         """Serializers pass unset image fields straight in and expect None back."""
@@ -436,10 +436,10 @@ class TestThePublicBaseUrlIsDerivedUnlessGiven:
                 {
                     "OBJECT_STORAGE_ENDPOINT": "https://fsn1.example-storage.com",
                     "OBJECT_STORAGE_BUCKET": "a-bucket",
-                    "MEDIA_PUBLIC_BASE_URL": "https://cdn.example.org",
+                    "MEDIA_PUBLIC_BASE_URL": "https://cdn.your-domain.test",
                 }
             )
-            == "https://cdn.example.org"
+            == "https://cdn.your-domain.test"
         )
 
     def test_an_unconfigured_checkout_gets_an_empty_string_not_a_broken_url(self):

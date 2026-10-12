@@ -458,7 +458,7 @@ describe('EditCollectionPage — a deployment that has narrowed since', () => {
             capabilities: {
               collection_modes: ['PROPRIETARY'],
               thing_types: ['GIFT_THING', 'SELL_THING'],
-              request_url: 'https://example.org/request-access/',
+              request_url: 'https://your-domain.test/request-access/',
             },
           }),
         });

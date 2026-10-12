@@ -23,7 +23,7 @@ from core.services import asset_cleanup
 @pytest.mark.django_db
 class TestAssetCleanup:
     def test_thing_delete_destroys_thumbnail_and_gallery(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="o1@example.com")
+        owner = User.objects.create(email="lala@your-domain.test")
         thing = Thing.objects.create(
             owner=owner,
             headline="Drill",
@@ -43,7 +43,7 @@ class TestAssetCleanup:
         }
 
     def test_collection_delete_destroys_thumbnail(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="o2@example.com")
+        owner = User.objects.create(email="lele@your-domain.test")
         coll = Collection.objects.create(
             owner=owner, headline="C", thumbnail="oiueei/collections/c1"
         )
@@ -56,7 +56,7 @@ class TestAssetCleanup:
     def test_user_delete_cascades_to_collection_and_thing_assets(
         self, django_capture_on_commit_callbacks
     ):
-        owner = User.objects.create(email="o3@example.com", photo="oiueei/users/p1")
+        owner = User.objects.create(email="lili@your-domain.test", photo="oiueei/users/p1")
         Collection.objects.create(owner=owner, headline="C", thumbnail="oiueei/collections/c2")
         Thing.objects.create(
             owner=owner, headline="T", type="GIFT_THING", thumbnail="oiueei/things/t1"
@@ -69,14 +69,14 @@ class TestAssetCleanup:
         assert {"oiueei/users/p1", "oiueei/collections/c2", "oiueei/things/t1"} <= destroyed
 
     def test_empty_image_fields_destroy_nothing(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="o4@example.com")  # no photo
+        owner = User.objects.create(email="lolo@your-domain.test")  # no photo
         with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 owner.delete()
         destroy.assert_not_called()
 
     def test_a_storage_failure_does_not_break_the_delete(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="o5@example.com")
+        owner = User.objects.create(email="lulu@your-domain.test")
         thing = Thing.objects.create(
             owner=owner, headline="T", type="GIFT_THING", thumbnail="oiueei/things/boom"
         )
@@ -95,7 +95,7 @@ class TestAssetCleanup:
         destroy.assert_not_called()
 
     def test_suspended_context_blocks_cleanup(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="o6@example.com", photo="oiueei/users/keep")
+        owner = User.objects.create(email="lala1@your-domain.test", photo="oiueei/users/keep")
         with patch("core.services.storage.delete") as destroy:
             with django_capture_on_commit_callbacks(execute=True):
                 with asset_cleanup.suspended():
@@ -121,7 +121,7 @@ class TestARollbackKeepsTheImages:
     """
 
     def test_a_rolled_back_thing_delete_destroys_nothing(self):
-        owner = User.objects.create(email="rb1@example.com")
+        owner = User.objects.create(email="lele1@your-domain.test")
         thing = Thing.objects.create(
             owner=owner,
             headline="Drill",
@@ -146,7 +146,7 @@ class TestARollbackKeepsTheImages:
         their collections and things too, so an inline destroy would empty
         several buckets' worth of objects for a transaction that never committed.
         """
-        owner = User.objects.create(email="rb2@example.com", photo="oiueei/users/face")
+        owner = User.objects.create(email="lili1@your-domain.test", photo="oiueei/users/face")
         collection = Collection.objects.create(
             code="RBC001", owner=owner, headline="Group", thumbnail="oiueei/collections/cover"
         )
@@ -168,7 +168,7 @@ class TestARollbackKeepsTheImages:
     def test_the_same_delete_committed_does_destroy_them(self, django_capture_on_commit_callbacks):
         """The counterpart, so the two above can't pass by the cleanup being
         broken outright."""
-        owner = User.objects.create(email="rb3@example.com")
+        owner = User.objects.create(email="lolo1@your-domain.test")
         thing = Thing.objects.create(
             owner=owner, headline="Drill", type="GIFT_THING", thumbnail="oiueei/things/cover2"
         )
@@ -193,7 +193,7 @@ class TestSeedPoolIsNeverDestroyed:
     """
 
     def test_thing_delete_spares_seed_keys(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="seed1@example.com")
+        owner = User.objects.create(email="lulu1@your-domain.test")
         thing = Thing.objects.create(
             owner=owner,
             headline="Demo drill",
@@ -207,7 +207,7 @@ class TestSeedPoolIsNeverDestroyed:
         destroy.assert_not_called()
 
     def test_collection_and_user_deletes_spare_seed_keys(self, django_capture_on_commit_callbacks):
-        owner = User.objects.create(email="seed2@example.com", photo="oiueei/seed/1u1uPH")
+        owner = User.objects.create(email="lala2@your-domain.test", photo="oiueei/seed/1u1uPH")
         collection = Collection.objects.create(
             owner=owner, headline="Demo group", thumbnail="oiueei/seed/l1l1C1"
         )
@@ -221,7 +221,7 @@ class TestSeedPoolIsNeverDestroyed:
         self, django_capture_on_commit_callbacks
     ):
         """The skip is per key, not per record — a genuine upload is still cleaned."""
-        owner = User.objects.create(email="seed3@example.com")
+        owner = User.objects.create(email="lele2@your-domain.test")
         thing = Thing.objects.create(
             owner=owner,
             headline="Half and half",
@@ -299,9 +299,9 @@ class TestAKeyAnotherRecordHoldsIsKept:
     def test_any_column_that_still_holds_the_key_keeps_it(
         self, holder, django_capture_on_commit_callbacks
     ):
-        holder(User.objects.create(email="holder@example.com"))
+        holder(User.objects.create(email="lili2@your-domain.test"))
         deleting = Thing.objects.create(
-            owner=User.objects.create(email="deleter@example.com"),
+            owner=User.objects.create(email="lolo2@your-domain.test"),
             headline="Going",
             type="GIFT_THING",
             thumbnail="oiueei/things/shared",
@@ -319,7 +319,7 @@ class TestAKeyAnotherRecordHoldsIsKept:
     ):
         # The gallery check matches text first; a longer key with this one as its
         # prefix is a different object and must not keep it alive.
-        owner = User.objects.create(email="prefix@example.com")
+        owner = User.objects.create(email="lulu2@your-domain.test")
         Thing.objects.create(
             owner=owner, headline="x", type="GIFT_THING", gallery=["oiueei/things/pic-2"]
         )
@@ -334,13 +334,13 @@ class TestAKeyAnotherRecordHoldsIsKept:
 
     def test_once_the_last_holder_goes_the_key_goes_too(self, django_capture_on_commit_callbacks):
         first = Thing.objects.create(
-            owner=User.objects.create(email="first@example.com"),
+            owner=User.objects.create(email="lala7@your-domain.test"),
             headline="a",
             type="GIFT_THING",
             thumbnail="oiueei/things/shared",
         )
         second = Thing.objects.create(
-            owner=User.objects.create(email="second@example.com"),
+            owner=User.objects.create(email="lele3@your-domain.test"),
             headline="b",
             type="GIFT_THING",
             thumbnail="oiueei/things/shared",
