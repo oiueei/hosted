@@ -19,7 +19,7 @@ python manage.py seed_demo          # Lala, Lele, Lili, Lolo, Lulu and their col
 python manage.py runserver          # then, in frontend/: npm run dev
 ```
 
-Open `http://localhost:3000/login`, enter **`lala@mail.com`**, and the magic link is **printed in the terminal running Django** (development uses the console email backend). Click it and you are in, with collections, things and every sharing mode already populated.
+Open `http://localhost:3000/login`, enter **`lala@your-domain.test`**, and the magic link is **printed in the terminal running Django** (development uses the console email backend). Click it and you are in, with collections, things and every sharing mode already populated.
 
 What I'm looking for is honest feedback from people willing to poke at it: things that confuse you, flows that break, words that don't make sense, design decisions you'd push back on. If something annoys you, that's signal.
 
@@ -413,6 +413,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `OBJECT_STORAGE_SECRET_KEY` | Uploads | S3 secret key |
 | `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are **read** from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. Uploads are unaffected — a presigned URL is always signed for the bucket, so the Content-Security-Policy allows both hosts and splitting them does not break writing. A wrong value shows up as images that refuse to load |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
+| `SEED_EMAIL_DOMAIN` | No | Domain of the five demo characters `seed_demo` creates (`lala@…`, `lele@…`…). Default `your-domain.test`: `.test` is a reserved domain, so a notice addressed to a demo character reaches nobody. Set a domain you control to receive those mails; re-run `seed_demo` to apply it (it updates the five accounts in place) |
 | `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
 | `COLLECTION_THINGS_BLOCK` | No | Per-collection ceiling on things: adds that would cross it are refused, including whole CSV batches. **Unset or `0` = off** (the default). A superuser lifts it per collection with `capacity_unblocked` in the admin. |

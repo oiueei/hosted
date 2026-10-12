@@ -17,11 +17,11 @@ const COLUMNS = ['email', 'name'];
 // Shown in the format hint popover. Language-agnostic, so it lives here rather
 // than in the i18n bundles.
 const EXAMPLE_CSV = `email,name
-lala@mail.com,
-lele@mail.com,LeLe
-lili@mail.com,Super LiLi
-lolo@mail.com,
-lulu@mail.com,`;
+lala@your-domain.test,
+lele@your-domain.test,LeLe
+lili@your-domain.test,Super LiLi
+lolo@your-domain.test,
+lulu@your-domain.test,`;
 
 /**
  * Bulk-invite collection guests from a CSV. Parses the file client-side with

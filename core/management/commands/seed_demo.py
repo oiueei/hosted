@@ -27,6 +27,7 @@ from datetime import timedelta
 from importlib import import_module
 from types import SimpleNamespace
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -189,7 +190,7 @@ class Command(BaseCommand):
             User.objects.update_or_create(
                 code=data["code"],
                 defaults={
-                    "email": data["email"],
+                    "email": f"{data['email_local']}@{settings.SEED_EMAIL_DOMAIN}",
                     "name": data["name"],
                     "headline": data["headline"],
                     "theeeme_id": data["theeeme_id"],

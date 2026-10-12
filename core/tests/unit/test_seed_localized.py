@@ -13,15 +13,17 @@ from importlib import import_module
 
 import pytest
 from django.core.management import call_command
+from django.test import override_settings
 
 from core.management.commands.seed_data import common
 from core.management.commands.seed_demo import (
     _MERGE_KEYS,
+    DEMO_USER_CODES,
     SUPPORTED_LANGS,
     _localize,
     load_seed_data,
 )
-from core.models import Collection, Thing
+from core.models import Collection, Thing, User
 from core.utils import parse_localized, resolve_localized
 
 LANG_MODULES = {
@@ -137,3 +139,39 @@ class TestSeedCommand:
         # Non-localizable text followed --lang=ca.
         faq = thing.owner.asked_faqs.model.objects.filter(thing_id="La1a01").first()
         assert faq is not None and faq.question == "Puc recollir-ho a final de mes?"
+
+
+@pytest.mark.django_db
+class TestSeedEmailDomain:
+    """The demo characters' address: `SEED_EMAIL_DOMAIN`, a reserved `.test` by default."""
+
+    @staticmethod
+    def _emails():
+        return set(User.objects.filter(code__in=DEMO_USER_CODES).values_list("email", flat=True))
+
+    def test_the_default_is_a_domain_that_cannot_exist(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        assert self._emails() == {
+            f"{name}@your-domain.test" for name in ("lala", "lele", "lili", "lolo", "lulu")
+        }
+
+    @override_settings(SEED_EMAIL_DOMAIN="otra.test")
+    def test_a_deployment_names_its_own_domain(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        assert self._emails() == {
+            f"{name}@otra.test" for name in ("lala", "lele", "lili", "lolo", "lulu")
+        }
+
+    def test_running_it_again_with_another_domain_moves_the_five_in_place(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        before = User.objects.count()
+
+        with override_settings(SEED_EMAIL_DOMAIN="otra.test"):
+            call_command("seed_demo", lang="en", verbosity=0)
+
+        assert User.objects.count() == before
+        assert self._emails() == {
+            f"{name}@otra.test" for name in ("lala", "lele", "lili", "lolo", "lulu")
+        }

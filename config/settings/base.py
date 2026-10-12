@@ -378,6 +378,12 @@ RETENTION_DAILY_ACTIVITY_MONTHS = int(os.environ.get("RETENTION_DAILY_ACTIVITY_M
 RETENTION_NOTIFICATION_MONTHS = int(os.environ.get("RETENTION_NOTIFICATION_MONTHS", "12"))
 RETENTION_REPORT_MONTHS = int(os.environ.get("RETENTION_REPORT_MONTHS", "12"))
 
+# Domain of the five demo characters `seed_demo` creates (lala@…, lele@…, …).
+# `.test` is reserved (RFC 2606): it cannot exist, so a notice addressed to a
+# demo character reaches nobody. A deployment that wants those mails in a real
+# inbox sets a domain it controls.
+SEED_EMAIL_DOMAIN = os.environ.get("SEED_EMAIL_DOMAIN", "your-domain.test")
+
 
 # Custom User Model
 AUTH_USER_MODEL = "core.User"
