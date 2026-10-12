@@ -42,6 +42,7 @@ from core.serializers import (
 )
 from core.serializers.thing import optimise_thing_queryset
 from core.services.creator_policy import co_owners_denial, collection_mode_denial
+from core.services.deletion_events import deleting_as
 from core.services.email_service import (
     send_broadcast_email,
     # Still used directly by the bulk-invite fan-out, which batches its RSVP
@@ -202,16 +203,9 @@ class CollectionViewSet(ModelViewSet):
         orphaned_things = instance.things.annotate(col_count=Count("collections")).filter(
             col_count=1
         )
-        collection_code = instance.code  # snapshot before delete() nulls the PK
-        with transaction.atomic():
+        with transaction.atomic(), deleting_as(self.request.user):
             orphaned_things.delete()
             instance.delete()
-
-        Event.log(
-            Event.Kind.COLLECTION_DELETED,
-            actor=self.request.user,
-            collection=collection_code,
-        )
 
         InAppNotification.objects.bulk_create(
             [

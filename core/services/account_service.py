@@ -41,6 +41,8 @@ import logging
 
 from django.db import transaction
 
+from core.services.deletion_events import deleting_as
+
 security_logger = logging.getLogger("security")
 
 
@@ -50,7 +52,7 @@ def delete_account(user):
     Returns the (now dangling) user code, for the caller's logging.
     """
     user_code = user.code
-    with transaction.atomic():
+    with transaction.atomic(), deleting_as(user):
         user.delete()
     security_logger.info(f"Account {user_code} deleted (user-requested erasure)")
     return user_code
