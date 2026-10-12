@@ -450,7 +450,7 @@ class TestTheCoCuratorCeilingIsAtomic:
         """
         group = Collection.objects.create(code="CORC01", owner=user, headline="Curators")
         for i in range(Collection.MAX_CO_OWNERS - 1):
-            curator = User.objects.create(code=f"CORM{i:02d}", email=f"lala{i}@your-domain.test")
+            curator = User.objects.create(code=f"CORM{i:02d}", email=f"lulu{i}@your-domain.test")
             group.invites.add(curator)
             group.co_owners.add(curator)
         first_new = User.objects.create(code="CORN01", email="lili@your-domain.test")
