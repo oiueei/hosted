@@ -52,3 +52,10 @@ take effect. It lives in `.git/config`, so a fresh clone needs it again.
 See [`HEROKU.md`](HEROKU.md) for the full setup. On top of the upstream config vars this
 deployment also needs `VITE_LEGAL_OPERATOR` / `_NIF` / `_ADDRESS`, `SENTRY_DSN` (an EU-region
 DSN — `…ingest.de.sentry.io`), `STATS_EMAIL` and `CURIOSA_FONT_URL`.
+
+## Where the data goes
+
+Error monitoring is Sentry, added by this deployment: events are scrubbed of cookies, auth headers,
+IP and user identity before they leave (`send_default_pii=False` and a `before_send` hook).
+
+For the official deployment at **www.oiueei.com**, the verified locations are (checked 2026-08-23): application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`), images in **Hetzner Object Storage, Falkenstein (Germany)** — moving them off Cloudinary's US region is what that migration was for — and error monitoring in **Sentry's EU region** (Germany). That is all five, and it is still deliberately not written as "everything is in Europe": the **servers** are European, two of the **companies** are not — Salesforce and Functional Software are US-incorporated, which is a different question from where the bytes sit, and the one the [`/legal`](https://www.oiueei.com/legal) page answers in full, transfer safeguards included. Sentry is also the one flow you cannot check from your own browser, because it runs server-side: its region shows only in the host of the DSN (`…ingest.de.sentry.io` rather than `…ingest.us.sentry.io`), and the region is fixed when the *organisation* is created — which is why moving meant making a new one, not flipping a setting. The current state is always the one written on [`/legal`](https://www.oiueei.com/legal).
