@@ -48,7 +48,7 @@ def hosted_policy(settings):
 @pytest.fixture
 def operator(db):
     return User.objects.create(
-        code="OPER01", email="ops@example.org", is_staff=True, is_superuser=True
+        code="OPER01", email="lala@your-domain.test", is_staff=True, is_superuser=True
     )
 
 
@@ -115,7 +115,10 @@ class TestFindingTheAccountByItsEmail:
     def test_a_part_of_the_address_is_enough(self, user, request_as):
         accounts = django_admin.site._registry[User]
 
-        found, _ = accounts.get_search_results(request_as, User.objects.all(), "test@exam")
+        # The local part, the @ and the first three letters of the domain.
+        part = user.email[: user.email.index("@") + 4]
+
+        found, _ = accounts.get_search_results(request_as, User.objects.all(), part)
 
         assert user in found
 

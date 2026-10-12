@@ -46,10 +46,10 @@ def _stamp(obj, when):
 
 def _build_flow():
     K = Event.Kind
-    chiara = User.objects.create(code="CHIARA", email="chiara@x.com", name="Chiara")
+    chiara = User.objects.create(code="CHIARA", email="lala@your-domain.test", name="Chiara")
     chiara.created = D["coll"].date()
     chiara.save(update_fields=["created"])
-    guest = User.objects.create(code="GUEST1", email="guest@x.com", name="Guest")
+    guest = User.objects.create(code="GUEST1", email="lele@your-domain.test", name="Guest")
     guest.created = D["join"].date()
     guest.save(update_fields=["created"])
 

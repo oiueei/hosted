@@ -53,7 +53,7 @@ class TestDemoPartition:
         onboarding = Collection.objects.create(
             code="ONB001", owner=user, headline="W", is_onboarding=True
         )
-        popin = User.objects.create(code="POPIN1", email="popin@x.com")
+        popin = User.objects.create(code="POPIN1", email="lala@your-domain.test")
         onboarding.invites.add(popin)
         sections = build_report()
         # user owns only an onboarding collection, popin only joined one → both demo.
@@ -137,7 +137,7 @@ class TestEventAndRetentionMetrics:
         onboarding = Collection.objects.create(
             code="ONB009", owner=user, headline="W", is_onboarding=True
         )
-        demo_user = User.objects.create(code="DEMOXX", email="demo@x.com")
+        demo_user = User.objects.create(code="DEMOXX", email="lele@your-domain.test")
         onboarding.invites.add(demo_user)  # only in an onboarding collection → demo
 
         Event.log(Event.Kind.USER_JOINED, actor=user)  # real → counts
@@ -219,17 +219,17 @@ class TestStatsCommand:
         assert len(mail.outbox) == 0
 
     def test_monday_sends_email(self, monkeypatch):
-        monkeypatch.setenv("STATS_EMAIL", "ops@example.com")
+        monkeypatch.setenv("STATS_EMAIL", "lala1@your-domain.test")
         with time_machine.travel(MONDAY):
             out = StringIO()
             call_command("stats_summary", stdout=out)
         assert len(mail.outbox) == 1
-        assert mail.outbox[0].to == ["ops@example.com"]
+        assert mail.outbox[0].to == ["lala1@your-domain.test"]
         assert "Stats email sent" in out.getvalue()
 
     def test_weekday_config_var_moves_the_email_day(self, monkeypatch):
         """STATS_EMAIL_WEEKDAY relocates the weekly send (here 1 = Tuesday)."""
-        monkeypatch.setenv("STATS_EMAIL", "ops@example.com")
+        monkeypatch.setenv("STATS_EMAIL", "lala1@your-domain.test")
         monkeypatch.setenv("STATS_EMAIL_WEEKDAY", "1")
         with time_machine.travel(TUESDAY):
             out = StringIO()
@@ -242,7 +242,7 @@ class TestStatsCommand:
         assert len(mail.outbox) == 1
 
     def test_garbage_weekday_config_falls_back_to_monday(self, monkeypatch):
-        monkeypatch.setenv("STATS_EMAIL", "ops@example.com")
+        monkeypatch.setenv("STATS_EMAIL", "lala1@your-domain.test")
         monkeypatch.setenv("STATS_EMAIL_WEEKDAY", "friday")
         with time_machine.travel(MONDAY):
             out = StringIO()
@@ -250,12 +250,12 @@ class TestStatsCommand:
         assert len(mail.outbox) == 1
 
     def test_email_flag_forces_send_on_non_monday(self, monkeypatch):
-        monkeypatch.setenv("STATS_EMAIL", "ops@example.com")
+        monkeypatch.setenv("STATS_EMAIL", "lala1@your-domain.test")
         with time_machine.travel(TUESDAY):
             out = StringIO()
             call_command("stats_summary", "--email", stdout=out)
         assert len(mail.outbox) == 1
-        assert mail.outbox[0].to == ["ops@example.com"]
+        assert mail.outbox[0].to == ["lala1@your-domain.test"]
 
     def test_monday_skips_email_when_stats_email_unset(self, monkeypatch):
         """Third-party deploys must not email metrics to the author by default."""

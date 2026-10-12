@@ -42,10 +42,10 @@ def onboarding(db, user):
 @pytest.mark.django_db
 class TestTheOpenDoor:
     def test_an_email_alone_creates_an_account_and_joins_the_demo(self, api_client, onboarding):
-        response = api_client.post(POP_IN_URL, {"email": "curious@test.com"}, format="json")
+        response = api_client.post(POP_IN_URL, {"email": "lala@your-domain.test"}, format="json")
 
         assert response.status_code == 200
-        visitor = User.objects.get(email="curious@test.com")
+        visitor = User.objects.get(email="lala@your-domain.test")
         assert onboarding.invites.filter(code=visitor.code).exists()
         assert len(mail.outbox) == 1
 
@@ -63,9 +63,9 @@ class TestTheOpenDoor:
         what is this app's to hold is what it stamps on the link: the origin,
         and no target.
         """
-        api_client.post(POP_IN_URL, {"email": "curious@test.com"}, format="json")
+        api_client.post(POP_IN_URL, {"email": "lala@your-domain.test"}, format="json")
 
-        rsvp = RSVP.objects.get(user_email="curious@test.com")
+        rsvp = RSVP.objects.get(user_email="lala@your-domain.test")
         assert rsvp.origin == RSVP.Origin.POPIN
         assert not rsvp.target_code
 
@@ -75,10 +75,10 @@ class TestTheOpenDoor:
         The account is real and the magic link works; there is simply nothing to
         put them in. Refusing here would make the door depend on demo data.
         """
-        response = api_client.post(POP_IN_URL, {"email": "early@test.com"}, format="json")
+        response = api_client.post(POP_IN_URL, {"email": "lele@your-domain.test"}, format="json")
 
         assert response.status_code == 200
-        assert User.objects.filter(email="early@test.com").exists()
+        assert User.objects.filter(email="lele@your-domain.test").exists()
         assert len(mail.outbox) == 1
 
     def test_an_existing_account_is_not_duplicated(self, api_client, user, onboarding):
@@ -96,9 +96,9 @@ class TestTheOpenDoor:
         logs no second MEMBER_JOINED and re-sends no welcome document.
         """
         for _ in range(3):
-            api_client.post(POP_IN_URL, {"email": "again@test.com"}, format="json")
+            api_client.post(POP_IN_URL, {"email": "lili@your-domain.test"}, format="json")
 
-        visitor = User.objects.get(email="again@test.com")
+        visitor = User.objects.get(email="lili@your-domain.test")
         assert (
             Event.objects.filter(kind=Event.Kind.MEMBER_JOINED, actor_code=visitor.code).count()
             == 1
@@ -111,18 +111,20 @@ class TestTheOpenDoor:
         operator cannot answer "is the open door worth keeping?", which is the
         question it exists to be judged on.
         """
-        api_client.post(POP_IN_URL, {"email": "counted@test.com"}, format="json")
+        api_client.post(POP_IN_URL, {"email": "lolo@your-domain.test"}, format="json")
 
-        visitor = User.objects.get(email="counted@test.com")
+        visitor = User.objects.get(email="lolo@your-domain.test")
         event = Event.objects.get(kind=Event.Kind.MEMBER_JOINED, actor_code=visitor.code)
         assert event.source == Event.Source.ONBOARDING
 
     def test_a_new_visitor_gets_their_first_email_in_their_own_language(
         self, api_client, onboarding
     ):
-        api_client.post(POP_IN_URL, {"email": "nova@test.com", "language": "ca"}, format="json")
+        api_client.post(
+            POP_IN_URL, {"email": "lulu@your-domain.test", "language": "ca"}, format="json"
+        )
 
-        assert User.objects.get(email="nova@test.com").language == "ca"
+        assert User.objects.get(email="lulu@your-domain.test").language == "ca"
         assert "benvinguda" in mail.outbox[0].subject
 
 
@@ -143,17 +145,17 @@ class TestItDoesNotForkTheProduct:
         """
         response = api_client.post(
             POP_IN_URL,
-            {"email": "visitor@test.com", "collection_code": public_collection.code},
+            {"email": "lele1@your-domain.test", "collection_code": public_collection.code},
             format="json",
         )
 
         assert response.status_code == 200
-        visitor = User.objects.get(email="visitor@test.com")
+        visitor = User.objects.get(email="lele1@your-domain.test")
         # Typed, not pressed: in neither the group they came for nor the demo.
         assert not public_collection.invites.filter(code=visitor.code).exists()
         assert not onboarding.invites.filter(code=visitor.code).exists()
         # What the click needs is on the link.
-        rsvp = RSVP.objects.get(user_email="visitor@test.com")
+        rsvp = RSVP.objects.get(user_email="lele1@your-domain.test")
         assert rsvp.target_code == public_collection.code
         assert rsvp.context["join_source"] == Event.Source.PUBLIC
 
@@ -171,11 +173,11 @@ class TestItDoesNotForkTheProduct:
     ):
         api_client.post(
             POP_IN_URL,
-            {"email": "visitor@test.com", "collection_code": public_collection.code},
+            {"email": "lele1@your-domain.test", "collection_code": public_collection.code},
             format="json",
         )
 
-        rsvp = RSVP.objects.get(user_email="visitor@test.com")
+        rsvp = RSVP.objects.get(user_email="lele1@your-domain.test")
         assert rsvp.target_code == public_collection.code
 
     def test_a_private_code_is_not_a_way_in_here_either(self, api_client, collection, onboarding):
@@ -187,13 +189,13 @@ class TestItDoesNotForkTheProduct:
         """
         response = api_client.post(
             POP_IN_URL,
-            {"email": "prober@test.com", "collection_code": collection.code},
+            {"email": "lulu1@your-domain.test", "collection_code": collection.code},
             format="json",
         )
 
         assert response.status_code == 200
-        assert not collection.invites.filter(email="prober@test.com").exists()
-        assert onboarding.invites.filter(email="prober@test.com").exists()
+        assert not collection.invites.filter(email="lulu1@your-domain.test").exists()
+        assert onboarding.invites.filter(email="lulu1@your-domain.test").exists()
 
 
 @pytest.mark.django_db
@@ -206,10 +208,10 @@ class TestTheTwoDoorsAnswerAlike:
         then sort real collection codes from invented ones by reading the shape
         of the reply.
         """
-        popped = api_client.post(POP_IN_URL, {"email": "one@test.com"}, format="json")
+        popped = api_client.post(POP_IN_URL, {"email": "lala1@your-domain.test"}, format="json")
         joined = api_client.post(
             JOIN_URL,
-            {"email": "two@test.com", "collection_code": public_collection.code},
+            {"email": "lele2@your-domain.test", "collection_code": public_collection.code},
             format="json",
         )
 
@@ -223,10 +225,10 @@ class TestTheTwoDoorsAnswerAlike:
         must go on creating nothing — otherwise the app has changed the product
         instead of adding to it.
         """
-        response = api_client.post(JOIN_URL, {"email": "nobody@test.com"}, format="json")
+        response = api_client.post(JOIN_URL, {"email": "lolo1@your-domain.test"}, format="json")
 
         assert response.status_code == 200
-        assert not User.objects.filter(email="nobody@test.com").exists()
+        assert not User.objects.filter(email="lolo1@your-domain.test").exists()
 
     def test_a_malformed_email_is_still_a_400(self, api_client):
         response = api_client.post(POP_IN_URL, {"email": "not-an-email"}, format="json")
