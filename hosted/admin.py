@@ -5,12 +5,15 @@ Registered on `admin.site`, which `config/urls.py` has already turned into an
 else in there. Nothing about this app weakens that.
 """
 
+import json
+
 from django.contrib import admin, messages
 from django.contrib.admin.widgets import AdminTextareaWidget
 from django.utils import timezone
+from django.utils.html import format_html
 
 from .emails import send_creator_validation_decision_email
-from .models import CreatorValidation
+from .models import CreatorValidation, Milestone, WeeklySnapshot
 
 # What the two free-text columns say for a row the operator creates by hand and leaves them
 # empty in. The request itself was written in a Tally form and lives there (see `tally.py`);
@@ -142,4 +145,43 @@ class CreatorValidationAdmin(admin.ModelAdmin):
             request,
             f"{queryset.count()} request(s) marked {status}; {told} answered by email.",
             messages.SUCCESS,
+        )
+
+
+@admin.register(Milestone)
+class MilestoneAdmin(admin.ModelAdmin):
+    """Where the operator marks when each phase began."""
+
+    list_display = ("date", "phase", "label")
+    list_filter = ("phase",)
+    ordering = ("date",)
+
+
+@admin.register(WeeklySnapshot)
+class WeeklySnapshotAdmin(admin.ModelAdmin):
+    """The series, read-only: a closed week is the record, not something to edit.
+
+    Nobody adds, changes or deletes a row here; the numbers come from
+    `record_weekly_snapshot`, and a wrong week is rebuilt with `--rebuild`.
+    """
+
+    list_display = ("week_start", "origin", "computed_at")
+    list_filter = ("origin",)
+    fields = ("week_start", "origin", "schema_version", "computed_at", "formatted_metrics")
+    readonly_fields = fields
+    ordering = ("-week_start",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Metrics")
+    def formatted_metrics(self, obj):
+        return format_html(
+            "<pre>{}</pre>", json.dumps(obj.metrics, indent=2, sort_keys=True, ensure_ascii=False)
         )

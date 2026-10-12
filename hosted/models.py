@@ -13,6 +13,8 @@ a gate it does not have, and `core/migrations/` — a log shared by two database
 of the same lineage — never forks.
 """
 
+from datetime import timedelta
+
 from django.db import models
 from django.utils import timezone
 
@@ -78,3 +80,78 @@ class CreatorValidation(models.Model):
         self.resolved = timezone.now()
         self.save(update_fields=["status", "note", "resolved"])
         return self
+
+
+class Milestone(models.Model):
+    """The day a phase of the deployment begins: early adopters, a launch.
+
+    It marks the *start* of a phase. The phase of a week is the one of the last
+    milestone dated before that week ends (``date < cutoff``, the cutoff being the
+    next Monday), and `PRE` before the first one. A milestone on a Sunday therefore
+    belongs to the week that is closing; one on the next Monday, to the following
+    week.
+    """
+
+    class Phase(models.TextChoices):
+        EARLY_ADOPTERS = "EARLY_ADOPTERS", "Early adopters"
+        DEV_LAUNCH = "DEV_LAUNCH", "Launch for developers"
+        PRODUCT_LAUNCH = "PRODUCT_LAUNCH", "Launch of the product"
+
+    # What a week reports before any milestone exists.
+    PRE = "PRE"
+
+    code = models.CharField(max_length=6, primary_key=True, default=generate_id)
+    date = models.DateField()
+    phase = models.CharField(max_length=14, choices=Phase.choices)
+    label = models.CharField(max_length=64)
+    note = models.CharField(max_length=256, blank=True, default="")
+
+    class Meta:
+        db_table = "hosted_milestones"
+        ordering = ["date", "code"]
+
+    def __str__(self):
+        return f"{self.date} {self.label}"
+
+    @classmethod
+    def phase_of_week(cls, week_start):
+        """The phase a week (given by its Monday) belongs to, or `PRE`."""
+        cutoff = week_start + timedelta(days=7)
+        last = cls.objects.filter(date__lt=cutoff).order_by("-date", "-code").first()
+        return last.phase if last else cls.PRE
+
+    @classmethod
+    def labels_of_week(cls, week_start):
+        """The labels of the milestones that fall inside a week (Monday to Sunday)."""
+        end = week_start + timedelta(days=7)
+        return list(
+            cls.objects.filter(date__gte=week_start, date__lt=end).values_list("label", flat=True)
+        )
+
+
+class WeeklySnapshot(models.Model):
+    """One week of the series, kept as aggregates only.
+
+    **No personal data lives here**: counts and medians, never a user code. That is
+    why it sits outside the retention periods and survives the anonymisation of the
+    `Event` log at fourteen months, which is the reason the table exists. A closed
+    week is not recomputed unless the operator asks for it with `--rebuild`.
+    """
+
+    class Origin(models.TextChoices):
+        LIVE = "LIVE", "Recorded on the Monday it closed"
+        BACKFILL = "BACKFILL", "Rebuilt from the event log"
+
+    code = models.CharField(max_length=6, primary_key=True, default=generate_id)
+    week_start = models.DateField(unique=True)
+    metrics = models.JSONField()
+    schema_version = models.PositiveSmallIntegerField()
+    origin = models.CharField(max_length=8, choices=Origin.choices)
+    computed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "hosted_weekly_snapshots"
+        ordering = ["-week_start"]
+
+    def __str__(self):
+        return f"week of {self.week_start} ({self.origin})"
