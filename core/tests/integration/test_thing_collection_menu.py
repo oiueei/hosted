@@ -20,7 +20,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection
-from core.tests.factories import ThingFactory, UserFactory
+from core.tests.factories import ThingFactory, UserFactory, also_in
 from core.utils import doc_asset_url
 
 DOC = "oiueei/documents/welcome-doc-1"
@@ -95,7 +95,7 @@ class TestWhoGetsTheMenu:
             visibility=Collection.Visibility.PUBLIC,
             welcome_doc=DOC,
         )
-        public.things.add(thing)
+        also_in(public, thing)
 
         data = _read(_client(UserFactory()), thing, public.code)
 
@@ -110,7 +110,7 @@ class TestWhoGetsTheMenu:
             visibility=Collection.Visibility.PUBLIC,
             welcome_doc=DOC,
         )
-        public.things.add(thing)
+        also_in(public, thing)
 
         data = _read(APIClient(), thing, public.code)
 
@@ -138,7 +138,7 @@ class TestWhoGetsTheMenu:
             headline="Open",
             visibility=Collection.Visibility.PUBLIC,
         )
-        public.things.add(thing)
+        also_in(public, thing)
 
         assert _read(_client(stranger), thing, public.code)["collection_menu"] is None
 

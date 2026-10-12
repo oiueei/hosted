@@ -19,6 +19,7 @@ from django.core import mail
 from django.test import override_settings
 
 from core.services import email_service
+from core.tests.factories import also_in
 
 
 def test_send_returns_false_on_smtp_error():
@@ -1833,7 +1834,7 @@ def two_groups(user, user2, thing, collection):
 
     collection.invites.add(user2)
     hidden = Collection.objects.create(code="AAAAAA", owner=user, headline="Private circle")
-    hidden.things.add(thing)
+    also_in(hidden, thing)
     return collection, hidden
 
 

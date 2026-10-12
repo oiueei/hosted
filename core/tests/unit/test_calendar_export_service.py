@@ -30,6 +30,7 @@ from core.services.calendar_export_service import (
     build_calendar_export,
     calendar_filename,
 )
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -395,7 +396,7 @@ class TestEveryDownloadCarriesEverything:
         a = Collection.objects.create(code="GRPA00", owner=owner, headline="A")
         b = Collection.objects.create(code="GRPB00", owner=owner, headline="B")
         a.things.add(thing)
-        b.things.add(thing)
+        also_in(b, thing)
         _booking(thing, member, owner)
 
         _, a_count, _ = build_calendar_export(a)

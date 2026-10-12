@@ -14,6 +14,7 @@ from django.utils import timezone
 from core.models import FAQ, Collection, Thing
 from core.models.booking import BookingPeriod
 from core.models.transfer import ThingTransfer
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -303,7 +304,7 @@ def _thing_in_two_collections(owner, second_visibility=Collection.Visibility.PUB
     private.save()
     reachable = _collection(owner, second_visibility, code="OPN001")
     thing = _thing(owner, private)
-    reachable.things.add(thing)
+    also_in(reachable, thing)
     return private, reachable, thing
 
 
