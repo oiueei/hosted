@@ -11,7 +11,9 @@ from django.utils import timezone
 
 from core.management.commands.seed_data import common as seed_common
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
-from hosted.management.commands.stats_summary import build_report
+from hosted.management.commands.stats_summary import _fraction, build_report
+from hosted.metrics import METRIC_KEYS
+from hosted.models import Milestone, WeeklySnapshot
 
 MONDAY = date(2026, 4, 20)
 TUESDAY = date(2026, 4, 21)
@@ -323,3 +325,176 @@ class TestJoinsByDoorSection:
         labels = [label for label, _ in self._section()["rows"]]
 
         assert not any("Unrecorded" in label for label in labels)
+
+
+# --- The weekly series in the Monday email ----------------------------------------
+
+
+EVOLUTION = "Weekly evolution (last 12 weeks)"
+CYCLE = "Organic cycle: guest → owner"
+PHASES = "By phase"
+
+
+def _snapshot(week_start, **values):
+    metrics = dict.fromkeys(METRIC_KEYS, 0)
+    metrics.update(values)
+    metrics["cohorts"] = values.pop("cohorts", {})
+    return WeeklySnapshot.objects.create(
+        week_start=week_start,
+        metrics=metrics,
+        schema_version=1,
+        origin=WeeklySnapshot.Origin.BACKFILL,
+    )
+
+
+def _titles(sections):
+    return [s["title"] for s in sections]
+
+
+def _section(sections, title):
+    return next(s for s in sections if s["title"] == title)
+
+
+@pytest.mark.django_db
+class TestTheEvolutionSection:
+    def test_each_week_shows_what_changed_since_the_one_before(self):
+        _snapshot(date(2026, 10, 5), creators=6, guests=19, things=55, collections=8)
+        _snapshot(
+            date(2026, 10, 12),
+            creators=7,
+            guests=19,
+            things=61,
+            collections=9,
+            requests=5,
+            requests_accepted=3,
+            reservations=2,
+        )
+
+        rows = _section(build_report(), EVOLUTION)["rows"]
+
+        assert rows[0] == (
+            "W42 · 12 Oct",
+            "creators 7 (+1) · guests 19 (±0) · collections 9 · things 61 (+6) · "
+            "requests 5 (3 ok) · reservations 2",
+        )
+        # The oldest has nothing before it to be compared with.
+        assert rows[1][0] == "W41 · 5 Oct"
+        assert rows[1][1].startswith("creators 6 · guests 19 · collections 8 · things 55 ·")
+
+    def test_the_week_of_a_milestone_says_so(self):
+        _snapshot(date(2026, 9, 7))
+        Milestone.objects.create(
+            date=date(2026, 9, 9), phase=Milestone.Phase.EARLY_ADOPTERS, label="Early adopters"
+        )
+
+        rows = _section(build_report(), EVOLUTION)["rows"]
+
+        assert rows[0][0] == "W37 · 7 Sep ◆ Early adopters"
+
+    def test_with_nothing_recorded_it_says_how_to_start(self):
+        sections = build_report()
+
+        row = _section(sections, EVOLUTION)["rows"][0]
+        assert row[0] == "No weeks recorded yet"
+        assert "record_weekly_snapshot --backfill-from 2026-09-07" in row[1]
+        assert _section(sections, PHASES)["rows"][0][0] == "No weeks recorded yet"
+
+    def test_only_the_last_twelve_weeks_are_listed(self):
+        for n in range(14):
+            _snapshot(date(2026, 9, 7) + timedelta(weeks=n))
+
+        assert len(_section(build_report(), EVOLUTION)["rows"]) == 12
+
+
+@pytest.mark.django_db
+class TestTheCycleSection:
+    def test_it_reports_the_funnel_the_generations_and_the_validation_beside_it(self):
+        K = Event.Kind
+        on = timezone.now() - timedelta(days=3)
+        Event.objects.create(
+            kind=K.COLLECTION_CREATED, actor_code="AAAAAA", collection_code="COL001", created=on
+        )
+        Event.objects.create(
+            kind=K.MEMBER_JOINED,
+            actor_code="BBBBBB",
+            collection_code="COL001",
+            source="INVITE",
+            created=on + timedelta(hours=1),
+        )
+        Event.objects.create(
+            kind=K.COLLECTION_CREATED,
+            actor_code="BBBBBB",
+            collection_code="COL002",
+            created=on + timedelta(days=1),
+        )
+
+        section = _section(build_report(), CYCLE)
+        rows = dict(section["rows"])
+
+        assert rows["Entered as a guest"] == 1
+        assert rows["  became an owner"] == "1/1"
+        assert rows["  came back (a second day)"] == "0/1"
+        assert rows["Median guest → owner"] == "0.96 days"
+        assert rows["Median owner → first request received"] == "—"
+        assert rows["Creator validation (asked / approved)"] == "0 / 0"
+        assert rows["K, generation 0 → 1"].startswith("1/1 = 1.00 · 1.0 guests brought per owner")
+        assert "K above 1" in section["note"]
+        assert any(label.endswith("(n=1)") for label, _ in section["rows"])
+
+    def test_a_percentage_appears_only_when_the_sample_can_bear_it(self):
+        assert _fraction(3, 9) == "3/9"
+        assert _fraction(3, 10) == "3/10 (30%)"
+        assert _fraction(0, 0) == "0/0"
+
+
+@pytest.mark.django_db
+class TestThePhasesSection:
+    def test_each_phase_with_weeks_is_averaged_and_one_without_weeks_is_absent(self):
+        Milestone.objects.create(
+            date=date(2026, 9, 7), phase=Milestone.Phase.EARLY_ADOPTERS, label="x"
+        )
+        Milestone.objects.create(
+            date=date(2026, 12, 1), phase=Milestone.Phase.DEV_LAUNCH, label="y"
+        )
+        _snapshot(date(2026, 9, 7), new_creators=2, new_guests=4, requests=1)
+        _snapshot(
+            date(2026, 9, 14),
+            new_creators=1,
+            new_guests=0,
+            requests=2,
+            cohorts={"2026-09-07": {"size": 4, "owners": 1, "owner_within": {}}},
+        )
+
+        rows = _section(build_report(), PHASES)["rows"]
+
+        assert len(rows) == 1
+        label, value = rows[0]
+        assert label == "Early adopters (2 weeks)"
+        assert "new creators 1.5" in value and "new guests 2.0" in value
+        assert "requests 1.5" in value
+        assert value.endswith("guest → owner 1/4")
+
+
+@pytest.mark.django_db
+class TestTheEmail:
+    def test_it_carries_the_three_sections_with_a_milestone_label_escaped(self, monkeypatch):
+        _snapshot(date(2026, 9, 7))
+        Milestone.objects.create(
+            date=date(2026, 9, 8), phase=Milestone.Phase.EARLY_ADOPTERS, label="<b>Early</b>"
+        )
+        monkeypatch.setenv("STATS_EMAIL", "lala@your-domain.test")
+
+        call_command("stats_summary", "--email", stdout=StringIO())
+
+        message = mail.outbox[0]
+        html = message.alternatives[0][0]
+        for title in (EVOLUTION, CYCLE, PHASES):
+            assert title in message.body and title in html
+        assert "&lt;b&gt;Early&lt;/b&gt;" in html
+        assert "<b>Early</b>" not in html
+
+    def test_the_new_sections_come_before_the_demo_funnel(self):
+        titles = _titles(build_report())
+
+        assert titles.index(EVOLUTION) < titles.index(CYCLE) < titles.index(PHASES)
+        assert titles.index(PHASES) < titles.index("Demo funnel (NOT real metrics)")

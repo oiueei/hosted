@@ -467,9 +467,13 @@ class TestTheCohortTriangle:
         early = cohorts_as_of(week_bounds(W38)[1])  # the cutoff is the end of W38
         later = cohorts_as_of(week_bounds(date(2026, 10, 12))[1])
 
-        assert early["2026-09-07"] == {"size": 2, "owner_within": {"1": 1}}
+        assert early["2026-09-07"] == {"size": 2, "owners": 1, "owner_within": {"1": 1}}
         # 8 weeks after the cohort closed would be 9 Nov: still ahead of that cutoff.
-        assert later["2026-09-07"] == {"size": 2, "owner_within": {"1": 1, "2": 1, "4": 1}}
+        assert later["2026-09-07"] == {
+            "size": 2,
+            "owners": 1,
+            "owner_within": {"1": 1, "2": 1, "4": 1},
+        }
 
     def test_a_four_week_window_is_absent_when_it_has_not_gone_by(self):
         creates(A, "COL001", madrid(date(2026, 9, 7)))

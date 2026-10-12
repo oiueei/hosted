@@ -19,7 +19,7 @@ Manual, any day:
 """
 
 import os
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
 from django.db.models import Count, Min, Q
@@ -28,6 +28,8 @@ from django.utils import timezone
 from core.management.commands.seed_data.common import USERS as _SEED_USERS
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
 from hosted.emails import send_stats_summary_email
+from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of
+from hosted.models import CreatorValidation, Milestone, WeeklySnapshot
 
 SEED_USER_CODES = frozenset(u["code"] for u in _SEED_USERS)
 
@@ -142,6 +144,9 @@ def build_report():
         _joins_by_door_section(demo, demo_collections, now),
         _conversion_section(demo, demo_collections),
         _retention_section(real, creators, guests, today),
+        _evolution_section(),
+        _cycle_section(now),
+        _phases_section(),
         _demo_section(demo, demo_collections),
     ]
     return sections
@@ -393,6 +398,162 @@ def _retention_section(real, creators, guests, today):
             ("Guests who never came back after 1st visit", len(one_visit & guests)),
         ],
     }
+
+
+# --- The weekly series ------------------------------------------------------------
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+BACKFILL_HINT = "record_weekly_snapshot --backfill-from 2026-09-07"
+PHASE_LABELS = {"PRE": "Before the first milestone", **dict(Milestone.Phase.choices)}
+# A percentage over fewer people than this says more than the sample can bear.
+MIN_FOR_PERCENT = 10
+
+
+def _fraction(part, whole):
+    """``n/N``, with the percentage only once N is big enough to mean something."""
+    if whole >= MIN_FOR_PERCENT:
+        return f"{part}/{whole} ({_pct(part, whole)})"
+    return f"{part}/{whole}"
+
+
+def _delta(now, before):
+    if before is None:
+        return ""
+    diff = now - before
+    return f" ({diff:+d})" if diff else " (±0)"
+
+
+def _evolution_section():
+    """The last twelve weeks, newest first, read from the stored snapshots."""
+    snapshots = list(WeeklySnapshot.objects.order_by("-week_start")[:13])
+    if not snapshots:
+        return {
+            "title": "Weekly evolution (last 12 weeks)",
+            "rows": [("No weeks recorded yet", f"run `{BACKFILL_HINT}`")],
+        }
+    by_week = {s.week_start: s.metrics for s in snapshots}
+    rows = []
+    for snap in snapshots[:12]:
+        m = snap.metrics
+        before = by_week.get(snap.week_start - timedelta(days=7))
+
+        def moved(key, m=m, before=before):
+            return _delta(m[key], before[key] if before else None)
+
+        label = (
+            f"W{snap.week_start.isocalendar().week} · "
+            f"{snap.week_start.day} {_MONTHS[snap.week_start.month - 1]}"
+        )
+        for milestone in Milestone.labels_of_week(snap.week_start):
+            label += f" ◆ {milestone}"
+        rows.append(
+            (
+                label,
+                f"creators {m['creators']}{moved('creators')} · "
+                f"guests {m['guests']}{moved('guests')} · "
+                f"collections {m['collections']} · "
+                f"things {m['things']}{moved('things')} · "
+                f"requests {m['requests']} ({m['requests_accepted']} ok) · "
+                f"reservations {m['reservations']}",
+            )
+        )
+    return {"title": "Weekly evolution (last 12 weeks)", "rows": rows}
+
+
+def _cohort_row(week, cohort):
+    n = cohort["size"]
+    windows = " · ".join(
+        f"{w}w {cohort['owner_within'][str(w)]}/{n}"
+        if str(w) in cohort["owner_within"]
+        else f"{w}w —"
+        for w in (1, 2, 4, 8)
+    )
+    return f"W{date.fromisoformat(week).isocalendar().week} (n={n})", windows
+
+
+def _cycle_section(now):
+    """Guest → owner, live: the funnel, the two medians, K per generation and the cohorts."""
+    cycle = cycle_as_of(now)
+    entered = cycle["cycle_entered"]
+    asked = CreatorValidation.objects.count()
+    approved = CreatorValidation.objects.filter(status=CreatorValidation.Status.APPROVED).count()
+
+    def median(value):
+        return "—" if value is None else f"{value:g} days"
+
+    rows = [
+        ("Entered as a guest", entered),
+        ("  came back (a second day)", _fraction(cycle["cycle_returned"], entered)),
+        ("  asked for something", _fraction(cycle["cycle_requested"], entered)),
+        ("  became an owner", _fraction(cycle["cycle_owner"], entered)),
+        ("  added their first thing", _fraction(cycle["cycle_first_thing"], entered)),
+        ("  brought somebody in", _fraction(cycle["cycle_closed"], entered)),
+        ("Median guest → owner", median(cycle["median_days_to_owner"])),
+        ("Median owner → first request received", median(cycle["median_days_to_first_request"])),
+        ("Creator validation (asked / approved)", f"{asked} / {approved}"),
+    ]
+    for row in cycle["generations"]:
+        owners, brought = row["owners"], row["brought"]
+        rows.append(
+            (
+                f"K, generation {row['generation']} → {row['generation'] + 1}",
+                f"{row['next_owners']}/{owners} = {row['k']:.2f} · "
+                f"{brought / owners:.1f} guests brought per owner ({brought}/{owners}) · "
+                f"{_fraction(row['converted'], brought)} became owners",
+            )
+        )
+    local = now.astimezone(WEEK_TZ).date()
+    since = local - timedelta(days=local.weekday()) - timedelta(weeks=7)
+    for week, cohort in cohorts_as_of(now).items():
+        if date.fromisoformat(week) >= since:
+            rows.append(_cohort_row(week, cohort))
+    return {
+        "title": "Organic cycle: guest → owner",
+        "rows": rows,
+        "note": (
+            "K above 1 means every owner brings at least one new owner. Creator validation is "
+            "optional (giving and selling are open) and its date is the day the row was created "
+            "from the form, not the day the person asked."
+        ),
+    }
+
+
+def _phases_section():
+    """What a typical week looks like in each phase, from the snapshots and their cohorts."""
+    snapshots = list(WeeklySnapshot.objects.order_by("week_start"))
+    if not snapshots:
+        return {
+            "title": "By phase",
+            "rows": [("No weeks recorded yet", f"run `{BACKFILL_HINT}`")],
+        }
+    weeks_by_phase = {}
+    for snap in snapshots:
+        weeks_by_phase.setdefault(Milestone.phase_of_week(snap.week_start), []).append(snap)
+
+    cohorts = snapshots[-1].metrics.get("cohorts", {})
+    entered, became = {}, {}
+    for week, cohort in cohorts.items():
+        phase = Milestone.phase_of_week(date.fromisoformat(week))
+        entered[phase] = entered.get(phase, 0) + cohort["size"]
+        became[phase] = became.get(phase, 0) + cohort.get("owners", 0)
+
+    rows = []
+    for phase, snaps in weeks_by_phase.items():
+
+        def mean(key, snaps=snaps):
+            return f"{sum(s.metrics[key] for s in snaps) / len(snaps):.1f}"
+
+        rows.append(
+            (
+                f"{PHASE_LABELS.get(phase, phase)} ({len(snaps)} weeks)",
+                f"per week: new creators {mean('new_creators')} "
+                f"({mean('new_creators_organic')} organic) · "
+                f"new guests {mean('new_guests')} · requests {mean('requests')} · "
+                f"reservations {mean('reservations')} · "
+                f"guest → owner {_fraction(became.get(phase, 0), entered.get(phase, 0))}",
+            )
+        )
+    return {"title": "By phase", "rows": rows}
 
 
 def _demo_section(demo, demo_collections):

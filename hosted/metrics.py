@@ -317,6 +317,9 @@ def _activity_dates(people, cutoff):
 def cohorts_as_of(cutoff):
     """The conversion triangle: for each week of entry, how many became owners in time.
 
+    ``size`` is how many people entered, ``owners`` how many of them are owners by the
+    cutoff whenever it happened, and ``owner_within`` how many were within each window.
+
     Keyed by the Monday (ISO) of the week the people entered. A window of ``w`` weeks
     is reported only once it has elapsed in full for the *whole* cohort, that is, when
     the week the cohort closed plus ``w`` weeks is not after the cutoff — otherwise
@@ -340,11 +343,20 @@ def cohorts_as_of(cutoff):
                     if p in history.owner_at
                     and history.owner_at[p] - history.first_join[p].created <= timedelta(weeks=w)
                 )
-        triangle[week.isoformat()] = {"size": len(people), "owner_within": within}
+        triangle[week.isoformat()] = {
+            "size": len(people),
+            "owners": sum(1 for p in people if p in history.owner_at),
+            "owner_within": within,
+        }
     return triangle
 
 
 def generation_k(cutoff):
+    """See `_generation_rows`; this is the version that reads the log up to ``cutoff``."""
+    return _generation_rows(_History(cutoff))
+
+
+def _generation_rows(history):
     """One row per generation of owners: how many, how many they brought, how many converted.
 
     ``k`` is ``next_owners / owners``, split into its two factors: guests brought per
@@ -352,7 +364,6 @@ def generation_k(cutoff):
     theirs) and the share of those who became owners themselves. Not stored: the
     counts per generation already travel in ``owners_gen*``.
     """
-    history = _History(cutoff)
     owners = defaultdict(list)
     for person in history.owner_at:
         owners[history.generation(person)].append(person)
@@ -507,3 +518,17 @@ def snapshot_metrics(week_start, *, live=False):
     ordered = {key: metrics[key] for key in METRIC_KEYS}
     ordered["cohorts"] = cohorts_as_of(cutoff)
     return ordered
+
+
+def cycle_as_of(cutoff):
+    """The cycle as of ``cutoff`` in one pass: stages, medians and the table of generations.
+
+    What the Monday email shows live; the same numbers per week are in the snapshots.
+    """
+    history = _History(cutoff)
+    return {
+        **history.stage_counts(_activity_dates(history.cycle, cutoff)),
+        "median_days_to_owner": history.median_days_to_owner(),
+        "median_days_to_first_request": history.median_days_to_first_request(),
+        "generations": _generation_rows(history),
+    }
