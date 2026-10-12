@@ -377,7 +377,7 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 | `retrieve` | `GET /api/v1/things/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: visible when the thing sits in a PUBLIC, ACTIVE collection |
 | `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
 | `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
-| `destroy` | `DELETE /api/v1/things/{code}/` | `IsAuthenticated` + `_can_delete()` |
+| `destroy` | `DELETE /api/v1/things/{code}/` | `IsAuthenticated` + `_can_delete()` — the `THING_REMOVED` event is written by the `Thing` delete receiver (`core/services/deletion_events.py`), not by the view; `perform_destroy` only wraps the delete in `deleting_as(request.user)` so the event names who deleted |
 | `activate` | `POST /api/v1/things/{code}/activate/` | `IsAuthenticated` + `IsThingManager` |
 | `hide` | `POST /api/v1/things/{code}/hide/` | `IsAuthenticated` + `IsThingManager` |
 
@@ -430,7 +430,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 | `retrieve` | `GET /api/v1/collections/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: a PUBLIC, ACTIVE collection is readable without login |
 | `update` | `PUT /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
 | `partial_update` | `PATCH /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
-| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone |
+| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone. `perform_destroy` deletes the collection and the things that were only in it inside `deleting_as(request.user)`; the `COLLECTION_DELETED` and one `THING_REMOVED` per deleted thing come from the delete receivers (`core/services/deletion_events.py`), not from the view |
 | `add_thing` | `POST /api/v1/collections/{code}/add-thing/` | `IsAuthenticated` + `can_add_thing()` |
 | `remove_thing` | `POST /api/v1/collections/{code}/remove-thing/` | `IsAuthenticated` + curator (owner or co-owner) or thing owner (COMMUNITY) |
 
