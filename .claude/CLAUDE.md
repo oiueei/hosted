@@ -8,7 +8,9 @@ extension points described in `SELF_HOSTING.md`.
 ## What a session here may change
 
 - `hosted/` (the Django app: open sign-up door, creator vetting, weekly operator report)
-- `frontend/src/deployment/`, except `index.js`, which is upstream's contract
+- `frontend/src/deployment/` — including `index.js`, whose **values** are this deployment's; its
+  **contract** (an export added, renamed or reshaped) is upstream's and changes in `oiueei/standalone`
+  first.
 - `frontend/src/legal/` (the operator's identity and legal text)
 - the hosted parts of `config/settings/*.py`
 - `core/tests/**/test_hosted_*`
