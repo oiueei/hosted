@@ -430,7 +430,7 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 | `retrieve` | `GET /api/v1/collections/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: a PUBLIC, ACTIVE collection is readable without login |
 | `update` | `PUT /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
 | `partial_update` | `PATCH /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
-| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone. `perform_destroy` deletes the collection and the things that were only in it inside `deleting_as(request.user)`; the `COLLECTION_DELETED` and one `THING_REMOVED` per deleted thing come from the delete receivers (`core/services/deletion_events.py`), not from the view |
+| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone. `perform_destroy` deletes the collection and the things that were only in it inside `deleting_as(request.user)`; the things deleted are those with no membership in any other collection (a query of their own: counting through the related manager reuses its filtered join and always said one); the `COLLECTION_DELETED` and one `THING_REMOVED` per deleted thing come from the delete receivers (`core/services/deletion_events.py`), not from the view |
 | `remove_thing` | `POST /api/v1/collections/{code}/remove-thing/` | `IsAuthenticated` + curator (owner or co-owner) or thing owner (COMMUNITY) |
 
 **Serializers:**
