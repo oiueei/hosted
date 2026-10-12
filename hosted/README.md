@@ -54,7 +54,11 @@ honesty note `SELF_HOSTING.md` makes about the extension points.
 | `models.CreatorValidation` | One row per person who asked, and the answer (the request itself is in Tally). **No column on `core.User`**, so the public schema says nothing about a gate it does not have. |
 | `policy.HostedCreatorPolicy` | The **narrowing**: giving and selling are open to everyone; COMMUNITY collections, lending, renting and on-site reservations wait for approval. |
 | `admin.py` | Where you answer, behind the admin's existing OTP. A request arrives through Tally, so the row is made by hand: **Add**, find the account by its email (autocomplete), copy the two answers from Tally into **Who** and **Intent**, pick the status and a note. The answers keep why each decision was taken in the database and not only in Tally; left empty they say `(enviado por Tally)`, and they can be corrected afterwards (the admin's History keeps each change, and changing them mails nobody). Choosing a status on the form is a decision like the **Approve** / **Reject** actions: it stamps when and mails the answer (a note on its own, or a status left as it was, mails nobody). No migration: the two columns stay required, and only the **Add** form lets them be left empty. |
-| `management/commands/stats_summary.py` | The weekly **operator report**, with its demo/real partition. |
+| `management/commands/stats_summary.py` | The weekly **operator report**, with its demo/real partition and, since the series exists, three sections read from it: the last twelve weeks, the organic cycle from guest to owner, and the average week of each phase. |
+| `metrics.py` | **One week of the series**, derived from the `Event` log: stocks at the cutoff, movements of the week and the cycle, as pure functions. The backfill and the live recording call the same one, so they cannot disagree. |
+| `models.WeeklySnapshot`, `models.Milestone` | The stored series (one row per closed week, **aggregates only**) and the days each phase began, edited in the admin. The snapshots are read-only there. |
+| `management/commands/record_weekly_snapshot.py` | Stores the last closed week (idempotent, so it runs daily); `--backfill-from` rebuilds the past from the log. |
+| `management/commands/stats_history.py` | Prints the series as CSV for a spreadsheet (`--cohorts` for the conversion triangle). |
 | `../frontend/src/deployment/` | The SPA half: the `/popin` and `/welcome` pages, their copy in three languages, and the values (`popInPath`, `aboutPath`, `faqPath`, `externalForms`) that make the shared components behave like a hosted service. `externalForms` is the nine Tally forms (the footer's "Contact us", "Ideas and bugs" and "Request access", each in `es`, `ca` and `en`, opened as written in a new tab): the shared components prefer them to `/contact`, `VITE_FEEDBACK_URL` and the server's request address, so the Heroku variable `VITE_FEEDBACK_URL` is no longer needed. `popInPath` is `/welcome`, not `/popin`: the "new here?" button on `/login` takes a stranger to the page that says what this is, whose last row of buttons (after the personas; a stranger's hero has none) offers the open door (`/popin`), the FAQ and the way back to `/login`. |
 
 ## What it needs
@@ -74,6 +78,7 @@ Config vars, both optional:
 |---|---|
 | `STATS_EMAIL` | Where the weekly report goes. Unset ⇒ the command prints and skips the email. |
 | `STATS_EMAIL_WEEKDAY` | Which day it sends (0=Monday … 6=Sunday, default Monday). |
+| `STATS_WEEK_TZ` | The time zone in which a week of the series runs from Monday 00:00 to Sunday 23:59 (default `Europe/Madrid`), whatever `TIME_ZONE` is. |
 
 **The scheduler is not in this repository.** Heroku Scheduler lives in the
 dashboard and nowhere else, so this section is the only readable copy of what
@@ -83,16 +88,20 @@ the chain and shows up in scheduler-monitor:
 ```
 python manage.py expire_bookings && python manage.py cleanup_rsvps && \
 python manage.py close_transfers && python manage.py send_reminders && \
-python manage.py send_digests && python manage.py stats_summary && \
-python manage.py purge_expired_data --commit
+python manage.py send_digests && python manage.py record_weekly_snapshot && \
+python manage.py stats_summary && python manage.py purge_expired_data --commit
 ```
 
-**Six of the seven are upstream's** — `HEROKU.md` explains each, including
+`record_weekly_snapshot` goes **right before** `stats_summary`: on Monday the week
+that has just closed is then already stored when the email is built.
+
+**Six of the eight are upstream's** — `HEROKU.md` explains each, including
 `purge_expired_data`, which lives in `core/` and became the sixth link of that
-guide's own chain on 2026-08-24. Only one command here is this deployment's:
+guide's own chain on 2026-08-24. Two commands here are this deployment's:
 
 | Command | Whose | What it does here |
 |---|---|---|
+| `record_weekly_snapshot` | **This deployment** | Stores the last closed week of the series if it is missing, and says so when there is nothing to do. |
 | `stats_summary` | **This deployment** | The weekly operator report. No-ops on the other six days. |
 | `purge_expired_data` | Upstream (`core/`) | Enforces the retention periods (GDPR art. 5.1.e). What belongs to this deployment is not the command — it is the decision to run it with `--commit`, and the `RETENTION_*` periods it obeys. |
 
@@ -129,6 +138,7 @@ indefinitely**:
 | Inactive accounts | 24 months, warned by email 30 days first |
 | Invited guests who never came in | 60 days |
 | Analytics log (`Event`) | **anonymised**, not deleted, at 14 months |
+| Weekly snapshots | aggregates only, no personal data — kept indefinitely: they are what survives when the `Event` log loses the link to people at 14 months |
 | Daily activity rows | 26 months |
 | In-app notifications | 12 months |
 | Reports | 12 months |
@@ -140,6 +150,53 @@ One exception worth knowing before reading the output: **an account that owns a
 collection with members is never deleted automatically**, however inactive.
 Cascading it would take the group's library with it, so the command prints the
 code and leaves the decision to a person.
+
+## The weekly series
+
+The email of one Monday is a photograph and is gone by the next; the series is what is
+kept. Each closed week is stored as a `WeeklySnapshot` of counts and medians (never a
+user code), so it can be kept for ever, and the cohort triangle in the last snapshot
+survives the anonymisation of the `Event` log.
+
+**How to read it**
+
+- **A week** runs Monday 00:00 to Sunday 23:59 in `STATS_WEEK_TZ`. Week 0 is the one of
+  7 September 2026.
+- **Real** is decided event by event: the five seed characters, onboarding collections,
+  joins through the open door and things added in onboarding are out. The accounts of the
+  operator count. Somebody who has since left their group still counts in the weeks they
+  were in it.
+- **A new person** is somebody whose first real event is a join or a collection created.
+  A visit through `/popin` is not one.
+- **Stocks** (creators, guests, collections, memberships, things) are rebuilt from the log
+  at each week's end: a collection lives until its deletion, a membership until the
+  member's last leave, a thing until its removal.
+- **The cycle** follows people who entered as guests through six stages: came in, came
+  back (a second day active), asked for something, became an owner, added a first thing,
+  brought somebody in. The stages count how many people reached each, in no required
+  order between the second and the third.
+- **Generations:** an owner who had no join before their first collection is *seeded*
+  (generation 0); an organic owner is one more than the owner of the collection of their
+  first join. **K** for a generation is owners of the next over owners of this one, shown
+  as `a/b = x.xx` with its two factors: guests brought per owner, and the share of them
+  who became owners.
+- **Small samples:** always `n/N`, with a percentage only from N = 10. Times are medians.
+- Weeks recorded as `BACKFILL` have no value for `collections_community`,
+  `collections_public` and `things_available`: they describe the state of the day and the
+  log cannot say what it was.
+
+**Starting it**
+
+1. In the admin, add the milestones: "Early adopters" on 2026-09-07 (`EARLY_ADOPTERS`), and
+   each launch on the day it happens.
+2. Rebuild the past once:
+   `heroku run --app <app> "python manage.py record_weekly_snapshot --backfill-from 2026-09-07"`.
+3. Put `record_weekly_snapshot` before `stats_summary` in the scheduler job (above).
+4. Whenever you want the table:
+   `heroku run --no-tty --app <app> "python manage.py stats_history" > serie.csv`.
+
+`--rebuild` recomputes weeks that exist and refuses to go back past the 14 months after
+which the log has lost who did what.
 
 ## Running the door
 
