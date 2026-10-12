@@ -12,7 +12,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import HomePage from './HomePage';
 
-const USER = { code: 'USR001', name: 'Lulu', email: 'lulu@example.com', koro: 'basic' };
+const USER = { code: 'USR001', name: 'Lulu', email: 'lulu1@your-domain.test', koro: 'basic' };
 const GROUP = {
   code: 'COL009',
   headline: 'Bibliocoses',

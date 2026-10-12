@@ -19,7 +19,7 @@ function renderShareVariant() {
   );
 }
 
-function submitEmail(email = 'newcomer@example.com') {
+function submitEmail(email = 'lele@your-domain.test') {
   fireEvent.change(screen.getByLabelText(/Email/), { target: { value: email } });
   fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 }
@@ -40,7 +40,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     });
     renderShareVariant();
 
-    submitEmail('newcomer@example.com');
+    submitEmail('lele@your-domain.test');
 
     await screen.findByText(/Magic link sent! Check your inbox/);
     const [url, options] = globalThis.fetch.mock.calls[0];
@@ -52,7 +52,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     // `share_token` targets the shared collection; the backend
     // now resolves the newcomer's very first magic link from it instead.
     expect(JSON.parse(options.body)).toEqual({
-      email: 'newcomer@example.com',
+      email: 'lele@your-domain.test',
       share_token: 'TOKEN123',
     });
   });
@@ -108,7 +108,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     const { container } = renderShareVariant();
 
     fireEvent.change(screen.getByLabelText(/Email/), {
-      target: { value: 'newcomer@example.com' },
+      target: { value: 'lele@your-domain.test' },
     });
     const form = container.querySelector('form');
     // Dispatched directly on the form, twice, inside one act() — the button's

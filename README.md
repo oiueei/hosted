@@ -332,8 +332,8 @@ python manage.py send_digests      # weekly/monthly digest emails (daily)
 # It can mail nobody but --to and it leaves the database untouched (see the module
 # docstring); the links in the samples are decoys. Console backend by default.
 python manage.py send_test_emails --list
-python manage.py send_test_emails --to you@example.com --lang es --only booking
-python manage.py send_test_emails --to you@example.com --lang all --yes   # 3 x every email, for real
+python manage.py send_test_emails --to lulu@your-domain.test --lang es --only booking
+python manage.py send_test_emails --to lulu@your-domain.test --lang all --yes   # 3 x every email, for real
 
 # Retention sweep (GDPR art. 5.1.e) — the sixth link in that daily chain, and the
 # one that makes "nothing is kept forever" below true rather than aspirational.

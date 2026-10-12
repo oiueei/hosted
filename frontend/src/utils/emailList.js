@@ -1,10 +1,10 @@
 /**
  * The addresses in a line of text someone typed or pasted into the invitations field:
- * one, or several separated by commas — `lalo@oiueei.com,
- * lelo@oiueei.com`. A semicolon separates too (what a mail client writes), and so does
+ * one, or several separated by commas — `lala@your-domain.test,
+ * lele@your-domain.test`. A semicolon separates too (what a mail client writes), and so does
  * any whitespace, line breaks included: an address cannot hold a space, and a browser
  * turns the line breaks of a column pasted into a one-line field into spaces, so
- * "a@x.com b@y.com" would otherwise be one very odd address. Spaces around an address go
+ * "lele1@your-domain.test lili1@your-domain.test" would otherwise be one very odd address. Spaces around an address go
  * away; an address repeated (in any case, as the server lowercases them) counts once, the
  * first spelling kept; nothing between two separators is nothing.
  *

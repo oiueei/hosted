@@ -18,7 +18,7 @@ Requests a magic link for passwordless authentication.
 
 **Request body:**
 ```json
-{ "email": "user@example.com", "next": "/collections/AbC123/things/XyZ789" }
+{ "email": "lala@your-domain.test", "next": "/collections/AbC123/things/XyZ789" }
 ```
 
 `next` is optional: the same-site path the person was heading for when their session ran out (the SPA's `apiFetch` and `RequireAuth` put it in `/login?next=…`, `LoginPage` forwards it). It goes through `core.utils.safe_next_path` — the single door, whitelist-based: starts with `/`, not `//`, ≤256 characters, no `..`, not `/` alone, not one of the SPA's own doors (`login`, `logout`, `verify`, `rsvp`, `magic-link`). It is read straight from the body, **not** through `RequestLinkSerializer`, so **a bad `next` is dropped without a word and the response does not change** — a 400 would tell a caller which requests carried a bad one for no reason.
@@ -142,7 +142,7 @@ standalone. `RSVP.Origin.POPIN` keeps its name — see the model for why.
 
 **Request body:**
 ```json
-{ "email": "user@example.com", "share_token": "<optional 22-char token>", "collection_code": "<optional PUBLIC collection code>", "thing_code": "<optional — the thing the visitor tried to reserve>" }
+{ "email": "lala@your-domain.test", "share_token": "<optional 22-char token>", "collection_code": "<optional PUBLIC collection code>", "thing_code": "<optional — the thing the visitor tried to reserve>" }
 ```
 
 **Behaviour:**
@@ -464,7 +464,7 @@ Invites a user to a collection by email. Creates user if they don't exist (`get_
 
 **Request body:**
 ```json
-{ "email": "invitee@example.com" }
+{ "email": "lele@your-domain.test" }
 ```
 
 | | |
@@ -1209,7 +1209,7 @@ Response: `text/calendar; charset=utf-8` attachment named `{code}-calendar.ics`,
 
 ## Middleware (`core/middleware.py`)
 
-- **`SecurityHeadersMiddleware`** — adds CSP + Permissions-Policy to every response (all environments). The CSP names a violation collector in both syntaxes (`report-uri` and `report-to`, the latter resolved by the `Reporting-Endpoints` header) pointing at `csp_report` below. It also names the asset hosts, and **two of them, from two settings**: `img-src` gets `MEDIA_PUBLIC_BASE_URL` (where files are read from), `connect-src` gets that *and* `OBJECT_STORAGE_PUBLIC_URL` (the bucket, where a presigned `PUT` always goes — it does not follow a CDN). Deriving the second from the first is what made `MEDIA_PUBLIC_BASE_URL=https://cdn.example.com` forbid every upload while the images already stored kept loading; `test_upload.py::TestTheBrowserIsActuallyAllowedToUseTheTicket` asks the question the browser asks, so the two cannot drift apart again.
+- **`SecurityHeadersMiddleware`** — adds CSP + Permissions-Policy to every response (all environments). The CSP names a violation collector in both syntaxes (`report-uri` and `report-to`, the latter resolved by the `Reporting-Endpoints` header) pointing at `csp_report` below. It also names the asset hosts, and **two of them, from two settings**: `img-src` gets `MEDIA_PUBLIC_BASE_URL` (where files are read from), `connect-src` gets that *and* `OBJECT_STORAGE_PUBLIC_URL` (the bucket, where a presigned `PUT` always goes — it does not follow a CDN). Deriving the second from the first is what made `MEDIA_PUBLIC_BASE_URL=https://cdn.your-domain.test` forbid every upload while the images already stored kept loading; `test_upload.py::TestTheBrowserIsActuallyAllowedToUseTheTicket` asks the question the browser asks, so the two cannot drift apart again.
 - **`DailyActivityMiddleware`** — records the authenticated user's daily activity (see [`DailyActivity`](../models/CLAUDE.md#dailyactivity)). Registered **innermost** so it can read the DRF-authenticated `request.user` *after* the view (there is no Django session — auth is JWT-cookie via DRF authenticators, so `request.user` only resolves once a view/permission touches it). A DatabaseCache key gates it to one write per user per day; failures are swallowed so tracking can never 500 a good response. Anonymous / non-DRF requests are skipped.
 
 ---

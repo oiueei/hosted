@@ -6,7 +6,7 @@ describe('HeroPhoto', () => {
   test('the photo keeps its alt text and the decorative wedge stays aria-hidden', () => {
     const { container } = render(
       <HeroPhoto
-        photoUrl="https://example.com/photo.jpg"
+        photoUrl="https://your-domain.test/photo.jpg"
         alt="Lala"
         koroType="basic"
         color03="copper"
@@ -15,7 +15,7 @@ describe('HeroPhoto', () => {
 
     const img = container.querySelector('img.hero-photo');
     expect(img).toHaveAttribute('alt', 'Lala');
-    expect(img).toHaveAttribute('src', 'https://example.com/photo.jpg');
+    expect(img).toHaveAttribute('src', 'https://your-domain.test/photo.jpg');
 
     const wedge = container.querySelector('.hero-photo-diag');
     expect(wedge).toHaveAttribute('aria-hidden', 'true');
@@ -27,7 +27,7 @@ describe('HeroPhoto', () => {
     // `max-width: 767px` query is what shows it, not conditional rendering.
     const { container } = render(
       <HeroPhoto
-        photoUrl="https://example.com/photo.jpg"
+        photoUrl="https://your-domain.test/photo.jpg"
         alt="Lala"
         koroType="basic"
         color03="copper"

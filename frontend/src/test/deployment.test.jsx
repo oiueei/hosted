@@ -249,7 +249,9 @@ describe('without an open door, /login says that it works by invitation', () => 
         <LoginPage />
       </MemoryRouter>
     );
-    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'lala@mail.com' } });
+    fireEvent.change(screen.getByLabelText(/Email/), {
+      target: { value: 'lala1@your-domain.test' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(await screen.findByText(en.login.magicLinkSent)).toBeInTheDocument();

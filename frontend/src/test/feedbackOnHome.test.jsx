@@ -32,7 +32,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   apiFetch.mockImplementation((url) => {
     if (url.startsWith('/api/v1/auth/me/')) {
-      return ok({ code: 'USR001', name: 'Lulu', email: 'lulu@example.com', koro: 'basic' });
+      return ok({ code: 'USR001', name: 'Lulu', email: 'lulu1@your-domain.test', koro: 'basic' });
     }
     if (url.startsWith('/api/v1/collections/')) return ok({ results: [] });
     return ok([]);

@@ -22,7 +22,7 @@ const COLLECTION_WITH_PHOTO = {
   owner: 'ABC123',
   owner_name: 'Test User',
   is_curator: true,
-  thumbnail_url: 'https://bucket.example.com/oiueei/collections/cover.jpg',
+  thumbnail_url: 'https://bucket.your-domain.test/oiueei/collections/cover.jpg',
   tags: [],
   things: [],
   invites: [],
@@ -1072,7 +1072,7 @@ describe('sending a message to the whole group', () => {
     thumbnail_url: '',
     tags: [],
     things: [],
-    invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+    invites: [{ code: 'GUE001', name: 'Guest', email: 'lulu@your-domain.test' }],
     is_paused: false,
     allowed_thing_types: [],
     digest_frequency: 'NONE',
@@ -1228,7 +1228,7 @@ describe('a broadcast the server turns down', () => {
     thumbnail_url: '',
     tags: [],
     things: [],
-    invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+    invites: [{ code: 'GUE001', name: 'Guest', email: 'lulu@your-domain.test' }],
     is_paused: false,
     allowed_thing_types: [],
     digest_frequency: 'NONE',
@@ -2070,13 +2070,16 @@ describe('CollectionPage — the welcome document', () => {
     renderWith({
       ...PUBLIC_COMMUNITY,
       is_member: true,
-      welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
+      welcome_doc_url: 'https://bucket.your-domain.test/oiueei/documents/welcome.pdf',
     });
 
     // In the collection menu: it was a loose link in the hero.
     fireEvent.click(await screen.findByRole('button', { name: 'Collection options' }));
     const link = await screen.findByRole('link', { name: /welcome document \(PDF\)/ });
-    expect(link).toHaveAttribute('href', 'https://bucket.example.com/oiueei/documents/welcome.pdf');
+    expect(link).toHaveAttribute(
+      'href',
+      'https://bucket.your-domain.test/oiueei/documents/welcome.pdf'
+    );
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
   });
@@ -2092,7 +2095,7 @@ describe('CollectionPage — the welcome document', () => {
     const { container } = renderWith({
       ...PUBLIC_COMMUNITY,
       is_member: true,
-      welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
+      welcome_doc_url: 'https://bucket.your-domain.test/oiueei/documents/welcome.pdf',
     });
 
     await screen.findByRole('button', { name: 'Collection options' });

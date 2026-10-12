@@ -87,7 +87,7 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     action: 'ACCOUNT_DELETE',
     requires_confirmation: true,
     name: 'Test User',
-    email: 'test@example.com',
+    email: 'lili3@your-domain.test',
     collections: 2,
     things: 5,
   };

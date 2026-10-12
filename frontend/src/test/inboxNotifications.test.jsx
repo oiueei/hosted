@@ -60,7 +60,7 @@ const COLLECTION = {
   allowed_thing_types: [],
 };
 
-const USER = { code: 'ABC123', name: 'Test User', email: 'me@test.com', koro: 'basic' };
+const USER = { code: 'ABC123', name: 'Test User', email: 'lala2@your-domain.test', koro: 'basic' };
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
@@ -179,12 +179,12 @@ describe('InboxNotifications — every type says something', () => {
           collection_headline: 'Toy library',
           collection_code: 'COL001',
           proposer_name: 'Lele',
-          email: 'nou@vei.cat',
+          email: 'lolo1@your-domain.test',
           note: 'my downstairs neighbour',
         },
         created: '2026-08-06T10:00:00Z',
       },
-      says: [/Lele/, /nou@vei\.cat/, /your call/i],
+      says: [/Lele/, /lolo1@your-domain\.test/, /your call/i],
       // The guest list is where the owner actually answers it.
       links: '/collections/COL001/invites',
     },
@@ -196,12 +196,12 @@ describe('InboxNotifications — every type says something', () => {
         payload: {
           collection_headline: 'Toy library',
           collection_code: 'COL001',
-          email: 'nou@vei.cat',
+          email: 'lolo1@your-domain.test',
           approved: true,
         },
         created: '2026-08-06T10:00:00Z',
       },
-      says: [/nou@vei\.cat/, /Toy library/],
+      says: [/lolo1@your-domain\.test/, /Toy library/],
       links: '/collections/COL001',
     },
     {
@@ -213,11 +213,11 @@ describe('InboxNotifications — every type says something', () => {
           collection_headline: 'Toy library',
           collection_code: 'COL001',
           owner_name: 'Lili',
-          email: 'nou@vei.cat',
+          email: 'lolo1@your-domain.test',
         },
         created: '2026-08-06T10:00:00Z',
       },
-      says: [/nou@vei\.cat/, /nobody was contacted/i, /haven't been told why/i],
+      says: [/lolo1@your-domain\.test/, /nobody was contacted/i, /haven't been told why/i],
       links: '/collections/COL001',
     },
     {
@@ -405,7 +405,7 @@ describe('InboxNotifications — every type says something', () => {
             payload: {
               collection_headline: 'Toy library',
               collection_code: 'COL001',
-              email: 'nou@vei.cat',
+              email: 'lolo1@your-domain.test',
               approved: true,
             },
             created: '2026-08-06T10:00:00Z',

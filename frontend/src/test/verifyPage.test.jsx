@@ -217,7 +217,7 @@ describe('a refusal the link survives', () => {
  * Spanish and kept it until a reload.
  */
 describe('a magic link applies the saved language of the account', () => {
-  const USER = { code: 'USR003', name: 'Lulu', email: 'lulu@test.com' };
+  const USER = { code: 'USR003', name: 'Lulu', email: 'lulu@your-domain.test' };
 
   // What language the page the person lands on is first painted in.
   const seen = { language: undefined };
@@ -419,7 +419,7 @@ describe('the owner answering a member’s suggestion', () => {
   const approved = {
     action: 'PROPOSAL_APPROVE',
     message: 'Invitation sent',
-    email: 'nou@vei.cat',
+    email: 'lolo1@your-domain.test',
     collection_headline: 'Toy library',
   };
 
@@ -439,7 +439,7 @@ describe('the owner answering a member’s suggestion', () => {
     // Naming them is the point: the owner is being told who they let into the
     // group, not merely that something happened. A confirmation that said
     // "done" would leave them unable to spot the wrong address.
-    expect(await screen.findByText(/nou@vei\.cat/)).toBeInTheDocument();
+    expect(await screen.findByText(/lolo1@your-domain\.test/)).toBeInTheDocument();
     expect(screen.getByText('Confirmed!')).toBeInTheDocument();
     expect(postCalls(globalThis.fetch)).toHaveLength(1);
   });
@@ -463,7 +463,7 @@ describe('the owner answering a member’s suggestion', () => {
 
     renderVerify(true);
 
-    expect(await screen.findByText(/nou@vei\.cat/)).toBeInTheDocument();
+    expect(await screen.findByText(/lolo1@your-domain\.test/)).toBeInTheDocument();
     expect(getCalls(globalThis.fetch)).toHaveLength(2); // the effect really did run twice
     expect(postCalls(globalThis.fetch)).toHaveLength(1);
   });
@@ -504,7 +504,7 @@ describe('where a magic link lands', () => {
   const USER = {
     code: 'USR002',
     name: 'Lele',
-    email: 'lele@test.com',
+    email: 'lele@your-domain.test',
     theeeme_colors: {
       color_01: 'bus',
       color_02: 'white',
@@ -653,7 +653,7 @@ describe('a stalled network', () => {
           action: 'ACCOUNT_DELETE',
           requires_confirmation: true,
           name: 'Lele',
-          email: 'lele@test.com',
+          email: 'lele@your-domain.test',
           collections: 2,
           things: 5,
         })

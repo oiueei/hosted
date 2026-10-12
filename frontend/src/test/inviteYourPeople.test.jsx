@@ -121,7 +121,7 @@ describe('the curator hero row — "Invite your people"', () => {
     const { container } = renderCollection({
       ...FOUNDER,
       invites: Array.from({ length: 12 }, (_, i) => ({ code: `GST${i}`, name: `Guest ${i}` })),
-      pending_invites: [{ code: 'RSVP01', email: 'pending@example.com' }],
+      pending_invites: [{ code: 'RSVP01', email: 'lili2@your-domain.test' }],
     });
     await screen.findByText('Kettle');
 

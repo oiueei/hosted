@@ -3,54 +3,63 @@ import { parseEmailList } from './emailList';
 
 describe('parseEmailList', () => {
   test('one address is a list of one', () => {
-    expect(parseEmailList('lalo@oiueei.com')).toEqual(['lalo@oiueei.com']);
+    expect(parseEmailList('lala@your-domain.test')).toEqual(['lala@your-domain.test']);
   });
 
   test('commas separate, and the spaces around an address go away', () => {
-    expect(parseEmailList('lalo@oiueei.com, lelo@oiueei.com')).toEqual([
-      'lalo@oiueei.com',
-      'lelo@oiueei.com',
+    expect(parseEmailList('lala@your-domain.test, lele@your-domain.test')).toEqual([
+      'lala@your-domain.test',
+      'lele@your-domain.test',
     ]);
-    expect(parseEmailList('  lalo@oiueei.com ,lelo@oiueei.com  ,  lili@oiueei.com ')).toEqual([
-      'lalo@oiueei.com',
-      'lelo@oiueei.com',
-      'lili@oiueei.com',
-    ]);
+    expect(
+      parseEmailList('  lala@your-domain.test ,lele@your-domain.test  ,  lili@your-domain.test ')
+    ).toEqual(['lala@your-domain.test', 'lele@your-domain.test', 'lili@your-domain.test']);
   });
 
   test('a semicolon separates too', () => {
-    expect(parseEmailList('a@x.com;b@y.com; c@z.com')).toEqual(['a@x.com', 'b@y.com', 'c@z.com']);
+    expect(
+      parseEmailList('lala1@your-domain.test;lele1@your-domain.test; lili1@your-domain.test')
+    ).toEqual(['lala1@your-domain.test', 'lele1@your-domain.test', 'lili1@your-domain.test']);
   });
 
   test('line breaks separate — a column of addresses pasted as it is', () => {
-    expect(parseEmailList('a@x.com\nb@y.com\r\nc@z.com\n')).toEqual([
-      'a@x.com',
-      'b@y.com',
-      'c@z.com',
-    ]);
+    expect(
+      parseEmailList('lala1@your-domain.test\nlele1@your-domain.test\r\nlili1@your-domain.test\n')
+    ).toEqual(['lala1@your-domain.test', 'lele1@your-domain.test', 'lili1@your-domain.test']);
   });
 
   test('so do plain spaces and tabs, which is what a browser makes of those line breaks in a one-line field', () => {
-    expect(parseEmailList('a@x.com b@y.com\tc@z.com')).toEqual(['a@x.com', 'b@y.com', 'c@z.com']);
+    expect(
+      parseEmailList('lala1@your-domain.test lele1@your-domain.test\tlili1@your-domain.test')
+    ).toEqual(['lala1@your-domain.test', 'lele1@your-domain.test', 'lili1@your-domain.test']);
   });
 
   test('the separators can be mixed', () => {
-    expect(parseEmailList('a@x.com, b@y.com;\n c@z.com d@w.com')).toEqual([
-      'a@x.com',
-      'b@y.com',
-      'c@z.com',
-      'd@w.com',
+    expect(
+      parseEmailList(
+        'lala1@your-domain.test, lele1@your-domain.test;\n lili1@your-domain.test lolo@your-domain.test'
+      )
+    ).toEqual([
+      'lala1@your-domain.test',
+      'lele1@your-domain.test',
+      'lili1@your-domain.test',
+      'lolo@your-domain.test',
     ]);
   });
 
   test('an address repeated counts once, in any case, the first spelling kept and the order too', () => {
     expect(
-      parseEmailList('Lalo@Oiueei.com, lelo@oiueei.com, lalo@oiueei.com, LELO@OIUEEI.COM')
-    ).toEqual(['Lalo@Oiueei.com', 'lelo@oiueei.com']);
+      parseEmailList(
+        'Lala@Your-Domain.TEST, lele@your-domain.test, lala@your-domain.test, LELE@Your-Domain.TEST'
+      )
+    ).toEqual(['Lala@Your-Domain.TEST', 'lele@your-domain.test']);
   });
 
   test('nothing between two separators is nothing: no empty addresses', () => {
-    expect(parseEmailList(',, a@x.com ,; , b@y.com,')).toEqual(['a@x.com', 'b@y.com']);
+    expect(parseEmailList(',, lala1@your-domain.test ,; , lele1@your-domain.test,')).toEqual([
+      'lala1@your-domain.test',
+      'lele1@your-domain.test',
+    ]);
   });
 
   test.each([[''], ['   '], [' , ; '], ['\n\n'], [null], [undefined]])(
