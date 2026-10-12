@@ -180,7 +180,6 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/collections/{code}/` | View collection (owner, co-owner, or invited) |
 | PUT | `/api/v1/collections/{code}/` | Update collection (owner or co-owner) |
 | DELETE | `/api/v1/collections/{code}/` | Delete collection (owner only — never a co-owner) |
-| POST | `/api/v1/collections/{code}/add-thing/` | Add thing to collection (owner; invited users in COMMUNITY mode) |
 | POST | `/api/v1/collections/{code}/remove-thing/` | Remove thing from collection (owner or co-owner; thing owner in COMMUNITY mode) |
 | POST | `/api/v1/collections/{code}/invite/` | Invite user (owner or co-owner, resend-safe) |
 | DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it |
@@ -480,7 +479,6 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Rate Limiting | Which IP a limit counts | The entry `TRUSTED_PROXY_COUNT` says a trusted proxy appended, counted from the right, **validated as an IP** before use; anything unparseable falls back to `REMOTE_ADDR` and then to one shared bucket — never to a fresh allowance |
 | Rate Limiting | Thing single create | 60 req/hour per user |
 | Rate Limiting | Collection single create | 30 req/hour per user |
-| Rate Limiting | Collection add-thing | 60 req/hour per user |
 | Rate Limiting | Collection leave | 30 req/hour per user |
 | Rate Limiting | Collection digest pref | 30 req/hour per user |
 | Rate Limiting | Recommend a guest | 30 req/day per member |
