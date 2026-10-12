@@ -21,7 +21,7 @@ const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promis
 const ME = {
   code: 'ME0001',
   name: 'Lala',
-  email: 'me@test.com',
+  email: 'lala2@your-domain.test',
   koro: 'basic',
   created: '2026-01-01',
 };

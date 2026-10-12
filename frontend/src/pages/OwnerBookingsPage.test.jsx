@@ -397,7 +397,7 @@ describe('OwnerBookingsPage cancelling a member’s reservation', () => {
 describe('OwnerBookingsPage pagination', () => {
   test('the pager sits in a wide row, so on a phone it is the width of the screen', async () => {
     mockApi([
-      { results: [booking()], next: 'http://api.example.com/api/v1/owner-bookings/?page=2' },
+      { results: [booking()], next: 'http://api.your-domain.test/api/v1/owner-bookings/?page=2' },
     ]);
     renderPage();
 
@@ -407,7 +407,7 @@ describe('OwnerBookingsPage pagination', () => {
 
   test('"Load more" appends the next page and keeps the request same-origin', async () => {
     mockApi([
-      { results: [booking()], next: 'http://api.example.com/api/v1/owner-bookings/?page=2' },
+      { results: [booking()], next: 'http://api.your-domain.test/api/v1/owner-bookings/?page=2' },
       { results: [booking({ code: 'BKG002', thing_headline: 'Ladder' })], next: null },
     ]);
     renderPage();
@@ -445,7 +445,7 @@ describe('OwnerBookingsPage pagination', () => {
           status: 200,
           json: async () => ({
             results: [booking()],
-            next: 'http://api.example.com/api/v1/owner-bookings/?page=2',
+            next: 'http://api.your-domain.test/api/v1/owner-bookings/?page=2',
           }),
         })
       )
@@ -739,16 +739,16 @@ describe('OwnerBookingsPage — the bold links of the table', () => {
 // they can write from. Table and phone card are painted from the same cell, so one
 // test each says it.
 describe('OwnerBookingsPage — the requester’s address under the name', () => {
-  const asked = (over = {}) => booking({ requester_email: 'lele@example.com', ...over });
+  const asked = (over = {}) => booking({ requester_email: 'lele@your-domain.test', ...over });
 
   test('in the table it is a mailto link right under "Asked by …"', async () => {
     mockApi([{ results: [asked()], next: null }]);
     renderPage();
 
-    const link = await screen.findByRole('link', { name: 'lele@example.com' });
-    expect(link).toHaveAttribute('href', 'mailto:lele@example.com');
+    const link = await screen.findByRole('link', { name: 'lele@your-domain.test' });
+    expect(link).toHaveAttribute('href', 'mailto:lele@your-domain.test');
     expect(
-      within(screen.getAllByRole('table')[0]).getByRole('link', { name: 'lele@example.com' })
+      within(screen.getAllByRole('table')[0]).getByRole('link', { name: 'lele@your-domain.test' })
     ).toBe(link);
     // Its own line, directly under the name's.
     expect(link.closest('p').previousElementSibling).toHaveTextContent('Asked by Lele');
@@ -763,8 +763,8 @@ describe('OwnerBookingsPage — the requester’s address under the name', () =>
 
       const list = await screen.findByRole('list', { name: 'Requests waiting for your answer' });
       const [card] = within(list).getAllByRole('listitem');
-      const link = within(card).getByRole('link', { name: 'lele@example.com' });
-      expect(link).toHaveAttribute('href', 'mailto:lele@example.com');
+      const link = within(card).getByRole('link', { name: 'lele@your-domain.test' });
+      expect(link).toHaveAttribute('href', 'mailto:lele@your-domain.test');
       expect(link.closest('p').previousElementSibling).toHaveTextContent('Asked by Lele');
       expect(screen.queryByRole('table')).toBeNull();
     } finally {
@@ -781,7 +781,7 @@ describe('OwnerBookingsPage — the requester’s address under the name', () =>
             code: 'BKG002',
             status: 'ACCEPTED',
             requester_name: 'Lili',
-            requester_email: 'lili@example.com',
+            requester_email: 'lili@your-domain.test',
           }),
         ],
         next: null,
@@ -789,13 +789,13 @@ describe('OwnerBookingsPage — the requester’s address under the name', () =>
     ]);
     renderPage();
 
-    expect(await screen.findByRole('link', { name: 'lele@example.com' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'lele@your-domain.test' })).toHaveAttribute(
       'href',
-      'mailto:lele@example.com'
+      'mailto:lele@your-domain.test'
     );
-    expect(screen.getByRole('link', { name: 'lili@example.com' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'lili@your-domain.test' })).toHaveAttribute(
       'href',
-      'mailto:lili@example.com'
+      'mailto:lili@your-domain.test'
     );
   });
 
@@ -804,9 +804,9 @@ describe('OwnerBookingsPage — the requester’s address under the name', () =>
     renderPage();
 
     expect(await screen.findByText('Asked by A member')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'lele@example.com' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'lele@your-domain.test' })).toBeInTheDocument();
     // …and the address does not take the name's place.
-    expect(screen.queryByText('Asked by lele@example.com')).toBeNull();
+    expect(screen.queryByText('Asked by lele@your-domain.test')).toBeNull();
   });
 
   test.each([

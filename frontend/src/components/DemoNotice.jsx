@@ -11,7 +11,7 @@ import { Notification } from 'hds-react';
 // supplies them through `deploymentI18n` (see `frontend/src/deployment/`) and the
 // banner appears — same null-upstream shape as `popInPath` / `FeedbackLink`.
 //
-// DESIGN_HOSTED.md §1: it must say what IS demo *and* what is not, so a visitor
+// The copy must say what IS demo *and* what is not, so a visitor
 // doesn't mistake their own new collection for something that gets wiped. Hence
 // the two lines — `body` (this is shared and resets) and `realNote` (your own
 // collections are real and stay).

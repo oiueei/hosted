@@ -44,12 +44,12 @@ def client_for(user):
 
 @pytest.fixture
 def member(db):
-    return User.objects.create(code="MEMB01", email="member@test.com", name="Lele")
+    return User.objects.create(code="MEMB01", email="lele@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def group(db, member):
-    owner = User.objects.create(code="OWNR01", email="owner@test.com", name="Lala")
+    owner = User.objects.create(code="OWNR01", email="lala@your-domain.test", name="Lala")
     # Proposals are off for a new collection since 2026-10-02; this group is the
     # one where its owner turned them on, which is what every test here is about.
     collection = Collection.objects.create(
@@ -70,20 +70,22 @@ class TestProposing:
         mail.outbox.clear()
         resp = client_for(member).post(
             PROPOSE_URL.format(code=group.code),
-            {"email": "friend@test.com", "note": "my downstairs neighbour"},
+            {"email": "lele11@your-domain.test", "note": "my downstairs neighbour"},
             format="json",
         )
 
         assert resp.status_code == 200
         proposal = InvitationProposal.objects.get(collection=group)
-        assert proposal.email == "friend@test.com"
+        assert proposal.email == "lele11@your-domain.test"
         assert proposal.status == InvitationProposal.Status.PENDING
 
-        assert not User.objects.filter(email="friend@test.com").exists(), (
+        assert not User.objects.filter(email="lele11@your-domain.test").exists(), (
             "the proposed person must not exist as an account yet"
         )
         recipients = [addr for m in mail.outbox for addr in m.to]
-        assert "friend@test.com" not in recipients, "the proposed person must not be emailed"
+        assert "lele11@your-domain.test" not in recipients, (
+            "the proposed person must not be emailed"
+        )
         assert group.owner.email in recipients, "the owner is the one who has to decide"
 
     def test_the_owner_is_told_in_the_app_too_with_the_note(self, group, member):
@@ -91,21 +93,21 @@ class TestProposing:
         nothing to go on when the group has rules of admission."""
         client_for(member).post(
             PROPOSE_URL.format(code=group.code),
-            {"email": "friend@test.com", "note": "she's paid the subs"},
+            {"email": "lele11@your-domain.test", "note": "she's paid the subs"},
             format="json",
         )
 
         note = InAppNotification.objects.get(
             user=group.owner, type=InAppNotification.Type.INVITE_PROPOSED
         )
-        assert note.payload["email"] == "friend@test.com"
+        assert note.payload["email"] == "lele11@your-domain.test"
         assert note.payload["note"] == "she's paid the subs"
         assert note.payload["proposer_name"] == "Lele"
 
     def test_a_stranger_cannot_propose(self, group, db):
-        outsider = User.objects.create(code="OUTS01", email="outsider@test.com")
+        outsider = User.objects.create(code="OUTS01", email="lolo@your-domain.test")
         resp = client_for(outsider).post(
-            PROPOSE_URL.format(code=group.code), {"email": "x@test.com"}, format="json"
+            PROPOSE_URL.format(code=group.code), {"email": "lala1@your-domain.test"}, format="json"
         )
         assert resp.status_code == 400
         assert InvitationProposal.objects.count() == 0
@@ -118,7 +120,7 @@ class TestProposing:
         group.save(update_fields=["allow_member_proposals"])
 
         resp = client_for(member).post(
-            PROPOSE_URL.format(code=group.code), {"email": "friend@test.com"}, format="json"
+            PROPOSE_URL.format(code=group.code), {"email": "lele11@your-domain.test"}, format="json"
         )
 
         assert resp.status_code == 403
@@ -126,17 +128,17 @@ class TestProposing:
 
     def test_the_same_person_cannot_be_queued_twice(self, group, member):
         url = PROPOSE_URL.format(code=group.code)
-        first = client_for(member).post(url, {"email": "f@test.com"}, format="json")
+        first = client_for(member).post(url, {"email": "lele1@your-domain.test"}, format="json")
         assert first.status_code == 200
-        second = client_for(member).post(url, {"email": "f@test.com"}, format="json")
+        second = client_for(member).post(url, {"email": "lele1@your-domain.test"}, format="json")
         assert second.status_code == 400
-        assert InvitationProposal.objects.filter(email="f@test.com").count() == 1
+        assert InvitationProposal.objects.filter(email="lele1@your-domain.test").count() == 1
 
     def test_the_owner_is_sent_to_the_real_invite_instead(self, group):
         """An owner has the actual invitation one endpoint over. Queuing a
         suggestion for themselves to approve would be a round trip to nowhere."""
         resp = client_for(group.owner).post(
-            PROPOSE_URL.format(code=group.code), {"email": "friend@test.com"}, format="json"
+            PROPOSE_URL.format(code=group.code), {"email": "lele11@your-domain.test"}, format="json"
         )
 
         assert resp.status_code == 400
@@ -166,22 +168,22 @@ class TestProposing:
         or shape is the whole vulnerability.
         """
         url = PROPOSE_URL.format(code=group.code)
-        client_for(member).post(url, {"email": "queued@test.com"}, format="json")
+        client_for(member).post(url, {"email": "lili@your-domain.test"}, format="json")
 
         inside = client_for(member).post(url, {"email": member.email}, format="json")
-        queued = client_for(member).post(url, {"email": "queued@test.com"}, format="json")
+        queued = client_for(member).post(url, {"email": "lili@your-domain.test"}, format="json")
 
         assert inside.status_code == queued.status_code == 400
         assert inside.data == queued.data
         # And a stranger nobody has mentioned still gets a *different* answer —
         # otherwise this test would pass on an endpoint that refused everything.
-        fresh = client_for(member).post(url, {"email": "stranger@test.com"}, format="json")
+        fresh = client_for(member).post(url, {"email": "lolo1@your-domain.test"}, format="json")
         assert fresh.status_code == 200
 
 
 @pytest.mark.django_db
 class TestDeciding:
-    def _propose(self, group, member, email="friend@test.com"):
+    def _propose(self, group, member, email="lele11@your-domain.test"):
         client_for(member).post(
             PROPOSE_URL.format(code=group.code), {"email": email}, format="json"
         )
@@ -198,11 +200,11 @@ class TestDeciding:
         assert proposal.status == InvitationProposal.Status.APPROVED
         # Indistinguishable from an owner's own invite: same RSVP pair.
         assert RSVP.objects.filter(
-            user_email="friend@test.com",
+            user_email="lele11@your-domain.test",
             target_code=group.code,
             action=RSVP.Action.COLLECTION_INVITE,
         ).exists()
-        assert "friend@test.com" in [addr for m in mail.outbox for addr in m.to]
+        assert "lele11@your-domain.test" in [addr for m in mail.outbox for addr in m.to]
 
     def test_the_invitation_says_who_suggested_them(self, group, member):
         """Lili knows Lele, not Lala.
@@ -216,7 +218,7 @@ class TestDeciding:
 
         client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
 
-        sent = next(m for m in mail.outbox if "friend@test.com" in m.to)
+        sent = next(m for m in mail.outbox if "lele11@your-domain.test" in m.to)
         assert "Lele" in sent.body
 
     def test_a_nameless_proposer_is_not_outed_by_their_email_address(self, group, member):
@@ -230,7 +232,7 @@ class TestDeciding:
 
         client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
 
-        sent = next(m for m in mail.outbox if "friend@test.com" in m.to)
+        sent = next(m for m in mail.outbox if "lele11@your-domain.test" in m.to)
         assert member.email not in sent.body
         assert member.email not in str(sent.alternatives)
 
@@ -239,7 +241,7 @@ class TestDeciding:
         It must not travel on to the person it describes."""
         client_for(member).post(
             PROPOSE_URL.format(code=group.code),
-            {"email": "friend@test.com", "note": "she can be a bit much but she's sound"},
+            {"email": "lele11@your-domain.test", "note": "she can be a bit much but she's sound"},
             format="json",
         )
         proposal = InvitationProposal.objects.get(collection=group)
@@ -247,7 +249,7 @@ class TestDeciding:
 
         client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/approve/")
 
-        sent = next(m for m in mail.outbox if "friend@test.com" in m.to)
+        sent = next(m for m in mail.outbox if "lele11@your-domain.test" in m.to)
         assert "a bit much" not in sent.body
         assert "a bit much" not in str(sent.alternatives)
 
@@ -269,8 +271,8 @@ class TestDeciding:
 
         recipients = [addr for m in mail.outbox for addr in m.to]
         assert member.email in recipients, "the proposer is told"
-        assert "friend@test.com" not in recipients, "the proposed person is never contacted"
-        assert not User.objects.filter(email="friend@test.com").exists()
+        assert "lele11@your-domain.test" not in recipients, "the proposed person is never contacted"
+        assert not User.objects.filter(email="lele11@your-domain.test").exists()
 
         note = InAppNotification.objects.get(
             user=member, type=InAppNotification.Type.INVITE_PROPOSAL_DECLINED
@@ -286,7 +288,7 @@ class TestDeciding:
         assert resp.status_code == 403
         proposal.refresh_from_db()
         assert proposal.status == InvitationProposal.Status.PENDING
-        assert not User.objects.filter(email="friend@test.com").exists()
+        assert not User.objects.filter(email="lele11@your-domain.test").exists()
 
     def test_a_decision_cannot_be_made_twice(self, group, member):
         proposal = self._propose(group, member)
@@ -302,7 +304,7 @@ class TestTheEmailLinks:
 
     def _proposal_rsvps(self, group, member):
         client_for(member).post(
-            PROPOSE_URL.format(code=group.code), {"email": "friend@test.com"}, format="json"
+            PROPOSE_URL.format(code=group.code), {"email": "lele11@your-domain.test"}, format="json"
         )
         proposal = InvitationProposal.objects.get(collection=group)
         approve = RSVP.objects.get(target_code=proposal.code, action=RSVP.Action.PROPOSAL_APPROVE)
@@ -323,7 +325,7 @@ class TestTheEmailLinks:
         proposal.refresh_from_db()
         assert proposal.status == InvitationProposal.Status.PENDING
         assert mail.outbox == [], "a bare GET must send nothing"
-        assert not User.objects.filter(email="friend@test.com").exists()
+        assert not User.objects.filter(email="lele11@your-domain.test").exists()
 
     def test_the_get_preview_carries_none_of_the_proposed_persons_details(self, group, member):
         """A GET is what a mail client's link scanner issues. The proposed
@@ -334,7 +336,7 @@ class TestTheEmailLinks:
         auto-commits with a POST and reads the address it shows from that."""
         client_for(member).post(
             PROPOSE_URL.format(code=group.code),
-            {"email": "friend@test.com", "note": "she still owes me twenty euros"},
+            {"email": "lele11@your-domain.test", "note": "she still owes me twenty euros"},
             format="json",
         )
         proposal = InvitationProposal.objects.get(collection=group)
@@ -348,7 +350,7 @@ class TestTheEmailLinks:
             assert resp.status_code == 200
             assert set(resp.data) == {"action", "requires_confirmation"}
             blob = str(resp.data)
-            assert "friend@test.com" not in blob
+            assert "lele11@your-domain.test" not in blob
             assert "still owes me" not in blob
             assert "Lele" not in blob  # the proposer's name
 
@@ -386,8 +388,8 @@ class TestTheEmailLinks:
 
         recipients = [addr for m in mail.outbox for addr in m.to]
         assert member.email in recipients, "the proposer is told"
-        assert "friend@test.com" not in recipients, "the proposed person is never contacted"
-        assert not User.objects.filter(email="friend@test.com").exists()
+        assert "lele11@your-domain.test" not in recipients, "the proposed person is never contacted"
+        assert not User.objects.filter(email="lele11@your-domain.test").exists()
         assert not RSVP.objects.filter(
             target_code=proposal.code,
             action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
@@ -430,7 +432,7 @@ class TestQuota:
         the deployment's sending domain, so it is the owner's daily allowance it
         spends — not the member's, who cannot send anything on their own."""
         client_for(member).post(
-            PROPOSE_URL.format(code=group.code), {"email": "friend@test.com"}, format="json"
+            PROPOSE_URL.format(code=group.code), {"email": "lele11@your-domain.test"}, format="json"
         )
         proposal = InvitationProposal.objects.get(collection=group)
 
@@ -449,7 +451,7 @@ class TestQuota:
 # mail instead of the app. These run every case against both doors.
 
 
-def _proposal_for(group, member, email="friend@test.com"):
+def _proposal_for(group, member, email="lele11@your-domain.test"):
     client_for(member).post(PROPOSE_URL.format(code=group.code), {"email": email}, format="json")
     return InvitationProposal.objects.get(collection=group, email=email)
 
@@ -485,7 +487,11 @@ def test_an_exhausted_daily_quota_refuses_the_approval(approve, group, member):
     with patch("core.services.invitation_service.send_collection_invite_email"):
         assert (
             client_for(group.owner)
-            .post(f"/api/v1/collections/{group.code}/invite/", {"email": "a@test.com"}, "json")
+            .post(
+                f"/api/v1/collections/{group.code}/invite/",
+                {"email": "lulu2@your-domain.test"},
+                "json",
+            )
             .status_code
             == 200
         )
@@ -498,7 +504,7 @@ def test_an_exhausted_daily_quota_refuses_the_approval(approve, group, member):
     assert proposal.status == InvitationProposal.Status.PENDING, (
         "a refused approval decides nothing"
     )
-    assert not User.objects.filter(email="friend@test.com").exists()
+    assert not User.objects.filter(email="lele11@your-domain.test").exists()
     assert mail.outbox == [], "nothing may reach the proposed address"
 
 
@@ -519,7 +525,7 @@ def test_a_refused_approval_leaves_the_owner_a_way_back(approve, group, member):
     proposal = _proposal_for(group, member)
     with patch("core.services.invitation_service.send_collection_invite_email"):
         client_for(group.owner).post(
-            f"/api/v1/collections/{group.code}/invite/", {"email": "a@test.com"}, "json"
+            f"/api/v1/collections/{group.code}/invite/", {"email": "lulu2@your-domain.test"}, "json"
         )
 
     resp = approve(group, proposal)
@@ -542,7 +548,7 @@ def test_a_full_collection_refuses_the_approval(approve, group, member):
     """The member ceiling is checked where invitations are *sent*, so approving
     one is exactly where it bites. Both doors, for the same reason as the quota.
     """
-    group.invites.add(User.objects.create(email="second@test.com"))
+    group.invites.add(User.objects.create(email="lele5@your-domain.test"))
     proposal = _proposal_for(group, member)
     mail.outbox.clear()
 
@@ -555,7 +561,7 @@ def test_a_full_collection_refuses_the_approval(approve, group, member):
     assert resp.data["retryable"] is True
     proposal.refresh_from_db()
     assert proposal.status == InvitationProposal.Status.PENDING
-    assert not User.objects.filter(email="friend@test.com").exists()
+    assert not User.objects.filter(email="lele11@your-domain.test").exists()
     assert mail.outbox == []
 
 
@@ -566,7 +572,7 @@ def test_declining_is_never_blocked_by_a_full_collection(approve, group, member)
     """Saying no adds nobody and sends one email to a member who is already
     inside the count. A ceiling that stopped the owner clearing their queue
     would leave them with a queue they cannot answer."""
-    group.invites.add(User.objects.create(email="second@test.com"))
+    group.invites.add(User.objects.create(email="lele5@your-domain.test"))
     proposal = _proposal_for(group, member)
 
     resp = client_for(group.owner).post(f"/api/v1/proposals/{proposal.code}/reject/")
@@ -590,23 +596,23 @@ class TestApprovedRecommendationIsDistinguishable:
     def test_the_accept_rsvp_carries_the_mark_only_when_a_member_suggested_them(
         self, collection, user
     ):
-        deliver_invitation(collection, "direct@test.com", "Owner")
-        deliver_invitation(collection, "viafriend@test.com", "Owner", proposer_name="Lele")
+        deliver_invitation(collection, "lolo2@your-domain.test", "Owner")
+        deliver_invitation(collection, "lele2@your-domain.test", "Owner", proposer_name="Lele")
 
         direct = RSVP.objects.get(
-            user_email="direct@test.com", action=RSVP.Action.COLLECTION_INVITE
+            user_email="lolo2@your-domain.test", action=RSVP.Action.COLLECTION_INVITE
         )
         recommended = RSVP.objects.get(
-            user_email="viafriend@test.com", action=RSVP.Action.COLLECTION_INVITE
+            user_email="lele2@your-domain.test", action=RSVP.Action.COLLECTION_INVITE
         )
         assert direct.context == {}
         assert recommended.context == {"via": "recommendation"}
 
     def test_accepting_each_lands_in_its_own_door(self, client, collection):
-        deliver_invitation(collection, "direct@test.com", "Owner")
-        deliver_invitation(collection, "viafriend@test.com", "Owner", proposer_name="Lele")
+        deliver_invitation(collection, "lolo2@your-domain.test", "Owner")
+        deliver_invitation(collection, "lele2@your-domain.test", "Owner", proposer_name="Lele")
 
-        for email in ("direct@test.com", "viafriend@test.com"):
+        for email in ("lolo2@your-domain.test", "lele2@your-domain.test"):
             rsvp = RSVP.objects.get(user_email=email, action=RSVP.Action.COLLECTION_INVITE)
             assert client.get(f"/api/v1/auth/verify/{rsvp.token}/").status_code == 200
 
@@ -614,8 +620,8 @@ class TestApprovedRecommendationIsDistinguishable:
             User.objects.get(code=e.actor_code).email: e.source
             for e in Event.objects.filter(kind=Event.Kind.MEMBER_JOINED)
         }
-        assert by_email["direct@test.com"] == Event.Source.INVITE
-        assert by_email["viafriend@test.com"] == Event.Source.RECOMMENDATION
+        assert by_email["lolo2@your-domain.test"] == Event.Source.INVITE
+        assert by_email["lele2@your-domain.test"] == Event.Source.RECOMMENDATION
 
 
 # ── The boundaries the mutation pass found unguarded ─────────────────────────
@@ -646,7 +652,7 @@ def test_a_full_collection_still_approves_somebody_already_inside(approve, group
     """
     proposal = _proposal_for(group, member)
     # They arrive by another route, filling the collection to its ceiling of 2.
-    group.invites.add(User.objects.create(email="friend@test.com"))
+    group.invites.add(User.objects.create(email="lele11@your-domain.test"))
     mail.outbox.clear()
 
     resp = approve(group, proposal)
@@ -664,7 +670,7 @@ def test_an_approval_claims_exactly_one_seat_so_the_last_free_one_is_enough(appr
     it fits, exactly. An approval that claimed two would refuse this — the
     off-by-one that hides until a group is nearly full, which is precisely when
     an owner is most likely to be approving."""
-    group.invites.add(User.objects.create(email="second@test.com"))
+    group.invites.add(User.objects.create(email="lele5@your-domain.test"))
     proposal = _proposal_for(group, member)
     mail.outbox.clear()
 
@@ -676,11 +682,11 @@ def test_an_approval_claims_exactly_one_seat_so_the_last_free_one_is_enough(appr
     # The invitation actually went out — approving is what sends it; the person
     # joins `invites` later, when they accept it.
     assert RSVP.objects.filter(
-        user_email="friend@test.com",
+        user_email="lele11@your-domain.test",
         target_code=group.code,
         action=RSVP.Action.COLLECTION_INVITE,
     ).exists()
-    assert "friend@test.com" in [addr for m in mail.outbox for addr in m.to]
+    assert "lele11@your-domain.test" in [addr for m in mail.outbox for addr in m.to]
 
 
 @pytest.mark.django_db
@@ -698,7 +704,7 @@ def test_the_approved_notification_is_marked_approved_for_the_old_inbox_branch(g
         user=member, type=InAppNotification.Type.INVITE_PROPOSAL_APPROVED
     )
     assert note.payload["approved"] is True
-    assert note.payload["email"] == "friend@test.com"
+    assert note.payload["email"] == "lele11@your-domain.test"
     assert note.payload["collection_code"] == group.code
 
 
@@ -710,7 +716,7 @@ def test_a_resend_clears_only_the_invitation_pair_it_is_replacing(group):
     survived mutation, and would delete every RSVP that person holds against
     this collection — including a magic link they are about to click.
     """
-    invitee = User.objects.create(email="guest@test.com")
+    invitee = User.objects.create(email="lele12@your-domain.test")
     unrelated = RSVP.objects.create(
         user_code=invitee,
         user_email=invitee.email,
@@ -768,7 +774,7 @@ class TestANewCollectionAsksItsOwnerNothing:
         Collection.objects.get(code=code).invites.add(user2)
 
         resp = client_for(user2).post(
-            PROPOSE_URL.format(code=code), {"email": "friend@test.com"}, format="json"
+            PROPOSE_URL.format(code=code), {"email": "lele11@your-domain.test"}, format="json"
         )
 
         assert resp.status_code == 403

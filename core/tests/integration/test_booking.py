@@ -336,7 +336,7 @@ class TestBookingOverlap:
         # Create a third user
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -372,7 +372,7 @@ class TestBookingOverlap:
         # Create a third user
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -407,7 +407,7 @@ class TestBookingOverlap:
         # Create a third user
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -442,7 +442,7 @@ class TestBookingOverlap:
         # Create a third user
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -471,7 +471,7 @@ class TestBookingOverlap:
             end_date=date.today() + timedelta(days=10),
             status="ACCEPTED",
         )
-        user3 = User.objects.create(code="TEST03", email="test3@example.com")
+        user3 = User.objects.create(code="TEST03", email="lele1@your-domain.test")
         collection.add_invite(user3.code)
 
         # Pick up on day 10 (the existing booking's return day) → allowed.
@@ -498,7 +498,7 @@ class TestBookingOverlap:
             end_date=date.today() + timedelta(days=15),
             status="ACCEPTED",
         )
-        user3 = User.objects.create(code="TEST03", email="test3@example.com")
+        user3 = User.objects.create(code="TEST03", email="lele1@your-domain.test")
         collection.add_invite(user3.code)
 
         # Return on day 10 (the existing booking's pickup day) → allowed.
@@ -524,7 +524,7 @@ class TestBookingOverlap:
             end_date=date.today() + timedelta(days=10),
             status="ACCEPTED",
         )
-        user3 = User.objects.create(code="TEST03", email="test3@example.com")
+        user3 = User.objects.create(code="TEST03", email="lele1@your-domain.test")
         collection.add_invite(user3.code)
 
         # Pick up on day 9 — interior to [5, 10] — overlapping by one day → 409.
@@ -724,7 +724,7 @@ class TestLendingThingStatusNotTaken:
         # Create third user for second booking
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -1026,7 +1026,7 @@ class TestSingleUseThingCompleteFlow:
 
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -1055,7 +1055,7 @@ class TestSingleUseThingCompleteFlow:
         # Create user3
         user3 = User.objects.create(
             code="TEST03",
-            email="test3@example.com",
+            email="lele1@your-domain.test",
         )
         collection.add_invite(user3.code)
 
@@ -1159,7 +1159,7 @@ class TestDateBasedThingCompleteFlow:
         assert lend_thing.status == "ACTIVE"
 
         # Step 3: Another user can now book those dates
-        user3 = User.objects.create(code="TEST03", email="test3@example.com")
+        user3 = User.objects.create(code="TEST03", email="lele1@your-domain.test")
         collection.add_invite(user3.code)
 
         client3 = get_client_for_user(user3)
@@ -1247,7 +1247,7 @@ class TestDateBasedThingCompleteFlow:
         )
 
         # Create third user for second booking
-        user3 = User.objects.create(code="TEST03", email="test3@example.com")
+        user3 = User.objects.create(code="TEST03", email="lele1@your-domain.test")
         collection.add_invite(user3.code)
 
         # Book starting the day after first ends

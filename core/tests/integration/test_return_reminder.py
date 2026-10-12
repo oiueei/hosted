@@ -47,22 +47,22 @@ def client_for(user):
 
 @pytest.fixture
 def owner():
-    return User.objects.create(code="RROWN1", email="lala@test.com", name="Lala")
+    return User.objects.create(code="RROWN1", email="lala4@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def borrower():
-    return User.objects.create(code="RRBOR1", email="lele@test.com", name="Lele")
+    return User.objects.create(code="RRBOR1", email="lele6@your-domain.test", name="Lele")
 
 
 @pytest.fixture
 def member():
-    return User.objects.create(code="RRMEM1", email="lili@test.com", name="Lili")
+    return User.objects.create(code="RRMEM1", email="lili4@your-domain.test", name="Lili")
 
 
 @pytest.fixture
 def co_curator():
-    return User.objects.create(code="RRCOC1", email="lolo@test.com", name="Lolo")
+    return User.objects.create(code="RRCOC1", email="lolo@your-domain.test", name="Lolo")
 
 
 @pytest.fixture
@@ -177,10 +177,10 @@ class TestRemindReturnEndpoint:
         assert response.status_code == 200
         assert len(mail.outbox) == 1
         sent = mail.outbox[0]
-        assert sent.to == ["lele@test.com"]
+        assert sent.to == ["lele6@your-domain.test"]
         # "Reply" reaches whoever pressed — the borrower's natural answer is
         # "I'll bring it tomorrow", and it belongs to that person.
-        assert sent.reply_to == ["lala@test.com"]
+        assert sent.reply_to == ["lala4@your-domain.test"]
         assert sent.subject == "Reminder: please return Drill"
         assert (
             "Lala is reminding you that 'Drill' was due back on 05/10/2026. "
@@ -201,7 +201,7 @@ class TestRemindReturnEndpoint:
 
         assert response.status_code == 200
         sent = mail.outbox[0]
-        assert sent.reply_to == ["lolo@test.com"]
+        assert sent.reply_to == ["lolo@your-domain.test"]
         assert "Lolo is reminding you" in sent.body
         assert "Lala" not in sent.body
 
@@ -218,10 +218,10 @@ class TestRemindReturnEndpoint:
         remind(co_curator, booking)
 
         sent = mail.outbox[0]
-        assert sent.reply_to == ["lolo@test.com"]
+        assert sent.reply_to == ["lolo@your-domain.test"]
         assert "A member is reminding you" in sent.body
-        assert "lolo@test.com" not in sent.body
-        assert "lolo@test.com" not in sent.alternatives[0][0]
+        assert "lolo@your-domain.test" not in sent.body
+        assert "lolo@your-domain.test" not in sent.alternatives[0][0]
 
     @pytest.mark.parametrize(
         ("language", "subject", "sentence"),

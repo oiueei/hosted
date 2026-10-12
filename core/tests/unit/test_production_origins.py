@@ -29,10 +29,10 @@ from unittest import mock
 # variable can satisfy it.
 BOOT_ENV = {
     "DATABASE_URL": "postgres://u:p@localhost:5432/d",
-    "DEFAULT_FROM_EMAIL": "noreply@example.org",
-    "MAGIC_LINK_BASE_URL": "https://example.org/verify",
-    "RSVP_BASE_URL": "https://example.org/rsvp",
-    "SHARE_LINK_BASE_URL": "https://example.org/share",
+    "DEFAULT_FROM_EMAIL": "lala@your-domain.test",
+    "MAGIC_LINK_BASE_URL": "https://your-domain.test/verify",
+    "RSVP_BASE_URL": "https://your-domain.test/rsvp",
+    "SHARE_LINK_BASE_URL": "https://your-domain.test/share",
 }
 
 ORIGIN_VARS = ("CSRF_TRUSTED_ORIGINS", "CORS_ALLOWED_ORIGINS")
@@ -113,16 +113,19 @@ def test_cors_and_csrf_fail_closed_the_same_way():
 
 def test_a_cross_domain_frontend_can_still_name_its_origin():
     """Failing closed must not mean the setting stopped working."""
-    settings = _production_settings({"CSRF_TRUSTED_ORIGINS": "https://app.example.org"})
+    settings = _production_settings({"CSRF_TRUSTED_ORIGINS": "https://app.your-domain.test"})
 
-    assert settings.CSRF_TRUSTED_ORIGINS == ["https://app.example.org"]
+    assert settings.CSRF_TRUSTED_ORIGINS == ["https://app.your-domain.test"]
 
 
 def test_whitespace_and_empty_entries_are_dropped():
     """A trailing comma in a config var must not add an empty trusted origin —
     `"".split(",")` is `[""]`, which is why the comprehension filters."""
     settings = _production_settings(
-        {"CSRF_TRUSTED_ORIGINS": " https://a.example.org , https://b.example.org ,"}
+        {"CSRF_TRUSTED_ORIGINS": " https://a.your-domain.test , https://b.your-domain.test ,"}
     )
 
-    assert settings.CSRF_TRUSTED_ORIGINS == ["https://a.example.org", "https://b.example.org"]
+    assert settings.CSRF_TRUSTED_ORIGINS == [
+        "https://a.your-domain.test",
+        "https://b.your-domain.test",
+    ]

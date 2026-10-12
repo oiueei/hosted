@@ -229,7 +229,7 @@ class CountingPolicy(CreatorPolicy):
         return Capabilities(
             collection_modes=(),
             thing_types=(),
-            request_url="https://example.org/request-access/",
+            request_url="https://your-domain.test/request-access/",
         )
 
 
@@ -293,7 +293,7 @@ class PerUserPolicy(CreatorPolicy):
     itself unguarded: nothing proved the person actually reaches the policy.
     """
 
-    ALLOWED_EMAIL = "vetted@example.com"
+    ALLOWED_EMAIL = "lala@your-domain.test"
 
     def capabilities(self, user):
         vetted = getattr(user, "email", None) == self.ALLOWED_EMAIL

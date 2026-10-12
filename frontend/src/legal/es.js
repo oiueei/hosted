@@ -2,8 +2,8 @@
 // Cada despliegue de OIUEEI tiene su propio operador, y ese operador es el
 // responsable del tratamiento de los datos: si auto-hospedas OIUEEI, edita la
 // sección «Quién opera esta instancia» con tu identidad y contacto.
-// (El despliegue oficial www.oiueei.com sustituye este archivo en su rama de
-// despliegue por la versión completa, con los datos reales de su titular.)
+// (Un despliegue puede sustituir este archivo por su propio texto, con los
+// datos reales de su titular.)
 export default `
 # Nuestro compromiso
 

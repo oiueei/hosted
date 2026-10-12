@@ -22,7 +22,7 @@ const NO_REGION = { rules: { region: { enabled: false } } };
 
 const MOCK_USER = {
   code: 'ABC123',
-  email: 'me@test.com',
+  email: 'lala2@your-domain.test',
   name: 'Owner',
   headline: '',
   about: '',
@@ -53,7 +53,7 @@ const MOCK_THING = {
   availability: '',
   location: '',
   condition: '',
-  thumbnail_url: 'https://bucket.example.com/x.jpg',
+  thumbnail_url: 'https://bucket.your-domain.test/x.jpg',
   gallery: [],
   gallery_urls: [],
   available_today: null,
@@ -80,7 +80,7 @@ const MOCK_COLLECTION = {
   is_member: false,
   is_paused: false,
   things: [MOCK_THING],
-  invites: [{ code: 'GUE001', name: 'Guest', email: 'g@test.com' }],
+  invites: [{ code: 'GUE001', name: 'Guest', email: 'lulu@your-domain.test' }],
 };
 
 function mockResponse(data, ok = true) {
@@ -226,7 +226,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
               is_member: true,
               digest_frequency: 'WEEKLY',
               is_digest_muted: false,
-              welcome_doc_url: 'https://bucket.example.com/oiueei/documents/welcome.pdf',
+              welcome_doc_url: 'https://bucket.your-domain.test/oiueei/documents/welcome.pdf',
             })
           )
         : Promise.resolve(mockResponse([]))

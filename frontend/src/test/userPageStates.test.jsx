@@ -23,11 +23,11 @@ import UserPage from '../pages/UserPage';
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const refused = (status) => Promise.resolve({ ok: false, status, json: async () => ({}) });
 
-const ME = { code: 'ME0001', name: 'Lala', email: 'me@test.com', created: '2026-01-01' };
+const ME = { code: 'ME0001', name: 'Lala', email: 'lala2@your-domain.test', created: '2026-01-01' };
 const OTHER = {
   code: 'OTH001',
   name: 'Lili',
-  email: 'lili@test.com',
+  email: 'lili@your-domain.test',
   created: '2026-01-01',
   shared_collections: [],
 };
@@ -195,7 +195,9 @@ describe('UserPage — the photo', () => {
       ok({ ...OTHER, name: '', photo_url: 'https://cdn.example/lili.jpg' })
     );
     renderAt('/OTH001');
-    expect(await screen.findByRole('img', { name: 'Photo of lili@test.com' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('img', { name: 'Photo of lili@your-domain.test' })
+    ).toBeInTheDocument();
   });
 
   test('a member with no photo gets no empty image', async () => {

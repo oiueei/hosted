@@ -1,7 +1,7 @@
 """
 A JSON *array* body must never 500 an endpoint that expects an object.
 
-DRF parses `[{"email": "a@b.com"}]` into a `list`, which has no `.get` — so a
+DRF parses `[{"email": "lulu@your-domain.test"}]` into a `list`, which has no `.get` — so a
 view reading `request.data.get(...)` before any serializer has run raises
 `AttributeError` and answers 500 where it owes a 400. Every endpoint here reads
 the body that way, and `core.views._helpers.body_dict` is what keeps them honest:
@@ -19,7 +19,7 @@ import pytest
 
 from core.models import Thing
 
-ARRAY_BODY = [{"email": "someone@example.com"}]
+ARRAY_BODY = [{"email": "lele8@your-domain.test"}]
 
 
 @pytest.mark.django_db
@@ -111,7 +111,7 @@ def test_logout_answers_200_not_500(api_client):
 @pytest.mark.parametrize(
     "body, expected",
     [
-        ({"email": "  Someone@Example.COM "}, "someone@example.com"),
+        ({"email": "  Lele8@Your-Domain.TEST "}, "lele8@your-domain.test"),
         ({"email": None}, ""),
         ({}, ""),
         (ARRAY_BODY, ""),  # the list body: `.get` does not exist on it

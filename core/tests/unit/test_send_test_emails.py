@@ -22,7 +22,7 @@ from core.management.commands.send_test_emails import LANGS, SAMPLES
 from core.models import Collection, Thing, User
 from core.services import email_service
 
-TO = "tester@example.org"
+TO = "lulu@your-domain.test"
 
 
 def _run(*args):
@@ -103,7 +103,7 @@ def test_sample_names_are_unique():
 
 @pytest.mark.django_db
 def test_it_sends_one_of_each_and_all_to_the_one_address():
-    boss = User.objects.create(email="boss@example.com", name="Boss", is_superuser=True)
+    boss = User.objects.create(email="lolo@your-domain.test", name="Boss", is_superuser=True)
 
     sent = _run()
 
@@ -134,7 +134,8 @@ def test_it_leaves_nothing_behind():
 
     assert (User.objects.count(), Collection.objects.count(), Thing.objects.count()) == before
     assert not User.objects.filter(email=TO).exists()
-    assert not User.objects.filter(email__endswith=".sample@example.com").exists()
+    sample = ["lala@your-domain.test", "lele@your-domain.test", "lili@your-domain.test"]
+    assert not User.objects.filter(email__in=sample).exists()
 
 
 @pytest.mark.django_db

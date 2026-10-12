@@ -84,7 +84,7 @@ def test_markdown_and_emojis_are_prose_not_html(collection):
     """The note carries Markdown and emojis as plain text — rejecting raw HTML
     is `SafeTextField`'s job (a `<script>` never validates), and Markdown
     syntax surviving to storage is what `_note_blocks` renders later."""
-    note = "Bring **ID** 🛠️ — see [the rules](https://example.com)"
+    note = "Bring **ID** 🛠️ — see [the rules](https://your-domain.test)"
     serializer = CollectionUpdateSerializer(collection, data={"email_note": note}, partial=True)
     assert serializer.is_valid(), serializer.errors
     assert serializer.save().email_note == note
@@ -132,8 +132,8 @@ def test_www_is_read_as_https_and_a_mailbox_names_no_host():
 
     assert 'href="https://www.x.cat"' in _md_inline(escape("[la web](www.x.cat)"))
     assert "(www.x.cat)" in _md_inline(escape("[la web](www.x.cat)"))
-    mail = _md_inline(escape("[escríbeme](mailto:lala@example.com)"))
-    assert 'href="mailto:lala@example.com"' in mail
+    mail = _md_inline(escape("[escríbeme](mailto:lala14@your-domain.test)"))
+    assert 'href="mailto:lala14@your-domain.test"' in mail
     assert mail.endswith("escríbeme</a>")
 
 

@@ -116,7 +116,7 @@ describe('ImportInvitesPage', () => {
     await screen.findByRole('heading', { level: 1, name: TITLE });
 
     fireEvent.change(fileInput(container), {
-      target: { files: [csv('email,name\nlala@mail.com,\nlele@mail.com,LeLe')] },
+      target: { files: [csv('email,name\nlala@your-domain.test,\nlele@your-domain.test,LeLe')] },
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Send 2 invitations' }));
 
@@ -129,7 +129,10 @@ describe('ImportInvitesPage', () => {
     expect(posts).toHaveLength(1);
     expect(posts[0][0]).toBe('/api/v1/collections/COL001/invite/bulk/');
     expect(JSON.parse(posts[0][1].body)).toEqual({
-      invites: [{ email: 'lala@mail.com' }, { email: 'lele@mail.com', name: 'LeLe' }],
+      invites: [
+        { email: 'lala@your-domain.test' },
+        { email: 'lele@your-domain.test', name: 'LeLe' },
+      ],
     });
     // …and the collection was not read again: that refresh belonged to the members
     // page, which reads it afresh when the reader goes back to it.

@@ -28,7 +28,7 @@ def test_send_returns_false_on_smtp_error():
         side_effect=smtplib.SMTPException("provider down"),
     ):
         result = email_service._send(
-            "nobody@example.com",
+            "lolo9@your-domain.test",
             "Subject",
             "plain",
             "<p>html</p>",
@@ -45,7 +45,7 @@ def test_send_returns_false_on_socket_error():
         side_effect=OSError("connection refused"),
     ):
         result = email_service._send(
-            "nobody@example.com",
+            "lolo9@your-domain.test",
             "Subject",
             "plain",
             "<p>html</p>",
@@ -64,7 +64,7 @@ def test_public_send_does_not_raise_when_provider_is_down():
         "core.services.email_service.EmailMultiAlternatives.send",
         side_effect=smtplib.SMTPException("down"),
     ) as mock_send:
-        email_service.send_magic_link_email("nobody@example.com", "https://x/verify/ABC123")
+        email_service.send_magic_link_email("lolo9@your-domain.test", "https://x/verify/ABC123")
     # The send must have been ATTEMPTED — otherwise this test would also pass
     # if the function silently skipped sending, which is a different bug.
     mock_send.assert_called_once()
@@ -75,7 +75,7 @@ def test_html_email_embeds_logo_inline():
     """An activity email carries the OIUEEI logo as a CID attachment: one
     inline image attachment on the message, referenced from the HTML
     alternative, plain-text body untouched."""
-    email_service.send_invite_rejected_email("Ana", "Ropa de invierno", "owner@example.com")
+    email_service.send_invite_rejected_email("Ana", "Ropa de invierno", "lala1@your-domain.test")
 
     assert len(mail.outbox) == 1
     msg = mail.outbox[0]
@@ -93,7 +93,7 @@ def test_logo_send_uses_multipart_related():
     so Apple Mail renders it once inline instead of also appending a full-size
     copy with a paperclip. The multipart/alternative (plain + html) stays
     nested inside, and the logo keeps its Content-ID."""
-    email_service.send_invite_rejected_email("Ana", "Ropa de invierno", "owner@example.com")
+    email_service.send_invite_rejected_email("Ana", "Ropa de invierno", "lala1@your-domain.test")
 
     assert len(mail.outbox) == 1
     msg = mail.outbox[0].message()
@@ -118,7 +118,9 @@ def test_every_email_links_to_the_legal_page():
     can't live behind the same category gate as the "manage your emails"
     footer. Proven on a mandatory-category send (the magic link) precisely
     because that is the one category the preferences footer skips."""
-    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+    email_service.send_magic_link_email(
+        "lele8@your-domain.test", "http://localhost:3000/verify/tok"
+    )
 
     html = mail.outbox[0].alternatives[0][0]
     assert 'href="http://localhost:3000/legal"' in html
@@ -130,7 +132,9 @@ def test_the_legal_link_sits_inside_the_one_html_document():
     the footer after it, so the document must close exactly once, at the very
     end. Mandatory mail (the magic link) is the case with the shortest footer:
     a rule, the mark and the legal link, and nothing else to hide behind."""
-    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+    email_service.send_magic_link_email(
+        "lele8@your-domain.test", "http://localhost:3000/verify/tok"
+    )
 
     html = mail.outbox[0].alternatives[0][0]
     assert html.count("</html>") == 1
@@ -144,7 +148,7 @@ def test_the_legal_link_follows_the_deployments_own_frontend_url():
     real domain, and every derived link — this one included — has to follow."""
     with override_settings(MAGIC_LINK_BASE_URL="https://oiueei.example/verify"):
         email_service.send_magic_link_email(
-            "someone@example.com", "https://oiueei.example/verify/x"
+            "lele8@your-domain.test", "https://oiueei.example/verify/x"
         )
 
     html = mail.outbox[0].alternatives[0][0]
@@ -155,7 +159,7 @@ def test_the_legal_link_follows_the_deployments_own_frontend_url():
 def test_the_legal_link_label_is_translated():
     with override_settings(EMAIL_LANGUAGE="es"):
         email_service.send_magic_link_email(
-            "someone@example.com", "http://localhost:3000/verify/tok"
+            "lele8@your-domain.test", "http://localhost:3000/verify/tok"
         )
 
     html = mail.outbox[0].alternatives[0][0]
@@ -174,7 +178,7 @@ def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     now, so the name appears twice — once as the title, once
     in the sentence beneath it."""
     email_service.send_magic_link_email(
-        "someone@example.com",
+        "lele8@your-domain.test",
         "http://localhost:3000/verify/tok",
         collection_headline="Chalmercadillo",
     )
@@ -191,7 +195,7 @@ def test_magic_link_repeats_the_subjects_greeting_in_the_body():
     # The generic /login variant has no collection to be its parent: OIUEEI is,
     # with its own one-line pitch as the intro.
     mail.outbox.clear()
-    email_service.send_magic_link_email("someone@example.com", "http://x/verify/t")
+    email_service.send_magic_link_email("lele8@your-domain.test", "http://x/verify/t")
     generic_html = mail.outbox[0].alternatives[0][0]
     # No collection to be the parent: the mark itself leads as the <h1>,
     # not the literal word "OIUEEI".
@@ -210,7 +214,7 @@ def test_magic_link_action_is_a_button_with_the_link_spelled_out():
     the raw link follows as text, because the one click this email exists for
     is exactly what some clients refuse."""
     link = "http://localhost:3000/verify/tok"
-    email_service.send_magic_link_email("someone@example.com", link)
+    email_service.send_magic_link_email("lele8@your-domain.test", link)
     html = mail.outbox[0].alternatives[0][0]
     # The button: the magic link behind a bus-blue, white-text inline-styled
     # anchor — the token styles travel inline or not at all.
@@ -234,7 +238,7 @@ def test_the_invitation_email_tells_the_recipient_where_their_address_came_from(
     email_service.send_collection_invite_email(
         "Lala",
         "Tools for the block",
-        "invitee@example.com",
+        "lele14@your-domain.test",
         "http://localhost:3000/rsvp/accept",
         "http://localhost:3000/rsvp/reject",
     )
@@ -251,7 +255,7 @@ def test_the_invitation_source_note_is_translated_too():
         email_service.send_collection_invite_email(
             "Lala",
             "Coses del barri",
-            "invitee@example.com",
+            "lele14@your-domain.test",
             "http://localhost:3000/rsvp/accept",
             "http://localhost:3000/rsvp/reject",
         )
@@ -308,7 +312,7 @@ INVITE_REJECT = "http://localhost:3000/rsvp/reject"
 
 def _invitation_html():
     email_service.send_collection_invite_email(
-        "Lala", "Tools for the block", "invitee@example.com", INVITE_ACCEPT, INVITE_REJECT
+        "Lala", "Tools for the block", "lele14@your-domain.test", INVITE_ACCEPT, INVITE_REJECT
     )
     return mail.outbox[0].alternatives[0][0]
 
@@ -347,7 +351,7 @@ def test_the_invitation_spells_both_links_out_under_the_buttons():
     accept first, after a sentence saying why — and still before the art. 14
     note, which stays the last thing said."""
     email_service.send_collection_invite_email(
-        "Lala", "Tools for the block", "invitee@example.com", INVITE_ACCEPT, INVITE_REJECT
+        "Lala", "Tools for the block", "lele14@your-domain.test", INVITE_ACCEPT, INVITE_REJECT
     )
     msg = mail.outbox[0]
     html = msg.alternatives[0][0]
@@ -576,7 +580,9 @@ def test_signing_back_in_from_the_inactivity_email_is_a_primary_button(user):
 
 @pytest.mark.django_db
 def test_opening_the_group_from_a_digest_is_a_primary_button():
-    email_service.send_digest_email("Chalmercadillo", "COL001", ["A chair"], ["a@example.com"])
+    email_service.send_digest_email(
+        "Chalmercadillo", "COL001", ["A chair"], ["lili@your-domain.test"]
+    )
 
     html = mail.outbox[0].alternatives[0][0]
     assert _first_button("http://localhost:3000/collections/COL001") in html
@@ -586,7 +592,7 @@ def test_opening_the_group_from_a_digest_is_a_primary_button():
 @pytest.mark.django_db
 def test_opening_the_welcome_document_is_a_primary_button():
     email_service.send_collection_welcome_doc_email(
-        "Chalmercadillo", "http://localhost:3000/doc.pdf", "a@example.com"
+        "Chalmercadillo", "http://localhost:3000/doc.pdf", "lili@your-domain.test"
     )
 
     html = mail.outbox[0].alternatives[0][0]
@@ -600,7 +606,13 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
     outlined secondary, both links spelled out after a sentence."""
     approve, reject = "http://localhost:3000/rsvp/yes", "http://localhost:3000/rsvp/no"
     email_service.send_invitation_proposal_email(
-        "owner@example.com", "Lala", "Chalmercadillo", "guest@example.com", "", approve, reject
+        "lala1@your-domain.test",
+        "Lala",
+        "Chalmercadillo",
+        "lele4@your-domain.test",
+        "",
+        approve,
+        reject,
     )
 
     html = mail.outbox[0].alternatives[0][0]
@@ -632,12 +644,12 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
 def test_an_email_shown_as_its_own_value_is_a_plain_mailto_link():
     """`_email()` — the proposed guest's address on an invitation proposal,
     the declined proposal's own."""
-    html = email_service._render_email([email_service._email("guest@example.com")], lang="en")
+    html = email_service._render_email([email_service._email("lele4@your-domain.test")], lang="en")
 
     assert (
-        '<p><a href="mailto:guest@example.com" '
+        '<p><a href="mailto:lele4@your-domain.test" '
         'style="color:#0000bf !important;text-decoration:underline !important;">'
-        "guest@example.com</a></p>" in html
+        "lele4@your-domain.test</a></p>" in html
     )
     assert "<strong" not in html
 
@@ -645,13 +657,13 @@ def test_an_email_shown_as_its_own_value_is_a_plain_mailto_link():
 def test_a_field_shown_as_an_address_is_a_plain_mailto_link():
     """`_field(label, value, email=True)` — the contact form's sender address."""
     html = email_service._render_email(
-        [email_service._field("Email", "sender@example.com", email=True)], lang="en"
+        [email_service._field("Email", "lili1@your-domain.test", email=True)], lang="en"
     )
 
     assert (
-        '<p>Email: <a href="mailto:sender@example.com" '
+        '<p>Email: <a href="mailto:lili1@your-domain.test" '
         'style="color:#0000bf !important;text-decoration:underline !important;">'
-        "sender@example.com</a></p>" in html
+        "lili1@your-domain.test</a></p>" in html
     )
     assert "<strong" not in html
 
@@ -660,28 +672,28 @@ def test_a_named_email_field_keeps_the_name_plain_and_links_only_the_address():
     """`_named_email_field()` — the capacity alarm's Owner row: the person's name is not itself a
     link, only their parenthesised address is."""
     html = email_service._render_email(
-        [email_service._named_email_field("Owner", "Lala", "lala@example.com")], lang="en"
+        [email_service._named_email_field("Owner", "Lala", "lala14@your-domain.test")], lang="en"
     )
 
     assert (
-        '<p>Owner: Lala (<a href="mailto:lala@example.com" '
+        '<p>Owner: Lala (<a href="mailto:lala14@your-domain.test" '
         'style="color:#0000bf !important;text-decoration:underline !important;">'
-        "lala@example.com</a>)</p>" in html
+        "lala14@your-domain.test</a>)</p>" in html
     )
 
 
 @pytest.mark.django_db
 def test_the_capacity_alarms_owner_row_has_no_angle_brackets():
-    """'Owner: Lala <lala.sample@example.com>' read as
+    """'Owner: Lala <lala6@your-domain.test>' read as
     a stray, unstyled HTML tag next to the name — parentheses instead, and
     only the address itself is a link (the two rows above)."""
     from core.models import Collection, User
 
-    owner = User.objects.create(code="ALRMO2", email="alarmowner2@test.com", name="Lala")
+    owner = User.objects.create(code="ALRMO2", email="lala@your-domain.test", name="Lala")
     collection = Collection.objects.create(
         code="ALRMC2", owner=owner, headline="Busy", status="ACTIVE"
     )
-    User.objects.create(code="ALRMS2", email="root2@test.com", is_superuser=True)
+    User.objects.create(code="ALRMS2", email="lala2@your-domain.test", is_superuser=True)
     mail.outbox.clear()
 
     email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
@@ -704,7 +716,9 @@ def test_every_email_declares_its_language_on_the_html_tag():
     every email already speaks a specific, known language
     (`resolve_email_language`) — leaving the attribute blank was never
     "unknown", only unstated."""
-    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+    email_service.send_magic_link_email(
+        "lele8@your-domain.test", "http://localhost:3000/verify/tok"
+    )
 
     html = mail.outbox[0].alternatives[0][0]
     assert '<html lang="en">' in html
@@ -713,7 +727,7 @@ def test_every_email_declares_its_language_on_the_html_tag():
 @pytest.mark.django_db
 def test_the_html_lang_attribute_follows_the_recipients_own_language():
     email_service.send_magic_link_email(
-        "someone@example.com", "http://localhost:3000/verify/tok", lang="ca"
+        "lele8@your-domain.test", "http://localhost:3000/verify/tok", lang="ca"
     )
 
     html = mail.outbox[0].alternatives[0][0]
@@ -727,7 +741,7 @@ def test_a_sender_with_no_lang_in_scope_still_declares_the_deployment_default():
     # takes on purpose (no recipient to speak for) — and the tag still has to
     # name a real language, not render lang="".
     with override_settings(EMAIL_LANGUAGE="es"):
-        email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/x")
+        email_service.send_magic_link_email("lele8@your-domain.test", "http://localhost:3000/x")
 
     html = mail.outbox[0].alternatives[0][0]
     assert '<html lang="es">' in html
@@ -742,7 +756,9 @@ def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
     footer sentence otherwise. A pale-yellow background + padding sets it
     apart; its own text is black, not the footer's muted grey — only the CTA
     link inside keeps the bus-blue LINK_STYLE."""
-    email_service.send_magic_link_email("someone@example.com", "http://localhost:3000/verify/tok")
+    email_service.send_magic_link_email(
+        "lele8@your-domain.test", "http://localhost:3000/verify/tok"
+    )
 
     html = mail.outbox[0].alternatives[0][0]
     assert (
@@ -980,7 +996,7 @@ def test_without_being_told_how_many_the_confirmation_counts_them_itself(
 
     from core.models import Collection, User
 
-    co_curator = User.objects.create(code="CURA01", email="cura@test.com", name="Cura")
+    co_curator = User.objects.create(code="CURA01", email="lele10@your-domain.test", name="Cura")
     collection.mode = Collection.Mode.PROPRIETARY
     collection.save(update_fields=["mode"])
     collection.invites.add(co_curator, user2)
@@ -1183,7 +1199,7 @@ def test_a_collection_scoped_email_leads_with_the_collection_name(user):
     still takes the collection's name as its <h1>, as it always did —
     the invitation is one of these."""
     email_service.send_collection_invite_email(
-        "Lala", "Chalmercadillo", "invitee@example.com", "http://x/a", "http://x/r"
+        "Lala", "Chalmercadillo", "lele14@your-domain.test", "http://x/a", "http://x/r"
     )
 
     msg = mail.outbox[0]
@@ -1372,7 +1388,7 @@ def test_the_header_speaks_the_readers_language(user):
 
     from core.models import Collection, User
 
-    catalan = User.objects.create(email="ca@example.com", language="ca")
+    catalan = User.objects.create(email="lele@your-domain.test", language="ca")
     collection = Collection.objects.create(
         code="BILN01",
         owner=user,
@@ -1510,7 +1526,7 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     plain, blocks = email_service._note_blocks(
         "Hola! **Léenos** 🛠️\n"
         "\n"
-        "- Trae tu [carnet](https://example.com/reglas)\n"
+        "- Trae tu [carnet](https://your-domain.test/reglas)\n"
         "- Planta 2\n"
         "\n"
         "1. Confirma\n"
@@ -1522,9 +1538,9 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     html = str(blocks[0]["html"])
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
-        '<ul><li>Trae tu <a href="https://example.com/reglas" '
+        '<ul><li>Trae tu <a href="https://your-domain.test/reglas" '
         'style="color:#0000bf !important;text-decoration:underline !important;">'
-        "carnet</a> (example.com)</li>"
+        "carnet</a> (your-domain.test)</li>"
         "<li>Planta 2</li></ul>"
     )
     assert expected_list in html
@@ -1546,26 +1562,26 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     the operator's own domain — so text that looks like the operator's sign-in
     link must not be all the reader sees."""
     _, blocks = email_service._note_blocks(
-        "[https://www.oiueei.com/verify/abc](https://elsewhere.example/verify)"
+        "[https://www.your-domain.test/verify/abc](https://elsewhere.example/verify)"
     )
     html = str(blocks[0]["html"])
     assert html == (
         '<p><a href="https://elsewhere.example/verify" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">https://www.oiueei.com/verify/abc</a>'
+        'style="color:#0000bf !important;text-decoration:underline !important;">https://www.your-domain.test/verify/abc</a>'
         " (elsewhere.example)</p>"
     )
 
 
 def test_a_link_whose_text_is_its_own_url_needs_no_host():
     _, blocks = email_service._note_blocks(
-        "[https://example.com/a?b=1&c=2](https://example.com/a?b=1&c=2)"
+        "[https://your-domain.test/a?b=1&c=2](https://your-domain.test/a?b=1&c=2)"
     )
     html = str(blocks[0]["html"])
     # Escaped once — the & survives as one &amp;, never &amp;amp; — and no
-    # "(example.com)" repeating what the text already says.
+    # "(your-domain.test)" repeating what the text already says.
     assert html == (
-        '<p><a href="https://example.com/a?b=1&amp;c=2" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">https://example.com/a?b=1&amp;c=2</a></p>'
+        '<p><a href="https://your-domain.test/a?b=1&amp;c=2" '
+        'style="color:#0000bf !important;text-decoration:underline !important;">https://your-domain.test/a?b=1&amp;c=2</a></p>'
     )
 
 
@@ -1877,7 +1893,7 @@ def test_the_team_answer_email_links_a_group_its_reader_is_in_and_never_one_they
 def test_a_reader_in_none_of_the_things_groups_gets_the_bare_thing_link(
     user, thing, two_groups, django_user_model
 ):
-    outsider = django_user_model.objects.create(code="OUTSD1", email="outsider@example.com")
+    outsider = django_user_model.objects.create(code="OUTSD1", email="lolo4@your-domain.test")
 
     mail.outbox.clear()
     email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", outsider.email)
@@ -1892,7 +1908,9 @@ def test_a_reader_in_none_of_the_things_groups_gets_the_bare_thing_link(
 @pytest.mark.django_db
 def test_an_address_with_no_account_gets_the_bare_thing_link(thing, two_groups):
     mail.outbox.clear()
-    email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", "new@example.com")
+    email_service.send_faq_answer_email(
+        "Test User", thing, "Is it free?", "Yes", "lele3@your-domain.test"
+    )
 
     for half in _both_halves(mail.outbox[0]):
         assert "/things/THNG01" in half
@@ -1908,7 +1926,7 @@ def test_a_public_group_is_named_to_a_reader_who_is_not_in_it(
 
     collection.visibility = Collection.Visibility.PUBLIC
     collection.save(update_fields=["visibility"])
-    passer_by = django_user_model.objects.create(code="PASSBY", email="passer@example.com")
+    passer_by = django_user_model.objects.create(code="PASSBY", email="lili2@your-domain.test")
 
     mail.outbox.clear()
     email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", passer_by.email)

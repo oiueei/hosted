@@ -70,7 +70,7 @@ DEPOSIT_POLICY_LILI = _localized_tag(
 USERS = [
     {
         "code": "La1aN1",
-        "email": "lala@mail.com",
+        "email_local": "lala",
         "name": "Lala",
         "theeeme_id": "BUU331",
         "photo": "La1aPH",
@@ -79,7 +79,7 @@ USERS = [
     },
     {
         "code": "L3L3oo",
-        "email": "lele@mail.com",
+        "email_local": "lele",
         "name": "Lele",
         "theeeme_id": "K0P4R1",
         "photo": "L3L3PH",
@@ -89,7 +89,7 @@ USERS = [
     },
     {
         "code": "l1l13S",
-        "email": "lili@mail.com",
+        "email_local": "lili",
         "name": "Lili",
         "theeeme_id": "BUU331",
         "photo": "l1l1PH",
@@ -97,7 +97,7 @@ USERS = [
     },
     {
         "code": "l0l0oh",
-        "email": "lolo@mail.com",
+        "email_local": "lolo",
         "name": "Lolo",
         "theeeme_id": "BUU331",
         "photo": "l0l0PH",
@@ -106,7 +106,7 @@ USERS = [
     },
     {
         "code": "1u1ucs",
-        "email": "lulu@mail.com",
+        "email_local": "lulu",
         "name": "Lulu",
         "theeeme_id": "BUU331",
         "photo": "1u1uPH",

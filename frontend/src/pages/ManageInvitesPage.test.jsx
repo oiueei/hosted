@@ -10,14 +10,14 @@ const COLLECTION = {
   owner: 'OWNER1',
   is_curator: true,
   co_owners: [],
-  invites: [{ code: 'GST001', email: 'ana@example.com', name: 'Ana' }],
-  pending_invites: [{ code: 'RSVP01', email: 'pending@example.com' }],
+  invites: [{ code: 'GST001', email: 'lala1@your-domain.test', name: 'Ana' }],
+  pending_invites: [{ code: 'RSVP01', email: 'lili2@your-domain.test' }],
 };
 
 // A member's suggestion, as `CollectionSerializer.pending_proposals` emits it.
 const PROPOSAL = {
   code: 'PRP001',
-  email: 'lili@example.com',
+  email: 'lili@your-domain.test',
   note: 'my downstairs neighbour',
   proposer_name: 'Lele',
 };
@@ -89,7 +89,7 @@ describe('ManageInvitesPage (the guest list)', () => {
     await screen.findByText(/Ana/);
 
     fireEvent.change(screen.getByLabelText('Guest email'), {
-      target: { value: 'new@example.com' },
+      target: { value: 'lele2@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
 
@@ -97,9 +97,9 @@ describe('ManageInvitesPage (the guest list)', () => {
     const [url, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/invite/'));
     expect(url).toBe('/api/v1/collections/COL001/invite/');
     expect(options.method).toBe('POST');
-    expect(JSON.parse(options.body)).toEqual({ email: 'new@example.com' });
+    expect(JSON.parse(options.body)).toEqual({ email: 'lele2@your-domain.test' });
     // The new address appears as Pending without waiting for a refetch.
-    expect(screen.getByText('new@example.com')).toBeInTheDocument();
+    expect(screen.getByText('lele2@your-domain.test')).toBeInTheDocument();
     expect(screen.getByLabelText('Guest email')).toHaveValue('');
   });
 
@@ -147,7 +147,7 @@ describe('ManageInvitesPage (the guest list)', () => {
     await screen.findByText(/Ana/);
 
     fireEvent.change(screen.getByLabelText('Guest email'), {
-      target: { value: 'ana@example.com' },
+      target: { value: 'lala1@your-domain.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
 
@@ -162,7 +162,7 @@ describe('ManageInvitesPage (the guest list)', () => {
 
     await screen.findByText('Invitation resent.');
     const [, options] = globalThis.fetch.mock.calls.find(([u]) => u.endsWith('/invite/'));
-    expect(JSON.parse(options.body)).toEqual({ email: 'pending@example.com' });
+    expect(JSON.parse(options.body)).toEqual({ email: 'lili2@your-domain.test' });
   });
 
   // ── Members' recommendations ──────────────────────────────────────────────
@@ -176,7 +176,7 @@ describe('ManageInvitesPage (the guest list)', () => {
     mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
     renderPage();
 
-    expect(await screen.findByText('lili@example.com')).toBeInTheDocument();
+    expect(await screen.findByText('lili@your-domain.test')).toBeInTheDocument();
     expect(screen.getByText(/recommended by Lele/)).toBeInTheDocument();
     // The note is the proposer's word FOR THE OWNER — it is the whole reason
     // this is a decision rather than a guess at an unfamiliar address.
@@ -187,7 +187,7 @@ describe('ManageInvitesPage (the guest list)', () => {
   test('approving posts to the proposal and clears it from the list', async () => {
     mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
     renderPage();
-    await screen.findByText('lili@example.com');
+    await screen.findByText('lili@your-domain.test');
 
     fireEvent.click(screen.getByRole('button', { name: 'Invite them' }));
 
@@ -197,19 +197,19 @@ describe('ManageInvitesPage (the guest list)', () => {
     expect(options.method).toBe('POST');
     // Answered means answered: an owner must not be asked the same question
     // twice, nor be able to approve it twice from a stale card.
-    await waitFor(() => expect(screen.queryByText('lili@example.com')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('lili@your-domain.test')).toBeNull());
   });
 
   test('declining goes to the reject endpoint, never to approve', async () => {
     mockRoutes({ collection: { ...COLLECTION, pending_proposals: [PROPOSAL] } });
     renderPage();
-    await screen.findByText('lili@example.com');
+    await screen.findByText('lili@your-domain.test');
 
     fireEvent.click(screen.getByRole('button', { name: 'Not this time' }));
 
     await waitFor(() => expect(proposalCalls()).toHaveLength(1));
     expect(proposalCalls()[0][0]).toBe('/api/v1/proposals/PRP001/reject/');
-    await waitFor(() => expect(screen.queryByText('lili@example.com')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('lili@your-domain.test')).toBeNull());
   });
 
   test('a refused decision keeps the suggestion and surfaces the reason', async () => {
@@ -221,7 +221,7 @@ describe('ManageInvitesPage (the guest list)', () => {
       },
     });
     renderPage();
-    await screen.findByText('lili@example.com');
+    await screen.findByText('lili@your-domain.test');
 
     fireEvent.click(screen.getByRole('button', { name: 'Invite them' }));
 
@@ -229,7 +229,7 @@ describe('ManageInvitesPage (the guest list)', () => {
     // from the owner, and a generic error would hide which one this was.
     expect(await screen.findByText(/Daily invitation limit reached/)).toBeInTheDocument();
     // The card stays, so the owner can answer tomorrow.
-    expect(screen.getByText('lili@example.com')).toBeInTheDocument();
+    expect(screen.getByText('lili@your-domain.test')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Invite them' })).toBeInTheDocument();
   });
 
@@ -243,7 +243,7 @@ describe('ManageInvitesPage (the guest list)', () => {
 
     // The note is one member's private word about a third person, written for
     // the owner alone; the address is somebody who has not agreed to be here.
-    expect(screen.queryByText('lili@example.com')).toBeNull();
+    expect(screen.queryByText('lili@your-domain.test')).toBeNull();
     expect(screen.queryByText(/my downstairs neighbour/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Invite them' })).toBeNull();
   });
@@ -352,8 +352,8 @@ describe('ManageInvitesPage — co-owners', () => {
   const TWO_MEMBERS = {
     ...COLLECTION,
     invites: [
-      { code: 'GST001', email: 'ana@example.com', name: 'Ana' },
-      { code: 'GST002', email: 'bea@example.com', name: 'Bea' },
+      { code: 'GST001', email: 'lala1@your-domain.test', name: 'Ana' },
+      { code: 'GST002', email: 'lele3@your-domain.test', name: 'Bea' },
     ],
     pending_invites: [],
     co_owners: [{ code: 'GST002', name: 'Bea' }],
@@ -552,8 +552,8 @@ describe('ManageInvitesPage — co-owners', () => {
 });
 
 /**
- * The invitations field takes several addresses: `lalo@oiueei.com,
- * lelo@oiueei.com`. One address is the invitation it always was (`invite/`); several are
+ * The invitations field takes several addresses: `lala@your-domain.test,
+ * lele@your-domain.test`. One address is the invitation it always was (`invite/`); several are
  * one batch for `invite/bulk/`, summarised the way the CSV tool says it. The ones that
  * went out join the pending list and the field keeps the ones that did not.
  */
@@ -598,33 +598,33 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
   test('one address is the invitation it always was: invite/, no batch', async () => {
     await open();
 
-    type('new@example.com');
+    type('lele2@your-domain.test');
     send();
 
     await screen.findByText('Invitation sent.');
     expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(1);
     expect(bulkCalls()).toHaveLength(0);
     // …also with a comma left at the end, which is no second address.
-    type('other@example.com, ');
+    type('lolo@your-domain.test, ');
     send();
     await waitFor(() =>
       expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(2)
     );
     expect(bulkCalls()).toHaveLength(0);
-    expect(JSON.parse(singleCalls().at(-1)[1].body)).toEqual({ email: 'other@example.com' });
+    expect(JSON.parse(singleCalls().at(-1)[1].body)).toEqual({ email: 'lolo@your-domain.test' });
   });
 
   test('two addresses with a comma — spaces around them, one repeated — are ONE batch of two', async () => {
     await open();
 
-    type('lalo@oiueei.com ,  lelo@oiueei.com, LALO@oiueei.com');
+    type('lala@your-domain.test ,  lele@your-domain.test, LALA@your-domain.test');
     send();
 
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][0]).toBe('/api/v1/collections/COL001/invite/bulk/');
     expect(bulkCalls()[0][1].method).toBe('POST');
     expect(bulkBody()).toEqual({
-      invites: [{ email: 'lalo@oiueei.com' }, { email: 'lelo@oiueei.com' }],
+      invites: [{ email: 'lala@your-domain.test' }, { email: 'lele@your-domain.test' }],
     });
     // Never one by one through the single endpoint.
     expect(singleCalls().filter(([, o]) => o?.method === 'POST')).toHaveLength(0);
@@ -636,27 +636,29 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
   test('";" separates too, and so do the spaces a browser makes of a pasted column’s line breaks', async () => {
     await open();
 
-    type('a@x.com;b@y.com; c@z.com d@w.com');
+    type(
+      'lele1@your-domain.test;lili1@your-domain.test; lala5@your-domain.test lele5@your-domain.test'
+    );
     send();
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkBody().invites.map((i) => i.email)).toEqual([
-      'a@x.com',
-      'b@y.com',
-      'c@z.com',
-      'd@w.com',
+      'lele1@your-domain.test',
+      'lili1@your-domain.test',
+      'lala5@your-domain.test',
+      'lele5@your-domain.test',
     ]);
   });
 
   test('the summary says how many went out, and the ones that did are pending; the field empties', async () => {
     await open({ bulk: { status: 200, body: { invited: 2, skipped: [] } } });
 
-    type('lalo@oiueei.com, lelo@oiueei.com');
+    type('lala@your-domain.test, lele@your-domain.test');
     send();
 
     // The CSV tool's own words and shape.
     expect(await screen.findByText('2 invitations sent.')).toBeInTheDocument();
-    expect(screen.getByText('lalo@oiueei.com')).toBeInTheDocument();
-    expect(screen.getByText('lelo@oiueei.com')).toBeInTheDocument();
+    expect(screen.getByText('lala@your-domain.test')).toBeInTheDocument();
+    expect(screen.getByText('lele@your-domain.test')).toBeInTheDocument();
     expect(field()).toHaveValue('');
     // It is a batch, not a single invitation: no "Invitation sent." toast.
     expect(screen.queryByText('Invitation sent.')).toBeNull();
@@ -671,28 +673,28 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
           skipped: [
             { email: 'nope', reason: 'invalid' },
             // The server lowercases what it validates: the field keeps what was typed.
-            { email: 'ana@example.com', reason: 'already_member' },
+            { email: 'lala1@your-domain.test', reason: 'already_member' },
           ],
         },
       },
     });
 
-    type('lalo@oiueei.com, nope, Ana@Example.com');
+    type('lala@your-domain.test, nope, Lala1@Your-Domain.TEST');
     send();
 
     expect(await screen.findByText('1 invitations sent.')).toBeInTheDocument();
     expect(screen.getByText('2 skipped:')).toBeInTheDocument();
     expect(screen.getByText('nope — invalid email')).toBeInTheDocument();
-    expect(screen.getByText('ana@example.com — already a member')).toBeInTheDocument();
+    expect(screen.getByText('lala1@your-domain.test — already a member')).toBeInTheDocument();
     // The field holds exactly the ones that did not go, as typed, to correct or retry.
-    expect(field()).toHaveValue('nope, Ana@Example.com');
+    expect(field()).toHaveValue('nope, Lala1@Your-Domain.TEST');
     // The one that did is pending now; the others were not added.
-    expect(screen.getByText('lalo@oiueei.com')).toBeInTheDocument();
+    expect(screen.getByText('lala@your-domain.test')).toBeInTheDocument();
     expect(screen.queryByText('nope')).toBeNull();
   });
 
   test('an address too long to be one is cut by the server at 64 characters and still stays in the field', async () => {
-    const long = `${'x'.repeat(70)}@example.com`;
+    const long = `${'x'.repeat(70)}@your-domain.test`;
     await open({
       bulk: {
         status: 200,
@@ -700,7 +702,7 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
       },
     });
 
-    type(`lalo@oiueei.com, ${long}`);
+    type(`lala@your-domain.test, ${long}`);
     send();
 
     await screen.findByText('1 invitations sent.');
@@ -708,7 +710,7 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
   });
 
   test('past 100 addresses it is still one batch, and the server’s own message comes back', async () => {
-    const many = Array.from({ length: 101 }, (_, i) => `p${i}@example.com`);
+    const many = Array.from({ length: 101 }, (_, i) => `lele${i}@your-domain.test`);
     await open({
       bulk: {
         status: 400,
@@ -734,34 +736,34 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
   test('too many attempts says so and keeps the field', async () => {
     await open({ bulk: { status: 429, body: {} } });
 
-    type('a@x.com, b@y.com');
+    type('lele1@your-domain.test, lili1@your-domain.test');
     send();
 
     expect(
       await screen.findByText('Too many attempts — please wait a moment and try again.')
     ).toBeInTheDocument();
-    expect(field()).toHaveValue('a@x.com, b@y.com');
+    expect(field()).toHaveValue('lele1@your-domain.test, lili1@your-domain.test');
   });
 
   test('a request that never arrives says so and keeps the field', async () => {
     await open({ bulk: { reject: true } });
 
-    type('a@x.com, b@y.com');
+    type('lele1@your-domain.test, lili1@your-domain.test');
     send();
 
     expect(await screen.findByText('Connection error.')).toBeInTheDocument();
-    expect(field()).toHaveValue('a@x.com, b@y.com');
+    expect(field()).toHaveValue('lele1@your-domain.test, lili1@your-domain.test');
     // …and the button is back, ready to try again.
     expect(screen.getByRole('button', { name: 'Invite' })).toBeEnabled();
   });
 
   test('the next send starts clean: the last batch’s summary goes', async () => {
     await open({ bulk: { status: 200, body: { invited: 2, skipped: [] } } });
-    type('a@x.com, b@y.com');
+    type('lele1@your-domain.test, lili1@your-domain.test');
     send();
     await screen.findByText('2 invitations sent.');
 
-    type('new@example.com');
+    type('lele2@your-domain.test');
     send();
 
     await screen.findByText('Invitation sent.');
@@ -775,9 +777,9 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
     expect(invite).toBeDisabled();
     type(' , ;  ');
     expect(invite).toBeDisabled();
-    type('a@x.com');
+    type('lele1@your-domain.test');
     expect(invite).toBeEnabled();
-    type('a@x.com, b@y.com');
+    type('lele1@your-domain.test, lili1@your-domain.test');
     expect(invite).toBeEnabled();
   });
 });

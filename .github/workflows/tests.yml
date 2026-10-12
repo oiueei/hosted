@@ -1,15 +1,6 @@
 name: Tests
 
-# This file ships unchanged in both repositories. In oiueei/standalone it guards
-# `development` and `main`; in oiueei/hosted the deployed branch is that repo's
-# own `main`, and this run is the deploy gate: Heroku auto-deploys it with
-# "wait for CI", so a red run holds the previous release. Keeping the file
-# identical everywhere is the point — a deploy-only edit would conflict on
-# every future merge.
-#
-# It used to list a third branch, `heroku`, from when a private mirror
-# (oiueei/heroku) deployed on push without waiting for anything. That mirror is
-# retired and the name matched nothing any more.
+# A deployment built on this repository can run this same workflow as its deploy gate.
 on:
   push:
     branches: [main, development]

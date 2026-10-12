@@ -28,8 +28,8 @@ class TestExpireBookingsCommand:
     """Tests for expire_bookings management command."""
 
     def _create_booking(self, hours_ago=0):
-        owner = User.objects.create(email=f"owner{hours_ago}@example.com")
-        requester = User.objects.create(email=f"req{hours_ago}@example.com")
+        owner = User.objects.create(email=f"lala{hours_ago}@your-domain.test")
+        requester = User.objects.create(email=f"lili{hours_ago}@your-domain.test")
         thing = Thing.objects.create(owner=owner, headline="Thing")
         booking = BookingPeriod.objects.create(
             thing_code=thing,
@@ -69,7 +69,7 @@ class TestCleanupRsvpsCommand:
     """Tests for cleanup_rsvps management command."""
 
     def _create_rsvp(self, hours_ago=0, action=RSVP.Action.MAGIC_LINK):
-        user = User.objects.create(email=f"user{hours_ago}{action}@example.com")
+        user = User.objects.create(email=f"lele{hours_ago}{action}@your-domain.test")
         rsvp = RSVP.objects.create(user_code=user, user_email=user.email, action=action)
         if hours_ago:
             rsvp.created = timezone.now() - timedelta(hours=hours_ago)
@@ -126,8 +126,10 @@ class TestSendRemindersCommand:
         pointless without it.
         """
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RMOWN1", email="rmowner@test.com", name="Owner")
-        requester = User.objects.create(code="RMREQ1", email="rmreq@test.com", name="Requester")
+        owner = User.objects.create(code="RMOWN1", email="lala@your-domain.test", name="Owner")
+        requester = User.objects.create(
+            code="RMREQ1", email="lili@your-domain.test", name="Requester"
+        )
         thing = Thing.objects.create(
             code="RMTHN1", owner=owner, headline="Drill", type="LEND_THING"
         )
@@ -147,15 +149,15 @@ class TestSendRemindersCommand:
 
         assert len(mail.outbox) == 2
         by_recipient = {m.to[0]: m for m in mail.outbox}
-        assert set(by_recipient) == {"rmowner@test.com", "rmreq@test.com"}
+        assert set(by_recipient) == {"lala@your-domain.test", "lili@your-domain.test"}
 
         # The owner is told somebody's hold is ending; nothing is asked of them.
-        to_owner = by_recipient["rmowner@test.com"]
+        to_owner = by_recipient["lala@your-domain.test"]
         assert "comes back tomorrow" in to_owner.subject
         assert "Requester" in to_owner.body
 
         # The borrower is told what they must do, and who they owe it to.
-        to_borrower = by_recipient["rmreq@test.com"]
+        to_borrower = by_recipient["lili@your-domain.test"]
         assert "Drill" in to_borrower.subject
         assert "return" in to_borrower.body.lower()
         assert "Owner" in to_borrower.body
@@ -169,8 +171,10 @@ class TestSendRemindersCommand:
     def test_a_failing_recipient_does_not_cost_the_other_their_reminder(self, monkeypatch):
         """One broken send must not silence the other half of the same loan."""
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RMOWN2", email="rmowner2@test.com", name="Owner")
-        requester = User.objects.create(code="RMREQ2", email="rmreq2@test.com", name="Requester")
+        owner = User.objects.create(code="RMOWN2", email="lala1@your-domain.test", name="Owner")
+        requester = User.objects.create(
+            code="RMREQ2", email="lili1@your-domain.test", name="Requester"
+        )
         thing = Thing.objects.create(
             code="RMTHN2", owner=owner, headline="Ladder", type="LEND_THING"
         )
@@ -197,7 +201,7 @@ class TestSendRemindersCommand:
         call_command("send_reminders", stdout=out, stderr=err)
 
         # The borrower still got theirs.
-        assert [m.to[0] for m in mail.outbox] == ["rmreq2@test.com"]
+        assert [m.to[0] for m in mail.outbox] == ["lili1@your-domain.test"]
         assert "Sent 1 reminder" in out.getvalue()
         assert "Reminder failed" in err.getvalue()
 
@@ -209,8 +213,10 @@ class TestSendRemindersCommand:
         — and a no-show costs a real slot.
         """
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RSVOW1", email="rsvowner@test.com", name="Space owner")
-        member = User.objects.create(code="RSVME1", email="rsvmember@test.com", name="Member")
+        owner = User.objects.create(
+            code="RSVOW1", email="lala3@your-domain.test", name="Space owner"
+        )
+        member = User.objects.create(code="RSVME1", email="lele@your-domain.test", name="Member")
         thing = Thing.objects.create(
             code="RSVTH1",
             owner=owner,
@@ -233,7 +239,7 @@ class TestSendRemindersCommand:
         call_command("send_reminders", stdout=out)
 
         # Only the member — nobody has to "take it back", so the owner is not pinged.
-        assert [m.to[0] for m in mail.outbox] == ["rsvmember@test.com"]
+        assert [m.to[0] for m in mail.outbox] == ["lele@your-domain.test"]
         msg = mail.outbox[0]
         assert "Sala polivalent" in msg.subject
         assert "tomorrow" in msg.subject.lower()
@@ -242,8 +248,8 @@ class TestSendRemindersCommand:
 
     def test_a_reservation_further_out_is_left_alone(self):
         """Only start_date == tomorrow is due; a reservation in three days is not."""
-        owner = User.objects.create(code="RSVOW2", email="rsvowner2@test.com")
-        member = User.objects.create(code="RSVME2", email="rsvmember2@test.com")
+        owner = User.objects.create(code="RSVOW2", email="lala4@your-domain.test")
+        member = User.objects.create(code="RSVME2", email="lele1@your-domain.test")
         thing = Thing.objects.create(
             code="RSVTH2", owner=owner, headline="Torn", type="RESERVE_THING"
         )
@@ -273,8 +279,8 @@ class TestSendRemindersCommand:
         coming.
         """
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RSVOW4", email="rsvowner4@test.com")
-        member = User.objects.create(code="RSVME4", email="rsvmember4@test.com")
+        owner = User.objects.create(code="RSVOW4", email="lala6@your-domain.test")
+        member = User.objects.create(code="RSVME4", email="lele2@your-domain.test")
         thing = Thing.objects.create(
             code="RSVTH4", owner=owner, headline="Sala", type="RESERVE_THING"
         )
@@ -298,8 +304,8 @@ class TestSendRemindersCommand:
     def test_a_reservation_ending_tomorrow_gets_no_return_reminder(self):
         """RESERVE is carried nowhere, so "take it back tomorrow" must never fire."""
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RSVOW3", email="rsvowner3@test.com")
-        member = User.objects.create(code="RSVME3", email="rsvmember3@test.com")
+        owner = User.objects.create(code="RSVOW3", email="lala7@your-domain.test")
+        member = User.objects.create(code="RSVME3", email="lele3@your-domain.test")
         thing = Thing.objects.create(
             code="RSVTH3", owner=owner, headline="Sala", type="RESERVE_THING"
         )
@@ -329,8 +335,8 @@ class TestSendRemindersCommand:
     def test_skips_non_accepted_bookings(self):
         """Should not send reminders for PENDING or REJECTED bookings."""
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RMOWN4", email="rmowner4@test.com")
-        requester = User.objects.create(code="RMREQ4", email="rmreq4@test.com")
+        owner = User.objects.create(code="RMOWN4", email="lala8@your-domain.test")
+        requester = User.objects.create(code="RMREQ4", email="lili2@your-domain.test")
         thing = Thing.objects.create(code="RMTHN4", owner=owner, headline="X", type="LEND_THING")
         BookingPeriod.objects.create(
             thing_code=thing,
@@ -358,8 +364,8 @@ class TestSendRemindersCommand:
         app has no right to make.
         """
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RMOWN6", email="rmowner6@test.com")
-        requester = User.objects.create(code="RMREQ6", email="rmreq6@test.com")
+        owner = User.objects.create(code="RMOWN6", email="lala9@your-domain.test")
+        requester = User.objects.create(code="RMREQ6", email="lili3@your-domain.test")
         thing = Thing.objects.create(
             code="RMTHN6", owner=owner, headline="Drill", type="LEND_THING"
         )
@@ -390,10 +396,10 @@ class TestSendRemindersCommand:
         """
         tomorrow = date.today() + timedelta(days=1)
         owner = User.objects.create(
-            code="RMOWN7", email="rmowner7@test.com", name="Owner", language="ca"
+            code="RMOWN7", email="lala10@your-domain.test", name="Owner", language="ca"
         )
         requester = User.objects.create(
-            code="RMREQ7", email="rmreq7@test.com", name="Requester", language="es"
+            code="RMREQ7", email="lili4@your-domain.test", name="Requester", language="es"
         )
         thing = Thing.objects.create(
             code="RMTHN7", owner=owner, headline="Drill", type="LEND_THING"
@@ -414,18 +420,18 @@ class TestSendRemindersCommand:
 
         assert len(mail.outbox) == 2
         by_recipient = {m.to[0]: m for m in mail.outbox}
-        assert set(by_recipient) == {"rmowner7@test.com", "rmreq7@test.com"}
+        assert set(by_recipient) == {"lala10@your-domain.test", "lili4@your-domain.test"}
 
         # The borrower is told what they must do, and who they collect from —
         # in their own language, with the date DD/MM/YYYY like the SPA.
-        to_borrower = by_recipient["rmreq7@test.com"]
+        to_borrower = by_recipient["lili4@your-domain.test"]
         assert to_borrower.subject == "Mañana recoges Drill"
         assert "recoges 'Drill' de Owner" in to_borrower.body
         assert tomorrow.strftime("%d/%m/%Y") in to_borrower.body
         assert tomorrow.isoformat() not in to_borrower.body
 
         # The owner is told who is coming for it — nothing is asked of them.
-        to_owner = by_recipient["rmowner7@test.com"]
+        to_owner = by_recipient["lala10@your-domain.test"]
         assert to_owner.subject == "Demà lliures Drill"
         assert "Requester recull 'Drill'" in to_owner.body
         assert "Sent 2 reminder" in out.getvalue()
@@ -439,8 +445,8 @@ class TestSendRemindersCommand:
         that never happens.
         """
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RSVOW5", email="rsvowner5@test.com")
-        member = User.objects.create(code="RSVME5", email="rsvmember5@test.com")
+        owner = User.objects.create(code="RSVOW5", email="lala11@your-domain.test")
+        member = User.objects.create(code="RSVME5", email="lele5@your-domain.test")
         thing = Thing.objects.create(
             code="RSVTH5", owner=owner, headline="Sala", type="RESERVE_THING"
         )
@@ -459,7 +465,7 @@ class TestSendRemindersCommand:
         call_command("send_reminders", stdout=out)
 
         # One mail: the member's arrival reminder, and nothing to the owner.
-        assert [m.to[0] for m in mail.outbox] == ["rsvmember5@test.com"]
+        assert [m.to[0] for m in mail.outbox] == ["lele5@your-domain.test"]
         assert "Sala" in mail.outbox[0].subject
         assert "Sent 1 reminder" in out.getvalue()
 
@@ -471,8 +477,10 @@ class TestSendRemindersCommand:
         answering a question the first already did.
         """
         tomorrow = date.today() + timedelta(days=1)
-        owner = User.objects.create(code="RMOWN8", email="rmowner8@test.com", name="Owner")
-        requester = User.objects.create(code="RMREQ8", email="rmreq8@test.com", name="Requester")
+        owner = User.objects.create(code="RMOWN8", email="lala12@your-domain.test", name="Owner")
+        requester = User.objects.create(
+            code="RMREQ8", email="lili5@your-domain.test", name="Requester"
+        )
         thing = Thing.objects.create(
             code="RMTHN8", owner=owner, headline="Drill", type="LEND_THING"
         )
@@ -491,10 +499,13 @@ class TestSendRemindersCommand:
         call_command("send_reminders", stdout=out)
 
         # The pickup pair only — the day's one handover, said once per person.
-        assert sorted(m.to[0] for m in mail.outbox) == ["rmowner8@test.com", "rmreq8@test.com"]
+        assert sorted(m.to[0] for m in mail.outbox) == [
+            "lala12@your-domain.test",
+            "lili5@your-domain.test",
+        ]
         by_recipient = {m.to[0]: m for m in mail.outbox}
-        assert "pick up" in by_recipient["rmreq8@test.com"].subject
-        assert "hand over" in by_recipient["rmowner8@test.com"].subject
+        assert "pick up" in by_recipient["lili5@your-domain.test"].subject
+        assert "hand over" in by_recipient["lala12@your-domain.test"].subject
         assert "Sent 2 reminder" in out.getvalue()
 
     @pytest.mark.parametrize(
@@ -510,8 +521,10 @@ class TestSendRemindersCommand:
         borrower's pickup and return reminders, in the HTML and the plain text alike.
         """
         today = date.today()
-        owner = User.objects.create(code="RMOWN9", email="nameless.owner@test.com")
-        requester = User.objects.create(code="RMREQ9", email="rmreq9@test.com", name="Requester")
+        owner = User.objects.create(code="RMOWN9", email="lala13@your-domain.test")
+        requester = User.objects.create(
+            code="RMREQ9", email="lili6@your-domain.test", name="Requester"
+        )
         thing = Thing.objects.create(
             code="RMTHN9", owner=owner, headline="Drill", type="LEND_THING"
         )
@@ -528,10 +541,10 @@ class TestSendRemindersCommand:
 
         call_command("send_reminders", stdout=StringIO())
 
-        to_borrower = next(m for m in mail.outbox if m.to == ["rmreq9@test.com"])
+        to_borrower = next(m for m in mail.outbox if m.to == ["lili6@your-domain.test"])
         html = to_borrower.alternatives[0][0]
-        assert "nameless.owner@test.com" not in to_borrower.body
-        assert "nameless.owner@test.com" not in html
+        assert "lala13@your-domain.test" not in to_borrower.body
+        assert "lala13@your-domain.test" not in html
         assert "A member" in to_borrower.body
 
     @pytest.mark.parametrize(
@@ -547,9 +560,9 @@ class TestSendRemindersCommand:
         recorded as the thing's owner. A curator who borrows is told once, as the
         borrower."""
         today = date.today()
-        founder = User.objects.create(code="RMFND1", email="founder@test.com", name="Founder")
-        cocurator = User.objects.create(code="RMCOC1", email="cocurator@test.com", name="Co")
-        borrower = User.objects.create(code="RMBOR1", email="borrower@test.com", name="Co2")
+        founder = User.objects.create(code="RMFND1", email="lala5@your-domain.test", name="Founder")
+        cocurator = User.objects.create(code="RMCOC1", email="lala2@your-domain.test", name="Co")
+        borrower = User.objects.create(code="RMBOR1", email="lili7@your-domain.test", name="Co2")
         collection = Collection.objects.create(
             code="RMCOL1", owner=founder, headline="Library", mode=Collection.Mode.PROPRIETARY
         )
@@ -574,8 +587,8 @@ class TestSendRemindersCommand:
         call_command("send_reminders", stdout=out)
 
         team = sorted(m.to[0] for m in mail.outbox if subject in m.subject)
-        assert team == ["cocurator@test.com", "founder@test.com"]
-        assert [m.to[0] for m in mail.outbox].count("borrower@test.com") == 1
+        assert team == ["lala2@your-domain.test", "lala5@your-domain.test"]
+        assert [m.to[0] for m in mail.outbox].count("lili7@your-domain.test") == 1
         assert "Sent 3 reminder" in out.getvalue()
 
     @pytest.mark.parametrize(
@@ -592,9 +605,13 @@ class TestSendRemindersCommand:
 
         def due_loans(count, start):
             for n in range(start, start + count):
-                founder = User.objects.create(code=f"RQF{n:03d}", email=f"f{n}@test.com")
-                cocurator = User.objects.create(code=f"RQC{n:03d}", email=f"c{n}@test.com")
-                borrower = User.objects.create(code=f"RQB{n:03d}", email=f"b{n}@test.com")
+                founder = User.objects.create(code=f"RQF{n:03d}", email=f"lala{n}@your-domain.test")
+                cocurator = User.objects.create(
+                    code=f"RQC{n:03d}", email=f"lele{n}@your-domain.test"
+                )
+                borrower = User.objects.create(
+                    code=f"RQB{n:03d}", email=f"lili{n}@your-domain.test"
+                )
                 group = Collection.objects.create(
                     code=f"RQG{n:03d}",
                     owner=founder,
@@ -643,8 +660,12 @@ class TestSendRemindersCommand:
         big, told_big = run()
 
         # Not vacuous: every founder and every co-curator was told, in both runs.
-        assert told_small == sorted(f"{who}{n}@test.com" for who in "cf" for n in range(2))
-        assert told_big == sorted(f"{who}{n}@test.com" for who in "cf" for n in range(6))
+        assert told_small == sorted(
+            f"{who}{n}@your-domain.test" for who in ("lala", "lele") for n in range(2)
+        )
+        assert told_big == sorted(
+            f"{who}{n}@your-domain.test" for who in ("lala", "lele") for n in range(6)
+        )
         assert big == small, f"a query per loan: {small} for 2 due, {big} for 6"
 
 
@@ -656,11 +677,11 @@ class TestSendDigestsCommand:
         self, code_prefix, frequency, thing_days_ago=3, anchor_date=None
     ):
         owner = User.objects.create(
-            code=f"{code_prefix}O1", email=f"{code_prefix}owner@test.com", name="Owner"
+            code=f"{code_prefix}O1", email=f"lala{code_prefix}@your-domain.test", name="Owner"
         )
         invitee = User.objects.create(
             code=f"{code_prefix}I1",
-            email=f"{code_prefix}inv@test.com",
+            email=f"lele{code_prefix}@your-domain.test",
             name="Invitee",
             notify_news=True,  # digest recipient must opt into Cat. 3 (default is now off)
         )
@@ -695,7 +716,7 @@ class TestSendDigestsCommand:
 
         assert len(mail.outbox) == 1
         assert "New Widget" in mail.outbox[0].body
-        assert "DGWinv@test.com" in mail.outbox[0].to
+        assert "leleDGW@your-domain.test" in mail.outbox[0].to
         assert "Sent 1 digest" in out.getvalue()
 
     @time_machine.travel(date(2026, 4, 21))  # a Tuesday
@@ -885,9 +906,9 @@ class TestAddTotpDeviceCommand:
     def test_creates_confirmed_device_for_staff_user(self):
         from django_otp.plugins.otp_totp.models import TOTPDevice
 
-        user = User.objects.create(email="staff@example.com", is_staff=True)
+        user = User.objects.create(email="lala15@your-domain.test", is_staff=True)
         out = StringIO()
-        call_command("add_totp_device", "staff@example.com", stdout=out)
+        call_command("add_totp_device", "lala15@your-domain.test", stdout=out)
 
         device = TOTPDevice.objects.get(user=user)
         assert device.confirmed is True
@@ -896,32 +917,32 @@ class TestAddTotpDeviceCommand:
     def test_rejects_non_staff_user(self):
         from django.core.management.base import CommandError
 
-        User.objects.create(email="guest@example.com", is_staff=False)
+        User.objects.create(email="lele4@your-domain.test", is_staff=False)
         with pytest.raises(CommandError):
-            call_command("add_totp_device", "guest@example.com")
+            call_command("add_totp_device", "lele4@your-domain.test")
 
     def test_rejects_unknown_email(self):
         from django.core.management.base import CommandError
 
         with pytest.raises(CommandError):
-            call_command("add_totp_device", "nobody@example.com")
+            call_command("add_totp_device", "lolo9@your-domain.test")
 
     def test_refuses_to_duplicate_without_replace(self):
         from django.core.management.base import CommandError
 
-        User.objects.create(email="staff@example.com", is_staff=True)
-        call_command("add_totp_device", "staff@example.com")
+        User.objects.create(email="lala15@your-domain.test", is_staff=True)
+        call_command("add_totp_device", "lala15@your-domain.test")
         with pytest.raises(CommandError):
-            call_command("add_totp_device", "staff@example.com")
+            call_command("add_totp_device", "lala15@your-domain.test")
 
     def test_replace_regenerates_the_device(self):
         from django_otp.plugins.otp_totp.models import TOTPDevice
 
-        user = User.objects.create(email="staff@example.com", is_staff=True)
-        call_command("add_totp_device", "staff@example.com")
+        user = User.objects.create(email="lala15@your-domain.test", is_staff=True)
+        call_command("add_totp_device", "lala15@your-domain.test")
         first_key = TOTPDevice.objects.get(user=user).key
 
-        call_command("add_totp_device", "staff@example.com", "--replace")
+        call_command("add_totp_device", "lala15@your-domain.test", "--replace")
         assert TOTPDevice.objects.filter(user=user).count() == 1
         assert TOTPDevice.objects.get(user=user).key != first_key
 
@@ -973,18 +994,18 @@ class TestSetBucketCorsCommand:
 
     def test_it_writes_rules_for_the_origin_it_was_given(self):
         with self._bucket() as written:
-            self._run("--origin", "https://www.example.com")
+            self._run("--origin", "https://www.your-domain.test")
 
-        assert written == storage.cors_rules(["https://www.example.com"])
+        assert written == storage.cors_rules(["https://www.your-domain.test"])
 
     def test_it_falls_back_to_the_origins_this_deployment_already_declares(self, configured):
         """CORS_ALLOWED_ORIGINS is the list the API already had to get right."""
-        configured.CORS_ALLOWED_ORIGINS = ["https://www.example.com"]
+        configured.CORS_ALLOWED_ORIGINS = ["https://www.your-domain.test"]
 
         with self._bucket() as written:
             self._run()
 
-        assert written[0]["AllowedOrigins"] == ["https://www.example.com"]
+        assert written[0]["AllowedOrigins"] == ["https://www.your-domain.test"]
 
     def test_with_no_origins_anywhere_it_refuses_rather_than_writing_an_empty_rule(self):
         """A rule allowing nobody is indistinguishable from a configured bucket."""
@@ -1001,24 +1022,24 @@ class TestSetBucketCorsCommand:
         corrected rather than refused.
         """
         with self._bucket() as written:
-            self._run("--origin", "https://www.example.com/")
+            self._run("--origin", "https://www.your-domain.test/")
 
-        assert written[0]["AllowedOrigins"] == ["https://www.example.com"]
+        assert written[0]["AllowedOrigins"] == ["https://www.your-domain.test"]
 
     def test_a_real_path_is_refused_because_cors_never_matches_one(self):
         with self._bucket(), pytest.raises(CommandError, match="no path"):
-            self._run("--origin", "https://www.example.com/media")
+            self._run("--origin", "https://www.your-domain.test/media")
 
     def test_something_that_is_not_an_origin_is_refused(self):
         with self._bucket(), pytest.raises(CommandError, match="Not an origin"):
-            self._run("--origin", "www.example.com")
+            self._run("--origin", "www.your-domain.test")
 
     def test_running_it_twice_writes_nothing_the_second_time(self):
-        rules = storage.cors_rules(["https://www.example.com"])
+        rules = storage.cors_rules(["https://www.your-domain.test"])
 
         with self._bucket(existing=rules):
             with patch.object(storage, "put_cors") as put:
-                output = self._run("--origin", "https://www.example.com")
+                output = self._run("--origin", "https://www.your-domain.test")
 
         put.assert_not_called()
         assert "nothing to do" in output
@@ -1029,13 +1050,13 @@ class TestSetBucketCorsCommand:
         Comparing dicts would make this command rewrite identical rules forever
         and report a change every time.
         """
-        stored = storage.cors_rules(["https://www.example.com"])
+        stored = storage.cors_rules(["https://www.your-domain.test"])
         stored[0]["AllowedHeaders"] = [h.lower() for h in stored[0]["AllowedHeaders"]]
         stored[0]["ExposeHeaders"] = []
 
         with self._bucket(existing=stored):
             with patch.object(storage, "put_cors") as put:
-                self._run("--origin", "https://www.example.com")
+                self._run("--origin", "https://www.your-domain.test")
 
         put.assert_not_called()
 
@@ -1046,7 +1067,7 @@ class TestSetBucketCorsCommand:
 
         with self._bucket(existing=theirs) as written:
             with pytest.raises(CommandError, match="--replace"):
-                self._run("--origin", "https://www.example.com")
+                self._run("--origin", "https://www.your-domain.test")
 
         assert written == []
 
@@ -1054,19 +1075,19 @@ class TestSetBucketCorsCommand:
         theirs = [{"AllowedOrigins": ["https://other.example"], "AllowedMethods": ["GET"]}]
 
         with self._bucket(existing=theirs) as written:
-            self._run("--origin", "https://www.example.com", "--replace")
+            self._run("--origin", "https://www.your-domain.test", "--replace")
 
-        assert written[0]["AllowedOrigins"] == ["https://www.example.com"]
+        assert written[0]["AllowedOrigins"] == ["https://www.your-domain.test"]
 
     def test_show_reports_and_changes_nothing(self):
-        rules = storage.cors_rules(["https://www.example.com"])
+        rules = storage.cors_rules(["https://www.your-domain.test"])
 
         with self._bucket(existing=rules):
             with patch.object(storage, "put_cors") as put:
                 output = self._run("--show")
 
         put.assert_not_called()
-        assert "https://www.example.com" in output
+        assert "https://www.your-domain.test" in output
 
     def test_it_fails_loudly_when_the_store_did_not_keep_what_it_accepted(self):
         """Hetzner drops the Cache-Control of a POST policy without a word — the
@@ -1076,10 +1097,10 @@ class TestSetBucketCorsCommand:
             patch.object(storage, "put_cors"),
             pytest.raises(CommandError, match="did not store them"),
         ):
-            self._run("--origin", "https://www.example.com")
+            self._run("--origin", "https://www.your-domain.test")
 
     def test_an_unconfigured_checkout_says_which_setting_is_missing(self, configured):
         configured.OBJECT_STORAGE_BUCKET = ""
 
         with pytest.raises(CommandError, match="OBJECT_STORAGE_BUCKET"):
-            self._run("--origin", "https://www.example.com")
+            self._run("--origin", "https://www.your-domain.test")

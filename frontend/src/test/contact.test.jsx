@@ -27,7 +27,9 @@ describe('ContactPage', () => {
   test('sends the message and confirms receipt', async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({ message: 'ok' })));
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'me@example.com' } });
+    fireEvent.change(screen.getByLabelText(/Email/), {
+      target: { value: 'lala@your-domain.test' },
+    });
     fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Help!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(
@@ -38,7 +40,7 @@ describe('ContactPage', () => {
     // No `kind`: the server's default, support, is the only kind a page asks for.
     expect(JSON.parse(post[1].body)).toEqual({
       name: '',
-      email: 'me@example.com',
+      email: 'lala@your-domain.test',
       message: 'Help!',
     });
   });
@@ -61,7 +63,9 @@ describe('ContactPage', () => {
   test('a rate limit shows the too-many-attempts message and keeps the form', async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({}, false, 429)));
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'me@example.com' } });
+    fireEvent.change(screen.getByLabelText(/Email/), {
+      target: { value: 'lala@your-domain.test' },
+    });
     fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Help!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(

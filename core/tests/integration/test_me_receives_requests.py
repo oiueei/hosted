@@ -27,12 +27,12 @@ def me(user):
 
 @pytest.fixture
 def founder(db):
-    return User.objects.create(code="FNDR01", email="founder@test.com", name="Lala")
+    return User.objects.create(code="FNDR01", email="lala5@your-domain.test", name="Lala")
 
 
 @pytest.fixture
 def newcomer(db):
-    return User.objects.create(code="NEWC01", email="newcomer@test.com", name="Lili")
+    return User.objects.create(code="NEWC01", email="lele@your-domain.test", name="Lili")
 
 
 def group(owner, code, mode):

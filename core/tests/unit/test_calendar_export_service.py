@@ -95,12 +95,12 @@ def _calendar_props(ics_bytes):
 
 @pytest.fixture
 def owner(db):
-    return User.objects.create(code="OWN001", email="own@example.com", name="Olga")
+    return User.objects.create(code="OWN001", email="lala@your-domain.test", name="Olga")
 
 
 @pytest.fixture
 def member(db):
-    return User.objects.create(code="MEM001", email="mem@example.com", name="Júlia")
+    return User.objects.create(code="MEM001", email="lele@your-domain.test", name="Júlia")
 
 
 @pytest.fixture

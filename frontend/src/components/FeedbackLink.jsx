@@ -14,10 +14,10 @@ const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_URL;
 /**
  * "Ideas and bugs", as a button. It was a quiet line — "Something
  * odd? An idea? Tell me →" — that sat under the page's content; a short
- * button replaces it, on Home and at the end of the hosted `/welcome`.
+ * button replaces it, on Home and wherever a deployment puts it.
  *
  * It renders **only the `<a>`**, no paragraph around it, so it can sit inside a
- * row of buttons (the hosted `/welcome` puts it in one). Built on HDS `Link` with
+ * row of buttons (a deployment's own page can put it in one). Built on HDS `Link` with
  * `useButtonStyles`, the same base as `ButtonLink` (read its docstring): the real
  * button CSS on one `<a>`, one tab stop. `style` carries the theeeme tokens, and
  * the caller decides whether this is the primary or the secondary button — Home

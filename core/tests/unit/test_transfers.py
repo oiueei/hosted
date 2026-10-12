@@ -227,8 +227,10 @@ class TestAutoClosedIsNotAConfirmedReturn:
     """
 
     def _overdue_transfer(self):
-        owner = User.objects.create(code="ACOWN1", email="acowner@test.com", name="Owner")
-        borrower = User.objects.create(code="ACBOR1", email="acbor@test.com", name="Borrower")
+        owner = User.objects.create(code="ACOWN1", email="lala@your-domain.test", name="Owner")
+        borrower = User.objects.create(
+            code="ACBOR1", email="lala1@your-domain.test", name="Borrower"
+        )
         thing = Thing.objects.create(
             code="ACTHN1", owner=owner, headline="Drill", type="LEND_THING"
         )

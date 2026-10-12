@@ -45,7 +45,7 @@ client.post("/api/v1/contact/", payload, format="json")   # green even if never 
 # GOOD
 mock_send = mocker.patch("core.views.contact.send_contact_email")
 client.post("/api/v1/contact/", payload, format="json")
-mock_send.assert_called_once_with("Napoleón", "nappy@example.com", "Help!", kind="support")
+mock_send.assert_called_once_with("Napoleón", "lala@your-domain.test", "Help!", kind="support")
 ```
 
 (Better still, in this repo: don't mock the email service at all — assert on

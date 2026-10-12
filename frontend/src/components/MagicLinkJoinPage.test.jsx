@@ -19,7 +19,7 @@ function renderShareVariant() {
   );
 }
 
-function submitEmail(email = 'newcomer@example.com') {
+function submitEmail(email = 'lele@your-domain.test') {
   fireEvent.change(screen.getByLabelText(/Email/), { target: { value: email } });
   fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 }
@@ -40,7 +40,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     });
     renderShareVariant();
 
-    submitEmail('newcomer@example.com');
+    submitEmail('lele@your-domain.test');
 
     await screen.findByText(/Magic link sent! Check your inbox/);
     const [url, options] = globalThis.fetch.mock.calls[0];
@@ -52,7 +52,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     // `share_token` targets the shared collection; the backend
     // now resolves the newcomer's very first magic link from it instead.
     expect(JSON.parse(options.body)).toEqual({
-      email: 'newcomer@example.com',
+      email: 'lele@your-domain.test',
       share_token: 'TOKEN123',
     });
   });
@@ -108,7 +108,7 @@ describe('MagicLinkJoinPage (the pop-in join door)', () => {
     const { container } = renderShareVariant();
 
     fireEvent.change(screen.getByLabelText(/Email/), {
-      target: { value: 'newcomer@example.com' },
+      target: { value: 'lele@your-domain.test' },
     });
     const form = container.querySelector('form');
     // Dispatched directly on the form, twice, inside one act() — the button's
@@ -171,8 +171,8 @@ describe('MagicLinkJoinPage and the legal notice', () => {
 });
 
 describe('MagicLinkJoinPage offerSignIn (a deployment door can leave every way to /login out)', () => {
-  // `/share/:token` keeps "Already have an account?"; the hosted
-  // `/popin` already leads people to /login another way and
+  // `/share/:token` keeps "Already have an account?"; a deployment's
+  // own door can lead people to /login another way and
   // drops it. The same prop also leaves out the corner's
   // own "Sign in" icon, which every signed-out page otherwise has. The component
   // is core's and identical in both branches, so what turns it off is a prop that no
@@ -250,7 +250,7 @@ describe('MagicLinkJoinPage footer children (a deployment door adds its own link
     renderShareVariant();
     expect(screen.queryByRole('link', { name: 'A deployment link' })).not.toBeInTheDocument();
 
-    // A deployment's door — e.g. the hosted /popin pointing at its /faq.
+    // A deployment's door — e.g. a deployment's own door pointing at its own FAQ.
     render(
       <MemoryRouter>
         <MagicLinkJoinPage

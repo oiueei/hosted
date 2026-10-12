@@ -114,7 +114,7 @@ class TestValidateHeadline:
             "<a href='bad'>Link</a>",
             "<img src=x onerror=alert(1)>",
             '<div onmouseover="alert(1)">',  # event handler
-            "Hello\r\nBcc: victim@example.com",  # CRLF header injection
+            "Hello\r\nBcc: lala@your-domain.test",  # CRLF header injection
             "Line one\nLine two",  # bare LF
             "[click](javascript:alert(1))",  # javascript: scheme
             "[x](data:text/plain,hello)",  # data: scheme
@@ -135,7 +135,7 @@ class TestValidateText:
 
     def test_allows_safe_markdown_links(self):
         """Should permit http(s) Markdown links."""
-        value = "See [my site](https://example.org/path?q=1)"
+        value = "See [my site](https://your-domain.test/path?q=1)"
         assert validate_text(value) == value
 
     def test_rejects_html(self):
@@ -175,7 +175,7 @@ class TestSafeTextField:
     def test_accepts_multiline_markdown(self):
         """Should accept multi-line Markdown (newlines, bold, list dashes, links)."""
         field = SafeTextField(max_length=2000)
-        value = "Contact me at [my site](https://example.com)\n- one\n- two\n**bold**"
+        value = "Contact me at [my site](https://your-domain.test)\n- one\n- two\n**bold**"
         assert field.to_internal_value(value) == value
 
     def test_empty_value_allowed(self):
@@ -199,7 +199,7 @@ class TestSafeTextField:
     def test_allows_newlines_with_safe_links(self):
         """Multi-line Markdown plus http(s) links must pass."""
         field = SafeTextField(max_length=2000)
-        value = "Para 1\n\nPara 2 with [a link](https://example.org/path?q=1)"
+        value = "Para 1\n\nPara 2 with [a link](https://your-domain.test/path?q=1)"
         assert field.to_internal_value(value) == value
 
 

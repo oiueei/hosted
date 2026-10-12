@@ -58,21 +58,21 @@ def test_single_invite_blocks_after_daily_cap(
     mock_single, mock_bulk, authenticated_client, collection
 ):
     caches["default"].clear()
-    for email in ("a@example.com", "b@example.com"):
+    for email in ("lili@your-domain.test", "lala@your-domain.test"):
         res = authenticated_client.post(
             SINGLE_URL.format(code=collection.code), {"email": email}, format="json"
         )
         assert res.status_code == 200
 
     res = authenticated_client.post(
-        SINGLE_URL.format(code=collection.code), {"email": "c@example.com"}, format="json"
+        SINGLE_URL.format(code=collection.code), {"email": "lolo3@your-domain.test"}, format="json"
     )
     assert res.status_code == 429
     assert "error" in res.data
     assert _emails_sent(mock_single, mock_bulk) == 2
     # The blocked request created neither RSVPs nor a User row.
     assert _invite_rsvp_count(collection) == 2
-    assert not User.objects.filter(email="c@example.com").exists()
+    assert not User.objects.filter(email="lolo3@your-domain.test").exists()
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=3)
@@ -82,18 +82,21 @@ def test_bulk_invite_caps_batch_and_reports_daily_limit(
     mock_single, mock_bulk, authenticated_client, collection
 ):
     caches["default"].clear()
-    invites = [{"email": f"u{i}@example.com"} for i in range(5)]
+    invites = [{"email": f"lele{i}@your-domain.test"} for i in range(5)]
     res = authenticated_client.post(
         BULK_URL.format(code=collection.code), {"invites": invites}, format="json"
     )
     assert res.status_code == 200
     assert res.data["invited"] == 3
     assert [s["reason"] for s in res.data["skipped"]] == ["daily_limit", "daily_limit"]
-    assert {s["email"] for s in res.data["skipped"]} == {"u3@example.com", "u4@example.com"}
+    assert {s["email"] for s in res.data["skipped"]} == {
+        "lele3@your-domain.test",
+        "lele4@your-domain.test",
+    }
     assert _emails_sent(mock_single, mock_bulk) == 3
     assert _invite_rsvp_count(collection) == 3
     # Quota-skipped rows never reached get_or_create.
-    assert not User.objects.filter(email="u3@example.com").exists()
+    assert not User.objects.filter(email="lele@your-domain.test").exists()
 
 
 @override_settings(**QUOTA_SETTINGS, INVITE_EMAILS_PER_DAY=2)
@@ -104,17 +107,17 @@ def test_quota_is_shared_between_single_and_bulk(
 ):
     caches["default"].clear()
     res = authenticated_client.post(
-        SINGLE_URL.format(code=collection.code), {"email": "one@example.com"}, format="json"
+        SINGLE_URL.format(code=collection.code), {"email": "lolo@your-domain.test"}, format="json"
     )
     assert res.status_code == 200
 
-    invites = [{"email": "two@example.com"}, {"email": "three@example.com"}]
+    invites = [{"email": "lulu@your-domain.test"}, {"email": "lala1@your-domain.test"}]
     res = authenticated_client.post(
         BULK_URL.format(code=collection.code), {"invites": invites}, format="json"
     )
     assert res.status_code == 200
     assert res.data["invited"] == 1
-    assert res.data["skipped"] == [{"email": "three@example.com", "reason": "daily_limit"}]
+    assert res.data["skipped"] == [{"email": "lala1@your-domain.test", "reason": "daily_limit"}]
     assert _emails_sent(mock_single, mock_bulk) == 2
 
 
@@ -126,13 +129,13 @@ def test_bulk_invite_blocks_outright_when_quota_exhausted(
 ):
     caches["default"].clear()
     res = authenticated_client.post(
-        SINGLE_URL.format(code=collection.code), {"email": "first@example.com"}, format="json"
+        SINGLE_URL.format(code=collection.code), {"email": "lala7@your-domain.test"}, format="json"
     )
     assert res.status_code == 200
 
     res = authenticated_client.post(
         BULK_URL.format(code=collection.code),
-        {"invites": [{"email": "x@example.com"}]},
+        {"invites": [{"email": "lulu1@your-domain.test"}]},
         format="json",
     )
     assert res.status_code == 429
@@ -149,7 +152,7 @@ def test_quota_follows_the_ratelimit_switch(
     """RATELIMIT_ENABLE=False (the dev/test default) disables the quota too —
     same switch the django-ratelimit decorators read, so local development
     never trips an abuse guard."""
-    for email in ("a@example.com", "b@example.com"):
+    for email in ("lili@your-domain.test", "lala@your-domain.test"):
         res = authenticated_client.post(
             SINGLE_URL.format(code=collection.code), {"email": email}, format="json"
         )
@@ -167,7 +170,7 @@ def test_no_cap_configured_means_unlimited(
 
     The cap is operator policy — it protects a particular deployment's sending
     reputation — so a self-hosted instance must not inherit a number chosen for
-    www.oiueei.com. This is the case that regresses silently: reinstate a
+    another deployment. This is the case that regresses silently: reinstate a
     module-level default and every self-hoster starts getting 429s they never
     configured, on a limit they cannot find in their settings.
     """
@@ -175,7 +178,7 @@ def test_no_cap_configured_means_unlimited(
     for i in range(4):
         res = authenticated_client.post(
             SINGLE_URL.format(code=collection.code),
-            {"email": f"guest{i}@example.com"},
+            {"email": f"lele{i}@your-domain.test"},
             format="json",
         )
         assert res.status_code == 200, res.data
@@ -199,7 +202,7 @@ def test_zero_is_the_explicit_way_to_turn_the_quota_off(
     for i in range(3):
         res = authenticated_client.post(
             SINGLE_URL.format(code=collection.code),
-            {"email": f"guest{i}@example.com"},
+            {"email": f"lele{i}@your-domain.test"},
             format="json",
         )
         assert res.status_code == 200, res.data
@@ -214,7 +217,7 @@ def test_bulk_respects_a_configured_cap(mock_single, mock_bulk, authenticated_cl
     caches["default"].clear()
     res = authenticated_client.post(
         BULK_URL.format(code=collection.code),
-        {"invites": [{"email": f"guest{i}@example.com"} for i in range(4)]},
+        {"invites": [{"email": f"lele{i}@your-domain.test"} for i in range(4)]},
         format="json",
     )
     assert res.status_code == 200, res.data

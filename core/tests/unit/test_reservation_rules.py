@@ -45,7 +45,7 @@ def _refused(refusal):
 
 @pytest.fixture
 def reservations_collection(db):
-    owner = User.objects.create(code="RSVOWN", email="rsvown@test.com", name="Ateneu")
+    owner = User.objects.create(code="RSVOWN", email="lala@your-domain.test", name="Ateneu")
     coll = Collection.objects.create(
         code="RSVCOL",
         owner=owner,
@@ -63,7 +63,7 @@ def reservations_collection(db):
 def hourly_reservations_collection(db):
     """Mon–Thu 10:00-14:00 & 16:00-20:00, Fri 10:00-14:00,
     weekend closed. Max 3 hours per reservation."""
-    owner = User.objects.create(code="HRLOWN", email="hrlown@test.com", name="Ateneu")
+    owner = User.objects.create(code="HRLOWN", email="lele@your-domain.test", name="Ateneu")
     coll = Collection.objects.create(
         code="HRLCOL",
         owner=owner,
@@ -90,7 +90,7 @@ def generous_hourly_reservations_collection(db):
     generous enough that a full-day span never runs into it — isolates the
     shape rule (inside one block, or exactly the full day) from the hour cap,
     which by design applies to the full-day form too."""
-    owner = User.objects.create(code="GHRLOW", email="ghrlow@test.com", name="Ateneu")
+    owner = User.objects.create(code="GHRLOW", email="lili@your-domain.test", name="Ateneu")
     return Collection.objects.create(
         code="GHRLCO",
         owner=owner,
@@ -124,7 +124,7 @@ def test_is_reservations_collection_true_only_for_solo_reserve_allowlist(reserva
     ],
 )
 def test_is_reservations_collection_false_for_anything_else(db, allowlist):
-    owner = User.objects.create(code="OWNX01", email="ownx@test.com")
+    owner = User.objects.create(code="OWNX01", email="lolo@your-domain.test")
     coll = Collection.objects.create(
         code="COLLX1", owner=owner, headline="X", allowed_thing_types=allowlist
     )
@@ -160,7 +160,7 @@ def test_reservation_violation_accepts_exactly_the_max(reservations_collection):
 
 
 def test_reservation_violation_rejects_past_the_horizon(db):
-    owner = User.objects.create(code="HZOWN1", email="hzown@test.com")
+    owner = User.objects.create(code="HZOWN1", email="lulu@your-domain.test")
     coll = Collection.objects.create(
         code="HZCOL1",
         owner=owner,
@@ -184,7 +184,7 @@ def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
     offered — and every day of them when ``reservation_max_days`` > 1 — were
     refused by the server the picker's own ``maxDate`` had just allowed.
     """
-    owner = User.objects.create(code="HZOWN3", email="hzown3@test.com")
+    owner = User.objects.create(code="HZOWN3", email="lala1@your-domain.test")
     coll = Collection.objects.create(
         code="HZCOL3",
         owner=owner,
@@ -205,7 +205,7 @@ def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
 
 
 def test_reservation_horizon_defaults_to_90(db):
-    owner = User.objects.create(code="HZOWN2", email="hzown2@test.com")
+    owner = User.objects.create(code="HZOWN2", email="lele1@your-domain.test")
     coll = Collection.objects.create(
         code="HZCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
     )
@@ -236,7 +236,7 @@ def test_reservation_violation_rejects_a_start_on_a_closed_day(reservations_coll
 
 
 def test_reservation_violation_ignores_weekdays_when_unset(db):
-    owner = User.objects.create(code="OWNY01", email="owny@test.com")
+    owner = User.objects.create(code="OWNY01", email="lili1@your-domain.test")
     coll = Collection.objects.create(
         code="COLLY1",
         owner=owner,
@@ -260,8 +260,8 @@ def test_reserve_thing_is_date_based_and_on_site_not_single_use():
 
 def test_an_accepted_reservation_blocks_its_day_and_frees_the_next(db):
     """Strict overlap: a booking [Mon, Wed] blocks Mon+Tue, leaves Wed free."""
-    owner = User.objects.create(code="AVOWN1", email="avown@test.com")
-    requester = User.objects.create(code="AVREQ1", email="avreq@test.com")
+    owner = User.objects.create(code="AVOWN1", email="lolo1@your-domain.test")
+    requester = User.objects.create(code="AVREQ1", email="lili2@your-domain.test")
     thing = Thing.objects.create(
         code="AVTHG1", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
     )
@@ -416,7 +416,7 @@ def test_day_has_a_free_hour_uses_the_collections_own_minimum_not_a_fixed_hour(d
     that collection actually offers. Friday's only block (10:00-14:00) with
     a 10:00-13:30 booking leaves a 30-minute tail: too short for the old
     fixed hour, exactly enough for a 15-minute minimum."""
-    owner = User.objects.create(code="DHFMIN", email="dhfmin@test.com")
+    owner = User.objects.create(code="DHFMIN", email="lulu1@your-domain.test")
     collection = Collection.objects.create(
         code="DHFCOL",
         owner=owner,
@@ -493,7 +493,7 @@ def test_compute_hourly_availability_parses_the_closures_once_per_walk(db, monke
     collection just switched to HOUR (opening_hours still {} — every day
     closed) walks its whole horizon. Re-parsing `closed_dates` for each of
     those days cost O(horizon × closures) per thing."""
-    owner = User.objects.create(code="HAVOW2", email="havow2@test.com")
+    owner = User.objects.create(code="HAVOW2", email="lala2@your-domain.test")
     coll = Collection.objects.create(
         code="HAVCO2",
         owner=owner,
@@ -514,7 +514,7 @@ def test_compute_hourly_availability_parses_the_closures_once_per_walk(db, monke
 
 
 def test_compute_hourly_availability_respects_the_horizon(db):
-    owner = User.objects.create(code="HAVOW1", email="havow1@test.com")
+    owner = User.objects.create(code="HAVOW1", email="lele2@your-domain.test")
     coll = Collection.objects.create(
         code="HAVCO1",
         owner=owner,
@@ -535,7 +535,7 @@ def test_compute_hourly_availability_offers_the_horizon_day_itself(db):
     `reservation_hour_violation` accepts and the picker offers. Stopping one
     day short would grey out a day the server would have taken (a surviving
     mutant, mutation sweep 2026-09-19)."""
-    owner = User.objects.create(code="HAVOW3", email="havow3@test.com")
+    owner = User.objects.create(code="HAVOW3", email="lili3@your-domain.test")
     coll = Collection.objects.create(
         code="HAVCO3",
         owner=owner,
@@ -570,8 +570,8 @@ def test_availability_window_for_hourly_reserve_uses_compute_hourly_availability
         BookingPeriod.objects.create(
             thing_code=thing,
             thing_type="RESERVE_THING",
-            requester_code=User.objects.create(code="AVWHM1", email="avwhm1@test.com"),
-            requester_email="avwhm1@test.com",
+            requester_code=User.objects.create(code="AVWHM1", email="lolo2@your-domain.test"),
+            requester_email="lolo2@your-domain.test",
             owner_code=coll.owner,
             start_date=mon,
             end_date=mon + timedelta(days=1),
@@ -582,8 +582,8 @@ def test_availability_window_for_hourly_reserve_uses_compute_hourly_availability
         BookingPeriod.objects.create(
             thing_code=thing,
             thing_type="RESERVE_THING",
-            requester_code=User.objects.create(code="AVWHM2", email="avwhm2@test.com"),
-            requester_email="avwhm2@test.com",
+            requester_code=User.objects.create(code="AVWHM2", email="lulu2@your-domain.test"),
+            requester_email="lulu2@your-domain.test",
             owner_code=coll.owner,
             start_date=mon,
             end_date=mon + timedelta(days=1),
@@ -600,8 +600,8 @@ def test_availability_window_for_hourly_reserve_uses_compute_hourly_availability
 def test_request_reservation_refuses_a_thing_with_no_reservations_collection(db):
     """Defensive: a RESERVE thing that somehow sits in no reservations
     collection (a hand-edited allowlist) cannot be booked."""
-    owner = User.objects.create(code="RRSVO1", email="rrsvo@test.com")
-    member = User.objects.create(code="RRSVM1", email="rrsvm@test.com")
+    owner = User.objects.create(code="RRSVO1", email="lala3@your-domain.test")
+    member = User.objects.create(code="RRSVM1", email="lele3@your-domain.test")
     coll = Collection.objects.create(
         code="RRSVC1", owner=owner, headline="X", allowed_thing_types=["GIFT_THING"]
     )
@@ -618,8 +618,8 @@ def test_request_reservation_refuses_a_thing_with_no_reservations_collection(db)
 
 
 def test_cancel_reservation_rejects_a_non_reservation_booking(db):
-    owner = User.objects.create(code="CRSVO1", email="crsvo@test.com")
-    member = User.objects.create(code="CRSVM1", email="crsvm@test.com")
+    owner = User.objects.create(code="CRSVO1", email="lili4@your-domain.test")
+    member = User.objects.create(code="CRSVM1", email="lolo3@your-domain.test")
     thing = Thing.objects.create(
         code="CRSVT1", type=Thing.Type.LEND_THING, owner=owner, headline="Drill"
     )
@@ -640,8 +640,8 @@ def test_cancel_reservation_rejects_a_non_reservation_booking(db):
 
 
 def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
-    owner = User.objects.create(code="IRSVO1", email="irsvo@test.com")
-    member = User.objects.create(code="IRSVM1", email="irsvm@test.com")
+    owner = User.objects.create(code="IRSVO1", email="lulu3@your-domain.test")
+    member = User.objects.create(code="IRSVM1", email="lala4@your-domain.test")
     coll = Collection.objects.create(
         code="IRSVC1",
         owner=owner,
@@ -666,7 +666,7 @@ def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
 
 
 def test_reservation_max_active_per_member_defaults_to_10(db):
-    owner = User.objects.create(code="ACOWN1", email="acown1@test.com")
+    owner = User.objects.create(code="ACOWN1", email="lele4@your-domain.test")
     coll = Collection.objects.create(
         code="ACCOL1", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
     )
@@ -677,9 +677,9 @@ def test_active_reservation_count_only_counts_this_collections_accepted_future_b
     """Counts ACCEPTED, not-yet-finished bookings for THIS requester in THIS
     collection only — a different requester, a different collection, an
     already-finished booking and a CANCELLED one all fall outside it."""
-    owner = User.objects.create(code="ACOWN2", email="acown2@test.com")
-    member = User.objects.create(code="ACMEM2", email="acmem2@test.com")
-    other_member = User.objects.create(code="ACMEM3", email="acmem3@test.com")
+    owner = User.objects.create(code="ACOWN2", email="lili5@your-domain.test")
+    member = User.objects.create(code="ACMEM2", email="lolo4@your-domain.test")
+    other_member = User.objects.create(code="ACMEM3", email="lulu4@your-domain.test")
     coll = Collection.objects.create(
         code="ACCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
     )
@@ -735,8 +735,8 @@ def test_an_hourly_reservation_counts_towards_the_cap_until_its_day_is_over(db):
     counting from tomorrow. Pinned as it stands — the cap is a courtesy limit
     on how much of the calendar one member sits on, and a place held for the
     rest of the day is a coarser answer than the clock could give."""
-    owner = User.objects.create(code="ACOWN5", email="acown5@test.com")
-    member = User.objects.create(code="ACMEM5", email="acmem5@test.com")
+    owner = User.objects.create(code="ACOWN5", email="lala5@your-domain.test")
+    member = User.objects.create(code="ACMEM5", email="lele5@your-domain.test")
     coll = Collection.objects.create(
         code="ACCOL5",
         owner=owner,
@@ -769,8 +769,8 @@ def test_an_hourly_reservation_counts_towards_the_cap_until_its_day_is_over(db):
 def test_request_reservation_refuses_past_the_active_cap(db):
     """At the cap a request still succeeds; one more is refused — a courtesy
     limit, not the date-clash 409."""
-    owner = User.objects.create(code="ACOWN4", email="acown4@test.com")
-    member = User.objects.create(code="ACMEM4", email="acmem4@test.com")
+    owner = User.objects.create(code="ACOWN4", email="lili6@your-domain.test")
+    member = User.objects.create(code="ACMEM4", email="lolo5@your-domain.test")
     coll = Collection.objects.create(
         code="ACCOL4",
         owner=owner,
@@ -803,7 +803,7 @@ def test_request_reservation_refuses_past_the_active_cap(db):
 
 
 def test_reservation_unit_defaults_to_day(db):
-    owner = User.objects.create(code="HRUOW1", email="hruow1@test.com")
+    owner = User.objects.create(code="HRUOW1", email="lulu5@your-domain.test")
     coll = Collection.objects.create(
         code="HRUCO1", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
     )
@@ -814,8 +814,8 @@ def test_reservation_unit_defaults_to_day(db):
 
 
 def test_booking_start_time_and_end_time_default_to_none(db):
-    owner = User.objects.create(code="HRUOW2", email="hruow2@test.com")
-    requester = User.objects.create(code="HRUME2", email="hrume2@test.com")
+    owner = User.objects.create(code="HRUOW2", email="lala6@your-domain.test")
+    requester = User.objects.create(code="HRUME2", email="lele6@your-domain.test")
     thing = Thing.objects.create(
         code="HRUTH2", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
     )
@@ -851,7 +851,7 @@ def test_day_opening_blocks_empty_when_the_weekday_has_no_entry(hourly_reservati
 
 
 def test_day_opening_blocks_skips_malformed_entries_defensively(db):
-    owner = User.objects.create(code="HBLOW1", email="hblow1@test.com")
+    owner = User.objects.create(code="HBLOW1", email="lili7@your-domain.test")
     coll = Collection.objects.create(
         code="HBLCO1",
         owner=owner,
@@ -890,7 +890,7 @@ def test_reservation_hour_violation_rejects_under_the_minimum(hourly_reservation
 def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_too_short(db):
     """A minimum lower than the old fixed 60-minute floor is exactly the
     feature this field exists for — an early adopter wanted shorter slots."""
-    owner = User.objects.create(code="HRMNOW", email="hrmnow@test.com")
+    owner = User.objects.create(code="HRMNOW", email="lili8@your-domain.test")
     coll = Collection.objects.create(
         code="HRMNCO",
         owner=owner,
@@ -943,7 +943,7 @@ def test_reservation_hour_violation_accepts_exactly_the_max(hourly_reservations_
 
 
 def test_reservation_hour_violation_rejects_past_the_horizon(db):
-    owner = User.objects.create(code="HHZOW1", email="hhzow1@test.com")
+    owner = User.objects.create(code="HHZOW1", email="lolo6@your-domain.test")
     coll = Collection.objects.create(
         code="HHZCO1",
         owner=owner,
@@ -1123,8 +1123,8 @@ def test_reservation_hour_violation_the_hour_cap_has_no_full_day_exception(
 
 
 def test_has_overlap_with_hours_conflicts_on_overlapping_times_same_day(db):
-    owner = User.objects.create(code="HOVOW1", email="hovow1@test.com")
-    requester = User.objects.create(code="HOVRQ1", email="hovrq1@test.com")
+    owner = User.objects.create(code="HOVOW1", email="lulu6@your-domain.test")
+    requester = User.objects.create(code="HOVRQ1", email="lala7@your-domain.test")
     thing = Thing.objects.create(
         code="HOVTH1", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
     )
@@ -1150,8 +1150,8 @@ def test_has_overlap_with_hours_conflicts_on_overlapping_times_same_day(db):
 
 
 def test_has_overlap_with_hours_touching_boundary_is_not_a_conflict(db):
-    owner = User.objects.create(code="HOVOW2", email="hovow2@test.com")
-    requester = User.objects.create(code="HOVRQ2", email="hovrq2@test.com")
+    owner = User.objects.create(code="HOVOW2", email="lele7@your-domain.test")
+    requester = User.objects.create(code="HOVRQ2", email="lili9@your-domain.test")
     thing = Thing.objects.create(
         code="HOVTH2", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
     )
@@ -1180,8 +1180,8 @@ def test_has_overlap_with_hours_a_whole_day_booking_blocks_any_hour(db):
     """An existing DAY-unit (or LEND/RENT) booking has `start_time=NULL` — it
     blocks the entire day, so a later HOUR-unit request against the same thing
     and date must clash regardless of which hours it asks for."""
-    owner = User.objects.create(code="HOVOW3", email="hovow3@test.com")
-    requester = User.objects.create(code="HOVRQ3", email="hovrq3@test.com")
+    owner = User.objects.create(code="HOVOW3", email="lolo7@your-domain.test")
+    requester = User.objects.create(code="HOVRQ3", email="lulu7@your-domain.test")
     thing = Thing.objects.create(
         code="HOVTH3", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
     )
@@ -1205,8 +1205,8 @@ def test_has_overlap_with_hours_a_whole_day_booking_blocks_any_hour(db):
 
 
 def test_has_overlap_with_hours_two_bookings_the_same_day_can_coexist(db):
-    owner = User.objects.create(code="HOVOW4", email="hovow4@test.com")
-    requester = User.objects.create(code="HOVRQ4", email="hovrq4@test.com")
+    owner = User.objects.create(code="HOVOW4", email="lala8@your-domain.test")
+    requester = User.objects.create(code="HOVRQ4", email="lele8@your-domain.test")
     thing = Thing.objects.create(
         code="HOVTH4", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
     )
@@ -1236,7 +1236,7 @@ def test_has_overlap_with_hours_two_bookings_the_same_day_can_coexist(db):
 
 def test_request_reservation_hour_mode_creates_a_slot_booking(hourly_reservations_collection):
     coll = hourly_reservations_collection
-    member = User.objects.create(code="HRQMB1", email="hrqmb1@test.com")
+    member = User.objects.create(code="HRQMB1", email="lili10@your-domain.test")
     coll.invites.add(member)
     thing = Thing.objects.create(
         code="HRQTH1", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
@@ -1259,7 +1259,7 @@ def test_request_reservation_hour_mode_rejects_a_span_outside_opening_hours(
     hourly_reservations_collection,
 ):
     coll = hourly_reservations_collection
-    member = User.objects.create(code="HRQMB2", email="hrqmb2@test.com")
+    member = User.objects.create(code="HRQMB2", email="lolo8@your-domain.test")
     coll.invites.add(member)
     thing = Thing.objects.create(
         code="HRQTH2", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
@@ -1280,7 +1280,7 @@ def test_request_reservation_hour_mode_rejects_a_span_outside_opening_hours(
 
 def test_request_reservation_hour_mode_requires_both_times(hourly_reservations_collection):
     coll = hourly_reservations_collection
-    member = User.objects.create(code="HRQMB3", email="hrqmb3@test.com")
+    member = User.objects.create(code="HRQMB3", email="lulu8@your-domain.test")
     coll.invites.add(member)
     thing = Thing.objects.create(
         code="HRQTH3", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
@@ -1297,7 +1297,7 @@ def test_request_reservation_day_mode_ignores_stray_hour_kwargs(reservations_col
     """A DAY-unit collection's create path stays exactly as before, even if a
     caller passed start_time/end_time by mistake — they must not reach the row."""
     coll = reservations_collection
-    member = User.objects.create(code="HRQMB4", email="hrqmb4@test.com")
+    member = User.objects.create(code="HRQMB4", email="lala9@your-domain.test")
     coll.invites.add(member)
     thing = Thing.objects.create(
         code="HRQTH4", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
@@ -1320,7 +1320,7 @@ def test_request_reservation_day_mode_ignores_stray_hour_kwargs(reservations_col
 
 def test_request_reservation_day_mode_requires_duration_days(reservations_collection):
     coll = reservations_collection
-    member = User.objects.create(code="HRQMB5", email="hrqmb5@test.com")
+    member = User.objects.create(code="HRQMB5", email="lele9@your-domain.test")
     coll.invites.add(member)
     thing = Thing.objects.create(
         code="HRQTH5", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Room"
@@ -1333,8 +1333,8 @@ def test_request_reservation_day_mode_requires_duration_days(reservations_collec
 
 
 def test_project_note_defaults_blank_and_holds_512(db):
-    owner = User.objects.create(code="PNOWN1", email="pnown@test.com")
-    requester = User.objects.create(code="PNREQ1", email="pnreq@test.com")
+    owner = User.objects.create(code="PNOWN1", email="lili11@your-domain.test")
+    requester = User.objects.create(code="PNREQ1", email="lili12@your-domain.test")
     thing = Thing.objects.create(
         code="PNTHG1", type=Thing.Type.RESERVE_THING, owner=owner, headline="Lab"
     )
@@ -1365,7 +1365,7 @@ def test_project_note_defaults_blank_and_holds_512(db):
 
 
 def _grid_collection(code, opening_hours, min_minutes, max_minutes=720):
-    owner = User.objects.create(code=f"{code}O", email=f"{code.lower()}@test.com")
+    owner = User.objects.create(code=f"{code}O", email=f"{code.lower()}@your-domain.test")
     return Collection.objects.create(
         code=code,
         owner=owner,
@@ -1511,7 +1511,7 @@ def test_cancel_refuses_an_hourly_slot_that_already_began_today(hourly_reservati
     """Cancelling this morning's slot this afternoon would free, and announce,
     something that already happened. A later slot the same day still cancels."""
     coll = hourly_reservations_collection
-    member = User.objects.create(code="CNLMEM", email="cnlmem@test.com")
+    member = User.objects.create(code="CNLMEM", email="lolo9@your-domain.test")
     coll.invites.add(member)
     space = Thing.objects.create(
         code="CNLSPC", type=Thing.Type.RESERVE_THING, owner=coll.owner, headline="Sala"

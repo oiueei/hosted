@@ -35,10 +35,10 @@ class TestNothingToJoinCreatesNothing:
         This is the case that made the endpoint a registration door. It is also
         the shape a script would use to mint accounts in bulk.
         """
-        response = api_client.post(URL, {"email": "nobody@test.com"}, format="json")
+        response = api_client.post(URL, {"email": "lolo6@your-domain.test"}, format="json")
 
         assert response.status_code == 200
-        assert not User.objects.filter(email="nobody@test.com").exists()
+        assert not User.objects.filter(email="lolo6@your-domain.test").exists()
 
     def test_it_creates_no_rsvp_and_sends_no_mail(self, api_client):
         """Not merely "no user": no login credential and no mail either.
@@ -47,9 +47,9 @@ class TestNothingToJoinCreatesNothing:
         nothing would hand out a session in exchange for typing an email, which
         is the same hole one layer down.
         """
-        api_client.post(URL, {"email": "nobody@test.com"}, format="json")
+        api_client.post(URL, {"email": "lolo6@your-domain.test"}, format="json")
 
-        assert not RSVP.objects.filter(user_email="nobody@test.com").exists()
+        assert not RSVP.objects.filter(user_email="lolo6@your-domain.test").exists()
         assert mail.outbox == []
 
     def test_an_existing_account_is_not_touched_either(self, api_client, user):
@@ -77,10 +77,10 @@ class TestTheAnswerIsAlwaysTheSame:
         """
         joined = api_client.post(
             URL,
-            {"email": "joiner@test.com", "collection_code": public_collection.code},
+            {"email": "lele7@your-domain.test", "collection_code": public_collection.code},
             format="json",
         )
-        refused = api_client.post(URL, {"email": "nobody@test.com"}, format="json")
+        refused = api_client.post(URL, {"email": "lolo6@your-domain.test"}, format="json")
 
         assert refused.status_code == joined.status_code
         assert refused.data == joined.data
@@ -93,12 +93,14 @@ class TestTheAnswerIsAlwaysTheSame:
         codes from invented ones, nor public ones from private.
         """
         response = api_client.post(
-            URL, {"email": "prober@test.com", "collection_code": collection.code}, format="json"
+            URL,
+            {"email": "lulu@your-domain.test", "collection_code": collection.code},
+            format="json",
         )
 
         assert response.status_code == 200
-        assert not User.objects.filter(email="prober@test.com").exists()
-        assert not collection.invites.filter(email="prober@test.com").exists()
+        assert not User.objects.filter(email="lulu@your-domain.test").exists()
+        assert not collection.invites.filter(email="lulu@your-domain.test").exists()
 
 
 @pytest.mark.django_db
@@ -110,12 +112,12 @@ class TestARealTargetStillWorks:
     ):
         response = api_client.post(
             URL,
-            {"email": "joiner@test.com", "collection_code": public_collection.code},
+            {"email": "lele7@your-domain.test", "collection_code": public_collection.code},
             format="json",
         )
 
         assert response.status_code == 200
-        joiner = User.objects.get(email="joiner@test.com")
+        joiner = User.objects.get(email="lele7@your-domain.test")
         rsvp = RSVP.objects.get(user_code=joiner, target_code=public_collection.code)
         assert len(mail.outbox) == 1
         # The address was only typed: the membership is made by the click.
@@ -164,17 +166,17 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         self, api_client, public_collection
     ):
         caches["default"].clear()
-        for email in ("first@test.com", "second@test.com"):
+        for email in ("lala@your-domain.test", "lele5@your-domain.test"):
             assert self._join(api_client, public_collection, email).status_code == 200
         assert len(mail.outbox) == 2
 
-        self._join(api_client, public_collection, "third@test.com")
+        self._join(api_client, public_collection, "lolo@your-domain.test")
 
         # Nothing created and nothing sent — the whole point is that the third
         # stranger is never mailed from the operator's domain.
         assert len(mail.outbox) == 2
-        assert not User.objects.filter(email="third@test.com").exists()
-        assert not RSVP.objects.filter(user_email="third@test.com").exists()
+        assert not User.objects.filter(email="lolo@your-domain.test").exists()
+        assert not RSVP.objects.filter(user_email="lolo@your-domain.test").exists()
 
     @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
     def test_the_refusal_is_indistinguishable_from_a_join(self, api_client, public_collection):
@@ -185,9 +187,9 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         withholds. Compared as whole responses, like the no-target case.
         """
         caches["default"].clear()
-        joined = self._join(api_client, public_collection, "joiner@test.com")
+        joined = self._join(api_client, public_collection, "lele7@your-domain.test")
 
-        refused = self._join(api_client, public_collection, "refused@test.com")
+        refused = self._join(api_client, public_collection, "lele@your-domain.test")
 
         assert refused.status_code == joined.status_code
         assert refused.data == joined.data
@@ -208,13 +210,15 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
             code="OTHERC", owner=user, headline="B", visibility=Collection.Visibility.PUBLIC
         )
 
-        self._join(api_client, abused, "one@test.com")
-        self._join(api_client, abused, "two@test.com")  # spent: refused
-        self._join(api_client, bystander, "three@test.com")
+        self._join(api_client, abused, "lili@your-domain.test")
+        self._join(api_client, abused, "lolo1@your-domain.test")  # spent: refused
+        self._join(api_client, bystander, "lulu1@your-domain.test")
 
-        assert not User.objects.filter(email="two@test.com").exists()
+        assert not User.objects.filter(email="lolo1@your-domain.test").exists()
         # Admitted = a link was sent for the bystander; the click would join them.
-        assert RSVP.objects.filter(user_email="three@test.com", target_code=bystander.code).exists()
+        assert RSVP.objects.filter(
+            user_email="lulu1@your-domain.test", target_code=bystander.code
+        ).exists()
 
     @override_settings(**QUOTA_SETTINGS)
     def test_unset_means_no_cap_at_all(self, api_client, public_collection):
@@ -222,7 +226,7 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         legitimately bring in far more people than any number we could pick, so
         upstream picks none and the operator sets their own."""
         caches["default"].clear()
-        for email in ("a@test.com", "b@test.com", "c@test.com"):
+        for email in ("lulu2@your-domain.test", "lala1@your-domain.test", "lele1@your-domain.test"):
             assert self._join(api_client, public_collection, email).status_code == 200
 
         assert len(mail.outbox) == 3
@@ -257,7 +261,7 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         """
         caches["default"].clear()
 
-        for email in ("first@test.com", "second@test.com", "third@test.com"):
+        for email in ("lala@your-domain.test", "lele5@your-domain.test", "lolo@your-domain.test"):
             assert self._join(api_client, public_collection, email).status_code == 200
 
         # A cap of 1 would have stopped the second. The layer is off, so it does

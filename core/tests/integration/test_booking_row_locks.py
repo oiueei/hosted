@@ -331,7 +331,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
         """RESERVE auto-confirms with no owner step, so an unlocked clash is two
         members turning up to one room. The loser must get the 409, and exactly
         one ACCEPTED booking may exist."""
-        other = User.objects.create(code="RCEUSR", email="rce-other@test.com")
+        other = User.objects.create(code="RCEUSR", email="lolo@your-domain.test")
         coll, thing = self._reservations_collection(user, user2, other)
         day = date.today() + timedelta(days=2)
         original = BookingPeriod.has_overlap
@@ -368,7 +368,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
     def test_a_gift_cannot_be_claimed_twice_at_once(self, monkeypatch, user, user2):
         """Two members claiming the same single-use GIFT: one booking, the thing
         TAKEN once. Unlocked, both read status ACTIVE and both create."""
-        other = User.objects.create(code="RCEG02", email="rce-g2@test.com")
+        other = User.objects.create(code="RCEG02", email="lala@your-domain.test")
         thing = Thing.objects.create(
             code="RCEG01", type=Thing.Type.GIFT_THING, owner=user, headline="A lamp"
         )
@@ -400,7 +400,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
     def test_two_overlapping_loans_cannot_both_be_created(self, monkeypatch, user, user2):
         """Same dates, same drill: the second request finds the first's booking
         under the lock and is a 409, not a second row."""
-        other = User.objects.create(code="RCEL02", email="rce-l2@test.com")
+        other = User.objects.create(code="RCEL02", email="lele@your-domain.test")
         thing = Thing.objects.create(
             code="RCEL01", type=Thing.Type.LEND_THING, owner=user, headline="A drill"
         )
@@ -450,11 +450,11 @@ class TestTheCoCuratorCeilingIsAtomic:
         """
         group = Collection.objects.create(code="CORC01", owner=user, headline="Curators")
         for i in range(Collection.MAX_CO_OWNERS - 1):
-            curator = User.objects.create(code=f"CORM{i:02d}", email=f"corm{i}@test.com")
+            curator = User.objects.create(code=f"CORM{i:02d}", email=f"lala{i}@your-domain.test")
             group.invites.add(curator)
             group.co_owners.add(curator)
-        first_new = User.objects.create(code="CORN01", email="corn1@test.com")
-        second_new = User.objects.create(code="CORN02", email="corn2@test.com")
+        first_new = User.objects.create(code="CORN01", email="lili@your-domain.test")
+        second_new = User.objects.create(code="CORN02", email="lolo1@your-domain.test")
         group.invites.add(first_new, second_new)
         manager = Collection.co_owners.related_manager_cls
         original = manager.add

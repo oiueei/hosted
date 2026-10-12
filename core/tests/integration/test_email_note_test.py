@@ -22,7 +22,7 @@ def test_a_curator_gets_their_draft_rendered_as_members_will_see_it(
 
     resp = authenticated_client.post(
         URL.format(collection.code),
-        {"email_note": "**Bring ID.**\n\n- Floor 2\n- [Rules](https://example.com/rules)"},
+        {"email_note": "**Bring ID.**\n\n- Floor 2\n- [Rules](https://your-domain.test/rules)"},
         format="json",
     )
 
@@ -36,9 +36,9 @@ def test_a_curator_gets_their_draft_rendered_as_members_will_see_it(
     assert "<strong>Bring ID.</strong>" in html
     assert "<li>Floor 2</li>" in html
     assert (
-        '<a href="https://example.com/rules" '
+        '<a href="https://your-domain.test/rules" '
         'style="color:#0000bf !important;text-decoration:underline !important;">'
-        "Rules</a> (example.com)" in html
+        "Rules</a> (your-domain.test)" in html
     )
     assert "Test Collection" in sent.subject
     # The plain half carries the raw Markdown, as the real emails do.

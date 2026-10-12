@@ -2,8 +2,8 @@
 // Cada desplegament d'OIUEEI té el seu propi operador, i aquest operador és el
 // responsable del tractament de les dades: si auto-hospedes OIUEEI, edita la
 // secció «Qui opera aquesta instància» amb la teva identitat i contacte.
-// (El desplegament oficial www.oiueei.com substitueix aquest fitxer a la seva
-// branca de desplegament per la versió completa, amb les dades reals del titular.)
+// (Un desplegament pot substituir aquest fitxer pel seu propi text, amb les
+// dades reals del titular.)
 export default `
 # El nostre compromís
 

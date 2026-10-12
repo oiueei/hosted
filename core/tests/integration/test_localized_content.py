@@ -92,7 +92,7 @@ class TestReadingLocalizedContent:
         collection = Collection.objects.create(
             code="LOC001", owner=user, headline=BILINGUAL, language=Language.ES
         )
-        catalan = User.objects.create(email="ca@test.com", language=Language.CA)
+        catalan = User.objects.create(email="lili5@your-domain.test", language=Language.CA)
         collection.invites.add(catalan)
 
         send_collection_invite_email(
@@ -107,8 +107,10 @@ class TestReadingLocalizedContent:
         collection = Collection.objects.create(
             code="LOC002", owner=user, headline=BILINGUAL, language=Language.ES
         )
-        catalan = User.objects.create(email="ca@test.com", language=Language.CA, notify_news=True)
-        spanish = User.objects.create(email="es@test.com", notify_news=True)
+        catalan = User.objects.create(
+            email="lili5@your-domain.test", language=Language.CA, notify_news=True
+        )
+        spanish = User.objects.create(email="lolo5@your-domain.test", notify_news=True)
         collection.invites.add(catalan, spanish)
 
         send_digest_email(
@@ -120,14 +122,14 @@ class TestReadingLocalizedContent:
         )
 
         by_recipient = {m.to[0]: m for m in mail.outbox}
-        assert "Les coses de mama" in by_recipient["ca@test.com"].subject
-        assert "Una cadira" in by_recipient["ca@test.com"].body
-        assert "Las cosas de mamá" in by_recipient["es@test.com"].subject
-        assert "Una silla" in by_recipient["es@test.com"].body
+        assert "Les coses de mama" in by_recipient["lili5@your-domain.test"].subject
+        assert "Una cadira" in by_recipient["lili5@your-domain.test"].body
+        assert "Las cosas de mamá" in by_recipient["lolo5@your-domain.test"].subject
+        assert "Una silla" in by_recipient["lolo5@your-domain.test"].body
 
     def test_a_reader_whose_language_the_owner_skipped_still_gets_words(self, user):
         collection = Collection.objects.create(code="LOC003", owner=user, headline=BILINGUAL)
-        english = User.objects.create(email="en@test.com", language=Language.EN)
+        english = User.objects.create(email="lala@your-domain.test", language=Language.EN)
         collection.invites.add(english)
 
         send_collection_invite_email(

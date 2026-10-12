@@ -375,7 +375,7 @@ class CollectionViewSet(ModelViewSet):
 # sending reputation, and only the operator knows what their provider tolerates,
 # so the value lives in settings (`INVITE_EMAILS_PER_DAY`, read from the env in
 # base.py) and the standalone ships it **unset = unlimited**: a self-hoster
-# decides for their own instance. www.oiueei.com sets the config var.
+# decides for their own instance. A deployment sets the config var.
 #
 # Coarse abuse prevention, not an exact quota: it also follows RATELIMIT_ENABLE
 # (the same switch the django-ratelimit decorators read, so dev and tests stay

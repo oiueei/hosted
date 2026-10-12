@@ -847,7 +847,7 @@ def _md_inline(escaped_text):
     **A link whose text is not its own URL names its host after it** —
     ``carnet (example.com)``. These emails leave from the operator's own
     domain, and the owner chooses both halves of the link: without the host,
-    ``[https://www.oiueei.com/verify/…](https://elsewhere.example)`` reads as
+    ``[https://www.your-domain.test/verify/…](https://elsewhere.example)`` reads as
     the operator's own sign-in link. The host is
     the one value here derived from unescaped text, so it is escaped once,
     itself.
