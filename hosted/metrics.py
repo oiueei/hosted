@@ -1,0 +1,509 @@
+"""One week of the series, derived from the event log.
+
+Pure functions over `Event`, `DailyActivity` and `CreatorValidation`: they write
+nothing. **The same function serves the backfill and the live recording**, which is
+what guarantees the two cannot give different numbers for the same week.
+
+Definitions that the tests pin:
+
+- **The week** runs from Monday 00:00 to Sunday 23:59:59.999 in `WEEK_TZ`
+  (`Europe/Madrid` unless `STATS_WEEK_TZ` says otherwise), whatever `TIME_ZONE` is.
+  An event belongs to the week when ``start <= created < cutoff``, the cutoff being
+  the start of the next Monday.
+- **What is real** is decided by `_real_events`, once, for the whole history.
+- **A person enters the real population with their first real event**: a
+  `MEMBER_JOINED` or a `COLLECTION_CREATED`. `USER_JOINED` does not count: a visit
+  through the open door generates one without entering anything real.
+- **Stocks at the cutoff** are rebuilt from the log: a collection is alive when its
+  `COLLECTION_CREATED` has no later `COLLECTION_DELETED`; a membership is a
+  (person, collection) pair whose last `MEMBER_JOINED` / `MEMBER_LEFT` is a join, in
+  a live collection; a creator owns a live collection; a guest has a membership and
+  is not a creator; a thing is alive until its `THING_REMOVED`, and its verb is the
+  `thing_type` of its `THING_ADDED` (a later change of type is accepted drift).
+- **The organic cycle** follows people whose first real relation is a
+  `MEMBER_JOINED`, through six stages (`cycle_*`). The stages count how many people
+  reached each one, without requiring the order between the second and third.
+  Their date for "returned" is the second distinct day of `DailyActivity` on or
+  after the day they entered.
+- **Generations:** an owner who has no real `MEMBER_JOINED` before their first
+  `COLLECTION_CREATED` is *seeded* (generation 0); an organic owner is one more than
+  the owner of the collection of their first real join. That owner comes from the
+  `COLLECTION_CREATED` with that code, which survives the collection being deleted.
+  If that event is not in the log, the parent counts as generation 0.
+
+Nothing here keeps a user code: the results are counts and medians.
+"""
+
+import os
+import statistics
+from collections import defaultdict
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
+from core.management.commands.seed_data.common import USERS as _SEED_USERS
+from core.models import Collection, DailyActivity, Event, Thing
+from hosted.models import CreatorValidation
+
+WEEK_TZ = ZoneInfo(os.environ.get("STATS_WEEK_TZ", "Europe/Madrid"))
+FIRST_WEEK = date(2026, 9, 7)
+SCHEMA_VERSION = 1
+
+SEED_USER_CODES = frozenset(u["code"] for u in _SEED_USERS)
+
+K = Event.Kind
+REQUEST_TYPES = ("GIFT_THING", "SELL_THING", "LEND_THING", "RENT_THING")
+RESERVE_TYPE = "RESERVE_THING"
+ALL_TYPES = REQUEST_TYPES + (RESERVE_TYPE,)
+
+# Window, in weeks, after which a cohort's conversion to owner is reported.
+COHORT_WINDOWS = (1, 2, 4, 8)
+
+LIVE_ONLY_KEYS = ("collections_community", "collections_public", "things_available")
+
+METRIC_KEYS = (
+    # Stocks at the cutoff.
+    "creators",
+    "creators_seeded",
+    "creators_organic",
+    "guests",
+    "collections",
+    "memberships",
+    "things",
+    "things_gift",
+    "things_sell",
+    "things_lend",
+    "things_rent",
+    "things_reserve",
+    # Movements of the week.
+    "new_people",
+    "new_guests",
+    "new_creators",
+    "new_creators_organic",
+    "collections_created",
+    "collections_deleted",
+    "things_added",
+    "things_removed",
+    "requests",
+    "requests_gift",
+    "requests_sell",
+    "requests_lend",
+    "requests_rent",
+    "requests_accepted",
+    "reservations",
+    "joins_invite",
+    "joins_recommendation",
+    "joins_share",
+    "joins_public",
+    "joins_unknown",
+    "validations_requested",
+    "validations_approved",
+    "active_creators",
+    "active_guests",
+    # The cycle, accumulated at the cutoff.
+    "cycle_entered",
+    "cycle_returned",
+    "cycle_requested",
+    "cycle_owner",
+    "cycle_first_thing",
+    "cycle_closed",
+    "cycle_median_days_to_owner",
+    "owner_median_days_to_first_request",
+    "owners_gen0",
+    "owners_gen1",
+    "owners_gen2plus",
+    # Only when recorded live: they describe the state of today.
+    *LIVE_ONLY_KEYS,
+)
+
+
+def week_bounds(week_start):
+    """``(start, cutoff)`` as aware datetimes: Monday 00:00 and the next Monday 00:00."""
+    start = datetime.combine(week_start, time.min, tzinfo=WEEK_TZ)
+    cutoff = datetime.combine(week_start + timedelta(days=7), time.min, tzinfo=WEEK_TZ)
+    return start, cutoff
+
+
+def _monday_of(moment):
+    local = moment.astimezone(WEEK_TZ).date()
+    return local - timedelta(days=local.weekday())
+
+
+def _days(delta):
+    return round(delta.total_seconds() / 86400, 2)
+
+
+def _median(values):
+    return statistics.median(values) if values else None
+
+
+def _real_events(cutoff):
+    """Every real event before ``cutoff``, oldest first.
+
+    This is **not** `stats_summary._partition()`, on purpose: that function sorts
+    people by their state *today*, so a guest of week 38 who has since left their group
+    would come out as demo and their events would vanish from the history. Here the
+    exclusion is made event by event, from what the event itself says:
+
+    - the actor is one of the five seed characters;
+    - it is about a collection that is `is_onboarding`;
+    - it is a `MEMBER_JOINED` through the open door (`source == ONBOARDING`);
+    - it is about a thing whose `THING_ADDED` fell in an onboarding collection
+      (`HOLD_REQUESTED` and `THING_REMOVED` carry no collection of their own).
+    """
+    onboarding = set(Collection.objects.filter(is_onboarding=True).values_list("code", flat=True))
+    events = list(Event.objects.filter(created__lt=cutoff).order_by("created", "code"))
+    demo_things = {
+        e.thing_code
+        for e in events
+        if e.kind == K.THING_ADDED and e.collection_code in onboarding and e.thing_code
+    }
+    return [
+        e
+        for e in events
+        if e.actor_code not in SEED_USER_CODES
+        and e.collection_code not in onboarding
+        and not (e.kind == K.MEMBER_JOINED and e.source == Event.Source.ONBOARDING)
+        and e.thing_code not in demo_things
+    ]
+
+
+class _History:
+    """Everything the week needs, indexed once from the real events before the cutoff."""
+
+    def __init__(self, cutoff):
+        self.cutoff = cutoff
+        self.events = _real_events(cutoff)
+
+        self.collection_creator = {}  # code -> actor (survives the collection's deletion)
+        self.collection_deleted = set()
+        self.membership = {}  # (actor, collection) -> bool
+        self.thing_added = {}  # code -> event
+        self.thing_removed = set()
+        self.first_join = {}  # person -> event
+        self.first_created = {}  # person -> event
+        self.first_request = {}  # person -> datetime
+        self.requests_by_thing = defaultdict(list)  # thing code -> [datetime]
+        self.things_by_actor = defaultdict(list)  # person -> [event]
+        for e in self.events:
+            if e.kind == K.COLLECTION_CREATED:
+                self.collection_creator.setdefault(e.collection_code, e.actor_code)
+                self.first_created.setdefault(e.actor_code, e)
+            elif e.kind == K.COLLECTION_DELETED:
+                self.collection_deleted.add(e.collection_code)
+            elif e.kind == K.MEMBER_JOINED:
+                self.membership[(e.actor_code, e.collection_code)] = True
+                self.first_join.setdefault(e.actor_code, e)
+            elif e.kind == K.MEMBER_LEFT:
+                self.membership[(e.actor_code, e.collection_code)] = False
+            elif e.kind == K.THING_ADDED:
+                self.thing_added.setdefault(e.thing_code, e)
+                self.things_by_actor[e.actor_code].append(e)
+            elif e.kind == K.THING_REMOVED:
+                self.thing_removed.add(e.thing_code)
+            elif e.kind == K.HOLD_REQUESTED:
+                self.first_request.setdefault(e.actor_code, e.created)
+                self.requests_by_thing[e.thing_code].append(e.created)
+
+        self.alive_collections = {
+            code for code in self.collection_creator if code not in self.collection_deleted
+        }
+        self.creators = {self.collection_creator[code] for code in self.alive_collections}
+        self.memberships = {
+            pair
+            for pair, joined in self.membership.items()
+            if joined and pair[1] in self.alive_collections
+        }
+        members = {actor for actor, _ in self.memberships}
+        self.guests = members - self.creators
+
+        # The organic cycle: people whose first real relation is a join.
+        self.cycle = {
+            person
+            for person, joined in self.first_join.items()
+            if person not in self.first_created
+            or joined.created < self.first_created[person].created
+        }
+        self.owner_at = {
+            person: self.first_created[person].created
+            for person in self.cycle
+            if person in self.first_created
+        }
+        self.seeded_owners = set(self.first_created) - self.cycle
+        self._generation = {}
+
+    # --- generations -------------------------------------------------------------
+
+    def parent_of(self, person):
+        """The owner of the collection of this person's first real join, or ``None``."""
+        return self.collection_creator.get(self.first_join[person].collection_code)
+
+    def generation(self, person, _seen=()):
+        """0 for a seeded owner (and for anyone unknown), else one more than the parent's."""
+        if person not in self.owner_at or person in _seen:
+            return 0
+        if person not in self._generation:
+            parent = self.parent_of(person)
+            self._generation[person] = 1 + self.generation(parent, _seen + (person,))
+        return self._generation[person]
+
+    # --- the cycle ---------------------------------------------------------------
+
+    def stage_counts(self, activity_dates):
+        """How many cycle people reached each stage by the cutoff."""
+        returned = 0
+        for person in self.cycle:
+            entered_day = self.first_join[person].created.astimezone(WEEK_TZ).date()
+            days = {d for d in activity_dates.get(person, ()) if d >= entered_day}
+            if len(days) >= 2:
+                returned += 1
+
+        first_thing = sum(
+            1
+            for person, owned in self.owner_at.items()
+            if any(e.created > owned for e in self.things_by_actor.get(person, ()))
+        )
+
+        closed = set()
+        for e in self.events:
+            if e.kind != K.MEMBER_JOINED:
+                continue
+            owner = self.collection_creator.get(e.collection_code)
+            if (
+                owner in self.owner_at
+                and owner != e.actor_code
+                and e.created > self.owner_at[owner]
+            ):
+                closed.add(owner)
+
+        return {
+            "cycle_entered": len(self.cycle),
+            "cycle_returned": returned,
+            "cycle_requested": sum(1 for p in self.cycle if p in self.first_request),
+            "cycle_owner": len(self.owner_at),
+            "cycle_first_thing": first_thing,
+            "cycle_closed": len(closed),
+        }
+
+    def median_days_to_owner(self):
+        return _median(
+            [_days(owned - self.first_join[p].created) for p, owned in self.owner_at.items()]
+        )
+
+    def median_days_to_first_request(self):
+        """Owner → first request or reservation *received* on a thing they added."""
+        waits = []
+        for person, owned in self.owner_at.items():
+            received = [
+                moment
+                for e in self.things_by_actor.get(person, ())
+                for moment in self.requests_by_thing.get(e.thing_code, ())
+            ]
+            if received:
+                waits.append(_days(min(received) - owned))
+        return _median(waits)
+
+
+def _activity_dates(people, cutoff):
+    """``{user code: {dates}}`` of `DailyActivity` before the cutoff's day."""
+    found = defaultdict(set)
+    rows = DailyActivity.objects.filter(
+        user_id__in=people, date__lt=cutoff.astimezone(WEEK_TZ).date()
+    ).values_list("user_id", "date")
+    for user_id, day in rows:
+        found[user_id].add(day)
+    return found
+
+
+def cohorts_as_of(cutoff):
+    """The conversion triangle: for each week of entry, how many became owners in time.
+
+    Keyed by the Monday (ISO) of the week the people entered. A window of ``w`` weeks
+    is reported only once it has elapsed in full for the *whole* cohort, that is, when
+    the week the cohort closed plus ``w`` weeks is not after the cutoff — otherwise
+    the number would still be moving. The last snapshot therefore keeps the whole
+    triangle even after the log is anonymised.
+    """
+    history = _History(cutoff)
+    by_week = defaultdict(list)
+    for person in history.cycle:
+        by_week[_monday_of(history.first_join[person].created)].append(person)
+
+    triangle = {}
+    for week, people in sorted(by_week.items()):
+        closed_at = week_bounds(week)[1]
+        within = {}
+        for w in COHORT_WINDOWS:
+            if closed_at + timedelta(weeks=w) <= cutoff:
+                within[str(w)] = sum(
+                    1
+                    for p in people
+                    if p in history.owner_at
+                    and history.owner_at[p] - history.first_join[p].created <= timedelta(weeks=w)
+                )
+        triangle[week.isoformat()] = {"size": len(people), "owner_within": within}
+    return triangle
+
+
+def generation_k(cutoff):
+    """One row per generation of owners: how many, how many they brought, how many converted.
+
+    ``k`` is ``next_owners / owners``, split into its two factors: guests brought per
+    owner of the generation (people whose first real join was in a collection of
+    theirs) and the share of those who became owners themselves. Not stored: the
+    counts per generation already travel in ``owners_gen*``.
+    """
+    history = _History(cutoff)
+    owners = defaultdict(list)
+    for person in history.owner_at:
+        owners[history.generation(person)].append(person)
+    for person in history.seeded_owners:
+        owners[0].append(person)
+
+    brought = defaultdict(int)
+    converted = defaultdict(int)
+    for person in history.cycle:
+        parent = history.parent_of(person)
+        if parent is None:
+            continue
+        g = history.generation(parent)
+        brought[g] += 1
+        if person in history.owner_at:
+            converted[g] += 1
+
+    rows = []
+    for g in range(max(owners, default=-1) + 1):
+        count = len(owners.get(g, ()))
+        if not count:
+            continue
+        next_owners = len(owners.get(g + 1, ()))
+        rows.append(
+            {
+                "generation": g,
+                "owners": count,
+                "next_owners": next_owners,
+                "k": next_owners / count,
+                "brought": brought[g],
+                "converted": converted[g],
+            }
+        )
+    return rows
+
+
+def _live_only():
+    """The three numbers that describe the state of today, over what is real."""
+    real_collections = Collection.objects.filter(is_onboarding=False).exclude(
+        owner_id__in=SEED_USER_CODES
+    )
+    return {
+        "collections_community": real_collections.filter(mode=Collection.Mode.COMMUNITY).count(),
+        "collections_public": real_collections.filter(
+            visibility=Collection.Visibility.PUBLIC
+        ).count(),
+        "things_available": Thing.objects.filter(
+            status=Thing.Status.ACTIVE, collections__is_onboarding=False
+        )
+        .exclude(owner_id__in=SEED_USER_CODES)
+        .distinct()
+        .count(),
+    }
+
+
+def snapshot_metrics(week_start, *, live=False):
+    """Every metric of one week, plus the cohort triangle under ``"cohorts"``.
+
+    ``live`` fills in the three keys that describe today's state; a rebuilt past week
+    has them as ``None`` because the log cannot say what they were.
+    """
+    start, cutoff = week_bounds(week_start)
+    history = _History(cutoff)
+    in_week = [e for e in history.events if e.created >= start]
+
+    def count(kind, **match):
+        return sum(
+            1
+            for e in in_week
+            if e.kind == kind and all(getattr(e, name) == value for name, value in match.items())
+        )
+
+    def stock(verb):
+        return sum(
+            1
+            for code, e in history.thing_added.items()
+            if code not in history.thing_removed and e.thing_type == verb
+        )
+
+    def entered_in_week(first):
+        return {p for p, e in first.items() if e.created >= start}
+
+    new_creators = entered_in_week(history.first_created)
+    joiners = entered_in_week(history.first_join)
+    first_real = {
+        p
+        for p in set(history.first_join) | set(history.first_created)
+        if min(e.created for e in (history.first_join.get(p), history.first_created.get(p)) if e)
+        >= start
+    }
+
+    week_activity = defaultdict(set)
+    for user_id, day in DailyActivity.objects.filter(
+        date__gte=start.date(), date__lt=cutoff.date()
+    ).values_list("user_id", "date"):
+        week_activity[user_id].add(day)
+
+    activity = _activity_dates(history.cycle, cutoff)
+    gens = [history.generation(p) for p in history.owner_at]
+
+    metrics = {
+        "creators": len(history.creators),
+        "creators_organic": len(history.creators & history.cycle),
+        "guests": len(history.guests),
+        "collections": len(history.alive_collections),
+        "memberships": len(history.memberships),
+        "things": sum(1 for code in history.thing_added if code not in history.thing_removed),
+        "things_gift": stock("GIFT_THING"),
+        "things_sell": stock("SELL_THING"),
+        "things_lend": stock("LEND_THING"),
+        "things_rent": stock("RENT_THING"),
+        "things_reserve": stock(RESERVE_TYPE),
+        "new_people": len(first_real),
+        # A guest is somebody whose first real relation is a join.
+        "new_guests": len(joiners & history.cycle),
+        "new_creators": len(new_creators),
+        "new_creators_organic": len(new_creators & history.cycle),
+        "collections_created": count(K.COLLECTION_CREATED),
+        "collections_deleted": count(K.COLLECTION_DELETED),
+        "things_added": count(K.THING_ADDED),
+        "things_removed": count(K.THING_REMOVED),
+        "reservations": count(K.HOLD_REQUESTED, thing_type=RESERVE_TYPE),
+        "requests_accepted": sum(count(K.HOLD_ACCEPTED, thing_type=t) for t in REQUEST_TYPES),
+        "joins_invite": count(K.MEMBER_JOINED, source=Event.Source.INVITE),
+        "joins_recommendation": count(K.MEMBER_JOINED, source=Event.Source.RECOMMENDATION),
+        "joins_share": count(K.MEMBER_JOINED, source=Event.Source.SHARE),
+        "joins_public": count(K.MEMBER_JOINED, source=Event.Source.PUBLIC),
+        "joins_unknown": count(K.MEMBER_JOINED, source=""),
+        "validations_requested": CreatorValidation.objects.filter(
+            created__gte=start, created__lt=cutoff
+        ).count(),
+        "validations_approved": CreatorValidation.objects.filter(
+            status=CreatorValidation.Status.APPROVED, resolved__gte=start, resolved__lt=cutoff
+        ).count(),
+        "active_creators": sum(1 for u in week_activity if u in history.creators),
+        "active_guests": sum(1 for u in week_activity if u in history.guests),
+        **history.stage_counts(activity),
+        "cycle_median_days_to_owner": history.median_days_to_owner(),
+        "owner_median_days_to_first_request": history.median_days_to_first_request(),
+        "owners_gen0": len(history.seeded_owners),
+        "owners_gen1": sum(1 for g in gens if g == 1),
+        "owners_gen2plus": sum(1 for g in gens if g >= 2),
+    }
+    metrics["creators_seeded"] = metrics["creators"] - metrics["creators_organic"]
+    for verb, key in zip(REQUEST_TYPES, ("gift", "sell", "lend", "rent"), strict=True):
+        metrics[f"requests_{key}"] = count(K.HOLD_REQUESTED, thing_type=verb)
+    metrics["requests"] = sum(metrics[f"requests_{k}"] for k in ("gift", "sell", "lend", "rent"))
+
+    live_values = _live_only() if live else dict.fromkeys(LIVE_ONLY_KEYS)
+    metrics.update(live_values)
+
+    ordered = {key: metrics[key] for key in METRIC_KEYS}
+    ordered["cohorts"] = cohorts_as_of(cutoff)
+    return ordered
