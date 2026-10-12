@@ -23,7 +23,7 @@ Open `http://localhost:3000/login`, enter **`lala@your-domain.test`**, and the m
 
 What I'm looking for is honest feedback from people willing to poke at it: things that confuse you, flows that break, words that don't make sense, design decisions you'd push back on. If something annoys you, that's signal.
 
-**[→ Tell me what you found](https://tally.so/r/A76Xkz)** (2 minutes, no signup needed)
+**[→ Tell me what you found](https://github.com/oiueei/standalone/issues)** (open an issue)
 
 ## Tech Stack
 
@@ -256,7 +256,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 
 ## Deploying to Heroku
 
-See [HEROKU.md](HEROKU.md) for a complete step-by-step guide covering buildpacks, config vars, font setup, and the deployment branch workflow.
+See [HEROKU.md](HEROKU.md) for a complete step-by-step guide covering buildpacks, config vars, font setup, custom domain, email, scheduled jobs and the backup restore drill.
 
 ## Running it for other people
 
@@ -414,7 +414,7 @@ DATABASE_URL=postgres://user:pass@localhost:5432/oiueei_test pytest -q
 | `MEDIA_PUBLIC_BASE_URL` | Optional | Where files are **read** from. Defaults to the bucket's own URL; set it to put a CDN or a custom domain in front. Uploads are unaffected — a presigned URL is always signed for the bucket, so the Content-Security-Policy allows both hosts and splitting them does not break writing. A wrong value shows up as images that refuse to load |
 | `CONTACT_EMAIL` | No | Recipient of the `/contact` support form (default: `DEFAULT_FROM_EMAIL` — the operator mails themselves) |
 | `SEED_EMAIL_DOMAIN` | No | Domain of the five demo characters `seed_demo` creates (`lala@…`, `lele@…`…). Default `your-domain.test`: `.test` is a reserved domain, so a notice addressed to a demo character reaches nobody. Set a domain you control to receive those mails; re-run `seed_demo` to apply it (it updates the five accounts in place) |
-| `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose (150/day is what www.oiueei.com uses). Ignored when `RATELIMIT_ENABLE` is off. |
+| `INVITE_EMAILS_PER_DAY` | No | Cap on invitation **emails** one account may send per day — single, bulk and approved member recommendations combined, whether the owner approves in the app or from the link in their email. **Unset or `0` = no limit**, which is the standalone default: this guards *your* sending domain's reputation, so the number is yours to choose. Ignored when `RATELIMIT_ENABLE` is off. |
 | `COLLECTION_THINGS_ALARM` | No | Per-collection thing count that quietly emails the superusers **once**, so an operator can notice unusual volume without touching anything. **Unset or `0` = off** (the default). The owner is never told. |
 | `COLLECTION_THINGS_BLOCK` | No | Per-collection ceiling on things: adds that would cross it are refused, including whole CSV batches. **Unset or `0` = off** (the default). A superuser lifts it per collection with `capacity_unblocked` in the admin. |
 | `COLLECTION_INVITES_ALARM` | No | The same silent, fire-once alert for a collection's **member** count. **Unset or `0` = off**. |
@@ -520,7 +520,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 
 | Claim | How to verify it |
 |---|---|
-| Third-party scripts *cannot* load | `curl -sI https://www.oiueei.com/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
+| Third-party scripts *cannot* load | `curl -sI https://<your-domain>/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
 | Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the host the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names. On a deployment that puts a CDN in front of its bucket the CSP allows one host more, the bucket itself, because that is where an upload is written even when reads come from the CDN. Two hosts at most, and that is the whole list. |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
@@ -535,9 +535,7 @@ Four outbound flows exist, all operational, all named — the app is a normal we
 1. **Hosting and database** — where the operator deploys it.
 2. **Email delivery** — the configured SMTP provider (magic links, invitations, activity notices).
 3. **Images and documents** — the object-storage bucket the operator configured, which serves the photos to your browser and therefore sees the request.
-4. **Error monitoring** — optional, deploy-only (Sentry). Events are scrubbed of cookies, auth headers, IP and user identity before being sent (`send_default_pii=False` + a `before_send` hook).
-
-For the official deployment at **www.oiueei.com**, the verified locations are (checked 2026-08-23): application dyno in Heroku's **EU region**, PostgreSQL in **eu-west-1 (Ireland)**, email through **Mailgun's EU region** (`smtp.eu.mailgun.org`), images in **Hetzner Object Storage, Falkenstein (Germany)** — moving them off Cloudinary's US region is what that migration was for — and error monitoring in **Sentry's EU region** (Germany). That is all five, and it is still deliberately not written as "everything is in Europe": the **servers** are European, two of the **companies** are not — Salesforce and Functional Software are US-incorporated, which is a different question from where the bytes sit, and the one the [`/legal`](https://www.oiueei.com/legal) page answers in full, transfer safeguards included. Sentry is also the one flow you cannot check from your own browser, because it runs server-side: its region shows only in the host of the DSN (`…ingest.de.sentry.io` rather than `…ingest.us.sentry.io`), and the region is fixed when the *organisation* is created — which is why moving meant making a new one, not flipping a setting. The current state is always the one written on [`/legal`](https://www.oiueei.com/legal).
+4. **Error monitoring** — OIUEEI ships none. A deployment that adds one must scrub cookies, auth headers, IP and user identity before an event leaves (`send_default_pii=False` and a `before_send` hook, for Sentry).
 
 ### Your rights over your data
 
@@ -545,11 +543,11 @@ For the official deployment at **www.oiueei.com**, the verified locations are (c
 
 **Portability is self-service too**: `GET /api/v1/auth/export/` hands you your whole account as a single JSON file — profile, collections, things, bookings, questions, handovers, notifications and your own activity rows. It carries no credentials (no `share_token`, no RSVP tokens) and no third-party data beyond what the app already shows you; photos and PDFs travel as links rather than bytes, which is why deleting the account breaks them — **download your images before you erase**. Collection owners get a second, separate download (`GET /api/v1/collections/{code}/export/`) with the whole group in it, so a library of things can be carried out rather than only deleted. That file holds other people's details, and whoever downloads it is the one answering for it.
 
-**Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first and 30 days to answer it), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are what www.oiueei.com decided, and a self-hoster under a different regime sets their own.
+**Nothing is kept forever.** Each category of data has a period, and `purge_expired_data` is what enforces it: inactive accounts (24 months, with an email first and 30 days to answer it), invited guests who never came in (60 days), daily-activity rows (26 months), in-app notifications (12 months), reports (12 months). The analytics log is **anonymised rather than deleted** at 14 months — what expires is the link to a person (`actor_code`), not the fact that something happened, so the aggregate history survives and stops being personal data. Every period is a `RETENTION_*` setting and **0 means keep indefinitely**: the numbers above are the defaults one deployment settled on, and a self-hoster under a different regime sets their own.
 
-**If somebody else's address reached you, you're told so in the same email.** Being invited to a collection means somebody else typed your address in, not you — art. 14 GDPR requires that to be disclosed the first time it happens, so the invitation email says where the address came from and that declining or ignoring it ends the relationship. Every email, that one included, links to [`/legal`](https://www.oiueei.com/legal) in its footer, whether or not you can opt out of the category it belongs to (`core/services/email_service.py`, `_render_email`).
+**If somebody else's address reached you, you're told so in the same email.** Being invited to a collection means somebody else typed your address in, not you — art. 14 GDPR requires that to be disclosed the first time it happens, so the invitation email says where the address came from and that declining or ignoring it ends the relationship. Every email, that one included, links to the instance's `/legal` page in its footer, whether or not you can opt out of the category it belongs to (`core/services/email_service.py`, `_render_email`).
 
-For access, rectification, objection or restriction, write to the operator — for www.oiueei.com, the address on the [`/legal`](https://www.oiueei.com/legal) page.
+For access, rectification, objection or restriction, write to the operator of your instance — the address on its `/legal` page.
 
 
 ## Architecture Decisions
@@ -627,7 +625,7 @@ Main pages are validated with [axe DevTools](https://www.deque.com/axe/devtools/
 The app ships a public **`/legal`** page (commitment, legal notice, privacy, basic terms — es/ca/en, following the UI language). Its content lives in `frontend/src/legal/{lang}.js` and is **per-deployment**:
 
 - The standalone repo carries a **generic, operator-neutral** text. **If you self-host OIUEEI, you are the data controller of your instance**: edit those files with your identity, contact, legal bases and processors before inviting real users.
-- The official deployment (www.oiueei.com) replaces those files on its deploy branch with the full RGPD/LSSI version of its owner.
+- A deployment replaces those files with its own legal text.
 
 **Licence**: [EUPL-1.2](LICENSE). OIUEEI is licensed under the EUPL-1.2 — a strong copyleft licence that also covers use over a network. If you modify it and run it as a service, you owe your users the source. Production self-hosting is allowed; an unmodified deployment owes nothing beyond keeping the notices. The EUPL is published by the European Commission in 23 official languages of identical legal value, Spanish among them.
 
