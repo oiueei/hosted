@@ -307,6 +307,28 @@ def _real_events(cutoff, vanished=None):
     ]
 
 
+def real_events(cutoff):
+    """The public door to `_real_events`: every real event before ``cutoff``, oldest first.
+
+    What the operator report counts from the log must be what the series counts, so it
+    reads the events through this function and never through its own filters. It does
+    not drop the people `stats_summary._partition()` calls demo (the visitors of the
+    open door who only left a `USER_JOINED`): the series does not either, and a caller
+    that wants that adds it.
+    """
+    return _real_events(cutoff, _Vanished())
+
+
+def retired_orphans(events):
+    """``{thing code: moment}`` of the things rule 2 takes as removed with their collection.
+
+    ``events`` are the real ones (`real_events`). The things of a collection that was
+    deleted without a removal of their own and are gone from the database. `_History`
+    reads the same through `_Vanished.orphans`, so the series and the report agree.
+    """
+    return _Vanished().orphans(events)
+
+
 class _History:
     """Everything the week needs, indexed once from the real events before the cutoff."""
 

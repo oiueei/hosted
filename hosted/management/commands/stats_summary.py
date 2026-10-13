@@ -28,7 +28,7 @@ from django.utils import timezone
 from core.management.commands.seed_data.common import USERS as _SEED_USERS
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
 from hosted.emails import send_stats_summary_email
-from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of, seed_scope
+from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of, real_events, retired_orphans
 from hosted.models import CreatorValidation, Milestone, WeeklySnapshot
 
 SEED_USER_CODES = frozenset(u["code"] for u in _SEED_USERS)
@@ -134,15 +134,23 @@ def build_report():
     real, creators, guests = p["real"], p["creators"], p["guests"]
     demo, demo_collections = p["demo"], p["demo_collections"]
     real_list = list(real)
+    # What the series counts, minus the visitors of the open door who left only a
+    # `USER_JOINED` (the series does not enter them in the population; these blocks never
+    # counted them either), so the three blocks that read the log agree with it.
+    events = [
+        e
+        for e in real_events(now)
+        if e.actor_code not in demo and e.collection_code not in demo_collections
+    ]
 
     sections = [
         _users_section(real, creators, guests),
         _collections_section(creators, guests),
         _things_section(real_list),
         _holds_section(real_list, guests),
-        _history_section(demo, demo_collections, now),
-        _joins_by_door_section(demo, demo_collections, now),
-        _conversion_section(demo, demo_collections),
+        _history_section(events, now),
+        _joins_by_door_section(events, now),
+        _conversion_section(events),
         _retention_section(real, creators, guests, today),
         _evolution_section(),
         _cycle_section(now),
@@ -254,29 +262,19 @@ def _holds_section(real_list, guests):
     }
 
 
-def _real_events(demo, demo_collections):
-    return Event.objects.exclude(actor_code__in=demo).exclude(collection_code__in=demo_collections)
-
-
-def _history_section(demo, demo_collections, now):
-    # The series leaves out whatever happens in a character's collection or on one of
-    # their things, whoever does it; the same function says which, so the two agree.
-    seed_collections, seed_things = seed_scope()
-    events = (
-        _real_events(demo, demo_collections)
-        .exclude(collection_code__in=seed_collections)
-        .exclude(thing_code__in=seed_things)
-    )
+def _history_section(events, now):
     d7, d30 = now - timedelta(days=7), now - timedelta(days=30)
 
     def n(kind, since=None):
-        qs = events.filter(kind=kind)
-        return qs.filter(created__gte=since).count() if since else qs.count()
+        return sum(1 for e in events if e.kind == kind and (since is None or e.created >= since))
 
     K = Event.Kind
     joined = f"{n(K.USER_JOINED, d7)} / {n(K.USER_JOINED, d30)} / {n(K.USER_JOINED)}"
     requested, accepted = n(K.HOLD_REQUESTED), n(K.HOLD_ACCEPTED)
-    added, removed = n(K.THING_ADDED), n(K.THING_REMOVED)
+    # A thing that went with its collection leaving no removal counts as removed, as the
+    # series' stocks take it.
+    added = n(K.THING_ADDED)
+    removed = n(K.THING_REMOVED) + len(retired_orphans(events))
     # The same real add/remove lifecycle averaged over the real (non-onboarding)
     # collections, so it reads right below the global counts.
     n_collections = Collection.objects.filter(is_onboarding=False).count()
@@ -298,10 +296,14 @@ def _history_section(demo, demo_collections, now):
             ("Holds requested / accepted", f"{requested} / {accepted}"),
             ("Hold success rate (all time)", _pct(accepted, requested)),
         ],
+        "note": (
+            "Created minus deleted need not equal today's collections: "
+            "some collections are older than the log."
+        ),
     }
 
 
-def _joins_by_door_section(demo, demo_collections, now):
+def _joins_by_door_section(events, now):
     """Which of the six doors actually brings members in.
 
     OIUEEI has six ways to acquire one — the owner's own invite, a bulk CSV
@@ -314,7 +316,6 @@ def _joins_by_door_section(demo, demo_collections, now):
     Rows written before the field are counted as `unknown` rather than folded
     into a bucket they might not belong to.
     """
-    events = _real_events(demo, demo_collections).filter(kind=Event.Kind.MEMBER_JOINED)
     d30 = now - timedelta(days=30)
     labels = {
         Event.Source.INVITE: "Owner invite",
@@ -324,10 +325,15 @@ def _joins_by_door_section(demo, demo_collections, now):
         Event.Source.ONBOARDING: "Pop-in / onboarding",
     }
 
-    def counts(qs):
-        return {row["source"]: row["n"] for row in qs.values("source").annotate(n=Count("code"))}
+    joins = [e for e in events if e.kind == Event.Kind.MEMBER_JOINED]
 
-    all_time, recent = counts(events), counts(events.filter(created__gte=d30))
+    def counts(rows):
+        found = {}
+        for e in rows:
+            found[e.source] = found.get(e.source, 0) + 1
+        return found
+
+    all_time, recent = counts(joins), counts(e for e in joins if e.created >= d30)
     rows = [
         (label, f"{all_time.get(source, 0)} ({recent.get(source, 0)} in 30d)")
         for source, label in labels.items()
@@ -342,23 +348,19 @@ def _joins_by_door_section(demo, demo_collections, now):
     }
 
 
-def _conversion_section(demo, demo_collections):
+def _conversion_section(events):
     """Guest→creator: an actor with a MEMBER_JOINED that predates their first
     COLLECTION_CREATED — i.e. someone who arrived as a guest and later started
     their own collection. Derived, never stored (per the spec)."""
-    events = _real_events(demo, demo_collections)
-    joined = dict(
-        events.filter(kind=Event.Kind.MEMBER_JOINED)
-        .values("actor_code")
-        .annotate(first=Min("created"))
-        .values_list("actor_code", "first")
-    )
-    created = dict(
-        events.filter(kind=Event.Kind.COLLECTION_CREATED)
-        .values("actor_code")
-        .annotate(first=Min("created"))
-        .values_list("actor_code", "first")
-    )
+
+    def first(kind):
+        found = {}
+        for e in events:  # oldest first
+            if e.kind == kind:
+                found.setdefault(e.actor_code, e.created)
+        return found
+
+    joined, created = first(Event.Kind.MEMBER_JOINED), first(Event.Kind.COLLECTION_CREATED)
     deltas = [
         (created[a] - joined[a]).total_seconds()
         for a in joined

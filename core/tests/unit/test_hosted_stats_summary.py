@@ -11,8 +11,9 @@ from django.utils import timezone
 
 from core.management.commands.seed_data import common as seed_common
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
+from core.tests.unit.test_hosted_metrics import LALA, adds, creates, joins, log, person
 from hosted.management.commands.stats_summary import _fraction, build_report
-from hosted.metrics import METRIC_KEYS
+from hosted.metrics import METRIC_KEYS, cycle_as_of
 from hosted.models import Milestone, WeeklySnapshot
 
 MONDAY = date(2026, 4, 20)
@@ -520,3 +521,88 @@ class TestTheEmail:
 
         assert titles.index(EVOLUTION) < titles.index(CYCLE) < titles.index(PHASES)
         assert titles.index(PHASES) < titles.index("Demo funnel (NOT real metrics)")
+
+
+@pytest.mark.django_db
+class TestTheMondayEmailReadsWhatTheSeriesReads:
+    """History, Conversion and Members joined, by door count from the series' events.
+
+    The story: a real collection with a thing, a guest and a second guest; a phantom
+    collection (created, never deleted, gone); a collection deleted with a thing that
+    left no removal; and a character's collection that real people walked into.
+    """
+
+    HISTORY = "History (accumulated, from Event log)"
+    DOORS = "Members joined, by door"
+
+    @pytest.fixture
+    def story(self):
+        on = timezone.now() - timedelta(days=5)
+        K = Event.Kind
+        creates("OWNERA", "COL001", on)
+        adds("OWNERA", "THING1", "COL001", on)
+        for guest in ("GUESTB", "GUESTC"):
+            Collection.objects.get(code="COL001").invites.add(person(guest))
+        joins("GUESTB", "COL001", on + timedelta(hours=1), source=Event.Source.PUBLIC)
+        joins("GUESTC", "COL001", on + timedelta(hours=1), source=Event.Source.INVITE)
+        # Gone without a trace: a collection and its thing…
+        creates("OWNERA", "GHOST1", on, row=False)
+        adds("OWNERA", "GHOSTT", "GHOST1", on, row=False)
+        joins("GUESTC", "GHOST1", on + timedelta(hours=2), source=Event.Source.SHARE, row=False)
+        # …a collection deleted with a thing that left no removal…
+        creates("OWNERA", "DEL001", on, row=False)
+        adds("OWNERA", "ORPH01", "DEL001", on, row=False)
+        log(K.COLLECTION_DELETED, "OWNERA", on + timedelta(hours=3), collection="DEL001")
+        # …and a character's collection that a real person entered.
+        Collection.objects.create(code="LALAC9", owner=person(LALA), headline="Lala's")
+        joins("GUESTC", "LALAC9", on + timedelta(hours=4), source=Event.Source.SHARE)
+        # GUESTB later starts a collection of their own; GUESTC only a phantom one.
+        creates("GUESTB", "COLB01", on + timedelta(days=1))
+        creates("GUESTC", "GHOST2", on + timedelta(days=1), row=False)
+
+    def test_history_counts_neither_the_phantom_nor_the_characters_and_retires_the_orphan(
+        self, story
+    ):
+        sections = build_report()
+
+        # COL001, DEL001 and COLB01 were created, DEL001 deleted: the phantoms are out.
+        assert _row(sections, self.HISTORY, "Collections created / deleted") == "3 / 1"
+        # THING1 and ORPH01 were added; ORPH01 went with its collection.
+        assert _row(sections, self.HISTORY, "Things added / removed") == "2 / 1"
+        # The two real joins; the phantom's and the character's are out.
+        assert _row(sections, self.HISTORY, "Members joined / left") == "2 / 0"
+
+    def test_history_says_why_created_minus_deleted_can_differ_from_today(self, story):
+        section = next(s for s in build_report() if s["title"] == self.HISTORY)
+
+        assert "older than the log" in section["note"]
+
+    def test_users_joined_still_leaves_out_the_visit_of_the_open_door(self, story):
+        onboarding_owner = person("ONBOWN")
+        Collection.objects.create(
+            code="ONBCOL", owner=onboarding_owner, headline="Demo", is_onboarding=True
+        )
+        visitor = person("POPIN1")
+        Collection.objects.get(code="ONBCOL").invites.add(visitor)
+        log(Event.Kind.USER_JOINED, "POPIN1", timezone.now() - timedelta(days=1))
+        log(Event.Kind.USER_JOINED, "GUESTB", timezone.now() - timedelta(days=1))
+
+        sections = build_report()
+
+        assert _row(sections, self.HISTORY, "Users joined (7d / 30d / all)") == "1 / 1 / 1"
+
+    def test_conversions_are_the_owners_of_the_cycle(self, story):
+        sections = build_report()
+        conversions = _row(sections, "Conversion", "Guest → creator conversions")
+
+        # Only GUESTB made a real collection after joining; GUESTC's was a phantom.
+        assert conversions == 1
+        assert conversions == cycle_as_of(timezone.now())["cycle_owner"]
+
+    def test_the_doors_count_only_real_joins_in_their_own_door(self, story):
+        sections = build_report()
+
+        assert _row(sections, self.DOORS, "Public collection (login to act)") == "1 (1 in 30d)"
+        assert _row(sections, self.DOORS, "Owner invite") == "1 (1 in 30d)"
+        # The phantom's and the character's joins, both through a share link, are out.
+        assert _row(sections, self.DOORS, "Share link / QR") == "0 (0 in 30d)"
