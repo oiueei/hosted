@@ -82,15 +82,31 @@ Config vars, both optional:
 
 **The scheduler is not in this repository.** Heroku Scheduler lives in the
 dashboard and nowhere else, so this section is the only readable copy of what
-that job says. One daily job, everything chained with `&&` so a failure stops
-the chain and shows up in scheduler-monitor:
+that job says. One daily job, every command guarded so that one failure neither
+cancels the rest nor goes unseen:
 
 ```
-python manage.py expire_bookings && python manage.py cleanup_rsvps && \
-python manage.py close_transfers && python manage.py send_reminders && \
-python manage.py send_digests && python manage.py record_weekly_snapshot && \
-python manage.py stats_summary && python manage.py purge_expired_data --commit
+rc=0; python manage.py expire_bookings || rc=1; \
+python manage.py cleanup_rsvps || rc=1; \
+python manage.py close_transfers || rc=1; \
+python manage.py send_reminders || rc=1; \
+python manage.py send_digests || rc=1; \
+python manage.py record_weekly_snapshot || rc=1; \
+python manage.py stats_summary || rc=1; \
+python manage.py purge_expired_data --commit || rc=1; \
+exit $rc
 ```
+
+Every command runs even if the one before it failed, and the job ends red if any
+of them did (`exit $rc`): chained with `&&`, a failure in the first stage left that
+day without the email and without the purge. It is the same shape that `HEROKU.md`
+teaches for the upstream commands, with its reasons: see "Scheduled jobs (cron)"
+there. (Paste it on one line in the dashboard; the backslashes are only for
+reading.)
+
+A **second job**, `python manage.py cleanup_orphan_images --bucket <bucket> --commit`,
+runs daily at 05:30 UTC, a little after the chain. It is upstream's too, and it is
+not chained on purpose (see the end of that same section of `HEROKU.md`).
 
 `record_weekly_snapshot` goes **right before** `stats_summary`: on Monday the week
 that has just closed is then already stored when the email is built.
