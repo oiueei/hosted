@@ -4,7 +4,11 @@ The domain tables can't answer historical questions on their own: Collections an
 Things are **hard-deleted**, `Collection.invites` has no join timestamp, and there
 is no session concept. This log is an append-only stream of the handful of events
 we care about, written alongside the notification/email each action already fires
-(see the instrumentation in ``core/views/`` and ``core/services/``).
+(see the instrumentation in ``core/views/`` and ``core/services/``). The exception
+is a deletion: ``COLLECTION_DELETED``, ``THING_REMOVED`` and the ``MEMBER_LEFT`` of
+a deleted account are written by receivers on the models themselves
+(``core/services/deletion_events.py``), so the admin, a cascade or a purge leave
+the same trace as the API.
 
 Everything is a **text snapshot**, not a foreign key: ``actor_code`` /
 ``collection_code`` / ``thing_code`` are plain 6-char strings so a row survives the

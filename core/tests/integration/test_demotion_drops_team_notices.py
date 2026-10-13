@@ -20,6 +20,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection, Thing, User
 from core.models.notification import InAppNotification
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -68,7 +69,7 @@ def world(lala, lele, lili):
             code=code, type=Thing.Type.GIFT_THING, owner=owner, headline=f"Thing {code}"
         )
         for g in groups:
-            g.things.add(t)
+            also_in(g, t)
         return t
 
     return {

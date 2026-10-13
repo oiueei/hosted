@@ -20,6 +20,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import RSVP, BookingPeriod, Collection, Thing, User
 from core.models.notification import InAppNotification
+from core.tests.factories import also_in
 
 
 def _client(user):
@@ -95,7 +96,7 @@ def test_request_notification_uses_the_collection_it_was_made_through(
     wins over any server-side approximation."""
     thing, first = gift_in_collection
     second = Collection.objects.create(code="IOCO02", owner=owner, headline="Garage")
-    second.things.add(thing)
+    also_in(second, thing)
     second.invites.add(requester)
 
     resp = _client(requester).post(

@@ -903,12 +903,6 @@ class CollectionProposeInviteSerializer(serializers.Serializer):
     note = SafeTextField(max_length=256, required=False, allow_blank=True)
 
 
-class CollectionAddThingSerializer(serializers.Serializer):
-    """Serializer for adding a thing to a collection."""
-
-    thing_code = serializers.CharField(max_length=6)
-
-
 class CollectionRemoveThingSerializer(serializers.Serializer):
     """Serializer for removing a thing from a collection."""
 

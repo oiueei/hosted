@@ -24,6 +24,7 @@ from core.tests.factories import (
     ThingFactory,
     ThingTransferFactory,
     UserFactory,
+    also_in,
 )
 
 
@@ -411,7 +412,7 @@ class TestNoticeFanOutQueryBudgets:
         # growing is the number of collections the fan-out considers.
         for _ in range(2):
             extra = CollectionFactory(owner=user, mode=Collection.Mode.PROPRIETARY)
-            extra.things.add(thing)
+            also_in(extra, thing)
 
         three_collections = ask()
 
@@ -440,7 +441,7 @@ class TestNoticeFanOutQueryBudgets:
             extra = CollectionFactory(
                 owner=owner, mode=Collection.Mode.PROPRIETARY, **collection_kwargs
             )
-            extra.things.add(thing)
+            also_in(extra, thing)
 
     def _assert_constant(self, owner, thing, act, what, **collection_kwargs):
         one_collection = act()
@@ -667,7 +668,7 @@ class TestNoticeFanOutQueryBudgets:
     def _grow_reservations(self, owner, thing):
         for _ in range(2):
             extra = self._reservations_collection(owner)
-            extra.things.add(thing)
+            also_in(extra, thing)
 
     def _assert_constant_reservations(self, owner, thing, act, what):
         one_collection = act()

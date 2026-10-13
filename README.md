@@ -127,7 +127,7 @@ core/
 | **Theeeme** | Colour palettes (6 HDS colour token names) for customising collections |
 | **RSVP** | One-time-use tokens (24h expiry) for auth and email actions. FK to User |
 | **BookingPeriod** | Unified booking model for all thing types (72h PENDING expiry). FKs to Thing, User (requester), User (owner). LEND/RENT/RESERVE carry dates; GIFT/SELL don't. **RESERVE_THING bookings are auto-confirmed** — created straight to ACCEPTED with no accept/reject step, no `ThingTransfer`, both parties emailed at once — and either the requester **or any curator** of the reservations collection (owner or co-curator) may cancel one that hasn't started. `project_note` (RESERVE only) carries the requester's optional note about what the space is for. |
-| **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires; read only by whatever reporting the deployment runs over it. Never exposed to users |
+| **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires — except deletions, which are logged by model receivers so every way a row can go (API, admin, account erasure, retention purge) leaves its event; read only by whatever reporting the deployment runs over it. Never exposed to users |
 | **DailyActivity** | One `(user, date)` row per user per active day, written by `DailyActivityMiddleware` (cache-gated to ≤1 DB write per user per day). Powers WAU/MAU and retention. Records less than the web-server logs already hold and never leaves our DB |
 
 ## Key Relationships
@@ -180,7 +180,6 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/collections/{code}/` | View collection (owner, co-owner, or invited) |
 | PUT | `/api/v1/collections/{code}/` | Update collection (owner or co-owner) |
 | DELETE | `/api/v1/collections/{code}/` | Delete collection (owner only — never a co-owner) |
-| POST | `/api/v1/collections/{code}/add-thing/` | Add thing to collection (owner; invited users in COMMUNITY mode) |
 | POST | `/api/v1/collections/{code}/remove-thing/` | Remove thing from collection (owner or co-owner; thing owner in COMMUNITY mode) |
 | POST | `/api/v1/collections/{code}/invite/` | Invite user (owner or co-owner, resend-safe) |
 | DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it |
@@ -480,7 +479,6 @@ Note what the second bullet means before you go public: **a PUBLIC collection's 
 | Rate Limiting | Which IP a limit counts | The entry `TRUSTED_PROXY_COUNT` says a trusted proxy appended, counted from the right, **validated as an IP** before use; anything unparseable falls back to `REMOTE_ADDR` and then to one shared bucket — never to a fresh allowance |
 | Rate Limiting | Thing single create | 60 req/hour per user |
 | Rate Limiting | Collection single create | 30 req/hour per user |
-| Rate Limiting | Collection add-thing | 60 req/hour per user |
 | Rate Limiting | Collection leave | 30 req/hour per user |
 | Rate Limiting | Collection digest pref | 30 req/hour per user |
 | Rate Limiting | Recommend a guest | 30 req/day per member |

@@ -14,6 +14,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from core.models import Collection, Language, Thing
 from core.serializers import ThingSerializer
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -52,7 +53,7 @@ def test_a_thing_in_two_collections_names_one_of_them_and_sticks_to_it(user, col
 
     thing = Thing.objects.create(code="CLTWO1", type=Thing.Type.GIFT_THING, owner=user)
     collection.things.add(thing)
-    other.things.add(thing)
+    also_in(other, thing)
 
     data = ThingSerializer(thing).data
     assert data["collection_language"] == languages[data["collection_code"]]
@@ -79,7 +80,7 @@ def test_an_anonymous_reader_never_sees_a_private_collections_language(user, pub
 
     thing = Thing.objects.create(code="CLPRIV", type=Thing.Type.GIFT_THING, owner=user)
     private.things.add(thing)
-    public_collection.things.add(thing)
+    also_in(public_collection, thing)
 
     request = APIRequestFactory().get("/")
     request.user = AnonymousUser()

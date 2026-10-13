@@ -22,7 +22,6 @@ from core.services.email_service import send_collection_capacity_alarm
 
 THINGS_URL = "/api/v1/things/"
 BULK_THINGS_URL = "/api/v1/collections/{code}/things/bulk/"
-ADD_THING_URL = "/api/v1/collections/{code}/add-thing/"
 INVITE_URL = "/api/v1/collections/{code}/invite/"
 BULK_INVITE_URL = "/api/v1/collections/{code}/invite/bulk/"
 
@@ -116,22 +115,6 @@ def test_a_batch_that_fits_is_still_imported(authenticated_client, collection, u
 
     assert res.status_code == 201, res.data
     assert collection.things.count() == 10
-
-
-@pytest.mark.django_db
-@override_settings(COLLECTION_THINGS_BLOCK=2)
-def test_add_thing_is_not_a_way_around_the_ceiling(authenticated_client, collection, user):
-    """add-thing moves an existing thing rather than creating one, but it lands
-    in the same collection — it must not be the unguarded door."""
-    _fill_things(collection, user, 2)
-    loose = Thing.objects.create(owner=user, headline="Elsewhere")
-
-    res = authenticated_client.post(
-        ADD_THING_URL.format(code=collection.code), {"thing_code": loose.code}, format="json"
-    )
-
-    assert res.status_code == 400
-    assert collection.things.count() == 2
 
 
 @pytest.mark.django_db

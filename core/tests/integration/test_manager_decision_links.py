@@ -17,6 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import RSVP, BookingPeriod, Collection, Thing, User
 from core.models.notification import InAppNotification
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -266,7 +267,7 @@ class TestAManagerOfBothCollectionsHearsARequestOnce:
             )
             coll.invites.add(co_curator, member)
             coll.co_owners.add(co_curator)
-            coll.things.add(drill)
+            also_in(coll, drill)
 
         mail.outbox.clear()
         booking = _ask(member, drill)

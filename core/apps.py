@@ -10,6 +10,13 @@ class CoreConfig(AppConfig):
         # deployment points at its own code (both resolve lazily at runtime, so
         # without them a typo in either config var reaches a booted dyno);
         # `asset_cleanup` registers the signal handlers that destroy a stored
-        # file when its row is deleted or a save drops its key.
+        # file when its row is deleted or a save drops its key;
+        # `deletion_events` registers the receivers that log a deletion in the
+        # Event log whichever way the row goes; `single_collection` refuses to put
+        # a thing in a second collection.
         from core import checks  # noqa: F401
-        from core.services import asset_cleanup  # noqa: F401
+        from core.services import (  # noqa: F401
+            asset_cleanup,
+            deletion_events,
+            single_collection,
+        )

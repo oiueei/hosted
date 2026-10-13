@@ -486,7 +486,6 @@
     "goesThings": "Todas las cosas de la colección, incluidas las que añadieron tus miembros, con sus fotos, sus solicitudes y reservas y su historial.",
     "goesFaq": "Todas las preguntas y respuestas hechas sobre esas cosas.",
     "goesGuests": "La lista de miembros. Se les avisa de que la colección ya no está; ninguno podrá recuperar nada.",
-    "staysShared": "Sólo se salva una cosa: lo que además pertenezca a otra colección se queda allí; simplemente sale de ésta.",
     "backupNote": "Si quieres conservar algo, guárdalo antes de pulsar borrar. Todavía no hay exportación, y después no queda nada que recuperar.",
     "errorDeleting": "Error al eliminar la colección."
   },

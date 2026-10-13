@@ -16,6 +16,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection, Thing, User
+from core.tests.factories import also_in
 
 
 def _make_client(user):
@@ -179,7 +180,7 @@ def test_request_allowed_when_one_of_two_active_collections_is_not_paused(
     second_collection = Collection.objects.create(
         code="PCOL02", owner=owner, headline="Second Collection", status="ACTIVE"
     )
-    second_collection.things.add(pause_thing)
+    also_in(second_collection, pause_thing)
     second_collection.invites.add(member)
 
     client = _make_client(member)
@@ -201,7 +202,7 @@ def test_request_blocked_when_all_active_collections_are_paused(
     second_collection = Collection.objects.create(
         code="PCOL02", owner=owner, headline="Second Collection", status="ACTIVE"
     )
-    second_collection.things.add(pause_thing)
+    also_in(second_collection, pause_thing)
     second_collection.invites.add(member)
     second_collection.pause_message = "Also on break."
     second_collection.save()
