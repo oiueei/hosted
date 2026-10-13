@@ -28,7 +28,7 @@ from django.utils import timezone
 from core.management.commands.seed_data.common import USERS as _SEED_USERS
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
 from hosted.emails import send_stats_summary_email
-from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of
+from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of, seed_scope
 from hosted.models import CreatorValidation, Milestone, WeeklySnapshot
 
 SEED_USER_CODES = frozenset(u["code"] for u in _SEED_USERS)
@@ -259,7 +259,14 @@ def _real_events(demo, demo_collections):
 
 
 def _history_section(demo, demo_collections, now):
-    events = _real_events(demo, demo_collections)
+    # The series leaves out whatever happens in a character's collection or on one of
+    # their things, whoever does it; the same function says which, so the two agree.
+    seed_collections, seed_things = seed_scope()
+    events = (
+        _real_events(demo, demo_collections)
+        .exclude(collection_code__in=seed_collections)
+        .exclude(thing_code__in=seed_things)
+    )
     d7, d30 = now - timedelta(days=7), now - timedelta(days=30)
 
     def n(kind, since=None):

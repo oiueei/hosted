@@ -151,6 +151,22 @@ class TestEventAndRetentionMetrics:
         )
         assert joined == "1 / 1 / 1"
 
+    def test_what_happens_in_a_characters_collection_is_not_counted_whoever_does_it(self, user):
+        _real_collection(user)  # so that they are a real person
+        lala = User.objects.create(code="La1aN1", email="lala@your-domain.test")
+        Collection.objects.create(code="LALAC9", owner=lala, headline="Lala's")
+        Thing.objects.create(code="LALAT9", owner=lala, headline="Lala's thing")
+        Event.log(Event.Kind.MEMBER_JOINED, actor=user, collection="LALAC9")
+        Event.log(Event.Kind.HOLD_REQUESTED, actor=user, thing="LALAT9")
+        Event.log(Event.Kind.USER_JOINED, actor=user)  # about nothing of theirs: counts
+
+        sections = build_report()
+        title = "History (accumulated, from Event log)"
+
+        assert _row(sections, title, "Members joined / left") == "0 / 0"
+        assert _row(sections, title, "Holds requested / accepted") == "0 / 0"
+        assert _row(sections, title, "Users joined (7d / 30d / all)") == "1 / 1 / 1"
+
     def test_things_added_removed_global_and_per_collection(self, user):
         # user owns 2 real collections → n_collections = 2 for the per-collection avg.
         _real_collection(user, code="HC1")
@@ -411,6 +427,12 @@ class TestTheCycleSection:
     def test_it_reports_the_funnel_the_generations_and_the_validation_beside_it(self):
         K = Event.Kind
         on = timezone.now() - timedelta(days=3)
+        # The log tells a story whose collections still exist: what the log lost
+        # without a trace is left out of the series.
+        owner_a = User.objects.create(code="AAAAAA", email="oa@your-domain.test")
+        owner_b = User.objects.create(code="BBBBBB", email="ob@your-domain.test")
+        Collection.objects.create(code="COL001", owner=owner_a, headline="One")
+        Collection.objects.create(code="COL002", owner=owner_b, headline="Two")
         Event.objects.create(
             kind=K.COLLECTION_CREATED, actor_code="AAAAAA", collection_code="COL001", created=on
         )

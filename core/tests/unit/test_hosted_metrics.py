@@ -14,11 +14,14 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from core.models import Collection, DailyActivity, Event, User
+from core.models import Collection, DailyActivity, Event, Thing, User
 from hosted.metrics import (
     LIVE_ONLY_KEYS,
     METRIC_KEYS,
+    SEED_COLLECTION_CODES,
+    SEED_THING_CODES,
     WEEK_TZ,
+    _History,
     cohorts_as_of,
     generation_k,
     snapshot_metrics,
@@ -51,15 +54,34 @@ def log(kind, who="", on=None, collection="", thing="", type="", source=""):
     )
 
 
-def creates(who, collection, on):
+def person(code):
+    """The account behind a code the story mentions (a person who left has none)."""
+    return User.objects.get_or_create(
+        code=code, defaults={"email": f"{code.lower()}@your-domain.test", "name": code}
+    )[0]
+
+
+def creates(who, collection, on, row=True):
+    """A collection created; ``row=False`` leaves nothing of it in the database."""
+    if row:
+        Collection.objects.get_or_create(
+            code=collection, defaults={"owner": person(who), "headline": collection}
+        )
     return log(K.COLLECTION_CREATED, who, on, collection=collection)
 
 
-def joins(who, collection, on, source=Event.Source.INVITE):
+def joins(who, collection, on, source=Event.Source.INVITE, row=True):
+    if row:
+        person(who)
     return log(K.MEMBER_JOINED, who, on, collection=collection, source=source)
 
 
-def adds(who, thing, collection, on, type="GIFT_THING"):
+def adds(who, thing, collection, on, type="GIFT_THING", row=True):
+    """A thing added; ``row=False`` leaves nothing of it in the database."""
+    if row:
+        Thing.objects.get_or_create(
+            code=thing, defaults={"owner": person(who), "headline": thing, "type": type}
+        )
     return log(K.THING_ADDED, who, on, collection=collection, thing=thing, type=type)
 
 
@@ -232,8 +254,7 @@ class TestTheStagesOfTheCycle:
         creates(A, "COL001", madrid(date(2026, 9, 8)))
         joins(B, "COL001", madrid(date(2026, 9, 9)))
         joins(C, "COL001", madrid(date(2026, 9, 9)))
-        user_b = User.objects.create(code=B, email="lele@your-domain.test")
-        user_c = User.objects.create(code=C, email="lili@your-domain.test")
+        user_b, user_c = person(B), person(C)
         for day in (date(2026, 9, 9), date(2026, 9, 11)):
             DailyActivity.objects.create(user=user_b, date=day)
         DailyActivity.objects.create(user=user_c, date=date(2026, 9, 9))
@@ -406,10 +427,10 @@ class TestJoinsByDoorAndTheOperatorsLedger:
     def test_active_people_are_split_by_their_role_at_the_cutoff(self):
         creates(A, "COL001", madrid(date(2026, 9, 8)))
         joins(B, "COL001", madrid(date(2026, 9, 9)))
-        for code, mail in ((A, "lala@your-domain.test"), (B, "lele@your-domain.test")):
-            user = User.objects.create(code=code, email=mail)
+        for code in (A, B):
+            user = person(code)
             DailyActivity.objects.create(user=user, date=date(2026, 9, 10))
-        stranger = User.objects.create(code=C, email="lili@your-domain.test")
+        stranger = person(C)
         DailyActivity.objects.create(user=stranger, date=date(2026, 9, 10))
         DailyActivity.objects.create(user=stranger, date=date(2026, 9, 14))  # next week
 
@@ -522,3 +543,215 @@ class TestTheCatalogue:
         assert got["collections_community"] == 1
         assert got["collections_public"] == 1
         assert got["things_available"] == 0
+
+
+LALA = "La1aN1"  # a seed character: the operator signs in as them to try things
+
+
+@pytest.mark.django_db
+class TestWhatTheCharactersTouchStandsForNothing:
+    """Rule 0: whoever acts, a character's collection or thing moves no number."""
+
+    def test_a_person_joining_a_collection_of_a_character_moves_nothing(self):
+        # Not an onboarding collection, and `seed_demo` leaves no events for it: only
+        # the character's ownership says whose it is.
+        Collection.objects.create(code="LALAC9", owner=person(LALA), headline="Lala's")
+        joins(B, "LALAC9", madrid(date(2026, 9, 8)))
+
+        got = week(W37)
+
+        assert (got["new_people"], got["new_guests"], got["memberships"]) == (0, 0, 0)
+
+    def test_a_request_on_a_thing_of_a_character_moves_nothing(self):
+        Thing.objects.create(code="LALAT9", owner=person(LALA), headline="Lala's thing")
+        asks(B, "LALAT9", madrid(date(2026, 9, 8)))
+
+        assert week(W37)["requests"] == 0
+
+    def test_the_fixed_codes_of_the_seed_count_even_when_nothing_of_them_exists(self):
+        fixed = sorted(SEED_COLLECTION_CODES)[0]
+        thing = sorted(SEED_THING_CODES)[0]
+        joins(B, fixed, madrid(date(2026, 9, 8)))
+        asks(C, thing, madrid(date(2026, 9, 8)))
+
+        got = week(W37)
+
+        assert (got["new_people"], got["requests"]) == (0, 0)
+
+    def test_what_a_character_created_from_the_app_is_theirs_without_a_row_for_it(self):
+        creates(LALA, "LALAC8", madrid(date(2026, 9, 8)), row=False)
+        adds(LALA, "LALAT8", "LALAC8", madrid(date(2026, 9, 8)), row=False)
+        joins(B, "LALAC8", madrid(date(2026, 9, 9)), row=False)
+        asks(C, "LALAT8", madrid(date(2026, 9, 9)))
+
+        got = week(W37)
+
+        assert (got["collections"], got["things"], got["new_people"], got["requests"]) == (
+            0,
+            0,
+            0,
+            0,
+        )
+
+    def test_the_person_is_not_erased_only_that_event_stops_counting(self):
+        Collection.objects.create(code="LALAC9", owner=person(LALA), headline="Lala's")
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        joins(B, "LALAC9", madrid(date(2026, 9, 8)))  # their first join was in Lala's
+        joins(B, "COL001", madrid(date(2026, 9, 15)))  # so this is the first real one
+
+        history = _History(week_bounds(W39)[1])
+
+        assert history.first_join[B].collection_code == "COL001"
+        assert week(W37)["new_people"] == 1  # only A
+        assert week(W38)["new_guests"] == 1  # B enters the cycle a week later
+
+
+@pytest.mark.django_db
+class TestAPhantomCollection:
+    """Rule 1: created, never deleted, and gone from the database."""
+
+    def test_it_and_everything_in_it_never_happened(self):
+        creates(A, "GHOST1", madrid(date(2026, 9, 8)), row=False)
+        adds(A, "GHOSTT", "GHOST1", madrid(date(2026, 9, 8)), row=False)
+        joins(B, "GHOST1", madrid(date(2026, 9, 9)), row=False)
+        asks(C, "GHOSTT", madrid(date(2026, 9, 9)))
+
+        got = week(W37)
+
+        for key in ("collections", "things", "memberships", "new_people", "requests"):
+            assert got[key] == 0, key
+        assert got["collections_created"] == 0
+
+    def test_a_collection_that_exists_or_was_deleted_properly_is_not_one(self):
+        creates(A, "LIVE01", madrid(date(2026, 9, 8)))
+        creates(A, "GONE01", madrid(date(2026, 9, 8)), row=False)
+        log(K.COLLECTION_DELETED, A, madrid(date(2026, 9, 10)), collection="GONE01")
+
+        got = week(W37)
+
+        assert got["collections_created"] == 2
+        assert got["collections_deleted"] == 1
+        assert got["collections"] == 1
+
+
+@pytest.mark.django_db
+class TestAnOrphanThingWithoutATrace:
+    """Rule 2: its collection was deleted, it left no removal and it is not in the database."""
+
+    def _story(self):
+        creates(A, "DEL001", madrid(date(2026, 9, 8)), row=False)
+        adds(A, "ORPH01", "DEL001", madrid(date(2026, 9, 8)), row=False)
+        log(K.COLLECTION_DELETED, A, madrid(date(2026, 9, 17)), collection="DEL001")
+
+    def test_it_counts_as_removed_from_the_week_its_collection_went(self):
+        self._story()
+
+        assert week(W37)["things"] == 1  # alive until the deletion
+        assert week(W38)["things"] == 0  # the deletion of Thursday, week 38
+
+    def test_it_is_not_a_movement_of_removed_things_that_week(self):
+        self._story()
+
+        assert week(W38)["things_removed"] == 0
+
+    def test_a_thing_still_in_the_database_is_not_taken_for_one(self):
+        creates(A, "DEL001", madrid(date(2026, 9, 8)), row=False)
+        adds(A, "KEPT01", "DEL001", madrid(date(2026, 9, 8)))  # has its row
+        log(K.COLLECTION_DELETED, A, madrid(date(2026, 9, 17)), collection="DEL001")
+
+        assert week(W38)["things"] == 1
+
+
+@pytest.mark.django_db
+class TestAThingWithoutATraceInALiveCollection:
+    """Rule 3: no row, no removal, and its collection exists: it never was."""
+
+    def test_it_is_left_out_whole(self):
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        adds(A, "REAL01", "COL001", madrid(date(2026, 9, 8)))
+        adds(A, "GHOST2", "COL001", madrid(date(2026, 9, 8)), row=False)
+        asks(B, "GHOST2", madrid(date(2026, 9, 9)))
+
+        got = week(W37)
+
+        assert (got["things"], got["things_added"], got["requests"]) == (1, 1, 0)
+
+    def test_a_thing_removed_with_its_event_is_not_one(self):
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        adds(A, "OLD001", "COL001", madrid(date(2026, 9, 8)), row=False)
+        log(K.THING_REMOVED, A, madrid(date(2026, 9, 9)), thing="OLD001")
+
+        got = week(W37)
+
+        assert (got["things"], got["things_added"], got["things_removed"]) == (0, 1, 1)
+
+
+@pytest.mark.django_db
+class TestAPersonWhoNoLongerExists:
+    """Rule 4: no row in `User` and memberships still open."""
+
+    def test_their_memberships_close_at_their_last_event(self):
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        joins(B, "COL001", madrid(date(2026, 9, 9)), row=False)
+        asks(B, "THING1", madrid(date(2026, 9, 17)))  # their last trace, in week 38
+
+        assert week(W37)["memberships"] == 1  # still there that week
+        assert week(W38)["memberships"] == 0  # gone by the end of this one
+        assert week(W38)["guests"] == 0
+
+    def test_they_stay_in_the_history(self):
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        joins(B, "COL001", madrid(date(2026, 9, 9)), row=False)
+
+        assert week(W38)["new_people"] == 0
+        assert week(W37)["new_people"] == 2  # A and B were there
+        assert week(W37)["cycle_entered"] == 1
+
+    def test_somebody_who_exists_keeps_their_membership(self):
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        joins(B, "COL001", madrid(date(2026, 9, 9)))
+
+        assert week(W39)["memberships"] == 1
+
+
+@pytest.mark.django_db
+class TestWhatVanishedAllTogether:
+    def test_a_history_with_every_kind_of_hole_adds_up_to_the_database(self):
+        # Real and whole.
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        adds(A, "THING1", "COL001", madrid(date(2026, 9, 8)))
+        joins(B, "COL001", madrid(date(2026, 9, 9)))
+        # A phantom collection, with a thing and a member.
+        creates(A, "GHOST1", madrid(date(2026, 9, 8)), row=False)
+        adds(A, "GHOSTT", "GHOST1", madrid(date(2026, 9, 8)), row=False)
+        joins(C, "GHOST1", madrid(date(2026, 9, 9)), row=False)
+        # A deleted collection whose thing left no trace.
+        creates(A, "DEL001", madrid(date(2026, 9, 8)), row=False)
+        adds(A, "ORPH01", "DEL001", madrid(date(2026, 9, 8)), row=False)
+        log(K.COLLECTION_DELETED, A, madrid(date(2026, 9, 10)), collection="DEL001")
+        # A thing without a trace in the live collection.
+        adds(A, "GHOST2", "COL001", madrid(date(2026, 9, 8)), row=False)
+        # A person who was deleted.
+        joins(D, "COL001", madrid(date(2026, 9, 9)), row=False)
+
+        got = week(W37)
+
+        assert got["collections"] == Collection.objects.count() == 1
+        assert got["things"] == Thing.objects.count() == 1
+        # B alive, D gone: the memberships of today are B's.
+        assert got["memberships"] == 1
+        assert got["guests"] == 1
+
+    def test_the_holes_are_read_once_per_history_not_once_per_event(
+        self, django_assert_num_queries
+    ):
+        creates(A, "COL001", madrid(date(2026, 9, 8)))
+        for n in range(10):
+            adds(A, f"TH{n:04d}", "COL001", madrid(date(2026, 9, 8)))
+            joins(f"JN{n:04d}", "COL001", madrid(date(2026, 9, 9)))
+
+        # The onboarding codes, the events, the two owner reads of the characters,
+        # today's collections, things and users, the deletion markers and the last
+        # event of each actor: nine however many events there are.
+        with django_assert_num_queries(9):
+            _History(week_bounds(W37)[1])

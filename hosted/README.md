@@ -166,6 +166,20 @@ survives the anonymisation of the `Event` log.
   joins through the open door and things added in onboarding are out. The accounts of the
   operator count. Somebody who has since left their group still counts in the weeks they
   were in it.
+- **The characters stand for nothing, whoever acts.** To try something in production
+  without touching the numbers, sign in as one of the five characters: nothing they do,
+  and nothing done in their collections or on their things, reaches the statistics. The
+  person who asked or joined is not erased; only that event stops counting, so their first
+  real entry may become the next one.
+- **What vanished without a trace is left out.** Deletions are logged by the models, so
+  from now on nothing disappears silently; for what was lost before, four rules read what
+  exists today and apply only to what left no event: a collection that was created, never
+  deleted and no longer exists never happened (nor did what was in it); a thing in a
+  collection that was deleted, with no removal and no longer existing, counts as removed
+  when its collection went (not as a movement of that week); a thing with no trace in a
+  collection that still exists never happened; and somebody who no longer has an account
+  leaves their groups at their last event, staying in the history for the weeks they were
+  there.
 - **A new person** is somebody whose first real event is a join or a collection created.
   A visit through `/popin` is not one.
 - **Stocks** (creators, guests, collections, memberships, things) are rebuilt from the log

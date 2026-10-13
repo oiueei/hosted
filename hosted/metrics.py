@@ -31,6 +31,29 @@ Definitions that the tests pin:
   `COLLECTION_CREATED` with that code, which survives the collection being deleted.
   If that event is not in the log, the parent counts as generation 0.
 
+- **The five seed characters stand for nothing, whoever acts.** Everything done by them,
+  in a collection of theirs or on a thing of theirs is out (`seed_scope`): the operator
+  signs in as them to try the product in production without touching a number. The
+  person who asked or joined is not erased, only that event stops counting, so their
+  first real join may become the next one.
+- **What vanished without a trace** (rules 1 to 4, `_Vanished`) reads the state of
+  *today*, but only for what left no event: since deletions are logged by the models,
+  none of them can fire for anything new. They are the reason the history does not use
+  `_partition()` either: that one sorts people by today's state, these rules only fill
+  the holes of the log.
+  1. A *phantom collection* has a `COLLECTION_CREATED`, no `COLLECTION_DELETED` and no
+     row in `Collection`: it was never real, so all its events and those of the things
+     added to it are out.
+  2. An *orphan thing without a trace* was added to a collection that has a
+     `COLLECTION_DELETED`, has no `THING_REMOVED` and has no row in `Thing`: it counts as
+     removed at the moment of that deletion. It is **not** a `things_removed` movement of
+     that week, because no event says so.
+  3. A *thing without a trace in a live collection* has no row, no `THING_REMOVED` and
+     its collection exists: a phantom, out as a whole like rule 1.
+  4. A *person who no longer exists* has no row in `User` and open memberships: they
+     close at the person's **last event** (of any time, so a past week still sees the
+     membership). The person stays in the history: they were there, and left.
+
 Nothing here keeps a user code: the results are counts and medians.
 """
 
@@ -40,8 +63,12 @@ from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from django.db.models import Max
+
+from core.management.commands.seed_data.common import COLLECTIONS as _SEED_COLLECTIONS
+from core.management.commands.seed_data.common import THINGS as _SEED_THINGS
 from core.management.commands.seed_data.common import USERS as _SEED_USERS
-from core.models import Collection, DailyActivity, Event, Thing
+from core.models import Collection, DailyActivity, Event, Thing, User
 from hosted.models import CreatorValidation
 
 WEEK_TZ = ZoneInfo(os.environ.get("STATS_WEEK_TZ", "Europe/Madrid"))
@@ -49,6 +76,8 @@ FIRST_WEEK = date(2026, 9, 7)
 SCHEMA_VERSION = 1
 
 SEED_USER_CODES = frozenset(u["code"] for u in _SEED_USERS)
+SEED_COLLECTION_CODES = frozenset(c["code"] for c in _SEED_COLLECTIONS)
+SEED_THING_CODES = frozenset(t["code"] for t in _SEED_THINGS)
 
 K = Event.Kind
 REQUEST_TYPES = ("GIFT_THING", "SELL_THING", "LEND_THING", "RENT_THING")
@@ -136,7 +165,105 @@ def _median(values):
     return statistics.median(values) if values else None
 
 
-def _real_events(cutoff):
+def seed_scope(events=None):
+    """``(collections, things)`` that belong to the five seed characters.
+
+    The fixed codes of the seed, plus what a character created later from the app
+    (their `COLLECTION_CREATED` / `THING_ADDED`), plus what is theirs today (for what left
+    no event), plus the things added to any of those collections. ``events`` are the ones
+    already loaded; without them the log is read. Shared with `stats_summary`'s
+    accumulated history, which counts raw events and must leave the same ones out.
+    """
+    if events is None:
+        events = list(
+            Event.objects.filter(kind__in=(K.COLLECTION_CREATED, K.THING_ADDED)).filter(
+                actor_code__in=SEED_USER_CODES
+            )
+        )
+    collections = set(SEED_COLLECTION_CODES)
+    things = set(SEED_THING_CODES)
+    for e in events:
+        if e.actor_code in SEED_USER_CODES:
+            if e.kind == K.COLLECTION_CREATED:
+                collections.add(e.collection_code)
+            elif e.kind == K.THING_ADDED and e.thing_code:
+                things.add(e.thing_code)
+    collections |= set(
+        Collection.objects.filter(owner_id__in=SEED_USER_CODES).values_list("code", flat=True)
+    )
+    things |= set(Thing.objects.filter(owner_id__in=SEED_USER_CODES).values_list("code", flat=True))
+    # What other people added to a character's collection is the character's scene.
+    things |= {
+        e.thing_code
+        for e in events
+        if e.kind == K.THING_ADDED and e.collection_code in collections and e.thing_code
+    }
+    collections.discard("")
+    things.discard("")
+    return collections, things
+
+
+class _Vanished:
+    """What the log lost, read once: today's codes and the deletions of any time.
+
+    Five queries however many weeks are asked for in one `_History`: the codes of
+    `Collection`, `Thing` and `User`, the deletion markers of the log (not cut at the
+    cutoff: a collection deleted next week was alive this one) and the last event of
+    every actor.
+    """
+
+    def __init__(self):
+        self.collections = set(Collection.objects.values_list("code", flat=True))
+        self.things = set(Thing.objects.values_list("code", flat=True))
+        self.users = set(User.objects.values_list("code", flat=True))
+        self.collection_deleted_at = {}
+        self.thing_removed = set()
+        for kind, collection, thing, created in Event.objects.filter(
+            kind__in=(K.COLLECTION_DELETED, K.THING_REMOVED)
+        ).values_list("kind", "collection_code", "thing_code", "created"):
+            if kind == K.COLLECTION_DELETED:
+                self.collection_deleted_at.setdefault(collection, created)
+            else:
+                self.thing_removed.add(thing)
+        self.last_event = {
+            actor: last
+            for actor, last in Event.objects.exclude(actor_code="")
+            .values_list("actor_code")
+            .annotate(last=Max("created"))
+        }
+
+    def ghosts(self, events):
+        """``(collections, things)`` whose events are all out (rules 1 and 3)."""
+        created = {e.collection_code for e in events if e.kind == K.COLLECTION_CREATED}
+        phantom_collections = {
+            code
+            for code in created
+            if code not in self.collection_deleted_at and code not in self.collections
+        }
+        phantom_things = set()
+        for e in events:
+            if e.kind != K.THING_ADDED or not e.thing_code:
+                continue
+            if e.thing_code in self.things or e.thing_code in self.thing_removed:
+                continue
+            if e.collection_code in phantom_collections or e.collection_code in self.collections:
+                phantom_things.add(e.thing_code)
+        return phantom_collections, phantom_things
+
+    def orphans(self, events):
+        """``{thing code: when its collection was deleted}`` for rule 2."""
+        return {
+            e.thing_code: self.collection_deleted_at[e.collection_code]
+            for e in events
+            if e.kind == K.THING_ADDED
+            and e.thing_code
+            and e.collection_code in self.collection_deleted_at
+            and e.thing_code not in self.things
+            and e.thing_code not in self.thing_removed
+        }
+
+
+def _real_events(cutoff, vanished=None):
     """Every real event before ``cutoff``, oldest first.
 
     This is **not** `stats_summary._partition()`, on purpose: that function sorts
@@ -144,26 +271,39 @@ def _real_events(cutoff):
     would come out as demo and their events would vanish from the history. Here the
     exclusion is made event by event, from what the event itself says:
 
-    - the actor is one of the five seed characters;
+    - the actor is one of the five seed characters, or it is about a collection or a
+      thing of theirs (`seed_scope`);
     - it is about a collection that is `is_onboarding`;
     - it is a `MEMBER_JOINED` through the open door (`source == ONBOARDING`);
     - it is about a thing whose `THING_ADDED` fell in an onboarding collection
-      (`HOLD_REQUESTED` and `THING_REMOVED` carry no collection of their own).
+      (`HOLD_REQUESTED` and `THING_REMOVED` carry no collection of their own);
+    - it is about a phantom collection or thing (rules 1 and 3 of the module).
     """
+    vanished = vanished or _Vanished()
     onboarding = set(Collection.objects.filter(is_onboarding=True).values_list("code", flat=True))
     events = list(Event.objects.filter(created__lt=cutoff).order_by("created", "code"))
+    seed_collections, seed_things = seed_scope(events)
+    ghost_collections, ghost_things = vanished.ghosts(events)
     demo_things = {
         e.thing_code
         for e in events
         if e.kind == K.THING_ADDED and e.collection_code in onboarding and e.thing_code
     }
+    out_collections = onboarding | seed_collections | ghost_collections
+    out_things = demo_things | seed_things | ghost_things
+    # A thing added to a phantom collection is as phantom as it is.
+    out_things |= {
+        e.thing_code
+        for e in events
+        if e.kind == K.THING_ADDED and e.collection_code in ghost_collections and e.thing_code
+    }
     return [
         e
         for e in events
         if e.actor_code not in SEED_USER_CODES
-        and e.collection_code not in onboarding
+        and e.collection_code not in out_collections
         and not (e.kind == K.MEMBER_JOINED and e.source == Event.Source.ONBOARDING)
-        and e.thing_code not in demo_things
+        and e.thing_code not in out_things
     ]
 
 
@@ -172,7 +312,8 @@ class _History:
 
     def __init__(self, cutoff):
         self.cutoff = cutoff
-        self.events = _real_events(cutoff)
+        vanished = _Vanished()
+        self.events = _real_events(cutoff, vanished)
 
         self.collection_creator = {}  # code -> actor (survives the collection's deletion)
         self.collection_deleted = set()
@@ -203,6 +344,17 @@ class _History:
             elif e.kind == K.HOLD_REQUESTED:
                 self.first_request.setdefault(e.actor_code, e.created)
                 self.requests_by_thing[e.thing_code].append(e.created)
+
+        # Rule 2: a thing whose collection was deleted without a trace of its own is
+        # taken as removed when that collection was.
+        for code, when in vanished.orphans(self.events).items():
+            if when < cutoff:
+                self.thing_removed.add(code)
+        # Rule 4: somebody who no longer exists left every group at their last event.
+        for (actor, collection), joined in list(self.membership.items()):
+            last = vanished.last_event.get(actor)
+            if joined and actor not in vanished.users and last is not None and last < cutoff:
+                self.membership[(actor, collection)] = False
 
         self.alive_collections = {
             code for code in self.collection_creator if code not in self.collection_deleted
