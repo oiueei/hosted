@@ -179,8 +179,10 @@ class Command(BaseCommand):
         # cleanup so wiping demo rows doesn't destroy the images the immediate
         # re-seed points back at.
         from core.services import asset_cleanup
+        from core.services.deletion_events import deletion_events_suppressed
 
-        with asset_cleanup.suspended():
+        # Nor is the demo's history real: no deletion event for what is wiped.
+        with asset_cleanup.suspended(), deletion_events_suppressed():
             Thing.objects.filter(owner_id__in=DEMO_USER_CODES).delete()
             Collection.objects.filter(owner_id__in=DEMO_USER_CODES).delete()
             User.objects.filter(code__in=DEMO_USER_CODES).delete()

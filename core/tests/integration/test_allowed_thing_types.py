@@ -9,6 +9,7 @@ import pytest
 from rest_framework import status
 
 from core.models import Collection, Thing
+from core.tests.factories import also_in
 
 
 @pytest.mark.django_db
@@ -287,7 +288,7 @@ class TestChangingAnExistingThingsType:
         permissive = self._collection(user, ["GIFT_THING", "SELL_THING"], code="EDT002")
         strict = self._collection(user, ["GIFT_THING"], code="EDT003")
         thing = self._thing(user, permissive)
-        strict.things.add(thing)
+        also_in(strict, thing)
 
         response = authenticated_client.patch(
             f"/api/v1/things/{thing.code}/", {"type": "SELL_THING"}, format="json"

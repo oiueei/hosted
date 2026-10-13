@@ -9,7 +9,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -29,7 +29,6 @@ from core.models.event import Event
 from core.models.notification import InAppNotification
 from core.permissions import IsCollectionCurator, IsCollectionOwner
 from core.serializers import (
-    CollectionAddThingSerializer,
     CollectionBroadcastSerializer,
     CollectionCreateSerializer,
     CollectionInviteSerializer,
@@ -42,6 +41,7 @@ from core.serializers import (
 )
 from core.serializers.thing import optimise_thing_queryset
 from core.services.creator_policy import co_owners_denial, collection_mode_denial
+from core.services.deletion_events import deleting_as
 from core.services.email_service import (
     send_broadcast_email,
     # Still used directly by the bulk-invite fan-out, which batches its RSVP
@@ -69,7 +69,6 @@ from core.validators import SafeHeadlineField
 from core.views._helpers import (
     body_dict,
     require_collection_curator,
-    type_validity_error,
     viewer_code,
 )
 
@@ -129,7 +128,6 @@ class CollectionViewSet(ModelViewSet):
     retrieve: GET /api/v1/collections/{code}/
     update:  PUT /api/v1/collections/{code}/
     destroy: DELETE /api/v1/collections/{code}/
-    add_thing: POST /api/v1/collections/{code}/add-thing/
     """
 
     lookup_field = "code"
@@ -156,8 +154,6 @@ class CollectionViewSet(ModelViewSet):
             return CollectionCreateSerializer
         if self.action in ("update", "partial_update"):
             return CollectionUpdateSerializer
-        if self.action == "add_thing":
-            return CollectionAddThingSerializer
         return CollectionSerializer
 
     def get_permissions(self):
@@ -199,19 +195,17 @@ class CollectionViewSet(ModelViewSet):
         headline = instance.headline
         invitees = list(instance.invites.all())
 
-        orphaned_things = instance.things.annotate(col_count=Count("collections")).filter(
-            col_count=1
+        # Only what lives nowhere else. Counting with `instance.things.annotate(
+        # Count("collections"))` reuses the join the related manager already
+        # filtered by this collection and always says 1, so a thing in another
+        # collection too would go with this one.
+        in_another = Collection.things.through.objects.filter(thing=OuterRef("pk")).exclude(
+            collection=instance
         )
-        collection_code = instance.code  # snapshot before delete() nulls the PK
-        with transaction.atomic():
+        orphaned_things = Thing.objects.filter(collections=instance).filter(~Exists(in_another))
+        with transaction.atomic(), deleting_as(self.request.user):
             orphaned_things.delete()
             instance.delete()
-
-        Event.log(
-            Event.Kind.COLLECTION_DELETED,
-            actor=self.request.user,
-            collection=collection_code,
-        )
 
         InAppNotification.objects.bulk_create(
             [
@@ -263,64 +257,6 @@ class CollectionViewSet(ModelViewSet):
         return Response(
             CollectionSerializer(self._created_collection, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
-        )
-
-    @action(detail=True, methods=["post"], url_path="add-thing")
-    @method_decorator(ratelimit(key="user", rate="60/h", method="POST", block=True))
-    def add_thing(self, request, code=None):
-        """Add a thing to the collection.
-
-        Owner can always add. Invited users can add their own things
-        in COMMUNITY mode collections.
-        """
-        collection = get_object_or_404(Collection, code=self.kwargs[self.lookup_field])
-
-        if not collection.can_add_thing(request.user.code):
-            return Response(
-                {"error": "You do not have permission to add things to this collection"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = CollectionAddThingSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        thing_code = serializer.validated_data["thing_code"]
-        thing = get_object_or_404(Thing, code=thing_code)
-
-        if not thing.is_owner(request.user.code):
-            return Response(
-                {"error": "You can only add your own things to collections"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        if collection.things.filter(code=thing_code).exists():
-            return Response(
-                {"error": "Thing is already in this collection"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # The thing's type must be valid for this collection — same rules as
-        # create/update, so add-thing can't smuggle in a forbidden type.
-        type_error = type_validity_error(thing.type, collection)
-        if type_error:
-            return Response({"error": type_error}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Mass-upload ceiling. This path moves an existing thing rather than
-        # creating one, but it lands in the same collection and must not be the
-        # way around the guard.
-        full = collection.capacity_violation("things", adding=1)
-        if full:
-            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
-
-        collection.things.add(thing)
-        collection.note_capacity("things")
-
-        return Response(
-            {
-                "message": "Thing added to collection",
-                "collection": CollectionSerializer(collection, context={"request": request}).data,
-            },
-            status=status.HTTP_200_OK,
         )
 
     @action(detail=True, methods=["post"], url_path="remove-thing")

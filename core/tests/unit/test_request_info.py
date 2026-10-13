@@ -26,6 +26,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
     ThingSerializer,
 )
+from core.tests.factories import also_in
 from core.utils import parse_localized
 
 pytestmark = pytest.mark.django_db
@@ -114,7 +115,7 @@ def test_a_thing_in_two_collections_names_one_of_them_and_sticks_to_it(user, col
         code="RQITWO", type=Thing.Type.GIFT_THING, owner=user, headline="X"
     )
     collection.things.add(thing)
-    other.things.add(thing)
+    also_in(other, thing)
 
     data = ThingSerializer(thing).data
     assert data["collection_request_info"] == notes[data["collection_code"]]

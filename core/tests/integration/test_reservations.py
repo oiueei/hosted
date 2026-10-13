@@ -15,6 +15,7 @@ from rest_framework import status
 from core.models import RSVP, BookingPeriod, Collection, Thing, User
 from core.models.notification import InAppNotification
 from core.models.transfer import ThingTransfer
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -328,7 +329,7 @@ def test_the_active_reservation_cap_is_per_member_per_collection(
 @pytest.fixture
 def space_in_two_collections(reservations, hourly_reservations):
     thing = reservations["thing"]  # lives in the DAY collection already
-    hourly_reservations["collection"].things.add(thing)
+    also_in(hourly_reservations["collection"], thing)
     return thing
 
 
@@ -420,7 +421,7 @@ def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
     )
-    hidden.things.add(space_in_two_collections)
+    also_in(hidden, space_in_two_collections)
     url = f"/api/v1/things/{space_in_two_collections.code}/"
 
     data = authenticated_client2.get(url, {"collection": "HIDC01"}).data

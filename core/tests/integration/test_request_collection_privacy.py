@@ -23,6 +23,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import Collection, Thing
 from core.models.booking import BookingPeriod
 from core.models.notification import InAppNotification
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -62,7 +63,7 @@ def groups(user, user2):
 def _thing(owner, groups, type_, code):
     thing = Thing.objects.create(code=code, type=type_, owner=owner, headline="Drill")
     groups["private"].things.add(thing)
-    groups["public"].things.add(thing)
+    also_in(groups["public"], thing)
     return thing
 
 

@@ -50,6 +50,7 @@ from core.services.export_service import (
     export_bytes,
     export_filename,
 )
+from core.tests.factories import also_in
 from core.utils import parse_localized
 
 pytestmark = pytest.mark.django_db
@@ -494,7 +495,7 @@ class TestCollectionExportStaysInsideTheGroup:
         """A second group holding the member's ladder, with the cousin in it."""
         family = Collection.objects.create(code="FAMY01", owner=user2, headline="Family")
         family.invites.add(cousin)
-        family.things.add(world["member_thing"])
+        also_in(family, world["member_thing"])
         return family
 
     @pytest.fixture

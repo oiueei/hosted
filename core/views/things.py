@@ -30,6 +30,7 @@ from core.services.creator_policy import (
     community_contribution_types,
     thing_type_denial,
 )
+from core.services.deletion_events import deleting_as
 from core.utils import parse_localized
 from core.views._helpers import type_validity_error, viewer_code
 
@@ -229,17 +230,11 @@ class ThingViewSet(ModelViewSet):
         self._created_thing = thing
 
     def perform_destroy(self, instance):
-        # Snapshot code + type before delete() nulls the instance PK — the log must
-        # outlive the row (things are hard-deleted). Actor is whoever deleted it
-        # (collection owner or thing owner), not necessarily the current owner.
-        thing_code, thing_type = instance.code, instance.type
-        super().perform_destroy(instance)
-        Event.log(
-            Event.Kind.THING_REMOVED,
-            actor=self.request.user,
-            thing=thing_code,
-            thing_type=thing_type,
-        )
+        # The THING_REMOVED event is written by the model's delete receiver; the
+        # actor is whoever deleted it (collection owner or thing owner), not
+        # necessarily the current owner.
+        with deleting_as(self.request.user):
+            super().perform_destroy(instance)
 
     def perform_update(self, serializer):
         # The type stays editable, but a PATCH can't move a thing to a type its

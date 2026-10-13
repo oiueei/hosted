@@ -377,7 +377,7 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 | `retrieve` | `GET /api/v1/things/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: visible when the thing sits in a PUBLIC, ACTIVE collection |
 | `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
 | `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
-| `destroy` | `DELETE /api/v1/things/{code}/` | `IsAuthenticated` + `_can_delete()` |
+| `destroy` | `DELETE /api/v1/things/{code}/` | `IsAuthenticated` + `_can_delete()` — the `THING_REMOVED` event is written by the `Thing` delete receiver (`core/services/deletion_events.py`), not by the view; `perform_destroy` only wraps the delete in `deleting_as(request.user)` so the event names who deleted |
 | `activate` | `POST /api/v1/things/{code}/activate/` | `IsAuthenticated` + `IsThingManager` |
 | `hide` | `POST /api/v1/things/{code}/hide/` | `IsAuthenticated` + `IsThingManager` |
 
@@ -430,14 +430,12 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 | `retrieve` | `GET /api/v1/collections/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: a PUBLIC, ACTIVE collection is readable without login |
 | `update` | `PUT /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
 | `partial_update` | `PATCH /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
-| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone |
-| `add_thing` | `POST /api/v1/collections/{code}/add-thing/` | `IsAuthenticated` + `can_add_thing()` |
+| `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone. `perform_destroy` deletes the collection and the things that were only in it inside `deleting_as(request.user)`; the things deleted are those with no membership in any other collection (a query of their own: counting through the related manager reuses its filtered join and always said one); the `COLLECTION_DELETED` and one `THING_REMOVED` per deleted thing come from the delete receivers (`core/services/deletion_events.py`), not from the view |
 | `remove_thing` | `POST /api/v1/collections/{code}/remove-thing/` | `IsAuthenticated` + curator (owner or co-owner) or thing owner (COMMUNITY) |
 
 **Serializers:**
 - Create: `CollectionCreateSerializer`
 - Update: `CollectionUpdateSerializer`
-- Add thing: `CollectionAddThingSerializer`
 - Read: `CollectionSerializer`
 
 **Queryset:** Owned **or co-owned** collections, ordered by `-created` — `list` is "my collections", and a co-owner's curated group belongs there next to their own rather than only under `InvitedCollectionsView`'s "shared with me". List and retrieve actions use the module-level `_optimise_collection_queryset()` helper for `select_related`/`prefetch_related` optimisation (also reused by `InvitedCollectionsView`).
@@ -445,8 +443,6 @@ CSV/ZIP bulk-add (F-9). Body is `{"rows": [{type, headline, description, fee, av
 **Deployment policy (`CREATOR_POLICY`).** `perform_create` refuses a mode this deployment does not hand out with **403**, judging the **PROPRIETARY default** when the body names no mode. `perform_update` refuses switching an existing collection *into* a withheld mode — only on a real change, so a collection already in one stays editable by its owner. Both are no-ops under the standalone's open policy. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
 
 **Retrieve:** Uses `collection.can_view(user_code)` — owner, or invited user if collection is ACTIVE (INACTIVE collections are only visible to their owner). The `CollectionSerializer.things` field excludes INACTIVE things for non-owners.
-
-**Add thing:** Uses `collection.can_add_thing(user_code)` — any curator (owner or co-curator, any mode) can always add; in COMMUNITY mode, invited members can also add their own things. Validates thing exists, belongs to user, and is not already in collection.
 
 **Remove thing:** Owner or co-owner can remove any thing. In COMMUNITY mode, thing owners can remove their own things. Validates thing is in the collection, removes it from the M2M without deleting the thing itself.
 
@@ -1254,7 +1250,7 @@ Independent of the rate limits below, and **off unless the deployment sets thres
 - a **silent alarm** (`COLLECTION_THINGS_ALARM` / `COLLECTION_INVITES_ALARM`) that emails the **superusers** once and changes nothing. The owner is never told: a tripwire, not a warning, so a legitimate bulk import is not interrupted and someone probing the endpoint does not learn where the line sits.
 - a **hard ceiling** (`COLLECTION_THINGS_BLOCK` / `COLLECTION_INVITES_BLOCK`) that refuses adds with **400**, checked against the whole batch so bulk cannot walk past it. A superuser lifts it per collection with `capacity_unblocked` in the admin — there is no API.
 
-Enforcement points: things — `ThingViewSet.create` (before the row is created), `ThingBulkCreateView` (whole batch, all-or-nothing), `CollectionViewSet.add_thing` (so moving an existing thing is not the unguarded door). Members — `CollectionInviteView` and `CollectionBulkInviteView`, enforced where invitations are **sent** rather than accepted (refusing an invitee at the door would punish someone who did nothing wrong); the alarm fires from `_join_collection`, the single funnel every join path goes through.
+Enforcement points: things — `ThingViewSet.create` (before the row is created), `ThingBulkCreateView` (whole batch, all-or-nothing). Members — `CollectionInviteView` and `CollectionBulkInviteView`, enforced where invitations are **sent** rather than accepted (refusing an invitee at the door would punish someone who did nothing wrong); the alarm fires from `_join_collection`, the single funnel every join path goes through.
 
 **The ceiling counts what would land, not what was typed.** `adding` is the number of rows that genuinely move the counter, so both invite endpoints check *after* validation and dedup and exclude addresses that are **already members** — those sit inside the count the ceiling measures, and counting them again refused batches that added nobody (a re-invite at the ceiling now falls through to the accurate "already invited" 400). The thing paths count `len(validated)` for the same reason. All of it is gated on `Collection.capacity_ceiling()`, so a deployment with no thresholds runs no extra query.
 
@@ -1280,7 +1276,6 @@ Enforcement points: things — `ThingViewSet.create` (before the row is created)
 - `/notifications/token/{t}/` — GET 20/min per IP, PATCH 10/min per IP
 - `/things/` POST (single create) — 60 requests per hour per user (so the 10/h bulk cap can't be bypassed one-by-one into unbounded rows)
 - `/collections/` POST (single create) — 30 requests per hour per user
-- `/collections/{code}/add-thing/` POST — 60 requests per hour per user
 - `/collections/{code}/join/` POST — 30 requests per hour per user (plus the per-collection daily ceiling)
 - `/collections/{code}/leave/` POST — 30 requests per hour per user
 - `/auth/delete-account/` POST — 3 requests per hour per user

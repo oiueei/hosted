@@ -164,8 +164,6 @@ describe('DeleteCollectionPage', () => {
     // the warning has to name what leaves that isn't theirs.
     expect(screen.getByText(/your members added/i)).toBeInTheDocument();
     expect(screen.getByText(/save it before you press delete/i)).toBeInTheDocument();
-    // And the one thing that survives, so the copy isn't scarier than the truth.
-    expect(screen.getByText(/belongs to another collection stays there/i)).toBeInTheDocument();
     expect(mutations()).toEqual([]);
   });
 

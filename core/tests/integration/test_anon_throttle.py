@@ -12,16 +12,40 @@ here; `conftest.anonymous_api_counts_start_at_zero` empties it around every test
 import os
 import subprocess
 import sys
-from datetime import UTC, datetime
+import types
 
 import pytest
-import time_machine
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from core import throttles
 
 RATE = "3/m"
+# Thirty seconds into a minute of the throttle's clock: the count is per clock
+# minute, so a run that crossed the change of minute would see its counter back
+# at zero halfway through a test.
+MID_MINUTE = 1_800_000_030.0
+
+
+class Clock:
+    """The throttle's notion of now, moved by hand."""
+
+    def __init__(self, now):
+        self.now = now
+
+    def time(self):
+        return self.now
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch):
+    """Pin the clock the throttle reads, and nothing else's, in mid-minute."""
+    fake = Clock(MID_MINUTE)
+    monkeypatch.setattr(throttles, "time", types.SimpleNamespace(time=fake.time))
+    return fake
 
 
 @pytest.fixture(autouse=True)
@@ -92,18 +116,26 @@ class TestAnonymousCeiling:
         assert codes == [200, 200, 200, 429]
 
     def test_the_next_window_brings_a_fresh_allowance_and_retry_after_says_when(
-        self, api_client, collection_url
+        self, api_client, collection_url, clock
     ):
-        # Ten seconds into a minute: the refusal says fifty are left, and the next
-        # minute answers again.
-        with time_machine.travel(datetime(2026, 9, 29, 12, 0, 10, tzinfo=UTC), tick=False):
-            responses = [api_client.get(collection_url) for _ in range(4)]
-        with time_machine.travel(datetime(2026, 9, 29, 12, 1, 0, tzinfo=UTC), tick=False):
-            next_minute = api_client.get(collection_url)
+        # Thirty seconds into a minute: the refusal says thirty are left, and the
+        # next minute answers again.
+        responses = [api_client.get(collection_url) for _ in range(4)]
+        clock.advance(30)
+        next_minute = api_client.get(collection_url)
 
         assert [r.status_code for r in responses] == [200, 200, 200, 429]
-        assert responses[-1]["Retry-After"] == "50"
+        assert responses[-1]["Retry-After"] == "30"
         assert next_minute.status_code == 200
+
+    def test_crossing_the_change_of_minute_resets_the_count(
+        self, api_client, collection_url, clock
+    ):
+        assert statuses(api_client, collection_url, 4) == [200, 200, 200, 429]
+
+        clock.advance(60)
+
+        assert statuses(api_client, collection_url, 4) == [200, 200, 200, 429]
 
     @pytest.mark.parametrize(
         ("rate", "expected"),

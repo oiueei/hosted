@@ -332,7 +332,7 @@ It answers only *may this person bring such a thing into existence here at all*.
 
 ### `account_service.py` — Account Erasure (Right to Be Forgotten)
 
-One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed); stored files are deleted by the `asset_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
+One function, `delete_account(user)`: a `user.delete()` inside `transaction.atomic()` plus a security-log line, returning the (now dangling) user code. The module exists because the *erasure map* deserves one written-down home — the schema already encodes it: collections/things/bookings/RSVPs/notifications/daily-activity **cascade**; FAQ questions and ThingTransfer hops on other people's things **survive with the user FK nulled** (SET_NULL — content stays, attribution goes, rendered as "former member"); `Report` rows were already SET_NULL; the `Event` log holds only code snapshots (never exposed), and the erasure writes into it — inside `deleting_as(user)` — a `COLLECTION_DELETED` per collection, a `THING_REMOVED` per thing and a `MEMBER_LEFT` per membership, from the receivers in `deletion_events.py`; stored files are deleted by the `asset_cleanup` `post_delete` handlers, which fire for cascade-deleted rows too. Called only from `VerifyLinkView._handle_account_delete` (the emailed-link commit step).
 
 ---
 
@@ -396,6 +396,10 @@ A curator downloads their collection's upcoming **date-based** reservations (LEN
 `CALENDAR_TEXTS` (en/es/ca) is an inline catalogue like `export_service.README_TEXTS`, kept in parity by `test_calendar_export_service.py` — it's a file for a machine, not a message, so it stays out of `email_texts/`.
 
 ---
+
+### `deletion_events.py` — Log a Deletion Whichever Way the Row Goes
+
+`post_delete` receivers on `Collection` (→ `COLLECTION_DELETED`) and `Thing` (→ `THING_REMOVED`, with its type) and a `pre_delete` receiver on `User` (→ one `MEMBER_LEFT` per membership; the M2M rows still exist then), registered in `core.apps.CoreConfig.ready`. They fire for every path — the API, the admin, the cascade of an account erasure, the retention purge, a `QuerySet.delete()` — and write inside the delete's transaction (never `on_commit`), so a rollback leaves no event. The actor is a `ContextVar` set by `deleting_as(user)` (the two viewsets' `perform_destroy` and `delete_account` use it) and blank outside one. `deletion_events_suppressed()` records nothing; `seed_demo --reset` runs under it because the demo is not history. A view never calls `Event.log` for a delete.
 
 ### `asset_cleanup.py` — Delete Stored Files on Delete, and When a Save Drops One
 

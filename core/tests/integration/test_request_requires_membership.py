@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import BookingPeriod, Collection, Thing, User
+from core.tests.factories import also_in
 
 pytestmark = pytest.mark.django_db
 
@@ -98,7 +99,7 @@ class TestSomeoneWithNoSeat:
         )
         closed.invites.add(stranger)
         thing = thing_in(group, contributor, "GIFT_THING", "MBTH02")
-        closed.things.add(thing)
+        also_in(closed, thing)
 
         assert ask(stranger, thing).status_code == 403
 
@@ -144,7 +145,7 @@ class TestSomeoneWithASeat:
         other = Collection.objects.create(code="MBCOL3", owner=contributor, headline="Otro")
         other.invites.add(stranger)
         thing = thing_in(group, contributor, "GIFT_THING", "MBTH06")
-        other.things.add(thing)
+        also_in(other, thing)
 
         assert ask(stranger, thing).status_code == 201
 

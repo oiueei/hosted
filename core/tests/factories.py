@@ -87,3 +87,14 @@ class ThingTransferFactory(DjangoModelFactory):
     from_user = factory.SubFactory(UserFactory)
     to_user = factory.SubFactory(UserFactory)
     lent_date = factory.LazyFunction(date.today)
+
+
+def also_in(collection, thing):
+    """Put ``thing`` in ``collection`` whatever other collection it already lives in.
+
+    The product keeps a thing in exactly one collection and ``collection.things.add``
+    refuses a second (``core.services.single_collection``). Code written for the
+    several-collections case is still there, and its tests need the case it
+    handles; they get it through the through table, which the guard does not see.
+    """
+    Collection.things.through.objects.get_or_create(collection=collection, thing=thing)

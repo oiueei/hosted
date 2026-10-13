@@ -106,8 +106,6 @@ export default function DeleteCollectionPage() {
         <li>{t('deleteCollection.goesGuests')}</li>
       </ul>
       <div className="spacer-s" />
-      <p className="measure">{t('deleteCollection.staysShared')}</p>
-      <div className="spacer-s" />
       <p className="measure">
         <strong>{t('deleteCollection.backupNote')}</strong>
       </p>

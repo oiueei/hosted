@@ -57,10 +57,10 @@ def get_viewable_thing(code, user_code, message):
 def type_validity_error(thing_type, collection):
     """Error message if ``thing_type`` isn't valid for ``collection``, else None.
 
-    Shared by thing create/update AND the collection add-thing endpoint so the
-    owner's per-collection allowlist can't be bypassed by any path. A thing
-    with no collection has no allowlist to answer to, so it is always valid —
-    the type-vs-mode rules that used to live here went with SHARE and SWAP.
+    Shared by thing create/update so the owner's per-collection allowlist can't
+    be bypassed by any path. A thing with no collection has no allowlist to
+    answer to, so it is always valid — the type-vs-mode rules that used to live
+    here went with SHARE and SWAP.
 
     RESERVE_THING is the one type with a rule of its own: it can *only* live in
     a reservations collection (``allowed_thing_types == ["RESERVE_THING"]``), so

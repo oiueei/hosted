@@ -70,62 +70,6 @@ class TestCommunityCollectionUpdate:
 class TestCommunityAddThing:
     """Tests for adding things to community collections."""
 
-    def test_invitee_can_add_thing_community(self, authenticated_client2, user, user2):
-        """Invited user should be able to add their own thing to a community collection."""
-        coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
-        coll.invites.add(user2)
-        thing = Thing.objects.create(owner=user2, headline="My Item", type="SELL_THING")
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{coll.code}/add-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 200
-        assert coll.things.filter(code=thing.code).exists()
-
-    def test_invitee_cannot_add_thing_proprietary(
-        self, authenticated_client2, user, user2, collection
-    ):
-        """Invited user should NOT be able to add things to a proprietary collection."""
-        collection.invites.add(user2)
-        thing = Thing.objects.create(owner=user2, headline="My Item", type="SELL_THING")
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{collection.code}/add-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 403
-        assert not collection.things.filter(code=thing.code).exists()
-
-    def test_invitee_cannot_add_others_thing_community(self, authenticated_client2, user, user2):
-        """Invited user cannot add someone else's thing to a community collection."""
-        coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
-        coll.invites.add(user2)
-        thing = Thing.objects.create(owner=user, headline="Owner Item", type="GIFT_THING")
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{coll.code}/add-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 403
-        assert not coll.things.filter(code=thing.code).exists()
-
-    def test_stranger_cannot_add_thing_community(self, authenticated_client2, user):
-        """Non-invited user should NOT be able to add things to a community collection."""
-        coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
-        thing = Thing.objects.create(owner=user, headline="Item", type="GIFT_THING")
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{coll.code}/add-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 403
-        assert not coll.things.filter(code=thing.code).exists()
-
     def test_create_thing_with_community_collection(self, authenticated_client2, user, user2):
         """Invited user should create a thing directly into a community collection."""
         coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
