@@ -16,24 +16,25 @@ from core.tests.factories import also_in
 class TestCreateWithAllowedTypes:
     """POST /api/v1/collections/ — allowlist is persisted and validated."""
 
-    def test_create_proprietary_with_allowlist(self, authenticated_client):
+    def test_a_proprietary_library_always_takes_both_of_its_verbs(self, authenticated_client):
+        """The curators put the things in and set each price, so the list is forced."""
         response = authenticated_client.post(
             "/api/v1/collections/",
             {"headline": "Books to lend", "allowed_thing_types": ["LEND_THING"]},
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["allowed_thing_types"] == ["LEND_THING"]
+        assert response.data["kind"] == "LIBRARY"
+        assert response.data["allowed_thing_types"] == ["LEND_THING", "RENT_THING"]
 
-    def test_create_proprietary_without_allowlist_succeeds(self, authenticated_client):
-        """Empty list is tolerated by the API — UI enforces 'pick at least one'."""
+    def test_a_kind_without_a_list_takes_the_kinds_verbs(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Untyped collection"},
+            {"headline": "Untyped collection", "kind": "STALL"},
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["allowed_thing_types"] == []
+        assert response.data["allowed_thing_types"] == ["GIFT_THING", "SELL_THING"]
 
 
 @pytest.mark.django_db
@@ -97,6 +98,7 @@ class TestCommunityWithAllowedTypes:
             code="COLL13",
             owner=user,
             headline="Books only",
+            kind="LIBRARY",
             mode="COMMUNITY",
             allowed_thing_types=["LEND_THING"],
         )
@@ -242,12 +244,12 @@ class TestChangingAnExistingThingsType:
     def test_an_owner_may_move_a_thing_to_another_type_the_collection_allows(
         self, authenticated_client, user
     ):
-        """The happy path, which had no test at all: a gift becomes a sale."""
+        """The happy path: a gift becomes a sale the moment it is given a price."""
         collection = self._collection(user, ["GIFT_THING", "SELL_THING"])
         thing = self._thing(user, collection)
 
         response = authenticated_client.patch(
-            f"/api/v1/things/{thing.code}/", {"type": "SELL_THING"}, format="json"
+            f"/api/v1/things/{thing.code}/", {"fee": "5.00"}, format="json"
         )
 
         assert response.status_code == status.HTTP_200_OK

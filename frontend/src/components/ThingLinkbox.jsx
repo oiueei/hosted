@@ -15,6 +15,7 @@ import { onImageError } from '../utils/imageFallback';
 import { useLocalized } from '../utils/localized';
 import { formatDate } from '../utils/rental';
 import ButtonLink from './ButtonLink';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 // Memoised: CollectionPage keeps broadcast/tag-filter state at its root, so a
 // keystroke in the broadcast box re-renders the page. With stable props (the
@@ -23,6 +24,7 @@ function ThingLinkbox({
   thing,
   userCode,
   collectionCode,
+  collectionKind,
   collectionHeadline,
   collectionOwner,
   collectionMode,
@@ -85,7 +87,8 @@ function ThingLinkbox({
   // `?thing=` rides along so the magic link lands them back on *this* thing, not
   // the collection index; it survives a refresh of the join page, unlike
   // navigation state.
-  const joinPath = `/collections/${collectionCode || thing.collection_code}/join?thing=${thing.code}`;
+  const kind = collectionKind || thing.collection_kind;
+  const joinPath = `${collectionPath(collectionCode || thing.collection_code, kind, '/join')}?thing=${thing.code}`;
   const goJoin = () =>
     navigate(joinPath, {
       state: { collectionHeadline: collectionHeadline || L(thing.collection_headline) },
@@ -96,24 +99,24 @@ function ThingLinkbox({
     bookingActionVerb === 'accept' ? t('thingCard.confirming') : t('thingCard.confirmHold');
 
   const editPath = collectionCode
-    ? `/collections/${collectionCode}/things/${thing.code}/edit`
+    ? collectionThingPath(collectionCode, kind, thing.code, '/edit')
     : `/things/${thing.code}/edit`;
 
   const deletePath = collectionCode
-    ? `/collections/${collectionCode}/things/${thing.code}/delete`
+    ? collectionThingPath(collectionCode, kind, thing.code, '/delete')
     : `/things/${thing.code}/delete`;
 
-  const deleteBackPath = collectionCode ? `/collections/${collectionCode}` : '/';
+  const deleteBackPath = collectionCode ? collectionPath(collectionCode, kind) : '/';
   const deleteBackLabel = collectionCode
     ? collectionHeadline || t('common.collection')
     : t('common.home');
 
   const thingPath = collectionCode
-    ? `/collections/${collectionCode}/things/${thing.code}`
+    ? collectionThingPath(collectionCode, kind, thing.code)
     : `/things/${thing.code}`;
 
   const requestPath = collectionCode
-    ? `/collections/${collectionCode}/things/${thing.code}/request`
+    ? collectionThingPath(collectionCode, kind, thing.code, '/request')
     : `/things/${thing.code}/request`;
 
   return (
@@ -318,7 +321,7 @@ function ThingLinkbox({
                     ? () =>
                         navigate(requestPath, {
                           state: {
-                            backPath: collectionCode ? `/collections/${collectionCode}` : '/',
+                            backPath: collectionCode ? collectionPath(collectionCode, kind) : '/',
                             backLabel: collectionCode
                               ? collectionHeadline || t('common.collection')
                               : t('common.home'),

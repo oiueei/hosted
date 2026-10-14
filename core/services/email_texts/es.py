@@ -356,7 +356,7 @@ TEXTS = {
 
 # Frases de crecimiento que se añaden a los correos salientes (encima del pie
 # de preferencias) para convertir invitados en creadores. Se elige una al azar
-# por envío. El CTA siempre apunta a {frontend_base}/collections/new; ``cta``
+# por envío. El CTA siempre apunta a {frontend_base}/new; ``cta``
 # es solo la etiqueta del enlace.
 VIRAL_LINES = [
     {

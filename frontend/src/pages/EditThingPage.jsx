@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'hds-react';
 import {
-  TYPE_VALUES,
-  FEE_TYPES,
-  FEE_OPTIONAL_TYPES,
   DATE_TYPES,
   DETAIL_TYPES,
+  KIND_THING_TYPES,
+  deriveThingType,
+  kindOfThingType,
 } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
@@ -18,6 +18,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 export default function EditThingPage() {
   const { t } = useTranslation();
@@ -30,10 +31,13 @@ export default function EditThingPage() {
 
   const [loading, setLoading] = useState(true);
   const capabilities = useCapabilities();
-  const [thingType, setThingType] = useState('');
-  // The verb as the server has it — see EditCollectionPage's `savedMode` for
-  // why the live form value cannot play this role.
+  // The verb as the server has it. The form never edits it — the server puts it from
+  // the collection's kind and the price — but it says which kind of thing this is
+  // (a thing a mixed collection kept from the other family, say) and whether a
+  // verb the policy withholds would be a *change* or just what it already is.
   const [savedType, setSavedType] = useState(null);
+  // The allowlist of its collection, only to tell whether members may set a price.
+  const [collectionAllowedTypes, setCollectionAllowedTypes] = useState([]);
   const [headline, setHeadline] = useState('');
   useEffect(() => {
     document.title = headline
@@ -56,6 +60,7 @@ export default function EditThingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [thingCollectionCode, setThingCollectionCode] = useState(code || '');
+  const [thingCollectionKind, setThingCollectionKind] = useState('');
   const [thingCollectionHeadline, setThingCollectionHeadline] = useState('');
   const [thingCollectionLanguage, setThingCollectionLanguage] = useState('');
   // The texts as loaded, not the live draft: typing must not flip the page's
@@ -69,7 +74,6 @@ export default function EditThingPage() {
         const res = await apiFetch(`/api/v1/things/${thingCode}/`);
         if (res.ok) {
           const data = await res.json();
-          setThingType(data.type);
           setSavedType(data.type);
           setHeadline(data.headline || '');
           setDescription(data.description || '');
@@ -89,6 +93,8 @@ export default function EditThingPage() {
           if (data.is_endless) setIsEndless(true);
           if (!code && data.collection_code) setThingCollectionCode(data.collection_code);
           if (data.collection_headline) setThingCollectionHeadline(data.collection_headline);
+          setThingCollectionKind(data.collection_kind || '');
+          setCollectionAllowedTypes(data.collection_allowed_thing_types || []);
           setThingCollectionLanguage(data.collection_language || '');
           setLoadedTexts([data.headline, data.description]);
         } else {
@@ -107,7 +113,34 @@ export default function EditThingPage() {
     // over anything the editor had typed in the meantime.
   }, [userCode, thingCode, navigate, code]);
 
-  const returnPath = thingCollectionCode ? `/collections/${thingCollectionCode}` : '/';
+  // What the form is for. A thing is a stall's, a library's or a shed's by its
+  // collection — except one a mixed collection kept from the other family at the
+  // migration, which keeps its own verb (the server leaves it as it is) and is
+  // edited as what it is.
+  const isStray =
+    !!savedType &&
+    !!thingCollectionKind &&
+    !KIND_THING_TYPES[thingCollectionKind]?.includes(savedType);
+  const kind = isStray
+    ? kindOfThingType(savedType)
+    : thingCollectionKind || kindOfThingType(savedType) || 'STALL';
+  // The verb the price makes now (a stray's does not follow it).
+  const type = isStray ? savedType : deriveThingType(kind, fee);
+  // A community stall or library whose members may not set a price lists only its free
+  // verb: there is no price to edit, as there was none to give.
+  const priceAllowed = !(
+    (thingCollectionKind === 'STALL' || thingCollectionKind === 'LIBRARY') &&
+    collectionAllowedTypes.length === 1 &&
+    collectionAllowedTypes[0] === KIND_THING_TYPES[thingCollectionKind][0]
+  );
+  // A thing already offered under a verb this deployment has stopped handing out stays
+  // editable, as the server allows: it only refuses a *change* into a withheld one,
+  // so the stored verb is never withheld here.
+  const notOffered = type !== savedType && !isOfferable(capabilities, 'thing_types', type);
+
+  const returnPath = thingCollectionCode
+    ? collectionPath(thingCollectionCode, thingCollectionKind)
+    : '/';
   const returnLabel =
     L(thingCollectionHeadline) || (thingCollectionCode ? t('common.collection') : t('common.home'));
 
@@ -117,9 +150,6 @@ export default function EditThingPage() {
     if (localizedCounter(headline, 64).over) newErrors.headline = t('addThing.maxHeadline');
     if (localizedCounter(description, 2000).over)
       newErrors.description = t('addThing.maxDescription');
-    if (FEE_TYPES.includes(thingType) && (fee === '' || fee === undefined)) {
-      newErrors.fee = t('addThing.priceRequired');
-    }
     if (location.length > 64) newErrors.location = t('addThing.maxLocation');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -130,32 +160,30 @@ export default function EditThingPage() {
     setSubmitting(true);
     setToast(null);
 
-    const body = { type: thingType, headline: headline.trim() };
+    // No `type`: the server puts the verb, and puts it back in step when the price
+    // changes. Sending the one it already has would be harmless; sending a derived
+    // one over a thing a mixed collection kept from the other family would not.
+    const body = { headline: headline.trim() };
     body.description = description.trim() || '';
     body.thumbnail = thumbnail || '';
-    if ((FEE_TYPES.includes(thingType) || FEE_OPTIONAL_TYPES.includes(thingType)) && fee !== '') {
-      body.fee = fee;
-    }
-    // Always explicit, never omitted: the server judges the row that lands, so
-    // switching the type away from LEND/RENT while a deposit is still stored
-    // has to clear it in the same request or the backend refuses the whole
-    // save (core/serializers/CLAUDE.md — "the one field with a type rule").
-    // RESERVE never carries one either.
-    body.deposit =
-      DATE_TYPES.includes(thingType) && thingType !== 'RESERVE_THING' && deposit !== ''
-        ? deposit
-        : null;
-    if (DETAIL_TYPES.includes(thingType)) {
-      // Date-based detail types (LEND/RESERVE) show live availability, not this
-      // static hint — clear any value a previous non-date type left stored so a
-      // dormant "IMMEDIATE" can't outlive the type it belonged to.
-      body.availability = DATE_TYPES.includes(thingType) ? '' : availability || '';
+    // Clearing the price has to be said: it is what turns a sale back into a gift.
+    if (priceAllowed) body.fee = fee === '' ? null : fee;
+    // Always explicit, never omitted: the server judges the row that lands, so a
+    // deposit that is still stored has to be cleared in the same request as whatever
+    // makes it meaningless (core/serializers/CLAUDE.md — "the one field with a type
+    // rule"). Only a library's things carry one.
+    body.deposit = kind === 'LIBRARY' && deposit !== '' ? deposit : null;
+    if (DETAIL_TYPES.includes(type)) {
+      // A library's and a shed's things show live availability, not this static
+      // hint — clear any value a previous verb left stored so a dormant
+      // "IMMEDIATE" can't outlive what it belonged to.
+      body.availability = DATE_TYPES.includes(type) ? '' : availability || '';
       body.location = location.trim();
       body.condition = condition || '';
     }
     body.gallery = gallery.map((g) => g.publicId);
     body.tags = tags;
-    if (['GIFT_THING', 'SELL_THING'].includes(thingType)) {
+    if (kind === 'STALL') {
       body.is_endless = isEndless;
     }
 
@@ -183,18 +211,6 @@ export default function EditThingPage() {
     return <LoadingSpinner />;
   }
 
-  // `savedType` is the current value: a thing already offered under a verb this
-  // deployment has stopped handing out stays editable, exactly as the server
-  // allows — it only refuses a *change* into a withheld one, so the stored verb
-  // stays offered however the owner rearranges the form before saving.
-  const typeOptions = TYPE_VALUES.filter(
-    (v) =>
-      isOfferable(capabilities, 'thing_types', v, savedType) &&
-      // RESERVE only ever belongs to a reservations collection; only offer it
-      // here when the thing already is one (never as a target to switch into).
-      (v !== 'RESERVE_THING' || savedType === 'RESERVE_THING')
-  ).map((v) => ({ label: t('types.' + v), value: v }));
-
   return (
     <PageLayout backTo={returnPath} backLabel={returnLabel}>
       <h1 className="page-title-xl">{t('editThing.pageTitle')}</h1>
@@ -203,10 +219,10 @@ export default function EditThingPage() {
           idPrefix="edit-thing"
           theeemeColor01={tc.color_01}
           errors={errors}
-          typeOptions={typeOptions}
-          typeCatalogue={TYPE_VALUES.map((v) => ({ label: t('types.' + v), value: v }))}
-          type={thingType}
-          setType={setThingType}
+          kind={kind}
+          type={type}
+          priceAllowed={priceAllowed}
+          approvalCatalogue={notOffered ? [{ label: t('types.' + type), value: type }] : []}
           isEndless={isEndless}
           setIsEndless={setIsEndless}
           headline={headline}
@@ -237,7 +253,12 @@ export default function EditThingPage() {
         />
       </div>
       <div className="form-actions">
-        <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
+        <Button
+          fullWidth
+          disabled={submitting || notOffered}
+          onClick={handleSubmit}
+          style={btnStyle}
+        >
           {submitting ? t('common.saving') : t('common.save')}
         </Button>
         <Button
@@ -246,7 +267,7 @@ export default function EditThingPage() {
           disabled={submitting}
           onClick={() => {
             const deletePath = thingCollectionCode
-              ? `/collections/${thingCollectionCode}/things/${thingCode}/delete`
+              ? collectionThingPath(thingCollectionCode, thingCollectionKind, thingCode, '/delete')
               : `/things/${thingCode}/delete`;
             navigate(deletePath, { state: { backPath: returnPath, backLabel: returnLabel } });
           }}

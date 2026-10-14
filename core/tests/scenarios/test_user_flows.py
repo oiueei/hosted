@@ -113,6 +113,7 @@ class TestCreateCollectionFlow:
             "/api/v1/collections/",
             {
                 "headline": "My Birthday Wishlist",
+                "kind": "STALL",
                 "description": "Things I want for my birthday",
             },
             format="json",
@@ -179,7 +180,7 @@ class TestShareCollectionFlow:
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {owner_token.access_token}")
         response = client.post(
             "/api/v1/collections/",
-            {"headline": "Gift Ideas"},
+            {"headline": "Gift Ideas", "kind": "STALL"},
             format="json",
         )
         collection_code = response.data["code"]
@@ -286,7 +287,7 @@ class TestFAQFlow:
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {owner_token.access_token}")
         response = client.post(
             "/api/v1/collections/",
-            {"headline": "For Sale"},
+            {"headline": "For Sale", "kind": "STALL"},
             format="json",
         )
         collection_code = response.data["code"]
@@ -389,6 +390,7 @@ class TestCompleteUserJourney:
             "/api/v1/collections/",
             {
                 "headline": "Alice's Birthday Wishlist",
+                "kind": "STALL",
                 "description": "Things I'd love for my birthday!",
             },
             format="json",
@@ -408,7 +410,6 @@ class TestCompleteUserJourney:
                 "/api/v1/things/",
                 {
                     **item,
-                    "type": "GIFT_THING",
                     "collection_code": wishlist_code,
                 },
                 format="json",

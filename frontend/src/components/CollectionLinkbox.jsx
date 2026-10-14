@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Linkbox } from 'hds-react';
 import { useLocalized } from '../utils/localized';
+import { collectionPath } from '../utils/collectionPath';
 
 /**
  * A collection row (HDS Linkbox, no thumbnail) used in the collection grids
@@ -23,7 +24,7 @@ export default function CollectionLinkbox({ collection, showInfo = false }) {
   const headline = useLocalized()(collection.headline);
   return (
     <Linkbox
-      href={`/collections/${collection.code}`}
+      href={collectionPath(collection.code, collection.kind)}
       onClick={(e) => {
         // A plain left click routes in-app; any click that means "somewhere
         // else, not here" — a new tab or window, a download — is the browser's,
@@ -36,7 +37,7 @@ export default function CollectionLinkbox({ collection, showInfo = false }) {
           return;
         }
         e.preventDefault();
-        navigate(`/collections/${collection.code}`);
+        navigate(collectionPath(collection.code, collection.kind));
       }}
       heading={headline}
       text={

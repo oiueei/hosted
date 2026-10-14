@@ -5,6 +5,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import BulkInviteCsv from '../components/BulkInviteCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 /**
  * Invite several people at once, from a CSV. The tool was the
@@ -30,6 +31,7 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 export default function ImportInvitesPage() {
   const { t } = useTranslation();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const userCode = localStorage.getItem('userCode');
 
   const [collectionLanguage, setCollectionLanguage] = useState('');
@@ -48,10 +50,7 @@ export default function ImportInvitesPage() {
   }, [userCode, code]);
 
   return (
-    <PageLayout
-      backTo={`/collections/${code}/invites`}
-      backLabel={t('collectionPage.manageGuests')}
-    >
+    <PageLayout backTo={`${base}/invites`} backLabel={t('collectionPage.manageGuests')}>
       <h1 className="page-title-xl">{t('bulkInvite.heading')}</h1>
       <section className="bulk-add-section">
         <BulkInviteCsv collectionCode={code} />

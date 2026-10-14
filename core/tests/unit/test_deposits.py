@@ -167,7 +167,7 @@ class TestTheGroupsPolicy:
 
     def test_a_group_can_say_how_deposits_work_in_it(self, user):
         serializer = CollectionCreateSerializer(
-            data={"headline": "Tools", "deposit_policy": self.POLICY}
+            data={"headline": "Tools", "kind": "LIBRARY", "deposit_policy": self.POLICY}
         )
         assert serializer.is_valid(), serializer.errors
 

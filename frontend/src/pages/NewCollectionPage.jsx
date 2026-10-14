@@ -1,0 +1,60 @@
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import PageLayout from '../components/PageLayout';
+import ButtonLink from '../components/ButtonLink';
+import ApprovalNotice from '../components/ApprovalNotice';
+import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
+import useTheeeme from '../hooks/useTheeeme';
+import { COLLECTION_KINDS, kindSegment } from '../utils/collectionPath';
+
+/**
+ * `/new` — what kind of collection is this? Three cards, one destination each:
+ * a stall (to sell or give away), a library (to lend or rent out) or a shed (to
+ * book by the day or by the hour). The kind is fixed for good when the
+ * collection is created, so it is chosen here, before the form, and the form
+ * lives at `/{kind}/new`.
+ *
+ * A deployment that does not hand a kind out to this account (`collection_kinds`
+ * on `GET /auth/me/`, derived from the verbs its policy offers) still shows the
+ * card — nothing disappears without a word — but without its button, and with
+ * the same "needs approval" line the forms use. Unknown capabilities offer
+ * everything: the server is the gate.
+ */
+export default function NewCollectionPage() {
+  const { t } = useTranslation();
+  const capabilities = useCapabilities();
+  const { btnStyle } = useTheeeme();
+
+  useEffect(() => {
+    document.title = t('titles.newCollection');
+  }, [t]);
+
+  return (
+    <PageLayout title={t('createCollection.pageTitle')} backTo="/" backLabel={t('common.home')}>
+      <ul className="kind-cards">
+        {COLLECTION_KINDS.map((kind) => {
+          const long = t(`kinds.${kind}.long`);
+          const open = isOfferable(capabilities, 'collection_kinds', kind);
+          return (
+            <li key={kind} className="kind-card">
+              <h2 className="kind-card-title">{long}</h2>
+              <p className="kind-card-what">{t(`kinds.${kind}.what`)}</p>
+              {open ? (
+                <div className="button-row-wide">
+                  <ButtonLink to={`/${kindSegment(kind)}/new`} style={btnStyle}>
+                    {t(`kinds.${kind}.create`)}
+                  </ButtonLink>
+                </div>
+              ) : (
+                <ApprovalNotice
+                  kind="collection_kinds"
+                  catalogue={[{ value: kind, label: long }]}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </PageLayout>
+  );
+}

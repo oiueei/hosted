@@ -324,6 +324,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     faqs = serializers.SerializerMethodField()
     deal = serializers.SlugRelatedField(slug_field="code", many=True, read_only=True)
     collection_code = serializers.SerializerMethodField()
+    collection_kind = serializers.SerializerMethodField()
+    collection_allowed_thing_types = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
@@ -373,6 +375,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "pending_questions",
             "can_manage",
             "collection_code",
+            "collection_kind",
+            "collection_allowed_thing_types",
             "collection_headline",
             "collection_owner",
             "collection_is_onboarding",
@@ -490,6 +494,19 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     def get_collection_code(self, obj):
         first = self._viewable_collection(obj)
         return first.code if first else None
+
+    def get_collection_kind(self, obj):
+        """The kind of the collection ``collection_code`` names — what the app needs
+        to build its address, ``/{kind}/{code}``."""
+        first = self._viewable_collection(obj)
+        return first.kind if first else None
+
+    def get_collection_allowed_thing_types(self, obj):
+        """The verbs the collection ``collection_code`` names takes — the edit form needs
+        to know whether members of a COMMUNITY group may set a price (both verbs of the
+        kind) or not (only the free one), and a thing's page has no other way to ask."""
+        first = self._viewable_collection(obj)
+        return list(first.allowed_thing_types or []) if first else []
 
     def get_collection_headline(self, obj):
         first = self._viewable_collection(obj)
@@ -758,7 +775,10 @@ class ThingCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        validate_deposit_for_type(attrs.get("type"), attrs.get("deposit"))
+        # With no type named the view works the verb out from the collection and
+        # the price, and runs this same check on the result.
+        if "type" in attrs:
+            validate_deposit_for_type(attrs["type"], attrs.get("deposit"))
         return attrs
 
 
@@ -945,5 +965,6 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
         return [reject_spreadsheet_formula(tag) for tag in value] if value else value
 
     def validate(self, attrs):
-        validate_deposit_for_type(attrs.get("type"), attrs.get("deposit"))
+        if "type" in attrs:
+            validate_deposit_for_type(attrs["type"], attrs.get("deposit"))
         return attrs

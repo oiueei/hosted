@@ -36,25 +36,42 @@ function setApi({ collection = {} } = {}) {
   apiFetch.mockImplementation((url, opts = {}) => {
     const method = opts.method || 'GET';
     if (url === '/api/v1/collections/' && method === 'POST')
-      return Promise.resolve(mockResponse({ code: 'NEW001' }));
+      return Promise.resolve(mockResponse({ code: 'NEW001', kind: 'STALL' }));
     if (/\/collections\/[^/]+\//.test(url)) return Promise.resolve(mockResponse(collection));
     return Promise.resolve(mockResponse({}));
   });
 }
 
-function renderCreate() {
+// A collection's form is the one for its kind, and the kind is in the address:
+// `/stall/new`, `/library/new`, `/shed/new`.
+function renderCreate(kind = 'stall') {
   setApi();
   return render(
-    <MemoryRouter initialEntries={['/collections/new']}>
+    <MemoryRouter initialEntries={[`/${kind}/new`]}>
       <Routes>
-        <Route path="/collections/new" element={<CreateCollectionPage />} />
+        <Route path="/:kind/new" element={<CreateCollectionPage />} />
         <Route path="*" element={<div data-testid="navigated" />} />
       </Routes>
     </MemoryRouter>
   );
 }
 
+// What the server serves with a collection: its kind, which these older fixtures
+// leave out, follows from the verbs they list.
+const KIND_OF_VERB = {
+  GIFT_THING: 'STALL',
+  SELL_THING: 'STALL',
+  LEND_THING: 'LIBRARY',
+  RENT_THING: 'LIBRARY',
+  RESERVE_THING: 'SHED',
+};
+const withKind = (collection) => ({
+  kind: KIND_OF_VERB[collection.allowed_thing_types?.[0]] || 'STALL',
+  ...collection,
+});
+
 function renderEdit(collection) {
+  collection = withKind(collection);
   setApi({ collection });
   return render(
     <MemoryRouter initialEntries={['/collections/COL001/edit']}>
@@ -195,14 +212,12 @@ describe('CreateCollectionPage', () => {
     await waitFor(() => expect(digest()).toBeVisible());
   });
 
-  // "Pick at least one type" is the only thing besides the headline that can
-  // block submit, so this is the shortest path to a valid Create.
+  // The headline is the one thing that can block submit, so this is the shortest
+  // path to a valid Create.
   async function fillTheRequiredFields(container, headline) {
     fireEvent.change(container.querySelector('#create-collection-headline'), {
       target: { value: headline },
     });
-    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
   }
 
   const createBody = () => {
@@ -289,9 +304,9 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
       return Promise.resolve(mockResponse({}));
     });
     return render(
-      <MemoryRouter initialEntries={['/collections/new']}>
+      <MemoryRouter initialEntries={['/library/new']}>
         <Routes>
-          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="/library/new" element={<CreateCollectionPage />} />
           <Route path="*" element={<Landed />} />
         </Routes>
       </MemoryRouter>
@@ -303,49 +318,30 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
       target: { value: headline },
     });
 
-  async function pickGift(container) {
-    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
-  }
-
   const posts = () =>
     apiFetch.mock.calls.filter(([u, o]) => u === '/api/v1/collections/' && o?.method === 'POST');
 
   test('a created collection opens on its own page', async () => {
-    const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'NEW001' })));
+    const { container } = renderCreateWith(() =>
+      Promise.resolve(mockResponse({ code: 'NEW001', kind: 'LIBRARY' }))
+    );
     typeTheTitle(container, 'The street');
-    await pickGift(container);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(await screen.findByTestId('landed')).toHaveTextContent('/collections/NEW001');
+    // At the kind's address, from the kind the server answered with.
+    expect(await screen.findByTestId('landed')).toHaveTextContent('/library/NEW001');
   });
 
   test('a blank title sends nothing and says it is needed', async () => {
     const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'X' })));
     typeTheTitle(container, '   ');
-    await pickGift(container);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByText('Title is required.')).toBeInTheDocument();
     expect(posts()).toHaveLength(0);
     expect(screen.queryByTestId('landed')).toBeNull();
-  });
-
-  test('with no type picked nothing is sent, and the reminder goes once one is picked', async () => {
-    const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'X' })));
-    typeTheTitle(container, 'The street');
-    // Not said before a first attempt: the form does not nag while it is filled in.
-    expect(screen.queryByText('Pick at least one type.')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
-    expect(await screen.findByText('Pick at least one type.')).toBeInTheDocument();
-    expect(posts()).toHaveLength(0);
-
-    await pickGift(container);
-    await waitFor(() => expect(screen.queryByText('Pick at least one type.')).toBeNull());
   });
 
   // A refusal keeps the page and everything typed in it, says why, and lets the
@@ -379,7 +375,6 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
     if (serverReason !== null) extractApiError.mockResolvedValueOnce(serverReason);
     const { container } = renderCreateWith(postResponse);
     typeTheTitle(container, 'The street');
-    await pickGift(container);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
@@ -595,108 +590,85 @@ describe('EditCollectionPage — load + pause + submit', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// CollectionForm — the allowed-types select respects the deployment policy
+// The kind a deployment hands out
 //
-// A narrowed deployment (e.g. HostedCreatorPolicy: GIFT/SELL open, LEND/RENT
-// wait for approval) must not let an unvetted account choose a withheld type
-// for its own collection — that config would only ever be refused later, at
-// AddThingPage or the create-thing endpoint, with no explanation of why. Bug:
-// this select used to ignore `capabilities` entirely, unlike the mode radios
-// right above it in the same form (see CollectionModeField).
+// A narrowed deployment (e.g. one whose policy gives GIFT/SELL to everyone and
+// LEND/RENT/RESERVE after approval) gives an unvetted account a stall and no more:
+// its form for the others would only end in a refusal at Create, with no
+// explanation. `collection_kinds` on `/auth/me/` is what says so, and the form
+// page answers with the same line the chooser uses instead of the form.
 // ════════════════════════════════════════════════════════════════════════
-describe('CollectionForm — thing_types capability narrows the allowed-types select', () => {
+describe('CreateCollectionPage — collection_kinds capability', () => {
   function setApiWithCapabilities(capabilities) {
     apiFetch.mockImplementation((url, opts = {}) => {
       const method = opts.method || 'GET';
       if (url === '/api/v1/auth/me/') return Promise.resolve(mockResponse({ capabilities }));
       if (url === '/api/v1/collections/' && method === 'POST')
-        return Promise.resolve(mockResponse({ code: 'NEW001' }));
+        return Promise.resolve(mockResponse({ code: 'NEW001', kind: 'STALL' }));
       return Promise.resolve(mockResponse({}));
     });
   }
 
-  test('a withheld type is left off the select, with the approval notice underneath', async () => {
-    // The hook caches one request per signed-in account, so a code no other
-    // test in this file uses keeps this answer from being served stale.
-    localStorage.setItem('userCode', 'POPIN01');
-    setApiWithCapabilities({
-      collection_modes: ['PROPRIETARY', 'COMMUNITY'],
-      thing_types: ['GIFT_THING', 'SELL_THING'],
-      request_url: 'https://example.test/request-access/',
-    });
+  const CAPS = {
+    collection_modes: ['PROPRIETARY', 'COMMUNITY'],
+    collection_kinds: ['STALL'],
+    thing_types: ['GIFT_THING', 'SELL_THING'],
+    request_url: 'https://example.test/request-access/',
+  };
 
-    const { container } = render(
-      <MemoryRouter initialEntries={['/collections/new']}>
+  const open = (kind) =>
+    render(
+      <MemoryRouter initialEntries={[`/${kind}/new`]}>
         <Routes>
-          <Route path="/collections/new" element={<CreateCollectionPage />} />
+          <Route path="/:kind/new" element={<CreateCollectionPage />} />
           <Route path="*" element={<div data-testid="navigated" />} />
         </Routes>
       </MemoryRouter>
     );
 
-    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
-    expect(await screen.findByRole('option', { name: 'Gift' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Rental' })).toBeNull();
-    expect(screen.queryByRole('option', { name: 'Lend' })).toBeNull();
-    expect(screen.queryByRole('option', { name: 'Reservation' })).toBeNull();
+  test.each(['library', 'shed'])(
+    'a withheld kind (%s) gets the notice and no form',
+    async (kind) => {
+      // The hook caches one request per signed-in account, so a code no other
+      // test in this file uses keeps this answer from being served stale.
+      localStorage.setItem('userCode', `POPIN-${kind}`);
+      setApiWithCapabilities(CAPS);
 
-    expect(
-      await screen.findByText(
-        'Some options need approval on this deployment: Rental, Lend, Reservation.'
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Request access/ })).toHaveAttribute(
-      'href',
-      'https://example.test/request-access/'
+      const { container } = open(kind);
+
+      expect(await screen.findByText(/need approval on this deployment/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Request access/ })).toHaveAttribute(
+        'href',
+        'https://example.test/request-access/'
+      );
+      expect(container.querySelector('#create-collection-headline')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Create' })).toBeNull();
+    }
+  );
+
+  test('the kind the policy hands out gets its form', async () => {
+    localStorage.setItem('userCode', 'POPIN-stall');
+    setApiWithCapabilities(CAPS);
+
+    const { container } = open('stall');
+
+    await waitFor(() =>
+      expect(container.querySelector('#create-collection-headline')).toBeInTheDocument()
     );
+    expect(screen.queryByText(/need approval/)).toBeNull();
   });
 
-  test('a type already on the collection stays offered even if the policy no longer allows it', async () => {
-    // Mirrors the server, which only judges a *change* — Edit must not hide
-    // (and silently drop, on the next save) a type the collection already has.
-    localStorage.setItem('userCode', 'POPIN02');
-    apiFetch.mockImplementation((url) => {
-      if (url === '/api/v1/auth/me/')
-        return Promise.resolve(
-          mockResponse({
-            capabilities: {
-              collection_modes: ['PROPRIETARY', 'COMMUNITY'],
-              thing_types: ['GIFT_THING', 'SELL_THING'],
-              request_url: 'https://example.test/request-access/',
-            },
-          })
-        );
-      if (/\/collections\/[^/]+\//.test(url))
-        return Promise.resolve(
-          mockResponse({
-            headline: 'Grandfathered',
-            mode: 'PROPRIETARY',
-            allowed_thing_types: ['GIFT_THING', 'LEND_THING'],
-          })
-        );
-      return Promise.resolve(mockResponse({}));
-    });
+  test('a prefix that is no kind sends the reader to the chooser', async () => {
+    renderCreate('collections');
 
-    render(
-      <MemoryRouter initialEntries={['/collections/COL001/edit']}>
-        <Routes>
-          <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await screen.findByDisplayValue('Grandfathered');
-    // Already selected, so it renders as a chip rather than a menu option —
-    // present at all is what this test is pinning (HDS renders the chip text
-    // twice — dropdown summary + assistive copy — hence findAllByText).
-    expect((await screen.findAllByText('Lend')).length).toBeGreaterThan(0);
+    expect(await screen.findByTestId('navigated')).toBeInTheDocument();
   });
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// A reservations collection is solo-RESERVE and always PROPRIETARY.
+// A shed holds reservations, and is always PROPRIETARY.
 // ════════════════════════════════════════════════════════════════════════
-describe('CollectionForm — picking "Reservation" makes a reservations collection', () => {
+describe('CreateCollectionPage — a shed', () => {
   const createBody = () => {
     const post = apiFetch.mock.calls.find(
       ([u, o]) => u === '/api/v1/collections/' && o?.method === 'POST'
@@ -704,32 +676,23 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
     return post && JSON.parse(post[1].body);
   };
 
-  async function pickReservation(container) {
+  const renderShed = () => renderCreate('shed');
+  const nameIt = (container) =>
     fireEvent.change(container.querySelector('#create-collection-headline'), {
       target: { value: 'Ateneu spaces' },
     });
-    fireEvent.click(container.querySelector('#create-collection-allowed-thing-types-main-button'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Reservation' }));
-  }
 
-  test('it becomes the only allowed type, forces PROPRIETARY, and sends reservation_max_days', async () => {
-    const { container } = render(
-      <MemoryRouter initialEntries={['/collections/new']}>
-        <Routes>
-          <Route path="/collections/new" element={<CreateCollectionPage />} />
-          <Route path="*" element={<div data-testid="navigated" />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await pickReservation(container);
-    // The COMMUNITY radio is gone once this is a reservations collection.
-    expect(screen.queryByRole('radio', { name: /Community/ })).toBeNull();
+  test('it has no mode to choose, and ships its kind, RESERVE and PROPRIETARY', async () => {
+    const { container } = renderShed();
+    nameIt(container);
+    // An operator runs the premises: there is no radio for a community shed.
+    expect(screen.queryByRole('radio')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(createBody()).toBeTruthy());
     const body = createBody();
+    expect(body.kind).toBe('SHED');
     expect(body.allowed_thing_types).toEqual(['RESERVE_THING']);
     expect(body.mode).toBe('PROPRIETARY');
     expect(body.visibility).toBe('PRIVATE');
@@ -738,18 +701,11 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
   });
 
   test('an unparseable opening-hours draft stops Create instead of creating without it', async () => {
-    // The Create twin of EditCollectionPage's guard: the field keeps the last
-    // good value ({} here), so creating anyway would open an HOUR space with
-    // every day closed while the owner believes their schedule went in.
-    const { container } = render(
-      <MemoryRouter initialEntries={['/collections/new']}>
-        <Routes>
-          <Route path="/collections/new" element={<CreateCollectionPage />} />
-          <Route path="*" element={<div data-testid="navigated" />} />
-        </Routes>
-      </MemoryRouter>
-    );
-    await pickReservation(container);
+    // The field keeps the last good value ({} here), so creating anyway would
+    // open an HOUR space with every day closed while the owner believes their
+    // schedule went in.
+    const { container } = renderShed();
+    nameIt(container);
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
     const field = screen.getByLabelText('Weekly opening hours');
@@ -767,15 +723,8 @@ describe('CollectionForm — picking "Reservation" makes a reservations collecti
     // Nothing on the Create path sent an HOUR-unit collection before: the
     // owner's hours could have gone missing and the space opened with every
     // day closed, found only when a member saw nothing to book.
-    const { container } = render(
-      <MemoryRouter initialEntries={['/collections/new']}>
-        <Routes>
-          <Route path="/collections/new" element={<CreateCollectionPage />} />
-          <Route path="*" element={<div data-testid="navigated" />} />
-        </Routes>
-      </MemoryRouter>
-    );
-    await pickReservation(container);
+    const { container } = renderShed();
+    nameIt(container);
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
     const hours = screen.getByLabelText('Weekly opening hours');

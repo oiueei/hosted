@@ -337,7 +337,7 @@ class TestCollectionViews:
         """Should create a new collection."""
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "New Collection"},
+            {"headline": "New Collection", "kind": "STALL"},
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
@@ -1598,7 +1598,7 @@ class TestSecurityInputValidation:
         """Should accept plain text in collection headline."""
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "My Wedding List 2024"},
+            {"headline": "My Wedding List 2024", "kind": "STALL"},
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED

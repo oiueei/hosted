@@ -14,7 +14,7 @@ class TestCollectionTags:
     def test_create_with_tags(self, authenticated_client):
         res = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Tagged", "tags": ["Vintage", "Kitchen"]},
+            {"headline": "Tagged", "kind": "STALL", "tags": ["Vintage", "Kitchen"]},
             format="json",
         )
         assert res.status_code == 201
@@ -23,7 +23,7 @@ class TestCollectionTags:
     def test_tags_normalized_trim_and_dedupe(self, authenticated_client):
         res = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Norm", "tags": [" Vintage ", "vintage", "Kitchen"]},
+            {"headline": "Norm", "kind": "STALL", "tags": [" Vintage ", "vintage", "Kitchen"]},
             format="json",
         )
         assert res.status_code == 201

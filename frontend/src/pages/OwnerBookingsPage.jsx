@@ -25,6 +25,7 @@ import { markMixedVerbs } from '../utils/bookingRows';
 import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
 import ResponsiveTable from '../components/ResponsiveTable';
+import { collectionThingPath } from '../utils/collectionPath';
 
 /**
  * The owner's side of MyBookingsPage: every request made on their things, in one
@@ -239,6 +240,7 @@ export default function OwnerBookingsPage() {
     _thingCode: b.thing_code,
     _thingHeadline: L(b.thing_headline) || b.thing_code,
     _collectionCode: b.collection_code,
+    _collectionKind: b.collection_kind,
     _collectionHeadline: L(b.collection_headline),
     _requesterName: b.requester_name,
     _requesterEmail: b.requester_email,
@@ -287,7 +289,7 @@ export default function OwnerBookingsPage() {
           <Link
             to={
               row._collectionCode
-                ? `/collections/${row._collectionCode}/things/${row._thingCode}`
+                ? collectionThingPath(row._collectionCode, row._collectionKind, row._thingCode)
                 : `/things/${row._thingCode}`
             }
           >

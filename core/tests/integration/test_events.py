@@ -25,7 +25,7 @@ def client_for(user):
 class TestCollectionEvents:
     def test_create_collection_logs_event(self, authenticated_client, user):
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Tracked"}, format="json"
+            "/api/v1/collections/", {"headline": "Tracked", "kind": "STALL"}, format="json"
         )
         assert response.status_code == status.HTTP_201_CREATED
         event = Event.objects.get(kind=Event.Kind.COLLECTION_CREATED)

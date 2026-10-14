@@ -177,7 +177,7 @@ describe('HomePage — the hero holds one button', () => {
     const row = container.querySelector('.form-hero .button-row-wide');
     const links = [...row.querySelectorAll('a')];
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-      ['Create collection', '/collections/new'],
+      ['Create collection', '/new'],
     ]);
     expect(row.querySelectorAll('button')).toHaveLength(0);
     // …and nothing else in the hero points at the account's own pages.
@@ -220,8 +220,8 @@ describe('HomePage — the hero holds one button', () => {
 describe('HomePage — one create button, in one place', () => {
   const INACTIVE = { ...MINE, code: 'COL002', headline: 'Old workshop', status: 'INACTIVE' };
   const heroButton = (container) =>
-    container.querySelector('.form-hero')?.querySelector('a[href="/collections/new"]');
-  const createLinks = () => document.querySelectorAll('a[href="/collections/new"]');
+    container.querySelector('.form-hero')?.querySelector('a[href="/new"]');
+  const createLinks = () => document.querySelectorAll('a[href="/new"]');
 
   test('with no collection at all the hero has none and the invitation is below', async () => {
     mockDashboard({ mine: [], invited: [] });

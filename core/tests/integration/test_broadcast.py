@@ -141,7 +141,7 @@ class TestCollectionBroadcast:
         assert "Broadcast Club" in email.body
         assert "New items added" in email.body
         # Link to the collection that originated the message
-        collection_path = f"/collections/{broadcast_setup['collection'].code}"
+        collection_path = f"/stall/{broadcast_setup['collection'].code}"
         assert collection_path in email.body
         # HTML alternative
         html = email.alternatives[0][0]
@@ -162,7 +162,7 @@ class TestCollectionBroadcast:
         )
         email = mail.outbox[0]
         html = email.alternatives[0][0]
-        collection_path = f"/collections/{broadcast_setup['collection'].code}"
+        collection_path = f"/stall/{broadcast_setup['collection'].code}"
         labelled_url = email.body.split("Open the group: ", 1)[1].split()[0]
         assert labelled_url.endswith(collection_path)
         assert "Open the group</a>" in html

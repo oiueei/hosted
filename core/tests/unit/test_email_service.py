@@ -580,13 +580,16 @@ def test_signing_back_in_from_the_inactivity_email_is_a_primary_button(user):
 
 
 @pytest.mark.django_db
-def test_opening_the_group_from_a_digest_is_a_primary_button():
+def test_opening_the_group_from_a_digest_is_a_primary_button(user):
+    from core.models import Collection
+
+    Collection.objects.create(code="COL001", owner=user, headline="C", kind="LIBRARY")
     email_service.send_digest_email(
         "Chalmercadillo", "COL001", ["A chair"], ["lili@your-domain.test"]
     )
 
     html = mail.outbox[0].alternatives[0][0]
-    assert _first_button("http://localhost:3000/collections/COL001") in html
+    assert _first_button("http://localhost:3000/library/COL001") in html
     assert f">{email_service.T('view_collection_cta', lang='en')}</a>" in html
 
 
@@ -1869,7 +1872,7 @@ def test_a_decision_email_links_a_group_its_reader_is_in_and_never_one_they_are_
     email_service.send_booking_decision_email(booking, thing, accepted=True)
 
     for half in _both_halves(mail.outbox[0]):
-        assert "/collections/COLL01/things/THNG01" in half
+        assert "/stall/COLL01/things/THNG01" in half
         assert "AAAAAA" not in half
 
 
@@ -1886,7 +1889,7 @@ def test_the_team_answer_email_links_a_group_its_reader_is_in_and_never_one_they
     )
 
     for half in _both_halves(mail.outbox[0]):
-        assert "/collections/COLL01/things/THNG01" in half
+        assert "/stall/COLL01/things/THNG01" in half
         assert "AAAAAA" not in half
 
 
@@ -1901,8 +1904,8 @@ def test_a_reader_in_none_of_the_things_groups_gets_the_bare_thing_link(
 
     for half in _both_halves(mail.outbox[0]):
         assert "/things/THNG01" in half
-        # (the viral line's own "/collections/new" is a different link)
-        assert "/collections/COLL01" not in half
+        # (the viral line's own "/new" is a different link)
+        assert "/stall/COLL01" not in half
         assert "AAAAAA" not in half
 
 
@@ -1915,7 +1918,7 @@ def test_an_address_with_no_account_gets_the_bare_thing_link(thing, two_groups):
 
     for half in _both_halves(mail.outbox[0]):
         assert "/things/THNG01" in half
-        assert "/collections/COLL01" not in half
+        assert "/stall/COLL01" not in half
         assert "AAAAAA" not in half
 
 
@@ -1933,7 +1936,7 @@ def test_a_public_group_is_named_to_a_reader_who_is_not_in_it(
     email_service.send_faq_answer_email("Test User", thing, "Is it free?", "Yes", passer_by.email)
 
     for half in _both_halves(mail.outbox[0]):
-        assert "/collections/COLL01/things/THNG01" in half
+        assert "/stall/COLL01/things/THNG01" in half
 
 
 @pytest.mark.django_db
@@ -1947,12 +1950,12 @@ def test_the_collection_the_caller_resolved_wins_over_the_first_one_the_reader_c
     mail.outbox.clear()
     email_service.send_booking_decision_email(booking, thing, accepted=True)
     for half in _both_halves(mail.outbox[0]):
-        assert "/collections/AAAAAA/things/THNG01" in half  # the rule, unprompted
+        assert "/stall/AAAAAA/things/THNG01" in half  # the rule, unprompted
 
     mail.outbox.clear()
     email_service.send_booking_decision_email(booking, thing, accepted=True, collection=collection)
     for half in _both_halves(mail.outbox[0]):
-        assert "/collections/COLL01/things/THNG01" in half
+        assert "/stall/COLL01/things/THNG01" in half
         assert "AAAAAA" not in half
 
 
@@ -1972,7 +1975,7 @@ def test_the_other_emails_that_receive_a_collection_link_that_one(
         email_service.send_reservation_confirmed_email(user2, thing, booking, collection)
 
     for half in _both_halves(mail.outbox[0]):
-        assert "/collections/COLL01/things/THNG01" in half
+        assert "/stall/COLL01/things/THNG01" in half
         assert "AAAAAA" not in half
 
 
@@ -2034,6 +2037,6 @@ def test_every_email_that_links_a_thing_names_only_a_group_its_reader_may_open(
     # The return-due reminder's plain text has never carried the listing link
     # (its catalogue string has no {url}); the button in the HTML does.
     for half in (html,) if sender == "return_due" else (plain, html):
-        assert "/collections/COLL01/things/THNG01" in half
+        assert "/stall/COLL01/things/THNG01" in half
     for half in (plain, html):
         assert "AAAAAA" not in half

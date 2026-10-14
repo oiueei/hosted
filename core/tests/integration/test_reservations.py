@@ -40,6 +40,7 @@ def reservations(db, user, user2, api_client):
         headline="Ateneu spaces",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=3,
         rental_weekdays=[0, 1, 2, 3, 4],
@@ -67,6 +68,7 @@ def hourly_reservations(db, user, user2, api_client):
         headline="Ateneu spaces (hourly)",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_max_minutes=180,
@@ -389,6 +391,7 @@ def test_the_grid_serializer_shares_the_mixin_without_the_resolver(
         headline="Closed",
         status="ACTIVE",
         visibility=Collection.Visibility.PUBLIC,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
     )
@@ -418,6 +421,7 @@ def test_naming_a_collection_the_reader_cannot_see_changes_nothing(
         headline="Staff only",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
     )
@@ -673,6 +677,7 @@ def test_a_full_day_hourly_reservation_is_accepted_when_it_fits_under_a_generous
         headline="Ateneu spaces (hourly, generous cap)",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_max_minutes=720,
@@ -768,6 +773,7 @@ def test_a_reservation_thing_may_carry_a_fee(authenticated_client):
         code="RSVC02",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
     )
@@ -790,6 +796,7 @@ def test_a_reservation_thing_may_not_carry_a_deposit(authenticated_client):
         code="RSVC03",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
     )
@@ -869,6 +876,7 @@ def test_a_reservations_collection_holds_only_reservations(authenticated_client)
         code="RSVC04",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
     )
@@ -887,7 +895,7 @@ def test_a_reservations_collection_holds_only_reservations(authenticated_client)
     [
         (
             {"headline": "Mixed", "allowed_thing_types": ["RESERVE_THING", "GIFT_THING"]},
-            "can't be mixed",
+            "one kind of thing",
         ),
         (
             {
@@ -913,6 +921,7 @@ def test_a_reservations_collection_cannot_become_community(authenticated_client)
         code="RSVC05",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
     )
@@ -984,6 +993,7 @@ def test_updating_only_the_minimum_above_an_untouched_maximum_is_a_400(authentic
         code="RSVC08",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_min_minutes=15,
@@ -1015,6 +1025,7 @@ def test_editing_the_numeric_rules_of_a_reservations_collection_persists_every_o
         code="RSVC50",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_horizon_days=120,
@@ -1054,6 +1065,7 @@ def test_updating_a_reservations_collection_switches_it_to_hourly(authenticated_
         code="RSVC06",
         owner=User.objects.get(code="TEST01"),
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
     )

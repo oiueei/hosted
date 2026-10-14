@@ -120,23 +120,40 @@ class World:
         self.owner = User.objects.create(email="lala@your-domain.test", name="Lala")
         self.member = User.objects.create(email="lele@your-domain.test", name="Lele")
 
+        pickup_note = (
+            "**Cómo recoger:** pásate el domingo entre las 11 y las 13 h. "
+            "Pregunta por Lala en el patio."
+        )
+        # A stall and a library, one kind each: a collection holds one kind of thing,
+        # and the links of the emails carry its address, /{kind}/{code}.
         self.collection = Collection.objects.create(
             owner=self.owner,
+            kind=Collection.Kind.STALL,
             headline="Chalmercadillo",
             description="El mercadillo de los domingos en el patio.",
             language=lang,
-            email_note=(
-                "**Cómo recoger:** pásate el domingo entre las 11 y las 13 h. "
-                "Pregunta por Lala en el patio."
-            ),
+            allowed_thing_types=[Thing.Type.GIFT_THING, Thing.Type.SELL_THING],
+            email_note=pickup_note,
         )
         self.collection.invites.add(self.me, self.member)
+        self.library = Collection.objects.create(
+            owner=self.owner,
+            kind=Collection.Kind.LIBRARY,
+            headline="Biblioteca de herramientas",
+            language=lang,
+            allowed_thing_types=[Thing.Type.LEND_THING, Thing.Type.RENT_THING],
+            email_note=pickup_note,
+        )
+        self.library.invites.add(self.me, self.member)
 
         self.gift = self._thing(Thing.Type.GIFT_THING, "Silla de madera")
-        self.lend = self._thing(Thing.Type.LEND_THING, "Escalera de mano", location="Planta baja")
+        self.lend = self._thing(
+            Thing.Type.LEND_THING, "Escalera de mano", location="Planta baja", home=self.library
+        )
 
         self.rooms = Collection.objects.create(
             owner=self.owner,
+            kind=Collection.Kind.SHED,
             headline="Sala polivalente",
             language=lang,
             allowed_thing_types=[Thing.Type.RESERVE_THING],
@@ -157,9 +174,9 @@ class World:
         )
         self.rooms.things.add(self.reserve)
 
-    def _thing(self, kind, headline, **extra):
+    def _thing(self, kind, headline, home=None, **extra):
         thing = Thing.objects.create(type=kind, owner=self.owner, headline=headline, **extra)
-        self.collection.things.add(thing)
+        (home or self.collection).things.add(thing)
         return thing
 
     def link(self, path):
@@ -302,21 +319,21 @@ def _(w):
 @sample("booking_confirmed", "send_booking_decision_email")
 def _(w):
     es.send_booking_decision_email(
-        w.booking(w.lend, w.me, accepted=True), w.lend, accepted=True, collection=w.collection
+        w.booking(w.lend, w.me, accepted=True), w.lend, accepted=True, collection=w.library
     )
 
 
 @sample("booking_declined", "send_booking_decision_email")
 def _(w):
     es.send_booking_decision_email(
-        w.booking(w.lend, w.me), w.lend, accepted=False, collection=w.collection
+        w.booking(w.lend, w.me), w.lend, accepted=False, collection=w.library
     )
 
 
 @sample("booking_confirmation", "send_booking_confirmation_email")
 def _(w):
     es.send_booking_confirmation_email(
-        w.me, w.lend, w.booking(w.lend, w.me, accepted=True), collection=w.collection
+        w.me, w.lend, w.booking(w.lend, w.me, accepted=True), collection=w.library
     )
 
 

@@ -45,6 +45,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Collection, Thing, User
 from core.models.booking import BookingPeriod
+from core.models.collection import kind_for_thing_type
 from core.models.transfer import ThingTransfer
 from core.services.booking_service import (
     BookingRequestError,
@@ -308,6 +309,7 @@ class TestTwoRequestsForOneSlotAreSerialised:
             owner=owner,
             headline="Rooms",
             mode=Collection.Mode.PROPRIETARY,
+            kind=Collection.Kind.SHED,
             allowed_thing_types=["RESERVE_THING"],
             reservation_max_days=3,
         )
@@ -322,7 +324,12 @@ class TestTwoRequestsForOneSlotAreSerialised:
         """An ACTIVE group holding ``thing`` with ``members`` in it: asking for any
         thing takes a seat in one of its groups, so the two requesters need one to
         reach the lock at all."""
-        group = Collection.objects.create(code=code, owner=owner, headline="Neighbours")
+        group = Collection.objects.create(
+            code=code,
+            owner=owner,
+            headline="Neighbours",
+            kind=kind_for_thing_type(thing.type),
+        )
         group.invites.add(*members)
         group.things.add(thing)
         return group
@@ -491,7 +498,9 @@ class TestTwoRemindersAtOnceSendOne:
         database against the row as the other request left it, so one matches and
         one gets the 429. A claim written as "read `return_reminded_at` off the
         loaded booking, then save" lets both through here and mails twice."""
-        group = Collection.objects.create(code="RMRC01", owner=user, headline="Taller")
+        group = Collection.objects.create(
+            code="RMRC01", owner=user, headline="Taller", kind=Collection.Kind.LIBRARY
+        )
         group.invites.add(user2)
         drill = Thing.objects.create(code="RMRT01", owner=user, headline="Drill", type="LEND_THING")
         group.things.add(drill)

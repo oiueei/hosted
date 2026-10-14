@@ -5,6 +5,8 @@ import { IconDocumentGroup, Notification } from 'hds-react';
 import useDismissable from '../hooks/useDismissable';
 import useReceivesRequests from '../hooks/useReceivesRequests';
 import StatusRegion from './StatusRegion';
+import { useCollectionBase } from '../hooks/useCollectionBase';
+import { collectionPath } from '../utils/collectionPath';
 
 const PANEL_ID = 'collection-menu-panel';
 
@@ -57,7 +59,7 @@ const PANEL_ID = 'collection-menu-panel';
  * the pages that have this one. The same menu is the corner of a thing's page when it
  * is read through a collection.
  *
- * Props: `code`; `headline` (the resolved name, handed to the leave page, which has
+ * Props: `code`; `kind` (the collection's kind, which makes its address); `headline` (the resolved name, handed to the leave page, which has
  * nothing else to name the group with); `isCurator` (default true, the menu it
  * always was); `hasDateThings` and `downloads` (a curator's); `welcomeDocUrl`
  * (the API serves it to curators and members only, so its presence is the whole
@@ -66,6 +68,7 @@ const PANEL_ID = 'collection-menu-panel';
  */
 export default function CollectionMenu({
   code,
+  kind,
   headline,
   isCurator = true,
   hasDateThings = false,
@@ -74,6 +77,10 @@ export default function CollectionMenu({
   digest = null,
 }) {
   const { t } = useTranslation();
+  // The group's own address: by its kind when the page knows it, else the prefix
+  // the page itself was reached under.
+  const routeBase = useCollectionBase(code);
+  const base = kind ? collectionPath(code, kind) : routeBase;
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
   const buttonRef = useRef(null);
@@ -137,22 +144,22 @@ export default function CollectionMenu({
           )}
           {isCurator ? (
             <>
-              <Link to={`/collections/${code}/add`} onClick={close}>
+              <Link to={`${base}/add`} onClick={close}>
                 {t('collectionPage.addThing')}
               </Link>
               {/* The CSV import used to be a line under an empty group's phrase, then a
                   section of the add page; it is a page of its own now
                   and this entry — curators only — is the way to it. */}
-              <Link to={`/collections/${code}/import`} onClick={close}>
+              <Link to={`${base}/import`} onClick={close}>
                 {t('collectionPage.addManyCsv')}
               </Link>
-              <Link to={`/collections/${code}/invites`} onClick={close}>
+              <Link to={`${base}/invites`} onClick={close}>
                 {t('collectionPage.manageGuests')}
               </Link>
               {/* The CSV of invitations, like the CSV of things above: it was the last
                   block of the members page, and it is a page of its own.
                   Curators only, as the invitations are. */}
-              <Link to={`/collections/${code}/invites/import`} onClick={close}>
+              <Link to={`${base}/invites/import`} onClick={close}>
                 {t('bulkInvite.heading')}
               </Link>
               <hr className="collection-menu-divider" />
@@ -190,7 +197,7 @@ export default function CollectionMenu({
               {(welcomeDocUrl || digest) && <hr className="collection-menu-divider" />}
               {/* The same link as "My groups" on the own profile, with the same state:
                   the confirmation page has nothing else to name the group with. */}
-              <Link to={`/collections/${code}/leave`} state={{ headline }} onClick={close}>
+              <Link to={`${base}/leave`} state={{ headline }} onClick={close}>
                 {t('collectionPage.leaveGroup')}
               </Link>
             </>

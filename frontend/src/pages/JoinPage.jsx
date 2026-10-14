@@ -10,6 +10,7 @@ import HeroPhoto from '../components/HeroPhoto';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import { useCollectionBase, useCanonicalCollectionPath } from '../hooks/useCollectionBase';
 
 /**
  * Login-to-act landing page for a PUBLIC collection. An anonymous visitor who
@@ -45,6 +46,9 @@ export default function JoinPage() {
   // What a member can do there — the door's first line names exactly that. The
   // API gives both to an anonymous reader of a PUBLIC collection.
   const [mode, setMode] = useState('');
+  const [kind, setKind] = useState('');
+  const base = useCollectionBase(code, kind);
+  useCanonicalCollectionPath(kind);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
   // The collection's own photo, so the door looks like the page it leads to.
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -76,6 +80,7 @@ export default function JoinPage() {
       .then((data) => {
         setCollectionLanguage(data?.language || '');
         setMode(data?.mode || '');
+        setKind(data?.kind || '');
         setAllowedThingTypes(data?.allowed_thing_types || []);
         setThumbnailUrl(data?.thumbnail_url || '');
         setOwnerHeadline(data?.headline || '');
@@ -101,7 +106,7 @@ export default function JoinPage() {
             <span className="hero-corners">
               <AccountMenu />
             </span>
-            <BackLink to={`/collections/${code}`} label={headline || t('common.collection')} />
+            <BackLink to={base} label={headline || t('common.collection')} />
             <h1 className="form-hero-title">{heading}</h1>
           </div>
         </div>
@@ -117,6 +122,7 @@ export default function JoinPage() {
       <div className="page-container">
         <JoinToAct
           collectionCode={code}
+          collectionKind={kind}
           collectionHeadline={headline}
           thingCode={thingCode}
           mode={mode}

@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from core.models import Collection, Thing
+from core.models.collection import KIND_THING_TYPES
 from core.models.event import Event
 from core.permissions import IsThingManager
 from core.serializers import (
@@ -24,7 +25,7 @@ from core.serializers import (
     ThingSerializer,
     ThingUpdateSerializer,
 )
-from core.serializers.thing import optimise_thing_queryset
+from core.serializers.thing import optimise_thing_queryset, validate_deposit_for_type
 from core.services.creator_policy import (
     capabilities_for,
     community_contribution_types,
@@ -32,7 +33,7 @@ from core.services.creator_policy import (
 )
 from core.services.deletion_events import deleting_as
 from core.utils import parse_localized
-from core.views._helpers import type_validity_error, viewer_code
+from core.views._helpers import type_validity_error, verb_from_price, viewer_code
 
 
 def _resolve_tag_aliases(tags, vocabulary):
@@ -154,7 +155,21 @@ class ThingViewSet(ModelViewSet):
             Collection.objects.filter(code=collection_code).first() if collection_code else None
         )
 
-        thing_type = serializer.validated_data.get("type", Thing.Type.GIFT_THING)
+        # In a collection the server puts the verb: it follows the price. Only for
+        # someone who may add to it — to anyone else the collection is not
+        # answered for, so the verb refusal below never turns on its kind.
+        if collection is not None and collection.can_add_thing(self.request.user.code):
+            thing_type, mismatch = verb_from_price(
+                collection,
+                serializer.validated_data.get("fee"),
+                serializer.validated_data.get("type"),
+            )
+            if mismatch:
+                raise ValidationError({"type": mismatch})
+            serializer.validated_data["type"] = thing_type
+        else:
+            thing_type = serializer.validated_data.get("type", Thing.Type.GIFT_THING)
+        validate_deposit_for_type(thing_type, serializer.validated_data.get("deposit"))
 
         # Whether this deployment offers the verb at all. The one exception is a
         # member contributing an owner-allow-listed type to a COMMUNITY group
@@ -240,9 +255,25 @@ class ThingViewSet(ModelViewSet):
         # The type stays editable, but a PATCH can't move a thing to a type its
         # collection forbids — re-validate against every collection it's in.
         thing = serializer.instance
-        new_type = serializer.validated_data.get("type", thing.type)
+        collections = list(thing.collections.all())
+        validated = serializer.validated_data
+        # Its collection's kind and its price give the verb, and an edit that
+        # touches either puts it back in step. A thing of the other family that a
+        # mixed collection kept through the migration is left as it is.
+        home = collections[0] if collections else None
+        if (
+            home is not None
+            and thing.type in KIND_THING_TYPES[home.kind]
+            and ("fee" in validated or "type" in validated)
+        ):
+            derived, mismatch = verb_from_price(
+                home, validated.get("fee", thing.fee), validated.get("type")
+            )
+            if mismatch:
+                raise ValidationError({"type": mismatch})
+            validated["type"] = derived
+        new_type = validated.get("type", thing.type)
         if new_type != thing.type:
-            collections = list(thing.collections.all())
             # Only on a change: a thing already offered under a verb the policy
             # has since stopped handing out stays editable by its owner. The
             # gate is on creating that state, not on living in it — otherwise
@@ -355,7 +386,20 @@ class ThingBulkCreateView(APIView):
             if not serializer.is_valid():
                 errors.append({"row": index, "errors": serializer.errors})
                 continue
-            thing_type = serializer.validated_data.get("type", Thing.Type.GIFT_THING)
+            thing_type, mismatch = verb_from_price(
+                collection,
+                serializer.validated_data.get("fee"),
+                serializer.validated_data.get("type"),
+            )
+            if mismatch:
+                errors.append({"row": index, "errors": {"type": [mismatch]}})
+                continue
+            serializer.validated_data["type"] = thing_type
+            try:
+                validate_deposit_for_type(thing_type, serializer.validated_data.get("deposit"))
+            except ValidationError as exc:
+                errors.append({"row": index, "errors": exc.detail})
+                continue
             # The deployment's own gate, checked per row because the verb is per
             # row. Reported as a row error rather than a 403 for the batch: this
             # endpoint's contract is that one response names every bad row, and

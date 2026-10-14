@@ -6,13 +6,15 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function RemoveGuestPage() {
   const { t } = useTranslation();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
   const location = useLocation();
-  const backPath = `/collections/${code}/invites`;
+  const backPath = `${base}/invites`;
   const backLabel = location.state?.backLabel || t('removeGuest.guests');
   const guestCode = location.state?.guestCode;
   // The same stand-in the rest of the app uses for a member with no name set

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { Navigate, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { TextInput, TextArea, Select, Button, Accordion } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
@@ -19,8 +19,40 @@ import { localizedCounter, localizedHelper } from '../utils/localized';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
+import ApprovalNotice from '../components/ApprovalNotice';
+import { collectionPath, kindOfPrefix } from '../utils/collectionPath';
+import { allowedVerbsFor } from '../utils/collectionKind';
 
+/**
+ * `/stall/new`, `/library/new` and `/shed/new`: the form for the kind named by the
+ * address, which is chosen at `/new` and never changes afterwards. An account the
+ * deployment's policy does not give that kind to sees the same "needs approval"
+ * line as the chooser, and no form: filling one in would end in a refusal.
+ */
 export default function CreateCollectionPage() {
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const capabilities = useCapabilities();
+  const kind = kindOfPrefix(pathname.split('/')[1]);
+  if (!kind) return <Navigate to="/new" replace />;
+  if (!isOfferable(capabilities, 'collection_kinds', kind)) {
+    return (
+      <PageLayout
+        title={t(`kinds.${kind}.create`)}
+        backTo="/new"
+        backLabel={t('createCollection.pageTitle')}
+      >
+        <ApprovalNotice
+          kind="collection_kinds"
+          catalogue={[{ value: kind, label: t(`kinds.${kind}.long`) }]}
+        />
+      </PageLayout>
+    );
+  }
+  return <CreateCollectionForm kind={kind} />;
+}
+
+function CreateCollectionForm({ kind }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   useEffect(() => {
@@ -36,7 +68,9 @@ export default function CreateCollectionPage() {
   const [mode, setMode] = useState('PROPRIETARY');
   const [visibility, setVisibility] = useState('PRIVATE');
   const [allowProposals, setAllowProposals] = useState(false);
-  const [allowedThingTypes, setAllowedThingTypes] = useState([]);
+  // Whether the members of a COMMUNITY stall or library may set a price: on, both of
+  // the kind's verbs; off, only the free one.
+  const [membersPrice, setMembersPrice] = useState(true);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationUnit, setReservationUnit] = useState('DAY');
@@ -91,25 +125,19 @@ export default function CreateCollectionPage() {
   // group rather than disabling it — an unchoosable radio is noise — and
   // ApprovalNotice below is what says it exists and where to ask for it.
   const capabilities = useCapabilities();
-  // A reservations collection (`allowed_thing_types` is exactly RESERVE) is
-  // always PROPRIETARY — an operator runs the premises.
-  const isReservations = allowedThingTypes.length === 1 && allowedThingTypes[0] === 'RESERVE_THING';
-  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter(
-    (opt) =>
-      isOfferable(capabilities, 'collection_modes', opt.value) &&
-      !(isReservations && opt.value !== 'PROPRIETARY')
+  // A shed is always PROPRIETARY — an operator runs the premises — so it has no
+  // mode to choose; a stall and a library choose, and the deployment may narrow it.
+  const isReservations = kind === 'SHED';
+  // What a kind shows: a reservation is made on the request page, a loan or rental
+  // too, but a gift or a sale completes from the card and never reaches it, so the
+  // note for that page, the closed days and the rental rules are for the other two.
+  const hasRequestPage = kind !== 'STALL';
+  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
+    isOfferable(capabilities, 'collection_modes', opt.value)
   );
 
   const [submitting, setSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [toast, setToast] = useState(null);
-
-  // Live "pick at least one" feedback once a submit has been attempted (P1-5):
-  // the error clears the moment the user picks a type, without nagging earlier.
-  const allowedTypesError =
-    submitAttempted && allowedThingTypes.length === 0
-      ? t('createCollection.allowedTypesAtLeastOne')
-      : '';
 
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
@@ -121,28 +149,16 @@ export default function CreateCollectionPage() {
     // never shown whether it is public, so a group of families ended up readable
     // by anyone without its members knowing. The server takes the same view when
     // no visibility is sent (`CollectionCreateSerializer.validate`).
-    // Both modes allow the same types, so the selection carries over untouched.
-  };
-
-  // Picking "Reservation" as the type forces PROPRIETARY + PRIVATE.
-  const handleTypesChange = (types) => {
-    setAllowedThingTypes(types);
-    if (types.length === 1 && types[0] === 'RESERVE_THING' && mode !== 'PROPRIETARY') {
-      setMode('PROPRIETARY');
-      setVisibility('PRIVATE');
-    }
   };
 
   const validate = () => {
-    setSubmitAttempted(true);
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('createCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('createCollection.maxHeadline');
     if (localizedCounter(description, 2000).over)
       newErrors.description = t('createCollection.maxDescription');
     setErrors(newErrors);
-    const allowedTypesOk = allowedThingTypes.length > 0;
-    return Object.keys(newErrors).length === 0 && allowedTypesOk;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
@@ -158,16 +174,13 @@ export default function CreateCollectionPage() {
     setToast(null);
 
     const body = {
+      kind,
       headline: headline.trim(),
-      mode,
+      mode: isReservations ? 'PROPRIETARY' : mode,
       visibility,
       allow_member_proposals: allowProposals,
-      allowed_thing_types: allowedThingTypes,
-      rental_durations: isReservations ? [] : rentalDurations,
-      rental_weekdays: rentalWeekdays,
-      closed_dates: closedDates,
+      allowed_thing_types: allowedVerbsFor(kind, mode, membersPrice),
       home_page: homePage.trim(),
-      request_info: requestInfo.trim(),
       email_note: emailNote.trim(),
       tags,
       thumbnail: thumbnail || '',
@@ -176,6 +189,11 @@ export default function CreateCollectionPage() {
       welcome_doc: welcomeDoc || '',
     };
     if (description.trim()) body.description = description.trim();
+    if (hasRequestPage) {
+      body.closed_dates = closedDates;
+      body.request_info = requestInfo.trim();
+      body.rental_weekdays = rentalWeekdays;
+    }
     if (isReservations) {
       body.reservation_horizon_days = reservationHorizonDays;
       body.reservation_max_active_per_member = reservationMaxActivePerMember;
@@ -187,7 +205,10 @@ export default function CreateCollectionPage() {
       } else {
         body.reservation_max_days = reservationMaxDays;
       }
-    } else if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
+    } else if (hasRequestPage) {
+      body.rental_durations = rentalDurations;
+      if (depositPolicy.trim()) body.deposit_policy = depositPolicy.trim();
+    }
     try {
       const res = await apiFetch('/api/v1/collections/', {
         method: 'POST',
@@ -195,7 +216,7 @@ export default function CreateCollectionPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        navigate(`/collections/${data.code}`);
+        navigate(collectionPath(data.code, data.kind));
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
@@ -211,7 +232,7 @@ export default function CreateCollectionPage() {
 
   return (
     <PageLayout backTo={backPath} backLabel={backLabel}>
-      <h1 className="page-title-xl">{t('createCollection.pageTitle')}</h1>
+      <h1 className="page-title-xl">{t(`kinds.${kind}.create`)}</h1>
       <div className="form-grid">
         <TextInput
           id="create-collection-headline"
@@ -233,24 +254,26 @@ export default function CreateCollectionPage() {
           helperText={localizedHelper(description, 2000, t)}
         />
         <LocalizedInfo id="create-collection-localized-info" />
-        <CollectionModeField
-          idPrefix="create-collection"
-          label={t('createCollection.modeLabel')}
-          options={MODE_OPTIONS}
-          catalogue={ALL_MODE_OPTIONS}
-          value={mode}
-          onChange={handleModeChange}
-        />
+        {!isReservations && (
+          <CollectionModeField
+            idPrefix="create-collection"
+            label={t('createCollection.modeLabel')}
+            options={MODE_OPTIONS}
+            catalogue={ALL_MODE_OPTIONS}
+            value={mode}
+            onChange={handleModeChange}
+          />
+        )}
         <CollectionForm
           idPrefix="create-collection"
-          allowedThingTypes={allowedThingTypes}
-          setAllowedThingTypes={handleTypesChange}
+          kind={kind}
           mode={mode}
           visibility={visibility}
           setVisibility={setVisibility}
           allowProposals={allowProposals}
           setAllowProposals={setAllowProposals}
-          errors={{ ...errors, allowedThingTypes: allowedTypesError }}
+          membersPrice={membersPrice}
+          setMembersPrice={setMembersPrice}
           theeemeColor01={theeemeColors.color_01}
         />
       </div>
@@ -300,7 +323,7 @@ export default function CreateCollectionPage() {
               theeemeColor01={theeemeColors.color_01}
               theeemeColor06={theeemeColors.color_06}
             />
-          ) : (
+          ) : hasRequestPage ? (
             <RentalRulesFields
               idPrefix="create-collection"
               rentalDurations={rentalDurations}
@@ -312,27 +335,31 @@ export default function CreateCollectionPage() {
               theeemeColor01={theeemeColors.color_01}
               theeemeColor06={theeemeColors.color_06}
             />
-          )}
-          <ClosedDatesField
-            id="create-collection-closed-dates"
-            value={closedDates}
-            onChange={setClosedDates}
-          />
-          <div>
-            <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
-            <TextArea
-              id="create-collection-request-info"
-              label={t('requestInfo.label')}
-              value={requestInfo}
-              onChange={(e) => setRequestInfo(e.target.value)}
-              invalid={localizedCounter(requestInfo, 512).over}
-              errorText={
-                localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
-              }
-              helperText={localizedHelper(requestInfo, 512, t)}
+          ) : null}
+          {hasRequestPage && (
+            <ClosedDatesField
+              id="create-collection-closed-dates"
+              value={closedDates}
+              onChange={setClosedDates}
             />
-            <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
-          </div>
+          )}
+          {hasRequestPage && (
+            <div>
+              <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
+              <TextArea
+                id="create-collection-request-info"
+                label={t('requestInfo.label')}
+                value={requestInfo}
+                onChange={(e) => setRequestInfo(e.target.value)}
+                invalid={localizedCounter(requestInfo, 512).over}
+                errorText={
+                  localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
+                }
+                helperText={localizedHelper(requestInfo, 512, t)}
+              />
+              <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
+            </div>
+          )}
           <div>
             <p className="weekday-field-helper">{t('emailNote.helper')}</p>
             <TextArea

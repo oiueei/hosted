@@ -5,6 +5,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
 import { loginPathFor } from '../utils/nextPath';
 import { joinActions } from '../utils/joinActions';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 /**
  * "Log in to act" body rendered by JoinPage for an anonymous visitor on a PUBLIC
@@ -24,6 +25,7 @@ import { joinActions } from '../utils/joinActions';
  */
 export default function JoinToAct({
   collectionCode,
+  collectionKind,
   collectionHeadline,
   thingCode,
   mode,
@@ -43,8 +45,8 @@ export default function JoinToAct({
   // in lands here and picks "already have an account": after the login they go
   // back to the thing they were looking at, or the group, not to Home.
   const returnPath = thingCode
-    ? `/collections/${collectionCode}/things/${thingCode}`
-    : `/collections/${collectionCode}`;
+    ? collectionThingPath(collectionCode, collectionKind, thingCode)
+    : collectionPath(collectionCode, collectionKind);
 
   // No mode means the collection has not loaded (or a caller that never asks for
   // it): the generic sentence, not a guess at what is allowed.

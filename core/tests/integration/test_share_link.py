@@ -481,19 +481,20 @@ class TestSharePreview:
         resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
         assert resp.status_code == 404
 
-    def test_the_payload_is_only_headline_description_and_language(self, share_link_setup):
+    def test_the_payload_is_only_headline_description_language_and_kind(self, share_link_setup):
         """The link reveals a collection exists; it must reveal nothing else —
         not the owner, not who is in it, not how many, not even the code.
         `language` joined the allow-list 2026-09-15 (`useCollectionLanguage`):
         it's no more sensitive than the other two — the same field
-        `CollectionSerializer` already hands any signed-in member."""
+        `CollectionSerializer` already hands any signed-in member; `kind` joined
+        it with the three kinds of collection, for the same reason."""
         collection = share_link_setup["collection"]
         collection.invites.add(share_link_setup["stranger"])
         token = self._token(share_link_setup)
 
         resp = share_link_setup["anon_client"].get(PREVIEW_URL.format(token))
 
-        assert set(resp.data) == {"headline", "description", "language"}
+        assert set(resp.data) == {"headline", "description", "language", "kind"}
 
     def test_the_preview_carries_the_collections_own_language(self, share_link_setup):
         collection = share_link_setup["collection"]
