@@ -16,6 +16,7 @@ import AccountMenu from '../components/AccountMenu';
 import ButtonLink from '../components/ButtonLink';
 import ResponsiveTable from '../components/ResponsiveTable';
 import useTheeeme from '../hooks/useTheeeme';
+import { collectionPath } from '../utils/collectionPath';
 
 // The groups of the account, each once: the ones it runs first, then the ones it is
 // only a member of; each part keeps the order of its own list. What it runs is what
@@ -222,7 +223,9 @@ export default function UserPage() {
                 {
                   key: '_group',
                   headerName: t('userPage.colGroup'),
-                  transform: (row) => <Link to={`/collections/${row._code}`}>{row._headline}</Link>,
+                  transform: (row) => (
+                    <Link to={collectionPath(row._code, row._kind)}>{row._headline}</Link>
+                  ),
                 },
                 {
                   key: '_team',
@@ -252,7 +255,7 @@ export default function UserPage() {
                         </div>
                       ) : (
                         <Link
-                          to={`/collections/${row._code}/leave`}
+                          to={collectionPath(row._code, row._kind, '/leave')}
                           state={{ headline: row._headline }}
                           className="table-cell-link--muted"
                         >
@@ -267,6 +270,7 @@ export default function UserPage() {
               rows={groups.map((c) => ({
                 _id: c.code,
                 _code: c.code,
+                _kind: c.kind,
                 _headline: L(c.headline),
                 _team: teamText(c, t, i18n.resolvedLanguage || i18n.language),
                 _runs: c._runs,

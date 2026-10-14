@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import {
-  TYPE_VALUES,
-  FEE_TYPES,
-  FEE_OPTIONAL_TYPES,
-  DATE_TYPES,
-  DETAIL_TYPES,
-} from '../constants/things';
+import { DETAIL_TYPES, KIND_THING_TYPES, deriveThingType } from '../constants/things';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -18,12 +12,14 @@ import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function AddThingPage() {
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
 
   const userCode = localStorage.getItem('userCode');
@@ -32,7 +28,9 @@ export default function AddThingPage() {
   }, [t]);
 
   const [collectionHeadline, setCollectionHeadline] = useState('');
-  const [type, setType] = useState('GIFT_THING');
+  // What the collection is, and so how its things take their verb. Until it has
+  // loaded the form is a stall's, the kind with the fewest fields.
+  const [kind, setKind] = useState('STALL');
   const [headline, setHeadline] = useState('');
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
@@ -50,6 +48,13 @@ export default function AddThingPage() {
   const capabilities = useCapabilities();
   const [collectionAllowedTypes, setCollectionAllowedTypes] = useState([]);
   const [collectionTags, setCollectionTags] = useState([]);
+  // A community group whose members may not set a price lists only its free verb: the
+  // form has no price field there, since a price would only be refused.
+  const priceAllowed = !(
+    (kind === 'STALL' || kind === 'LIBRARY') &&
+    collectionAllowedTypes.length === 1 &&
+    collectionAllowedTypes[0] === KIND_THING_TYPES[kind][0]
+  );
   // A member contributing to a COMMUNITY collection they were invited to may
   // offer any type its (vetted) owner allow-listed, whatever this deployment's
   // creator policy says about them personally — the same exception the backend
@@ -67,16 +72,12 @@ export default function AddThingPage() {
       .then((data) => {
         setCollectionHeadline(data.headline || '');
         const allowed = data.allowed_thing_types || [];
+        setKind(data.kind || 'STALL');
         setCollectionAllowedTypes(allowed);
         setContributingToCommunity(data.mode === 'COMMUNITY' && !!data.is_member);
         setIsOnboarding(!!data.is_onboarding);
         setCollectionTags(data.tags || []);
         setCollectionLanguage(data.language || '');
-        // If the allowlist names a single type, pre-select it so the form
-        // immediately shows the right downstream fields.
-        if (allowed.length === 1) {
-          setType(allowed[0]);
-        }
       })
       .catch(() => {});
   }, [userCode, code]);
@@ -87,9 +88,6 @@ export default function AddThingPage() {
     else if (localizedCounter(headline, 64).over) newErrors.headline = t('addThing.maxHeadline');
     if (localizedCounter(description, 2000).over)
       newErrors.description = t('addThing.maxDescription');
-    if (FEE_TYPES.includes(type) && (fee === '' || fee === undefined)) {
-      newErrors.fee = t('addThing.priceRequired');
-    }
     if (location.length > 64) newErrors.location = t('addThing.maxLocation');
     return newErrors;
   };
@@ -104,17 +102,17 @@ export default function AddThingPage() {
     setSubmitting(true);
     setToast(null);
 
+    // No `type`: the server puts the verb from the collection's kind and the price.
     const body = {
-      type,
       headline: headline.trim(),
       collection_code: code,
     };
     if (thumbnail) body.thumbnail = thumbnail;
     if (description.trim()) body.description = description.trim();
-    if ((FEE_TYPES.includes(type) || FEE_OPTIONAL_TYPES.includes(type)) && fee !== '') {
+    if (priceAllowed && fee !== '') {
       body.fee = fee;
     }
-    if (DATE_TYPES.includes(type) && type !== 'RESERVE_THING' && deposit !== '') {
+    if (kind === 'LIBRARY' && deposit !== '') {
       body.deposit = deposit;
     }
     if (DETAIL_TYPES.includes(type)) {
@@ -128,7 +126,7 @@ export default function AddThingPage() {
     if (tags.length > 0) {
       body.tags = tags;
     }
-    if (['GIFT_THING', 'SELL_THING'].includes(type) && isEndless) {
+    if (kind === 'STALL' && isEndless) {
       body.is_endless = true;
     }
     try {
@@ -143,10 +141,7 @@ export default function AddThingPage() {
         // is in sight. The page ignores it on a desktop. A response without a code
         // simply sends no state.
         const created = await res.json().catch(() => null);
-        navigate(
-          `/collections/${code}`,
-          created?.code ? { state: { addedThing: created.code } } : undefined
-        );
+        navigate(`${base}`, created?.code ? { state: { addedThing: created.code } } : undefined);
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
@@ -163,53 +158,19 @@ export default function AddThingPage() {
   // Theeeme colors from localStorage (set by HomePage on login)
   const { tc, btnStyle } = useTheeeme();
 
-  // A RESERVE thing can only live in a reservations collection (allowlist is
-  // exactly RESERVE). Anywhere else — a plain collection with no allowlist — it
-  // is never on offer, even though the deployment policy advertises the verb.
-  const isReservationsCollection =
-    collectionAllowedTypes.length === 1 && collectionAllowedTypes[0] === 'RESERVE_THING';
-
-  const typeOptions = (() => {
-    return TYPE_VALUES.filter((v) => {
-      if (v === 'RESERVE_THING' && !isReservationsCollection) return false;
-      // Per-collection allowlist (set on Create/Edit). Empty = no restriction.
-      if (collectionAllowedTypes.length > 0 && !collectionAllowedTypes.includes(v)) return false;
-      // A type this COMMUNITY collection's owner explicitly allow-listed is open
-      // to its invited members regardless of the deployment's own policy — an
-      // empty allowlist is not "all", so this falls through to `isOfferable`.
-      if (contributingToCommunity && collectionAllowedTypes.includes(v)) return true;
-      // The deployment's own policy, which is a different question from the
-      // owner's allowlist: that one is about this collection, this one is about
-      // whether the account may offer the verb anywhere here at all.
-      return isOfferable(capabilities, 'thing_types', v);
-    });
-  })().map((v) => ({ label: t('types.' + v), value: v }));
-  // The `GIFT_THING` default can sit outside what the collection actually
-  // offers — an allowlist of two or more types, none of them GIFT — and then
-  // the form opens on a type the backend would refuse, showing the wrong
-  // downstream fields and (until HDS resolves it) the raw code in the selector.
-  // The single-type case is pre-selected in the fetch effect; this covers the
-  // rest, once the offered set (allowlist + deployment policy) is known.
-  const offeredTypes = typeOptions.map((o) => o.value).join(',');
-  useEffect(() => {
-    if (!offeredTypes) return;
-    const offered = offeredTypes.split(',');
-    if (!offered.includes(type)) setType(offered[0]);
-  }, [offeredTypes, type]);
-  // What the "needs approval" notice diffs against: the collection's own
-  // allowlist applied, the deployment's policy not yet — except a type an
-  // invited member may already contribute here is not withheld, so it drops out.
-  const approvalCatalogue = TYPE_VALUES.filter(
-    (v) => collectionAllowedTypes.length === 0 || collectionAllowedTypes.includes(v)
-  )
-    .filter((v) => !(contributingToCommunity && collectionAllowedTypes.includes(v)))
-    .map((v) => ({ label: t('types.' + v), value: v }));
+  // The verb the price makes, in the collection's kind, and whether this account may
+  // offer it: the deployment's policy is asked about the verb the thing will take, not
+  // about one a form selector used to pick — a price in a stall is a sale, and a policy
+  // that does not give sales shows its notice here instead of letting it be sent.
+  // A member contributing to a COMMUNITY group may offer what its (vetted) owner
+  // allow-listed whatever the policy says of them personally.
+  const type = deriveThingType(kind, fee);
+  const notOffered =
+    !(contributingToCommunity && collectionAllowedTypes.includes(type)) &&
+    !isOfferable(capabilities, 'thing_types', type);
 
   return (
-    <PageLayout
-      backTo={`/collections/${code}`}
-      backLabel={L(collectionHeadline) || t('common.collection')}
-    >
+    <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>
       <h1 className="page-title-xl">{t('addThing.pageTitle')}</h1>
       {isOnboarding && <DemoNotice />}
       <div className="form-grid">
@@ -217,11 +178,10 @@ export default function AddThingPage() {
           idPrefix="add-thing"
           theeemeColor01={tc.color_01}
           errors={errors}
-          typeOptions={typeOptions}
-          typeCatalogue={approvalCatalogue}
-          showTypeSelector
+          kind={kind}
           type={type}
-          setType={setType}
+          priceAllowed={priceAllowed}
+          approvalCatalogue={notOffered ? [{ label: t('types.' + type), value: type }] : []}
           isEndless={isEndless}
           setIsEndless={setIsEndless}
           headline={headline}
@@ -250,7 +210,11 @@ export default function AddThingPage() {
       </div>
 
       <div className="form-actions">
-        <Button style={{ ...btnStyle, width: '100%' }} disabled={submitting} onClick={handleSubmit}>
+        <Button
+          style={{ ...btnStyle, width: '100%' }}
+          disabled={submitting || notOffered}
+          onClick={handleSubmit}
+        >
           {submitting ? t('common.creating') : t('common.create')}
         </Button>
       </div>

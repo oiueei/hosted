@@ -22,9 +22,11 @@ import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import { parseEmailList } from '../utils/emailList';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function ManageInvitesPage() {
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
@@ -267,11 +269,7 @@ export default function ManageInvitesPage() {
 
   if (loadError) {
     return (
-      <PageLayout
-        title={t('common.error')}
-        backTo={`/collections/${code}`}
-        backLabel={t('common.collection')}
-      >
+      <PageLayout title={t('common.error')} backTo={`${base}`} backLabel={t('common.collection')}>
         <Notification label={t('common.error')} type="error">
           {t(loadError)}
         </Notification>
@@ -295,7 +293,7 @@ export default function ManageInvitesPage() {
   return (
     <PageLayout
       title={t('manageInvites.pageTitle')}
-      backTo={`/collections/${code}`}
+      backTo={`${base}`}
       backLabel={headline || t('common.collection')}
     >
       {/* Members' recommendations, above the guest list because they are the
@@ -446,7 +444,7 @@ export default function ManageInvitesPage() {
                         <TooltipButton
                           tooltip={t('manageInvites.removeTooltip')}
                           onClick={() =>
-                            navigate(`/collections/${code}/invites/remove`, {
+                            navigate(`${base}/invites/remove`, {
                               state: {
                                 guestCode: row._code,
                                 guestName: row._name,

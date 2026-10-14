@@ -40,7 +40,12 @@ from core.serializers import (
     EmailNoteTestSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
-from core.services.creator_policy import co_owners_denial, collection_mode_denial
+from core.services.creator_policy import (
+    capabilities_for,
+    co_owners_denial,
+    collection_kind_denial,
+    collection_mode_denial,
+)
 from core.services.deletion_events import deleting_as
 from core.services.email_service import (
     send_broadcast_email,
@@ -223,9 +228,12 @@ class CollectionViewSet(ModelViewSet):
         # Does this deployment let this person open a collection in that mode?
         # The default is checked too, not just an explicit one: a policy that
         # withholds every mode has to refuse a body that names none.
+        capabilities = capabilities_for(self.request.user)
         denial = collection_mode_denial(
-            self.request.user, validated_data.get("mode", Collection.Mode.PROPRIETARY)
-        )
+            self.request.user,
+            validated_data.get("mode", Collection.Mode.PROPRIETARY),
+            capabilities,
+        ) or collection_kind_denial(self.request.user, validated_data["kind"], capabilities)
         if denial:
             raise PermissionDenied(denial)
         collection = Collection.objects.create(
@@ -1319,10 +1327,10 @@ class SharePreviewView(APIView):
 
     Public and unauthenticated: the 22-char token **is** the credential, and
     whoever holds it already knows a real collection sits behind it. It returns
-    **only** ``headline``, ``description`` and ``language`` — never the owner,
+    **only** ``headline``, ``description``, ``language`` and ``kind`` — never the owner,
     the roster or a member count — and a generic **404** for an unknown,
     revoked or inactive token, so it reveals nothing the link itself does not.
-    ``language`` is no more sensitive than the other two: it is exactly what
+    ``language`` and ``kind`` are no more sensitive than the other two: they are exactly what
     `CollectionSerializer` already serves any signed-in member.
 
     ``headline``/``description`` are returned raw: either may be a
@@ -1348,6 +1356,7 @@ class SharePreviewView(APIView):
                 "headline": collection.headline,
                 "description": collection.description,
                 "language": collection.language,
+                "kind": collection.kind,
             }
         )
 
@@ -1397,7 +1406,9 @@ class ShareJoinView(APIView):
 
         user_code = request.user.code
         if collection.is_owner(user_code) or collection.invites.filter(code=user_code).exists():
-            return Response({"collection": collection.code, "joined": False})
+            return Response(
+                {"collection": collection.code, "collection_kind": collection.kind, "joined": False}
+            )
 
         if join_quota_exhausted(collection.code):
             return Response(
@@ -1408,7 +1419,9 @@ class ShareJoinView(APIView):
         _join_collection(collection, request.user, source=Event.Source.SHARE)
         consume_join_quota(collection.code)
 
-        return Response({"collection": collection.code, "joined": True})
+        return Response(
+            {"collection": collection.code, "collection_kind": collection.kind, "joined": True}
+        )
 
 
 class CollectionEmailNoteTestView(APIView):

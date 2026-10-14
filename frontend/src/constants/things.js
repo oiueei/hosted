@@ -22,24 +22,45 @@ export const FEE_TYPES = ['SELL_THING', 'RENT_THING'];
 // requires it only for FEE_TYPES.
 export const FEE_OPTIONAL_TYPES = ['RESERVE_THING'];
 
-export const DETAIL_TYPES = ['GIFT_THING', 'SELL_THING', 'LEND_THING', 'RESERVE_THING'];
+// A rental has a condition and a place like a loan does (and its availability, live,
+// from the calendar), so RENT joins LEND here.
+export const DETAIL_TYPES = [
+  'GIFT_THING',
+  'SELL_THING',
+  'LEND_THING',
+  'RENT_THING',
+  'RESERVE_THING',
+];
 
 export const AVAILABILITY_VALUES = ['IMMEDIATE', 'NEXT_WEEK', 'END_OF_MONTH', 'NEXT_MONTH'];
 
 export const CONDITION_VALUES = ['NEW', 'GOOD', 'FAIR', 'USED', 'WELL_USED', 'ALMOST_JUNK'];
 
-// The thing types a collection's allowlist may name. The first four take the
-// same set in either mode — mode decides WHO may add a thing, not WHICH types.
-// RESERVE_THING is the exception: picking it makes it the *sole* allowed type
-// (a reservations collection holds only reservations) and locks the mode to
-// PROPRIETARY. It is never offered in a COMMUNITY collection's form.
-export const ALLOWED_TYPES = [
-  'GIFT_THING',
-  'SELL_THING',
-  'RENT_THING',
-  'LEND_THING',
-  'RESERVE_THING',
-];
+// The verbs each kind of collection holds, the browser's copy of the server's
+// `KIND_THING_TYPES`: a stall gives or sells, a library lends or rents out, a shed
+// books. A collection's `allowed_thing_types` is always within its kind's.
+export const KIND_THING_TYPES = {
+  STALL: ['GIFT_THING', 'SELL_THING'],
+  LIBRARY: ['LEND_THING', 'RENT_THING'],
+  SHED: ['RESERVE_THING'],
+};
+
+/**
+ * The verb a thing takes in a `kind` collection: it follows the price. A stall gives
+ * (no price) or sells (a price), a library lends or rents out, a shed books. The
+ * browser's copy of the server's `derive_thing_type`, used to decide what the form
+ * shows and what the policy is asked about — the server puts the verb itself, and
+ * the form never sends one.
+ */
+export function deriveThingType(kind, fee) {
+  const [free, paid] = KIND_THING_TYPES[kind] || KIND_THING_TYPES.STALL;
+  return paid && Number(fee) > 0 ? paid : free;
+}
+
+/** The kind of collection a verb belongs to (`undefined` for none). */
+export function kindOfThingType(type) {
+  return Object.keys(KIND_THING_TYPES).find((kind) => KIND_THING_TYPES[kind].includes(type));
+}
 
 export const TAG_THEMES = {
   taken: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },

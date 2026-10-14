@@ -32,6 +32,7 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
     # now pools requests across every PROPRIETARY collection the viewer curates,
     # so a co-curator of two groups needs to see which one each row is about.
     collection_code = serializers.SerializerMethodField()
+    collection_kind = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     # Whether the "remind them to return it" action is on offer for *this reader*
     # on this row: a manager of the thing, and the model's rule
@@ -50,6 +51,7 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "thing_type",
             "thing_is_endless",
             "collection_code",
+            "collection_kind",
             "collection_headline",
             "requester_code",
             "requester_name",
@@ -82,6 +84,10 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
     def get_collection_code(self, obj):
         collection = self._collection(obj)
         return collection.code if collection else None
+
+    def get_collection_kind(self, obj):
+        collection = self._collection(obj)
+        return collection.kind if collection else None
 
     def get_collection_headline(self, obj):
         collection = self._collection(obj)

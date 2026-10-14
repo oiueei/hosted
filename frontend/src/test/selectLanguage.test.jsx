@@ -48,7 +48,7 @@ describe('no Select speaks Finnish', () => {
     );
 
     await waitFor(() =>
-      expect(container.querySelector('#add-thing-type-main-button')).toBeTruthy()
+      expect(container.querySelector('#add-thing-condition-main-button')).toBeTruthy()
     );
 
     const labels = [...container.querySelectorAll('[aria-label]')].map((el) =>

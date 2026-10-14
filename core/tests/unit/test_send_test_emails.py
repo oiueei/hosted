@@ -398,3 +398,34 @@ def test_list_prints_the_samples_and_sends_nothing(capsys):
     assert f"{len(SAMPLES)} samples" in out
     assert all(s.name in out for s in SAMPLES)
     assert mail.outbox == []
+
+
+@pytest.mark.django_db
+def test_no_email_links_a_collection_at_the_address_from_before_kinds():
+    """A collection's address is /{kind}/{code}: the samples carry one of each kind
+    (a stall, a library, a shed), and none of what they send names /collections/…"""
+    sent = _run()
+
+    def text(message):
+        return message.body + "".join(body for body, _ in message.alternatives)
+
+    assert [m.subject for m in sent if "/collections/" in text(m)] == []
+    everything = "".join(text(m) for m in sent)
+    for prefix in ("/stall/", "/library/", "/shed/"):
+        assert prefix in everything, prefix
+
+
+@pytest.mark.django_db
+def test_every_sample_thing_lives_in_a_collection_of_its_own_kind():
+    """The sample data obeys what the product enforces: a collection holds one kind of
+    thing, so a loan is in the library and a gift in the stall."""
+    from core.management.commands.send_test_emails import World
+    from core.models.collection import kind_for_thing_type
+
+    world = World(TO, "es")
+
+    for collection in Collection.objects.all():
+        for thing in collection.things.all():
+            assert kind_for_thing_type(thing.type) == collection.kind, thing.headline
+    assert {c.kind for c in Collection.objects.all()} == {"STALL", "LIBRARY", "SHED"}
+    assert world.lend.collections.get() == world.library

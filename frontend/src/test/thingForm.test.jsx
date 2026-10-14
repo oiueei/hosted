@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -77,92 +77,89 @@ beforeEach(() => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// AddThingPage — field visibility per type / collection config
+// AddThingPage — field visibility per kind of collection
+//
+// The fields follow the collection's kind, never the verb its price makes, so
+// typing a price does not make another field appear or vanish.
 // ════════════════════════════════════════════════════════════════════════
 describe('AddThingPage — field visibility', () => {
-  test('GIFT (default): fee hidden, detail fields + gallery shown', async () => {
-    const { container } = renderAdd({ collection: { headline: 'Plain', mode: 'PROPRIETARY' } });
+  test('a stall: price, the endless switch, availability, condition, place, photos', async () => {
+    const { container } = renderAdd({
+      collection: { kind: 'STALL', headline: 'Plain', mode: 'PROPRIETARY' },
+    });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // GIFT is a DETAIL_TYPE but not a FEE_TYPE.
-    expect(container.querySelector('#add-thing-fee')).toBeNull();
+    expect(container.querySelector('#add-thing-fee')).toBeTruthy();
+    expect(container.querySelector('#add-thing-is-endless')).toBeTruthy();
     expect(screen.getByText('Availability')).toBeInTheDocument();
     expect(screen.getByText('Condition')).toBeInTheDocument();
     expect(container.querySelector('#add-thing-location')).toBeTruthy();
+    expect(container.querySelector('#add-thing-deposit')).toBeNull();
     expect(screen.getByText('More photos')).toBeInTheDocument();
     expect(screen.getByText('Thumbnail')).toBeInTheDocument();
   });
 
-  test('SELL (single-type allowlist): pre-selects type, shows fee + detail fields', async () => {
+  test('a library: rental price, deposit, condition and place — and no static availability', async () => {
     const { container } = renderAdd({
-      collection: { mode: 'PROPRIETARY', allowed_thing_types: ['SELL_THING'] },
+      collection: { kind: 'LIBRARY', mode: 'PROPRIETARY' },
     });
 
-    // The single-element allowlist pre-selects SELL_THING, so the fee surfaces.
-    await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
-    expect(screen.getByText('Availability')).toBeInTheDocument();
-    expect(container.querySelector('#add-thing-location')).toBeTruthy();
-  });
-
-  test('single-type allowlist: preselects it and shows its fields', async () => {
-    const { container } = renderAdd({
-      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
-    });
-
-    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // The Select still renders even when the allowlist leaves one option.
-    expect(screen.getByText('Type')).toBeInTheDocument();
-    // LEND has no fee, and no static availability either — a date-based type
-    // shows *live* availability from the calendar, so collecting the static
-    // hint would be data that never surfaces. Condition and location still show.
-    expect(container.querySelector('#add-thing-fee')).toBeNull();
-    expect(screen.queryByText('Availability')).toBeNull();
-    expect(container.querySelector('#add-thing-location')).toBeTruthy();
-  });
-
-  test('RESERVE: no static availability field, but location and condition stay', async () => {
-    const { container } = renderAdd({
-      collection: { mode: 'PROPRIETARY', allowed_thing_types: ['RESERVE_THING'] },
-    });
-
-    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
-    // Date-based like LEND — live calendar availability, not the static hint.
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    expect(container.querySelector('#add-thing-fee')).toBeTruthy();
+    expect(container.querySelector('#add-thing-is-endless')).toBeNull();
+    // A loan and a rental show their *live* availability from the calendar, so a
+    // static hint would be data that never surfaces.
     expect(screen.queryByText('Availability')).toBeNull();
     expect(screen.getByText('Condition')).toBeInTheDocument();
     expect(container.querySelector('#add-thing-location')).toBeTruthy();
   });
-});
 
-// ════════════════════════════════════════════════════════════════════════
-// AddThingPage — the (i) explaining the thing types
-// ════════════════════════════════════════════════════════════════════════
-describe('AddThingPage — type explainer popover', () => {
-  test('the (i) opens and describes each type the collection offers', async () => {
-    const { container } = renderAdd({ collection: { mode: 'PROPRIETARY' } });
+  test('a shed: an optional price and a place, nothing of a loan or a gift', async () => {
+    const { container } = renderAdd({
+      collection: { kind: 'SHED', mode: 'PROPRIETARY', allowed_thing_types: ['RESERVE_THING'] },
+    });
 
-    // Icon-only, accessible name = the panel title.
-    const info = await screen.findByRole('button', { name: 'What each type means' });
-    fireEvent.click(info);
-
-    // A PROPRIETARY collection offers GIFT (among others) — its description shows.
-    expect(await screen.findByText(/whoever claims it keeps it/)).toBeInTheDocument();
-    // The bold type label sits next to its description, inside the panel (the same
-    // word is also a Select option, so scope the lookup to the popover).
-    const panel = within(container.querySelector('#add-thing-type-info'));
-    expect(panel.getByText('Gift')).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    expect(container.querySelector('#add-thing-fee')).toBeTruthy();
+    expect(container.querySelector('#add-thing-deposit')).toBeNull();
+    expect(container.querySelector('#add-thing-is-endless')).toBeNull();
+    expect(screen.queryByText('Availability')).toBeNull();
+    expect(screen.getByText('Condition')).toBeInTheDocument();
+    expect(container.querySelector('#add-thing-location')).toBeTruthy();
   });
 
-  // The panel is built from the already-filtered typeOptions, so a type the
-  // collection can't hold is never explained. An allowlist of one leaves one.
-  test('does not list a type the collection filtered out', async () => {
-    renderAdd({ collection: { mode: 'COMMUNITY', allowed_thing_types: ['SELL_THING'] } });
+  test.each([
+    ['STALL', 'Price (optional)', "No price, it's a gift."],
+    ['LIBRARY', 'Rental price (optional)', "No price, it's lent for free."],
+  ])('a %s says what no price means', async (kind, label, help) => {
+    const { container } = renderAdd({ collection: { kind, mode: 'PROPRIETARY' } });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'What each type means' }));
+    await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
+    expect(container.querySelector('label[for="add-thing-fee"]')).toHaveTextContent(label);
+    expect(screen.getByText(help)).toBeInTheDocument();
+  });
 
-    // SELL is the only offered type, so its description is present…
-    expect(await screen.findByText(/For sale at the price you set/)).toBeInTheDocument();
-    // …and GIFT, which the allowlist excludes, is not explained.
-    expect(screen.queryByText(/whoever claims it keeps it/)).toBeNull();
+  test.each([
+    ['STALL', ['GIFT_THING']],
+    ['LIBRARY', ['LEND_THING']],
+  ])(
+    'a community %s whose members may not set a price has no price field',
+    async (kind, allowed) => {
+      const { container } = renderAdd({
+        collection: { kind, mode: 'COMMUNITY', allowed_thing_types: allowed },
+      });
+
+      await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+      expect(container.querySelector('#add-thing-fee')).toBeNull();
+    }
+  );
+
+  test('there is no selector of verbs, and nothing explaining them', async () => {
+    const { container } = renderAdd({ collection: { kind: 'STALL', mode: 'PROPRIETARY' } });
+
+    await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
+    expect(container.querySelector('#add-thing-type-main-button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'What each type means' })).toBeNull();
   });
 });
 
@@ -170,8 +167,8 @@ describe('AddThingPage — type explainer popover', () => {
 // AddThingPage — submit payload
 // ════════════════════════════════════════════════════════════════════════
 describe('AddThingPage — submit', () => {
-  test('POSTs to /api/v1/things/ with headline, type and collection_code', async () => {
-    const { container } = renderAdd({ collection: { mode: 'PROPRIETARY' } });
+  test('POSTs to /api/v1/things/ with headline and collection_code, and no type', async () => {
+    const { container } = renderAdd({ collection: { kind: 'STALL', mode: 'PROPRIETARY' } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     fireEvent.change(container.querySelector('#add-thing-headline'), {
@@ -185,11 +182,9 @@ describe('AddThingPage — submit', () => {
       );
       expect(call).toBeTruthy();
       const body = JSON.parse(call[1].body);
-      expect(body).toMatchObject({
-        headline: 'My Gift',
-        type: 'GIFT_THING',
-        collection_code: 'COL001',
-      });
+      expect(body).toMatchObject({ headline: 'My Gift', collection_code: 'COL001' });
+      // The server puts the verb, from the kind and the price.
+      expect(body).not.toHaveProperty('type');
     });
   });
 });
@@ -208,7 +203,13 @@ describe('EditThingPage', () => {
 
   test('PATCHes /api/v1/things/{code}/ with the edited fields', async () => {
     const { container } = renderEdit({
-      thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Existing Thing', description: '' },
+      thing: {
+        code: 'THG001',
+        type: 'GIFT_THING',
+        collection_kind: 'STALL',
+        headline: 'Existing Thing',
+        description: '',
+      },
     });
 
     await screen.findByDisplayValue('Existing Thing');
@@ -223,7 +224,8 @@ describe('EditThingPage', () => {
       );
       expect(call).toBeTruthy();
       const body = JSON.parse(call[1].body);
-      expect(body).toMatchObject({ headline: 'Renamed Thing', type: 'GIFT_THING' });
+      expect(body).toMatchObject({ headline: 'Renamed Thing' });
+      expect(body).not.toHaveProperty('type');
     });
   });
 });
@@ -232,43 +234,23 @@ describe('EditThingPage', () => {
 // EditThingPage — a deployment that has narrowed since the thing was offered
 // ════════════════════════════════════════════════════════════════════════
 
-describe('EditThingPage — the stored verb stays offered', () => {
-  /* A thing offered as a loan, on a deployment that has since stopped handing
-     out LEND. The server judges only a **change**, so its owner may still save
-     it as it stands — and the type Select has to keep saying so.
+describe('EditThingPage — the policy is asked about the verb the price makes', () => {
+  /* A deployment that has stopped handing out one verb still lets a thing stay as it is
+     — the server judges only a **change** — but a price that would turn a gift into a
+     sale it does not give shows the "needs approval" notice and cannot be saved. The
+     same for the other way round: what a thing already is is never withheld from it. */
+  const caps = (thing_types) => ({
+    collection_modes: ['PROPRIETARY'],
+    thing_types,
+    request_url: 'https://example.test/ask/',
+  });
 
-     The bug this pins: the option list was filtered against the live `thingType`
-     state rather than the stored one, so the moment the owner opened the Select
-     and picked something else to compare, LEND stopped counting as "current",
-     failed `isOfferable`, and left the list. There was then no way back to the
-     verb the thing was actually offered under without reloading. The twin of
-     EditCollectionPage's `savedMode`; invisible upstream, where nothing is
-     withheld, which is why it needs a test.
-
-     `openTypes()` reads the option list the way a user sees it — the Select
-     renders its options only while open, so each read opens it first. */
-  const LENT_THING = {
-    code: 'THG001',
-    type: 'LEND_THING',
-    headline: 'Drill',
-    tags: [],
-    gallery_urls: [],
-  };
-
-  function narrowedApi() {
+  function apiWith(thing, capabilities) {
     apiFetch.mockImplementation((url) => {
       if (url.includes('/auth/me/')) {
-        return Promise.resolve(
-          mockResponse({
-            capabilities: {
-              collection_modes: ['PROPRIETARY'],
-              thing_types: ['GIFT_THING', 'SELL_THING'],
-              request_url: null,
-            },
-          })
-        );
+        return Promise.resolve(mockResponse({ capabilities }));
       }
-      return Promise.resolve(mockResponse(LENT_THING));
+      return Promise.resolve(mockResponse(thing));
     });
   }
 
@@ -276,35 +258,74 @@ describe('EditThingPage — the stored verb stays offered', () => {
     // The capabilities cache is module-scope and keyed by account; a fresh code
     // keeps this independent of the tests above, which answer /auth/me/ with {}.
     localStorage.setItem('userCode', `NARROW${Math.random()}`);
-    narrowedApi();
   });
 
-  test('it survives the owner trying another verb first', async () => {
-    const { container } = render(
+  const open = () =>
+    render(
       <MemoryRouter initialEntries={['/things/THG001/edit']}>
         <Routes>
           <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
         </Routes>
       </MemoryRouter>
     );
-    await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
 
-    // Opens only when closed: the trigger is a toggle, so a helper that clicked
-    // unconditionally would shut the list it was about to read.
-    const openTypes = () => {
-      const trigger = container.querySelector('#edit-thing-type-main-button');
-      if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
-      return [...container.querySelectorAll('[role="option"]')];
-    };
+  test('a price that would make a sale the policy does not give shows the notice and blocks Save', async () => {
+    apiWith(
+      { code: 'THG001', type: 'GIFT_THING', collection_kind: 'STALL', headline: 'Vase', tags: [] },
+      caps(['GIFT_THING'])
+    );
+    const { container } = open();
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+    // As it stands it is a gift, which is given: nothing to explain.
+    expect(screen.queryByText(/need approval/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
 
-    // Offered to begin with, because the thing is offered under it.
-    await waitFor(() => expect(openTypes().map((o) => o.textContent)).toContain('Lend'));
+    fireEvent.change(container.querySelector('#edit-thing-fee'), { target: { value: '5' } });
 
-    // The owner compares: picks a verb the deployment does allow...
-    fireEvent.click(openTypes().find((o) => o.textContent === 'Gift'));
+    expect(await screen.findByText(/need approval on this deployment: Sale/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
-    // ...and can still change their mind. This is the assertion that failed.
-    expect(openTypes().map((o) => o.textContent)).toContain('Lend');
+    fireEvent.change(container.querySelector('#edit-thing-fee'), { target: { value: '' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+  });
+
+  test('a thing already offered under a verb the policy no longer gives stays editable', async () => {
+    apiWith(
+      {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'LIBRARY',
+        headline: 'Drill',
+        tags: [],
+      },
+      caps(['GIFT_THING', 'SELL_THING'])
+    );
+    const { container } = open();
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+
+    expect(screen.queryByText(/need approval/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+
+  test('a loan a stall kept stays what it is, whatever its price would make it elsewhere', async () => {
+    // The server leaves such a thing's verb alone (it is not one of the stall's); the
+    // form must not ask the policy about the rental its price would be in a library.
+    apiWith(
+      {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'STALL',
+        headline: 'Old drill',
+        fee: '5.00',
+        tags: [],
+      },
+      caps(['GIFT_THING', 'SELL_THING'])
+    );
+    const { container } = open();
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+
+    expect(screen.queryByText(/need approval/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 });
 
@@ -386,30 +407,32 @@ describe('AddThingPage — clearing a detail select', () => {
 // Deposit — LEND/RENT only, and never left ambiguous across an edit
 // ════════════════════════════════════════════════════════════════════════
 
-describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {
-  test('a GIFT thing never sees a deposit input', async () => {
-    const { container } = renderAdd({ collection: { headline: 'Plain', mode: 'PROPRIETARY' } });
+describe('AddThingPage — the deposit field only exists in a library', () => {
+  test('a stall never has a deposit input', async () => {
+    const { container } = renderAdd({
+      collection: { kind: 'STALL', headline: 'Plain', mode: 'PROPRIETARY' },
+    });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     expect(container.querySelector('#add-thing-deposit')).toBeNull();
   });
 
-  test('a LEND thing gets the field, with no default and never labelled as part of the price', async () => {
+  test('a library that only lends gets the field, with no default and never labelled as part of the price', async () => {
     const { container } = renderAdd({
-      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+      collection: { kind: 'LIBRARY', mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
     });
 
     await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
     // Empty, never pre-filled (DESIGN §6 — no suggested amount).
     expect(container.querySelector('#add-thing-deposit').value).toBe('');
-    // A price row for LEND would be wrong regardless — but if it ever appeared,
-    // a shared euro icon with no other cue is exactly how "10 + 50" becomes "60 €".
+    // A group that lends and does not rent has no price row: a shared euro icon with
+    // no other cue is exactly how "10 + 50" becomes "60 €".
     expect(container.querySelector('#add-thing-fee')).toBeNull();
   });
 
-  test('a RENT thing carries both fields, distinctly labelled', async () => {
+  test('a library carries both fields, distinctly labelled', async () => {
     const { container } = renderAdd({
-      collection: { mode: 'COMMUNITY', allowed_thing_types: ['RENT_THING'] },
+      collection: { kind: 'LIBRARY', mode: 'PROPRIETARY' },
     });
 
     await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
@@ -424,7 +447,7 @@ describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {
 
   test('a deposit typed for a LEND thing reaches the POST body', async () => {
     const { container } = renderAdd({
-      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+      collection: { kind: 'LIBRARY', mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
     });
 
     await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
@@ -439,13 +462,13 @@ describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {
         (c) => c[0] === '/api/v1/things/' && c[1]?.method === 'POST'
       );
       expect(call).toBeTruthy();
-      expect(JSON.parse(call[1].body)).toMatchObject({ deposit: '50', type: 'LEND_THING' });
+      expect(JSON.parse(call[1].body)).toMatchObject({ deposit: '50' });
     });
   });
 
   test('leaving it empty never sends the field at all — nothing to clear on a brand-new thing', async () => {
     const { container } = renderAdd({
-      collection: { mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
+      collection: { kind: 'LIBRARY', mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
     });
 
     await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
@@ -467,24 +490,35 @@ describe('AddThingPage — the deposit field only exists on LEND/RENT', () => {
 describe('EditThingPage — deposit follows the type, explicitly', () => {
   test('a stored deposit pre-fills the field', async () => {
     const { container } = renderEdit({
-      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+      thing: {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'LIBRARY',
+        headline: 'Drill',
+        deposit: '50.00',
+      },
     });
 
     await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
     expect(container.querySelector('#edit-thing-deposit').value).toBe('50');
   });
 
-  test('switching the type away from LEND/RENT clears the deposit in the same PATCH', async () => {
-    // The server judges the row that lands (core/serializers/CLAUDE.md): an
-    // untouched field keeps its stored value, so this can't be left implicit —
-    // the client has to say `deposit: null` itself or the save 400s.
+  test('the deposit is sent as null from a kind that has none, so a stored one cannot outlive it', async () => {
+    // The server judges the row that lands (core/serializers/CLAUDE.md): an untouched
+    // field keeps its stored value, so a thing in a stall that somehow carries a
+    // deposit has to clear it itself or the save 400s.
     const { container } = renderEdit({
-      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+      thing: {
+        code: 'THG001',
+        type: 'GIFT_THING',
+        collection_kind: 'STALL',
+        headline: 'Vase',
+        deposit: '50.00',
+      },
     });
-    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-deposit')).toBeNull();
 
-    fireEvent.click(container.querySelector('#edit-thing-type-main-button'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Gift' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
@@ -496,9 +530,15 @@ describe('EditThingPage — deposit follows the type, explicitly', () => {
     });
   });
 
-  test('keeping the type as LEND/RENT keeps sending the amount', async () => {
+  test('a library keeps sending the amount', async () => {
     const { container } = renderEdit({
-      thing: { code: 'THG001', type: 'LEND_THING', headline: 'Drill', deposit: '50.00' },
+      thing: {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'LIBRARY',
+        headline: 'Drill',
+        deposit: '50.00',
+      },
     });
     await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
 
@@ -537,5 +577,117 @@ describe('a text that opens like a language map and is not one', () => {
 
     fireEvent.change(description, { target: { value: '{"es": "Funciona"' } });
     expect(screen.getByText(warning)).toBeInTheDocument();
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// EditThingPage — the price puts the verb, so the price is what is edited
+// ════════════════════════════════════════════════════════════════════════
+describe('EditThingPage — what a save sends', () => {
+  const patch = () => {
+    const call = apiFetch.mock.calls.find(
+      (c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH'
+    );
+    return call && JSON.parse(call[1].body);
+  };
+
+  const sale = {
+    code: 'THG001',
+    type: 'SELL_THING',
+    collection_kind: 'STALL',
+    collection_allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+    headline: 'Bike',
+    fee: '30.00',
+  };
+
+  test('a price is sent as typed, and no verb with it', async () => {
+    const { container } = renderEdit({ thing: sale });
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+
+    fireEvent.change(container.querySelector('#edit-thing-fee'), { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patch()).toBeTruthy());
+    expect(patch().fee).toBe('25');
+    expect(patch()).not.toHaveProperty('type');
+  });
+
+  test('clearing the price is said, so the sale becomes a gift again', async () => {
+    const { container } = renderEdit({ thing: sale });
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+
+    fireEvent.change(container.querySelector('#edit-thing-fee'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patch()).toBeTruthy());
+    expect(patch().fee).toBeNull();
+  });
+
+  test('a community group whose members may not set a price has no price to edit or send', async () => {
+    const { container } = renderEdit({
+      thing: {
+        ...sale,
+        type: 'GIFT_THING',
+        fee: null,
+        collection_allowed_thing_types: ['GIFT_THING'],
+      },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-fee')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patch()).toBeTruthy());
+    expect(patch()).not.toHaveProperty('fee');
+  });
+
+  test('the endless switch is a stall’s, and a library’s thing has none', async () => {
+    const stall = renderEdit({ thing: sale });
+    await waitFor(() =>
+      expect(stall.container.querySelector('#edit-thing-is-endless')).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(patch()).toHaveProperty('is_endless'));
+    stall.unmount();
+
+    apiFetch.mockClear();
+    const library = renderEdit({
+      thing: {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'LIBRARY',
+        collection_allowed_thing_types: ['LEND_THING', 'RENT_THING'],
+        headline: 'Drill',
+      },
+    });
+    await waitFor(() => expect(library.container.querySelector('#edit-thing-fee')).toBeTruthy());
+    expect(library.container.querySelector('#edit-thing-is-endless')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(patch()).toBeTruthy());
+    expect(patch()).not.toHaveProperty('is_endless');
+  });
+
+  test('a loan a mixed stall kept is edited as a loan: its deposit stays, the stall’s switch does not appear', async () => {
+    const { container } = renderEdit({
+      thing: {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'STALL',
+        collection_allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+        headline: 'Old drill',
+        deposit: '20.00',
+        availability: 'IMMEDIATE',
+      },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-deposit')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-is-endless')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patch()).toBeTruthy());
+    expect(patch().deposit).toBe('20.00');
+    // A loan's availability is live, from the calendar: the static hint is cleared.
+    expect(patch().availability).toBe('');
+    expect(patch()).not.toHaveProperty('type');
   });
 });

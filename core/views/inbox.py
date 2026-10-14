@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ..models.collection import Collection
 from ..models.notification import InAppNotification
 
 # The one group `DELETE /inbox/?group=` knows: the request and reservation notices
@@ -38,13 +39,42 @@ class InboxView(APIView):
         if code is not None:
             # There is no single-notification GET — only the collection is listable.
             raise MethodNotAllowed("GET")
-        notifications = self._scoped(request, InAppNotification.objects.filter(user=request.user))
+        notifications = list(
+            self._scoped(request, InAppNotification.objects.filter(user=request.user))
+        )
+        kinds = self._kinds_of(notifications)
         return Response(
             [
-                {"code": n.code, "type": n.type, "payload": n.payload, "created": n.created}
+                {
+                    "code": n.code,
+                    "type": n.type,
+                    "payload": self._with_kind(n.payload, kinds),
+                    "created": n.created,
+                }
                 for n in notifications
             ]
         )
+
+    @staticmethod
+    def _kinds_of(notifications):
+        """``{collection_code: kind}`` for every collection the notices name — one
+        query for the lot, so a notice written before kinds existed links to the
+        right address too. Nothing is stored in the payload."""
+        codes = {
+            n.payload["collection_code"]
+            for n in notifications
+            if isinstance(n.payload, dict) and n.payload.get("collection_code")
+        }
+        if not codes:
+            return {}
+        return dict(Collection.objects.filter(code__in=codes).values_list("code", "kind"))
+
+    @staticmethod
+    def _with_kind(payload, kinds):
+        code = payload.get("collection_code") if isinstance(payload, dict) else None
+        if code and code in kinds:
+            return {**payload, "collection_kind": kinds[code]}
+        return payload
 
     @staticmethod
     def _scoped(request, notifications):

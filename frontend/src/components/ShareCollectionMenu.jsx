@@ -17,6 +17,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import { apiFetch } from '../services/api';
 import Toast from './Toast';
+import { collectionPath } from '../utils/collectionPath';
 
 // qrcode.react only renders once the owner opens the QR dialog — split it
 // out of the CollectionPage chunk instead of shipping it to every visitor.
@@ -53,7 +54,12 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QR
  * `qrcode.react` (client-side, no network). It is handy for sharing in person —
  * a guest scans it with their phone camera.
  */
-export default function ShareCollectionMenu({ collectionCode, collectionHeadline, isPublic }) {
+export default function ShareCollectionMenu({
+  collectionCode,
+  collectionKind,
+  collectionHeadline,
+  isPublic,
+}) {
   const { t, i18n } = useTranslation();
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const [toast, setToast] = useState(null);
@@ -66,7 +72,7 @@ export default function ShareCollectionMenu({ collectionCode, collectionHeadline
     // Public collections need no share token — anyone can read them without an
     // account, so share the collection page directly (no /share email gate).
     if (isPublic) {
-      cachedUrlRef.current = `${window.location.origin}/collections/${collectionCode}`;
+      cachedUrlRef.current = `${window.location.origin}${collectionPath(collectionCode, collectionKind)}`;
       return cachedUrlRef.current;
     }
     const res = await apiFetch(`/api/v1/collections/${collectionCode}/share-link/`, {

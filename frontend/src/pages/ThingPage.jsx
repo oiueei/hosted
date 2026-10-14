@@ -28,6 +28,8 @@ import ButtonLink from '../components/ButtonLink';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useDigestPreference from '../hooks/useDigestPreference';
+import { useCanonicalCollectionPath } from '../hooks/useCollectionBase';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 export default function ThingPage() {
   const { code, thingCode } = useParams();
@@ -72,9 +74,13 @@ export default function ThingPage() {
   // mode, show the action buttons but route each click to the collection's join
   // page (they log in there and come back able to act) rather than an inline form.
   const collectionCode = code || thing?.collection_code;
+  // The kind that makes the collection's address — the one the server resolved the
+  // thing to, so only valid for that same code.
+  const kind = collectionCode === thing?.collection_code ? thing?.collection_kind : undefined;
+  useCanonicalCollectionPath(kind);
   const loginToAct = !isAuthenticated && !!collectionCode;
   const goJoin = () =>
-    navigate(`/collections/${collectionCode}/join?thing=${thingCode}`, {
+    navigate(`${collectionPath(collectionCode, kind, '/join')}?thing=${thingCode}`, {
       state: { collectionHeadline: L(thing?.collection_headline) },
     });
 
@@ -193,19 +199,19 @@ export default function ThingPage() {
   // buttonLabel all come from useThingActions (destructured at the top).
 
   const editPath = code
-    ? `/collections/${code}/things/${thing.code}/edit`
+    ? collectionThingPath(code, kind, thing.code, '/edit')
     : `/things/${thing.code}/edit`;
 
-  const backPath = collectionCode ? `/collections/${collectionCode}` : '/';
+  const backPath = collectionCode ? collectionPath(collectionCode, kind) : '/';
   const backLabel =
     L(thing.collection_headline) || (collectionCode ? t('common.collection') : t('common.home'));
 
   const requestPath = code
-    ? `/collections/${code}/things/${thing.code}/request`
+    ? collectionThingPath(code, kind, thing.code, '/request')
     : `/things/${thing.code}/request`;
 
   const deletePath = code
-    ? `/collections/${code}/things/${thing.code}/delete`
+    ? collectionThingPath(code, kind, thing.code, '/delete')
     : `/things/${thing.code}/delete`;
 
   // An empty name in the journey means two different things, and only the
@@ -269,6 +275,7 @@ export default function ThingPage() {
   const collectionMenu = menu ? (
     <CollectionMenu
       code={code}
+      kind={kind}
       headline={L(thing.collection_headline)}
       isCurator={menu.is_curator}
       hasDateThings={menu.has_date_things}
@@ -412,7 +419,7 @@ export default function ThingPage() {
                       navigate(requestPath, {
                         state: {
                           backPath: code
-                            ? `/collections/${code}/things/${thing.code}`
+                            ? collectionThingPath(code, kind, thing.code)
                             : `/things/${thing.code}`,
                           backLabel: headline,
                         },

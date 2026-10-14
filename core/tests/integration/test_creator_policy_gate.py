@@ -26,6 +26,7 @@ from core.models import Collection, Thing
 from core.tests.sample_creator_policy import REQUEST_URL
 
 RESTRICTED = "core.tests.sample_creator_policy.RestrictedCreatorPolicy"
+LOANS_ONLY = "core.tests.sample_creator_policy.LoansOnlyCreatorPolicy"
 CO_OWNERS_DISABLED = "core.tests.sample_creator_policy.CoOwnersDisabledCreatorPolicy"
 BULK_URL = "/api/v1/collections/{code}/things/bulk/"
 
@@ -37,7 +38,7 @@ class TestTheStandaloneDoorIsOpen:
     def test_a_community_collection_is_created_without_asking_anyone(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "kind": "STALL", "mode": "COMMUNITY"},
             format="json",
         )
 
@@ -68,7 +69,7 @@ class TestANarrowedDeploymentRefusesAtCreation:
     def test_a_withheld_mode_is_refused_with_403_and_creates_nothing(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "kind": "STALL", "mode": "COMMUNITY"},
             format="json",
         )
 
@@ -78,7 +79,9 @@ class TestANarrowedDeploymentRefusesAtCreation:
 
     def test_what_the_policy_allows_still_works(self, authenticated_client):
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "My shelf", "mode": "PROPRIETARY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "My shelf", "kind": "STALL", "mode": "PROPRIETARY"},
+            format="json",
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -93,7 +96,7 @@ class TestANarrowedDeploymentRefusesAtCreation:
         withholding every mode depends on.
         """
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Unstated mode"}, format="json"
+            "/api/v1/collections/", {"headline": "Unstated mode", "kind": "STALL"}, format="json"
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -159,16 +162,21 @@ class TestTheGateCannotBeWalkedAroundByEditing:
         collection.refresh_from_db()
         assert collection.mode == Collection.Mode.PROPRIETARY
 
-    def test_moving_a_thing_to_a_withheld_verb_is_refused(self, authenticated_client, thing):
+    def test_moving_a_thing_to_a_withheld_verb_is_refused(self, authenticated_client, user):
+        """Giving a loan a price turns it into a rental, a verb this policy withholds."""
+        library = Collection.objects.create(code="LIBGT1", owner=user, headline="L", kind="LIBRARY")
+        loan = Thing.objects.create(code="LOAN01", owner=user, headline="Ladder", type="LEND_THING")
+        library.things.add(loan)
+
         response = authenticated_client.patch(
-            f"/api/v1/things/{thing.code}/",
-            {"type": "RENT_THING", "thumbnail": "img/x"},
+            f"/api/v1/things/{loan.code}/",
+            {"fee": "5.00", "thumbnail": "img/x"},
             format="json",
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        thing.refresh_from_db()
-        assert thing.type == Thing.Type.GIFT_THING
+        loan.refresh_from_db()
+        assert loan.type == Thing.Type.LEND_THING
 
     def test_a_collection_already_in_that_mode_stays_editable(
         self, authenticated_client, collection
@@ -231,6 +239,7 @@ class TestContributingToACommunityGroupIsNotInitiating:
         coll = Collection.objects.create(
             owner=user,
             headline="Tool library",
+            kind="LIBRARY",
             mode=Collection.Mode.COMMUNITY,
             allowed_thing_types=["LEND_THING"],
         )
@@ -289,6 +298,7 @@ class TestContributingToACommunityGroupIsNotInitiating:
             "/api/v1/things/",
             {
                 "type": "RENT_THING",
+                "fee": "5.00",
                 "headline": "A drill",
                 "thumbnail": "img/x",
                 "collection_code": lending_group.code,
@@ -303,7 +313,7 @@ class TestContributingToACommunityGroupIsNotInitiating:
         """A COMMUNITY collection with no type restriction: the owner made no
         choice, so an un-vetted member stays on the deployment's open half."""
         coll = Collection.objects.create(
-            owner=user, headline="Open group", mode=Collection.Mode.COMMUNITY
+            owner=user, headline="Open group", kind="LIBRARY", mode=Collection.Mode.COMMUNITY
         )
         coll.invites.add(user2)
 
@@ -327,6 +337,7 @@ class TestContributingToACommunityGroupIsNotInitiating:
         coll = Collection.objects.create(
             owner=user,
             headline="Tool library",
+            kind="LIBRARY",
             mode=Collection.Mode.COMMUNITY,
             allowed_thing_types=["LEND_THING"],
         )
@@ -351,6 +362,7 @@ class TestContributingToACommunityGroupIsNotInitiating:
         coll = Collection.objects.create(
             owner=user,
             headline="Tool library",
+            kind="LIBRARY",
             mode=Collection.Mode.COMMUNITY,
             allowed_thing_types=["LEND_THING"],
         )
@@ -378,15 +390,19 @@ class TestTheBulkImportObeysTheSamePolicy:
         """Every test in this class runs against the restricted policy."""
         settings.CREATOR_POLICY = RESTRICTED
 
-    def test_a_row_with_a_withheld_verb_fails_the_whole_batch(
-        self, authenticated_client, collection
-    ):
+    @pytest.fixture
+    def library(self, user, settings):
+        """A library on a deployment that lets loans through but holds rentals back."""
+        settings.CREATOR_POLICY = LOANS_ONLY
+        return Collection.objects.create(code="LIBBK1", owner=user, headline="L", kind="LIBRARY")
+
+    def test_a_row_with_a_withheld_verb_fails_the_whole_batch(self, authenticated_client, library):
         response = authenticated_client.post(
-            BULK_URL.format(code=collection.code),
+            BULK_URL.format(code=library.code),
             {
                 "rows": [
-                    {"type": "GIFT_THING", "headline": "Fine"},
-                    {"type": "RENT_THING", "headline": "Refused"},
+                    {"type": "LEND_THING", "headline": "Fine"},
+                    {"type": "RENT_THING", "fee": "5.00", "headline": "Refused"},
                 ]
             },
             format="json",
@@ -395,9 +411,10 @@ class TestTheBulkImportObeysTheSamePolicy:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         # All-or-nothing: the good row is not created either.
         assert not Thing.objects.filter(headline="Fine").exists()
+        assert response.data["errors"][0]["row"] == 1
 
     def test_the_refusal_names_the_row_so_the_importer_can_fix_it(
-        self, authenticated_client, collection
+        self, authenticated_client, library
     ):
         """Reported per row, not as a 403 for the batch.
 
@@ -406,11 +423,11 @@ class TestTheBulkImportObeysTheSamePolicy:
         rows by bisection.
         """
         response = authenticated_client.post(
-            BULK_URL.format(code=collection.code),
+            BULK_URL.format(code=library.code),
             {
                 "rows": [
-                    {"type": "GIFT_THING", "headline": "Fine"},
-                    {"type": "RENT_THING", "headline": "Refused"},
+                    {"type": "LEND_THING", "headline": "Fine"},
+                    {"type": "RENT_THING", "fee": "5.00", "headline": "Refused"},
                 ]
             },
             format="json",
@@ -475,6 +492,7 @@ class TestWhatTheFrontendIsTold:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["capabilities"] == {
             "collection_modes": list(Collection.Mode.values),
+            "collection_kinds": list(Collection.Kind.values),
             "thing_types": list(Thing.Type.values),
             "request_url": None,
             "co_owners_enabled": True,
@@ -496,6 +514,7 @@ class TestWhatTheFrontendIsTold:
 
         assert response.data["capabilities"] == {
             "collection_modes": ["PROPRIETARY"],
+            "collection_kinds": ["STALL"],
             "thing_types": ["GIFT_THING", "SELL_THING"],
             "request_url": REQUEST_URL,
             "co_owners_enabled": True,

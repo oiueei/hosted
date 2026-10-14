@@ -432,8 +432,14 @@ class VerifyLinkView(APIView):
         user_data = UserSerializer(user).data
         return user, refresh, user_data
 
-    def _solo_collection_code(self, user):
-        """The code of the user's one real ACTIVE collection, or None.
+    @staticmethod
+    def _kind_of(code):
+        """A collection's kind, for the response that lands the SPA on it — the app
+        builds the address ``/{kind}/{code}`` from it."""
+        return Collection.objects.filter(code=code).values_list("kind", flat=True).first()
+
+    def _solo_collection(self, user):
+        """``(code, kind)`` of the user's one real ACTIVE collection, or None.
 
         "Real" leaves out the demonstration collections (``is_onboarding``,
         the ones an open door joins people to): somebody who peeked at the demo
@@ -445,16 +451,16 @@ class VerifyLinkView(APIView):
 
         Two rows are enough to answer "exactly one?", so the query stops there.
         """
-        codes = list(
+        rows = list(
             Collection.objects.filter(
                 Q(owner=user) | Q(invites=user),
                 status=Collection.Status.ACTIVE,
                 is_onboarding=False,
             )
             .distinct()
-            .values_list("code", flat=True)[:2]
+            .values_list("code", "kind")[:2]
         )
-        return codes[0] if len(codes) == 1 else None
+        return rows[0] if len(rows) == 1 else None
 
     @staticmethod
     def _join_when_pressed(rsvp, user):
@@ -574,6 +580,7 @@ class VerifyLinkView(APIView):
         if invited_collection:
             response_data["landing"] = self.LANDING_COLLECTION
             response_data["collection"] = invited_collection
+            response_data["collection_kind"] = self._kind_of(invited_collection)
             # Kept for compatibility: an older SPA read the landing collection
             # from this field, and it still marks that the link carried a target.
             response_data["invited_collection"] = invited_collection
@@ -591,10 +598,10 @@ class VerifyLinkView(APIView):
             response_data["landing"] = self.LANDING_PATH
             response_data["path"] = next_path
         else:
-            solo = self._solo_collection_code(user)
+            solo = self._solo_collection(user)
             if solo:
                 response_data["landing"] = self.LANDING_COLLECTION
-                response_data["collection"] = solo
+                response_data["collection"], response_data["collection_kind"] = solo
             else:
                 response_data["landing"] = self.LANDING_HOME
 
@@ -647,6 +654,7 @@ class VerifyLinkView(APIView):
         }
         if invited_collection:
             response_data["collection"] = invited_collection
+            response_data["collection_kind"] = self._kind_of(invited_collection)
             response_data["invited_collection"] = invited_collection
 
         response = Response(response_data, status=status.HTTP_200_OK)

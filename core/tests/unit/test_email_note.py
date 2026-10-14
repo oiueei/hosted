@@ -36,7 +36,7 @@ def test_defaults_to_empty(collection):
 
 def test_a_group_can_write_one(user):
     serializer = CollectionCreateSerializer(
-        data={"headline": "Tools", "email_note": "We confirm within 48h."}
+        data={"headline": "Tools", "kind": "STALL", "email_note": "We confirm within 48h."}
     )
     assert serializer.is_valid(), serializer.errors
     created = serializer.save(owner=user)

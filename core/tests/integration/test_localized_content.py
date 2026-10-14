@@ -28,7 +28,7 @@ class TestWritingLocalizedContent:
     def test_a_collection_headline_may_carry_one_text_per_language(self, authenticated_client):
         res = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": BILINGUAL, "description": BILINGUAL},
+            {"headline": BILINGUAL, "description": BILINGUAL, "kind": "STALL"},
             format="json",
         )
 
@@ -51,7 +51,7 @@ class TestWritingLocalizedContent:
 
         res = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Tagged", "tags": [label]},
+            {"headline": "Tagged", "kind": "STALL", "tags": [label]},
             format="json",
         )
 
@@ -79,7 +79,9 @@ class TestWritingLocalizedContent:
     def test_a_headline_that_only_looks_like_json_is_kept_verbatim(self, authenticated_client):
         # An owner writing about JSON must not have their words swallowed.
         res = authenticated_client.post(
-            "/api/v1/collections/", {"headline": '{"not": "a language"}'}, format="json"
+            "/api/v1/collections/",
+            {"headline": '{"not": "a language"}', "kind": "STALL"},
+            format="json",
         )
 
         assert res.status_code == 201

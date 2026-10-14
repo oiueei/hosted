@@ -450,10 +450,8 @@
   },
   "addThing": {
     "pageTitle": "Add thing",
-    "typeLabel": "Type",
     "titleLabel": "Title",
     "descriptionLabel": "Description",
-    "priceLabel": "Price",
     "depositLabel": "Deposit (optional)",
     "depositHelper": "A guarantee you give back when the thing does — not part of the price.",
     "availabilityLabel": "Availability",
@@ -461,7 +459,6 @@
     "locationLabel": "Location",
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
-    "priceRequired": "Price is required for this type.",
     "maxLocation": "Maximum 64 characters.",
     "uploaded": "Thing uploaded!",
     "errorCreating": "Error creating thing.",
@@ -552,16 +549,11 @@
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
     "errorCreating": "Error creating collection.",
-    "allowedTypesLabel": "What can be added to this collection",
-    "allowedTypesPlaceholder": "Pick one or more types",
-    "allowedTypesHelper": "Pick at least one. Only the types you choose will be available when adding things later.",
-    "allowedTypesAtLeastOne": "Pick at least one type.",
     "advancedTitle": "More options",
     "tagsLabel": "Tags",
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
-    "maxDescription": "Description is too long: 2000 characters per language.",
-    "reservationsModeNote": "A reservations collection holds only reservations, and the team running the group manages what can be booked — so it's always proprietary."
+    "maxDescription": "Description is too long: 2000 characters per language."
   },
   "myBookings": {
     "pageTitle": "My requests",
@@ -726,14 +718,6 @@
     "LEND_THING": "Lend",
     "RESERVE_THING": "Reservation"
   },
-  "typeInfo": {
-    "title": "What each type means",
-    "GIFT_THING": "A gift — whoever claims it keeps it.",
-    "SELL_THING": "For sale at the price you set.",
-    "RENT_THING": "Rented out for a fee, by dates.",
-    "LEND_THING": "Borrowed for a few days, then returned.",
-    "RESERVE_THING": "Booked by the day or the hour, to use where it is — nothing is taken away."
-  },
   "availability": {
     "IMMEDIATE": "Immediate",
     "NEXT_WEEK": "Next week",
@@ -858,7 +842,7 @@
   "bulkAdd": {
     "help": "Add multiple things from a CSV — or a ZIP with the photos included.",
     "formatTitle": "CSV/ZIP format",
-    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column. Extra photos (the carousel) go in a \"photos\" column, separated by | (up to 8 per thing).",
+    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (libraries only). The fee decides the verb: with a fee a stall sells and a library rents out, without one it gives away and lends. (A \"type\" column is still accepted, and has to agree with the fee.) To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column. Extra photos (the carousel) go in a \"photos\" column, separated by | (up to 8 per thing).",
     "fileLabel": "CSV or ZIP file",
     "empty": "No rows found in that file.",
     "tooMany": "You can import up to {{max}} items at once.",
@@ -1127,5 +1111,35 @@
     "reservation_weekday_closed": "Those dates include a day that isn't open for reservations.",
     "reservation_whole_minutes": "Times are whole minutes (HH:MM).",
     "time_taken": "That time is already taken."
+  },
+  "kinds": {
+    "STALL": {
+      "short": "Stall",
+      "long": "Stall",
+      "what": "Things to sell or give away",
+      "create": "Create stall"
+    },
+    "LIBRARY": {
+      "short": "Library",
+      "long": "Library of Things",
+      "what": "Things to lend or rent out",
+      "create": "Create library"
+    },
+    "SHED": {
+      "short": "Shed",
+      "long": "Shed",
+      "what": "Things to book by the day or by the hour",
+      "create": "Create shed"
+    }
+  },
+  "collectionForm": {
+    "membersPriceStall": "Members can sell (set a price)",
+    "membersPriceLibrary": "Members can rent out (set a price)"
+  },
+  "thingForm": {
+    "priceStall": "Price (optional)",
+    "priceStallHelp": "No price, it's a gift.",
+    "priceLibrary": "Rental price (optional)",
+    "priceLibraryHelp": "No price, it's lent for free."
   }
 }

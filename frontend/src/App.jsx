@@ -4,13 +4,14 @@ import 'hds-core/lib/base.css';
 import './fonts/oiueei-fonts.css';
 import './styles/oiueei-theme.css';
 import { useEffect, useRef, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import i18n, { SUPPORTED_LANGUAGES } from './i18n';
 import RequireAuth from './components/RequireAuth';
 import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
 import { deploymentRoutes } from './deployment';
+import { COLLECTION_PREFIXES, COLLECTION_KINDS } from './utils/collectionPath';
 import './App.css';
 
 // Pages are lazy-loaded so each route ships as its own chunk: the initial bundle
@@ -27,6 +28,7 @@ const ImportInvitesPage = lazy(() => import('./pages/ImportInvitesPage'));
 const EditThingPage = lazy(() => import('./pages/EditThingPage'));
 const ThingPage = lazy(() => import('./pages/ThingPage'));
 const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
+const NewCollectionPage = lazy(() => import('./pages/NewCollectionPage'));
 const EditCollectionPage = lazy(() => import('./pages/EditCollectionPage'));
 const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
 const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage'));
@@ -48,6 +50,40 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const DigestMutePage = lazy(() => import('./pages/DigestMutePage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
+
+/**
+ * The pages of a collection, mounted once per prefix (`/stall`, `/library`,
+ * `/shed` and the old `/collections`): the same components under four roots, so
+ * the tree is written once and cannot drift between them. A function returning
+ * `<Route>` elements rather than a component, because `<Routes>` only reads its
+ * own `<Route>` children.
+ */
+const publicCollectionRoutes = (prefix) => [
+  <Route key={`${prefix}-page`} path={`/${prefix}/:code`} element={<CollectionPage />} />,
+  <Route
+    key={`${prefix}-thing`}
+    path={`/${prefix}/:code/things/:thingCode`}
+    element={<ThingPage />}
+  />,
+  <Route key={`${prefix}-join`} path={`/${prefix}/:code/join`} element={<JoinPage />} />,
+];
+
+const protectedCollectionRoutes = (prefix) =>
+  [
+    ['edit', <EditCollectionPage />],
+    ['delete', <DeleteCollectionPage />],
+    ['invites', <ManageInvitesPage />],
+    ['leave', <LeaveCollectionPage />],
+    ['add', <AddThingPage />],
+    ['import', <ImportThingsPage />],
+    ['things/:thingCode/edit', <EditThingPage />],
+    ['things/:thingCode/request', <RequestThingPage />],
+    ['things/:thingCode/delete', <DeleteThingPage />],
+    ['invites/import', <ImportInvitesPage />],
+    ['invites/remove', <RemoveGuestPage />],
+  ].map(([sub, element]) => (
+    <Route key={`${prefix}-${sub}`} path={`/${prefix}/:code/${sub}`} element={element} />
+  ));
 
 /**
  * On every route change (but not the initial mount), move focus to the main
@@ -151,10 +187,8 @@ function App() {
             {/* Public read of PUBLIC collections/things — anonymous visitors can
             browse; can_view() gates it server-side (PUBLIC + ACTIVE only) and the
             pages hide every owner/member action behind an auth check. */}
-            <Route path="/collections/:code" element={<CollectionPage />} />
-            <Route path="/collections/:code/things/:thingCode" element={<ThingPage />} />
+            {COLLECTION_PREFIXES.flatMap(publicCollectionRoutes)}
             <Route path="/things/:thingCode" element={<ThingPage />} />
-            <Route path="/collections/:code/join" element={<JoinPage />} />
 
             {/* Protected routes — RequireAuth redirects to /login when signed out */}
             <Route element={<RequireAuth />}>
@@ -163,24 +197,15 @@ function App() {
               <Route path="/me/edit" element={<EditProfilePage />} />
               <Route path="/me/data" element={<DataExportPage />} />
               <Route path="/me/delete" element={<DeleteAccountPage />} />
-              <Route path="/collections/new" element={<CreateCollectionPage />} />
-              <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
-              <Route path="/collections/:code/delete" element={<DeleteCollectionPage />} />
-              <Route path="/collections/:code/invites" element={<ManageInvitesPage />} />
-              <Route path="/collections/:code/leave" element={<LeaveCollectionPage />} />
-              <Route path="/collections/:code/add" element={<AddThingPage />} />
-              <Route path="/collections/:code/import" element={<ImportThingsPage />} />
-              <Route path="/collections/:code/things/:thingCode/edit" element={<EditThingPage />} />
-              <Route
-                path="/collections/:code/things/:thingCode/request"
-                element={<RequestThingPage />}
-              />
-              <Route
-                path="/collections/:code/things/:thingCode/delete"
-                element={<DeleteThingPage />}
-              />
-              <Route path="/collections/:code/invites/import" element={<ImportInvitesPage />} />
-              <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
+              <Route path="/new" element={<NewCollectionPage />} />
+              <Route path="/collections/new" element={<Navigate to="/new" replace />} />
+              {COLLECTION_KINDS.map((kind) => (
+                <Route key={`start-${kind}`} path={`/${kind.toLowerCase()}`}>
+                  <Route index element={<Navigate to={`/${kind.toLowerCase()}/new`} replace />} />
+                  <Route path="new" element={<CreateCollectionPage />} />
+                </Route>
+              ))}
+              {COLLECTION_PREFIXES.flatMap(protectedCollectionRoutes)}
               <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
               <Route path="/things/:thingCode/request" element={<RequestThingPage />} />
               <Route path="/things/:thingCode/delete" element={<DeleteThingPage />} />

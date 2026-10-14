@@ -28,6 +28,17 @@ class RestrictedCreatorPolicy(CreatorPolicy):
         )
 
 
+class LoansOnlyCreatorPolicy(CreatorPolicy):
+    """Lending is open but renting out is not: a library may exist, and only half of it."""
+
+    def capabilities(self, user) -> Capabilities:
+        return Capabilities(
+            collection_modes=(Collection.Mode.PROPRIETARY,),
+            thing_types=(Thing.Type.GIFT_THING, Thing.Type.SELL_THING, Thing.Type.LEND_THING),
+            request_url=REQUEST_URL,
+        )
+
+
 class SilentlyRestrictedCreatorPolicy(RestrictedCreatorPolicy):
     """The same, minus anywhere to ask — a deployment that just says no."""
 

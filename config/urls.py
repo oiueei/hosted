@@ -6,10 +6,13 @@ import os
 
 from django.conf import settings
 from django.contrib import admin
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponsePermanentRedirect
 from django.urls import include, path, re_path
 from django_otp.admin import OTPAdminSite
 from django_ratelimit.decorators import ratelimit
+
+from core.models import Collection
+from core.services.link_preview import inject_preview, preview_for_path
 
 # Require a verified OTP device (django-otp) for every admin login, on top of
 # password auth. Swapping the class (rather than instantiating a fresh
@@ -47,15 +50,51 @@ def spa_index(request):
     JS chunks by hash, a release replaces them, and a cached ``index.html`` would
     hand the reload the very same page that names the chunks that are gone. The
     hashed assets themselves are served (and cached) by the static layer.
+
+    A few routes get their ``<head>`` filled in for link previews (see
+    ``core.services.link_preview``): a collection, a thing and a share link. Only
+    what an anonymous visitor could already read on the page is used, so a private,
+    inactive or unknown target is answered with the untouched ``index.html``. The
+    share link carries no photo, like the endpoint behind its join page.
     """
     index_path = os.path.join(settings.BASE_DIR, "frontend", "dist", "index.html")
     try:
         with open(index_path, encoding="utf-8") as f:
-            response = HttpResponse(f.read(), content_type="text/html")
+            html = f.read()
     except FileNotFoundError:
         return HttpResponse("Frontend not built. Run: cd frontend && npm run build", status=503)
+    preview = preview_for_path(request.path)
+    if preview:
+        html = inject_preview(html, preview, request.build_absolute_uri(request.path))
+    response = HttpResponse(html, content_type="text/html")
     response["Cache-Control"] = "no-cache"
     return response
+
+
+def collection_address(request, prefix, code, rest=None):
+    """A collection lives at ``/{kind}/{code}``; any other prefix is sent there.
+
+    ``/collections/{code}`` was the only address before kinds, and an old link — an
+    email, a pinned page — may still name it, or the wrong kind. The 301 keeps the
+    rest of the path and the query string (``?thing=…`` of the join page), and is
+    safe to cache because a collection's kind never changes. A code that names no
+    collection, or one already under its own prefix, is the SPA's page as usual.
+
+    It deliberately asks nothing about permissions: an old link to a private
+    collection has to reach its page so the member can sign in. What it tells a
+    stranger is the kind of a collection whose code they already hold — that the
+    code exists is already said by ``GET /api/v1/collections/{code}/``, 403 against
+    404 — and what the link preview serves for the page itself is unchanged: the
+    body of a private collection is still the untouched ``index.html``; the
+    difference is only the redirect.
+    """
+    kind = Collection.objects.filter(code=code).values_list("kind", flat=True).first()
+    if kind is None or prefix == kind.lower():
+        return spa_index(request)
+    target = f"/{kind.lower()}/{code}{rest or ''}"
+    if request.META.get("QUERY_STRING"):
+        target += f"?{request.META['QUERY_STRING']}"
+    return HttpResponsePermanentRedirect(target)
 
 
 def deployment_urlpatterns():
@@ -78,6 +117,16 @@ def deployment_urlpatterns():
 
 
 urlpatterns += deployment_urlpatterns()
+
+# A collection's address follows its kind, and the pre-kind /collections/ one moves.
+urlpatterns += [
+    re_path(r"^collections/new/?$", lambda request: HttpResponsePermanentRedirect("/new")),
+    re_path(
+        r"^(?P<prefix>collections|stall|library|shed)/"
+        r"(?P<code>[A-Za-z0-9]{6})(?P<rest>/.*)?$",
+        collection_address,
+    ),
+]
 
 # Catch-all: serve React SPA for all routes not handled above
 urlpatterns += [re_path(r"^(?!static/|api/|oiueei-admin).*", spa_index)]

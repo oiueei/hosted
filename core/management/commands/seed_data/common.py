@@ -123,7 +123,8 @@ COLLECTIONS = [
         "visibility": "PRIVATE",
         "invites": ["L3L3oo"],
         "is_onboarding": True,
-        "allowed_thing_types": ["SELL_THING"],
+        "kind": "STALL",
+        "allowed_thing_types": ["GIFT_THING", "SELL_THING"],
         "thumbnail": "La1aC1",
     },
     {
@@ -132,7 +133,8 @@ COLLECTIONS = [
         "visibility": "PUBLIC",
         "invites": ["La1aN1", "l1l13S", "L3L3oo", "1u1ucs"],
         "is_onboarding": True,
-        "allowed_thing_types": ["GIFT_THING"],
+        "kind": "STALL",
+        "allowed_thing_types": ["GIFT_THING", "SELL_THING"],
         "thumbnail": "L3L3C2",
     },
     {
@@ -141,7 +143,8 @@ COLLECTIONS = [
         "visibility": "PUBLIC",
         "invites": ["La1aN1", "L3L3oo", "l0l0oh", "1u1ucs"],
         "is_onboarding": True,
-        "allowed_thing_types": ["RENT_THING"],
+        "kind": "LIBRARY",
+        "allowed_thing_types": ["LEND_THING", "RENT_THING"],
         # Lili closes the tool library over the winter holidays — no pickup or
         # return on these days. (Re-entered each year; stale ones drop on edit.)
         "closed_dates": ["2026-12-25", "2026-12-26", "2027-01-01", "2027-01-06"],
@@ -169,6 +172,7 @@ COLLECTIONS = [
         # the feature is reachable without seeding a whole second scenario for it.
         "co_owners": ["La1aN1"],
         "is_onboarding": True,
+        "kind": "LIBRARY",
         "allowed_thing_types": ["LEND_THING"],
         # One of two COMMUNITY collections in the demo (the other is Lele's
         # market below): every member uploads and every member lends, so the 21
@@ -196,6 +200,7 @@ COLLECTIONS = [
         "visibility": "PRIVATE",
         "invites": ["La1aN1", "l1l13S", "l0l0oh", "1u1ucs"],
         "is_onboarding": True,
+        "kind": "STALL",
         "allowed_thing_types": ["GIFT_THING"],
         # No rental rules: a gift has no dates to constrain. Its bookings are the
         # single-use kind — start_date/end_date stay null.
@@ -213,6 +218,7 @@ COLLECTIONS = [
         "visibility": "PRIVATE",
         "invites": ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh"],
         "is_onboarding": True,
+        "kind": "SHED",
         "allowed_thing_types": ["RESERVE_THING"],
         "reservation_max_days": 3,
         "reservation_horizon_days": 30,

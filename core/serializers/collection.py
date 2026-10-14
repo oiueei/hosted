@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from core.models import RSVP, Collection, InvitationProposal, Thing
+from core.models.collection import KIND_THING_TYPES, kind_for_thing_type
 from core.serializers.thing import ThingComputedFieldsMixin
 from core.utils import asset_url, doc_asset_url
 from core.validators import (
@@ -21,19 +22,8 @@ from core.validators import (
     SafeTextField,
 )
 
-# The thing types a collection's allowlist may name. The first four take the
-# same set in either mode — mode decides WHO may add a thing (owner only, or any
-# member), never WHICH types are on offer. **RESERVE_THING is the exception**:
-# it stands alone (a reservations collection holds only RESERVE things) and
-# forces PROPRIETARY mode — an operator runs the premises, so COMMUNITY (peer
-# contribution) has no meaning for it. Enforced in `_validate_allowed_thing_types`.
-ALLOWED_THING_TYPES = (
-    Thing.Type.GIFT_THING,
-    Thing.Type.SELL_THING,
-    Thing.Type.RENT_THING,
-    Thing.Type.LEND_THING,
-    Thing.Type.RESERVE_THING,
-)
+NO_MIXED_KINDS = "A collection holds one kind of thing: stall, library or shed."
+ONLY_PRICES = "A group can take prices or not; it can't take only prices."
 
 
 class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
@@ -139,6 +129,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "headline",
             "description",
             "status",
+            "kind",
             "mode",
             "visibility",
             "digest_frequency",
@@ -464,6 +455,7 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         fields = [
             "headline",
             "description",
+            "kind",
             "mode",
             "visibility",
             "digest_frequency",
@@ -517,7 +509,12 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         mode = attrs.get("mode", Collection.Mode.PROPRIETARY)
         if not attrs.get("visibility"):
             attrs["visibility"] = Collection.Visibility.PRIVATE
-        _validate_allowed_thing_types(attrs.get("allowed_thing_types", []), mode)
+        listed = attrs.get("allowed_thing_types", [])
+        # A client that names no kind (the API before kinds) gets the one its verbs
+        # belong to; a list that names none or several kinds cannot say.
+        kind = attrs.get("kind") or _kind_of_verbs(listed)
+        attrs["kind"] = kind
+        attrs["allowed_thing_types"] = normalize_allowed_thing_types(kind, mode, listed)
         _validate_reservation_minutes(
             attrs.get("reservation_min_minutes", 60), attrs.get("reservation_max_minutes", 180)
         )
@@ -668,32 +665,44 @@ def _normalize_tags(tags):
     return result
 
 
-def _validate_allowed_thing_types(allowed_thing_types, mode=None):
-    """Validate the allowed_thing_types list when non-empty.
+def _kind_of_verbs(verbs):
+    """The one kind a list of verbs belongs to, else the 400 that says why not."""
+    unknown = [v for v in verbs if kind_for_thing_type(v) is None]
+    if unknown:
+        raise serializers.ValidationError(f"These types are not allowed: {unknown}")
+    kinds = {kind_for_thing_type(v) for v in verbs}
+    if len(kinds) != 1:
+        raise serializers.ValidationError(NO_MIXED_KINDS)
+    return kinds.pop()
 
-    Empty list means "no restriction" — accepted in any mode (preserves the
-    pre-feature behaviour and keeps the API tolerant for non-form callers).
-    The "user must pick at least one" rule is enforced in the create/edit
-    form on the frontend, where it belongs as a UX nudge.
 
-    RESERVE_THING is special: a reservations collection holds *only* RESERVE
-    things and is always PROPRIETARY (an operator runs the premises), so the
-    allowlist must be exactly ``["RESERVE_THING"]`` and the mode PROPRIETARY.
+def normalize_allowed_thing_types(kind, mode, allowed_thing_types):
+    """The verb list a ``kind``/``mode`` collection stores, or the 400 for one it can't.
+
+    Always within the kind's own verbs and never empty. PROPRIETARY takes both of
+    them (its curators put the things in and set each price); a COMMUNITY stall or
+    library takes both, or only the free one when its members may not set a price
+    (an empty list means both, "only the paid one" is refused); a shed takes
+    RESERVE alone and is always PROPRIETARY — an operator runs the premises.
     """
-    invalid = [t for t in allowed_thing_types if t not in ALLOWED_THING_TYPES]
+    verbs = KIND_THING_TYPES[kind]
+    listed = list(allowed_thing_types or [])
+    invalid = [t for t in listed if t not in verbs]
     if invalid:
         raise serializers.ValidationError(f"These types are not allowed: {invalid}")
-    if Thing.Type.RESERVE_THING in allowed_thing_types:
-        if list(allowed_thing_types) != [Thing.Type.RESERVE_THING]:
-            raise serializers.ValidationError(
-                "A reservations collection holds only RESERVE things — "
-                "reservations can't be mixed with the other types."
-            )
+    if kind == Collection.Kind.SHED:
         if mode == Collection.Mode.COMMUNITY:
             raise serializers.ValidationError(
                 "A reservations collection is run by one operator, so it can't "
                 "be a community collection."
             )
+        return list(verbs)
+    if mode == Collection.Mode.PROPRIETARY or not listed or set(listed) == set(verbs):
+        return list(verbs)
+    free = verbs[0]
+    if listed == [free]:
+        return [free]
+    raise serializers.ValidationError(ONLY_PRICES)
 
 
 class CollectionUpdateSerializer(serializers.ModelSerializer):
@@ -779,6 +788,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             "headline",
             "description",
             "status",
+            "kind",
             "mode",
             "visibility",
             "digest_frequency",
@@ -819,20 +829,16 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         instance = self.instance
+        # The kind is read-only: naming the one it already has is harmless, any
+        # other is refused rather than silently ignored.
+        if "kind" in attrs:
+            if instance is not None and attrs.pop("kind") != instance.kind:
+                raise serializers.ValidationError("A collection's kind can't change.")
         allowed_thing_types = attrs.get(
             "allowed_thing_types",
             instance.allowed_thing_types if instance else [],
         )
         mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
-        _validate_allowed_thing_types(allowed_thing_types, mode)
-        _validate_reservation_minutes(
-            attrs.get(
-                "reservation_min_minutes", instance.reservation_min_minutes if instance else 60
-            ),
-            attrs.get(
-                "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
-            ),
-        )
         # A reservations collection can never be switched to COMMUNITY, even if
         # the allowlist isn't being touched in this request.
         if (
@@ -843,6 +849,20 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "A reservations collection can't become a community collection."
             )
+        kind = instance.kind if instance else Collection.Kind.STALL
+        allowed_thing_types = normalize_allowed_thing_types(kind, mode, allowed_thing_types)
+        # Switching to PROPRIETARY widens a free-only list, so write it back whenever
+        # the list or the mode is part of the edit.
+        if "allowed_thing_types" in attrs or "mode" in attrs:
+            attrs["allowed_thing_types"] = allowed_thing_types
+        _validate_reservation_minutes(
+            attrs.get(
+                "reservation_min_minutes", instance.reservation_min_minutes if instance else 60
+            ),
+            attrs.get(
+                "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
+            ),
+        )
         # Orphan check: if this is an update narrowing the list, every existing
         # thing currently in the collection must keep a valid slot in the new
         # list. Otherwise the rule would become incoherent ("type X is not

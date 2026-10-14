@@ -143,6 +143,7 @@ def team(db, lala, lele):
         headline="Spaces",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=3,
         rental_weekdays=[0, 1, 2, 3, 4],

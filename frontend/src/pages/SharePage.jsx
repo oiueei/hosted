@@ -8,6 +8,7 @@ import MagicLinkJoinPage from '../components/MagicLinkJoinPage';
 import StatusRegion from '../components/StatusRegion';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useTheeeme from '../hooks/useTheeeme';
+import { collectionPath } from '../utils/collectionPath';
 
 /**
  * `/share/{token}` landing. Renders the shared `MagicLinkJoinPage`, but first
@@ -68,8 +69,8 @@ export default function SharePage() {
     try {
       const res = await apiFetch(`/api/v1/share/${token}/join/`, { method: 'POST' });
       if (res.ok) {
-        const { collection } = await res.json();
-        navigate(`/collections/${collection}`);
+        const { collection, collection_kind: kind } = await res.json();
+        navigate(collectionPath(collection, kind));
         return;
       }
       if (res.status === 404) {

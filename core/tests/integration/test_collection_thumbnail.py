@@ -33,7 +33,7 @@ def test_create_collection_with_thumbnail(owner):
     client = get_client(owner)
     res = client.post(
         "/api/v1/collections/",
-        {"headline": "With Photo", "thumbnail": "oiueei/collections/abc123"},
+        {"headline": "With Photo", "kind": "STALL", "thumbnail": "oiueei/collections/abc123"},
         format="json",
     )
     assert res.status_code == 201
@@ -47,7 +47,7 @@ def test_create_collection_without_thumbnail(owner):
     client = get_client(owner)
     res = client.post(
         "/api/v1/collections/",
-        {"headline": "No Photo"},
+        {"headline": "No Photo", "kind": "STALL"},
         format="json",
     )
     assert res.status_code == 201

@@ -64,7 +64,7 @@ class TestAcceptingWithASession:
         res = _post(signed_in)
 
         assert res.status_code == 200
-        assert res.data == {"collection": shared.code, "joined": True}
+        assert res.data == {"collection": shared.code, "collection_kind": "STALL", "joined": True}
         assert shared.invites.filter(code=user.code).exists()
         # Counted as the share door, so a report over the Event log can say which
         # of the doors actually brings people in.
@@ -86,7 +86,7 @@ class TestAcceptingWithASession:
         res = _post(signed_in)
 
         assert TOKEN not in res.content.decode()
-        assert set(res.data) == {"collection", "joined"}
+        assert set(res.data) == {"collection", "collection_kind", "joined"}
 
     def test_repeating_it_neither_joins_twice_nor_resends_the_welcome_document(
         self, signed_in, user, shared
@@ -99,7 +99,11 @@ class TestAcceptingWithASession:
 
         assert first.data["joined"] is True
         assert second.status_code == 200
-        assert second.data == {"collection": shared.code, "joined": False}
+        assert second.data == {
+            "collection": shared.code,
+            "collection_kind": "STALL",
+            "joined": False,
+        }
         assert _member_joined(shared, user).count() == 1
         assert len([m for m in mail.outbox if DOC_ID in m.body]) == 1
 
@@ -122,7 +126,7 @@ class TestAcceptingWithASession:
         res = _post(client)
 
         assert res.status_code == 200
-        assert res.data == {"collection": shared.code, "joined": False}
+        assert res.data == {"collection": shared.code, "collection_kind": "STALL", "joined": False}
         assert not _member_joined(shared, owner).exists()
 
     def test_a_co_curator_is_told_they_are_already_in(self, signed_in, user, shared):
@@ -132,7 +136,7 @@ class TestAcceptingWithASession:
 
         res = _post(signed_in)
 
-        assert res.data == {"collection": shared.code, "joined": False}
+        assert res.data == {"collection": shared.code, "collection_kind": "STALL", "joined": False}
         assert not _member_joined(shared, user).exists()
 
 
@@ -249,7 +253,11 @@ class TestTheOperatorsCeiling:
         founder.force_authenticate(user=owner)
 
         # The one join the day allows, then proof that the day really is full.
-        assert _post(member).data == {"collection": shared.code, "joined": True}
+        assert _post(member).data == {
+            "collection": shared.code,
+            "collection_kind": "STALL",
+            "joined": True,
+        }
         assert _post(stranger).status_code == 429
 
         again = _post(member)
@@ -257,11 +265,11 @@ class TestTheOperatorsCeiling:
 
         assert (again.status_code, again.data) == (
             200,
-            {"collection": shared.code, "joined": False},
+            {"collection": shared.code, "collection_kind": "STALL", "joined": False},
         )
         assert (from_the_owner.status_code, from_the_owner.data) == (
             200,
-            {"collection": shared.code, "joined": False},
+            {"collection": shared.code, "collection_kind": "STALL", "joined": False},
         )
         assert _member_joined(shared, user).count() == 1
         assert not shared.invites.filter(code=user2.code).exists()

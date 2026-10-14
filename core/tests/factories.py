@@ -18,6 +18,7 @@ from factory.django import DjangoModelFactory
 
 from core.models import FAQ, RSVP, Collection, Thing, User
 from core.models.booking import BookingPeriod
+from core.models.collection import kind_for_thing_type
 from core.models.transfer import ThingTransfer
 
 
@@ -35,6 +36,18 @@ class CollectionFactory(DjangoModelFactory):
 
     owner = factory.SubFactory(UserFactory)
     headline = factory.Sequence(lambda n: f"Collection {n}")
+    # A collection built with a verb list gets the kind that list belongs to, so a
+    # test names the verbs it cares about and the kind follows.
+    kind = factory.LazyAttribute(
+        lambda o: next(
+            (
+                kind_for_thing_type(t)
+                for t in (getattr(o, "allowed_thing_types", None) or [])
+                if kind_for_thing_type(t)
+            ),
+            Collection.Kind.STALL,
+        )
+    )
 
 
 class ThingFactory(DjangoModelFactory):

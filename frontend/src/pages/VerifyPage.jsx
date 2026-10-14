@@ -7,6 +7,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 /**
  * The verifying / success / error states share the same form-hero + Koros
@@ -173,7 +174,9 @@ export default function VerifyPage() {
             // `data.thing` is set when the join came from a "Reserve" click on a
             // specific thing — land them back on it, ready to act.
             navigate(
-              data.thing ? `/collections/${target}/things/${data.thing}` : `/collections/${target}`
+              data.thing
+                ? collectionThingPath(target, data.collection_kind, data.thing)
+                : collectionPath(target, data.collection_kind)
             );
           } else if (data.landing === 'path' && safeNextPath(data.path)) {
             // The page the reader was heading for when their session ran out

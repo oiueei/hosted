@@ -27,7 +27,7 @@ import { externalFormUrl } from '../utils/externalForms';
  * URL there is the sentence and no button, as before. These forms already have a
  * primary of their own ("Create" / "Save"); this one is wanted all the same.
  *
- * @param {'collection_modes'|'thing_types'} kind Which capability list to check.
+ * @param {'collection_modes'|'collection_kinds'|'thing_types'} kind Which capability list to check.
  * @param {Array<{value: string, label: string}>} catalogue Every option the
  *   product has, already labelled — the same list the form would offer if
  *   nothing were withheld.

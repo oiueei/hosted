@@ -11,7 +11,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-BODY = {"headline": "CSRF probe", "mode": "PROPRIETARY"}
+BODY = {"headline": "CSRF probe", "kind": "STALL", "mode": "PROPRIETARY"}
 COLLECTIONS_URL = "/api/v1/collections/"
 
 

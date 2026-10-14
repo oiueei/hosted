@@ -1,8 +1,6 @@
 import { Select, TextInput, TextArea, NumberInput, ToggleButton } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import {
-  FEE_TYPES,
-  FEE_OPTIONAL_TYPES,
   DATE_TYPES,
   DETAIL_TYPES,
   AVAILABILITY_VALUES,
@@ -11,36 +9,37 @@ import {
 import ImageUpload from './ImageUpload';
 import GalleryUpload from './GalleryUpload';
 import LocalizedInfo from './LocalizedInfo';
-import InfoPopover from './InfoPopover';
 import ApprovalNotice from './ApprovalNotice';
 import { useLocalized, localizedHelper } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
 
 /**
- * The shared field cluster of the Add and Edit thing forms: type selector (with
- * an (i) `InfoPopover` explaining each offered type), the endless /
- * notify-group toggles, headline, description, fee, the
- * availability/condition/location detail fields, the per-thing tags select, the
- * thumbnail upload and gallery.
+ * The shared field cluster of the Add and Edit thing forms: the endless toggle,
+ * headline, description, price, the availability/condition/location detail fields,
+ * the per-thing tags select, the thumbnail upload and gallery.
  *
- * Controlled: each value + setter is owned by the page. Field visibility is
- * derived from `type` so both pages share one set of rules. The page supplies
- * the already filtered `typeOptions` and whether the selector is shown (Add
- * hides it for share collections). `idPrefix` is `add-thing` or `edit-thing`.
+ * There is no selector of verbs: a thing's verb follows its collection's kind and
+ * its price (a stall gives or sells, a library lends or rents out, a shed books),
+ * and the server puts it. The fields shown follow the **kind**, not the verb, so
+ * typing a price never makes another field appear or vanish: a stall has the
+ * "endless" switch and the static availability hint, a library the deposit, every
+ * kind its condition and place. `type` is the verb the price makes — read here only
+ * for the few things that really do depend on it (the detail fields).
+ *
+ * Controlled: each value + setter is owned by the page. `priceAllowed` is false in a
+ * community group whose members may not set a price (there is no price field at all);
+ * `approvalCatalogue` lists the verb the deployment's policy withholds from this
+ * account for the price typed, so the notice says so instead of letting it be sent.
+ * `idPrefix` is `add-thing` or `edit-thing`.
  */
 export default function ThingForm({
   idPrefix,
   theeemeColor01,
   errors,
-  typeOptions,
-  // Every type this *collection* would take, labelled — i.e. `typeOptions`
-  // before the deployment's policy narrowed it. ApprovalNotice diffs the two,
-  // so it never offers to get approval for a verb the collection's own
-  // allowlist rules out anyway. Omitted ⇒ no notice.
-  typeCatalogue,
-  showTypeSelector = true,
+  kind,
   type,
-  setType,
+  priceAllowed = true,
+  approvalCatalogue = [],
   isEndless,
   setIsEndless,
   headline,
@@ -75,22 +74,32 @@ export default function ThingForm({
     ? { '--toggle-button-color': `var(--color-${theeemeColor01})` }
     : undefined;
 
-  const showEndless = ['GIFT_THING', 'SELL_THING'].includes(type);
-  const isFeeType = FEE_TYPES.includes(type);
+  const showEndless = kind === 'STALL';
+  const showFee = priceAllowed;
+  // Deposit is a guarantee that comes back, not part of the price — a library's
+  // things only. Its own gate, never the price's: a rental carries both, a loan only
+  // this. A gift, a sale or a reservation has nothing to give back.
+  const showDeposit = kind === 'LIBRARY';
   const isDetailType = DETAIL_TYPES.includes(type);
-  // Fee: required + shown for SELL/RENT; shown but optional for RESERVE.
-  const showFee = isFeeType || FEE_OPTIONAL_TYPES.includes(type);
-  // Deposit is a guarantee that comes back, not part of the price — LEND/RENT
-  // only. Its own gate, never showFee: RENT carries both, LEND only this.
-  // A RESERVE thing never leaves the premises, so there is nothing to secure.
-  const showDeposit = DATE_TYPES.includes(type) && type !== 'RESERVE_THING';
   const showSpacer = (showFee || showDeposit) && isDetailType;
   const showDetailFields = isDetailType;
   // The static availability hint (IMMEDIATE / NEXT_WEEK / …) is only ever shown
-  // for non-date types: LEND and RESERVE render *live* availability from the
-  // booking calendar instead (ThingInfoRows), so a value collected here would
-  // never surface anywhere. Condition and location still matter for them.
+  // for non-date types: a library's and a shed's things render *live* availability
+  // from the booking calendar instead (ThingInfoRows), so a value collected here
+  // would never surface anywhere. Condition and location still matter for them.
   const showAvailability = showDetailFields && !DATE_TYPES.includes(type);
+  const priceLabel =
+    kind === 'STALL'
+      ? t('thingForm.priceStall')
+      : kind === 'LIBRARY'
+        ? t('thingForm.priceLibrary')
+        : t('addThing.priceOptionalLabel');
+  const priceHelper =
+    kind === 'STALL'
+      ? t('thingForm.priceStallHelp')
+      : kind === 'LIBRARY'
+        ? t('thingForm.priceLibraryHelp')
+        : undefined;
 
   // HDS Select wants the selected option object(s), never a bare string: handed
   // a string it can't resolve against `options`, it renders that string
@@ -105,35 +114,6 @@ export default function ThingForm({
 
   return (
     <>
-      {showTypeSelector && (
-        <>
-          <Select
-            id={`${idPrefix}-type`}
-            texts={{ label: t('addThing.typeLabel'), language: hdsLang(i18n.language) }}
-            options={typeOptions}
-            value={typeOptions.filter((o) => o.value === type)}
-            onChange={(selectedOptions) => {
-              if (selectedOptions.length > 0) {
-                setType(selectedOptions[0].value);
-              }
-            }}
-          />
-          {/* One-word type names don't tell a first-timer that a "Share" transfers
-              ownership on accept. The (i) explains each type the collection actually
-              offers — built from typeOptions, already filtered, so it never lists
-              one the owner can't pick. */}
-          <div className="info-popover-row info-popover-row--end">
-            <InfoPopover id={`${idPrefix}-type-info`} title={t('typeInfo.title')}>
-              {typeOptions.map(({ label, value }) => (
-                <p key={value}>
-                  <b>{label}</b> — {t('typeInfo.' + value)}
-                </p>
-              ))}
-            </InfoPopover>
-          </div>
-          {typeCatalogue && <ApprovalNotice kind="thing_types" catalogue={typeCatalogue} />}
-        </>
-      )}
       {showEndless && (
         <div className="toggle-left">
           <ToggleButton
@@ -169,16 +149,19 @@ export default function ThingForm({
       {showFee && (
         <NumberInput
           id={`${idPrefix}-fee`}
-          label={isFeeType ? t('addThing.priceLabel') : t('addThing.priceOptionalLabel')}
+          label={priceLabel}
+          helperText={priceHelper}
           value={fee === '' ? '' : Number(fee)}
           onChange={(e) => setFee(e.target.value)}
           min={0}
           step={feeStep}
           unit="EUR"
-          required={isFeeType}
           invalid={!!errors.fee}
           errorText={errors.fee}
         />
+      )}
+      {approvalCatalogue.length > 0 && (
+        <ApprovalNotice kind="thing_types" catalogue={approvalCatalogue} />
       )}
       {/* No default, never pre-filled, and never presented ahead of the price:
           a deposit is exclusionary by nature (DESIGN §6 — no dark pattern nudges

@@ -231,7 +231,7 @@ export default function HomePage() {
           <p className="text-muted">{t('userPage.collectionExplainer')}</p>
           <div className="spacer-m" />
           <div className="button-row-wide">
-            <ButtonLink to="/collections/new" style={btnStyle}>
+            <ButtonLink to="/new" style={btnStyle}>
               {t('userPage.createFirst')}
             </ButtonLink>
             {/* Only where this deployment has a page saying what it is.
@@ -331,7 +331,7 @@ export default function HomePage() {
               with no collection gets the invitation under "My collections". */}
           {heroCreateButton && (
             <div className="button-row-wide">
-              <ButtonLink to="/collections/new" style={btnStyle}>
+              <ButtonLink to="/new" style={btnStyle}>
                 {t('home.createCollection')}
               </ButtonLink>
             </div>
