@@ -8,6 +8,7 @@ import { apiFetch } from '../../services/api';
 import useTheeeme from '../../hooks/useTheeeme';
 import ButtonLink from '../../components/ButtonLink';
 import { faqPath } from '../index';
+import { collectionPath } from '../../utils/collectionPath';
 
 // Every persona owns a demo collection (the seed gives Lele and Lulu one each).
 // The render filters by accessibleCodes, so a persona whose group
@@ -36,6 +37,8 @@ export default function WelcomePage() {
   }, [t]);
   const [userName, setUserName] = useState('');
   const [accessibleCodes, setAccessibleCodes] = useState(() => new Set());
+  // The kind the server gives each of those collections, which the link needs.
+  const [kinds, setKinds] = useState(() => new Map());
   // Read once on mount, like every other page in the app. It decides which doors
   // this page offers: a member gets "create a collection" / "edit profile", a
   // stranger gets whichever door this deployment opens for them (popInPath,
@@ -60,7 +63,11 @@ export default function WelcomePage() {
   useEffect(() => {
     apiFetch('/api/v1/invited-collections/', { optionalAuth: true })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setAccessibleCodes(new Set((data || []).map((c) => c.code))))
+      .then((data) => {
+        const rows = data || [];
+        setAccessibleCodes(new Set(rows.map((c) => c.code)));
+        setKinds(new Map(rows.map((c) => [c.code, c.kind])));
+      })
       .catch(() => {});
   }, []);
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
@@ -109,7 +116,7 @@ export default function WelcomePage() {
           {isAuthenticated ? (
             <div className="button-row-wide" style={{ paddingBottom: 'var(--spacing-s)' }}>
               <ButtonLink
-                to="/collections/new"
+                to="/new"
                 state={{
                   backPath: '/welcome',
                   backLabel: t('welcome.pageTitle'),
@@ -202,7 +209,7 @@ export default function WelcomePage() {
                   {links.map(({ code, key }) => (
                     <Link
                       key={code}
-                      to={`/collections/${code}`}
+                      to={collectionPath(code, kinds.get(code))}
                       style={{
                         color: tc.color_01 ? `var(--color-${tc.color_01})` : 'var(--color-bus)',
                         textDecoration: 'underline',

@@ -72,7 +72,7 @@ describe('WelcomePage — readable without an account', () => {
     expect(hrefs).toContain('/login');
     // Every one of these is behind RequireAuth: offering them to a signed-out
     // visitor is a link straight back to the login form they came to avoid.
-    expect(hrefs).not.toContain('/collections/new');
+    expect(hrefs).not.toContain('/new');
     expect(hrefs).not.toContain('/me/edit');
     expect(hrefs).not.toContain('/');
   });
@@ -107,7 +107,7 @@ describe('WelcomePage — readable without an account', () => {
 
     const links = [...container.querySelectorAll('.form-hero .button-row-wide a')];
     expect(links.map((a) => a.textContent)).toEqual(['Create collection', 'Edit profile']);
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/collections/new', '/me/edit']);
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/new', '/me/edit']);
     expect(
       links.map((a) => a.style.getPropertyValue('--background-color') !== 'var(--color-white)')
     ).toEqual([true, false]);
@@ -169,7 +169,7 @@ describe('WelcomePage — readable without an account', () => {
     await screen.findByText(/Welcome to OIUEEI/i);
 
     const hrefs = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toContain('/collections/new');
+    expect(hrefs).toContain('/new');
     expect(hrefs).toContain('/me/edit');
     expect(hrefs).not.toContain('/popin');
   });

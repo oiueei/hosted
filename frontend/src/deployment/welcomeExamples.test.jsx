@@ -15,9 +15,23 @@ import WelcomePage from './pages/WelcomePage';
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
-const setInvited = (codes) => {
+// The kind the seed gives each demo collection (core/management/commands/seed_data/common.py);
+// anything else is a real group, a stall here.
+const SEEDED_KINDS = {
+  La1aC1: 'STALL',
+  l0l0C1: 'STALL',
+  L3L3C1: 'STALL',
+  l1l1C1: 'LIBRARY',
+  '1u1uC1': 'LIBRARY',
+};
+
+// `kinds` overrides the seeded kind of a code, to serve one the page must follow.
+const setInvited = (codes, kinds = {}) => {
   apiFetch.mockImplementation((url) => {
-    if (url.startsWith('/api/v1/invited-collections/')) return ok(codes.map((code) => ({ code })));
+    if (url.startsWith('/api/v1/invited-collections/'))
+      return ok(
+        codes.map((code) => ({ code, kind: kinds[code] || SEEDED_KINDS[code] || 'STALL' }))
+      );
     if (url.startsWith('/api/v1/auth/me/')) return ok({ code: 'ABC123', name: 'Lala' });
     return ok([]);
   });
@@ -62,7 +76,17 @@ describe('WelcomePage example collections', () => {
     expect(await screen.findByText(/we've shared a few example collections/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Lili's Lending Library/i })).toHaveAttribute(
       'href',
-      '/collections/l1l1C1'
+      '/library/l1l1C1'
+    );
+  });
+
+  test('a link follows the kind the server serves, not a fixed one', async () => {
+    setInvited(['l1l1C1'], { l1l1C1: 'SHED' });
+    renderWelcome();
+
+    expect(await screen.findByRole('link', { name: /Lili's Lending Library/i })).toHaveAttribute(
+      'href',
+      '/shed/l1l1C1'
     );
   });
 
@@ -97,11 +121,11 @@ describe('WelcomePage example collections', () => {
     // One per persona, in the order they are told. The two at the ends are the
     // ones that used to be missing.
     const expected = [
-      [/The Sunday swap-meet/i, '/collections/L3L3C1'],
-      [/Lulu's shared workshop/i, '/collections/1u1uC1'],
-      [/Lala's sabbatical sale/i, '/collections/La1aC1'],
-      [/Lili's Lending Library/i, '/collections/l1l1C1'],
-      [/Lolo's Leafy Lounge/i, '/collections/l0l0C1'],
+      [/The Sunday swap-meet/i, '/stall/L3L3C1'],
+      [/Lulu's shared workshop/i, '/library/1u1uC1'],
+      [/Lala's sabbatical sale/i, '/stall/La1aC1'],
+      [/Lili's Lending Library/i, '/library/l1l1C1'],
+      [/Lolo's Leafy Lounge/i, '/stall/l0l0C1'],
     ];
     for (const [name, href] of expected) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
