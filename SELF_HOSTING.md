@@ -112,8 +112,17 @@ the endpoint the SPA calls on every load. A system check now imports and
 instantiates the policy at check time, and `manage.py migrate` runs system
 checks, so a Heroku release phase aborts on it and keeps the previous release.
 
-Enforced at five doors: collection create and update, thing create and update,
-and the bulk CSV import. The two edit paths only judge a **change**, so
+**The kinds of collection need nothing of a policy.** A collection is a stall
+(give or sell), a library (lend or rent out) or a shed (book), and which of them an
+account may open is *derived* from the verbs the policy offers: a kind is open when
+at least one of its verbs is in `thing_types`. A policy keeps declaring only modes
+and verbs — no deployment's class has to learn about kinds — and the one above, which
+gives GIFT and SELL, lets an account open a stall and a library and a shed only
+after it is vetted. `collection_kind_denial()` refuses the others with the
+request URL, like the two denials beside it.
+
+Enforced at five doors: collection create (its mode **and** its kind) and update, thing
+create and update, and the bulk CSV import. The two edit paths only judge a **change**, so
 narrowing a deployment never freezes what people already own — an owner who
 could no longer fix a typo on their own lending collection would be the product
 punishing them for a decision they had no part in.
@@ -126,11 +135,15 @@ every load:
 ```json
 "capabilities": {
   "collection_modes": ["PROPRIETARY", "COMMUNITY"],
+  "collection_kinds": ["STALL", "LIBRARY", "SHED"],
   "thing_types": ["GIFT_THING", "SELL_THING", "RENT_THING", "LEND_THING", "RESERVE_THING"],
   "request_url": null,
   "co_owners_enabled": true
 }
 ```
+
+`collection_kinds` is computed from `thing_types`, never declared: the chooser at
+`/new` shows a card for each kind but a button only for the ones listed.
 
 The forms build their options from this, so a narrowed deployment stops offering
 what its API would refuse instead of letting someone fill a form in and meet a
