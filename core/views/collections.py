@@ -1327,10 +1327,10 @@ class SharePreviewView(APIView):
 
     Public and unauthenticated: the 22-char token **is** the credential, and
     whoever holds it already knows a real collection sits behind it. It returns
-    **only** ``headline``, ``description`` and ``language`` — never the owner,
+    **only** ``headline``, ``description``, ``language`` and ``kind`` — never the owner,
     the roster or a member count — and a generic **404** for an unknown,
     revoked or inactive token, so it reveals nothing the link itself does not.
-    ``language`` is no more sensitive than the other two: it is exactly what
+    ``language`` and ``kind`` are no more sensitive than the other two: they are exactly what
     `CollectionSerializer` already serves any signed-in member.
 
     ``headline``/``description`` are returned raw: either may be a
@@ -1356,6 +1356,7 @@ class SharePreviewView(APIView):
                 "headline": collection.headline,
                 "description": collection.description,
                 "language": collection.language,
+                "kind": collection.kind,
             }
         )
 
@@ -1405,7 +1406,9 @@ class ShareJoinView(APIView):
 
         user_code = request.user.code
         if collection.is_owner(user_code) or collection.invites.filter(code=user_code).exists():
-            return Response({"collection": collection.code, "joined": False})
+            return Response(
+                {"collection": collection.code, "collection_kind": collection.kind, "joined": False}
+            )
 
         if join_quota_exhausted(collection.code):
             return Response(
@@ -1416,7 +1419,9 @@ class ShareJoinView(APIView):
         _join_collection(collection, request.user, source=Event.Source.SHARE)
         consume_join_quota(collection.code)
 
-        return Response({"collection": collection.code, "joined": True})
+        return Response(
+            {"collection": collection.code, "collection_kind": collection.kind, "joined": True}
+        )
 
 
 class CollectionEmailNoteTestView(APIView):

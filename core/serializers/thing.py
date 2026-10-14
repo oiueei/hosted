@@ -324,6 +324,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     faqs = serializers.SerializerMethodField()
     deal = serializers.SlugRelatedField(slug_field="code", many=True, read_only=True)
     collection_code = serializers.SerializerMethodField()
+    collection_kind = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
@@ -373,6 +374,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "pending_questions",
             "can_manage",
             "collection_code",
+            "collection_kind",
             "collection_headline",
             "collection_owner",
             "collection_is_onboarding",
@@ -490,6 +492,12 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     def get_collection_code(self, obj):
         first = self._viewable_collection(obj)
         return first.code if first else None
+
+    def get_collection_kind(self, obj):
+        """The kind of the collection ``collection_code`` names — what the app needs
+        to build its address, ``/{kind}/{code}``."""
+        first = self._viewable_collection(obj)
+        return first.kind if first else None
 
     def get_collection_headline(self, obj):
         first = self._viewable_collection(obj)
