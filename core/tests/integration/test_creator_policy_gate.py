@@ -37,7 +37,7 @@ class TestTheStandaloneDoorIsOpen:
     def test_a_community_collection_is_created_without_asking_anyone(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "kind": "STALL", "mode": "COMMUNITY"},
             format="json",
         )
 
@@ -68,7 +68,7 @@ class TestANarrowedDeploymentRefusesAtCreation:
     def test_a_withheld_mode_is_refused_with_403_and_creates_nothing(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "kind": "STALL", "mode": "COMMUNITY"},
             format="json",
         )
 
@@ -78,7 +78,9 @@ class TestANarrowedDeploymentRefusesAtCreation:
 
     def test_what_the_policy_allows_still_works(self, authenticated_client):
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "My shelf", "mode": "PROPRIETARY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "My shelf", "kind": "STALL", "mode": "PROPRIETARY"},
+            format="json",
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -93,7 +95,7 @@ class TestANarrowedDeploymentRefusesAtCreation:
         withholding every mode depends on.
         """
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Unstated mode"}, format="json"
+            "/api/v1/collections/", {"headline": "Unstated mode", "kind": "STALL"}, format="json"
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -475,6 +477,7 @@ class TestWhatTheFrontendIsTold:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["capabilities"] == {
             "collection_modes": list(Collection.Mode.values),
+            "collection_kinds": list(Collection.Kind.values),
             "thing_types": list(Thing.Type.values),
             "request_url": None,
             "co_owners_enabled": True,
@@ -496,6 +499,7 @@ class TestWhatTheFrontendIsTold:
 
         assert response.data["capabilities"] == {
             "collection_modes": ["PROPRIETARY"],
+            "collection_kinds": ["STALL"],
             "thing_types": ["GIFT_THING", "SELL_THING"],
             "request_url": REQUEST_URL,
             "co_owners_enabled": True,

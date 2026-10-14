@@ -38,6 +38,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 from core.models import Collection, Thing
+from core.models.collection import KIND_THING_TYPES
 
 
 @dataclass(frozen=True)
@@ -62,10 +63,22 @@ class Capabilities:
     # it would a mode or a verb.
     co_owners_enabled: bool = True
 
+    @property
+    def collection_kinds(self) -> tuple[str, ...]:
+        """The kinds of collection this account can open: those with at least one
+        verb in `thing_types`. Derived, never declared — a policy keeps saying
+        only modes and verbs, so no deployment's class has to learn about kinds."""
+        return tuple(
+            kind
+            for kind, verbs in KIND_THING_TYPES.items()
+            if any(verb in self.thing_types for verb in verbs)
+        )
+
     def as_dict(self):
         """The JSON shape served by `GET /auth/me/` (lists, not tuples)."""
         return {
             "collection_modes": list(self.collection_modes),
+            "collection_kinds": list(self.collection_kinds),
             "thing_types": list(self.thing_types),
             "request_url": self.request_url,
             "co_owners_enabled": self.co_owners_enabled,
@@ -166,6 +179,21 @@ def collection_mode_denial(user, mode, capabilities=None) -> str | None:
         return None
     return _denial(
         f"This deployment does not allow you to create {mode} collections.",
+        caps.request_url,
+    )
+
+
+def collection_kind_denial(user, kind, capabilities=None) -> str | None:
+    """Why this deployment won't let `user` create a `kind` collection, else `None`.
+
+    Same shape as `collection_mode_denial`. A kind is available when **any** of
+    its verbs is offered, since a stall with only gifts is still a stall.
+    """
+    caps = capabilities_for(user) if capabilities is None else capabilities
+    if kind in caps.collection_kinds:
+        return None
+    return _denial(
+        f"This deployment does not allow you to create {kind.lower()} collections.",
         caps.request_url,
     )
 

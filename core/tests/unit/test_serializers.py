@@ -211,6 +211,7 @@ class TestCollectionCreateSerializer:
         serializer = CollectionCreateSerializer(
             data={
                 "headline": "My Collection",
+                "kind": "STALL",
             }
         )
         assert serializer.is_valid()
@@ -224,12 +225,14 @@ class TestCollectionCreateSerializer:
     def test_home_page_accepts_a_url_and_rejects_junk(self):
         """`home_page` is a URLField — a bare word is not a URL."""
         ok = CollectionCreateSerializer(
-            data={"headline": "Ateneu", "home_page": "https://ateneu.example/"}
+            data={"headline": "Ateneu", "kind": "STALL", "home_page": "https://ateneu.example/"}
         )
         assert ok.is_valid(), ok.errors
         assert ok.validated_data["home_page"] == "https://ateneu.example/"
 
-        bad = CollectionCreateSerializer(data={"headline": "Ateneu", "home_page": "not a url"})
+        bad = CollectionCreateSerializer(
+            data={"headline": "Ateneu", "kind": "STALL", "home_page": "not a url"}
+        )
         assert not bad.is_valid()
         assert "home_page" in bad.errors
 
@@ -237,21 +240,29 @@ class TestCollectionCreateSerializer:
         """The column is 128 and CI runs Postgres — the serializer must reject
         an over-long address before it reaches the DB."""
         long_url = "https://your-domain.test/" + "a" * 120
-        serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": long_url})
+        serializer = CollectionCreateSerializer(
+            data={"headline": "X", "kind": "STALL", "home_page": long_url}
+        )
         assert not serializer.is_valid()
         assert "home_page" in serializer.errors
 
     def test_home_page_is_optional(self):
         """An empty string is fine — most groups have no website."""
-        serializer = CollectionCreateSerializer(data={"headline": "X", "home_page": ""})
+        serializer = CollectionCreateSerializer(
+            data={"headline": "X", "kind": "STALL", "home_page": ""}
+        )
         assert serializer.is_valid(), serializer.errors
 
     def test_description_is_long_form_2000_per_language(self):
         """`Collection.description` became a `TextField` with a 2000-char *visible*
         cap the serializer enforces — kept symmetric with `Thing.description`."""
-        ok = CollectionCreateSerializer(data={"headline": "X", "description": "x" * 2000})
+        ok = CollectionCreateSerializer(
+            data={"headline": "X", "kind": "STALL", "description": "x" * 2000}
+        )
         assert ok.is_valid(), ok.errors
-        too_long = CollectionCreateSerializer(data={"headline": "X", "description": "x" * 2001})
+        too_long = CollectionCreateSerializer(
+            data={"headline": "X", "kind": "STALL", "description": "x" * 2001}
+        )
         assert not too_long.is_valid()
         assert "description" in too_long.errors
 
@@ -261,10 +272,14 @@ class TestCollectionCreateSerializer:
         import json
 
         both_full = json.dumps({"es": "e" * 2000, "ca": "c" * 2000})
-        ok = CollectionCreateSerializer(data={"headline": "X", "description": both_full})
+        ok = CollectionCreateSerializer(
+            data={"headline": "X", "kind": "STALL", "description": both_full}
+        )
         assert ok.is_valid(), ok.errors
         one_over = json.dumps({"es": "e" * 2001, "ca": "c" * 10})
-        bad = CollectionCreateSerializer(data={"headline": "X", "description": one_over})
+        bad = CollectionCreateSerializer(
+            data={"headline": "X", "kind": "STALL", "description": one_over}
+        )
         assert not bad.is_valid()
         assert "description" in bad.errors
 

@@ -40,7 +40,12 @@ from core.serializers import (
     EmailNoteTestSerializer,
 )
 from core.serializers.thing import optimise_thing_queryset
-from core.services.creator_policy import co_owners_denial, collection_mode_denial
+from core.services.creator_policy import (
+    capabilities_for,
+    co_owners_denial,
+    collection_kind_denial,
+    collection_mode_denial,
+)
 from core.services.deletion_events import deleting_as
 from core.services.email_service import (
     send_broadcast_email,
@@ -223,9 +228,12 @@ class CollectionViewSet(ModelViewSet):
         # Does this deployment let this person open a collection in that mode?
         # The default is checked too, not just an explicit one: a policy that
         # withholds every mode has to refuse a body that names none.
+        capabilities = capabilities_for(self.request.user)
         denial = collection_mode_denial(
-            self.request.user, validated_data.get("mode", Collection.Mode.PROPRIETARY)
-        )
+            self.request.user,
+            validated_data.get("mode", Collection.Mode.PROPRIETARY),
+            capabilities,
+        ) or collection_kind_denial(self.request.user, validated_data["kind"], capabilities)
         if denial:
             raise PermissionDenied(denial)
         collection = Collection.objects.create(

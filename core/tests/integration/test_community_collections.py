@@ -15,7 +15,7 @@ class TestCommunityCollectionCreate:
         """Creating a collection without mode should default to PROPRIETARY."""
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "My Collection"},
+            {"headline": "My Collection", "kind": "STALL"},
             format="json",
         )
         assert response.status_code == 201
@@ -25,7 +25,7 @@ class TestCommunityCollectionCreate:
         """Should create a community collection."""
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "kind": "STALL", "mode": "COMMUNITY"},
             format="json",
         )
         assert response.status_code == 201

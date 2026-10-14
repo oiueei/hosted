@@ -748,7 +748,7 @@ class TestANewCollectionAsksItsOwnerNothing:
 
     def test_one_created_without_mentioning_it_has_proposals_off(self, authenticated_client):
         res = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "A new street"}, format="json"
+            "/api/v1/collections/", {"headline": "A new street", "kind": "STALL"}, format="json"
         )
 
         assert res.status_code == 201, res.data
@@ -758,7 +758,7 @@ class TestANewCollectionAsksItsOwnerNothing:
     def test_the_owner_who_turns_it_on_at_creation_gets_it_on(self, authenticated_client):
         res = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "A new street", "allow_member_proposals": True},
+            {"headline": "A new street", "kind": "STALL", "allow_member_proposals": True},
             format="json",
         )
 
@@ -769,7 +769,7 @@ class TestANewCollectionAsksItsOwnerNothing:
         self, authenticated_client, user2
     ):
         code = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "A new street"}, format="json"
+            "/api/v1/collections/", {"headline": "A new street", "kind": "STALL"}, format="json"
         ).data["code"]
         Collection.objects.get(code=code).invites.add(user2)
 

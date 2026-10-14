@@ -895,7 +895,7 @@ def test_a_reservations_collection_holds_only_reservations(authenticated_client)
     [
         (
             {"headline": "Mixed", "allowed_thing_types": ["RESERVE_THING", "GIFT_THING"]},
-            "can't be mixed",
+            "one kind of thing",
         ),
         (
             {

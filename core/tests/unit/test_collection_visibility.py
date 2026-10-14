@@ -160,22 +160,28 @@ def test_a_community_collection_is_born_private_like_any_other():
     It used to be born PUBLIC, and whoever contributed a thing to it was never
     shown that — so a group of neighbours' families was readable by anyone.
     """
-    data = _validated({"headline": "Neighbourhood share", "mode": "COMMUNITY"})
+    data = _validated({"headline": "Neighbourhood share", "kind": "STALL", "mode": "COMMUNITY"})
     assert data["visibility"] == Collection.Visibility.PRIVATE
 
 
 def test_proprietary_collection_is_born_private():
-    data = _validated({"headline": "My shelf"})  # mode defaults to PROPRIETARY
+    data = _validated({"headline": "My shelf", "kind": "STALL"})  # mode defaults to PROPRIETARY
     assert data["visibility"] == Collection.Visibility.PRIVATE
 
 
 def test_an_explicit_visibility_is_respected_in_either_mode():
     # A proprietary owner may open their collection to the public…
-    data = _validated({"headline": "Open shelf", "mode": "PROPRIETARY", "visibility": "PUBLIC"})
+    data = _validated(
+        {"headline": "Open shelf", "kind": "STALL", "mode": "PROPRIETARY", "visibility": "PUBLIC"}
+    )
     assert data["visibility"] == Collection.Visibility.PUBLIC
     # …and so may a community's: it can be born public when that is asked for.
-    data = _validated({"headline": "Open group", "mode": "COMMUNITY", "visibility": "PUBLIC"})
+    data = _validated(
+        {"headline": "Open group", "kind": "STALL", "mode": "COMMUNITY", "visibility": "PUBLIC"}
+    )
     assert data["visibility"] == Collection.Visibility.PUBLIC
     # Private stays private in either mode, of course.
-    data = _validated({"headline": "Closed group", "mode": "COMMUNITY", "visibility": "PRIVATE"})
+    data = _validated(
+        {"headline": "Closed group", "kind": "STALL", "mode": "COMMUNITY", "visibility": "PRIVATE"}
+    )
     assert data["visibility"] == Collection.Visibility.PRIVATE
