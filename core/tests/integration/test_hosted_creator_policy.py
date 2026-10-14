@@ -74,6 +74,18 @@ class TestSomebodyWhoHasNotAsked:
 
         assert response.status_code == status.HTTP_201_CREATED
 
+    @pytest.mark.parametrize("kind", ["LIBRARY", "SHED"])
+    def test_a_library_and_a_shed_are_held_back(self, authenticated_client, kind):
+        response = authenticated_client.post(
+            "/api/v1/collections/",
+            {"headline": "Held back", "mode": "PROPRIETARY", "kind": kind},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert FORM_URL in str(response.data)
+        assert not Collection.objects.filter(headline="Held back").exists()
+
     @pytest.mark.parametrize("thing_type", ["LEND_THING", "RENT_THING"])
     def test_lending_and_renting_are_held_back(self, authenticated_client, thing_type):
         response = authenticated_client.post(
@@ -224,6 +236,38 @@ class TestTheAdvertisedListIsTheAcceptedList:
                 format="json",
             )
             assert response.status_code == status.HTTP_201_CREATED, thing_type
+
+    @pytest.mark.parametrize("approved", [False, True])
+    def test_every_advertised_kind_can_be_created(self, authenticated_client, user, approved):
+        if approved:
+            approve(user)
+
+        advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
+
+        for kind in advertised["collection_kinds"]:
+            response = authenticated_client.post(
+                "/api/v1/collections/",
+                {"headline": f"Open {kind}", "mode": "PROPRIETARY", "kind": kind},
+                format="json",
+            )
+            assert response.status_code == status.HTTP_201_CREATED, kind
+            assert response.data["kind"] == kind
+
+    @pytest.mark.parametrize("approved", [False, True])
+    def test_no_withheld_kind_slips_through(self, authenticated_client, user, approved):
+        if approved:
+            approve(user)
+
+        advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
+        withheld = set(Collection.Kind.values) - set(advertised["collection_kinds"])
+
+        for kind in withheld:
+            response = authenticated_client.post(
+                "/api/v1/collections/",
+                {"headline": f"Withheld {kind}", "mode": "PROPRIETARY", "kind": kind},
+                format="json",
+            )
+            assert response.status_code == status.HTTP_403_FORBIDDEN, kind
 
     @pytest.mark.parametrize("approved", [False, True])
     def test_nothing_withheld_slips_through(self, authenticated_client, user, approved):

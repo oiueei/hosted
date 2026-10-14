@@ -193,6 +193,23 @@ class TestCapabilitiesAndTheRefusals:
         assert [url for url in REQUEST_ACCESS.values() if url != expected and url in body] == []
 
     @pytest.mark.parametrize(("language", "expected"), [("es", ES), ("ca", CA), ("en", EN)])
+    def test_the_403_for_a_collection_kind_names_the_form_of_their_language(
+        self, authenticated_client, user, language, expected
+    ):
+        speaking(user, language)
+
+        response = authenticated_client.post(
+            "/api/v1/collections/",
+            {"headline": "Ladders", "mode": "PROPRIETARY", "kind": "LIBRARY"},
+            format="json",
+        )
+
+        body = str(response.data)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert expected in body
+        assert [url for url in REQUEST_ACCESS.values() if url != expected and url in body] == []
+
+    @pytest.mark.parametrize(("language", "expected"), [("es", ES), ("ca", CA), ("en", EN)])
     def test_the_403_for_a_thing_type_names_the_form_of_their_language(
         self, authenticated_client, user, language, expected
     ):
