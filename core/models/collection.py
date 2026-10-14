@@ -16,6 +16,23 @@ from core.utils import Refusal, generate_id
 
 logger = logging.getLogger(__name__)
 
+# Which verbs a kind of collection holds: the single source the serializers, the
+# policy and the routes read. A stall gives or sells, a library lends or rents,
+# a shed books. ``allowed_thing_types`` is always a subset of these.
+KIND_THING_TYPES = {
+    "STALL": ("GIFT_THING", "SELL_THING"),
+    "LIBRARY": ("LEND_THING", "RENT_THING"),
+    "SHED": ("RESERVE_THING",),
+}
+
+
+def kind_for_thing_type(thing_type):
+    """The kind of collection a verb belongs to, or ``None`` for an unknown one."""
+    for kind, types in KIND_THING_TYPES.items():
+        if thing_type in types:
+            return kind
+    return None
+
 
 def generate_share_token():
     """22-char URL-safe token for public share links. Bearer credential — must be unguessable."""
@@ -36,6 +53,15 @@ class Collection(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
         INACTIVE = "INACTIVE", "Inactive"
+
+    class Kind(models.TextChoices):
+        """What a collection is for, fixed when it is created: a stall (give or
+        sell), a library (lend or rent) or a shed (book by the day or the hour).
+        Its address is ``/{kind}/{code}``."""
+
+        STALL = "STALL", "Stall"
+        LIBRARY = "LIBRARY", "Library"
+        SHED = "SHED", "Shed"
 
     class Mode(models.TextChoices):
         PROPRIETARY = "PROPRIETARY", "Proprietary"
@@ -219,6 +245,10 @@ class Collection(models.Model):
     # 512/2048 like `request_info`: the visible limit is per language and the
     # column has to hold all three plus the JSON scaffolding.
     email_note = models.CharField(max_length=2048, blank=True, default="")
+    kind = models.CharField(max_length=8, choices=Kind.choices, default=Kind.STALL)
+    # The verbs this collection takes, always within ``KIND_THING_TYPES[kind]`` and
+    # never empty: both of the kind's verbs, or — in a COMMUNITY stall or library
+    # whose members may not set a price — only the free one.
     allowed_thing_types = models.JSONField(default=list, blank=True)
     tags = models.JSONField(
         default=list,
@@ -487,15 +517,13 @@ class Collection(models.Model):
         return out
 
     def is_reservations_collection(self):
-        """True if this is a RESERVE_THING collection.
+        """True if this is a shed (``kind == SHED``): the collection that holds
+        RESERVE_THING things. A shed is always PROPRIETARY and takes only that verb."""
+        return self.kind == self.Kind.SHED
 
-        Derived from the allowlist rather than a marker field: a collection
-        holds RESERVE things **iff** ``allowed_thing_types == ["RESERVE_THING"]``.
-        The serializer enforces that a RESERVE entry stands alone and forces
-        PROPRIETARY mode, so "reservations collection" and "solo-RESERVE
-        PROPRIETARY collection" are the same thing.
-        """
-        return list(self.allowed_thing_types or []) == ["RESERVE_THING"]
+    def path(self):
+        """The SPA route of this collection, ``/{kind}/{code}``."""
+        return f"/{self.kind.lower()}/{self.code}"
 
     def reservation_violation(self, start_date, duration_days, today=None):
         """Return an error string if a RESERVE booking breaks this collection's

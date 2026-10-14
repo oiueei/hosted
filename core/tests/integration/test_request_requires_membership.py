@@ -156,6 +156,7 @@ class TestAReservationIsUnchanged:
             code="MBCOL4",
             owner=founder,
             headline="Salas",
+            kind="SHED",
             allowed_thing_types=["RESERVE_THING"],
             visibility=Collection.Visibility.PUBLIC,
         )

@@ -52,6 +52,7 @@ def reservations_collection(db):
         headline="Ateneu spaces",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=3,
         rental_weekdays=[0, 1, 2, 3, 4],  # Mon–Fri
@@ -70,6 +71,7 @@ def hourly_reservations_collection(db):
         headline="Ateneu spaces (hourly)",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_max_minutes=180,
@@ -97,6 +99,7 @@ def generous_hourly_reservations_collection(db):
         headline="Ateneu spaces (hourly, generous cap)",
         status="ACTIVE",
         mode=Collection.Mode.PROPRIETARY,
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_max_minutes=720,
@@ -165,6 +168,7 @@ def test_reservation_violation_rejects_past_the_horizon(db):
         code="HZCOL1",
         owner=owner,
         headline="Short lead time",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
         reservation_horizon_days=14,
@@ -189,6 +193,7 @@ def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
         code="HZCOL3",
         owner=owner,
         headline="Exact horizon",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=3,
         reservation_horizon_days=7,
@@ -207,7 +212,7 @@ def test_the_horizon_is_the_pickup_day_not_the_exclusive_end(db):
 def test_reservation_horizon_defaults_to_90(db):
     owner = User.objects.create(code="HZOWN2", email="lele1@your-domain.test")
     coll = Collection.objects.create(
-        code="HZCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+        code="HZCOL2", owner=owner, headline="X", kind="SHED", allowed_thing_types=["RESERVE_THING"]
     )
     assert coll.reservation_horizon_days == 90
     today = date(2026, 6, 1)
@@ -241,6 +246,7 @@ def test_reservation_violation_ignores_weekdays_when_unset(db):
         code="COLLY1",
         owner=owner,
         headline="Any day",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=7,
         rental_weekdays=[],
@@ -421,6 +427,7 @@ def test_day_has_a_free_hour_uses_the_collections_own_minimum_not_a_fixed_hour(d
         code="DHFCOL",
         owner=owner,
         headline="Quick machine slots",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_min_minutes=15,
@@ -498,6 +505,7 @@ def test_compute_hourly_availability_parses_the_closures_once_per_walk(db, monke
         code="HAVCO2",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_horizon_days=365,
@@ -519,6 +527,7 @@ def test_compute_hourly_availability_respects_the_horizon(db):
         code="HAVCO1",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_horizon_days=1,
@@ -540,6 +549,7 @@ def test_compute_hourly_availability_offers_the_horizon_day_itself(db):
         code="HAVCO3",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_horizon_days=6,
@@ -646,6 +656,7 @@ def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
         code="IRSVC1",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
     )
@@ -668,7 +679,7 @@ def test_cancel_reservation_is_idempotent_under_a_lost_race(db):
 def test_reservation_max_active_per_member_defaults_to_10(db):
     owner = User.objects.create(code="ACOWN1", email="lele4@your-domain.test")
     coll = Collection.objects.create(
-        code="ACCOL1", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+        code="ACCOL1", owner=owner, headline="X", kind="SHED", allowed_thing_types=["RESERVE_THING"]
     )
     assert coll.reservation_max_active_per_member == 10
 
@@ -681,10 +692,10 @@ def test_active_reservation_count_only_counts_this_collections_accepted_future_b
     member = User.objects.create(code="ACMEM2", email="lolo4@your-domain.test")
     other_member = User.objects.create(code="ACMEM3", email="lulu4@your-domain.test")
     coll = Collection.objects.create(
-        code="ACCOL2", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+        code="ACCOL2", owner=owner, headline="X", kind="SHED", allowed_thing_types=["RESERVE_THING"]
     )
     other_coll = Collection.objects.create(
-        code="ACCOL3", owner=owner, headline="Y", allowed_thing_types=["RESERVE_THING"]
+        code="ACCOL3", owner=owner, headline="Y", kind="SHED", allowed_thing_types=["RESERVE_THING"]
     )
     thing = Thing.objects.create(
         code="ACTHG2", type=Thing.Type.RESERVE_THING, owner=owner, headline="Room"
@@ -741,6 +752,7 @@ def test_an_hourly_reservation_counts_towards_the_cap_until_its_day_is_over(db):
         code="ACCOL5",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
     )
@@ -775,6 +787,7 @@ def test_request_reservation_refuses_past_the_active_cap(db):
         code="ACCOL4",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_max_days=1,
         reservation_max_active_per_member=2,
@@ -805,7 +818,7 @@ def test_request_reservation_refuses_past_the_active_cap(db):
 def test_reservation_unit_defaults_to_day(db):
     owner = User.objects.create(code="HRUOW1", email="lulu5@your-domain.test")
     coll = Collection.objects.create(
-        code="HRUCO1", owner=owner, headline="X", allowed_thing_types=["RESERVE_THING"]
+        code="HRUCO1", owner=owner, headline="X", kind="SHED", allowed_thing_types=["RESERVE_THING"]
     )
     assert coll.reservation_unit == Collection.ReservationUnit.DAY
     assert coll.opening_hours == {}
@@ -856,6 +869,7 @@ def test_day_opening_blocks_skips_malformed_entries_defensively(db):
         code="HBLCO1",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         opening_hours={"0": [["not-a-time", "14:00"], ["10:00", "14:00"]]},
@@ -895,6 +909,7 @@ def test_reservation_hour_violation_rejects_a_below_the_default_floor_minimum_to
         code="HRMNCO",
         owner=owner,
         headline="Quick machine slots",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_min_minutes=15,
@@ -948,6 +963,7 @@ def test_reservation_hour_violation_rejects_past_the_horizon(db):
         code="HHZCO1",
         owner=owner,
         headline="X",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_horizon_days=14,
@@ -1370,6 +1386,7 @@ def _grid_collection(code, opening_hours, min_minutes, max_minutes=720):
         code=code,
         owner=owner,
         headline="Grid",
+        kind="SHED",
         allowed_thing_types=["RESERVE_THING"],
         reservation_unit=Collection.ReservationUnit.HOUR,
         reservation_min_minutes=min_minutes,
