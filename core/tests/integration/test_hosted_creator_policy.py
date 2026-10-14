@@ -69,7 +69,7 @@ class TestSomebodyWhoHasNotAsked:
 
     def test_a_private_collection_is_open_to_them(self, authenticated_client):
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "My shelf"}, format="json"
+            "/api/v1/collections/", {"headline": "My shelf", "kind": "STALL"}, format="json"
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -88,7 +88,7 @@ class TestSomebodyWhoHasNotAsked:
     def test_a_community_collection_is_held_back(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
             format="json",
         )
 
@@ -104,7 +104,7 @@ class TestSomebodyWhoHasNotAsked:
         """
         response = authenticated_client.post(
             "/api/v1/collections/",
-            {"headline": "Mercadillo", "mode": "COMMUNITY"},
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
             format="json",
         )
 
@@ -116,6 +116,7 @@ class TestSomebodyWhoHasNotAsked:
         assert response.data["capabilities"] == {
             "collection_modes": ["PROPRIETARY"],
             "thing_types": ["GIFT_THING", "SELL_THING"],
+            "collection_kinds": ["STALL"],
             "request_url": FORM_URL,
             "co_owners_enabled": True,
         }
@@ -127,7 +128,9 @@ class TestSomebodyApproved:
         approve(user)
 
         collection = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "LIBRARY"},
+            format="json",
         )
         thing = authenticated_client.post(
             "/api/v1/things/",
@@ -145,6 +148,7 @@ class TestSomebodyApproved:
 
         assert capabilities["collection_modes"] == list(Collection.Mode.values)
         assert capabilities["thing_types"] == list(Thing.Type.values)
+        assert capabilities["collection_kinds"] == list(Collection.Kind.values)
         # Nothing left to request, so the notice must not appear at all.
         assert capabilities["request_url"] is None
 
@@ -161,7 +165,9 @@ class TestSomebodyApproved:
         )
 
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
+            format="json",
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN

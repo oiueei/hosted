@@ -182,7 +182,9 @@ class TestCapabilitiesAndTheRefusals:
         speaking(user, language)
 
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
+            format="json",
         )
 
         body = str(response.data)
@@ -209,9 +211,12 @@ class TestCapabilitiesAndTheRefusals:
 
     def test_no_refusal_points_at_a_page_of_our_own_any_more(self, authenticated_client):
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
+            format="json",
         )
 
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "/request-access" not in str(response.data)
 
 

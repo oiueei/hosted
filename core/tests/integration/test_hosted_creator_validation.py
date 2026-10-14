@@ -44,7 +44,9 @@ class TestTheOperatorsAnswer:
 
         assert validation.resolved is not None
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
+            format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -55,7 +57,7 @@ class TestTheOperatorsAnswer:
         validation.resolve(CreatorValidation.Status.REJECTED, note="Not this time")
 
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "My shelf"}, format="json"
+            "/api/v1/collections/", {"headline": "My shelf", "kind": "STALL"}, format="json"
         )
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -102,7 +104,9 @@ class TestTheAdminActions:
         assert validation.status == CreatorValidation.Status.APPROVED
         assert validation.resolved is not None
         response = authenticated_client.post(
-            "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+            "/api/v1/collections/",
+            {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
+            format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
 

@@ -88,7 +88,9 @@ def edit(model_admin, request, obj, **data):
 
 def can_create_a_community(authenticated_client):
     response = authenticated_client.post(
-        "/api/v1/collections/", {"headline": "Mercadillo", "mode": "COMMUNITY"}, format="json"
+        "/api/v1/collections/",
+        {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "STALL"},
+        format="json",
     )
     return response.status_code == status.HTTP_201_CREATED
 
