@@ -264,7 +264,7 @@ class TestRemindReturnEndpoint:
         remind(owner, booking)
 
         html = mail.outbox[0].alternatives[0][0]
-        assert f"/collections/RRCOL1/things/{drill.code}" in html
+        assert f"/stall/RRCOL1/things/{drill.code}" in html
 
     def test_another_member_may_not_nudge_somebody_elses_loan(self, drill, borrower, member):
         booking = lend(drill, borrower, TODAY - timedelta(days=5), YESTERDAY)

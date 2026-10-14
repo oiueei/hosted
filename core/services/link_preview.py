@@ -22,8 +22,9 @@ from django.utils.html import escape
 from core.models import Collection, Thing
 from core.utils import asset_url, resolve_localized
 
-# SLS adds the other kinds of collection page here.
-PREVIEW_COLLECTION_PREFIXES = ("collections",)
+# The address of a collection's page: one prefix per kind, and the pre-kind one
+# (an unknown code reaches the SPA under it, and previews nothing).
+PREVIEW_COLLECTION_PREFIXES = ("collections", "stall", "library", "shed")
 
 DESCRIPTION_LIMIT = 200
 SITE_NAME = "OIUEEI"
@@ -31,7 +32,7 @@ SITE_NAME = "OIUEEI"
 _SEGMENT = r"([^/]+)"
 _THING_ROUTES = (
     re.compile(r"things/" + _SEGMENT),
-    re.compile(r"collections/[^/]+/things/" + _SEGMENT),
+    re.compile(r"(?:" + "|".join(PREVIEW_COLLECTION_PREFIXES) + r")/[^/]+/things/" + _SEGMENT),
 )
 _SHARE_ROUTE = re.compile(r"share/" + _SEGMENT)
 

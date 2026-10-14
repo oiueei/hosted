@@ -358,7 +358,7 @@ TEXTS = {
 
 # Growth blurbs appended to outbound emails (above the preferences footer) to
 # turn guests into creators. One is chosen at random per send. The CTA always
-# points to {frontend_base}/collections/new; ``cta`` is the link label only.
+# points to {frontend_base}/new; ``cta`` is the link label only.
 VIRAL_LINES = [
     {
         "text": (

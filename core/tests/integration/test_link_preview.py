@@ -59,20 +59,20 @@ class TestACollection:
     def test_a_public_collection_names_itself(self, built, owner):
         _collection(owner)
 
-        body = Client().get("/collections/PUB001", HTTP_HOST="testserver").content.decode()
+        body = Client().get("/stall/PUB001", HTTP_HOST="testserver").content.decode()
 
         assert "<title>The street — OIUEEI</title>" in body
         assert '<meta property="og:title" content="The street">' in body
         assert '<meta property="og:description" content="Things we share">' in body
         assert '<meta name="description" content="Things we share">' in body
-        assert '<meta property="og:url" content="http://testserver/collections/PUB001">' in body
+        assert '<meta property="og:url" content="http://testserver/stall/PUB001">' in body
         assert '<meta property="og:site_name" content="OIUEEI">' in body
 
     @override_settings(MEDIA_PUBLIC_BASE_URL=MEDIA)
     def test_a_photo_becomes_the_card_image(self, built, owner):
         _collection(owner, thumbnail="oiueei/u/cover.webp")
 
-        body = _body("/collections/PUB001")
+        body = _body("/stall/PUB001")
 
         assert f'<meta property="og:image" content="{MEDIA}/oiueei/u/cover.webp">' in body
         assert "summary_large_image" in body
@@ -81,7 +81,7 @@ class TestACollection:
     def test_without_a_photo_there_is_no_image_at_all(self, built, owner):
         _collection(owner)
 
-        body = _body("/collections/PUB001")
+        body = _body("/stall/PUB001")
 
         assert "og:image" not in body
         assert "summary_large_image" not in body
@@ -90,13 +90,13 @@ class TestACollection:
     def test_the_join_page_carries_the_same_preview(self, built, owner):
         _collection(owner)
 
-        assert "<title>The street — OIUEEI</title>" in _body("/collections/PUB001/join")
-        assert "<title>The street — OIUEEI</title>" in _body("/collections/PUB001/join/")
+        assert "<title>The street — OIUEEI</title>" in _body("/stall/PUB001/join")
+        assert "<title>The street — OIUEEI</title>" in _body("/stall/PUB001/join/")
 
     def test_a_description_less_collection_has_no_description_tags(self, built, owner):
         _collection(owner, description="")
 
-        body = _body("/collections/PUB001")
+        body = _body("/stall/PUB001")
 
         assert "description" not in body
 
@@ -107,25 +107,50 @@ class TestACollection:
     def test_the_collections_own_language_picks_the_text(self, built, owner, language, expected):
         _collection(owner, headline='{"es": "Las calles", "ca": "Els carrers"}', language=language)
 
-        assert f"<title>{expected} — OIUEEI</title>" in _body("/collections/PUB001")
+        assert f"<title>{expected} — OIUEEI</title>" in _body("/stall/PUB001")
 
 
 class TestWhatAStrangerCannotSee:
     def test_a_private_collection_is_the_untouched_page(self, built, owner):
         _collection(owner, visibility=Collection.Visibility.PRIVATE)
 
-        assert _body("/collections/PUB001") == _neutral() == HEAD
-        assert _body("/collections/PUB001/join") == HEAD
+        assert _body("/stall/PUB001") == _neutral() == HEAD
+        assert _body("/stall/PUB001/join") == HEAD
 
     def test_an_inactive_public_collection_is_the_untouched_page(self, built, owner):
         _collection(owner, status=Collection.Status.INACTIVE)
 
-        assert _body("/collections/PUB001") == _neutral()
+        assert _body("/stall/PUB001") == _neutral()
 
     def test_an_unknown_code_is_the_untouched_page(self, built, db):
         assert _body("/collections/NOPE00") == _neutral()
         assert _body("/things/NOPE00") == _neutral()
         assert _body("/share/nope") == _neutral()
+
+
+class TestEveryKindHasItsOwnPrefix:
+    @pytest.mark.parametrize("kind", ["STALL", "LIBRARY", "SHED"])
+    def test_a_collection_and_its_thing_are_previewed_under_their_kinds_prefix(
+        self, built, owner, kind
+    ):
+        group = _collection(owner, kind=kind)
+        _thing(owner, group)
+        prefix = kind.lower()
+
+        assert "<title>The street — OIUEEI</title>" in _body(f"/{prefix}/PUB001")
+        assert "<title>The street — OIUEEI</title>" in _body(f"/{prefix}/PUB001/join")
+        assert "<title>Drill — OIUEEI</title>" in _body(f"/{prefix}/PUB001/things/THG001")
+
+    @pytest.mark.parametrize("kind", ["STALL", "LIBRARY", "SHED"])
+    def test_a_private_one_is_the_untouched_page_under_every_prefix(self, built, owner, kind):
+        _collection(owner, kind=kind, visibility=Collection.Visibility.PRIVATE)
+
+        assert _body(f"/{kind.lower()}/PUB001") == _neutral()
+
+    def test_the_old_prefix_reaches_the_preview_only_for_a_code_that_exists_nowhere(
+        self, built, db
+    ):
+        assert _body("/collections/NOPE00") == _neutral()
 
 
 class TestAThing:
@@ -134,7 +159,7 @@ class TestAThing:
             owner, _collection(owner, language="ca"), headline='{"es": "Taladro", "ca": "Trepant"}'
         )
 
-        for path in ("/things/THG001", "/collections/PUB001/things/THG001"):
+        for path in ("/things/THG001", "/stall/PUB001/things/THG001"):
             body = _body(path)
             assert "<title>Trepant — OIUEEI</title>" in body, path
             assert '<meta property="og:title" content="Trepant">' in body, path
@@ -143,7 +168,7 @@ class TestAThing:
         _thing(owner, _collection(owner), status=Thing.Status.INACTIVE)
 
         assert _body("/things/THG001") == _neutral()
-        assert _body("/collections/PUB001/things/THG001") == _neutral()
+        assert _body("/stall/PUB001/things/THG001") == _neutral()
 
     def test_a_thing_of_a_private_collection_is_the_untouched_page(self, built, owner):
         _thing(owner, _collection(owner, visibility=Collection.Visibility.PRIVATE))
@@ -187,7 +212,7 @@ class TestEscaping:
     def test_an_owners_markup_never_reaches_the_page_as_markup(self, built, owner):
         _collection(owner, headline='"><script>alert(1)</script>')
 
-        body = _body("/collections/PUB001")
+        body = _body("/stall/PUB001")
 
         assert "<script>alert" not in body
         assert "&quot;" in body
@@ -237,11 +262,12 @@ class TestQueryBudget:
         with django_assert_num_queries(0):
             Client().get(path)
 
-    def test_a_collection_costs_one_query(self, built, owner, django_assert_max_num_queries):
+    def test_a_collection_costs_two_queries(self, built, owner, django_assert_max_num_queries):
+        """One to see which kind's address it was asked at, one for the preview."""
         _collection(owner)
 
-        with django_assert_max_num_queries(1):
-            Client().get("/collections/PUB001")
+        with django_assert_max_num_queries(2):
+            Client().get("/stall/PUB001")
 
     def test_a_thing_costs_a_few(self, built, owner, django_assert_max_num_queries):
         _thing(owner, _collection(owner))

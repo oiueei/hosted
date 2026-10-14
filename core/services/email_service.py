@@ -431,7 +431,7 @@ def _bottom(
     Viral-line eligibility: recipients who don't own a collection — the
     audience for "create your own" — including not-yet-registered invitees
     (``user`` is ``None``). Suppressed for collection owners and when
-    ``VIRAL_LINES`` is empty. Its CTA is the plain ``/collections/new`` URL,
+    ``VIRAL_LINES`` is empty. Its CTA is the plain ``/new`` URL,
     never tracking-wrapped (DESIGN §9).
     """
     lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
@@ -469,7 +469,7 @@ def _bottom(
         )
         if lines and not curates_collection:
             line = random.choice(lines)
-            url = f"{_frontend_base_url()}/collections/new"
+            url = f"{_frontend_base_url()}/new"
             plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
             # A highlighted callout, not plain footer prose:
             # a pale-yellow background + padding sets the growth line apart
@@ -1087,6 +1087,20 @@ def _first_collection_readable_by(thing, reader):
     return next((c for c in collections if c.can_view(reader.code, invited_to=invited_to)), None)
 
 
+def _collection_path(collection_code, collection=None):
+    """The SPA route of a collection, ``/{kind}/{code}``.
+
+    A caller that holds the collection passes it; otherwise one query reads its
+    kind — made once per send, never per recipient. A code that names nothing
+    falls back to the old address, which the server redirects.
+    """
+    if collection is None:
+        from core.models import Collection
+
+        collection = Collection.objects.filter(code=collection_code).only("code", "kind").first()
+    return collection.path() if collection else f"/collections/{collection_code}"
+
+
 def _thing_url(thing, reader=None, collection=None):
     """Build the frontend URL for a thing, through a collection **its reader may open**.
 
@@ -1106,7 +1120,7 @@ def _thing_url(thing, reader=None, collection=None):
     if collection is None and reader is not None:
         collection = _first_collection_readable_by(thing, reader)
     if collection:
-        return f"{base}/collections/{collection.code}/things/{thing.code}"
+        return f"{base}{collection.path()}/things/{thing.code}"
     return f"{base}/things/{thing.code}"
 
 
@@ -2023,7 +2037,7 @@ def send_broadcast_email(
     collection — the object that originated the message — so recipients can open
     it in-app. Composed per recipient language (see ``_compose_per_language``).
     """
-    collection_url = f"{_frontend_base_url()}/collections/{collection_code}"
+    collection_url = f"{_frontend_base_url()}{_collection_path(collection_code, collection)}"
 
     def compose(lang):
         T, L = _texts(lang), _local(lang)
@@ -2441,7 +2455,7 @@ def send_digest_email(
 ):
     """Send a digest email listing new things added to a collection."""
     base_url = _frontend_base_url()
-    collection_url = f"{base_url}/collections/{collection_code}"
+    collection_url = f"{base_url}{_collection_path(collection_code, collection)}"
 
     def compose(lang):
         T, L = _texts(lang), _local(lang)

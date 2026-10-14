@@ -6,11 +6,12 @@ import os
 
 from django.conf import settings
 from django.contrib import admin
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponsePermanentRedirect
 from django.urls import include, path, re_path
 from django_otp.admin import OTPAdminSite
 from django_ratelimit.decorators import ratelimit
 
+from core.models import Collection
 from core.services.link_preview import inject_preview, preview_for_path
 
 # Require a verified OTP device (django-otp) for every admin login, on top of
@@ -70,6 +71,32 @@ def spa_index(request):
     return response
 
 
+def collection_address(request, prefix, code, rest=None):
+    """A collection lives at ``/{kind}/{code}``; any other prefix is sent there.
+
+    ``/collections/{code}`` was the only address before kinds, and an old link — an
+    email, a pinned page — may still name it, or the wrong kind. The 301 keeps the
+    rest of the path and the query string (``?thing=…`` of the join page), and is
+    safe to cache because a collection's kind never changes. A code that names no
+    collection, or one already under its own prefix, is the SPA's page as usual.
+
+    It deliberately asks nothing about permissions: an old link to a private
+    collection has to reach its page so the member can sign in. What it tells a
+    stranger is the kind of a collection whose code they already hold — that the
+    code exists is already said by ``GET /api/v1/collections/{code}/``, 403 against
+    404 — and what the link preview serves for the page itself is unchanged: the
+    body of a private collection is still the untouched ``index.html``; the
+    difference is only the redirect.
+    """
+    kind = Collection.objects.filter(code=code).values_list("kind", flat=True).first()
+    if kind is None or prefix == kind.lower():
+        return spa_index(request)
+    target = f"/{kind.lower()}/{code}{rest or ''}"
+    if request.META.get("QUERY_STRING"):
+        target += f"?{request.META['QUERY_STRING']}"
+    return HttpResponsePermanentRedirect(target)
+
+
 def deployment_urlpatterns():
     """Mount the URL modules this deployment adds (`DEPLOYMENT_URLCONFS`).
 
@@ -90,6 +117,16 @@ def deployment_urlpatterns():
 
 
 urlpatterns += deployment_urlpatterns()
+
+# A collection's address follows its kind, and the pre-kind /collections/ one moves.
+urlpatterns += [
+    re_path(r"^collections/new/?$", lambda request: HttpResponsePermanentRedirect("/new")),
+    re_path(
+        r"^(?P<prefix>collections|stall|library|shed)/"
+        r"(?P<code>[A-Za-z0-9]{6})(?P<rest>/.*)?$",
+        collection_address,
+    ),
+]
 
 # Catch-all: serve React SPA for all routes not handled above
 urlpatterns += [re_path(r"^(?!static/|api/|oiueei-admin).*", spa_index)]

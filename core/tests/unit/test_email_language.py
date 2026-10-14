@@ -245,15 +245,15 @@ class TestViralLine:
         u = User.objects.create(code="GUEST1", email="lele12@your-domain.test", name="Guest")
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", u.email)
-        assert "/collections/new" in mail.outbox[0].body
-        assert "/collections/new" in mail.outbox[0].alternatives[0][0]
+        assert "/new" in mail.outbox[0].body
+        assert "/new" in mail.outbox[0].alternatives[0][0]
 
     def test_line_absent_for_collection_owner(self):
         owner = User.objects.create(code="OWNR1", email="lala@your-domain.test", name="Owner")
         Collection.objects.create(code="OWNC1", owner=owner, headline="Mine", status="ACTIVE")
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", owner.email)
-        assert "/collections/new" not in mail.outbox[0].body
+        assert "/new" not in mail.outbox[0].body
 
     def test_line_absent_for_a_co_curator(self):
         """Since 2026-09 a co-curator has the founder's whole reach minus
@@ -269,7 +269,7 @@ class TestViralLine:
         collection.co_owners.add(co)
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", co.email)
-        assert "/collections/new" not in mail.outbox[0].body
+        assert "/new" not in mail.outbox[0].body
 
     def test_line_absent_for_a_co_curator_in_a_bulk_send(self):
         # The bulk lookup resolves the same flag in one query for the whole
@@ -286,7 +286,7 @@ class TestViralLine:
             "Founder", founder.email, "Ours", collection.code, "Hello team", [co.email]
         )
         assert len(mail.outbox) == 1
-        assert "/collections/new" not in mail.outbox[0].body
+        assert "/new" not in mail.outbox[0].body
 
     def test_a_plain_member_still_gets_the_line(self):
         # Being IN a collection is not curating one — the rank-and-file member
@@ -299,7 +299,7 @@ class TestViralLine:
         collection.invites.add(member)
         mail.outbox.clear()
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", member.email)
-        assert "/collections/new" in mail.outbox[0].body
+        assert "/new" in mail.outbox[0].body
 
     def test_line_present_on_magic_link_for_non_owner(self):
         # The magic link is the one email every user gets, so the growth
@@ -307,21 +307,21 @@ class TestViralLine:
         u = User.objects.create(code="GUEST2", email="lele1@your-domain.test", name="Guest")
         mail.outbox.clear()
         email_service.send_magic_link_email(u.email, "http://x/verify/tok")
-        assert "/collections/new" in mail.outbox[0].body
+        assert "/new" in mail.outbox[0].body
 
     def test_line_present_on_magic_link_for_unregistered_address(self):
         # Not-yet-registered invitees (JoinView, before the User row exists
         # at send time in some callers) are exactly the growth target too.
         mail.outbox.clear()
         email_service.send_magic_link_email("lili1@your-domain.test", "http://x/verify/tok")
-        assert "/collections/new" in mail.outbox[0].body
+        assert "/new" in mail.outbox[0].body
 
     def test_line_absent_on_magic_link_for_collection_owner(self):
         owner = User.objects.create(code="OWNR2", email="lala7@your-domain.test", name="Owner")
         Collection.objects.create(code="OWNC2", owner=owner, headline="Mine", status="ACTIVE")
         mail.outbox.clear()
         email_service.send_magic_link_email(owner.email, "http://x/verify/tok")
-        assert "/collections/new" not in mail.outbox[0].body
+        assert "/new" not in mail.outbox[0].body
 
     def test_line_absent_on_an_operator_report(self):
         """Ops mail is never growth copy — it goes to whoever runs the server.
@@ -339,7 +339,7 @@ class TestViralLine:
 
         email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
 
-        assert "/collections/new" not in mail.outbox[0].body
+        assert "/new" not in mail.outbox[0].body
 
     def test_footer_still_after_viral_line(self):
         u = User.objects.create(code="GUEST3", email="lulu@your-domain.test", name="Guest")
@@ -347,4 +347,4 @@ class TestViralLine:
         email_service.send_faq_answer_email("Lala", self._thing(), "¿Sigue?", "Sí", u.email)
         body = mail.outbox[0].body
         # Viral CTA appears before the preferences footer (footer always last).
-        assert body.index("/collections/new") < body.index("Manage your email preferences")
+        assert body.index("/new") < body.index("Manage your email preferences")

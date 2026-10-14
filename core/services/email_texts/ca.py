@@ -368,7 +368,7 @@ TEXTS = {
 
 # Frases de creixement que s'afegeixen als correus sortints (sobre el peu de
 # preferències) per convertir convidats en creadors. Se'n tria una a l'atzar per
-# enviament. El CTA sempre apunta a {frontend_base}/collections/new; ``cta`` és
+# enviament. El CTA sempre apunta a {frontend_base}/new; ``cta`` és
 # només l'etiqueta de l'enllaç.
 VIRAL_LINES = [
     {

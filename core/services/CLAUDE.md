@@ -12,8 +12,8 @@ WhatsApp, Telegram, Signal, iMessage and Slack read the HTML the server sends an
 
 | Route (trailing `/` optional) | Previewed when | Filled in |
 |---|---|---|
-| `<prefix>/<code>` and `<prefix>/<code>/join`, for each prefix in `PREVIEW_COLLECTION_PREFIXES` (today `collections`) | `collection.can_view(None)` | name, description, photo |
-| `collections/<code>/things/<thing>` and `things/<thing>` | `thing.can_view(None)` | name, description, photo |
+| `<prefix>/<code>` and `<prefix>/<code>/join`, for each prefix in `PREVIEW_COLLECTION_PREFIXES` (`collections`, `stall`, `library`, `shed`) | `collection.can_view(None)` | name, description, photo |
+| `<prefix>/<code>/things/<thing>` (same prefixes) and `things/<thing>` | `thing.can_view(None)` | name, description, photo |
 | `share/<token>` | `share_token=token` and `ACTIVE` (the filter of `SharePreviewView`) | name, description, **no photo** |
 
 Anything else, and any of the above whose condition fails, gets `None` and the **untouched `index.html`, byte for byte** — a private collection cannot be told from a code that does not exist, and a path that is none of these costs no query.
@@ -23,7 +23,7 @@ Anything else, and any of the above whose condition fails, gets `None` and the *
 - **Tags**: `<title>{name} — OIUEEI</title>`, `description` and `og:description` (only with a description), `og:title`, `og:site_name`, `og:type`, `og:url` (absolute, no query string), `og:image` (only with a photo, via `asset_url`) and `twitter:card` (`summary_large_image` with a photo, `summary` without). Every value goes through `escape`: they are an owner's words inside attributes. No fallback image: without a photo the app shows its icon as before.
 - **Language**: the crawler has no reader language, so name and description resolve with the collection's (a thing's: that of its first collection), falling back to `es`.
 - **Description**: `plain_description` turns Markdown into one line (links keep their text; heading, list, emphasis and table marks go; whitespace collapses) cut at 200 characters on a word boundary with `…`.
-- **Queries**: one for a collection; three for a thing (the thing, the visibility check, its collection for the language).
+- **Queries**: one for a collection (two once the address redirect has looked at its kind); three for a thing (the thing, the visibility check, its collection for the language). A page under the wrong prefix never gets here: `config.urls.collection_address` answers it with a 301 first, so the preview only sees the right one.
 
 ---
 
