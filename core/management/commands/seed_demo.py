@@ -226,6 +226,7 @@ class Command(BaseCommand):
                 "headline": data["headline"],
                 "description": data["description"],
                 "status": "ACTIVE",
+                "kind": data["kind"],
                 "mode": data.get("mode", "PROPRIETARY"),
                 "visibility": data.get("visibility", "PRIVATE"),
                 "is_onboarding": data.get("is_onboarding", False),

@@ -852,7 +852,39 @@ class TestSeedDemoCommand:
     def test_maps_allowed_thing_types_key(self):
         """Regression guard: _seed_collections must copy `allowed_thing_types`."""
         call_command("seed_demo")
-        assert Collection.objects.get(code="l1l1C1").allowed_thing_types == ["RENT_THING"]
+        assert Collection.objects.get(code="l1l1C1").allowed_thing_types == [
+            "LEND_THING",
+            "RENT_THING",
+        ]
+
+    def test_every_demo_collection_has_its_kind_and_holds_only_that_kinds_things(self):
+        """A collection holds one kind of thing, and a thing's verb follows its price:
+        the gift and the loan are free, the sale and the rental carry a price."""
+        from core.models.collection import KIND_THING_TYPES, derive_thing_type
+
+        call_command("seed_demo")
+
+        kinds = dict(Collection.objects.filter(is_onboarding=True).values_list("code", "kind"))
+        assert kinds == {
+            "La1aC1": "STALL",
+            "l0l0C1": "STALL",
+            "l1l1C1": "LIBRARY",
+            "1u1uC1": "LIBRARY",
+            "L3L3C1": "STALL",
+            "1u1uRe": "SHED",
+        }
+        for collection in Collection.objects.filter(is_onboarding=True):
+            assert set(collection.allowed_thing_types) <= set(KIND_THING_TYPES[collection.kind])
+            for thing in collection.things.all():
+                assert thing.type in KIND_THING_TYPES[collection.kind], thing.code
+                if collection.kind != "SHED":
+                    assert thing.type == derive_thing_type(collection.kind, thing.fee), thing.code
+
+    def test_a_community_demo_that_never_took_prices_keeps_only_its_free_verb(self):
+        call_command("seed_demo")
+
+        assert Collection.objects.get(code="1u1uC1").allowed_thing_types == ["LEND_THING"]
+        assert Collection.objects.get(code="L3L3C1").allowed_thing_types == ["GIFT_THING"]
 
     def test_lolo_owns_succulent_collection(self):
         call_command("seed_demo")
