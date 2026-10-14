@@ -291,7 +291,7 @@ class TestThePolicyItself:
     def test_an_anonymous_caller_gets_the_open_half_without_a_query(
         self, django_assert_num_queries
     ):
-        """`/collections/{code}` is public, and public pages must not query for
+        """`/{kind}/{code}` is public, and public pages must not query for
         a validation row that cannot exist."""
         from django.contrib.auth.models import AnonymousUser
 

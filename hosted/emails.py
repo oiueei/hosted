@@ -82,7 +82,7 @@ def send_creator_validation_decision_email(validation):
     key = "approved" if approved else "rejected"
     # A "yes" goes back into the product; a "no" says where to ask again — the form
     # in the language this email is written in (`hosted/tally.py`).
-    url = f"{_frontend_base_url()}/collections/new" if approved else request_access_url(lang)
+    url = f"{_frontend_base_url()}/new" if approved else request_access_url(lang)
 
     _send(
         user.email,

@@ -34,7 +34,7 @@ from django.test import RequestFactory
 from django.urls import resolve
 from rest_framework import status
 
-from core.services.email_service import resolve_email_language
+from core.services.email_service import _frontend_base_url, resolve_email_language
 from hosted.emails import send_creator_validation_decision_email
 from hosted.models import CreatorValidation
 from hosted.policy import HostedCreatorPolicy
@@ -278,7 +278,8 @@ class TestTheEmailThatSaysNo:
         send_creator_validation_decision_email(validation)
 
         body = mail.outbox[-1].body
-        assert "/collections/new" in body
+        assert f"{_frontend_base_url()}/new" in body
+        assert "/collections/" not in body
         assert "tally.so" not in body
 
 

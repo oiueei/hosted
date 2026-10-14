@@ -33,6 +33,7 @@ from rest_framework import status
 
 from core.admin import UserAdmin
 from core.models import User
+from core.services.email_service import _frontend_base_url
 from hosted.admin import SENT_THROUGH_TALLY, CreatorValidationAdmin
 from hosted.models import CreatorValidation
 from hosted.tally import REQUEST_ACCESS
@@ -271,7 +272,8 @@ class TestCreatingARowAndAnsweringIt:
         assert can_create_a_community(authenticated_client)
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
-        assert "/collections/new" in mail.outbox[0].body
+        assert f"{_frontend_base_url()}/new" in mail.outbox[0].body
+        assert "/collections/" not in mail.outbox[0].body
 
     def test_create_then_reject_with_the_action_tells_them_where_to_ask_again(
         self, model_admin, request_as, user
@@ -411,7 +413,8 @@ class TestADecisionMadeOnTheForm:
         assert row.status == STATUS.APPROVED
         assert row.resolved is not None
         assert len(mail.outbox) == 1
-        assert "/collections/new" in mail.outbox[0].body
+        assert f"{_frontend_base_url()}/new" in mail.outbox[0].body
+        assert "/collections/" not in mail.outbox[0].body
 
     def test_the_note_typed_with_the_decision_is_not_wiped(self, model_admin, request_as, user):
         """`resolve()` blanks the note; the form's decision must not."""
