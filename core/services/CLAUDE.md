@@ -6,6 +6,27 @@ Business logic and side effects extracted from views into `core/services/`. Keep
 
 ## Modules
 
+### `link_preview.py` — The `<head>` of a shared link
+
+WhatsApp, Telegram, Signal, iMessage and Slack read the HTML the server sends and run no JavaScript, and `spa_index` serves one `index.html` for every route, so a shared link used to show only "OIUEEI" and the icon. `spa_index` now asks `preview_for_path(path)` and, when it answers, serves `inject_preview(html, preview, absolute_url)`.
+
+| Route (trailing `/` optional) | Previewed when | Filled in |
+|---|---|---|
+| `<prefix>/<code>` and `<prefix>/<code>/join`, for each prefix in `PREVIEW_COLLECTION_PREFIXES` (today `collections`) | `collection.can_view(None)` | name, description, photo |
+| `collections/<code>/things/<thing>` and `things/<thing>` | `thing.can_view(None)` | name, description, photo |
+| `share/<token>` | `share_token=token` and `ACTIVE` (the filter of `SharePreviewView`) | name, description, **no photo** |
+
+Anything else, and any of the above whose condition fails, gets `None` and the **untouched `index.html`, byte for byte** — a private collection cannot be told from a code that does not exist, and a path that is none of these costs no query.
+
+- **The rule is "only what an anonymous visitor could already read".** The condition is the model's own `can_view(None)`, never a copy of it.
+- **`share/` carries no photo on purpose**, like the endpoint behind the join page: the card must not give the holder of a link more than the join page does.
+- **Tags**: `<title>{name} — OIUEEI</title>`, `description` and `og:description` (only with a description), `og:title`, `og:site_name`, `og:type`, `og:url` (absolute, no query string), `og:image` (only with a photo, via `asset_url`) and `twitter:card` (`summary_large_image` with a photo, `summary` without). Every value goes through `escape`: they are an owner's words inside attributes. No fallback image: without a photo the app shows its icon as before.
+- **Language**: the crawler has no reader language, so name and description resolve with the collection's (a thing's: that of its first collection), falling back to `es`.
+- **Description**: `plain_description` turns Markdown into one line (links keep their text; heading, list, emphasis and table marks go; whitespace collapses) cut at 200 characters on a word boundary with `…`.
+- **Queries**: one for a collection; three for a thing (the thing, the visibility check, its collection for the language).
+
+---
+
 ### `booking_service.py` — Booking Business Logic
 
 Handles state transitions for `BookingPeriod` and `Thing` models as an atomic unit.

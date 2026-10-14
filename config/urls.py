@@ -11,6 +11,8 @@ from django.urls import include, path, re_path
 from django_otp.admin import OTPAdminSite
 from django_ratelimit.decorators import ratelimit
 
+from core.services.link_preview import inject_preview, preview_for_path
+
 # Require a verified OTP device (django-otp) for every admin login, on top of
 # password auth. Swapping the class (rather than instantiating a fresh
 # OTPAdminSite) keeps the existing instance's `name = "admin"`, so every
@@ -47,13 +49,23 @@ def spa_index(request):
     JS chunks by hash, a release replaces them, and a cached ``index.html`` would
     hand the reload the very same page that names the chunks that are gone. The
     hashed assets themselves are served (and cached) by the static layer.
+
+    A few routes get their ``<head>`` filled in for link previews (see
+    ``core.services.link_preview``): a collection, a thing and a share link. Only
+    what an anonymous visitor could already read on the page is used, so a private,
+    inactive or unknown target is answered with the untouched ``index.html``. The
+    share link carries no photo, like the endpoint behind its join page.
     """
     index_path = os.path.join(settings.BASE_DIR, "frontend", "dist", "index.html")
     try:
         with open(index_path, encoding="utf-8") as f:
-            response = HttpResponse(f.read(), content_type="text/html")
+            html = f.read()
     except FileNotFoundError:
         return HttpResponse("Frontend not built. Run: cd frontend && npm run build", status=503)
+    preview = preview_for_path(request.path)
+    if preview:
+        html = inject_preview(html, preview, request.build_absolute_uri(request.path))
+    response = HttpResponse(html, content_type="text/html")
     response["Cache-Control"] = "no-cache"
     return response
 

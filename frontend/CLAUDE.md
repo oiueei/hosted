@@ -55,6 +55,8 @@ React frontend using HDS (Helsinki Design System) from npm with OIUEEI customiza
 
 Every page sets `document.title` via `useEffect` for meaningful browser tab titles and bookmarks. Dynamic pages (CollectionPage, ThingPage, UserPage, etc.) update the title when data loads. Format: `{Page context} — OIUEEI` — and `test/i18nParity.test.js` checks every `titles.*` string in the three locales ends with it (`titles.reserveThing` was the one that forgot, in all three, until 2026-09-29).
 
+For the previews chat apps build from a shared link (they run no JavaScript), the server fills the `<head>` of a public collection, a thing and a share link before serving `index.html` (`core/services/link_preview.py`); React then sets the title as usual once it loads.
+
 ---
 
 ## Page Layout Pattern
