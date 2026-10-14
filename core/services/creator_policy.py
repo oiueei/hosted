@@ -229,20 +229,22 @@ def community_contribution_types(collection, user) -> frozenset[str]:
     A `CreatorPolicy` gates *initiating*: opening a collection, or offering a
     verb under your own name or into your own collection. It does not gate a
     member adding a thing to a COMMUNITY group someone else already runs, of a
-    type that group's owner has **explicitly** put in `allowed_thing_types`.
-    That owner is the vetted party — a deployment narrow enough to hold
-    COMMUNITY creation behind a request vetted them — and naming the type in
-    the allowlist is them opening their group to it.
+    type in that group's `allowed_thing_types`. That owner is the vetted party —
+    a deployment narrow enough to hold COMMUNITY creation behind a request
+    vetted them — and what they allow is them opening their group to it.
 
-    An empty `allowed_thing_types` is deliberately **not** "every type" here:
-    an empty allowlist means the owner made no choice, so the deployment's own
-    default still decides what an un-vetted member may bring in. The exception
-    needs a positive act by the owner.
+    The allowlist is always explicit: it holds the verbs within the group's
+    kind and is never empty. With "members may set a price" on (the default
+    when the group is created) a member can bring in both verbs of the kind,
+    even ones the instance's policy would not give them personally; with it
+    off, only the free one. The owner decides, being the part the instance
+    could verify when it opened the group.
 
     Returns the empty set for `None`, a PROPRIETARY collection, the collection's
-    own owner, a non-member, and an empty allowlist — so a caller can gate on
+    own owner and a non-member — so a caller can gate on
     `thing_type in community_contribution_types(...)` and nothing slips through
-    a collection the person has no standing in.
+    a collection the person has no standing in. The empty-allowlist branch stays
+    as a defence against a hand-edited row.
 
     Upstream this is dead weight: `OpenCreatorPolicy` allows every verb, so
     `thing_type_denial()` returns `None` and no caller ever reaches for this.
