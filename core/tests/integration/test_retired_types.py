@@ -21,7 +21,7 @@ exactly who arrives at these doors after a type is retired.
 
 import pytest
 
-from core.models import Thing
+from core.models import Collection, Thing
 
 RETIRED = ["WISH_THING", "SWAP_THING", "SHARE_THING"]
 
@@ -89,15 +89,20 @@ def test_the_four_live_types_still_pass_every_door(authenticated_client, collect
     that refused every type — would satisfy all three tests above, so the live
     catalogue has to be pinned in the same breath as the retired one."""
     live = ["GIFT_THING", "SELL_THING", "RENT_THING", "LEND_THING"]
-
+    library = Collection.objects.create(
+        code="LIBRTY", owner=collection.owner, headline="Lend", kind="LIBRARY"
+    )
+    # The verb follows the price: a fee makes a sale or a rental, none a gift or a loan.
     for thing_type in live:
+        home = library if thing_type in ("RENT_THING", "LEND_THING") else collection
+        priced = thing_type in ("SELL_THING", "RENT_THING")
         res = authenticated_client.post(
             "/api/v1/things/",
             {
                 "headline": f"A live {thing_type}",
                 "type": thing_type,
-                "fee": "5.00",
-                "collection_code": collection.code,
+                **({"fee": "5.00"} if priced else {}),
+                "collection_code": home.code,
             },
             format="json",
         )

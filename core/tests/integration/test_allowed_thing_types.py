@@ -98,6 +98,7 @@ class TestCommunityWithAllowedTypes:
             code="COLL13",
             owner=user,
             headline="Books only",
+            kind="LIBRARY",
             mode="COMMUNITY",
             allowed_thing_types=["LEND_THING"],
         )
@@ -243,12 +244,12 @@ class TestChangingAnExistingThingsType:
     def test_an_owner_may_move_a_thing_to_another_type_the_collection_allows(
         self, authenticated_client, user
     ):
-        """The happy path, which had no test at all: a gift becomes a sale."""
+        """The happy path: a gift becomes a sale the moment it is given a price."""
         collection = self._collection(user, ["GIFT_THING", "SELL_THING"])
         thing = self._thing(user, collection)
 
         response = authenticated_client.patch(
-            f"/api/v1/things/{thing.code}/", {"type": "SELL_THING"}, format="json"
+            f"/api/v1/things/{thing.code}/", {"fee": "5.00"}, format="json"
         )
 
         assert response.status_code == status.HTTP_200_OK

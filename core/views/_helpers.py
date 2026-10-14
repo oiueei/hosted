@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from core.models import Thing
+from core.models.collection import KIND_THING_TYPES, derive_thing_type
 
 
 def body_dict(request):
@@ -54,6 +55,33 @@ def get_viewable_thing(code, user_code, message):
     return thing, deny_if_cannot_view(thing, user_code, message)
 
 
+_VERB_NAMES = {
+    "STALL": ("sale", "gift"),
+    "LIBRARY": ("rental", "loan"),
+}
+
+
+def verb_from_price(collection, fee, given_type=None):
+    """``(thing_type, None)`` for a thing in ``collection`` priced at ``fee``, or
+    ``(None, message)`` when the verb the client named contradicts its price.
+
+    The server decides the verb (`derive_thing_type`); a client may still name one,
+    and naming the wrong one is an error rather than something silently corrected,
+    so a stale form never sells what its owner meant to give away.
+    """
+    derived = derive_thing_type(collection.kind, fee)
+    if given_type is None or given_type == derived:
+        return derived, None
+    kind = collection.kind.lower()
+    names = _VERB_NAMES.get(collection.kind)
+    if names is None:
+        return None, f"In a {kind} every thing is booked: its verb is always a reservation."
+    return None, (
+        f"In a {kind} the verb follows the price: with a price it's a {names[0]}, "
+        f"without one a {names[1]}."
+    )
+
+
 def type_validity_error(thing_type, collection):
     """Error message if ``thing_type`` isn't valid for ``collection``, else None.
 
@@ -78,6 +106,8 @@ def type_validity_error(thing_type, collection):
     if collection is None:
         return None
     if collection.allowed_thing_types and thing_type not in collection.allowed_thing_types:
+        if thing_type in KIND_THING_TYPES[collection.kind][1:]:
+            return "This group doesn't take prices."
         return (
             f"This collection does not accept {thing_type.replace('_', ' ').title()}s."
             " The owner has restricted it to specific types."

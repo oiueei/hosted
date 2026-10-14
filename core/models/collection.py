@@ -26,6 +26,16 @@ KIND_THING_TYPES = {
 }
 
 
+def derive_thing_type(kind, fee):
+    """The verb a thing takes in a ``kind`` collection: it follows the price.
+
+    A stall gives (no price) or sells (a price), a library lends or rents out, a
+    shed always books. ``fee`` of ``None`` or ``0`` is no price.
+    """
+    free, *paid = KIND_THING_TYPES[kind]
+    return paid[0] if paid and fee is not None and fee > 0 else free
+
+
 def kind_for_thing_type(thing_type):
     """The kind of collection a verb belongs to, or ``None`` for an unknown one."""
     for kind, types in KIND_THING_TYPES.items():

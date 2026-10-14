@@ -758,7 +758,10 @@ class ThingCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        validate_deposit_for_type(attrs.get("type"), attrs.get("deposit"))
+        # With no type named the view works the verb out from the collection and
+        # the price, and runs this same check on the result.
+        if "type" in attrs:
+            validate_deposit_for_type(attrs["type"], attrs.get("deposit"))
         return attrs
 
 
@@ -945,5 +948,6 @@ class ThingBulkRowSerializer(serializers.ModelSerializer):
         return [reject_spreadsheet_formula(tag) for tag in value] if value else value
 
     def validate(self, attrs):
-        validate_deposit_for_type(attrs.get("type"), attrs.get("deposit"))
+        if "type" in attrs:
+            validate_deposit_for_type(attrs["type"], attrs.get("deposit"))
         return attrs

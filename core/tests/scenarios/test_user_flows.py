@@ -410,7 +410,6 @@ class TestCompleteUserJourney:
                 "/api/v1/things/",
                 {
                     **item,
-                    "type": "GIFT_THING",
                     "collection_code": wishlist_code,
                 },
                 format="json",

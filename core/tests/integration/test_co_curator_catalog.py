@@ -44,7 +44,11 @@ def outsider(db):
 def space(db, owner, co_curator):
     """A PROPRIETARY collection with one co-curator, and one thing the founder added."""
     collection = Collection.objects.create(
-        code="SPC001", owner=owner, headline="The workshop", mode=Collection.Mode.PROPRIETARY
+        code="SPC001",
+        owner=owner,
+        headline="The workshop",
+        kind="LIBRARY",
+        mode=Collection.Mode.PROPRIETARY,
     )
     collection.invites.add(co_curator)
     collection.co_owners.add(co_curator)
