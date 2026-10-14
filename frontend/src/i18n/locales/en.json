@@ -1127,5 +1127,25 @@
     "reservation_weekday_closed": "Those dates include a day that isn't open for reservations.",
     "reservation_whole_minutes": "Times are whole minutes (HH:MM).",
     "time_taken": "That time is already taken."
+  },
+  "kinds": {
+    "STALL": {
+      "short": "Stall",
+      "long": "Stall",
+      "what": "Things to sell or give away",
+      "create": "Create stall"
+    },
+    "LIBRARY": {
+      "short": "Library",
+      "long": "Library of Things",
+      "what": "Things to lend or rent out",
+      "create": "Create library"
+    },
+    "SHED": {
+      "short": "Shed",
+      "long": "Shed",
+      "what": "Things to book by the day or by the hour",
+      "create": "Create shed"
+    }
   }
 }

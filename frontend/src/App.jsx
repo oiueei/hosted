@@ -28,6 +28,7 @@ const ImportInvitesPage = lazy(() => import('./pages/ImportInvitesPage'));
 const EditThingPage = lazy(() => import('./pages/EditThingPage'));
 const ThingPage = lazy(() => import('./pages/ThingPage'));
 const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
+const NewCollectionPage = lazy(() => import('./pages/NewCollectionPage'));
 const EditCollectionPage = lazy(() => import('./pages/EditCollectionPage'));
 const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
 const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage'));
@@ -196,14 +197,13 @@ function App() {
               <Route path="/me/edit" element={<EditProfilePage />} />
               <Route path="/me/data" element={<DataExportPage />} />
               <Route path="/me/delete" element={<DeleteAccountPage />} />
-              <Route path="/new" element={<CreateCollectionPage />} />
+              <Route path="/new" element={<NewCollectionPage />} />
               <Route path="/collections/new" element={<Navigate to="/new" replace />} />
               {COLLECTION_KINDS.map((kind) => (
-                <Route
-                  key={`start-${kind}`}
-                  path={`/${kind.toLowerCase()}`}
-                  element={<Navigate to="/new" replace />}
-                />
+                <Route key={`start-${kind}`} path={`/${kind.toLowerCase()}`}>
+                  <Route index element={<Navigate to={`/${kind.toLowerCase()}/new`} replace />} />
+                  <Route path="new" element={<CreateCollectionPage />} />
+                </Route>
               ))}
               {COLLECTION_PREFIXES.flatMap(protectedCollectionRoutes)}
               <Route path="/things/:thingCode/edit" element={<EditThingPage />} />

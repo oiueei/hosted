@@ -2242,3 +2242,45 @@ caption:has(> .sr-only:only-child) {
   margin: 0 0 var(--spacing-s);
   font-size: var(--fontsize-body-s);
 }
+
+/* ── The three kinds of collection (`/new`) ──
+   One card per kind, one destination each. Mobile first: a column, then the
+   three side by side at 992px. There is no two-column step at 768px on purpose:
+   three cards in two columns leave one alone on a second row, and that is
+   worse than a column (the standing exception to the card-grid progression,
+   as `collections-grid`). White with a thin border, like the table cards. */
+.kind-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-s);
+}
+
+.kind-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  background: var(--color-white);
+  border: 1px solid var(--color-black-20);
+  border-radius: 4px;
+  padding: var(--spacing-s);
+}
+
+.kind-card-title {
+  margin: 0;
+  font-size: var(--fontsize-heading-s);
+  line-height: var(--lineheight-m);
+}
+
+.kind-card-what {
+  margin: 0;
+  flex-grow: 1;
+}
+
+@media (min-width: 992px) {
+  .kind-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

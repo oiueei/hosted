@@ -1127,5 +1127,25 @@
     "reservation_weekday_closed": "Esas fechas incluyen un día que no admite reservas.",
     "reservation_whole_minutes": "Las horas van en minutos enteros (HH:MM).",
     "time_taken": "Esa hora ya está cogida."
+  },
+  "kinds": {
+    "STALL": {
+      "short": "Rastrillo",
+      "long": "Rastrillo",
+      "what": "Cosas para vender o regalar",
+      "create": "Crear rastrillo"
+    },
+    "LIBRARY": {
+      "short": "Biblioteca",
+      "long": "Biblioteca de las cosas",
+      "what": "Cosas para prestar o alquilar",
+      "create": "Crear biblioteca"
+    },
+    "SHED": {
+      "short": "Taller",
+      "long": "Taller de máquinas",
+      "what": "Cosas para reservar por días o por horas",
+      "create": "Crear taller"
+    }
   }
 }

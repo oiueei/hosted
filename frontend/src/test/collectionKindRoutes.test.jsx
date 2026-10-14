@@ -82,6 +82,22 @@ describe('every prefix mounts the collection’s pages', () => {
   });
 });
 
+describe('starting a collection', () => {
+  test('/new is the chooser: three kinds, no form', async () => {
+    await openApp('/new');
+
+    expect(await screen.findAllByRole('listitem')).toHaveLength(3);
+    expect(screen.queryByLabelText(/^Title/)).toBeNull();
+  });
+
+  test.each(['stall', 'library', 'shed'])('/%s/new is the form', async (prefix) => {
+    await openApp(`/${prefix}/new`);
+
+    expect(await screen.findByLabelText(/^Title/)).toBeVisible();
+    expect(window.location.pathname).toBe(`/${prefix}/new`);
+  });
+});
+
 describe('the address from before kinds', () => {
   test.each(['/collections/COL001', '/stall/COL001', '/shed/COL001'])(
     '%s lands on /library/COL001 once the kind is known',
@@ -105,9 +121,9 @@ describe('the address from before kinds', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/new'));
   });
 
-  test.each(['/stall', '/library', '/shed'])('%s leads on to /new', async (path) => {
+  test.each(['/stall', '/library', '/shed'])('%s leads on to its own form', async (path) => {
     await openApp(path);
 
-    await waitFor(() => expect(window.location.pathname).toBe('/new'));
+    await waitFor(() => expect(window.location.pathname).toBe(`${path}/new`));
   });
 });

@@ -1127,5 +1127,25 @@
     "reservation_weekday_closed": "Aquestes dates inclouen un dia que no admet reserves.",
     "reservation_whole_minutes": "Les hores van en minuts sencers (HH:MM).",
     "time_taken": "Aquesta hora ja està agafada."
+  },
+  "kinds": {
+    "STALL": {
+      "short": "Paradeta",
+      "long": "Paradeta",
+      "what": "Coses per vendre o regalar",
+      "create": "Crear paradeta"
+    },
+    "LIBRARY": {
+      "short": "Biblioteca",
+      "long": "Biblioteca de les coses",
+      "what": "Coses per prestar o llogar",
+      "create": "Crear biblioteca"
+    },
+    "SHED": {
+      "short": "Taller",
+      "long": "Taller de màquines",
+      "what": "Coses per reservar per dies o per hores",
+      "create": "Crear taller"
+    }
   }
 }
