@@ -24,6 +24,7 @@ import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import EmailNoteTest from '../components/EmailNoteTest';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import { allowedVerbsFor, membersPriceFromVerbs } from '../utils/collectionKind';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -55,7 +56,12 @@ export default function EditCollectionPage() {
   const [visibility, setVisibility] = useState('PRIVATE');
   const [allowProposals, setAllowProposals] = useState(true);
   const [digestFrequency, setDigestFrequency] = useState('NONE');
-  const [allowedThingTypes, setAllowedThingTypes] = useState([]);
+  // The kind is the collection's own and never changes: the page shows it as a fact
+  // about the collection and sends it nowhere.
+  const [kind, setKind] = useState('');
+  // Whether the members of a COMMUNITY stall or library may set a price (both of the
+  // kind's verbs stored) or only give and lend (the free verb alone).
+  const [membersPrice, setMembersPrice] = useState(true);
   const [rentalDurations, setRentalDurations] = useState([]);
   const [rentalWeekdays, setRentalWeekdays] = useState([]);
   const [reservationUnit, setReservationUnit] = useState('DAY');
@@ -109,7 +115,6 @@ export default function EditCollectionPage() {
   const [pauseSubmitting, setPauseSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [toast, setToast] = useState(null);
 
   const STATUS_OPTIONS = [
@@ -134,11 +139,13 @@ export default function EditCollectionPage() {
   // showing it while the owner tries the alternatives. The server only judges a
   // change; a form that hid the stored answer would submit a wrong one.
   const capabilities = useCapabilities();
-  const isReservations = allowedThingTypes.length === 1 && allowedThingTypes[0] === 'RESERVE_THING';
-  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter(
-    (opt) =>
-      isOfferable(capabilities, 'collection_modes', opt.value, savedMode) &&
-      !(isReservations && opt.value !== 'PROPRIETARY')
+  // A shed is always PROPRIETARY, so it has no mode to change; a gift or a sale
+  // completes from the card and never reaches the request page, so the note for that
+  // page, the closed days and the rental rules are for a library and a shed.
+  const isReservations = kind === 'SHED';
+  const hasRequestPage = kind === 'LIBRARY' || kind === 'SHED';
+  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
+    isOfferable(capabilities, 'collection_modes', opt.value, savedMode)
   );
 
   const DIGEST_OPTIONS = [
@@ -147,23 +154,9 @@ export default function EditCollectionPage() {
     { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
   ];
 
-  // Live "pick at least one" feedback once a submit has been attempted (P1-5).
-  const allowedTypesError =
-    submitAttempted && allowedThingTypes.length === 0
-      ? t('createCollection.allowedTypesAtLeastOne')
-      : '';
-
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
     setMode(newMode);
-    // Both modes allow the same types, so the selection carries over untouched.
-  };
-
-  const handleTypesChange = (types) => {
-    setAllowedThingTypes(types);
-    if (types.length === 1 && types[0] === 'RESERVE_THING' && mode !== 'PROPRIETARY') {
-      setMode('PROPRIETARY');
-    }
   };
 
   useEffect(() => {
@@ -185,7 +178,8 @@ export default function EditCollectionPage() {
           // instead of springing back on at the next save.
           setAllowProposals(data.allow_member_proposals ?? true);
           setDigestFrequency(data.digest_frequency || 'NONE');
-          setAllowedThingTypes(data.allowed_thing_types || []);
+          setKind(data.kind || '');
+          setMembersPrice(membersPriceFromVerbs(data.kind, data.allowed_thing_types));
           setRentalDurations(data.rental_durations || []);
           setRentalWeekdays(data.rental_weekdays || []);
           setReservationUnit(data.reservation_unit || 'DAY');
@@ -232,15 +226,13 @@ export default function EditCollectionPage() {
   }, [userCode, code, navigate]);
 
   const validate = () => {
-    setSubmitAttempted(true);
     const newErrors = {};
     if (!headline.trim()) newErrors.headline = t('editCollection.titleRequired');
     if (localizedCounter(headline, 64).over) newErrors.headline = t('editCollection.maxHeadline');
     if (localizedCounter(description, 2000).over)
       newErrors.description = t('editCollection.maxDescription');
     setErrors(newErrors);
-    const allowedTypesOk = allowedThingTypes.length > 0;
-    return Object.keys(newErrors).length === 0 && allowedTypesOk;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
@@ -263,19 +255,21 @@ export default function EditCollectionPage() {
       visibility,
       allow_member_proposals: allowProposals,
       digest_frequency: digestFrequency,
-      allowed_thing_types: allowedThingTypes,
-      rental_durations: isReservations ? [] : rentalDurations,
-      rental_weekdays: rentalWeekdays,
-      closed_dates: closedDates,
+      allowed_thing_types: allowedVerbsFor(kind, mode, membersPrice),
       home_page: homePage.trim(),
-      deposit_policy: isReservations ? '' : depositPolicy.trim(),
-      request_info: requestInfo.trim(),
       email_note: emailNote.trim(),
       tags,
       thumbnail: thumbnail || '',
       language,
       welcome_doc: welcomeDoc || '',
     };
+    if (hasRequestPage) {
+      body.closed_dates = closedDates;
+      body.request_info = requestInfo.trim();
+      body.rental_weekdays = rentalWeekdays;
+      body.rental_durations = isReservations ? [] : rentalDurations;
+      body.deposit_policy = isReservations ? '' : depositPolicy.trim();
+    }
     if (isReservations) {
       body.reservation_horizon_days = reservationHorizonDays;
       body.reservation_max_active_per_member = reservationMaxActivePerMember;
@@ -344,6 +338,7 @@ export default function EditCollectionPage() {
   return (
     <PageLayout backTo={`${base}`} backLabel={L(headline) || t('common.collection')}>
       <h1 className="page-title-xl">{t('editCollection.pageTitle')}</h1>
+      {kind && <p className="collection-kind">{t(`kinds.${kind}.long`)}</p>}
       <div className="form-grid">
         <TextInput
           id="edit-collection-headline"
@@ -377,24 +372,26 @@ export default function EditCollectionPage() {
             }
           }}
         />
-        <CollectionModeField
-          idPrefix="edit-collection"
-          label={t('editCollection.modeLabel')}
-          options={MODE_OPTIONS}
-          catalogue={ALL_MODE_OPTIONS}
-          value={mode}
-          onChange={handleModeChange}
-        />
+        {!isReservations && (
+          <CollectionModeField
+            idPrefix="edit-collection"
+            label={t('editCollection.modeLabel')}
+            options={MODE_OPTIONS}
+            catalogue={ALL_MODE_OPTIONS}
+            value={mode}
+            onChange={handleModeChange}
+          />
+        )}
         <CollectionForm
           idPrefix="edit-collection"
-          allowedThingTypes={allowedThingTypes}
-          setAllowedThingTypes={handleTypesChange}
+          kind={kind}
           mode={mode}
           visibility={visibility}
           setVisibility={setVisibility}
           allowProposals={allowProposals}
           setAllowProposals={setAllowProposals}
-          errors={{ ...errors, allowedThingTypes: allowedTypesError }}
+          membersPrice={membersPrice}
+          setMembersPrice={setMembersPrice}
           theeemeColor01={tc.color_01}
         />
       </div>
@@ -440,7 +437,7 @@ export default function EditCollectionPage() {
               theeemeColor01={tc.color_01}
               theeemeColor06={tc.color_06}
             />
-          ) : (
+          ) : hasRequestPage ? (
             <RentalRulesFields
               idPrefix="edit-collection"
               rentalDurations={rentalDurations}
@@ -452,27 +449,31 @@ export default function EditCollectionPage() {
               theeemeColor01={tc.color_01}
               theeemeColor06={tc.color_06}
             />
-          )}
-          <ClosedDatesField
-            id="edit-collection-closed-dates"
-            value={closedDates}
-            onChange={setClosedDates}
-          />
-          <div>
-            <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
-            <TextArea
-              id="edit-collection-request-info"
-              label={t('requestInfo.label')}
-              value={requestInfo}
-              onChange={(e) => setRequestInfo(e.target.value)}
-              invalid={localizedCounter(requestInfo, 512).over}
-              errorText={
-                localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
-              }
-              helperText={localizedHelper(requestInfo, 512, t)}
+          ) : null}
+          {hasRequestPage && (
+            <ClosedDatesField
+              id="edit-collection-closed-dates"
+              value={closedDates}
+              onChange={setClosedDates}
             />
-            <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
-          </div>
+          )}
+          {hasRequestPage && (
+            <div>
+              <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
+              <TextArea
+                id="edit-collection-request-info"
+                label={t('requestInfo.label')}
+                value={requestInfo}
+                onChange={(e) => setRequestInfo(e.target.value)}
+                invalid={localizedCounter(requestInfo, 512).over}
+                errorText={
+                  localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
+                }
+                helperText={localizedHelper(requestInfo, 512, t)}
+              />
+              <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
+            </div>
+          )}
           <div>
             <p className="weekday-field-helper">{t('emailNote.helper')}</p>
             <TextArea

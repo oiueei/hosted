@@ -552,16 +552,11 @@
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
     "errorCreating": "Error creating collection.",
-    "allowedTypesLabel": "What can be added to this collection",
-    "allowedTypesPlaceholder": "Pick one or more types",
-    "allowedTypesHelper": "Pick at least one. Only the types you choose will be available when adding things later.",
-    "allowedTypesAtLeastOne": "Pick at least one type.",
     "advancedTitle": "More options",
     "tagsLabel": "Tags",
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",
-    "maxDescription": "Description is too long: 2000 characters per language.",
-    "reservationsModeNote": "A reservations collection holds only reservations, and the team running the group manages what can be booked — so it's always proprietary."
+    "maxDescription": "Description is too long: 2000 characters per language."
   },
   "myBookings": {
     "pageTitle": "My requests",
@@ -1147,5 +1142,9 @@
       "what": "Things to book by the day or by the hour",
       "create": "Create shed"
     }
+  },
+  "collectionForm": {
+    "membersPriceStall": "Members can sell (set a price)",
+    "membersPriceLibrary": "Members can rent out (set a price)"
   }
 }

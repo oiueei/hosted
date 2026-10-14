@@ -28,18 +28,14 @@ export const AVAILABILITY_VALUES = ['IMMEDIATE', 'NEXT_WEEK', 'END_OF_MONTH', 'N
 
 export const CONDITION_VALUES = ['NEW', 'GOOD', 'FAIR', 'USED', 'WELL_USED', 'ALMOST_JUNK'];
 
-// The thing types a collection's allowlist may name. The first four take the
-// same set in either mode — mode decides WHO may add a thing, not WHICH types.
-// RESERVE_THING is the exception: picking it makes it the *sole* allowed type
-// (a reservations collection holds only reservations) and locks the mode to
-// PROPRIETARY. It is never offered in a COMMUNITY collection's form.
-export const ALLOWED_TYPES = [
-  'GIFT_THING',
-  'SELL_THING',
-  'RENT_THING',
-  'LEND_THING',
-  'RESERVE_THING',
-];
+// The verbs each kind of collection holds, the browser's copy of the server's
+// `KIND_THING_TYPES`: a stall gives or sells, a library lends or rents out, a shed
+// books. A collection's `allowed_thing_types` is always within its kind's.
+export const KIND_THING_TYPES = {
+  STALL: ['GIFT_THING', 'SELL_THING'],
+  LIBRARY: ['LEND_THING', 'RENT_THING'],
+  SHED: ['RESERVE_THING'],
+};
 
 export const TAG_THEMES = {
   taken: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },

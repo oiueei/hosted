@@ -546,16 +546,11 @@
     "titleRequired": "El títol és obligatori.",
     "maxHeadline": "Màxim 64 caràcters per idioma.",
     "errorCreating": "Error en crear la col·lecció.",
-    "allowedTypesLabel": "Què es pot afegir a aquesta col·lecció",
-    "allowedTypesPlaceholder": "Tria un o més tipus",
-    "allowedTypesHelper": "Tria almenys un. Només estaran disponibles els tipus que seleccionis quan hi afegeixis coses.",
-    "allowedTypesAtLeastOne": "Tria almenys un tipus.",
     "advancedTitle": "Més opcions",
     "tagsLabel": "Etiquetes",
     "tagsPlaceholder": "p. ex. Vintage, Cuina, Exterior",
     "tagsHelper": "Etiquetes opcionals per organitzar les coses d'aquesta col·lecció",
-    "maxDescription": "La descripció és massa llarga: 2000 caràcters per idioma.",
-    "reservationsModeNote": "Una col·lecció de reserves només conté reserves i qui dinamitza el grup gestiona el que es pot reservar, així que sempre és de tipus propietari."
+    "maxDescription": "La descripció és massa llarga: 2000 caràcters per idioma."
   },
   "myBookings": {
     "pageTitle": "Les meves sol·licituds",
@@ -1147,5 +1142,9 @@
       "what": "Coses per reservar per dies o per hores",
       "create": "Crear taller"
     }
+  },
+  "collectionForm": {
+    "membersPriceStall": "Els membres poden vendre (posar preu)",
+    "membersPriceLibrary": "Els membres poden llogar (posar preu)"
   }
 }

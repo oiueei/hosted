@@ -40,7 +40,10 @@ const COLLECTION = {
   status: 'ACTIVE',
   visibility: 'PRIVATE',
   owner: 'USR001', // matches the userCode set in beforeEach — the viewer is the founder
-  allowed_thing_types: ['GIFT_THING'],
+  // A library: the kind whose form has all of what the notes and the rental rules
+  // below hang from (a stall has no request page, a shed has its own rules).
+  kind: 'LIBRARY',
+  allowed_thing_types: ['LEND_THING', 'RENT_THING'],
   rental_durations: [],
   rental_weekdays: [],
   tags: [],
@@ -150,6 +153,7 @@ describe('EditCollectionPage — saving', () => {
     // the form would still say it was saved.
     const byTheDay = {
       ...COLLECTION,
+      kind: 'SHED',
       allowed_thing_types: ['RESERVE_THING'],
       reservation_unit: 'DAY',
       reservation_max_days: 3,
@@ -545,6 +549,7 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
   // schedule was saved when the old one was (found in review, 2026-09-18).
   const HOURLY = {
     ...COLLECTION,
+    kind: 'SHED',
     allowed_thing_types: ['RESERVE_THING'],
     reservation_unit: 'HOUR',
     opening_hours: { 0: [['10:00', '14:00']] },

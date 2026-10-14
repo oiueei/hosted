@@ -546,16 +546,11 @@
     "titleRequired": "El título es obligatorio.",
     "maxHeadline": "Máximo 64 caracteres por idioma.",
     "errorCreating": "Error al crear la colección.",
-    "allowedTypesLabel": "Qué se puede añadir a esta colección",
-    "allowedTypesPlaceholder": "Elige uno o más tipos",
-    "allowedTypesHelper": "Elige al menos uno. Solo estarán disponibles los tipos que selecciones cuando añadas cosas.",
-    "allowedTypesAtLeastOne": "Elige al menos un tipo.",
     "advancedTitle": "Más opciones",
     "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "p. ej. Vintage, Cocina, Exterior",
     "tagsHelper": "Etiquetas opcionales para organizar las cosas de esta colección",
-    "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma.",
-    "reservationsModeNote": "Una colección de reservas solo contiene reservas y quien dinamiza el grupo gestiona lo que se puede reservar, así que siempre es de tipo propietario."
+    "maxDescription": "La descripción es demasiado larga: 2000 caracteres por idioma."
   },
   "myBookings": {
     "pageTitle": "Mis solicitudes",
@@ -1147,5 +1142,9 @@
       "what": "Cosas para reservar por días o por horas",
       "create": "Crear taller"
     }
+  },
+  "collectionForm": {
+    "membersPriceStall": "Los miembros pueden vender (poner precio)",
+    "membersPriceLibrary": "Los miembros pueden alquilar (poner precio)"
   }
 }

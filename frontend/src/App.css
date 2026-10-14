@@ -2284,3 +2284,11 @@ caption:has(> .sr-only:only-child) {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* The kind of the collection being edited, said once under the title: a fact about
+   it, not a control — it never changes. */
+.collection-kind {
+  margin: 0 0 var(--spacing-s);
+  color: var(--color-black-60);
+  font-size: var(--fontsize-body-m);
+}
