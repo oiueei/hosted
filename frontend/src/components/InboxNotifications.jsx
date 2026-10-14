@@ -11,6 +11,7 @@ import {
   localToday,
   summarizeOwnerBookings,
 } from '../utils/inboxGroups';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 // The figures on the summary card come from the owner-bookings list, which the API
 // pages (100 at most). A group with more history than this many pages says nothing
@@ -382,7 +383,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     // owner answers it — landing them on the collection would leave them hunting
     // for the button. The two resolved states just point at the group.
     if (n.type === 'INVITE_PROPOSED' && !isProposalApproved(n) && p.collection_code) {
-      return { to: `/collections/${p.collection_code}/invites`, label: t('home.viewProposal') };
+      return {
+        to: collectionPath(p.collection_code, p.collection_kind, '/invites'),
+        label: t('home.viewProposal'),
+      };
     }
     // A broadcast says whatever its curator wrote, so its link only says where
     // it goes. It was labelled "I can help!" — the call-for-help CTA of the
@@ -397,11 +401,14 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         n.type === 'DEMOTED_CO_OWNER') &&
       p.collection_code
     ) {
-      return { to: `/collections/${p.collection_code}`, label: t('home.viewGroup') };
+      return {
+        to: collectionPath(p.collection_code, p.collection_kind),
+        label: t('home.viewGroup'),
+      };
     }
     if (p.thing_code) {
       const to = p.collection_code
-        ? `/collections/${p.collection_code}/things/${p.thing_code}`
+        ? collectionThingPath(p.collection_code, p.collection_kind, p.thing_code)
         : `/things/${p.thing_code}`;
       return { to, label: t('home.viewThing') };
     }

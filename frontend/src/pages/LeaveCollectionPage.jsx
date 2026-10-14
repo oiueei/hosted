@@ -6,13 +6,15 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function LeaveCollectionPage() {
   const { t } = useTranslation();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
   const location = useLocation();
-  const backPath = `/collections/${code}`;
+  const backPath = `${base}`;
   const headline = location.state?.headline || t('leaveCollection.thisCollection');
 
   useEffect(() => {

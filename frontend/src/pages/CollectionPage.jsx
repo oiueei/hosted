@@ -30,6 +30,7 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useMediaQuery from '../hooks/useMediaQuery';
 import Toast from '../components/Toast';
 import { DATE_TYPES } from '../constants/things';
+import { useCollectionBase, useCanonicalCollectionPath } from '../hooks/useCollectionBase';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -61,6 +62,10 @@ export default function CollectionPage() {
   const { t, i18n } = useTranslation();
   const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
+  // The collection's own address, and the move off a wrong one: a link made
+  // before kinds, or at the wrong kind's prefix, is corrected here.
+  const base = useCollectionBase(code, collection?.kind);
+  useCanonicalCollectionPath(collection?.kind);
   const [error, setError] = useState('');
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -393,6 +398,7 @@ export default function CollectionPage() {
               {(isCurator || isMember) && (
                 <CollectionMenu
                   code={code}
+                  kind={collection.kind}
                   headline={headline}
                   isCurator={isCurator}
                   hasDateThings={hasDateThings}
@@ -404,6 +410,7 @@ export default function CollectionPage() {
               {canShare && (
                 <ShareCollectionMenu
                   collectionCode={code}
+                  collectionKind={collection.kind}
                   collectionHeadline={headline}
                   isPublic={collection.visibility === 'PUBLIC'}
                 />
@@ -489,13 +496,10 @@ export default function CollectionPage() {
             {showsSignedOutDoors && (
               <div className="invite-nudge">
                 <div className="button-row-wide">
-                  <ButtonLink
-                    to={loginPathFor({ pathname: `/collections/${code}` })}
-                    style={btnStyle}
-                  >
+                  <ButtonLink to={loginPathFor({ pathname: base })} style={btnStyle}>
                     {t('login.signIn')}
                   </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/join`} style={btnSecondaryStyle}>
+                  <ButtonLink to={`${base}/join`} style={btnSecondaryStyle}>
                     {t('collectionPage.visitorJoin')}
                   </ButtonLink>
                 </div>
@@ -537,10 +541,10 @@ export default function CollectionPage() {
                     "Manage members" and the downloads live only in the menu; the
                     outcome of a download lands right under the row. */}
                 <div className="button-row-wide">
-                  <ButtonLink to={`/collections/${code}/add`} style={btnStyle}>
+                  <ButtonLink to={`${base}/add`} style={btnStyle}>
                     {t('collectionPage.addThing')}
                   </ButtonLink>
-                  <ButtonLink to={`/collections/${code}/edit`} style={btnSecondaryStyle}>
+                  <ButtonLink to={`${base}/edit`} style={btnSecondaryStyle}>
                     {t('collectionPage.editCollection')}
                   </ButtonLink>
                   {/* The third button of the row (it was a quiet line
@@ -552,7 +556,7 @@ export default function CollectionPage() {
                       always there for whoever runs the group, owner or co-curator, with
                       things or without and with members or without: inviting is not a
                       step of the beginning. */}
-                  <ButtonLink to={`/collections/${code}/invites`} style={btnSecondaryStyle}>
+                  <ButtonLink to={`${base}/invites`} style={btnSecondaryStyle}>
                     {t('collectionPage.inviteYourPeople')}
                   </ButtonLink>
                 </div>
@@ -592,7 +596,7 @@ export default function CollectionPage() {
                       </Button>
                     )}
                     {collection.mode === 'COMMUNITY' && (
-                      <ButtonLink to={`/collections/${code}/add`} style={btnSecondaryStyle}>
+                      <ButtonLink to={`${base}/add`} style={btnSecondaryStyle}>
                         {t('collectionPage.addThing')}
                       </ButtonLink>
                     )}
@@ -740,6 +744,7 @@ export default function CollectionPage() {
                   thing={thing}
                   userCode={userCode}
                   collectionCode={code}
+                  collectionKind={collection.kind}
                   collectionHeadline={headline}
                   collectionOwner={collection.owner}
                   collectionMode={collection.mode}
@@ -870,6 +875,7 @@ export default function CollectionPage() {
                     thing={thing}
                     userCode={userCode}
                     collectionCode={code}
+                    collectionKind={collection.kind}
                     collectionHeadline={headline}
                     collectionOwner={collection.owner}
                     collectionMode={collection.mode}

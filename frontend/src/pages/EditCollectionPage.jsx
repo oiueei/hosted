@@ -23,6 +23,7 @@ import { useLocalized, localizedCounter, localizedHelper } from '../utils/locali
 import { closedDatesToDisplay } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import EmailNoteTest from '../components/EmailNoteTest';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -30,6 +31,7 @@ export default function EditCollectionPage() {
   // page title and the back label show the resolved words.
   const L = useLocalized();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
   const userCode = localStorage.getItem('userCode');
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
@@ -293,7 +295,7 @@ export default function EditCollectionPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        navigate(`/collections/${code}`);
+        navigate(`${base}`);
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else if (res.status === 400) {
@@ -340,7 +342,7 @@ export default function EditCollectionPage() {
   };
 
   return (
-    <PageLayout backTo={`/collections/${code}`} backLabel={L(headline) || t('common.collection')}>
+    <PageLayout backTo={`${base}`} backLabel={L(headline) || t('common.collection')}>
       <h1 className="page-title-xl">{t('editCollection.pageTitle')}</h1>
       <div className="form-grid">
         <TextInput
@@ -548,9 +550,9 @@ export default function EditCollectionPage() {
             fullWidth
             disabled={submitting}
             onClick={() => {
-              navigate(`/collections/${code}/delete`, {
+              navigate(`${base}/delete`, {
                 state: {
-                  backPath: `/collections/${code}/edit`,
+                  backPath: `${base}/edit`,
                   backLabel: L(headline) || t('common.collection'),
                 },
               });

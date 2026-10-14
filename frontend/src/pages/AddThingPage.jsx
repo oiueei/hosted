@@ -18,12 +18,14 @@ import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function AddThingPage() {
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
 
   const userCode = localStorage.getItem('userCode');
@@ -143,10 +145,7 @@ export default function AddThingPage() {
         // is in sight. The page ignores it on a desktop. A response without a code
         // simply sends no state.
         const created = await res.json().catch(() => null);
-        navigate(
-          `/collections/${code}`,
-          created?.code ? { state: { addedThing: created.code } } : undefined
-        );
+        navigate(`${base}`, created?.code ? { state: { addedThing: created.code } } : undefined);
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
@@ -206,10 +205,7 @@ export default function AddThingPage() {
     .map((v) => ({ label: t('types.' + v), value: v }));
 
   return (
-    <PageLayout
-      backTo={`/collections/${code}`}
-      backLabel={L(collectionHeadline) || t('common.collection')}
-    >
+    <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>
       <h1 className="page-title-xl">{t('addThing.pageTitle')}</h1>
       {isOnboarding && <DemoNotice />}
       <div className="form-grid">

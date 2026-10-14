@@ -2,6 +2,10 @@
   "_about": "Shared by core/tests/unit/test_safe_next_path.py and frontend/src/utils/nextPath.test.js. The server (core.utils.safe_next_path) is the gate and the browser (utils/nextPath.js) is defence in depth; both decide whether a login's `next` may carry the reader to a page. Every row is either a same-site path the SPA really has or one thing a browser could read as somewhere else. The last row of each list is the length boundary (256 accepted, 257 refused), written out in full so a hand edit cannot quietly move it. JS keeps one extra local row, undefined, which JSON cannot carry.",
   "accepted": [
     "/collections/AbC123/things/XyZ789",
+    "/library/AbC123/things/XyZ789",
+    "/stall/AbC123/join?thing=XyZ789",
+    "/shed/AbC123/things/XyZ789/request",
+    "/new",
     "/collections/new",
     "/me/edit",
     "/my-bookings",

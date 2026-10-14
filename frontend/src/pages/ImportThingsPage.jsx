@@ -6,6 +6,7 @@ import PageLayout from '../components/PageLayout';
 import BulkAddCsv from '../components/BulkAddCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized } from '../utils/localized';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 /**
  * Add several things at once, from a CSV or a ZIP. The tool
@@ -28,6 +29,7 @@ export default function ImportThingsPage() {
   // Owner content (the collection's headline) may carry one text per language.
   const L = useLocalized();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
   const userCode = localStorage.getItem('userCode');
 
@@ -51,13 +53,10 @@ export default function ImportThingsPage() {
   }, [userCode, code]);
 
   return (
-    <PageLayout
-      backTo={`/collections/${code}`}
-      backLabel={L(collectionHeadline) || t('common.collection')}
-    >
+    <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>
       <h1 className="page-title-xl">{t('collectionPage.addManyCsv')}</h1>
       <section className="bulk-add-section">
-        <BulkAddCsv collectionCode={code} onImported={() => navigate(`/collections/${code}`)} />
+        <BulkAddCsv collectionCode={code} onImported={() => navigate(`${base}`)} />
       </section>
     </PageLayout>
   );

@@ -9,17 +9,19 @@ import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import { useCollectionBase } from '../hooks/useCollectionBase';
 
 export default function DeleteCollectionPage() {
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
   const { code } = useParams();
+  const base = useCollectionBase(code);
   const navigate = useNavigate();
   const location = useLocation();
   const userCode = localStorage.getItem('userCode');
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
-  const backPath = location.state?.backPath || `/collections/${code}/edit`;
+  const backPath = location.state?.backPath || `${base}/edit`;
   const backLabel = location.state?.backLabel || t('common.back');
 
   const [collection, setCollection] = useState(null);

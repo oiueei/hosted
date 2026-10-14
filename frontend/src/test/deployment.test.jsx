@@ -494,9 +494,7 @@ describe("the dashboard's second button follows aboutPath", () => {
 
     // The empty state has rendered: it is the "create your first" button that
     // proves we are looking at it and not at a loading or error branch.
-    await waitFor(() =>
-      expect(document.querySelector('a[href="/collections/new"]')).not.toBeNull()
-    );
+    await waitFor(() => expect(document.querySelector('a[href="/new"]')).not.toBeNull());
     expect(document.querySelector('a[href="/welcome"]')).toBeNull();
     // Scoped to the empty state by its own copy: HomePage has a second
     // `.button-row-wide` up in the hero, and a document-wide selector would be
@@ -505,7 +503,7 @@ describe("the dashboard's second button follows aboutPath", () => {
     // the href had been spelled.
     const emptyState = screen.getByText('You have no active collections yet.').parentElement;
     const links = [...emptyState.querySelectorAll('a')];
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/collections/new']);
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/new']);
     expect(screen.queryByText('See how it works')).not.toBeInTheDocument();
   });
 

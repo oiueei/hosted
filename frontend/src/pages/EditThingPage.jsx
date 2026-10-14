@@ -18,6 +18,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
+import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 export default function EditThingPage() {
   const { t } = useTranslation();
@@ -56,6 +57,7 @@ export default function EditThingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [thingCollectionCode, setThingCollectionCode] = useState(code || '');
+  const [thingCollectionKind, setThingCollectionKind] = useState('');
   const [thingCollectionHeadline, setThingCollectionHeadline] = useState('');
   const [thingCollectionLanguage, setThingCollectionLanguage] = useState('');
   // The texts as loaded, not the live draft: typing must not flip the page's
@@ -89,6 +91,7 @@ export default function EditThingPage() {
           if (data.is_endless) setIsEndless(true);
           if (!code && data.collection_code) setThingCollectionCode(data.collection_code);
           if (data.collection_headline) setThingCollectionHeadline(data.collection_headline);
+          setThingCollectionKind(data.collection_kind || '');
           setThingCollectionLanguage(data.collection_language || '');
           setLoadedTexts([data.headline, data.description]);
         } else {
@@ -107,7 +110,9 @@ export default function EditThingPage() {
     // over anything the editor had typed in the meantime.
   }, [userCode, thingCode, navigate, code]);
 
-  const returnPath = thingCollectionCode ? `/collections/${thingCollectionCode}` : '/';
+  const returnPath = thingCollectionCode
+    ? collectionPath(thingCollectionCode, thingCollectionKind)
+    : '/';
   const returnLabel =
     L(thingCollectionHeadline) || (thingCollectionCode ? t('common.collection') : t('common.home'));
 
@@ -246,7 +251,7 @@ export default function EditThingPage() {
           disabled={submitting}
           onClick={() => {
             const deletePath = thingCollectionCode
-              ? `/collections/${thingCollectionCode}/things/${thingCode}/delete`
+              ? collectionThingPath(thingCollectionCode, thingCollectionKind, thingCode, '/delete')
               : `/things/${thingCode}/delete`;
             navigate(deletePath, { state: { backPath: returnPath, backLabel: returnLabel } });
           }}

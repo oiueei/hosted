@@ -19,6 +19,7 @@ import { localizedCounter, localizedHelper } from '../utils/localized';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
+import { collectionPath } from '../utils/collectionPath';
 
 export default function CreateCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -195,7 +196,7 @@ export default function CreateCollectionPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        navigate(`/collections/${data.code}`);
+        navigate(collectionPath(data.code, data.kind));
       } else if (res.status === 429) {
         setToast({ type: 'error', message: t('common.tooManyAttempts') });
       } else {
