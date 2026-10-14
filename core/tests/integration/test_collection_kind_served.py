@@ -250,3 +250,20 @@ class TestShare:
         res = APIClient().get(f"/api/v1/share/{self.TOKEN}/preview/")
 
         assert res.data["kind"] == "LIBRARY"
+
+
+@pytest.mark.django_db
+class TestOnAProfile:
+    def test_the_collections_two_people_share_carry_their_kind_in_both_directions(
+        self, authenticated_client, user, user2
+    ):
+        mine = _group(user, "LIBRARY", "MINE01")
+        mine.invites.add(user2)
+        theirs = _group(user2, "SHED", "THEIR1")
+        theirs.invites.add(user)
+
+        res = authenticated_client.get(f"/api/v1/users/{user2.code}/")
+
+        assert res.status_code == status.HTTP_200_OK
+        shared = {c["code"]: c["kind"] for c in res.data["shared_collections"]}
+        assert shared == {"MINE01": "LIBRARY", "THEIR1": "SHED"}
