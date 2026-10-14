@@ -19,15 +19,17 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import AddThingPage from './AddThingPage';
 
-// The form a member meets first in a COMMUNITY collection, and the one place a
-// collection's `allowed_thing_types` has to be honoured in the UI: the backend
-// refuses a type outside the list with a 400, so a picker that still offers it
-// sends people down a path that cannot succeed.
+// The form a member meets first in a COMMUNITY collection. There is no choice of
+// verb in it: the collection's kind and the price decide it, the server puts it, and
+// the form sends none. What it still has to honour is the collection's own list — a
+// group whose members may not set a price has no price field — and the deployment's
+// policy, asked about the verb the price makes.
 
 const collection = (over = {}) => ({
   code: 'COL001',
   headline: 'The lending library',
-  allowed_thing_types: [],
+  kind: 'STALL',
+  allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
   tags: [],
   ...over,
 });
@@ -59,10 +61,6 @@ const postBody = () => {
   return call && JSON.parse(call[1].body);
 };
 
-const openTypePicker = async () => {
-  fireEvent.click(await screen.findByRole('combobox', { name: /Type/ }));
-};
-
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'USR001');
@@ -78,7 +76,7 @@ describe('AddThingPage — no CSV import any more', () => {
   test('the page has no bulk section and no import heading', async () => {
     mockApi();
     const { container } = renderPage();
-    await screen.findByRole('combobox', { name: /Type/ });
+    await screen.findByLabelText(/Title/);
 
     expect(container.querySelector('#bulk-add, .bulk-add-section')).toBeNull();
     expect(screen.queryByText(/Add multiple things from a CSV/)).toBeNull();
@@ -97,7 +95,7 @@ describe('AddThingPage — no CSV import any more', () => {
           </Routes>
         </MemoryRouter>
       );
-      await screen.findByRole('combobox', { name: /Type/ });
+      await screen.findByLabelText(/Title/);
 
       expect(scrollIntoView).not.toHaveBeenCalled();
     } finally {
@@ -106,93 +104,100 @@ describe('AddThingPage — no CSV import any more', () => {
   });
 });
 
-describe('AddThingPage — the collection decides which types exist', () => {
-  test('with no allowlist, every type is on offer', async () => {
+describe('AddThingPage — the price decides the verb, the server puts it', () => {
+  test('a gift and a sale are the same form: a price, or none', async () => {
     mockApi();
     renderPage();
-    await openTypePicker();
 
-    for (const label of ['Gift', 'Sale', 'Rental', 'Lend']) {
-      expect(screen.getByRole('option', { name: label })).toBeInTheDocument();
-    }
+    const price = await screen.findByLabelText(/Price/);
+    expect(price).toBeInTheDocument();
+    // Typing a price changes nothing else on the form.
+    const before = screen.getAllByRole('textbox').length;
+    fireEvent.change(price, { target: { value: '5' } });
+    expect(screen.getAllByRole('textbox').length).toBe(before);
+    expect(screen.getByText('Availability')).toBeInTheDocument();
   });
 
-  test('an allowlist hides the types the collection would refuse', async () => {
-    // A lending library that accepts only loans must not offer "Gift": the
-    // backend answers 400 on it, so offering it is an invitation to fail.
-    mockApi({ coll: collection({ allowed_thing_types: ['LEND_THING', 'RENT_THING'] }) });
+  test('no verb is sent, with a price or without one', async () => {
+    mockApi();
     renderPage();
-    await openTypePicker();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Old bike' } });
+    fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '30' } });
 
-    expect(screen.getByRole('option', { name: 'Lend' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Rental' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Gift' })).toBeNull();
-    expect(screen.queryByRole('option', { name: 'Sale' })).toBeNull();
-  });
-
-  test('a single allowed type is chosen for the member, not asked of them', async () => {
-    // With one possible answer, asking the question is friction — and the
-    // downstream fields (dates, fee) only appear once a type is picked.
-    mockApi({ coll: collection({ allowed_thing_types: ['SELL_THING'] }) });
-    renderPage();
-
-    // The fee field belongs to SELL, so its presence proves the pre-selection
-    // reached the form rather than only the select's own value.
-    expect(await screen.findByLabelText(/Price/)).toBeInTheDocument();
-  });
-
-  test('a multi-type allowlist without GIFT still opens on an offered type', async () => {
-    // The GIFT_THING default is not in this list and the list has more than one
-    // entry, so the single-type pre-select does not fire. The box used to show
-    // a raw "GIFT_THING" — a type the backend refuses — with the wrong
-    // downstream fields; now it moves to the first type the collection offers.
-    mockApi({ coll: collection({ allowed_thing_types: ['RENT_THING', 'LEND_THING'] }) });
-    renderPage();
-
-    const combo = await screen.findByRole('combobox', { name: /Type/ });
-    await waitFor(() => expect(combo).toHaveTextContent('Rental'));
-    expect(combo).not.toHaveTextContent('GIFT_THING');
-    // downstream state followed the correction: RENT's price field is shown,
-    // GIFT's "endless" toggle is not
-    expect(await screen.findByLabelText(/Price/)).toBeInTheDocument();
-    expect(screen.queryByText(/Endless/)).toBeNull();
-
-    // and the corrected type is what a submit sends
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'The ladder' } });
-    fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '5' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    await waitFor(() => expect(postBody()).toMatchObject({ type: 'RENT_THING' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).toMatchObject({
+      headline: 'Old bike',
+      fee: '30',
+      collection_code: 'COL001',
+    });
+    expect(postBody()).not.toHaveProperty('type');
   });
 
-  test('the type box names the selected type, never its raw code', async () => {
+  test('a price is optional: with none the thing is sent without a fee', async () => {
     mockApi();
     renderPage();
-    const combo = await screen.findByRole('combobox', { name: /Type/ });
-    // the default, shown by label not value
-    await waitFor(() => expect(combo).toHaveTextContent('Gift'));
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Lend' }));
-    await waitFor(() => expect(combo).toHaveTextContent('Lend'));
-    expect(combo).not.toHaveTextContent('LEND_THING');
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).not.toHaveProperty('fee');
+    expect(screen.queryByText(/Price is required/)).toBeNull();
+  });
+
+  test.each([
+    ['STALL', 'Price (optional)'],
+    ['LIBRARY', 'Rental price (optional)'],
+  ])('a %s asks for its price in its own words', async (kind, label) => {
+    mockApi({ coll: collection({ kind }) });
+    renderPage();
+
+    expect(
+      await screen.findByLabelText(new RegExp(label.replace(/[()]/g, '\\$&')))
+    ).toBeInTheDocument();
+  });
+
+  test('a community group whose members may not set a price has no price field', async () => {
+    mockApi({
+      coll: collection({
+        mode: 'COMMUNITY',
+        is_member: true,
+        allowed_thing_types: ['GIFT_THING'],
+      }),
+    });
+    renderPage();
+    await screen.findByLabelText(/Title/);
+
+    expect(screen.queryByLabelText(/Price/)).toBeNull();
+  });
+
+  test('a library has its deposit; a stall does not', async () => {
+    mockApi({
+      coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
+    });
+    const { container, unmount } = renderPage();
+    await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
+    unmount();
+
+    mockApi();
+    const stall = renderPage();
+    await screen.findByLabelText(/Title/);
+    expect(stall.container.querySelector('#add-thing-deposit')).toBeNull();
   });
 });
 
 describe('AddThingPage — what the form sends', () => {
-  test('a title and a type are enough, and the collection travels with them', async () => {
+  test('a title is enough, and the collection travels with it', async () => {
     mockApi();
     renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() =>
-      expect(postBody()).toMatchObject({
-        type: 'GIFT_THING',
-        headline: 'Blue armchair',
-        collection_code: 'COL001',
-      })
+      expect(postBody()).toMatchObject({ headline: 'Blue armchair', collection_code: 'COL001' })
     );
     await waitFor(() => expect(navigate).toHaveBeenCalled());
     expect(navigate.mock.calls[0][0]).toBe('/collections/COL001');
@@ -204,9 +209,7 @@ describe('AddThingPage — what the form sends', () => {
   test('the new thing’s code, from the response, travels to the collection page', async () => {
     mockApi({ post: { ok: true, body: { code: 'NEW123', headline: 'Blue armchair' } } });
     renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
@@ -220,9 +223,7 @@ describe('AddThingPage — what the form sends', () => {
   test('a response with no code still goes to the collection, with no state to act on', async () => {
     mockApi({ post: { ok: true, body: {} } });
     renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
@@ -232,9 +233,7 @@ describe('AddThingPage — what the form sends', () => {
   test('a title of only spaces is not a title', async () => {
     mockApi();
     renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: '   ' } });
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: '   ' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
@@ -242,49 +241,40 @@ describe('AddThingPage — what the form sends', () => {
     expect(postBody()).toBeUndefined();
   });
 
-  test('a sale without a price is refused before it reaches the server', async () => {
-    // The fee is what makes a sale a sale; a 400 round-trip to learn that is a
-    // worse answer than the form saying so.
-    mockApi();
-    renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Sale' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Old bike' } });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
-    expect(await screen.findByText('Price is required for this type.')).toBeInTheDocument();
-    expect(postBody()).toBeUndefined();
-  });
-
-  test('the endless toggle only ships when it means something', async () => {
-    // `is_endless` is a GIFT/SELL concept — a loan comes back by definition, so
+  test('the endless toggle ships in a stall, and a library has none to ship', async () => {
+    // `is_endless` is a gift-and-sale concept — a loan comes back by definition, so
     // sending the flag on one would be describing something that cannot happen.
     mockApi();
-    renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Seed packets' } });
+    const stall = renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Seed packets' } });
     fireEvent.click(screen.getByRole('button', { name: /Endless|Sin límite/i }));
-
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
     await waitFor(() => expect(postBody()?.is_endless).toBe(true));
+    stall.unmount();
+
+    apiFetch.mockClear();
+    mockApi({
+      coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
+    });
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'A ladder' } });
+    expect(screen.queryByRole('button', { name: /Endless|Sin límite/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).not.toHaveProperty('is_endless');
   });
 
   test('a refused create shows the backend’s reason and keeps the form', async () => {
     mockApi({
-      post: { ok: false, status: 400, body: { type: ['This collection does not accept gifts.'] } },
+      post: { ok: false, status: 400, body: { type: ['This group doesn’t take prices.'] } },
     });
     renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
     navigate.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(await screen.findByText('This collection does not accept gifts.')).toBeInTheDocument();
+    expect(await screen.findByText('This group doesn’t take prices.')).toBeInTheDocument();
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -293,9 +283,7 @@ describe('AddThingPage — what the form sends', () => {
     // back to edit a form that was already correct.
     mockApi({ post: { ok: false, status: 429, body: {} } });
     renderPage();
-    await openTypePicker();
-    fireEvent.click(screen.getByRole('option', { name: 'Gift' }));
-    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
@@ -303,61 +291,76 @@ describe('AddThingPage — what the form sends', () => {
   });
 });
 
-describe('AddThingPage — a member contributing to a COMMUNITY collection', () => {
-  // A deployment may vet who offers LEND/RENT of their own — but a member
-  // invited to a COMMUNITY collection whose (vetted) owner allow-listed LEND
-  // may add one there (core/services/creator_policy). The picker has to reflect
-  // that, and not warn about a verb that is not actually withheld here.
-  const NARROWED = {
-    collection_modes: ['PROPRIETARY'],
-    thing_types: ['GIFT_THING', 'SELL_THING'],
+describe('AddThingPage — the deployment’s policy, asked about the verb the price makes', () => {
+  // A deployment that gives gifts and sales to everyone and loans and rentals after
+  // approval (a library's two verbs) — or one that gives gifts and not sales.
+  const policy = (thing_types) => ({
+    collection_modes: ['PROPRIETARY', 'COMMUNITY'],
+    thing_types,
     request_url: '/request-access/',
-  };
+  });
 
-  const mockNarrowed = (coll) =>
+  const mockPolicy = (coll, capabilities) =>
     apiFetch.mockImplementation((url, opts) => {
       if (opts?.method === 'POST')
         return Promise.resolve({ ok: true, status: 201, json: async () => ({}) });
       if (url.includes('/auth/me/'))
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({ capabilities: NARROWED }),
-        });
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ capabilities }) });
       return Promise.resolve({ ok: true, status: 200, json: async () => coll });
     });
 
   beforeEach(() => {
-    // useCapabilities caches per account at module scope; a fresh code keeps
-    // this from inheriting the null capabilities the tests above leave behind.
+    // useCapabilities caches per account at module scope; a fresh code keeps this
+    // from inheriting what the tests above left behind.
     localStorage.setItem('userCode', `MEMBER${Math.random()}`);
   });
 
-  test('an allow-listed verb is offered even though the deployment withholds it', async () => {
-    mockNarrowed(
-      collection({
-        mode: 'COMMUNITY',
-        is_member: true,
-        allowed_thing_types: ['LEND_THING', 'GIFT_THING'],
-      })
-    );
+  test('a price in a stall whose policy does not give sales shows the notice and cannot be sent', async () => {
+    mockPolicy(collection(), policy(['GIFT_THING']));
     renderPage();
-    await openTypePicker();
-
-    expect(await screen.findByRole('option', { name: 'Lend' })).toBeInTheDocument();
-    // And the "needs approval" notice does not name it — it is not withheld here.
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Old bike' } });
+    // No price: a gift, which is given — nothing to explain, and it can be sent.
     expect(screen.queryByText(/need approval/i)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '30' } });
+
+    expect(await screen.findByText(/need approval on this deployment: Sale/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(postBody()).toBeUndefined();
+
+    fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled());
   });
 
-  test('an empty allowlist still holds an un-vetted member to the open half', async () => {
-    // The owner made no type choice, so the member keeps GIFT/SELL and the
-    // notice explains the rest — exactly as in a proprietary collection.
-    mockNarrowed(collection({ mode: 'COMMUNITY', is_member: true, allowed_thing_types: [] }));
+  test('a member of a community library may lend what its owner allowed, whatever the policy says of them', async () => {
+    mockPolicy(
+      collection({
+        kind: 'LIBRARY',
+        mode: 'COMMUNITY',
+        is_member: true,
+        allowed_thing_types: ['LEND_THING', 'RENT_THING'],
+      }),
+      policy(['GIFT_THING', 'SELL_THING'])
+    );
     renderPage();
-    await openTypePicker();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'A ladder' } });
 
-    expect(screen.getByRole('option', { name: 'Gift' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Lend' })).toBeNull();
-    expect(await screen.findByText(/need approval/i)).toBeInTheDocument();
+    // Neither the loan nor, with a price, the rental is withheld here.
+    expect(screen.queryByText(/need approval/i)).toBeNull();
+    fireEvent.change(screen.getByLabelText(/Rental price/), { target: { value: '3' } });
+    expect(screen.queryByText(/need approval/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+  });
+
+  test('an unvetted account in a proprietary library is held to the policy for its loans', async () => {
+    mockPolicy(
+      collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
+      policy(['GIFT_THING', 'SELL_THING'])
+    );
+    renderPage();
+    await screen.findByLabelText(/Title/);
+
+    expect(await screen.findByText(/need approval on this deployment: Lend/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 });

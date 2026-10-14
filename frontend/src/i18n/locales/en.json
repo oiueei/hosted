@@ -450,10 +450,8 @@
   },
   "addThing": {
     "pageTitle": "Add thing",
-    "typeLabel": "Type",
     "titleLabel": "Title",
     "descriptionLabel": "Description",
-    "priceLabel": "Price",
     "depositLabel": "Deposit (optional)",
     "depositHelper": "A guarantee you give back when the thing does — not part of the price.",
     "availabilityLabel": "Availability",
@@ -461,7 +459,6 @@
     "locationLabel": "Location",
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
-    "priceRequired": "Price is required for this type.",
     "maxLocation": "Maximum 64 characters.",
     "uploaded": "Thing uploaded!",
     "errorCreating": "Error creating thing.",
@@ -721,14 +718,6 @@
     "LEND_THING": "Lend",
     "RESERVE_THING": "Reservation"
   },
-  "typeInfo": {
-    "title": "What each type means",
-    "GIFT_THING": "A gift — whoever claims it keeps it.",
-    "SELL_THING": "For sale at the price you set.",
-    "RENT_THING": "Rented out for a fee, by dates.",
-    "LEND_THING": "Borrowed for a few days, then returned.",
-    "RESERVE_THING": "Booked by the day or the hour, to use where it is — nothing is taken away."
-  },
   "availability": {
     "IMMEDIATE": "Immediate",
     "NEXT_WEEK": "Next week",
@@ -853,7 +842,7 @@
   "bulkAdd": {
     "help": "Add multiple things from a CSV — or a ZIP with the photos included.",
     "formatTitle": "CSV/ZIP format",
-    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: type, description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (LEND/RENT only). To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column. Extra photos (the carousel) go in a \"photos\" column, separated by | (up to 8 per thing).",
+    "formatIntro": "Upload a CSV with a \"headline\" column (required). Optional columns: description, fee, availability, location, condition, tags (separate multiple tags with |), deposit (libraries only). The fee decides the verb: with a fee a stall sells and a library rents out, without one it gives away and lends. (A \"type\" column is still accepted, and has to agree with the fee.) To add photos, upload a ZIP with the CSV plus the image files and reference each photo by filename in a \"photo\" column. Extra photos (the carousel) go in a \"photos\" column, separated by | (up to 8 per thing).",
     "fileLabel": "CSV or ZIP file",
     "empty": "No rows found in that file.",
     "tooMany": "You can import up to {{max}} items at once.",
@@ -1146,5 +1135,11 @@
   "collectionForm": {
     "membersPriceStall": "Members can sell (set a price)",
     "membersPriceLibrary": "Members can rent out (set a price)"
+  },
+  "thingForm": {
+    "priceStall": "Price (optional)",
+    "priceStallHelp": "No price, it's a gift.",
+    "priceLibrary": "Rental price (optional)",
+    "priceLibraryHelp": "No price, it's lent for free."
   }
 }

@@ -88,6 +88,36 @@ describe('BulkAddCsv — plain CSV', () => {
     });
   });
 
+  // The verb follows the price now (a stall sells with one, a library rents out), so
+  // the column that named it is optional: a file with a headline and a fee is enough,
+  // and the rows go with no `type` at all.
+  test('a file with no type column imports, and its rows carry none', async () => {
+    apiFetch.mockResolvedValue(jsonResponse({ created: 2 }));
+    const { container, onImported } = renderBulkAdd();
+
+    pick(container, csvFile('headline,fee\nCazo de acero,1\nSartén,'));
+
+    expect(await screen.findByText('Preview (2)')).toBeInTheDocument();
+    expect(screen.getByText('Cazo de acero · 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Add 2 items'));
+
+    await waitFor(() => expect(onImported).toHaveBeenCalledWith(2));
+    const [, options] = apiFetch.mock.calls.find(([url]) => /things\/bulk/.test(url));
+    expect(JSON.parse(options.body).rows).toEqual([
+      { headline: 'Cazo de acero', fee: '1' },
+      { headline: 'Sartén' },
+    ]);
+  });
+
+  test('the example in the help is the file the help describes: no type column', () => {
+    const { container } = renderBulkAdd();
+    fireEvent.click(screen.getByRole('button', { name: 'CSV/ZIP format' }));
+
+    const example = container.querySelector('.bulk-add-example');
+    expect(example.textContent.split('\n')[0]).not.toMatch(/type/);
+    expect(example.textContent.split('\n')[0]).toMatch(/^headline,fee,/);
+  });
+
   test('a tags cell is split on the pipe and previewed', async () => {
     const { container } = renderBulkAdd();
 

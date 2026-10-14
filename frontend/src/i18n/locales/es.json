@@ -444,10 +444,8 @@
   },
   "addThing": {
     "pageTitle": "Añadir cosa",
-    "typeLabel": "Tipo",
     "titleLabel": "Título",
     "descriptionLabel": "Descripción",
-    "priceLabel": "Precio",
     "depositLabel": "Fianza (opcional)",
     "depositHelper": "Una garantía que devuelves cuando la cosa vuelve — no forma parte del precio.",
     "availabilityLabel": "Disponibilidad",
@@ -455,7 +453,6 @@
     "locationLabel": "Ubicación",
     "titleRequired": "El título es obligatorio.",
     "maxHeadline": "Máximo 64 caracteres por idioma.",
-    "priceRequired": "El precio es obligatorio para este tipo.",
     "maxLocation": "Máximo 64 caracteres.",
     "uploaded": "¡Cosa subida con éxito!",
     "errorCreating": "Error al crear la cosa.",
@@ -715,14 +712,6 @@
     "LEND_THING": "Préstamo",
     "RESERVE_THING": "Reserva"
   },
-  "typeInfo": {
-    "title": "Qué significa cada tipo",
-    "GIFT_THING": "Se regala — quien lo pide se lo queda.",
-    "SELL_THING": "En venta al precio que pongas.",
-    "RENT_THING": "Se alquila por días, con precio.",
-    "LEND_THING": "Se presta unos días y vuelve.",
-    "RESERVE_THING": "Se reserva por días u horas para usarla donde está — no te la llevas."
-  },
   "availability": {
     "IMMEDIATE": "Inmediata",
     "NEXT_WEEK": "La semana que viene",
@@ -847,7 +836,7 @@
   "bulkAdd": {
     "help": "Añade varias cosas desde un CSV — o un ZIP con las fotos incluidas.",
     "formatTitle": "Formato del CSV/ZIP",
-    "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: type, description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo LEND/RENT). Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\". Las fotos adicionales (el carrusel) van en una columna \"photos\", separadas por | (hasta 8 por cosa).",
+    "formatIntro": "Sube un CSV con una columna \"headline\" (obligatoria). Columnas opcionales: description, fee, availability, location, condition, tags (separa varios tags con |), deposit (solo bibliotecas). El precio decide el verbo: con precio un rastrillo vende y una biblioteca alquila; sin precio regala y presta. (Una columna \"type\" se sigue aceptando, y tiene que concordar con el precio.) Para añadir fotos, sube un ZIP con el CSV y las imágenes, y referencia cada foto por su nombre de archivo en una columna \"photo\". Las fotos adicionales (el carrusel) van en una columna \"photos\", separadas por | (hasta 8 por cosa).",
     "fileLabel": "Archivo CSV o ZIP",
     "empty": "No se encontraron filas en el archivo.",
     "tooMany": "Puedes importar hasta {{max}} elementos a la vez.",
@@ -1146,5 +1135,11 @@
   "collectionForm": {
     "membersPriceStall": "Los miembros pueden vender (poner precio)",
     "membersPriceLibrary": "Los miembros pueden alquilar (poner precio)"
+  },
+  "thingForm": {
+    "priceStall": "Precio (opcional)",
+    "priceStallHelp": "Sin precio, es un regalo.",
+    "priceLibrary": "Precio del alquiler (opcional)",
+    "priceLibraryHelp": "Sin precio, se presta gratis."
   }
 }

@@ -29,8 +29,8 @@ const MIME_BY_EXT = {
 };
 // Shown in the format InfoPopover. Language-agnostic, so it lives here rather
 // than in the i18n bundles (matches BulkInviteCsv's EXAMPLE_CSV).
-const EXAMPLE_CSV = `headline,type,fee,location,condition,tags,photo,deposit
-Cazo de acero,RENT_THING,1,LC (08038),GOOD,Cocina,cazo.jpg,10`;
+const EXAMPLE_CSV = `headline,fee,location,condition,tags,photo,deposit
+Cazo de acero,1,LC (08038),GOOD,Cocina,cazo.jpg,10`;
 
 function basename(path) {
   return path.split('/').pop();

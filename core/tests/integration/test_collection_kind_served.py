@@ -48,12 +48,31 @@ class TestOnAThing:
         assert res.data["collection_code"] == "LIBRY1"
         assert res.data["collection_kind"] == "LIBRARY"
 
+    def test_it_says_which_verbs_that_collection_takes(self, authenticated_client, user):
+        """A COMMUNITY group whose members may not set a price lists only the free verb,
+        and the form that edits a thing has no price field there."""
+        free_only = _group(
+            user,
+            "STALL",
+            "STLFRE",
+            visibility=Collection.Visibility.PUBLIC,
+            mode=Collection.Mode.COMMUNITY,
+            allowed_thing_types=["GIFT_THING"],
+        )
+        thing = Thing.objects.create(code="THG010", owner=user, headline="Vase")
+        free_only.things.add(thing)
+
+        res = authenticated_client.get(f"/api/v1/things/{thing.code}/")
+
+        assert res.data["collection_allowed_thing_types"] == ["GIFT_THING"]
+
     def test_a_thing_in_no_collection_has_none(self, authenticated_client, user):
         thing = Thing.objects.create(code="THG002", owner=user, headline="Loose")
 
         res = authenticated_client.get(f"/api/v1/things/{thing.code}/")
 
         assert res.data["collection_kind"] is None
+        assert res.data["collection_allowed_thing_types"] == []
 
     def test_a_private_collection_is_not_named_to_someone_outside_it(
         self, authenticated_client2, user

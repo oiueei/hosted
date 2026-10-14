@@ -325,6 +325,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     deal = serializers.SlugRelatedField(slug_field="code", many=True, read_only=True)
     collection_code = serializers.SerializerMethodField()
     collection_kind = serializers.SerializerMethodField()
+    collection_allowed_thing_types = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
@@ -375,6 +376,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "can_manage",
             "collection_code",
             "collection_kind",
+            "collection_allowed_thing_types",
             "collection_headline",
             "collection_owner",
             "collection_is_onboarding",
@@ -498,6 +500,13 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         to build its address, ``/{kind}/{code}``."""
         first = self._viewable_collection(obj)
         return first.kind if first else None
+
+    def get_collection_allowed_thing_types(self, obj):
+        """The verbs the collection ``collection_code`` names takes — the edit form needs
+        to know whether members of a COMMUNITY group may set a price (both verbs of the
+        kind) or not (only the free one), and a thing's page has no other way to ask."""
+        first = self._viewable_collection(obj)
+        return list(first.allowed_thing_types or []) if first else []
 
     def get_collection_headline(self, obj):
         first = self._viewable_collection(obj)

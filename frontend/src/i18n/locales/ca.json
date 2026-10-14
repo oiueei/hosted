@@ -444,10 +444,8 @@
   },
   "addThing": {
     "pageTitle": "Afegir cosa",
-    "typeLabel": "Tipus",
     "titleLabel": "Títol",
     "descriptionLabel": "Descripció",
-    "priceLabel": "Preu",
     "depositLabel": "Fiança (opcional)",
     "depositHelper": "Una garantia que retornes quan la cosa torna — no forma part del preu.",
     "availabilityLabel": "Disponibilitat",
@@ -455,7 +453,6 @@
     "locationLabel": "Ubicació",
     "titleRequired": "El títol és obligatori.",
     "maxHeadline": "Màxim 64 caràcters per idioma.",
-    "priceRequired": "El preu és obligatori per a aquest tipus.",
     "maxLocation": "Màxim 64 caràcters.",
     "uploaded": "Cosa pujada amb èxit!",
     "errorCreating": "Error en crear la cosa.",
@@ -715,14 +712,6 @@
     "LEND_THING": "Préstec",
     "RESERVE_THING": "Reserva"
   },
-  "typeInfo": {
-    "title": "Què significa cada tipus",
-    "GIFT_THING": "Es regala — qui el demana se'l queda.",
-    "SELL_THING": "En venda al preu que posis.",
-    "RENT_THING": "Es lloga per dies, amb preu.",
-    "LEND_THING": "Es deixa uns dies i torna.",
-    "RESERVE_THING": "Es reserva per dies o hores per fer-la servir allà on és — no te l'endús."
-  },
   "availability": {
     "IMMEDIATE": "Immediata",
     "NEXT_WEEK": "La setmana que ve",
@@ -847,7 +836,7 @@
   "bulkAdd": {
     "help": "Afegeix diverses coses des d'un CSV — o un ZIP amb les fotos incloses.",
     "formatTitle": "Format del CSV/ZIP",
-    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: type, description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només LEND/RENT). Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\". Les fotos addicionals (el carrusel) van en una columna \"photos\", separades per | (fins a 8 per cosa).",
+    "formatIntro": "Puja un CSV amb una columna \"headline\" (obligatòria). Columnes opcionals: description, fee, availability, location, condition, tags (separa diversos tags amb |), deposit (només biblioteques). El preu decideix el verb: amb preu una paradeta ven i una biblioteca lloga; sense preu regala i presta. (Una columna \"type\" encara s'accepta, i ha de concordar amb el preu.) Per afegir fotos, puja un ZIP amb el CSV i les imatges, i referencia cada foto pel seu nom de fitxer en una columna \"photo\". Les fotos addicionals (el carrusel) van en una columna \"photos\", separades per | (fins a 8 per cosa).",
     "fileLabel": "Fitxer CSV o ZIP",
     "empty": "No s'han trobat files al fitxer.",
     "tooMany": "Pots importar fins a {{max}} elements alhora.",
@@ -1146,5 +1135,11 @@
   "collectionForm": {
     "membersPriceStall": "Els membres poden vendre (posar preu)",
     "membersPriceLibrary": "Els membres poden llogar (posar preu)"
+  },
+  "thingForm": {
+    "priceStall": "Preu (opcional)",
+    "priceStallHelp": "Sense preu, és un regal.",
+    "priceLibrary": "Preu del lloguer (opcional)",
+    "priceLibraryHelp": "Sense preu, es presta de franc."
   }
 }
