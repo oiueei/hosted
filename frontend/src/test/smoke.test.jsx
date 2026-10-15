@@ -137,6 +137,7 @@ function renderWithRoute(Component, { path, entry, state } = {}) {
 import LoginPage from '../pages/LoginPage';
 import LogoutPage from '../pages/LogoutPage';
 import VerifyPage from '../pages/VerifyPage';
+import NewCollectionPage from '../pages/NewCollectionPage';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import AddThingPage from '../pages/AddThingPage';
 import ImportThingsPage from '../pages/ImportThingsPage';
@@ -229,6 +230,7 @@ function smokeAndAxe(name, Component, routeOpts) {
 
 // ── Pages without route params ─────────────────────────────────────────
 smokeAndAxe('LoginPage', LoginPage);
+smokeAndAxe('NewCollectionPage', NewCollectionPage);
 smokeAndAxe('CreateCollectionPage', CreateCollectionPage);
 smokeAndAxe('MyBookingsPage', MyBookingsPage);
 smokeAndAxe('OwnerBookingsPage', OwnerBookingsPage);
