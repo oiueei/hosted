@@ -814,7 +814,9 @@
     "whatsapp": "WhatsApp",
     "emailSubject": "Te invito a {{headline}} en OIUEEI",
     "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI, donde un grupo comparte sus cosas entre sus miembros.\n\nPuedes unirte aquí: {{url}}",
+    "emailBodyKind": "Hola,\n\nTe invito a \"{{headline}}\", {{kind}} en OIUEEI, donde un grupo comparte sus cosas entre sus miembros.\n\nPuedes unirte aquí: {{url}}",
     "whatsappText": "Te invito a \"{{headline}}\" en OIUEEI, donde un grupo comparte sus cosas entre sus miembros: {{url}}",
+    "whatsappTextKind": "Te invito a \"{{headline}}\", {{kind}} en OIUEEI, donde un grupo comparte sus cosas entre sus miembros: {{url}}",
     "copied": "Enlace copiado al portapapeles.",
     "copyError": "No hemos podido copiar el enlace. Inténtalo de nuevo o usa otra opción.",
     "linkError": "No hemos podido generar el enlace. Inténtalo de nuevo.",
@@ -1121,18 +1123,21 @@
       "short": "Rastrillo",
       "long": "Rastrillo",
       "what": "Cosas para vender o regalar: quien se la lleva, se la queda.",
+      "withArticle": "un rastrillo",
       "create": "Crear rastrillo"
     },
     "LIBRARY": {
       "short": "Biblioteca",
       "long": "Biblioteca de las cosas",
       "what": "Cosas para prestar o alquilar: se las llevan a casa y las devuelven.",
+      "withArticle": "una biblioteca de las cosas",
       "create": "Crear biblioteca"
     },
     "SHED": {
       "short": "Taller",
       "long": "Taller de máquinas",
       "what": "Máquinas y espacios que se usan donde están, con reserva por días o por horas.",
+      "withArticle": "un taller de máquinas",
       "create": "Crear taller"
     }
   },

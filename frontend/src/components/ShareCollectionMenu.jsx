@@ -50,6 +50,9 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QR
  * visitor who wants to *act* is asked to log in only at that point (login-to-act).
  * The resolved URL is cached locally for the rest of the session.
  *
+ * The text that goes with the link names the collection's kind when it has one
+ * (`kinds.<K>.withArticle`: "a stall", "a library of things", "a shed").
+ *
  * The "QR code" action opens an HDS Dialog rendering a QR of that same link via
  * `qrcode.react` (client-side, no network). It is handy for sharing in person —
  * a guest scans it with their phone camera.
@@ -84,11 +87,14 @@ export default function ShareCollectionMenu({
     return data.share_url;
   };
 
+  // With the kind ("…, a library of things on OIUEEI…") when the collection has one;
+  // the words it always had when it does not.
+  const kind = collectionKind ? t(`kinds.${collectionKind}.withArticle`) : null;
+
   const buildEmailBody = (url) =>
-    t('shareMenu.emailBody', {
-      headline: collectionHeadline,
-      url,
-    });
+    kind
+      ? t('shareMenu.emailBodyKind', { headline: collectionHeadline, kind, url })
+      : t('shareMenu.emailBody', { headline: collectionHeadline, url });
 
   const handleEmail = async (url) => {
     const subject = encodeURIComponent(
@@ -109,7 +115,9 @@ export default function ShareCollectionMenu({
 
   const handleWhatsApp = async (url) => {
     const text = encodeURIComponent(
-      t('shareMenu.whatsappText', { headline: collectionHeadline, url })
+      kind
+        ? t('shareMenu.whatsappTextKind', { headline: collectionHeadline, kind, url })
+        : t('shareMenu.whatsappText', { headline: collectionHeadline, url })
     );
     window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
   };

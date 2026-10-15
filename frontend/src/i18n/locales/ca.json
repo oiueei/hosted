@@ -814,7 +814,9 @@
     "whatsapp": "WhatsApp",
     "emailSubject": "T'invito a {{headline}} a OIUEEI",
     "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI, on un grup comparteix les seves coses entre els seus membres.\n\nPots unir-t'hi aquí: {{url}}",
+    "emailBodyKind": "Hola,\n\nT'invito a \"{{headline}}\", {{kind}} a OIUEEI, on un grup comparteix les seves coses entre els seus membres.\n\nPots unir-t'hi aquí: {{url}}",
     "whatsappText": "T'invito a \"{{headline}}\" a OIUEEI, on un grup comparteix les seves coses entre els seus membres: {{url}}",
+    "whatsappTextKind": "T'invito a \"{{headline}}\", {{kind}} a OIUEEI, on un grup comparteix les seves coses entre els seus membres: {{url}}",
     "copied": "Enllaç copiat al porta-retalls.",
     "copyError": "No hem pogut copiar l'enllaç. Torna-ho a provar o fes servir una altra opció.",
     "linkError": "No hem pogut generar l'enllaç. Torna-ho a provar.",
@@ -1121,18 +1123,21 @@
       "short": "Paradeta",
       "long": "Paradeta",
       "what": "Coses per vendre o regalar: qui se l'emporta, se la queda.",
+      "withArticle": "una paradeta",
       "create": "Crear paradeta"
     },
     "LIBRARY": {
       "short": "Biblioteca",
       "long": "Biblioteca de les coses",
       "what": "Coses per prestar o llogar: se les emporten a casa i les tornen.",
+      "withArticle": "una biblioteca de les coses",
       "create": "Crear biblioteca"
     },
     "SHED": {
       "short": "Taller",
       "long": "Taller de màquines",
       "what": "Màquines i espais que es fan servir on són, amb reserva per dies o per hores.",
+      "withArticle": "un taller de màquines",
       "create": "Crear taller"
     }
   },
