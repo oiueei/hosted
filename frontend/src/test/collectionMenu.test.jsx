@@ -147,6 +147,8 @@ function renderPage() {
     <MemoryRouter initialEntries={['/collections/COL001']}>
       <Routes>
         <Route path="/collections/:code" element={<CollectionPage />} />
+        {/* A collection that names its kind is moved to its own address. */}
+        <Route path="/:kind/:code" element={<CollectionPage />} />
       </Routes>
     </MemoryRouter>
   );
@@ -191,9 +193,9 @@ beforeEach(() => {
  * - WHO sees it: `is_curator` only — a member or an anonymous reader gets no
  *   trigger at all, so no entry either.
  * - The calendar entry additionally needs the group to hold date-based
- *   things — the allowlist says so when it exists, the things themselves say
- *   so for an old collection that never restricted anything (the rule the
- *   hero button always used, unchanged).
+ *   things: a library and a shed always do, a stall only when one of its
+ *   things is a loan, a rental or a reservation (one that a migrated mixed
+ *   collection kept).
  * - What a click does: each download's request, filename and outcome message
  *   (stats and JSON moved from `EditCollectionPage` as they were), the panel
  *   closing, and the focus landing back on the trigger — the pressed button
@@ -332,6 +334,44 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     await screen.findByText('Drill');
     expect(screen.queryByRole('button', { name: TRIGGER })).not.toBeInTheDocument();
+  });
+
+  test('a library with nothing in it yet still offers the calendar entry', async () => {
+    renderCollection({
+      ...COLLECTION,
+      kind: 'LIBRARY',
+      allowed_thing_types: ['LEND_THING', 'RENT_THING'],
+      things: [],
+    });
+
+    await openMenu();
+    expect(screen.getByRole('button', { name: CALENDAR })).toBeInTheDocument();
+  });
+
+  test('a stall with only gifts and sales offers no calendar entry', async () => {
+    renderCollection({
+      ...COLLECTION,
+      kind: 'STALL',
+      allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+      things: [{ ...LEND_THING, type: 'SELL_THING', headline: 'Record' }],
+    });
+
+    await screen.findByText('Record');
+    await openMenu();
+    expect(screen.queryByRole('button', { name: CALENDAR })).not.toBeInTheDocument();
+  });
+
+  test('a stall that kept a loan from before the kinds offers the calendar entry', async () => {
+    renderCollection({
+      ...COLLECTION,
+      kind: 'STALL',
+      allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+      things: [LEND_THING],
+    });
+
+    await screen.findByText('Drill');
+    await openMenu();
+    expect(screen.getByRole('button', { name: CALENDAR })).toBeInTheDocument();
   });
 
   test('an old collection with no allowlist: a RENT thing offers the calendar entry', async () => {

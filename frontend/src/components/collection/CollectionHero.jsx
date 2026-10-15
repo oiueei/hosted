@@ -123,15 +123,15 @@ export default function CollectionHero({
   // ordinary one) had no way in from here at all.
   const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
   // Whether the calendar download has anything to offer: only date-based
-  // things (loans, rentals, on-site reservations) ever reach that CSV. The
-  // allowlist says so directly; an old collection with no allowlist never
-  // restricted anything, so its own things are the answer — a RENT drill in a
-  // restriction-free group is as bookable as one the list names.
-  const allowedTypes = collection.allowed_thing_types || [];
+  // things (loans, rentals, on-site reservations) ever reach it. A library and
+  // a shed hold nothing else; a stall gives or sells, but one that the kind
+  // migration took from a collection that also lent keeps those loans, and
+  // they do export — so a stall answers by its things. The server's rule for
+  // a thing's own page (`_collection_has_date_things`) is this one.
   const hasDateThings =
-    allowedTypes.length > 0
-      ? allowedTypes.some((type) => DATE_TYPES.includes(type))
-      : collection.things.some((thg) => DATE_TYPES.includes(thg.type));
+    collection.kind === 'LIBRARY' ||
+    collection.kind === 'SHED' ||
+    collection.things.some((thg) => DATE_TYPES.includes(thg.type));
 
   // When the owner has given the group its own web address, the hero's back
   // link goes there instead of the OIUEEI home — but it still says "Home".
