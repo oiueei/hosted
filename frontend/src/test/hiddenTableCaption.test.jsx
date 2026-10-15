@@ -10,16 +10,18 @@ import { rulesFor, declared, css } from './cssRules';
  */
 const SELECTOR = css.match(/caption:has\([^)]*\)/)?.[0];
 
-const renderTable = () =>
+const renderTable = (caption) =>
   render(
     <Table
       dense
       indexKey="id"
-      caption={<span className="sr-only">My requests</span>}
+      caption={caption}
       cols={[{ key: 'name', headerName: 'Name' }]}
       rows={[{ id: 'a', name: 'Lala' }]}
     />
   );
+
+const captionOf = (caption) => renderTable(caption).container.querySelector('caption');
 
 describe('a table caption that only screen readers see', () => {
   test('the rule that flattens it declares no margin, no padding and no line height', () => {
@@ -31,22 +33,23 @@ describe('a table caption that only screen readers see', () => {
     expect(declared(body, 'line-height')).toBe('0');
   });
 
-  test('the rule reaches the sr-only text wherever HDS nests it in the caption', () => {
-    const { container } = renderTable();
-    const caption = container.querySelector('caption');
-    const hidden = caption.querySelector('.sr-only');
-    expect(hidden).not.toBeNull();
+  test('the rule reaches the caption HDS paints around an sr-only title', () => {
+    const caption = captionOf(<span className="sr-only">My requests</span>);
+    expect(caption.matches(SELECTOR)).toBe(true);
+  });
 
-    // Walk down by only-children, as `:has(… .sr-only:only-child)` does, since
-    // jsdom's selector engine may not evaluate `:has()`.
-    let node = caption;
-    while (node !== hidden.parentElement) {
-      expect(node.children).toHaveLength(1);
-      node = node.children[0];
-    }
-    expect(hidden.parentElement.children).toHaveLength(1);
+  test('a caption people can read is not flattened', () => {
+    const caption = captionOf(<span>My requests</span>);
+    expect(caption.matches(SELECTOR)).toBe(false);
+  });
 
-    // The descendant form — no `>` — is what matches both nestings of HDS.
-    expect(SELECTOR).toBe('caption:has(.sr-only:only-child)');
+  test('a caption with visible text beside an sr-only part is not flattened', () => {
+    const caption = captionOf(
+      <>
+        <span className="sr-only">Table:</span>
+        <span>My requests</span>
+      </>
+    );
+    expect(caption.matches(SELECTOR)).toBe(false);
   });
 });
