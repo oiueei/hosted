@@ -14,6 +14,7 @@ import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function AddThingPage() {
   const { t } = useTranslation();
@@ -24,9 +25,7 @@ export default function AddThingPage() {
   const navigate = useNavigate();
 
   const userCode = localStorage.getItem('userCode');
-  useEffect(() => {
-    document.title = t('titles.addThing');
-  }, [t]);
+  useDocumentTitle(t('titles.addThing'));
 
   const [collectionHeadline, setCollectionHeadline] = useState('');
   // What the collection is, and so how its things take their verb. Until it has

@@ -8,6 +8,7 @@ import AccountMenu from '../components/AccountMenu';
 import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * The verifying / success / error states share the same form-hero + Koros
@@ -49,9 +50,7 @@ export default function VerifyPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  useEffect(() => {
-    document.title = t('titles.verify');
-  }, [t]);
+  useDocumentTitle(t('titles.verify'));
   const [error, setError] = useState('');
   // Set when the refusal on screen is one the backend deliberately survives
   // (`retryable`): the link still works, so the error screen owes a different

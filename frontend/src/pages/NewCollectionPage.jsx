@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import PageLayout from '../components/PageLayout';
@@ -7,6 +6,7 @@ import ApprovalNotice from '../components/ApprovalNotice';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useTheeeme from '../hooks/useTheeeme';
 import { COLLECTION_KINDS, kindSegment } from '../utils/collectionPath';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * `/new` — what kind of collection is this? Three cards, one destination each:
@@ -31,9 +31,7 @@ export default function NewCollectionPage() {
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');
 
-  useEffect(() => {
-    document.title = t('titles.newCollection');
-  }, [t]);
+  useDocumentTitle(t('titles.newCollection'));
 
   return (
     <PageLayout title={t('createCollection.pageTitle')} backTo={backPath} backLabel={backLabel}>

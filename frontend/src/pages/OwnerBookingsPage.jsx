@@ -26,6 +26,7 @@ import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
 import ResponsiveTable from '../components/ResponsiveTable';
 import { collectionThingPath } from '../utils/collectionPath';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * The owner's side of MyBookingsPage: every request made on their things, in one
@@ -86,9 +87,7 @@ export default function OwnerBookingsPage() {
   // is cancelled: it tells them, frees the slot and cannot be undone
   // (CancelReservationDialog). Declining a *pending* request stays one click.
   const [cancelRow, setCancelRow] = useState(null);
-  useEffect(() => {
-    document.title = t('titles.ownerBookings');
-  }, [t]);
+  useDocumentTitle(t('titles.ownerBookings'));
 
   const STATUS_LABELS = {
     PENDING: t('myBookings.statusPending'),

@@ -6,6 +6,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import { useLocalized } from '../utils/localized';
 import StatusRegion from '../components/StatusRegion';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Landing page for the one-click "stop the summaries from this group" link in
@@ -30,9 +31,7 @@ export default function DigestMutePage() {
   const [headline, setHeadline] = useState('');
   const sentRef = useRef(false);
 
-  useEffect(() => {
-    document.title = t('digestMute.pageTitle');
-  }, [t]);
+  useDocumentTitle(t('digestMute.pageTitle'));
 
   useEffect(() => {
     if (sentRef.current) return;

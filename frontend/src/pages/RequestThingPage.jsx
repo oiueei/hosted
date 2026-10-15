@@ -38,6 +38,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function RequestThingPage() {
   const { code, thingCode } = useParams();
@@ -61,15 +62,13 @@ export default function RequestThingPage() {
   const headline = L(thing?.headline);
   const isReservation = thing?.type === 'RESERVE_THING';
   useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
-  useEffect(() => {
-    if (!thing) {
-      document.title = t('titles.holdDefault');
-    } else {
-      document.title = isReservation
+  useDocumentTitle(
+    !thing
+      ? t('titles.holdDefault')
+      : isReservation
         ? t('titles.reserveThing', { headline })
-        : t('titles.holdThing', { headline });
-    }
-  }, [thing, headline, isReservation, t]);
+        : t('titles.holdThing', { headline })
+  );
   // Date field state lives in the DISPLAY format (DD/MM/YYYY, what the DateInputs
   // emit); it converts to ISO at the consumption boundaries (POST body, derived
   // return date) via displayToIso.

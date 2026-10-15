@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { TextInput, Button, Notification } from 'hds-react';
@@ -7,6 +6,7 @@ import useJoin from '../hooks/useJoin';
 import PageLayout from './PageLayout';
 import ButtonLink from './ButtonLink';
 import MarkdownText from './MarkdownText';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Shared join landing page: an email form that POSTs to `/auth/join/` and
@@ -74,9 +74,7 @@ export default function MagicLinkJoinPage({
   const { t } = useTranslation();
   const heroTitle = titleText || t(titleKey);
   const intro = descriptionText || t(descriptionKey);
-  useEffect(() => {
-    document.title = docTitleText || t(docTitleKey);
-  }, [t, docTitleKey, docTitleText]);
+  useDocumentTitle(docTitleText || t(docTitleKey));
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: `${ns}.magicLinkSent`,
     errorMessageKey: `${ns}.errorSendingLink`,

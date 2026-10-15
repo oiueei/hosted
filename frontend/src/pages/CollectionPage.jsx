@@ -31,6 +31,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import Toast from '../components/Toast';
 import { DATE_TYPES } from '../constants/things';
 import { useCollectionBase, useCanonicalCollectionPath } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -143,11 +144,9 @@ export default function CollectionPage() {
       JUST_ADDED_MS
     );
   }, [addedThing, collection, isPhone, reducedMotion, tc.color_01, location.pathname, navigate]);
-  useEffect(() => {
-    document.title = collection
-      ? t('titles.collection', { headline })
-      : t('titles.collectionDefault');
-  }, [collection, headline, t]);
+  useDocumentTitle(
+    collection ? t('titles.collection', { headline }) : t('titles.collectionDefault')
+  );
 
   // Stable across renders (functional setState, no deps) so memoised ThingLinkbox
   // cards don't re-render when unrelated page state (broadcast box, tag filter)

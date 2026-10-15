@@ -11,6 +11,7 @@ import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useCollectionBase, useCanonicalCollectionPath } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Login-to-act landing page for a PUBLIC collection. An anonymous visitor who
@@ -66,11 +67,9 @@ export default function JoinPage() {
   // tab, once the name is known. Until then — a collection that cannot be read
   // keeps the generic copy rather than an invented name — the title of always.
   const heading = headline ? t('share.pageTitleNamed', { name: headline }) : t('joinToAct.heading');
-  useEffect(() => {
-    document.title = headline
-      ? t('titles.shareNamed', { name: headline })
-      : `${t('joinToAct.heading')} — OIUEEI`;
-  }, [t, headline]);
+  useDocumentTitle(
+    headline ? t('titles.shareNamed', { name: headline }) : `${t('joinToAct.heading')} — OIUEEI`
+  );
 
   useEffect(() => {
     if (!code) return undefined;

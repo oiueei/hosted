@@ -20,6 +20,7 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 import { membersPriceFromVerbs } from '../utils/collectionKind';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function EditThingPage() {
   const { t } = useTranslation();
@@ -40,11 +41,9 @@ export default function EditThingPage() {
   // The allowlist of its collection, only to tell whether members may set a price.
   const [collectionAllowedTypes, setCollectionAllowedTypes] = useState([]);
   const [headline, setHeadline] = useState('');
-  useEffect(() => {
-    document.title = headline
-      ? t('titles.editThing', { headline: L(headline) })
-      : t('titles.editThingDefault');
-  }, [headline, t, L]);
+  useDocumentTitle(
+    headline ? t('titles.editThing', { headline: L(headline) }) : t('titles.editThingDefault')
+  );
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');

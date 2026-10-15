@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, TextInput, TextArea } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from './PageLayout';
 import useTheeeme from '../hooks/useTheeeme';
 import StatusRegion from './StatusRegion';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * The shared operator-message form, rendered by `ContactPage` with its own copy
@@ -23,9 +24,7 @@ import StatusRegion from './StatusRegion';
  */
 export default function ContactFormPage({ docTitleKey, titleKey, introKey, idPrefix, children }) {
   const { t } = useTranslation();
-  useEffect(() => {
-    document.title = t(docTitleKey);
-  }, [t, docTitleKey]);
+  useDocumentTitle(t(docTitleKey));
   const { btnStyle } = useTheeeme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

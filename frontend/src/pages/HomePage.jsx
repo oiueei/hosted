@@ -12,14 +12,13 @@ import { aboutPath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import ButtonLink from '../components/ButtonLink';
 import StatusRegion from '../components/StatusRegion';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function HomePage() {
   const { t } = useTranslation();
   // Owner content (invitation headlines) may carry one text per language.
   const L = useLocalized();
-  useEffect(() => {
-    document.title = t('titles.home');
-  }, [t]);
+  useDocumentTitle(t('titles.home'));
   const [user, setUser] = useState(null);
   const [myCollections, setMyCollections] = useState(null);
   const [invitedCollections, setInvitedCollections] = useState(null);

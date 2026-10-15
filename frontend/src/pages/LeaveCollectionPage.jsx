@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation, Trans } from 'react-i18next';
 import { Button, IconSignout } from 'hds-react';
@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function LeaveCollectionPage() {
   const { t } = useTranslation();
@@ -17,9 +18,7 @@ export default function LeaveCollectionPage() {
   const backPath = `${base}`;
   const headline = location.state?.headline || t('leaveCollection.thisCollection');
 
-  useEffect(() => {
-    document.title = t('titles.leaveCollection');
-  }, [t]);
+  useDocumentTitle(t('titles.leaveCollection'));
 
   const [leaving, setLeaving] = useState(false);
   const [toast, setToast] = useState(null);

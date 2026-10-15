@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { TextInput, TextArea, Select, Button, Accordion } from 'hds-react';
@@ -23,6 +23,7 @@ import hdsLang from '../utils/hdsLang';
 import ApprovalNotice from '../components/ApprovalNotice';
 import { collectionPath, kindOfPrefix } from '../utils/collectionPath';
 import { allowedVerbsFor } from '../utils/collectionKind';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * `/stall/new`, `/library/new` and `/shed/new`: the form for the kind named by the
@@ -60,9 +61,7 @@ export default function CreateCollectionPage() {
 function CreateCollectionForm({ kind }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  useEffect(() => {
-    document.title = t('titles.newCollection');
-  }, [t]);
+  useDocumentTitle(t('titles.newCollection'));
   const location = useLocation();
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');

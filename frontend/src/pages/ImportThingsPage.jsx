@@ -7,6 +7,7 @@ import BulkAddCsv from '../components/BulkAddCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized } from '../utils/localized';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Add several things at once, from a CSV or a ZIP. The tool
@@ -37,9 +38,7 @@ export default function ImportThingsPage() {
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
 
-  useEffect(() => {
-    document.title = t('titles.importThings');
-  }, [t]);
+  useDocumentTitle(t('titles.importThings'));
 
   useEffect(() => {
     if (!userCode) return;
