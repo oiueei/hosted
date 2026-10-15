@@ -218,6 +218,7 @@ export default function EditThingPage() {
           kind={kind}
           type={type}
           priceAllowed={priceAllowed}
+          verbFollowsPrice={!!thingCollectionKind && !isStray}
           approvalCatalogue={notOffered ? [{ label: t('types.' + type), value: type }] : []}
           isEndless={isEndless}
           setIsEndless={setIsEndless}

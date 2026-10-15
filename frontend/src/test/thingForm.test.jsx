@@ -15,6 +15,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import AddThingPage from '../pages/AddThingPage';
 import EditThingPage from '../pages/EditThingPage';
+import en from '../i18n/locales/en.json';
 
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
@@ -723,5 +724,54 @@ describe('EditThingPage — what a save sends', () => {
     // A loan's availability is live, from the calendar: the static hint is cleared.
     expect(patch().availability).toBe('');
     expect(patch()).not.toHaveProperty('type');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// EditThingPage — what no price means: said only where it is true
+// ════════════════════════════════════════════════════════════════════════
+describe('EditThingPage — what no price means', () => {
+  const GIFT_HELP = en.thingForm.priceStallHelp;
+  const LEND_HELP = en.thingForm.priceLibraryHelp;
+
+  test('a thing of a stall says no price is a gift', async () => {
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'GIFT_THING', collection_kind: 'STALL', headline: 'Vase' },
+    });
+
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+    expect(screen.getByText(GIFT_HELP)).toBeInTheDocument();
+  });
+
+  test('a thing with no collection promises nothing about what no price makes it', async () => {
+    const { container } = renderEdit({
+      thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Vase' },
+    });
+
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+    expect(screen.queryByText(GIFT_HELP)).toBeNull();
+    expect(screen.queryByText(LEND_HELP)).toBeNull();
+    expect(container.querySelector('label[for="edit-thing-fee"]')).toHaveTextContent(
+      en.addThing.priceOptionalLabel
+    );
+  });
+
+  test('a loan a stall kept promises neither help, and its label is the neutral one', async () => {
+    const { container } = renderEdit({
+      thing: {
+        code: 'THG001',
+        type: 'LEND_THING',
+        collection_kind: 'STALL',
+        collection_allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+        headline: 'Old drill',
+      },
+    });
+
+    await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
+    expect(screen.queryByText(GIFT_HELP)).toBeNull();
+    expect(screen.queryByText(LEND_HELP)).toBeNull();
+    expect(container.querySelector('label[for="edit-thing-fee"]')).toHaveTextContent(
+      en.addThing.priceOptionalLabel
+    );
   });
 });
