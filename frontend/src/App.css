@@ -2252,8 +2252,13 @@ caption:has(.sr-only:only-child) {
    One card per kind, one destination each. Mobile first: a column, then the
    three side by side at 992px. There is no two-column step at 768px on purpose:
    three cards in two columns leave one alone on a second row, and that is
-   worse than a column (the standing exception to the card-grid progression,
-   as `collections-grid`). White with a thin border, like the table cards. */
+   worse than a column (an exception to the card-grid progression, like
+   `collections-grid`). White with a thin border, like the table cards.
+   Deliberately not HDS `Card`: it paints a `role="region"` with no name — the
+   defect already recorded for `Linkbox` — and three anonymous regions in a list
+   of three options are noise for a screen reader, where a `<ul>` of `<li>` with
+   an `<h2>` says what this is; and its default 2px black border and padding
+   clash with the table cards this one imitates. */
 .kind-cards {
   list-style: none;
   margin: 0;
