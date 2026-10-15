@@ -64,7 +64,7 @@ echo "smoke OK"
 ```
 
 Wire it as a `workflow_dispatch` job (run it by hand right after "Deploy
-Branch") — Heroku's release phase can't curl the new dynos itself. UptimeRobot
+Branch") — Heroku's release phase can't curl the new dynos itself. An uptime monitor
 covers *continuous* uptime; the smoke covers *this specific release, right now*.
 
 ## Upgrade 3 — env-var validation
@@ -83,4 +83,4 @@ get safe defaults and a line in README's env table.
 - No tests that hit third parties (Cloudinary, SMTP) — CI uses the locmem
   email backend and mocked externals; the contract with real services is
   verified by the post-deploy smoke and the operational monitors
-  (UptimeRobot/Sentry), not by CI.
+  (an uptime monitor, an error tracker), not by CI.
