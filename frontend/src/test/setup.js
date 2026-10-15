@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { configure } from '@testing-library/react';
+import { afterEach } from 'vitest';
 import nodeConsole from 'node:console';
 import './i18n-mock';
 
@@ -45,13 +46,35 @@ if (!globalThis.ResizeObserver) {
 // handed at environment setup, ahead of Vitest's own console wrapper, so
 // that's the object that actually needs patching (patching globalThis.console
 // alone leaves this one call site un-intercepted).
-function withoutCssParseNoise(original) {
+//
+// React's "not wrapped in act(...)" warnings are not noise: each one is a state
+// update that landed while nobody was watching, so a test that ends before it, or
+// asserts around it, is not testing what the page does. They are collected here and
+// fail the test that produced them (below), rather than burying the day one of
+// them matters under hundreds that do not.
+const actWarnings = [];
+
+function withoutKnownNoise(original) {
   return (...args) => {
-    if (typeof args[0] === 'string' && args[0].includes('Could not parse CSS stylesheet')) {
-      return;
+    if (typeof args[0] === 'string') {
+      if (args[0].includes('Could not parse CSS stylesheet')) return;
+      if (args[0].includes('not wrapped in act')) {
+        // "An update to %s inside a test…" carries the component's name as its argument.
+        actWarnings.push(args[0].split('\n')[0].replace('%s', String(args[1] ?? 'a component')));
+      }
     }
     original(...args);
   };
 }
-nodeConsole.error = withoutCssParseNoise(nodeConsole.error);
-console.error = withoutCssParseNoise(console.error);
+nodeConsole.error = withoutKnownNoise(nodeConsole.error);
+console.error = withoutKnownNoise(console.error);
+
+afterEach(() => {
+  if (actWarnings.length === 0) return;
+  const found = actWarnings.splice(0);
+  throw new Error(
+    `${found.length} state update(s) outside act(...) — wait for the final state ` +
+      `(findBy…, or \`settle\` from src/test/settle.js) before the test ends:\n` +
+      found.map((warning) => `  ${warning}`).join('\n')
+  );
+});
