@@ -337,7 +337,6 @@
     "availabilityLabel": "Availability.",
     "locationLabel": "Location.",
     "conditionLabel": "Condition.",
-    "photos": "Photos",
     "faqHeading": "Questions or comments?",
     "faqPlaceholder": "Write your question here...",
     "faqLabel": "Question",
@@ -793,7 +792,6 @@
     "newsLabel": "News and announcements (optional)",
     "newsHelper": "A summary of what's new in each group you're in. You can turn a single group's summary off from the collection page, or from the foot of the email itself.",
     "saved": "Preferences saved.",
-    "errorLoading": "Error loading preferences.",
     "errorSaving": "Error saving.",
     "invalidLink": "This link is invalid or has expired. Please sign in to change your preferences."
   },

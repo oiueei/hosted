@@ -331,7 +331,6 @@
     "availabilityLabel": "Disponibilitat.",
     "locationLabel": "Ubicació.",
     "conditionLabel": "Estat.",
-    "photos": "Fotos",
     "faqHeading": "Preguntes o comentaris?",
     "faqPlaceholder": "Escriu la teva pregunta aquí...",
     "faqLabel": "Pregunta",
@@ -787,7 +786,6 @@
     "newsLabel": "Notícies i anuncis (opcional)",
     "newsHelper": "Un resum de les novetats de cada grup on ets. Pots desactivar el d'un grup concret des de la pàgina de la col·lecció, o des del peu del mateix correu.",
     "saved": "Preferències desades.",
-    "errorLoading": "Error en carregar les preferències.",
     "errorSaving": "Error en desar.",
     "invalidLink": "Aquest enllaç no és vàlid o ha caducat. Inicia sessió per canviar les teves preferències."
   },

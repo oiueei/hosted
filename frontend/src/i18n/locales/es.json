@@ -331,7 +331,6 @@
     "availabilityLabel": "Disponibilidad.",
     "locationLabel": "Ubicación.",
     "conditionLabel": "Estado.",
-    "photos": "Fotos",
     "faqHeading": "¿Preguntas o comentarios?",
     "faqPlaceholder": "Escribe tu pregunta aquí...",
     "faqLabel": "Pregunta",
@@ -787,7 +786,6 @@
     "newsLabel": "Noticias y anuncios (opcional)",
     "newsHelper": "Un resumen de las novedades de cada grupo en el que estás. Puedes desactivar el de un grupo concreto desde la página de la colección, o desde el pie del propio correo.",
     "saved": "Preferencias guardadas.",
-    "errorLoading": "Error al cargar las preferencias.",
     "errorSaving": "Error al guardar.",
     "invalidLink": "Este enlace no es válido o ha caducado. Inicia sesión para cambiar tus preferencias."
   },
