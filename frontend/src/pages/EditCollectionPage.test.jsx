@@ -24,7 +24,7 @@ import { apiFetch } from '../services/api';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import EditCollectionPage from './EditCollectionPage';
 import { dropHdsStyles } from '../test/dropHdsStyles';
-import { press } from '../test/settle';
+import { press, settle } from '../test/settle';
 import en from '../i18n/locales/en.json';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
@@ -221,6 +221,7 @@ describe('EditCollectionPage — the delete button', () => {
     renderPage();
 
     expect(await screen.findByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    await settle(apiFetch);
   });
 
   test('a co-owner reaching this page does not see it', async () => {
@@ -247,6 +248,7 @@ describe('EditCollectionPage — no downloads', () => {
     mockApi();
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
+    await settle(apiFetch);
 
     expect(screen.queryByRole('button', { name: /download/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /download/i })).not.toBeInTheDocument();
@@ -342,6 +344,7 @@ describe('EditCollectionPage — the request-page note', () => {
     mockApi();
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
+    await settle(apiFetch);
 
     await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
@@ -355,6 +358,7 @@ describe('EditCollectionPage — the request-page note', () => {
     mockApi();
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
+    await settle(apiFetch);
 
     await press(screen.getByRole('button', { name: 'More options' }));
     const field = screen.getByLabelText(/note shown before someone asks/i);
@@ -439,6 +443,7 @@ describe('EditCollectionPage — the email note', () => {
     mockApi();
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
+    await settle(apiFetch);
 
     await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
@@ -452,6 +457,7 @@ describe('EditCollectionPage — the email note', () => {
     mockApi();
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
+    await settle(apiFetch);
 
     await press(screen.getByRole('button', { name: 'More options' }));
     const field = screen.getByLabelText(/note in the emails after someone asks/i);
@@ -684,10 +690,21 @@ describe('EditCollectionPage — pausing and resuming', () => {
 
   const ok = () => Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
 
+  // The page is loaded when the form is there *and* what it asked for on mounting
+  // (the deployment's capabilities, for the mode notice) has answered: that answer
+  // sets state a moment later, and a test that ends first leaves it outside `act`.
+  async function renderLoaded(findControl) {
+    renderPage();
+    const control = await findControl();
+    await settle(apiFetch);
+    return control;
+  }
+
   test('nothing can be paused without a message for the members', async () => {
     mockPausable({ patch: ok });
-    renderPage();
-    const pause = await screen.findByRole('button', { name: 'Pause collection' });
+    const pause = await renderLoaded(() =>
+      screen.findByRole('button', { name: 'Pause collection' })
+    );
 
     expect(pause).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Message to members'), { target: { value: '   ' } });
@@ -700,8 +717,7 @@ describe('EditCollectionPage — pausing and resuming', () => {
 
   test('pausing sends the message alone, trimmed, and shows it as the members will', async () => {
     mockPausable({ patch: ok });
-    renderPage();
-    fireEvent.change(await screen.findByLabelText('Message to members'), {
+    fireEvent.change(await renderLoaded(() => screen.findByLabelText('Message to members')), {
       target: { value: '  Back in a week  ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Pause collection' }));
@@ -722,8 +738,9 @@ describe('EditCollectionPage — pausing and resuming', () => {
       collection: { ...COLLECTION, is_paused: true, pause_message: 'Back in a week' },
       patch: ok,
     });
-    renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Resume collection' }));
+    fireEvent.click(
+      await renderLoaded(() => screen.findByRole('button', { name: 'Resume collection' }))
+    );
 
     expect(await screen.findByText('Collection resumed.')).toBeInTheDocument();
     expect(JSON.parse(pauseCalls()[0][1].body)).toEqual({ pause_message: '' });
@@ -740,8 +757,7 @@ describe('EditCollectionPage — pausing and resuming', () => {
     ['a dropped connection', () => Promise.reject(new TypeError('offline')), 'Connection error.'],
   ])('%s leaves the group open and says so', async (_label, patch, message) => {
     mockPausable({ patch });
-    renderPage();
-    fireEvent.change(await screen.findByLabelText('Message to members'), {
+    fireEvent.change(await renderLoaded(() => screen.findByLabelText('Message to members')), {
       target: { value: 'Back in a week' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Pause collection' }));
