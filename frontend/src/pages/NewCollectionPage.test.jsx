@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import en from '../i18n/locales/en.json';
 
@@ -34,11 +34,14 @@ beforeEach(() => {
   globalThis.fetch.mockClear();
 });
 
-const renderPage = () =>
+const FormProbe = () => <p data-testid="form-state">{JSON.stringify(useLocation().state)}</p>;
+
+const renderPage = (entry = '/new') =>
   render(
-    <MemoryRouter initialEntries={['/new']}>
+    <MemoryRouter initialEntries={[entry]}>
       <Routes>
         <Route path="/new" element={<NewCollectionPage />} />
+        <Route path="/:kind/new" element={<FormProbe />} />
       </Routes>
     </MemoryRouter>
   );
@@ -90,6 +93,36 @@ describe('the three cards', () => {
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
 
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('the way back', () => {
+  const back = { backPath: '/welcome', backLabel: 'Welcome' };
+  const from = { pathname: '/new', state: back };
+
+  test('without a state the arrow goes home', async () => {
+    renderPage();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    const arrow = screen.getByRole('link', { name: new RegExp(en.common.home) });
+    expect(arrow).toHaveAttribute('href', '/');
+  });
+
+  test('the arrow follows the state of whoever opened the page', async () => {
+    renderPage(from);
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    const arrow = screen.getByRole('link', { name: /Welcome/ });
+    expect(arrow).toHaveAttribute('href', '/welcome');
+  });
+
+  test('a kind button hands the same state on to its form', async () => {
+    renderPage(from);
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    fireEvent.click(within(cards()[1]).getByRole('link'));
+
+    expect(await screen.findByTestId('form-state')).toHaveTextContent(JSON.stringify(back));
   });
 });
 
