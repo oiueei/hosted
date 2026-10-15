@@ -474,3 +474,21 @@ export const isHourlyPickupDisabled = (
   const earliest = earliestStartMinutes(isoDate, now);
   return freeStartTimes(blocks, minMinutes, bookings, minMinutes, earliest).length === 0;
 };
+
+/** Today at local midnight. Fresh on every call: a module-scope `new Date()` would
+ *  freeze "today" at app load and drift stale past midnight. */
+export const startOfToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+/** `days` after today, at local midnight. */
+export const daysFromToday = (days) => addDays(startOfToday(), days);
+
+/** The longest reservation a collection allows, in days (at least 1). */
+export const reservationMaxDays = (thing) => Math.max(1, thing?.reservation_max_days || 1);
+
+/** How far ahead a reservation may be booked, in days: the collection's own limit,
+ *  not the fixed 90 the rental picker uses. */
+export const reservationHorizonDays = (thing) => thing?.reservation_horizon_days || 90;

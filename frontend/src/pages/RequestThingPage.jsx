@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, DateInput, Notification, Select, TextArea } from 'hds-react';
+import { Button, Notification, TextArea } from 'hds-react';
 import { DATE_TYPES } from '../constants/things';
 import {
-  durationLabel,
   isPickupDisabled,
   reservationPickupDisabled,
   freePickupDisabled,
@@ -14,16 +13,7 @@ import {
   displayToIso,
   formatDate,
   formatRequestedWhen,
-  DISPLAY_DATE_FORMAT,
-  parseLocalDate,
-  parseHM,
-  formatHM,
-  dayBlocks,
-  dayBookings,
-  durationOptions,
-  freeStartTimes,
-  earliestStartMinutes,
-  isHourlyPickupDisabled,
+  reservationMaxDays,
 } from '../utils/rental';
 import { apiFetch, apiErrorMessage, codedErrorMessage } from '../services/api';
 import PageLayout from '../components/PageLayout';
@@ -31,31 +21,28 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import DemoNotice from '../components/DemoNotice';
 import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
-import OptionPicker from '../components/OptionPicker';
-import { optionPickerFocusId } from '../utils/optionPicker';
 import StatusRegion from '../components/StatusRegion';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
-import hdsLang from '../utils/hdsLang';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import useHourlyReservation from '../hooks/useHourlyReservation';
+import JoinGroupNudge from '../components/request/JoinGroupNudge';
+import RequestSuccess from '../components/request/RequestSuccess';
+import ConstrainedRentalFields from '../components/request/ConstrainedRentalFields';
+import DayReservationFields from '../components/request/DayReservationFields';
+import HourlyReservationFields from '../components/request/HourlyReservationFields';
+import FreeRentalFields from '../components/request/FreeRentalFields';
 
 export default function RequestThingPage() {
   const { code, thingCode } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const userCode = localStorage.getItem('userCode');
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.back');
-
-  // Fresh each render — a module-scope `new Date()` would freeze "today" at app
-  // load and drift stale past midnight.
-  const TODAY = new Date();
-  TODAY.setHours(0, 0, 0, 0);
-  const MAX_DATE = new Date(TODAY);
-  MAX_DATE.setDate(MAX_DATE.getDate() + 90);
 
   const [thing, setThing] = useState(null);
   const L = useLocalized();
@@ -75,11 +62,6 @@ export default function RequestThingPage() {
   const [startDate, setStartDate] = useState(isoToDisplay(location.state?.prefillDate) || '');
   const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState('');
-  // HOUR-unit reservations only: a duration-option key (its minutes, e.g.
-  // '30') and a chosen "HH:MM" start — kept apart from `duration` above
-  // (a day-count) since the two are never both meaningful for the same thing.
-  const [hourlyDuration, setHourlyDuration] = useState('');
-  const [hourlyStartTime, setHourlyStartTime] = useState('');
   const [projectNote, setProjectNote] = useState('');
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -150,81 +132,9 @@ export default function RequestThingPage() {
 
   // RESERVE: the renter picks a pickup date + a length of 1..reservation_max_days.
   // The Select is omitted (length fixed to 1) when the collection caps it at 1.
-  const reservationMax = Math.max(1, thing?.reservation_max_days || 1);
-  const reservationLengths = Array.from({ length: reservationMax }, (_, i) => i + 1);
-  // How far ahead a reservation may be booked — the collection's own limit,
-  // not the fixed 90 the rental picker uses.
-  const reservationMaxDate = new Date(TODAY);
-  reservationMaxDate.setDate(
-    reservationMaxDate.getDate() + (thing?.reservation_horizon_days || 90)
-  );
-
-  // HOUR-unit RESERVE: day → duration → start time, in that order (unlike the
-  // DAY-unit flow above, which picks the length first). Each step's options
-  // depend on the previous one, computed fresh from the thing's opening_hours
-  // and the fetched calendar — the same pure helpers the backend's own
-  // Collection.day_opening_blocks / reservation_hour_violation mirror.
-  const isHourlyReservation = isReservation && thing?.reservation_unit === 'HOUR';
-  const openingHours = thing?.opening_hours || {};
-  const reservationMinMinutes = thing?.reservation_min_minutes || 60;
-  const reservationMaxMinutes = thing?.reservation_max_minutes || 180;
-  const hourlyPickupDisabled = (date) =>
-    isHourlyPickupDisabled(date, {
-      openingHours,
-      closedDates,
-      blockedPeriods,
-      minMinutes: reservationMinMinutes,
-    });
-  const selectedIso = displayToIso(startDate);
-  const blocksForSelectedDay =
-    isHourlyReservation && selectedIso ? dayBlocks(openingHours, parseLocalDate(selectedIso)) : [];
-  const bookingsForSelectedDay =
-    isHourlyReservation && selectedIso
-      ? dayBookings(blockedPeriods, selectedIso)
-      : { wholeDay: false, ranges: [] };
-  const hourlyDurationChoices = isHourlyReservation
-    ? durationOptions(reservationMinMinutes, reservationMaxMinutes)
-    : [];
-  const chosenDurationOption = hourlyDurationChoices.find((o) => o.key === hourlyDuration);
-  // For today, only starts not yet passed (by the browser's clock) — see
-  // `earliestStartMinutes`. Recomputed every render, so a start that passes
-  // while the page sits open drops out of the list...
-  const hourlyStartTimeChoices = chosenDurationOption
-    ? freeStartTimes(
-        blocksForSelectedDay,
-        chosenDurationOption.minutes,
-        bookingsForSelectedDay,
-        reservationMinMinutes,
-        earliestStartMinutes(selectedIso)
-      )
-    : [];
-  // ...and out of the selection too: a start the reader picked before it
-  // passed is no longer one this page will send.
-  const chosenStartTime = hourlyStartTimeChoices.includes(hourlyStartTime) ? hourlyStartTime : '';
-  // What a Reserve click on the HOUR flow is still missing, once a day is
-  // picked (a missing day is the DateInput's own error). No start time is only
-  // "missing" when there were some to choose from — with none, the "no start
-  // times" notice already says to pick a shorter duration.
-  const hourlyDurationMissing = isHourlyReservation && !!selectedIso && !chosenDurationOption;
-  const hourlyStartTimeMissing =
-    isHourlyReservation &&
-    !!chosenDurationOption &&
-    hourlyStartTimeChoices.length > 0 &&
-    !chosenStartTime;
-  const durationOptionLabel = (opt) => {
-    const hours = Math.floor(opt.minutes / 60);
-    const minutes = opt.minutes % 60;
-    if (hours === 0) return t('reservation.minutes', { count: minutes });
-    if (minutes === 0) return t('reservation.hours', { count: hours });
-    return t('reservation.hoursAndMinutes', { hours, minutes });
-  };
-  // Radios for a handful, a dropdown past OptionPicker's RADIO_MAX — a short
-  // minimum turns both lists long (48 start times at 15 minutes over 12 hours).
-  const durationPickerOptions = hourlyDurationChoices.map((opt) => ({
-    value: opt.key,
-    label: durationOptionLabel(opt),
-  }));
-  const startTimePickerOptions = hourlyStartTimeChoices.map((hm) => ({ value: hm, label: hm }));
+  const reservationMax = reservationMaxDays(thing);
+  // HOUR-unit RESERVE: day → duration → start time, which owns its choices.
+  const hourly = useHourlyReservation({ thing, startDate, blockedPeriods });
 
   // With a single fixed length there is nothing to choose, so it *is* the answer
   // until the renter picks otherwise — the pickup picker is usable straight away
@@ -267,7 +177,7 @@ export default function RequestThingPage() {
     freePickupDisabled(date, { rentalWeekdays, blockedPeriods, closedDates });
   const freeReturnBlocked = (date) =>
     freeReturnDisabled(date, {
-      pickup: selectedIso,
+      pickup: displayToIso(startDate),
       rentalWeekdays,
       blockedPeriods,
       closedDates,
@@ -282,16 +192,15 @@ export default function RequestThingPage() {
   const buildReservationBody = () => {
     const isDateBased = thing && DATE_TYPES.includes(thing.type);
     let body = null;
-    if (isReservation && isHourlyReservation) {
+    if (isReservation && hourly.isHourly) {
       // Pickup date + a chosen slot; the backend derives end_date = start + 1
       // and auto-confirms.
-      const startIso = displayToIso(startDate);
-      if (!startIso || !chosenDurationOption || !chosenStartTime) return null;
-      const endTime = formatHM(parseHM(chosenStartTime) + chosenDurationOption.minutes);
+      const slot = hourly.slot();
+      if (!slot) return null;
       body = {
-        start_date: startIso,
-        start_time: chosenStartTime,
-        end_time: endTime,
+        start_date: slot.date,
+        start_time: slot.start,
+        end_time: slot.end,
         project_note: projectNote.trim(),
       };
     } else if (isReservation) {
@@ -420,26 +329,11 @@ export default function RequestThingPage() {
     }
   };
 
-  // A Reserve click that can't be sent used to do nothing visible on the HOUR
-  // flow: the radio groups had no error state, unlike the DAY flow's Select
-  // (found in review, 2026-09-18 — and more reachable once a start that passes
-  // while the page sits open drops out of the selection on its own). The group
-  // now shows HDS's error text, and focus moves to its first option, which
-  // reads the question out — HDS links that error text to nothing.
-  const focusMissingHourlyChoice = () => {
-    const first = hourlyDurationMissing
-      ? optionPickerFocusId('reservation-duration', durationPickerOptions)
-      : hourlyStartTimeMissing
-        ? optionPickerFocusId('reservation-start-time', startTimePickerOptions)
-        : null;
-    if (first) document.getElementById(first)?.focus();
-  };
-
   const handleSubmit = async () => {
     setAttempted(true);
     const body = buildReservationBody();
     if (!body) {
-      focusMissingHourlyChoice();
+      hourly.focusMissingChoice();
       return;
     }
 
@@ -489,6 +383,13 @@ export default function RequestThingPage() {
     return joinThenRetry(body, notMemberError);
   };
 
+  // A length picked in the constrained-rental or the day-reservation Select: the
+  // dates that are open depend on it, so the pickup date is cleared with it.
+  const chooseLength = (value) => {
+    setDuration(value);
+    setStartDate('');
+  };
+
   // The optional project note — the same field in the DAY and HOUR flows, one
   // or the other on screen, never both (their ids stay distinct anyway).
   const projectNoteField = (id) => (
@@ -531,19 +432,12 @@ export default function RequestThingPage() {
     >
       {thing.collection_is_onboarding && <DemoNotice />}
       {notMemberError && (
-        <div className="invite-nudge" role="alert">
-          <p style={{ margin: 0 }}>{notMemberError}</p>
-          <div className="button-row-wide" style={{ marginTop: 'var(--spacing-xs)' }}>
-            <Button style={btnStyle} disabled={joining} onClick={handleJoinGroup}>
-              {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
-            </Button>
-          </div>
-          {joinError && (
-            <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
-              {t('collectionPage.visitorJoinError')}
-            </p>
-          )}
-        </div>
+        <JoinGroupNudge
+          message={notMemberError}
+          joining={joining}
+          joinError={joinError}
+          onJoin={handleJoinGroup}
+        />
       )}
       {/* The join stands even when the retried reservation fails (the slot
           was taken meanwhile, say), and then there is no success message to
@@ -559,40 +453,14 @@ export default function RequestThingPage() {
         )}
       </StatusRegion>
       {success ? (
-        <>
-          <Notification
-            autofocus
-            label={isReservation ? t('reservation.successLabel') : t('request.successLabel')}
-            type="success"
-          >
-            {isReservation ? t('reservation.successMessage') : t('request.successMessage')}
-            {/* What and when, said back: a reservation confirms on the spot,
-                with no owner step to catch a wrong day or hour. */}
-            {bookedWhen && (
-              <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
-                <strong>{headline}</strong>
-                <br />
-                {bookedWhen}
-              </p>
-            )}
-            {joinedGroup && (
-              <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
-                {t(isReservation ? 'reservation.joinedGroup' : 'request.joinedGroup', {
-                  group: joinedGroup,
-                })}
-              </p>
-            )}
-          </Notification>
-          <div className="spacer-m" />
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={() => navigate(backPath)}
-            style={btnSecondaryStyle}
-          >
-            {t('request.backTo', { label: backLabel })}
-          </Button>
-        </>
+        <RequestSuccess
+          isReservation={isReservation}
+          headline={headline}
+          bookedWhen={bookedWhen}
+          joinedGroup={joinedGroup}
+          backPath={backPath}
+          backLabel={backLabel}
+        />
       ) : (
         <>
           {thing.fee && (
@@ -620,293 +488,50 @@ export default function RequestThingPage() {
             </>
           )}
           {isDateBased && isConstrainedRental && (
-            <div className="summary-grid section-mt">
-              <Select
-                id="request-duration"
-                texts={{
-                  label: t('rental.chooseDuration'),
-                  placeholder: t('rental.chooseDurationPlaceholder'),
-                  error: attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
-                  language: hdsLang(i18n.language),
-                }}
-                options={rentalDurations.map((d) => ({
-                  label: durationLabel(d, t),
-                  value: String(d),
-                }))}
-                value={
-                  chosenDuration
-                    ? [{ label: durationLabel(Number(chosenDuration), t), value: chosenDuration }]
-                    : []
-                }
-                onChange={(opts) => {
-                  setDuration(opts.length ? opts[0].value : '');
-                  setStartDate('');
-                }}
-                invalid={attempted && !chosenDuration}
-              />
-              <div className="spacer-xxxs" />
-              <DateInput
-                id="request-pickup-date"
-                label={t('rental.pickupLabel')}
-                value={startDate}
-                onChange={(value) => setStartDate(value)}
-                dateFormat={DISPLAY_DATE_FORMAT}
-                language={hdsLang(i18n.language)}
-                openButtonAriaLabel={t('datePicker.open')}
-                selectButtonLabel={t('datePicker.select')}
-                closeButtonLabel={t('datePicker.close')}
-                required
-                disabled={!chosenDuration}
-                invalid={attempted && !startDate}
-                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
-                minDate={TODAY}
-                maxDate={MAX_DATE}
-                dateOutsideRangeErrorText={t('request.dateRange')}
-                isDateDisabledBy={pickupDisabled}
-                malformedDateErrorText={t('request.dateOverlap')}
-              />
-              {chosenDuration && displayToIso(startDate) && (
-                <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-                  {t('rental.returnBy', {
-                    date: isoToDisplay(derivedReturnDate(displayToIso(startDate), chosenDuration)),
-                  })}
-                </p>
-              )}
-            </div>
+            <ConstrainedRentalFields
+              durations={rentalDurations}
+              chosenDuration={chosenDuration}
+              onDuration={chooseLength}
+              startDate={startDate}
+              onStartDate={setStartDate}
+              attempted={attempted}
+              pickupDisabled={pickupDisabled}
+            />
           )}
-          {isReservation && !isHourlyReservation && (
-            <div className="summary-grid section-mt">
-              {reservationMax > 1 && (
-                <>
-                  <Select
-                    id="reservation-duration"
-                    texts={{
-                      label: t('reservation.durationLabel'),
-                      placeholder: t('rental.chooseDurationPlaceholder'),
-                      error:
-                        attempted && !chosenDuration ? t('rental.durationRequired') : undefined,
-                      language: hdsLang(i18n.language),
-                    }}
-                    options={reservationLengths.map((d) => ({
-                      label: t('reservation.days', { count: d }),
-                      value: String(d),
-                    }))}
-                    value={
-                      chosenDuration
-                        ? [
-                            {
-                              label: t('reservation.days', { count: Number(chosenDuration) }),
-                              value: chosenDuration,
-                            },
-                          ]
-                        : []
-                    }
-                    onChange={(opts) => {
-                      setDuration(opts.length ? opts[0].value : '');
-                      setStartDate('');
-                    }}
-                    invalid={attempted && !chosenDuration}
-                  />
-                  <div className="spacer-xxxs" />
-                </>
-              )}
-              <DateInput
-                id="reservation-pickup-date"
-                label={t('reservation.pickupLabel')}
-                helperText={t('reservation.pickupHelper')}
-                value={startDate}
-                onChange={(value) => setStartDate(value)}
-                dateFormat={DISPLAY_DATE_FORMAT}
-                language={hdsLang(i18n.language)}
-                openButtonAriaLabel={t('datePicker.open')}
-                selectButtonLabel={t('datePicker.select')}
-                closeButtonLabel={t('datePicker.close')}
-                required
-                disabled={!chosenDuration}
-                invalid={attempted && !startDate}
-                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
-                minDate={TODAY}
-                maxDate={reservationMaxDate}
-                dateOutsideRangeErrorText={t('reservation.dateRange', {
-                  days: thing.reservation_horizon_days || 90,
-                })}
-                isDateDisabledBy={pickupDisabled}
-                malformedDateErrorText={t('request.dateOverlap')}
-              />
-              {/* The span the member is about to book, once both parts are set
-                  — the reservation auto-confirms, so there is no owner step
-                  that would catch a wrong end date. Shown only when the length
-                  is more than a day (a 1-day slot IS the pickup date). */}
-              {Number(chosenDuration) > 1 && displayToIso(startDate) && (
-                <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-                  {t('reservation.dateSummary', {
-                    start: startDate,
-                    end: isoToDisplay(
-                      derivedReturnDate(displayToIso(startDate), Number(chosenDuration) - 1)
-                    ),
-                  })}
-                </p>
-              )}
-              <div className="spacer-xxxs" />
+          {isReservation && !hourly.isHourly && (
+            <DayReservationFields
+              thing={thing}
+              chosenDuration={chosenDuration}
+              onDuration={chooseLength}
+              startDate={startDate}
+              onStartDate={setStartDate}
+              attempted={attempted}
+              pickupDisabled={pickupDisabled}
+            >
               {projectNoteField('reservation-project-note')}
-            </div>
+            </DayReservationFields>
           )}
-          {isReservation && isHourlyReservation && (
-            <div className="summary-grid section-mt">
-              <DateInput
-                id="reservation-pickup-date-hourly"
-                label={t('reservation.pickupLabelHourly')}
-                helperText={t('reservation.pickupHelperHourly')}
-                value={startDate}
-                onChange={(value) => {
-                  setStartDate(value);
-                  setHourlyDuration('');
-                  setHourlyStartTime('');
-                }}
-                dateFormat={DISPLAY_DATE_FORMAT}
-                language={hdsLang(i18n.language)}
-                openButtonAriaLabel={t('datePicker.open')}
-                selectButtonLabel={t('datePicker.select')}
-                closeButtonLabel={t('datePicker.close')}
-                required
-                invalid={attempted && !startDate}
-                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
-                minDate={TODAY}
-                maxDate={reservationMaxDate}
-                dateOutsideRangeErrorText={t('reservation.dateRange', {
-                  days: thing.reservation_horizon_days || 90,
-                })}
-                isDateDisabledBy={hourlyPickupDisabled}
-                malformedDateErrorText={t('request.dateOverlap')}
-              />
-              {selectedIso && (
-                <>
-                  <div className="spacer-xxxs" />
-                  <OptionPicker
-                    idPrefix="reservation-duration"
-                    name="reservation-duration"
-                    label={t('reservation.durationLabelHourly')}
-                    placeholder={t('rental.chooseDurationPlaceholder')}
-                    options={durationPickerOptions}
-                    value={hourlyDuration}
-                    onChange={(key) => {
-                      setHourlyDuration(key);
-                      setHourlyStartTime('');
-                    }}
-                    errorText={
-                      attempted && hourlyDurationMissing ? t('rental.durationRequired') : undefined
-                    }
-                  />
-                </>
-              )}
-              {hourlyDuration && hourlyStartTimeChoices.length > 0 && (
-                <>
-                  <div className="spacer-xxxs" />
-                  <OptionPicker
-                    idPrefix="reservation-start-time"
-                    name="reservation-start-time"
-                    label={t('reservation.startTimeLabel')}
-                    placeholder={t('reservation.startTimePlaceholder')}
-                    options={startTimePickerOptions}
-                    value={chosenStartTime}
-                    onChange={setHourlyStartTime}
-                    errorText={
-                      attempted && hourlyStartTimeMissing
-                        ? t('reservation.startTimeRequired')
-                        : undefined
-                    }
-                  />
-                </>
-              )}
-              {/* Rendered unconditionally (StatusRegion), the conditional stays
-                  inside it — see StatusRegion.jsx's own note. A live region
-                  only announces a change made *inside a region that already
-                  existed*: gating the Notification itself behind `hourlyDuration`
-                  (as this used to) meant the reader picking a duration with no
-                  free start left that day heard nothing at all — the
-                  Notification was never inside a live region, since it didn't
-                  exist yet either (WCAG 4.1.3, found in review 2026-09-18). */}
-              <StatusRegion>
-                {/* The slot this Reserve will book, once all three parts are
-                    picked — the end time is never shown anywhere else, and the
-                    reservation auto-confirms. In the live region, so choosing a
-                    start time reads the whole slot back. */}
-                {selectedIso && chosenDurationOption && chosenStartTime && (
-                  <p className="thing-card-meta" style={{ marginTop: 'var(--spacing-2-xs)' }}>
-                    {t('reservation.slotSummary', {
-                      date: isoToDisplay(selectedIso),
-                      start: chosenStartTime,
-                      end: formatHM(parseHM(chosenStartTime) + chosenDurationOption.minutes),
-                    })}
-                  </p>
-                )}
-                {hourlyDuration && hourlyStartTimeChoices.length === 0 && (
-                  <>
-                    <div className="spacer-xxxs" />
-                    {/* `notificationAriaLabel` distinguishes this landmark from
-                        the availability Notification above, which is always
-                        mounted alongside it here — two HDS Notifications share
-                        the same default aria-label ("Notification"), which
-                        axe's landmark-unique rule (correctly) flags once both
-                        are on screen at once (found by the new axe coverage
-                        for this page, 2026-09-18). */}
-                    <Notification
-                      type="info"
-                      size="small"
-                      label={t('reservation.noStartTimesLabel')}
-                      notificationAriaLabel={t('reservation.noStartTimesLabel')}
-                    >
-                      {t('reservation.noStartTimesForDuration')}
-                    </Notification>
-                  </>
-                )}
-              </StatusRegion>
-              <div className="spacer-xxxs" />
+          {isReservation && hourly.isHourly && (
+            <HourlyReservationFields
+              thing={thing}
+              hourly={hourly}
+              startDate={startDate}
+              onStartDate={setStartDate}
+              attempted={attempted}
+            >
               {projectNoteField('reservation-project-note-hourly')}
-            </div>
+            </HourlyReservationFields>
           )}
           {isDateBased && !isConstrainedRental && !isReservation && (
-            <div className="summary-grid section-mt">
-              <DateInput
-                id="request-start-date"
-                label={t('request.startLabel')}
-                value={startDate}
-                onChange={(value) => setStartDate(value)}
-                dateFormat={DISPLAY_DATE_FORMAT}
-                language={hdsLang(i18n.language)}
-                openButtonAriaLabel={t('datePicker.open')}
-                selectButtonLabel={t('datePicker.select')}
-                closeButtonLabel={t('datePicker.close')}
-                required
-                invalid={attempted && !startDate}
-                errorText={attempted && !startDate ? t('request.startRequired') : undefined}
-                minDate={TODAY}
-                maxDate={MAX_DATE}
-                dateOutsideRangeErrorText={t('request.dateRange')}
-                isDateDisabledBy={freePickupBlocked}
-                malformedDateErrorText={t('request.dateOverlap')}
-              />
-              <div className="spacer-xxxs" />
-              <DateInput
-                id="request-end-date"
-                label={t('request.endLabel')}
-                value={endDate}
-                onChange={(value) => setEndDate(value)}
-                dateFormat={DISPLAY_DATE_FORMAT}
-                language={hdsLang(i18n.language)}
-                openButtonAriaLabel={t('datePicker.open')}
-                selectButtonLabel={t('datePicker.select')}
-                closeButtonLabel={t('datePicker.close')}
-                required
-                invalid={attempted && !endDate}
-                errorText={attempted && !endDate ? t('request.endRequired') : undefined}
-                minDate={TODAY}
-                maxDate={MAX_DATE}
-                dateOutsideRangeErrorText={t('request.dateRange')}
-                isDateDisabledBy={freeReturnBlocked}
-                malformedDateErrorText={t('request.dateOverlap')}
-              />
-            </div>
+            <FreeRentalFields
+              startDate={startDate}
+              onStartDate={setStartDate}
+              endDate={endDate}
+              onEndDate={setEndDate}
+              attempted={attempted}
+              pickupBlocked={freePickupBlocked}
+              returnBlocked={freeReturnBlocked}
+            />
           )}
 
           <div className="spacer-xs" />
