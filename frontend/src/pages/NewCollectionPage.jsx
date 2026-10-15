@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 import PageLayout from '../components/PageLayout';
 import ButtonLink from '../components/ButtonLink';
 import ApprovalNotice from '../components/ApprovalNotice';
@@ -17,20 +18,25 @@ import { COLLECTION_KINDS, kindSegment } from '../utils/collectionPath';
  * A deployment that does not hand a kind out to this account (`collection_kinds`
  * on `GET /auth/me/`, derived from the verbs its policy offers) still shows the
  * card — nothing disappears without a word — but without its button, and with
- * the same "needs approval" line the forms use. Unknown capabilities offer
+ * the same "needs approval" line the forms use. Whoever opens the page may say
+ * how to come back (`state.backPath` / `state.backLabel`, as `CreateCollectionPage`
+ * reads them); the arrow honours it and each button hands it on to the form. Unknown capabilities offer
  * everything: the server is the gate.
  */
 export default function NewCollectionPage() {
   const { t } = useTranslation();
   const capabilities = useCapabilities();
   const { btnStyle } = useTheeeme();
+  const location = useLocation();
+  const backPath = location.state?.backPath || '/';
+  const backLabel = location.state?.backLabel || t('common.home');
 
   useEffect(() => {
     document.title = t('titles.newCollection');
   }, [t]);
 
   return (
-    <PageLayout title={t('createCollection.pageTitle')} backTo="/" backLabel={t('common.home')}>
+    <PageLayout title={t('createCollection.pageTitle')} backTo={backPath} backLabel={backLabel}>
       <ul className="kind-cards">
         {COLLECTION_KINDS.map((kind) => {
           const long = t(`kinds.${kind}.long`);
@@ -41,7 +47,11 @@ export default function NewCollectionPage() {
               <p className="kind-card-what">{t(`kinds.${kind}.what`)}</p>
               {open ? (
                 <div className="button-row-wide">
-                  <ButtonLink to={`/${kindSegment(kind)}/new`} style={btnStyle}>
+                  <ButtonLink
+                    to={`/${kindSegment(kind)}/new`}
+                    state={location.state}
+                    style={btnStyle}
+                  >
                     {t(`kinds.${kind}.create`)}
                   </ButtonLink>
                 </div>
