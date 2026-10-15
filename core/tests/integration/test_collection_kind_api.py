@@ -55,7 +55,15 @@ class TestCreatingByKind:
         assert res.status_code == status.HTTP_201_CREATED, res.data
         assert res.data["kind"] == kind
 
-    @pytest.mark.parametrize("verbs", [[], [GIFT, LEND], [RESERVE, SELL]])
+    def test_no_kind_and_no_verbs_is_a_stall_with_both_of_its_verbs(self, authenticated_client):
+        res = _create(authenticated_client)
+
+        assert res.status_code == status.HTTP_201_CREATED, res.data
+        assert res.data["kind"] == "STALL"
+        assert res.data["allowed_thing_types"] == [GIFT, SELL]
+        assert Collection.objects.get(code=res.data["code"]).kind == "STALL"
+
+    @pytest.mark.parametrize("verbs", [[GIFT, LEND], [RESERVE, SELL]])
     def test_no_kind_and_no_single_family_is_refused(self, authenticated_client, verbs):
         res = _create(authenticated_client, allowed_thing_types=verbs)
 

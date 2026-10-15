@@ -511,8 +511,10 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             attrs["visibility"] = Collection.Visibility.PRIVATE
         listed = attrs.get("allowed_thing_types", [])
         # A client that names no kind (the API before kinds) gets the one its verbs
-        # belong to; a list that names none or several kinds cannot say.
-        kind = attrs.get("kind") or _kind_of_verbs(listed)
+        # belong to; one that names neither a kind nor any verb gets a stall, the
+        # model's default (and what the kind migration made of a collection with no
+        # verbs); a list that spans several kinds cannot say.
+        kind = attrs.get("kind") or (_kind_of_verbs(listed) if listed else Collection.Kind.STALL)
         attrs["kind"] = kind
         attrs["allowed_thing_types"] = normalize_allowed_thing_types(kind, mode, listed)
         _validate_reservation_minutes(
@@ -666,7 +668,7 @@ def _normalize_tags(tags):
 
 
 def _kind_of_verbs(verbs):
-    """The one kind a list of verbs belongs to, else the 400 that says why not."""
+    """The one kind a non-empty list of verbs belongs to, else the 400 that says why not."""
     unknown = [v for v in verbs if kind_for_thing_type(v) is None]
     if unknown:
         raise serializers.ValidationError(f"These types are not allowed: {unknown}")
