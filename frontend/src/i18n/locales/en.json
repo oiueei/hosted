@@ -317,7 +317,9 @@
     "showMoreThings_other": "Show {{count}} more things",
     "visitorJoin": "Join this group",
     "visitorJoinError": "We couldn't add you to the group. Please try again.",
-    "welcomeDoc": "The group's welcome document (PDF)"
+    "welcomeDoc": "The group's welcome document (PDF)",
+    "noOpeningHoursLabel": "Nobody can book yet",
+    "noOpeningHoursBody": "This shed is booked by the hour and has no opening hours. Add them in Edit collection, under \"More options\"."
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",

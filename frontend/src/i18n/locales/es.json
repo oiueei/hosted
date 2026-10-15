@@ -311,7 +311,9 @@
     "showMoreThings_other": "Ver {{count}} cosas más",
     "visitorJoin": "Unirme al grupo",
     "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo.",
-    "welcomeDoc": "Documento de bienvenida del grupo (PDF)"
+    "welcomeDoc": "Documento de bienvenida del grupo (PDF)",
+    "noOpeningHoursLabel": "Aún no se puede reservar",
+    "noOpeningHoursBody": "Este taller se reserva por horas y no tiene horario. Añádelo en Editar colección, en «Más opciones»."
   },
   "digestMute": {
     "pageTitle": "Resúmenes por correo — OIUEEI",

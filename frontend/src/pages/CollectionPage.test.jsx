@@ -775,6 +775,82 @@ describe('CollectionPage — the kind is said under the name, to every reader', 
   });
 });
 
+describe('CollectionPage — an hourly shed nobody can book yet', () => {
+  const SHED = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    kind: 'SHED',
+    reservation_unit: 'HOUR',
+    opening_hours: {},
+    allowed_thing_types: ['RESERVE_THING'],
+    digest_frequency: 'NONE',
+  };
+  const NOTICE = en.collectionPage.noOpeningHoursBody;
+
+  async function renderAs(collection, { signedIn = true } = {}) {
+    if (!signedIn) localStorage.removeItem('userCode');
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    render(
+      <MemoryRouter initialEntries={['/shed/COL001']}>
+        <Routes>
+          <Route path="/shed/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { level: 1, name: /Kitchen Collection/ });
+    await settle(apiFetch);
+  }
+
+  test('the curator is told, and is given the way to Edit collection', async () => {
+    await renderAs(SHED);
+
+    expect(screen.getByText(en.collectionPage.noOpeningHoursLabel)).toBeInTheDocument();
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+    const links = screen.getAllByRole('link', { name: en.collectionPage.editCollection });
+    expect(links.some((a) => a.getAttribute('href') === '/shed/COL001/edit')).toBe(true);
+    expect(links).toHaveLength(2); // the hero's, and the notice's
+  });
+
+  test('a week of empty days is the same as none', async () => {
+    await renderAs({ ...SHED, opening_hours: { 0: [], 3: [] } });
+
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+  });
+
+  test.each([
+    ['a member', { is_curator: false, is_member: true, owner: 'OTHER1' }, {}],
+    [
+      'an anonymous reader',
+      { is_curator: false, owner: 'OTHER1', visibility: 'PUBLIC' },
+      { signedIn: false },
+    ],
+  ])('%s is not told: it is not theirs to fix', async (_who, over, opts) => {
+    await renderAs({ ...SHED, ...over }, opts);
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
+  test('a shed booked by the day has no opening hours to miss', async () => {
+    await renderAs({ ...SHED, reservation_unit: 'DAY' });
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
+  test('with a range on some day there is nothing to say', async () => {
+    await renderAs({ ...SHED, opening_hours: { 2: [['10:00', '14:00']] } });
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
+  test('a library, whatever its unit says, is never told it', async () => {
+    await renderAs({ ...SHED, kind: 'LIBRARY' });
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+});
+
 const PUBLIC_COMMUNITY = {
   ...COLLECTION_WITH_PHOTO,
   visibility: 'PUBLIC',

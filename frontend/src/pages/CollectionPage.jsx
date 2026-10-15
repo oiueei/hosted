@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InboxNotifications from '../components/InboxNotifications';
 import DemoNotice from '../components/DemoNotice';
+import ButtonLink from '../components/ButtonLink';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
@@ -16,6 +17,8 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import Toast from '../components/Toast';
 import { useCanonicalCollectionPath } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { collectionPath } from '../utils/collectionPath';
+import { hasOpeningHours } from '../utils/rental';
 import CollectionHero from '../components/collection/CollectionHero';
 import BroadcastBox from '../components/collection/BroadcastBox';
 import ThingsSection, { InactiveThings } from '../components/collection/ThingsSection';
@@ -28,7 +31,7 @@ export default function CollectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { tc } = useTheeeme();
+  const { tc, btnStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
   // The move off a wrong address: a link made before kinds, or at the wrong
   // kind's prefix, is corrected here.
@@ -217,6 +220,24 @@ export default function CollectionPage() {
             {t('collectionPage.inactiveNotice')}
           </Notification>
         )}
+        {/* A shed booked by the hour that has no opening hours is closed every day,
+            and whoever tries to reserve sees a calendar of grey: its curators are
+            told where to fix it. Nobody else can. */}
+        {isCurator &&
+          collection.kind === 'SHED' &&
+          collection.reservation_unit === 'HOUR' &&
+          !hasOpeningHours(collection.opening_hours) && (
+            <Notification
+              label={t('collectionPage.noOpeningHoursLabel')}
+              type="alert"
+              style={{ marginBottom: 'var(--spacing-m)' }}
+            >
+              <p>{t('collectionPage.noOpeningHoursBody')}</p>
+              <ButtonLink to={`${collectionPath(code, collection.kind)}/edit`} style={btnStyle}>
+                {t('collectionPage.editCollection')}
+              </ButtonLink>
+            </Notification>
+          )}
         {collection.is_paused && (
           <Notification
             label={t('pause.bannerLabel')}
