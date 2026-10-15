@@ -1116,22 +1116,23 @@
     "time_taken": "Aquesta hora ja està agafada."
   },
   "kinds": {
+    "chooseIntro": "Tria per a què són les teves coses. El tipus no es pot canviar després.",
     "STALL": {
       "short": "Paradeta",
       "long": "Paradeta",
-      "what": "Coses per vendre o regalar",
+      "what": "Coses per vendre o regalar: qui se l'emporta, se la queda.",
       "create": "Crear paradeta"
     },
     "LIBRARY": {
       "short": "Biblioteca",
       "long": "Biblioteca de les coses",
-      "what": "Coses per prestar o llogar",
+      "what": "Coses per prestar o llogar: se les emporten a casa i les tornen.",
       "create": "Crear biblioteca"
     },
     "SHED": {
       "short": "Taller",
       "long": "Taller de màquines",
-      "what": "Coses per reservar per dies o per hores",
+      "what": "Màquines i espais que es fan servir on són, amb reserva per dies o per hores.",
       "create": "Crear taller"
     }
   },

@@ -1116,22 +1116,23 @@
     "time_taken": "Esa hora ya está cogida."
   },
   "kinds": {
+    "chooseIntro": "Elige para qué son tus cosas. El tipo no se puede cambiar después.",
     "STALL": {
       "short": "Rastrillo",
       "long": "Rastrillo",
-      "what": "Cosas para vender o regalar",
+      "what": "Cosas para vender o regalar: quien se la lleva, se la queda.",
       "create": "Crear rastrillo"
     },
     "LIBRARY": {
       "short": "Biblioteca",
       "long": "Biblioteca de las cosas",
-      "what": "Cosas para prestar o alquilar",
+      "what": "Cosas para prestar o alquilar: se las llevan a casa y las devuelven.",
       "create": "Crear biblioteca"
     },
     "SHED": {
       "short": "Taller",
       "long": "Taller de máquinas",
-      "what": "Cosas para reservar por días o por horas",
+      "what": "Máquinas y espacios que se usan donde están, con reserva por días o por horas.",
       "create": "Crear taller"
     }
   },

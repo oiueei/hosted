@@ -98,6 +98,30 @@ describe('the three cards', () => {
   });
 });
 
+describe('the kind is for good, and the page says so', () => {
+  test('it is said above the cards', async () => {
+    renderPage();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    expect(screen.getByText(en.kinds.chooseIntro)).toBeInTheDocument();
+    expect(en.kinds.chooseIntro).toMatch(/can't be changed/);
+  });
+
+  test('it is said too when the cards have no button for the deployment', async () => {
+    capabilities = {
+      collection_modes: ['PROPRIETARY'],
+      collection_kinds: ['STALL'],
+      thing_types: ['GIFT_THING', 'SELL_THING'],
+      request_url: null,
+    };
+    renderPage();
+    await settle(globalThis.fetch);
+
+    expect(screen.getByText(en.kinds.chooseIntro)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: en.kinds.LIBRARY.create })).toBeNull();
+  });
+});
+
 describe('the way back', () => {
   const back = { backPath: '/welcome', backLabel: 'Welcome' };
   const from = { pathname: '/new', state: back };

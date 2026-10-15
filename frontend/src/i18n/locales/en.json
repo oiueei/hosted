@@ -1116,22 +1116,23 @@
     "time_taken": "That time is already taken."
   },
   "kinds": {
+    "chooseIntro": "Choose what your things are for. The kind can't be changed later.",
     "STALL": {
       "short": "Stall",
       "long": "Stall",
-      "what": "Things to sell or give away",
+      "what": "Things to sell or give away: whoever takes one keeps it.",
       "create": "Create stall"
     },
     "LIBRARY": {
       "short": "Library",
       "long": "Library of Things",
-      "what": "Things to lend or rent out",
+      "what": "Things to lend or rent out: people take them home and bring them back.",
       "create": "Create library"
     },
     "SHED": {
       "short": "Shed",
       "long": "Shed",
-      "what": "Things to book by the day or by the hour",
+      "what": "Machines and spaces used where they are, booked by the day or by the hour.",
       "create": "Create shed"
     }
   },
