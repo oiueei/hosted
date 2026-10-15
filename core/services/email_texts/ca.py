@@ -46,9 +46,9 @@ TEXTS = {
     # The one-line "what is this" under the OIUEEI parent title, for the one
     # email a reader may open with no idea what OIUEEI is.
     "generic_parent_pitch": (
-        "Comparteix el que tens amb la gent que t'envolta. Crea una col·lecció de coses "
-        "per regalar, vendre, llogar, deixar o reservar — i convida la gent a "
-        "conèixer-les i demanar-les."
+        "Comparteix el que tens amb la gent que t'envolta: una paradeta per regalar o vendre, "
+        "una biblioteca de les coses per prestar o llogar, un taller per reservar per dies o "
+        "per hores. Després, convida la teva gent a demanar el que necessiti."
     ),
     # What a kind of collection is, one sentence each. The same words as
     # `kinds.<K>.what` in the frontend's locale files (the kind chooser): a shared
