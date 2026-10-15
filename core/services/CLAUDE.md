@@ -16,7 +16,7 @@ WhatsApp, Telegram, Signal, iMessage and Slack read the HTML the server sends an
 | `<prefix>/<code>/things/<thing>` (same prefixes) and `things/<thing>` | `thing.can_view(None)` | name, description, photo |
 | `share/<token>` | `share_token=token` and `ACTIVE` (the filter of `SharePreviewView`) | name, description, **no photo** |
 
-Anything else, and any of the above whose condition fails, gets `None` and the **untouched `index.html`, byte for byte** — a private collection cannot be told from a code that does not exist, and a path that is none of these costs no query.
+Anything else, and any of the above whose condition fails, gets `None` and is served **the site's card** (`site_preview()`: title "OIUEEI", `generic_parent_pitch` in the deployment's `EMAIL_LANGUAGE`, no photo, `og:url` the site's own root and never the page's) — **the same bytes for every such page**, so a private collection cannot be told from a code that does not exist (`/` and `/login` carry it too, which is the card of the instance's own address). It costs no query and spends no allowance, and a path that is none of the routes above costs no query at all.
 
 - **The rule is "only what an anonymous visitor could already read".** The condition is the model's own `can_view(None)`, never a copy of it.
 - **`share/` carries no photo on purpose**, like the endpoint behind the join page: the card must not give the holder of a link more than the join page does.

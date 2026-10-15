@@ -5,7 +5,7 @@
 anonymous visit. They spend the **same per-IP count** as `AnonymousApiThrottle`
 (`ANON_API_RATE`, in this process's memory), and past the ceiling they stop asking:
 a person who opens a link must not see an error for the sake of a preview card, so
-the page is the untouched `index.html` (no card, no redirect), made with no query.
+the page is the site's own card (not the collection's, no redirect), made with no query.
 A route that was never going to ask anything spends nothing.
 """
 
@@ -19,6 +19,7 @@ from core.models import Collection, User
 
 RATE = "3/m"
 MID_MINUTE = 1_800_000_030.0
+GROUP_TITLE = "<title>The street — OIUEEI</title>"
 HEAD = "<!doctype html><html><head><title>OIUEEI</title></head><body></body></html>"
 OTHER_IP = {"HTTP_X_FORWARDED_FOR": "203.0.113.77"}
 
@@ -57,6 +58,11 @@ def group(db):
     )
 
 
+def _site_card():
+    """What a page with no card of its own (or one that may not be asked for) gets."""
+    return Client().get("/login").content.decode()
+
+
 def _mine(path="/library/THRGRP"):
     return Client().get(path, HTTP_X_FORWARDED_FOR="198.51.100.1")
 
@@ -77,17 +83,17 @@ class TestTheLinkPreview:
             res = _mine()
 
         assert res.status_code == 200
-        assert res.content.decode() == HEAD
+        assert res.content.decode() == _site_card()
 
     def test_inside_the_ceiling_the_card_is_there(self, group):
         _spend(2)
 
-        assert "og:title" in _mine().content.decode()
+        assert GROUP_TITLE in _mine().content.decode()
 
     def test_another_address_in_the_same_window_still_gets_the_card(self, group):
         _spend(4)
 
-        assert "og:title" in Client().get("/library/THRGRP", **OTHER_IP).content.decode()
+        assert GROUP_TITLE in Client().get("/library/THRGRP", **OTHER_IP).content.decode()
 
     def test_a_share_link_is_counted_too(self, group, django_assert_num_queries):
         group.share_token = "tok_throttle_share_01"
@@ -97,7 +103,7 @@ class TestTheLinkPreview:
         with django_assert_num_queries(0):
             res = _mine("/share/tok_throttle_share_01")
 
-        assert res.content.decode() == HEAD
+        assert res.content.decode() == _site_card()
 
 
 @pytest.mark.django_db
@@ -111,7 +117,7 @@ class TestTheAddressRedirect:
             res = _mine("/collections/THRGRP")
 
         assert res.status_code == 200
-        assert res.content.decode() == HEAD
+        assert res.content.decode() == _site_card()
 
     def test_inside_the_ceiling_it_still_redirects(self, group):
         _spend(2, "/collections/THRGRP")
@@ -126,8 +132,8 @@ class TestTheAddressRedirect:
         `spa_index`; the second must not count the same visit again."""
         _spend(2)
 
-        assert "og:title" in _mine().content.decode()
-        assert "og:title" not in _mine().content.decode()
+        assert GROUP_TITLE in _mine().content.decode()
+        assert GROUP_TITLE not in _mine().content.decode()
 
 
 @pytest.mark.django_db
@@ -138,7 +144,7 @@ class TestWhatSpendsNothing:
             _mine("/")
             _mine("/me/edit")
 
-        assert "og:title" in _mine().content.decode()
+        assert GROUP_TITLE in _mine().content.decode()
 
 
 @pytest.mark.django_db
@@ -151,7 +157,7 @@ class TestOneCountForThePagesAndTheApi:
         with django_assert_num_queries(0):
             res = _mine()
 
-        assert res.content.decode() == HEAD
+        assert res.content.decode() == _site_card()
 
     def test_what_the_pages_spent_is_gone_from_the_api(self, group):
         _spend(3)
@@ -170,10 +176,10 @@ class TestSwitchedOff:
         settings.ANON_API_RATE = rate
         _spend(10)
 
-        assert "og:title" in _mine().content.decode()
+        assert GROUP_TITLE in _mine().content.decode()
 
     def test_the_global_switch_does_too(self, group, settings):
         settings.RATELIMIT_ENABLE = False
         _spend(10)
 
-        assert "og:title" in _mine().content.decode()
+        assert GROUP_TITLE in _mine().content.decode()

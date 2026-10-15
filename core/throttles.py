@@ -50,7 +50,7 @@ Points worth knowing before changing it:
   (`spend_anonymous_quota`): `spa_index`'s link preview and `collection_address`,
   and only on a route that was going to ask (see `core.services.link_preview`).
   Past the ceiling they do not answer 429 — a person opening a link must not meet
-  an error for a preview card — they stop asking: the untouched `index.html`, with
+  an error for a preview card — they stop asking: the plain page with the site's card, with
   no query.
 - **`ANON_API_RATE=0` (or empty) switches it off**, and so does `RATELIMIT_ENABLE =
   False` (development and the test suite): the one switch for the whole layer.

@@ -7,8 +7,13 @@ so without this a shared link shows "OIUEEI" and the icon, nothing else.
 **The rule: a preview shows only what a visitor with no account could already read
 on the page.** A collection or thing is previewed when its own ``can_view(None)``
 says so — the model's rule, not a copy of it. A private, inactive or unknown
-target gets ``None``, and the caller then serves ``index.html`` untouched, byte for
-byte, so a private collection cannot be told apart from a code that does not exist.
+target gets ``None``, and the caller then serves the site's card, the same bytes
+whatever the page, so a private collection cannot be told apart from a code that
+does not exist.
+
+A page that is none of these — and a target a stranger may not see — gets the site's
+own card (``site_preview``) instead of a bare ``index.html``: the same bytes whatever
+the page, so a private collection still cannot be told from a code that names nothing.
 
 A collection with no description of its own is described by its kind's sentence
 (``kind_what_<KIND>``, the app's own words for it): a card is never only a title.
@@ -86,6 +91,13 @@ def _collection_preview(collection, with_image):
     return card
 
 
+def site_preview():
+    """The card of every page that has none of its own: what OIUEEI is, in the
+    deployment's language. No database, no photo, and nothing that depends on the
+    page, so a private collection and a code that names nothing get the same one."""
+    return {"title": SITE_NAME, "description": T("generic_parent_pitch"), "image": None}
+
+
 def route_for_preview(path):
     """What a path would look up for a preview, or ``None`` — **without touching the
     database**: ``("collection", code)``, ``("thing", code)`` or ``("share", token)``.
@@ -156,5 +168,6 @@ def inject_preview(html, preview, url):
     tags.append(
         f'<meta name="twitter:card" content="{"summary_large_image" if image else "summary"}">'
     )
-    html = _TITLE.sub(lambda _: f"<title>{title} — {SITE_NAME}</title>", html, count=1)
+    page_title = title if preview["title"] == SITE_NAME else f"{title} — {SITE_NAME}"
+    html = _TITLE.sub(lambda _: f"<title>{page_title}</title>", html, count=1)
     return html.replace("</head>", "".join(tags) + "</head>", 1)

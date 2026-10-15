@@ -142,12 +142,56 @@ class TestAShareLinkWithNoDescription:
         assert "og:image" not in body
 
 
+class TestEveryOtherPageCarriesTheSitesCard:
+    """A page with no preview of its own is not left bare: whoever shares the
+    address of the instance (`/`, `/login`) gets a card that says what OIUEEI is."""
+
+    @pytest.mark.parametrize("path", ["/", "/login", "/me"])
+    def test_the_front_door_and_the_other_pages_say_what_oiueei_is(self, built, db, path):
+        body = _body(path)
+
+        pitch = escape(T("generic_parent_pitch", "en"))
+        assert f'<meta property="og:description" content="{pitch}">' in body
+        assert f'<meta name="description" content="{pitch}">' in body
+        assert '<meta property="og:title" content="OIUEEI">' in body
+        assert "<title>OIUEEI</title>" in body
+        assert "og:image" not in body
+
+    @override_settings(EMAIL_LANGUAGE="es")
+    def test_it_speaks_the_deployments_language(self, built, db):
+        body = _body("/login")
+
+        assert f'content="{escape(T("generic_parent_pitch", "es"))}"' in body
+
+    def test_it_asks_the_database_nothing(self, built, django_assert_num_queries):
+        with django_assert_num_queries(0):
+            Client().get("/login")
+
+    def test_a_private_collection_and_a_code_that_names_nothing_are_the_same_answer(
+        self, built, owner
+    ):
+        _collection(owner, visibility=Collection.Visibility.PRIVATE)
+
+        assert _body("/stall/PUB001") == _body("/stall/NOPE00")
+        assert _body("/stall/PUB001").count("og:title") == 1
+
+    def test_a_private_thing_and_a_share_link_that_name_nothing_are_too(self, built, owner):
+        group = _collection(owner, visibility=Collection.Visibility.PRIVATE)
+        _thing(owner, group)
+
+        assert _body("/things/THG001") == _body("/things/NOPE00")
+        assert _body("/share/nope") == _body("/login")
+
+
 class TestWhatAStrangerCannotSee:
     def test_a_private_collection_is_the_untouched_page(self, built, owner):
         _collection(owner, visibility=Collection.Visibility.PRIVATE)
 
-        assert _body("/stall/PUB001") == _neutral() == HEAD
-        assert _body("/stall/PUB001/join") == HEAD
+        # The same bytes as a code that names nothing: not a hint of the group.
+        assert _body("/stall/PUB001") == _body("/stall/NOPE00") == _neutral()
+        assert _body("/stall/PUB001/join") == _body("/stall/NOPE00/join")
+        assert "The street" not in _body("/stall/PUB001")
+        assert "Things we share" not in _body("/stall/PUB001")
 
     def test_an_inactive_public_collection_is_the_untouched_page(self, built, owner):
         _collection(owner, status=Collection.Status.INACTIVE)
