@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from core.models import Thing
 from core.models.collection import KIND_THING_TYPES, derive_thing_type
+from core.utils import Refusal
 
 
 def body_dict(request):
@@ -107,7 +108,7 @@ def type_validity_error(thing_type, collection):
         return None
     if collection.allowed_thing_types and thing_type not in collection.allowed_thing_types:
         if thing_type in KIND_THING_TYPES[collection.kind][1:]:
-            return "This group doesn't take prices."
+            return Refusal("This group doesn't take prices.", "no_prices_here")
         return (
             f"This collection does not accept {thing_type.replace('_', ' ').title()}s."
             " The owner has restricted it to specific types."

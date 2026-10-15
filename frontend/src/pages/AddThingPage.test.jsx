@@ -10,14 +10,17 @@ vi.mock('react-router', async () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock('../services/api', () => ({
+// The real `extractApiError`: the refusal tests feed it real response bodies and
+// check what it makes of them reaches the toast.
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
   apiFetch: vi.fn(),
-  extractApiError: vi.fn(async (res) => (await res.json())?.type?.[0] ?? null),
   getCsrfToken: () => 'tok',
 }));
 
 import { apiFetch } from '../services/api';
 import AddThingPage from './AddThingPage';
+import en from '../i18n/locales/en.json';
 
 // The form a member meets first in a COMMUNITY collection. There is no choice of
 // verb in it: the collection's kind and the price decide it, the server puts it, and
@@ -350,6 +353,23 @@ describe('AddThingPage — what the form sends', () => {
 
     expect(await screen.findByText('This group doesn’t take prices.')).toBeInTheDocument();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  test('a refusal the server coded is said in the reader’s language, not in its English', async () => {
+    mockApi({
+      post: {
+        ok: false,
+        status: 400,
+        body: { type: ['This group doesn’t take prices.'], code: 'no_prices_here' },
+      },
+    });
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText(en.requestErrors.no_prices_here)).toBeInTheDocument();
+    expect(screen.queryByText('This group doesn’t take prices.')).toBeNull();
   });
 
   test('a rate-limited create says "too many", not "error"', async () => {

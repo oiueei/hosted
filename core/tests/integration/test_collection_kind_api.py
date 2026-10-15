@@ -156,6 +156,28 @@ class TestTheKindNeverChanges:
         assert res.status_code == status.HTTP_400_BAD_REQUEST
         assert "orphaned" in str(res.data)
 
+    def test_the_refusal_names_its_code_and_lists_the_verbs_as_words(
+        self, authenticated_client, collection, user
+    ):
+        collection.mode = "COMMUNITY"
+        collection.allowed_thing_types = [GIFT, SELL]
+        collection.save()
+        also_in(
+            collection,
+            Thing.objects.create(code="SELL02", owner=user, headline="Lamp", type=SELL),
+        )
+
+        res = authenticated_client.patch(
+            f"{URL}{collection.code}/", {"allowed_thing_types": [GIFT]}, format="json"
+        )
+
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+        assert res.data["code"] == "priced_things_remain"
+        sentence = res.json()["non_field_errors"][0]
+        assert "(types: SELL_THING)" in sentence
+        assert "[" not in sentence
+        assert "'" not in sentence
+
     def test_a_stall_holding_a_lend_can_still_be_saved_from_the_edit_page(
         self, authenticated_client, collection, user
     ):

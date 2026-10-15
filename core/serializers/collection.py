@@ -11,7 +11,7 @@ from rest_framework import serializers
 from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.models.collection import KIND_THING_TYPES, kind_for_thing_type
 from core.serializers.thing import ThingComputedFieldsMixin
-from core.utils import asset_url, doc_asset_url
+from core.utils import Refusal, asset_url, doc_asset_url
 from core.validators import (
     LOCALIZED_DESCRIPTION_STORAGE,
     LOCALIZED_DESCRIPTION_VISIBLE,
@@ -875,8 +875,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             orphaned = sorted(existing_types - set(allowed_thing_types))
             if orphaned:
                 raise serializers.ValidationError(
-                    "Cannot restrict the allowed types: existing things would be"
-                    f" orphaned (types: {orphaned}). Remove them first."
+                    Refusal(
+                        "Cannot restrict the allowed types: existing things would be"
+                        f" orphaned (types: {', '.join(orphaned)}). Remove them first.",
+                        "priced_things_remain",
+                    )
                 )
         return attrs
 

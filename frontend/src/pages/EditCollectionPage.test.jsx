@@ -25,6 +25,7 @@ import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import EditCollectionPage from './EditCollectionPage';
 import { dropHdsStyles } from '../test/dropHdsStyles';
 import { press } from '../test/settle';
+import en from '../i18n/locales/en.json';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
 // visible, which fold into "More options", the pause section). These cover what
@@ -115,6 +116,28 @@ describe('EditCollectionPage — saving', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('Error saving.')).toBeNull();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  test('a refusal the server coded is said in the reader’s language, not in its English', async () => {
+    mockApi({
+      save: {
+        ok: false,
+        status: 400,
+        body: {
+          non_field_errors: [
+            'Cannot restrict the allowed types: existing things would be orphaned.',
+          ],
+          code: 'priced_things_remain',
+        },
+      },
+    });
+    renderPage();
+    await screen.findByDisplayValue('Kitchen Collection');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(en.requestErrors.priced_things_remain)).toBeInTheDocument();
+    expect(screen.queryByText(/would be orphaned/)).toBeNull();
   });
 
   test('a 400 with a DRF `detail` is surfaced the same way', async () => {
