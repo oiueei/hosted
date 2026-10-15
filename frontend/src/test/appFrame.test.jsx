@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { switchLanguage } from './settle';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -47,7 +48,10 @@ afterEach(() => {
  *  about it. `pushState` alone changes the URL without notifying BrowserRouter. */
 function navigateTo(path) {
   window.history.pushState({}, '', path);
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  // The router re-renders on the event: inside `act`, as a click would be.
+  act(() => {
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
 }
 
 describe('the skip link', () => {
@@ -135,6 +139,9 @@ describe('the account own saved language', () => {
     const spy = vi.spyOn(i18n, 'changeLanguage');
     render(<App />);
 
+    // The page of the address is a lazy chunk: let it arrive, then give the
+    // language check a moment to (not) happen.
+    await screen.findByRole('heading', { level: 1 });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
@@ -154,6 +161,7 @@ describe('the account own saved language', () => {
     const before = i18n.language;
     render(<App />);
 
+    await screen.findByRole('heading', { level: 1 });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(i18n.language).toBe(before);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
@@ -171,10 +179,10 @@ describe('html[lang]', () => {
     // The attribute is what tells a screen reader which pronunciation to use and
     // a translator which language it is reading; the picker changes the strings
     // whether or not anyone updates it.
-    await i18n.changeLanguage('es');
+    await switchLanguage(i18n, 'es');
     await waitFor(() => expect(document.documentElement.lang).toBe('es'));
 
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     await waitFor(() => expect(document.documentElement.lang).toBe('en'));
   });
 });

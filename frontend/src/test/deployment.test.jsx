@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { switchLanguage } from './settle';
 
 /**
  * `frontend/src/deployment/` — the directory a deployment replaces instead of
@@ -383,7 +384,7 @@ describe('the door’s two secondary buttons read as the question alone, in ever
   // language this test picks would outlive it and reach the next section's English.
   let i18n;
   afterEach(async () => {
-    await i18n?.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
   });
 
   test.each([
@@ -400,7 +401,7 @@ describe('the door’s two secondary buttons read as the question alone, in ever
       externalForms: null,
     }));
     ({ default: i18n } = await import('../i18n'));
-    await i18n.changeLanguage(language);
+    await switchLanguage(i18n, language);
     const { default: LoginPage } = await import('../pages/LoginPage');
 
     render(

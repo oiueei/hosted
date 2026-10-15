@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import en from '../i18n/locales/en.json';
+import { settle, switchLanguage } from '../test/settle';
 
 expect.extend(toHaveNoViolations);
 
@@ -1363,7 +1364,11 @@ describe('a join that does not take', () => {
 
   async function pressJoin() {
     renderPublic();
-    fireEvent.click(await screen.findByRole('button', { name: 'Join this group' }));
+    const join = await screen.findByRole('button', { name: 'Join this group' });
+    // The press starts a request whose answer sets state: keep it inside `act`.
+    await act(async () => {
+      fireEvent.click(join);
+    });
   }
 
   test('a refused join says so and leaves the door where it was', async () => {
@@ -1859,7 +1864,7 @@ describe('CollectionPage as a co-owner', () => {
       // `useCollectionLanguage` moves the whole UI to the collection's language;
       // put it back so the next test starts in English.
       const { default: i18n } = await import('../i18n');
-      await i18n.changeLanguage('en');
+      await switchLanguage(i18n, 'en');
       localStorage.removeItem('i18nextLng');
     });
 
@@ -2014,7 +2019,7 @@ describe('CollectionPage — the owner wrote in the visitor’s language', () =>
 
   afterEach(async () => {
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
@@ -2088,6 +2093,8 @@ describe('CollectionPage — the welcome document', () => {
     renderWith({ ...PUBLIC_COMMUNITY, is_member: true, welcome_doc_url: '' });
 
     fireEvent.click(await screen.findByRole('button', { name: 'Collection options' }));
+    // Opening the menu asks whether this reader receives requests; let it answer.
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: /welcome document/ })).not.toBeInTheDocument();
   });
 

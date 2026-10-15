@@ -1,6 +1,7 @@
 import { render, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { nestedTabStops } from './nestedInteractive';
+import { settle } from './settle';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -134,6 +135,7 @@ function renderWithRoute(Component, { path, entry, state } = {}) {
 }
 
 // ── Imports ────────────────────────────────────────────────────────────
+import { apiFetch } from '../services/api';
 import LoginPage from '../pages/LoginPage';
 import LogoutPage from '../pages/LogoutPage';
 import VerifyPage from '../pages/VerifyPage';
@@ -194,6 +196,7 @@ function smokeAndAxe(name, Component, routeOpts) {
           container.querySelector('.form-page, .page-container, form, [data-testid="navigated"]')
         ).toBeTruthy();
       });
+      await settle(apiFetch, globalThis.fetch);
     });
 
     test('has no accessibility violations', async () => {
@@ -204,6 +207,7 @@ function smokeAndAxe(name, Component, routeOpts) {
           container.querySelector('.form-page, .page-container, form, [data-testid="navigated"]')
         ).toBeTruthy();
       });
+      await settle(apiFetch, globalThis.fetch);
       const results = await axe(container);
       expect(results).toHaveNoViolations();
     });
@@ -212,8 +216,9 @@ function smokeAndAxe(name, Component, routeOpts) {
     // rule for it, so this invariant is the only thing standing between the app
     // and another 28 of them. See `nestedInteractive.js` for why it counts tab
     // stops rather than roles, and KNOWN_NESTING below for the debt it carries.
-    test('no tab stop contains another', () => {
+    test('no tab stop contains another', async () => {
       const { container } = renderWithRoute(Component, routeOpts);
+      await settle(apiFetch, globalThis.fetch);
       const found = nestedTabStops(container);
       const allowed = KNOWN_NESTING[name] || [];
       expect(

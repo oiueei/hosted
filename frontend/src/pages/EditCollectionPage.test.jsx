@@ -24,6 +24,7 @@ import { apiFetch } from '../services/api';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import EditCollectionPage from './EditCollectionPage';
 import { dropHdsStyles } from '../test/dropHdsStyles';
+import { press } from '../test/settle';
 
 // `collectionForm.test.jsx` covers the shape of this form (which fields are
 // visible, which fold into "More options", the pause section). These cover what
@@ -167,7 +168,7 @@ describe('EditCollectionPage — saving', () => {
     );
     const { container } = renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     const maxDays = container.querySelector('#edit-collection-reservation-max-days');
     expect(maxDays).toHaveValue(3);
     fireEvent.change(maxDays, { target: { value: '5' } });
@@ -249,7 +250,7 @@ describe('EditCollectionPage — the deposit policy', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
 
     expect(screen.getByLabelText(/deposit policy/i).value).toBe('50 €, back when it comes home');
   });
@@ -259,7 +260,7 @@ describe('EditCollectionPage — the deposit policy', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/deposit policy/i), {
       target: { value: 'No deposits in this group.' },
     });
@@ -291,7 +292,7 @@ describe('EditCollectionPage — the request-page note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
 
     expect(screen.getByLabelText(/note shown before someone asks/i).value).toBe('Bring photo ID.');
   });
@@ -301,7 +302,7 @@ describe('EditCollectionPage — the request-page note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
       target: { value: 'Pickup is Tuesdays only.' },
     });
@@ -319,7 +320,7 @@ describe('EditCollectionPage — the request-page note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/note shown before someone asks/i), {
       target: { value: 'Bring ID.' },
     });
@@ -332,7 +333,7 @@ describe('EditCollectionPage — the request-page note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     const field = screen.getByLabelText(/note shown before someone asks/i);
     fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
 
@@ -361,7 +362,7 @@ describe('EditCollectionPage — the email note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
 
     expect(screen.getByLabelText(/note in the emails after someone asks/i).value).toBe(
       'We confirm within 48h.'
@@ -383,7 +384,7 @@ describe('EditCollectionPage — the email note', () => {
     });
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Send me a test email' }));
 
@@ -398,7 +399,7 @@ describe('EditCollectionPage — the email note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
       target: { value: '  The space is on floor 2.  ' },
     });
@@ -416,7 +417,7 @@ describe('EditCollectionPage — the email note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     fireEvent.change(screen.getByLabelText(/note in the emails after someone asks/i), {
       target: { value: 'Floor 2.' },
     });
@@ -429,7 +430,7 @@ describe('EditCollectionPage — the email note', () => {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     const field = screen.getByLabelText(/note in the emails after someone asks/i);
     fireEvent.change(field, { target: { value: 'x'.repeat(513) } });
 
@@ -528,7 +529,7 @@ describe('EditCollectionPage — useCollectionLanguage gets the saved value, nev
     });
     expect(useCollectionLanguage).toHaveBeenLastCalledWith('ca', SAVED_TEXTS);
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     const languageCombobox = await screen.findByRole('combobox', {
       name: /Language of the group messages/,
     });
@@ -574,7 +575,7 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
   async function openForm() {
     renderPage();
     await screen.findByDisplayValue('Kitchen Collection');
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
   }
 
   test('Save sends nothing, stays put, and says why', async () => {
@@ -597,7 +598,7 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
     mockHourly();
     await openForm();
     typeOpeningHours('{"0": [["10:00","14:00"]],}');
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await press(screen.getByRole('button', { name: 'More options' }));
     expect(screen.getByLabelText('Weekly opening hours')).not.toBeVisible();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

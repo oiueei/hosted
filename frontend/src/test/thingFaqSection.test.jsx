@@ -8,6 +8,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch, extractApiError } from '../services/api';
 import ThingFaqSection from '../components/ThingFaqSection';
+import { press, settle } from './settle';
 
 function jsonResponse(data, ok = true, status = ok ? 200 : 400) {
   return { ok, status, json: () => Promise.resolve(data) };
@@ -95,8 +96,10 @@ describe('ThingFaqSection — asking a question', () => {
     expect(screen.getByLabelText('Question')).toHaveValue('');
   });
 
-  test('the send button stays disabled until something is typed', () => {
+  test('the send button stays disabled until something is typed', async () => {
     renderFaq();
+    // The questions already asked are on their way: let them arrive first.
+    await settle(apiFetch);
 
     const send = screen.getByRole('button', { name: 'Send question' });
     expect(send).toBeDisabled();
@@ -246,7 +249,7 @@ describe('ThingFaqSection — Load more', () => {
 describe('ThingFaqSection — failures', () => {
   async function ask() {
     fireEvent.change(screen.getByLabelText('Question'), { target: { value: 'A question?' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+    await press(screen.getByRole('button', { name: 'Send question' }));
   }
 
   test('a rejected question surfaces the server detail', async () => {
@@ -300,6 +303,7 @@ describe('ThingFaqSection — failures', () => {
         message: 'Too many attempts — please wait a moment and try again.',
       })
     );
+    await settle(apiFetch);
   });
 
   test('a dropped connection while asking is reported', async () => {

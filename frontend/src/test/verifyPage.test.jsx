@@ -4,6 +4,7 @@ import { StrictMode, useEffect } from 'react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import VerifyPage from '../pages/VerifyPage';
 import i18n from '../i18n';
+import { switchLanguage } from './settle';
 
 // VerifyPage talks to the backend via raw `fetch` (not the apiFetch wrapper), so
 // we drive both legs of the auto-commit (GET preview, POST commit) from here.
@@ -256,11 +257,11 @@ describe('a magic link applies the saved language of the account', () => {
   beforeEach(async () => {
     localStorage.clear();
     seen.language = undefined;
-    await i18n.changeLanguage('es');
+    await switchLanguage(i18n, 'es');
     localStorage.clear();
   });
   afterEach(async () => {
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
@@ -343,7 +344,7 @@ describe('a decision link its holder no longer manages', () => {
   });
   afterEach(async () => {
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
@@ -393,7 +394,7 @@ describe('a decision link its holder no longer manages', () => {
     ],
   ])('says it in %s, again with no invitation advice', async (language, sentence, advice) => {
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage(language);
+    await switchLanguage(i18n, language);
     mockRefusal({ error: 'Not authorized', code: 'no_longer_manages' });
 
     renderVerify();

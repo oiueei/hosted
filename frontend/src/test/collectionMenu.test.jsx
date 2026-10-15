@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { press } from './settle';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -159,7 +160,7 @@ const CALENDAR = 'Download the calendar (ICS)';
 
 /** The menu's trigger, then the panel open — every test below starts here. */
 async function openMenu() {
-  fireEvent.click(await screen.findByRole('button', { name: TRIGGER }));
+  await press(await screen.findByRole('button', { name: TRIGGER }));
 }
 
 beforeEach(() => {
@@ -534,7 +535,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
     expect(await screen.findByText('3 event(s) — check your downloads.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     expect(await screen.findByText('Preparing the file…')).toBeInTheDocument();
@@ -559,7 +560,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
     expect(await screen.findByText("Couldn't download the stats.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     await waitFor(() =>
@@ -578,7 +579,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       await screen.findByText("Couldn't build the export. Please try again in a moment.")
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the whole collection (JSON)' }));
 
     await waitFor(() =>
@@ -611,7 +612,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     expect(await screen.findByText('Preparing the file…')).toBeInTheDocument();
     // And its menu entry is disabled until it lands.
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     expect(screen.getByRole('button', { name: 'Download the stats (CSV)' })).toBeDisabled();
 
     release();
@@ -634,7 +635,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     await openMenu();
     const trigger = screen.getByRole('button', { name: TRIGGER });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
+    await press(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     // The panel is gone at once (the file keeps fetching underneath)…
     expect(panel()).toBeNull();

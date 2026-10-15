@@ -190,8 +190,9 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     fireEvent.click(screen.getByRole('combobox', { name: /Share collection/ }));
     fireEvent.click(await screen.findByRole('option', { name: 'QR code' }));
 
-    // The Dialog renders in a portal on document.body.
-    await waitFor(() => expect(document.querySelector('.share-qr-code')).toBeTruthy());
+    // The Dialog renders in a portal on document.body, and the code itself is a
+    // lazy chunk: wait for the drawing, not for the box that will hold it.
+    await waitFor(() => expect(document.querySelector('.share-qr-code svg')).toBeTruthy());
     expect(await axe(document.body, NO_REGION)).toHaveNoViolations();
   });
 

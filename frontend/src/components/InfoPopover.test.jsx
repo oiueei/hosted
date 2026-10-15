@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
 import InfoPopover from './InfoPopover';
 
@@ -52,7 +52,7 @@ describe('InfoPopover', () => {
 
     const button = screen.getByRole('button', { name: 'CSV format' });
     fireEvent.mouseEnter(button.closest('.info-popover'));
-    button.focus();
+    act(() => button.focus());
     expect(screen.getByText('body')).toBeInTheDocument();
 
     // Dispatched on document, not the wrapper: a mouse user reading the panel
