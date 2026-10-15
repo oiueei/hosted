@@ -188,6 +188,37 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
   });
 });
 
+describe('AddThingPage — when the collection cannot be read', () => {
+  // The form of a stall is all there is until the collection is known, so the page
+  // says it could not read it; the server stays the gate, and "Create" stays usable.
+  test('a failed read says so and leaves the form usable', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+    );
+    renderPage();
+
+    expect(await screen.findByText('Error loading collection.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+  });
+
+  test('a dropped connection says so and leaves the form usable', async () => {
+    apiFetch.mockImplementation(() => Promise.reject(new Error('offline')));
+    renderPage();
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+  });
+
+  test('a collection that reads fine shows no error', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByLabelText(/Title/);
+
+    expect(screen.queryByText('Error loading collection.')).toBeNull();
+    expect(screen.queryByText('Connection error.')).toBeNull();
+  });
+});
+
 describe('AddThingPage — what the form sends', () => {
   test('a stall gift sends its condition, its place and its availability', async () => {
     mockApi();

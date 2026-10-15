@@ -62,10 +62,27 @@ export default function AddThingPage() {
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
 
+  // The verb the price makes, in the collection's kind, and whether this account may
+  // offer it: the deployment's policy is asked about the verb the thing will take, not
+  // about one a form selector used to pick — a price in a stall is a sale, and a policy
+  // that does not give sales shows its notice here instead of letting it be sent.
+  // A member contributing to a COMMUNITY group may offer what its (vetted) owner
+  // allow-listed whatever the policy says of them personally.
+  const type = deriveThingType(kind, fee);
+  const notOffered =
+    !(contributingToCommunity && collectionAllowedTypes.includes(type)) &&
+    !isOfferable(capabilities, 'thing_types', type);
+
   useEffect(() => {
     if (!userCode) return;
     apiFetch(`/api/v1/collections/${code}/`)
-      .then((res) => (res.ok ? res.json() : {}))
+      .then((res) => {
+        if (res.ok) return res.json();
+        // The form stays (the server is the gate), but it is the form of a stall
+        // until the collection is read: say so rather than let it pass for the real one.
+        setToast({ type: 'error', messageKey: 'collectionPage.errorLoading' });
+        return {};
+      })
       .then((data) => {
         setCollectionHeadline(data.headline || '');
         const allowed = data.allowed_thing_types || [];
@@ -76,7 +93,7 @@ export default function AddThingPage() {
         setCollectionTags(data.tags || []);
         setCollectionLanguage(data.language || '');
       })
-      .catch(() => {});
+      .catch(() => setToast({ type: 'error', messageKey: 'common.connectionError' }));
   }, [userCode, code]);
 
   const computeErrors = () => {
@@ -154,17 +171,6 @@ export default function AddThingPage() {
 
   // Theeeme colors from localStorage (set by HomePage on login)
   const { tc, btnStyle } = useTheeeme();
-
-  // The verb the price makes, in the collection's kind, and whether this account may
-  // offer it: the deployment's policy is asked about the verb the thing will take, not
-  // about one a form selector used to pick — a price in a stall is a sale, and a policy
-  // that does not give sales shows its notice here instead of letting it be sent.
-  // A member contributing to a COMMUNITY group may offer what its (vetted) owner
-  // allow-listed whatever the policy says of them personally.
-  const type = deriveThingType(kind, fee);
-  const notOffered =
-    !(contributingToCommunity && collectionAllowedTypes.includes(type)) &&
-    !isOfferable(capabilities, 'thing_types', type);
 
   return (
     <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>
