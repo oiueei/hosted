@@ -50,6 +50,13 @@ TEXTS = {
         "to gift, sell, rent, lend or reserve — and invite people to browse it and ask "
         "for what they need."
     ),
+    # What a kind of collection is, one sentence each. The same words as
+    # `kinds.<K>.what` in the frontend's locale files (the kind chooser): a shared
+    # link's card uses them for a collection with no description of its own.
+    # `test_kind_what_parity.py` keeps the two copies equal.
+    "kind_what_STALL": "Things to sell or give away: whoever takes one keeps it.",
+    "kind_what_LIBRARY": "Things to lend or rent out: people take them home and bring them back.",
+    "kind_what_SHED": "Machines and spaces used where they are, booked by the day or by the hour.",
     # Collection invite
     "invite_subject": "You have an invitation to '{collection}' - OIUEEI!",
     "invite_plain": (

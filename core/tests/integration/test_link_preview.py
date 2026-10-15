@@ -9,8 +9,10 @@ collection cannot be told from a code that does not exist.
 
 import pytest
 from django.test import Client, override_settings
+from django.utils.html import escape
 
 from core.models import Collection, Thing, User
+from core.services.email_texts import T
 from core.services.link_preview import inject_preview, plain_description
 
 HEAD = "<!doctype html><html><head><title>OIUEEI</title></head><body></body></html>"
@@ -93,12 +95,30 @@ class TestACollection:
         assert "<title>The street — OIUEEI</title>" in _body("/stall/PUB001/join")
         assert "<title>The street — OIUEEI</title>" in _body("/stall/PUB001/join/")
 
-    def test_a_description_less_collection_has_no_description_tags(self, built, owner):
-        _collection(owner, description="")
+    @pytest.mark.parametrize("kind", ["STALL", "LIBRARY", "SHED"])
+    def test_a_description_less_collection_is_described_by_its_kind(self, built, owner, kind):
+        _collection(owner, description="", kind=kind)
+        sentence = T(f"kind_what_{kind}", "en")
 
-        body = _body("/stall/PUB001")
+        body = _body(f"/{kind.lower()}/PUB001")
 
-        assert "description" not in body
+        assert f'<meta property="og:description" content="{escape(sentence)}">' in body
+        assert f'<meta name="description" content="{escape(sentence)}">' in body
+
+    def test_the_sentence_of_the_kind_speaks_the_collections_language(self, built, owner):
+        _collection(owner, description="", kind="LIBRARY", language="es")
+
+        body = _body("/library/PUB001")
+
+        assert f'content="{escape(T("kind_what_LIBRARY", "es"))}"' in body
+
+    def test_with_a_description_of_its_own_the_kind_says_nothing(self, built, owner):
+        _collection(owner, kind="LIBRARY")
+
+        body = _body("/library/PUB001")
+
+        assert '<meta name="description" content="Things we share">' in body
+        assert T("kind_what_LIBRARY", "en") not in body
 
     @pytest.mark.parametrize(
         "language,expected",
@@ -108,6 +128,18 @@ class TestACollection:
         _collection(owner, headline='{"es": "Las calles", "ca": "Els carrers"}', language=language)
 
         assert f"<title>{expected} — OIUEEI</title>" in _body("/stall/PUB001")
+
+
+class TestAShareLinkWithNoDescription:
+    def test_it_is_described_by_its_kind_and_carries_no_photo(self, built, owner):
+        _collection(
+            owner, description="", kind="SHED", share_token=TOKEN, thumbnail="oiueei/u/cover.webp"
+        )
+
+        body = _body(f"/share/{TOKEN}")
+
+        assert f'<meta name="description" content="{escape(T("kind_what_SHED", "en"))}">' in body
+        assert "og:image" not in body
 
 
 class TestWhatAStrangerCannotSee:

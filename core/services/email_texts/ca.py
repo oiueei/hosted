@@ -50,6 +50,15 @@ TEXTS = {
         "per regalar, vendre, llogar, deixar o reservar — i convida la gent a "
         "conèixer-les i demanar-les."
     ),
+    # What a kind of collection is, one sentence each. The same words as
+    # `kinds.<K>.what` in the frontend's locale files (the kind chooser): a shared
+    # link's card uses them for a collection with no description of its own.
+    # `test_kind_what_parity.py` keeps the two copies equal.
+    "kind_what_STALL": "Coses per vendre o regalar: qui se l'emporta, se la queda.",
+    "kind_what_LIBRARY": "Coses per prestar o llogar: se les emporten a casa i les tornen.",
+    "kind_what_SHED": (
+        "Màquines i espais que es fan servir on són, amb reserva per dies o per hores."
+    ),
     # Collection invite
     "invite_subject": "Tens una invitació a '{collection}' - OIUEEI!",
     "invite_plain": (

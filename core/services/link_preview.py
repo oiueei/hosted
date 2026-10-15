@@ -10,6 +10,9 @@ says so — the model's rule, not a copy of it. A private, inactive or unknown
 target gets ``None``, and the caller then serves ``index.html`` untouched, byte for
 byte, so a private collection cannot be told apart from a code that does not exist.
 
+A collection with no description of its own is described by its kind's sentence
+(``kind_what_<KIND>``, the app's own words for it): a card is never only a title.
+
 ``share/<token>`` is previewed with the filter ``SharePreviewView`` uses and, like
 that endpoint, **with name and description only — never the photo**: the card must
 not give a holder of the link more than the join page does.
@@ -20,6 +23,7 @@ import re
 from django.utils.html import escape
 
 from core.models import Collection, Thing
+from core.services.email_texts import T
 from core.utils import asset_url, resolve_localized
 
 # The address of a collection's page: one prefix per kind, and the pre-kind one
@@ -70,6 +74,18 @@ def _preview(source, lang, with_image):
     }
 
 
+def _collection_preview(collection, with_image):
+    """A collection's card: its own description, or — when it has none in the
+    language of the reader — the sentence of its kind, so a card is never only a
+    title. The sentence says what the kind is and nothing about this group, which
+    the join page already tells anyone holding the link."""
+    lang = collection.language or None
+    card = _preview(collection, lang, with_image)
+    if not card["description"]:
+        card["description"] = T(f"kind_what_{collection.kind}", lang)
+    return card
+
+
 def route_for_preview(path):
     """What a path would look up for a preview, or ``None`` — **without touching the
     database**: ``("collection", code)``, ``("thing", code)`` or ``("share", token)``.
@@ -101,7 +117,7 @@ def preview_for_route(route):
         collection = Collection.objects.filter(code=key).first()
         if collection is None or not collection.can_view(None):
             return None
-        return _preview(collection, collection.language or None, with_image=True)
+        return _collection_preview(collection, with_image=True)
     if kind == "thing":
         thing = Thing.objects.filter(code=key).first()
         if thing is None or not thing.can_view(None):
@@ -111,7 +127,7 @@ def preview_for_route(route):
     collection = Collection.objects.filter(share_token=key, status=Collection.Status.ACTIVE).first()
     if collection is None:
         return None
-    return _preview(collection, collection.language or None, with_image=False)
+    return _collection_preview(collection, with_image=False)
 
 
 def inject_preview(html, preview, url):
