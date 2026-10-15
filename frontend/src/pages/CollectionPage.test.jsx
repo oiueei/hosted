@@ -714,6 +714,67 @@ describe('CollectionPage hero tags belong to the curators', () => {
   });
 });
 
+describe('CollectionPage — the kind is said under the name, to every reader', () => {
+  const LIBRARY = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    kind: 'LIBRARY',
+    mode: 'PROPRIETARY',
+    visibility: 'PUBLIC',
+    digest_frequency: 'NONE',
+    owner: 'OTHER1',
+    is_curator: false,
+    is_member: false,
+  };
+
+  async function renderAs(collection, { signedIn = true } = {}) {
+    if (!signedIn) localStorage.removeItem('userCode');
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    const view = render(
+      <MemoryRouter initialEntries={['/library/COL001']}>
+        <Routes>
+          <Route path="/library/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const title = await screen.findByRole('heading', { level: 1, name: /Kitchen Collection/ });
+    await settle(apiFetch);
+    return { title, view };
+  }
+
+  test.each([
+    ['an anonymous reader', { is_member: false }, { signedIn: false }],
+    ['a member', { is_member: true }, {}],
+    ['a curator', { is_curator: true, owner: 'ABC123' }, {}],
+  ])('%s reads what kind of collection it is', async (_who, over, opts) => {
+    await renderAs({ ...LIBRARY, ...over }, opts);
+
+    expect(screen.getByText(en.kinds.LIBRARY.long)).toBeInTheDocument();
+  });
+
+  test('the title is still the collection’s name and nothing else', async () => {
+    const { title } = await renderAs({ ...LIBRARY, is_member: true });
+
+    expect(title).toHaveTextContent(/^Kitchen Collection$/);
+    expect(within(title).queryByText(en.kinds.LIBRARY.long)).toBeNull();
+  });
+
+  test('a collection read without its kind says nothing of the sort', async () => {
+    await renderAs({ ...LIBRARY, kind: undefined });
+
+    expect(screen.queryByText(/kinds\./)).toBeNull();
+    expect(screen.queryByText(en.kinds.LIBRARY.long)).toBeNull();
+  });
+
+  test('has no accessibility violations', async () => {
+    const { view } = await renderAs({ ...LIBRARY, is_member: true });
+
+    expect(await axe(view.container)).toHaveNoViolations();
+  });
+});
+
 const PUBLIC_COMMUNITY = {
   ...COLLECTION_WITH_PHOTO,
   visibility: 'PUBLIC',

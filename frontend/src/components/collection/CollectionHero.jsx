@@ -210,6 +210,12 @@ export default function CollectionHero({
               </>
             )}
           </h1>
+          {/* What kind of collection this is, for every reader: it tells them what
+              they can do here. Not in the title (that stays the group's name) and
+              not a curator's tag. */}
+          {collection.kind && (
+            <p className="form-hero-kind">{t(`kinds.${collection.kind}.long`)}</p>
+          )}
           {collection.description && (
             <MarkdownText text={L(collection.description)} className="form-hero-text" />
           )}
