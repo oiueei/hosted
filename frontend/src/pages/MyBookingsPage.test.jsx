@@ -4,6 +4,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import MyBookingsPage from './MyBookingsPage';
 import { mockMatchMedia, PHONE } from '../test/matchMedia';
+import { settle } from '../test/settle';
 
 expect.extend(toHaveNoViolations);
 
@@ -387,6 +388,7 @@ describe('MyBookingsPage cancelling a confirmed reservation', () => {
     expect(posts()).toHaveLength(0);
     // Scoped to the dialog, which is what this adds. `region` is off: the render
     // has no app landmarks to hold it (as in a11yInteractive.test.jsx).
+    await settle(globalThis.fetch);
     expect(await axe(dialog, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });
 
@@ -597,6 +599,7 @@ describe('MyBookingsPage on a phone', () => {
     const { container } = renderPage();
     await screen.findByRole('list', { name: 'Requests waiting for an answer' });
 
+    await settle(globalThis.fetch);
     expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });
 });

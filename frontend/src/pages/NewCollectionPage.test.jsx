@@ -17,6 +17,7 @@ globalThis.fetch = vi.fn(() =>
 );
 
 import NewCollectionPage from './NewCollectionPage';
+import { settle } from '../test/settle';
 
 const OPEN = {
   collection_modes: ['PROPRIETARY', 'COMMUNITY'],
@@ -92,6 +93,7 @@ describe('the three cards', () => {
     const { container } = renderPage();
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
 
+    await settle(globalThis.fetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 });
@@ -170,6 +172,7 @@ describe('a deployment that gives out only some kinds', () => {
     const { container } = renderPage();
     await waitFor(() => expect(cards()[2]).toHaveTextContent(/need approval/i));
 
+    await settle(globalThis.fetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

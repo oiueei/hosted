@@ -19,6 +19,7 @@ import { apiFetch, extractApiError } from '../services/api';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
 import { dropHdsStyles } from './dropHdsStyles';
+import { settle } from './settle';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -574,6 +575,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
     // nothing about ReservationRulesFields.
     expect(screen.getByRole('group', { name: 'Days open for reservations' })).toBeInTheDocument();
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 

@@ -68,6 +68,7 @@ describe('CollectionPage with a collection thumbnail', () => {
       COLLECTION_WITH_PHOTO.thumbnail_url
     );
 
+    await settle(apiFetch);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
@@ -127,6 +128,7 @@ describe('CollectionPage with a collection thumbnail', () => {
 
       const levels = [...container.querySelectorAll('h1, h2, h3')].map((h) => h.tagName);
       expect(levels).toEqual(['H1', 'H2', 'H3']);
+      await settle(apiFetch);
       expect(await axe(container)).toHaveNoViolations();
     });
   });
