@@ -70,39 +70,57 @@ def _preview(source, lang, with_image):
     }
 
 
-def preview_for_path(path):
-    """``{"title", "description", "image"}`` for a path a stranger may preview, else ``None``.
+def route_for_preview(path):
+    """What a path would look up for a preview, or ``None`` — **without touching the
+    database**: ``("collection", code)``, ``("thing", code)`` or ``("share", token)``.
 
-    No query at all unless the path is one of the routes in the module docstring.
+    A ``None`` is a route that was never going to ask anything, which is what lets a
+    caller count only the visits that will.
     """
     route = path.strip("/")
     parts = route.split("/")
     if parts[0] in PREVIEW_COLLECTION_PREFIXES and (
         len(parts) == 2 or (len(parts) == 3 and parts[2] == "join")
     ):
-        collection = Collection.objects.filter(code=parts[1]).first()
-        if collection is None or not collection.can_view(None):
-            return None
-        return _preview(collection, collection.language or None, with_image=True)
-
+        return "collection", parts[1]
     for pattern in _THING_ROUTES:
         match = pattern.fullmatch(route)
         if match:
-            thing = Thing.objects.filter(code=match.group(1)).first()
-            if thing is None or not thing.can_view(None):
-                return None
-            home = thing.collections.first()
-            return _preview(thing, (home.language if home else "") or None, with_image=True)
-
+            return "thing", match.group(1)
     match = _SHARE_ROUTE.fullmatch(route)
     if match:
-        collection = Collection.objects.filter(
-            share_token=match.group(1), status=Collection.Status.ACTIVE
-        ).first()
-        if collection is None:
-            return None
-        return _preview(collection, collection.language or None, with_image=False)
+        return "share", match.group(1)
     return None
+
+
+def preview_for_route(route):
+    """``{"title", "description", "image"}`` for a route from ``route_for_preview``
+    that a stranger may preview, else ``None``. This is where the queries are."""
+    kind, key = route
+    if kind == "collection":
+        collection = Collection.objects.filter(code=key).first()
+        if collection is None or not collection.can_view(None):
+            return None
+        return _preview(collection, collection.language or None, with_image=True)
+    if kind == "thing":
+        thing = Thing.objects.filter(code=key).first()
+        if thing is None or not thing.can_view(None):
+            return None
+        home = thing.collections.first()
+        return _preview(thing, (home.language if home else "") or None, with_image=True)
+    collection = Collection.objects.filter(share_token=key, status=Collection.Status.ACTIVE).first()
+    if collection is None:
+        return None
+    return _preview(collection, collection.language or None, with_image=False)
+
+
+def preview_for_path(path):
+    """``{"title", "description", "image"}`` for a path a stranger may preview, else ``None``.
+
+    No query at all unless the path is one of the routes in the module docstring.
+    """
+    route = route_for_preview(path)
+    return preview_for_route(route) if route else None
 
 
 def inject_preview(html, preview, url):

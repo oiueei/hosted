@@ -46,6 +46,12 @@ Points worth knowing before changing it:
 - **DRF checks permissions before throttles**, so a 401 or 403 never spends quota.
   Correct as it is: an anonymous probe of an authenticated endpoint costs the
   operator nothing to refuse.
+- **The two pages that ask the database for a visitor spend the same count**
+  (`spend_anonymous_quota`): `spa_index`'s link preview and `collection_address`,
+  and only on a route that was going to ask (see `core.services.link_preview`).
+  Past the ceiling they do not answer 429 — a person opening a link must not meet
+  an error for a preview card — they stop asking: the untouched `index.html`, with
+  no query.
 - **`ANON_API_RATE=0` (or empty) switches it off**, and so does `RATELIMIT_ENABLE =
   False` (development and the test suite): the one switch for the whole layer.
 - **Fixed windows**: `"300/m"` is 300 per calendar minute of the server clock, and
@@ -95,39 +101,53 @@ def reset_counters():
     _counters.clear()
 
 
+def spend_anonymous_quota(request):
+    """Count one anonymous request from this IP against ``ANON_API_RATE``.
+
+    Returns ``None`` when it is allowed, or the seconds left in the window when
+    the ceiling is spent. The one count behind the API's throttle **and** the two
+    pages that ask the database for a visitor (``spa_index``'s link preview and
+    ``collection_address``), so they share a single allowance per address. Off
+    (always ``None``) when ``RATELIMIT_ENABLE`` is false or the rate is ``0``.
+    """
+    if not getattr(settings, "RATELIMIT_ENABLE", True):
+        return None
+    rate = parse_rate(getattr(settings, "ANON_API_RATE", ""))
+    if rate is None:
+        return None
+    limit, period = rate
+    now = time.time()
+    window = int(now // period)
+    key = f"{get_client_ip(request)}:{period}:{window}"
+    # The key outlives its window by a second so a request on the boundary
+    # never finds it gone between these two calls; if it is anyway (culled),
+    # the count starts again at one.
+    if _counters.add(key, 1, period + 1):
+        count = 1
+    else:
+        try:
+            count = _counters.incr(key)
+        except ValueError:
+            _counters.set(key, 1, period + 1)
+            count = 1
+    if count > limit:
+        return (window + 1) * period - now
+    return None
+
+
 class AnonymousApiThrottle(BaseThrottle):
     """At most ``settings.ANON_API_RATE`` API requests per IP while not signed in,
-    counted in this process's memory."""
+    counted in this process's memory (``spend_anonymous_quota``)."""
 
     def __init__(self):
         # DRF builds one throttle per request, so this is that request's alone.
         self._wait = None
 
     def allow_request(self, request, view):
-        if request.user.is_authenticated or not getattr(settings, "RATELIMIT_ENABLE", True):
+        if request.user.is_authenticated:
             return True
-        rate = parse_rate(getattr(settings, "ANON_API_RATE", ""))
-        if rate is None:
-            return True
-        limit, period = rate
-        now = time.time()
-        window = int(now // period)
-        key = f"{get_client_ip(request)}:{period}:{window}"
-        # The key outlives its window by a second so a request on the boundary
-        # never finds it gone between these two calls; if it is anyway (culled),
-        # the count starts again at one.
-        if _counters.add(key, 1, period + 1):
-            count = 1
-        else:
-            try:
-                count = _counters.incr(key)
-            except ValueError:
-                _counters.set(key, 1, period + 1)
-                count = 1
-        if count > limit:
-            self._wait = (window + 1) * period - now
-            return False
-        return True
+        self._wait = spend_anonymous_quota(request)
+        return self._wait is None
 
     def wait(self):
         """Seconds left in the window, for DRF's ``Retry-After`` header."""

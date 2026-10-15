@@ -12,7 +12,8 @@ from django_otp.admin import OTPAdminSite
 from django_ratelimit.decorators import ratelimit
 
 from core.models import Collection
-from core.services.link_preview import inject_preview, preview_for_path
+from core.services.link_preview import inject_preview, preview_for_route, route_for_preview
+from core.throttles import spend_anonymous_quota
 
 # Require a verified OTP device (django-otp) for every admin login, on top of
 # password auth. Swapping the class (rather than instantiating a fresh
@@ -56,14 +57,32 @@ def spa_index(request):
     what an anonymous visitor could already read on the page is used, so a private,
     inactive or unknown target is answered with the untouched ``index.html``. The
     share link carries no photo, like the endpoint behind its join page.
+
+    A visit to one of those routes asks the database, so it spends the visitor's
+    share of ``ANON_API_RATE`` — the same per-IP count the API uses
+    (``core.throttles.spend_anonymous_quota``). Past the ceiling nothing is asked:
+    the page is the untouched ``index.html``, with no card, and no error — it is a
+    page a person opens. A route that asks nothing spends nothing.
     """
+    return _serve_index(request)
+
+
+def _serve_index(request, allowed=None):
+    """``spa_index``'s body. ``allowed`` is the answer of a caller that has already
+    counted this visit (``collection_address``); ``None`` means count it here."""
     index_path = os.path.join(settings.BASE_DIR, "frontend", "dist", "index.html")
     try:
         with open(index_path, encoding="utf-8") as f:
             html = f.read()
     except FileNotFoundError:
         return HttpResponse("Frontend not built. Run: cd frontend && npm run build", status=503)
-    preview = preview_for_path(request.path)
+    route = route_for_preview(request.path)
+    preview = None
+    if route:
+        if allowed is None:
+            allowed = spend_anonymous_quota(request) is None
+        if allowed:
+            preview = preview_for_route(route)
     if preview:
         html = inject_preview(html, preview, request.build_absolute_uri(request.path))
     response = HttpResponse(html, content_type="text/html")
@@ -87,10 +106,19 @@ def collection_address(request, prefix, code, rest=None):
     404 — and what the link preview serves for the page itself is unchanged: the
     body of a private collection is still the untouched ``index.html``; the
     difference is only the redirect.
+
+    The lookup spends the visitor's share of ``ANON_API_RATE`` (the API's own
+    per-IP count). Past the ceiling it asks nothing and redirects nothing: the page
+    is served as it is, and the SPA moves the address itself
+    (``useCanonicalCollectionPath``). One visit is one unit: the page it hands on to
+    is not counted again.
     """
+    allowed = spend_anonymous_quota(request) is None
+    if not allowed:
+        return _serve_index(request, allowed=False)
     kind = Collection.objects.filter(code=code).values_list("kind", flat=True).first()
     if kind is None or prefix == kind.lower():
-        return spa_index(request)
+        return _serve_index(request, allowed=True)
     target = f"/{kind.lower()}/{code}{rest or ''}"
     if request.META.get("QUERY_STRING"):
         target += f"?{request.META['QUERY_STRING']}"
