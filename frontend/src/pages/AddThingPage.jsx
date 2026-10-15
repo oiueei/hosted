@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { DETAIL_TYPES, KIND_THING_TYPES, deriveThingType } from '../constants/things';
+import { DETAIL_TYPES, deriveThingType } from '../constants/things';
+import { membersPriceFromVerbs } from '../utils/collectionKind';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -50,11 +51,7 @@ export default function AddThingPage() {
   const [collectionTags, setCollectionTags] = useState([]);
   // A community group whose members may not set a price lists only its free verb: the
   // form has no price field there, since a price would only be refused.
-  const priceAllowed = !(
-    (kind === 'STALL' || kind === 'LIBRARY') &&
-    collectionAllowedTypes.length === 1 &&
-    collectionAllowedTypes[0] === KIND_THING_TYPES[kind][0]
-  );
+  const priceAllowed = membersPriceFromVerbs(kind, collectionAllowedTypes);
   // A member contributing to a COMMUNITY collection they were invited to may
   // offer any type its (vetted) owner allow-listed, whatever this deployment's
   // creator policy says about them personally — the same exception the backend

@@ -19,6 +19,7 @@ import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
+import { membersPriceFromVerbs } from '../utils/collectionKind';
 
 export default function EditThingPage() {
   const { t } = useTranslation();
@@ -128,11 +129,7 @@ export default function EditThingPage() {
   const type = isStray ? savedType : deriveThingType(kind, fee);
   // A community stall or library whose members may not set a price lists only its free
   // verb: there is no price to edit, as there was none to give.
-  const priceAllowed = !(
-    (thingCollectionKind === 'STALL' || thingCollectionKind === 'LIBRARY') &&
-    collectionAllowedTypes.length === 1 &&
-    collectionAllowedTypes[0] === KIND_THING_TYPES[thingCollectionKind][0]
-  );
+  const priceAllowed = membersPriceFromVerbs(thingCollectionKind, collectionAllowedTypes);
   // A thing already offered under a verb this deployment has stopped handing out stays
   // editable, as the server allows: it only refuses a *change* into a withheld one,
   // so the stored verb is never withheld here.

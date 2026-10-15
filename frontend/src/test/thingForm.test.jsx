@@ -685,6 +685,22 @@ describe('EditThingPage — what a save sends', () => {
     expect(patch().is_endless).toBe(true);
   });
 
+  test('a sale a lending-only group kept has no price field: its collection decides, not its verb', async () => {
+    const { container } = renderEdit({
+      thing: {
+        code: 'THG001',
+        type: 'SELL_THING',
+        collection_kind: 'LIBRARY',
+        collection_allowed_thing_types: ['LEND_THING'],
+        headline: 'Old bike',
+        fee: '30.00',
+      },
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
+
+    expect(container.querySelector('#edit-thing-fee')).toBeNull();
+  });
+
   test('a loan a mixed stall kept is edited as a loan: its deposit stays, the stall’s switch does not appear', async () => {
     const { container } = renderEdit({
       thing: {
