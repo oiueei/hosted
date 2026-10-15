@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
 import ReservationRulesFields from './ReservationRulesFields';
+import en from '../i18n/locales/en.json';
 
 // These fields decide what a member can book on a reservations collection: the
 // longest span, how far ahead, and which weekdays the space is open. The number
@@ -247,5 +248,48 @@ describe('ReservationRulesFields — DAY vs HOUR field visibility', () => {
     renderFields({ reservationUnit: 'HOUR' });
     expect(horizonField()).toBeInTheDocument();
     expect(maxActiveField()).toBeInTheDocument();
+  });
+});
+
+describe('ReservationRulesFields — an hourly space with no opening hours', () => {
+  const NONE_OPEN = en.openingHours.noneOpen;
+  const MONDAY = { 0: [['10:00', '14:00']] };
+
+  test('opens no day at all: it says nobody can book', () => {
+    renderFields({ reservationUnit: 'HOUR', openingHours: {} });
+
+    expect(screen.getByText(NONE_OPEN)).toBeInTheDocument();
+  });
+
+  test('every day given an empty list is the same as none', () => {
+    renderFields({
+      reservationUnit: 'HOUR',
+      openingHours: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] },
+    });
+
+    expect(screen.getByText(NONE_OPEN)).toBeInTheDocument();
+  });
+
+  test('one range on one day is enough: no warning', () => {
+    renderFields({ reservationUnit: 'HOUR', openingHours: MONDAY });
+
+    expect(screen.queryByText(NONE_OPEN)).toBeNull();
+  });
+
+  test('a space booked by the day has no opening hours to miss', () => {
+    renderFields({ reservationUnit: 'DAY', openingHours: {} });
+
+    expect(screen.queryByText(NONE_OPEN)).toBeNull();
+  });
+
+  test('while the JSON cannot be read, the field’s own error speaks and this one does not', () => {
+    renderFields({ reservationUnit: 'HOUR', openingHours: {} });
+    const field = screen.getByLabelText('Weekly opening hours');
+
+    fireEvent.change(field, { target: { value: '{"0": [' } });
+    fireEvent.blur(field);
+
+    expect(screen.getByText(en.openingHours.invalidJson)).toBeInTheDocument();
+    expect(screen.queryByText(NONE_OPEN)).toBeNull();
   });
 });

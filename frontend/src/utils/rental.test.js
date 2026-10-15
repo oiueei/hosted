@@ -27,6 +27,7 @@ import {
   earliestStartMinutes,
   isHourlyPickupDisabled,
   openingHoursWeek,
+  hasOpeningHours,
   startOfToday,
   daysFromToday,
   reservationMaxDays,
@@ -986,5 +987,19 @@ describe('today, read fresh each time', () => {
     vi.setSystemTime(new Date(2026, 9, 30, 12, 0));
     expect(toISODate(daysFromToday(2))).toBe('2026-11-01');
     expect(toISODate(daysFromToday(0))).toBe('2026-10-30');
+  });
+});
+
+describe('hasOpeningHours', () => {
+  test.each([
+    [{}, false],
+    [undefined, false],
+    [null, false],
+    [{ 0: [], 3: [] }, false],
+    [{ 0: 'not a list' }, false],
+    [{ 3: [['10:00', '12:00']] }, true],
+    [{ 0: [], 6: [['09:00', '10:00']] }, true],
+  ])('%j → %s', (hours, expected) => {
+    expect(hasOpeningHours(hours)).toBe(expected);
   });
 });

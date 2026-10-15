@@ -53,6 +53,12 @@ export const openingHoursWeek = (hours, lang) =>
     return { day, name: weekdayShort(day, lang), ranges };
   });
 
+// Whether any day of the week has an opening range. `{}` — the value of a space
+// whose hours were never written — and a week of empty days are both closed all
+// week: nobody can book an hourly space that never opens.
+export const hasOpeningHours = (hours) =>
+  Object.values(hours || {}).some((ranges) => Array.isArray(ranges) && ranges.length > 0);
+
 // JS Date.getDay() (0=Sun … 6=Sat) → Python weekday (0=Mon … 6=Sun).
 export const jsToPyWeekday = (jsDay) => (jsDay + 6) % 7;
 
