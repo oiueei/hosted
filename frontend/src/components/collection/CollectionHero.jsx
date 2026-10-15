@@ -1,0 +1,419 @@
+import { useRef, useState } from 'react';
+import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { Button, Koros, Tag } from 'hds-react';
+import { apiFetch } from '../../services/api';
+import AccountMenu from '../AccountMenu';
+import BackLink from '../BackLink';
+import ButtonLink from '../ButtonLink';
+import CollectionMenu, {
+  CollectionDigestStatus,
+  CollectionDownloadsStatus,
+} from '../CollectionMenu';
+import HeroPhoto from '../HeroPhoto';
+import MarkdownText, { sanitizeUrl } from '../MarkdownText';
+import RecommendGuest from '../RecommendGuest';
+import ShareCollectionMenu from '../ShareCollectionMenu';
+import useTheeeme from '../../hooks/useTheeeme';
+import { useCollectionBase } from '../../hooks/useCollectionBase';
+import { useLocalized } from '../../utils/localized';
+import { teamParts } from '../../utils/team';
+import { loginPathFor } from '../../utils/nextPath';
+import { DATE_TYPES } from '../../constants/things';
+
+// What the member's "Invite someone" button controls (aria-controls) and the
+// form it opens sits under.
+const RECOMMEND_BOX_ID = 'recommend-box';
+
+/**
+ * The collection's hero: its corner of menus, title, text, who runs it, and the
+ * buttons each kind of reader is given (a curator's, a member's, a visitor's).
+ *
+ * It reads the reader off the collection and the session, so the page hands it the
+ * collection and little else. `setCollection` is for the one thing the hero does to
+ * it, joining a public group from the signed-in visitor's button; `downloads` and
+ * `digestPref` are the page's hooks, which the menu and the status zones share.
+ */
+export default function CollectionHero({
+  collection,
+  setCollection,
+  code,
+  headline,
+  downloads,
+  digestPref,
+}) {
+  const { t, i18n } = useTranslation();
+  const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const L = useLocalized();
+  const base = useCollectionBase(code, collection.kind);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(false);
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  const recommendButtonRef = useRef(null);
+
+  // Join a PUBLIC group you are only browsing. The signed-in half of
+  // login-to-act: an anonymous reader gets `/collections/:code/join`, which
+  // takes an email and mails a magic link — no use at all to a session that
+  // already exists, so the reader with the most intent had no way in. Re-fetches
+  // rather than patching `is_member` locally: joining changes several fields at
+  // once (the member roster, the digest switch, what the cards may offer), and
+  // the server is the only thing that knows all of them.
+  const handleJoin = async () => {
+    setJoining(true);
+    setJoinError(false);
+    try {
+      const res = await apiFetch(`/api/v1/collections/${code}/join/`, { method: 'POST' });
+      if (res.ok) {
+        const fresh = await apiFetch(`/api/v1/collections/${code}/`);
+        if (fresh.ok) setCollection(await fresh.json());
+        else setJoinError(true);
+      } else {
+        setJoinError(true);
+      }
+    } catch {
+      setJoinError(true);
+    }
+    setJoining(false);
+  };
+
+  const userCode = localStorage.getItem('userCode');
+  // The strict founder check — still what the attribution line and the
+  // INACTIVE/delete-adjacent controls key on. Everything else that used to
+  // read `isOwner` for an admin power now reads `isCurator` instead, the
+  // server-computed field that also admits a co-owner.
+  const isOwner = userCode === collection.owner;
+  const isCurator = !!collection.is_curator;
+  // The team the hero names, founder first, whoever has no name counted at the
+  // end rather than listed, written as the language on screen writes a list
+  // ("A y B", "A, B y C") — one rule (`utils/team.js`) shared with the "Run by"
+  // column of "My groups", so the two cannot disagree. The pieces come apart so
+  // each name can be a link.
+  const teamLine = teamParts(collection, t, i18n.resolvedLanguage || i18n.language);
+  const isAuthenticated = !!userCode;
+  // The Community/visibility tags in the H1 are purely informational — no
+  // click, no delete, so no hover/focus state to design for — so they follow
+  // the theeeme's primary-button colours (color_01/color_06) instead of a
+  // fixed HDS token pair, matching every other themed surface on the page.
+  // They are also the curators' own bookkeeping — how the group is set up, not
+  // something a member or a passer-by needs before the title —
+  // so both render for `isCurator` only.
+  const tagTheme = tc.color_01
+    ? {
+        '--tag-background': `var(--color-${tc.color_01})`,
+        '--tag-color': `var(--color-${tc.color_06})`,
+      }
+    : undefined;
+  // Who may hand the group's link to someone: a curator, and — in a PUBLIC group
+  // — any member. A PUBLIC group is shared by its own address,
+  // with no token to mint, rotate or revoke, so a member can pass it on without
+  // holding anything a curator would need to pull back; it is the cheapest way to
+  // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
+  // the link is the curators' credential, and the member has "Recommend" instead.
+  const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
+  // A rank-and-file member: signed in, `is_member` (false for a co-owner by design,
+  // who is a curator and has the curator's menu). They get a menu of their own in
+  // the corner — the welcome document, the summary switch when
+  // the group sends one, and "Leave the group".
+  const isMember = isAuthenticated && !!collection.is_member && !isCurator;
+  const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
+  // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
+  // this group" and "Sign in" — whatever the mode and whether it holds things or not.
+  // It used to be a line in the content that only a COMMUNITY or an
+  // empty group showed, and a member without a session (the weekly digest's link is an
+  // ordinary one) had no way in from here at all.
+  const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
+  // Whether the calendar download has anything to offer: only date-based
+  // things (loans, rentals, on-site reservations) ever reach that CSV. The
+  // allowlist says so directly; an old collection with no allowlist never
+  // restricted anything, so its own things are the answer — a RENT drill in a
+  // restriction-free group is as bookable as one the list names.
+  const allowedTypes = collection.allowed_thing_types || [];
+  const hasDateThings =
+    allowedTypes.length > 0
+      ? allowedTypes.some((type) => DATE_TYPES.includes(type))
+      : collection.things.some((thg) => DATE_TYPES.includes(thg.type));
+
+  // When the owner has given the group its own web address, the hero's back
+  // link goes there instead of the OIUEEI home — but it still says "Home".
+  // `sanitizeUrl` returns "#" for anything that isn't
+  // http(s), and we ignore that.
+  const homePageUrl = collection.home_page ? sanitizeUrl(collection.home_page) : '';
+  const backHref = homePageUrl && homePageUrl !== '#' ? homePageUrl : null;
+
+  return (
+    <div
+      className={`form-hero${collection.thumbnail_url ? ' form-hero--photo' : ''}`}
+      style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
+    >
+      <div className="form-hero-split">
+        <div
+          className="form-hero-content"
+          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
+        >
+          <span className="hero-corners">
+            {/* "Requests to me" is the collection menu's first entry where this page
+                  has one: the account menu then leaves it out. */}
+            {/* Signed out, in a PUBLIC group the hero already offers "Sign in",
+                  so the corner's icon to the same place is left out; with
+                  a session `offerSignIn` changes nothing, and on every other page a
+                  signed-out reader keeps the icon. */}
+            <AccountMenu
+              requestsInCollectionMenu={isCurator || isMember}
+              offerSignIn={!showsSignedOutDoors}
+            />
+            {/* The group's own options, between the account menu
+                  and the share one: a curator's, and a
+                  member's, with what is theirs. Nothing for a reader who is
+                  neither. */}
+            {(isCurator || isMember) && (
+              <CollectionMenu
+                code={code}
+                kind={collection.kind}
+                headline={headline}
+                isCurator={isCurator}
+                hasDateThings={hasDateThings}
+                downloads={downloads}
+                welcomeDocUrl={collection.welcome_doc_url || ''}
+                digest={isMember && sendsDigest ? digestPref : null}
+              />
+            )}
+            {canShare && (
+              <ShareCollectionMenu
+                collectionCode={code}
+                collectionKind={collection.kind}
+                collectionHeadline={headline}
+                isPublic={collection.visibility === 'PUBLIC'}
+              />
+            )}
+          </span>
+          {/* Says "← Home" whatever it points at: the group's own
+                `home_page` when it has one, the app's home otherwise. It used to be
+                worded "The group's site" with an external-link icon; the wording
+                and the icon went, the destination stayed. */}
+          <BackLink to="/" href={backHref} label={t('common.home')} />
+          <h1 className="form-hero-title">
+            {headline}
+            {isCurator && collection.mode === 'COMMUNITY' && (
+              <>
+                {' '}
+                <Tag theme={tagTheme}>{t('collectionPage.communityTag')}</Tag>
+              </>
+            )}
+            {isCurator && (
+              <>
+                {' '}
+                <Tag theme={tagTheme}>
+                  {collection.visibility === 'PUBLIC'
+                    ? t('visibility.publicTag')
+                    : t('visibility.privateTag')}
+                </Tag>
+              </>
+            )}
+          </h1>
+          {collection.description && (
+            <MarkdownText text={L(collection.description)} className="form-hero-text" />
+          )}
+          {/* Attribution. With co-curators, one line names the whole team,
+                founder first, everyone at the same level and shown to everyone
+                (2026-09); whoever has no name is counted at the end, not
+                linked, and with nobody named there is no line. Without, the
+                single founder line, and only to non-owners — the owner knows
+                who they are. */}
+          {collection.co_owners?.length > 0
+            ? teamLine.length > 0 && (
+                <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                  <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
+                  {teamLine.map((part, i) => {
+                    if (part.type === 'member') {
+                      return (
+                        <Link key={i} to={`/${part.member.code}`} className="owner-link">
+                          {part.member.name}
+                        </Link>
+                      );
+                    }
+                    // The count of those without a name is plain text, and so is
+                    // what the language puts between the pieces ("," and "y").
+                    return part.type === 'more' ? part.text : part.value;
+                  })}
+                </p>
+              )
+            : !isOwner &&
+              collection.owner_name && (
+                <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                  <strong>{t('collectionPage.curator')}</strong>{' '}
+                  <Link to={`/${collection.owner}`} className="owner-link">
+                    {collection.owner_name}
+                  </Link>
+                </p>
+              )}
+          {/* The group's welcome PDF is an entry of the collection menu,
+                first, for members and curators — the API serves its
+                URL to those two only. It was a loose link here. */}
+          {/* The hero's two doors for a signed-out reader, in the
+              order: "Sign in" first and primary, to /login,
+              which brings them back here — most people who open a public group
+              without a session already have an account, and the member whose session
+              expired (the weekly digest's link is an ordinary one) is one of them —
+              and "Join this group" secondary, to the join page (no ?thing=: there is
+              no thing in it). Its first form — "This group shares its things on
+              OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
+              the content stood in for it from 2026-09-29, only where no card
+              had a button to press, and that line is gone in turn. In every PUBLIC
+              group, COMMUNITY or PROPRIETARY, empty or not; the action button on
+              each card (login-to-act) is still there for whoever has one. The
+              account icon of the corner is left out on this page (above): this row
+              is its replacement. */}
+          {showsSignedOutDoors && (
+            <div className="invite-nudge">
+              <div className="button-row-wide">
+                <ButtonLink to={loginPathFor({ pathname: base })} style={btnStyle}>
+                  {t('login.signIn')}
+                </ButtonLink>
+                <ButtonLink to={`${base}/join`} style={btnSecondaryStyle}>
+                  {t('collectionPage.visitorJoin')}
+                </ButtonLink>
+              </div>
+            </div>
+          )}
+          {/* An invitation for a reader who is already signed in. They
+              cannot be sent down the anonymous funnel — it asks for an email and
+              answers with a magic link — so they get the action itself. Only on
+              a PUBLIC collection: a private one is unreachable without an
+              invitation, and this is exactly where the page used to offer
+              "Add thing" to someone the API would refuse. */}
+          {isAuthenticated &&
+            !isCurator &&
+            !collection.is_member &&
+            collection.visibility === 'PUBLIC' && (
+              <div className="invite-nudge">
+                <div className="button-row-wide">
+                  <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
+                    {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
+                  </Button>
+                </div>
+                {joinError && (
+                  <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
+                    {t('collectionPage.visitorJoinError')}
+                  </p>
+                )}
+              </div>
+            )}
+          {isCurator && (
+            <>
+              <div className="spacer-m"></div>
+              {/* "Add thing" first and primary, then "Edit collection":
+                    what a curator does most, and what
+                    an empty group needs before anything else, is put things in it;
+                    editing the group is the second thing. It used to be the other way round
+                    ("Edit collection" primary, "Add thing" beside it). Always there,
+                    with things or without, and still an
+                    entry of the collection menu (deliberately repeated there).
+                    "Manage members" and the downloads live only in the menu; the
+                    outcome of a download lands right under the row. */}
+              <div className="button-row-wide">
+                <ButtonLink to={`${base}/add`} style={btnStyle}>
+                  {t('collectionPage.addThing')}
+                </ButtonLink>
+                <ButtonLink to={`${base}/edit`} style={btnSecondaryStyle}>
+                  {t('collectionPage.editCollection')}
+                </ButtonLink>
+                {/* The third button of the row (it was a quiet line
+                      under the row, "Your collection is taking shape. Now invite your
+                      circle →"): secondary, like "Edit collection", so the row keeps its
+                      one primary. It was shown only while the group had things and
+                      nobody invited, and went with the first guest who accepted — a curator
+                      who had invited people found the button gone. Now it is
+                      always there for whoever runs the group, owner or co-curator, with
+                      things or without and with members or without: inviting is not a
+                      step of the beginning. */}
+                <ButtonLink to={`${base}/invites`} style={btnSecondaryStyle}>
+                  {t('collectionPage.inviteYourPeople')}
+                </ButtonLink>
+              </div>
+              <CollectionDownloadsStatus downloads={downloads} />
+              <div className="spacer-s"></div>
+            </>
+          )}
+          {/* Everything in here is a rank-and-file member's control —
+              contributing a thing, recommending a guest — so membership
+              (excluding a curator, who has the real thing above) is the single
+              condition. It used to admit any signed-in reader of a COMMUNITY
+              collection, which is how the dead-end button got here. */}
+          {isAuthenticated && !isOwner && collection.is_member && (
+            <>
+              <div className="spacer-m"></div>
+              {/* One row, each button on its own condition:
+                "Invite someone" first and primary — it opens the recommend form
+                below the row, and stays on screen while the form is open so the
+                same button closes it — then "Add thing", secondary. Neither:
+                no row. Membership, not just mode, for "Add thing":
+                `Collection.can_add_thing` requires an invite, so offering it to
+                a signed-in non-member sent them through the whole form — photos
+                uploaded to the bucket and all — to collect a 403 at the end.
+                They get the join button above instead, which is the thing that
+                actually unlocks it. */}
+              {(collection.allow_member_proposals || collection.mode === 'COMMUNITY') && (
+                <div className="button-row-wide">
+                  {collection.allow_member_proposals && (
+                    <Button
+                      ref={recommendButtonRef}
+                      style={btnStyle}
+                      aria-expanded={recommendOpen}
+                      aria-controls={recommendOpen ? RECOMMEND_BOX_ID : undefined}
+                      onClick={() => setRecommendOpen((open) => !open)}
+                    >
+                      {t('recommend.openButton')}
+                    </Button>
+                  )}
+                  {collection.mode === 'COMMUNITY' && (
+                    <ButtonLink to={`${base}/add`} style={btnSecondaryStyle}>
+                      {t('collectionPage.addThing')}
+                    </ButtonLink>
+                  )}
+                </div>
+              )}
+              {collection.allow_member_proposals && recommendOpen && (
+                <RecommendGuest
+                  id={RECOMMEND_BOX_ID}
+                  collectionCode={code}
+                  ownerName={collection.owner_name}
+                  coOwnerCount={collection.co_owners?.length ?? 0}
+                  onClose={() => {
+                    setRecommendOpen(false);
+                    recommendButtonRef.current?.focus();
+                  }}
+                />
+              )}
+              {/* The outcome of "Mute the summary" / "Get the summary again" from the
+                collection menu: a short message in a live region, as the downloads'.
+                Only a member has the switch. */}
+              <CollectionDigestStatus digest={digestPref} />
+              {/* "Leave the group" used to sit here, third in a stack of
+                unlabelled text links under the description — and the only
+                destructive one of the three. It moved to the own profile's "My
+                groups" list: leaving is something you do to your
+                own membership, so it belongs with the rest of your account, next
+                to the other memberships you might weigh it against. It is also
+                the last entry of the member's collection
+                menu, under a divider; the route (/collections/:code/leave) is
+                unchanged. */}
+            </>
+          )}
+        </div>
+      </div>
+      {collection.thumbnail_url && (
+        <HeroPhoto
+          photoUrl={collection.thumbnail_url}
+          alt={headline}
+          koroType={koro}
+          color03={tc.color_03}
+        />
+      )}
+      <Koros
+        className="form-hero-koros"
+        type={koro}
+        style={tc.color_02 ? { fill: `var(--color-${tc.color_02})` } : undefined}
+      />
+    </div>
+  );
+}
