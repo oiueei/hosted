@@ -6,7 +6,8 @@ import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
-import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
+import useCapabilities, { useCapabilitiesSettled, isOfferable } from '../hooks/useCapabilities';
+import LoadingSpinner from '../components/LoadingSpinner';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
 import ClosedDatesField from '../components/ClosedDatesField';
@@ -32,9 +33,13 @@ import { allowedVerbsFor } from '../utils/collectionKind';
 export default function CreateCollectionPage() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const capabilities = useCapabilities();
+  const { capabilities, settled } = useCapabilitiesSettled();
   const kind = kindOfPrefix(pathname.split('/')[1]);
   if (!kind) return <Navigate to="/new" replace />;
+  // Until the deployment has answered, neither form nor notice: showing the form
+  // first and swapping it for the notice would throw away what was typed. A failed
+  // answer is `null` and settles open, as everywhere else.
+  if (!settled) return <LoadingSpinner />;
   if (!isOfferable(capabilities, 'collection_kinds', kind)) {
     return (
       <PageLayout
