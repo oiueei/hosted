@@ -682,7 +682,6 @@
     "myCollections": "My collections",
     "inactiveCollections": "Inactive collections",
     "sharedWithMe": "Shared with me",
-    "collectionInfo": "{{things}} things · {{guests}} members",
     "viewCollection": "View {{headline}}",
     "loadingCollections": "Loading collections...",
     "noCollections": "You have no active collections yet.",
@@ -700,7 +699,11 @@
     "myGroupsIntro": "Every group you're in, including the ones you run. Leaving one removes your access to it.",
     "youRunIt": "You run it",
     "colGroup": "Group",
-    "colTeam": "Run by"
+    "colTeam": "Run by",
+    "thingsCount_one": "{{count}} thing",
+    "thingsCount_other": "{{count}} things",
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members"
   },
   "koro": {
     "basic": "Basic",

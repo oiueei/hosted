@@ -676,7 +676,6 @@
     "myCollections": "Les meves col·leccions",
     "inactiveCollections": "Col·leccions inactives",
     "sharedWithMe": "Compartides amb mi",
-    "collectionInfo": "{{things}} coses · {{guests}} membres",
     "viewCollection": "Veure {{headline}}",
     "loadingCollections": "Carregant col·leccions...",
     "noCollections": "Encara no tens col·leccions actives.",
@@ -694,7 +693,11 @@
     "myGroupsIntro": "Tots els grups on ets, també els que dinamitzes. Si en deixes un, en perds l'accés.",
     "youRunIt": "El dinamitzes",
     "colGroup": "Grup",
-    "colTeam": "Dinamització"
+    "colTeam": "Dinamització",
+    "thingsCount_one": "{{count}} cosa",
+    "thingsCount_other": "{{count}} coses",
+    "membersCount_one": "{{count}} membre",
+    "membersCount_other": "{{count}} membres"
   },
   "koro": {
     "basic": "Bàsic",

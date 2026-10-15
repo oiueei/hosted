@@ -15,7 +15,7 @@ import { collectionPath } from '../utils/collectionPath';
  *
  * Props:
  *   collection – { code, headline, things?, invites? }
- *   showInfo   – show the "{N} things · {N} guests" line (the Home grids pass
+ *   showInfo   – show the "{N} things · {N} members" line (the Home grids pass
  *                counts; the profile grid omits it). Requires things/invites.
  */
 export default function CollectionLinkbox({ collection, showInfo = false }) {
@@ -42,10 +42,10 @@ export default function CollectionLinkbox({ collection, showInfo = false }) {
       heading={headline}
       text={
         showInfo
-          ? t('userPage.collectionInfo', {
-              things: collection.things.length,
-              guests: collection.invites.length,
-            })
+          ? [
+              t('userPage.thingsCount', { count: collection.things.length }),
+              t('userPage.membersCount', { count: collection.invites.length }),
+            ].join(' · ')
           : undefined
       }
       linkAriaLabel={t('userPage.viewCollection', { headline })}

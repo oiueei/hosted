@@ -676,7 +676,6 @@
     "myCollections": "Mis colecciones",
     "inactiveCollections": "Colecciones inactivas",
     "sharedWithMe": "Compartidas conmigo",
-    "collectionInfo": "{{things}} cosas · {{guests}} miembros",
     "viewCollection": "Ver {{headline}}",
     "loadingCollections": "Cargando colecciones...",
     "noCollections": "Todavía no tienes colecciones activas.",
@@ -694,7 +693,11 @@
     "myGroupsIntro": "Todos los grupos en los que estás, también los que dinamizas. Si dejas uno, pierdes el acceso.",
     "youRunIt": "Lo dinamizas",
     "colGroup": "Grupo",
-    "colTeam": "Dinamización"
+    "colTeam": "Dinamización",
+    "thingsCount_one": "{{count}} cosa",
+    "thingsCount_other": "{{count}} cosas",
+    "membersCount_one": "{{count}} miembro",
+    "membersCount_other": "{{count}} miembros"
   },
   "koro": {
     "basic": "Básico",

@@ -1,7 +1,10 @@
 import { render, screen, fireEvent, createEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect } from 'vitest';
+import i18n from 'i18next';
 import CollectionLinkbox from './CollectionLinkbox';
+import es from '../i18n/locales/es.json';
+import { switchLanguage } from '../test/settle';
 
 const collection = {
   code: 'COL001',
@@ -10,6 +13,48 @@ const collection = {
   things: [{ code: 'THG001' }, { code: 'THG002' }],
   invites: [{ code: 'INV001' }],
 };
+
+const counted = (things, invites) => ({
+  ...collection,
+  things: Array.from({ length: things }, (_, i) => ({ code: `THG00${i}` })),
+  invites: Array.from({ length: invites }, (_, i) => ({ code: `INV00${i}` })),
+});
+
+const info = (c) => {
+  render(
+    <MemoryRouter>
+      <CollectionLinkbox collection={c} showInfo />
+    </MemoryRouter>
+  );
+};
+
+describe('CollectionLinkbox — the counts', () => {
+  test('one thing and one member are said in the singular', () => {
+    info(counted(1, 1));
+
+    expect(screen.getByText('1 thing · 1 member')).toBeInTheDocument();
+  });
+
+  test.each([
+    [0, 0, '0 things · 0 members'],
+    [2, 3, '2 things · 3 members'],
+  ])('%i things and %i members are said in the plural', (things, members, text) => {
+    info(counted(things, members));
+
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  test('in Spanish too: "1 cosa · 1 miembro"', async () => {
+    i18n.addResourceBundle('es', 'translation', es, true, true);
+    await switchLanguage(i18n, 'es');
+    try {
+      info(counted(1, 1));
+      expect(screen.getByText('1 cosa · 1 miembro')).toBeInTheDocument();
+    } finally {
+      await switchLanguage(i18n, 'en');
+    }
+  });
+});
 
 describe('CollectionLinkbox', () => {
   test('renders no thumbnail, even when the collection has one (full-width rows, no image)', () => {
