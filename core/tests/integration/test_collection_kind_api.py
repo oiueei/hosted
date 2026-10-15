@@ -156,6 +156,44 @@ class TestTheKindNeverChanges:
         assert res.status_code == status.HTTP_400_BAD_REQUEST
         assert "orphaned" in str(res.data)
 
+    def test_a_stall_holding_a_lend_can_still_be_saved_from_the_edit_page(
+        self, authenticated_client, collection, user
+    ):
+        # The edit page always sends the verb list; a thing of the other family is
+        # tolerated, so it must not make every save a 400.
+        also_in(
+            collection,
+            Thing.objects.create(code="LEND01", owner=user, headline="Drill", type=LEND),
+        )
+
+        res = authenticated_client.patch(
+            f"{URL}{collection.code}/",
+            {"headline": "Renamed", "allowed_thing_types": [GIFT, SELL]},
+            format="json",
+        )
+
+        assert res.status_code == status.HTTP_200_OK, res.data
+        collection.refresh_from_db()
+        assert collection.headline == "Renamed"
+        assert collection.things.get(code="LEND01").type == LEND
+
+    def test_a_mixed_stall_with_no_sale_inside_can_switch_the_prices_off(
+        self, authenticated_client, collection, user
+    ):
+        collection.mode = "COMMUNITY"
+        collection.save()
+        also_in(
+            collection,
+            Thing.objects.create(code="LEND02", owner=user, headline="Drill", type=LEND),
+        )
+
+        res = authenticated_client.patch(
+            f"{URL}{collection.code}/", {"allowed_thing_types": [GIFT]}, format="json"
+        )
+
+        assert res.status_code == status.HTTP_200_OK, res.data
+        assert res.data["allowed_thing_types"] == [GIFT]
+
     def test_the_switch_can_be_flipped_when_nothing_is_priced(
         self, authenticated_client, collection
     ):

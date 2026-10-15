@@ -863,12 +863,15 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
                 "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
             ),
         )
-        # Orphan check: if this is an update narrowing the list, every existing
-        # thing currently in the collection must keep a valid slot in the new
-        # list. Otherwise the rule would become incoherent ("type X is not
-        # allowed but the collection contains 3 of them").
+        # Orphan check: narrowing the list must leave every thing of the collection's
+        # own family a valid slot. A thing of the other family (a lend in a stall, kept
+        # by design when a collection that held both was given a kind) is tolerated
+        # and not counted: it was never covered by the list. What can be orphaned
+        # inside a kind is the paid verb, when a COMMUNITY group stops letting
+        # members set a price.
         if instance is not None and "allowed_thing_types" in attrs and allowed_thing_types:
-            existing_types = set(instance.things.values_list("type", flat=True))
+            own_family = set(KIND_THING_TYPES[instance.kind])
+            existing_types = set(instance.things.values_list("type", flat=True)) & own_family
             orphaned = sorted(existing_types - set(allowed_thing_types))
             if orphaned:
                 raise serializers.ValidationError(
