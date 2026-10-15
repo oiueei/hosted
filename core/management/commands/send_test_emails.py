@@ -117,8 +117,11 @@ class World:
         self.me.notify_news = True
         self.me.save()
 
-        self.owner = User.objects.create(email="lala@your-domain.test", name="Lala")
-        self.member = User.objects.create(email="lele@your-domain.test", name="Lele")
+        # Lala and Lele, at addresses `seed_demo` never makes (it makes lala@ and lele@
+        # at SEED_EMAIL_DOMAIN, and an address is unique). Created, never looked up: a
+        # real demo account would lend the samples its language and switches.
+        self.owner = User.objects.create(email="lala.sample@your-domain.test", name="Lala")
+        self.member = User.objects.create(email="lele.sample@your-domain.test", name="Lele")
 
         pickup_note = (
             "**Cómo recoger:** pásate el domingo entre las 11 y las 13 h. "
