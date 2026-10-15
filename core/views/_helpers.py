@@ -92,10 +92,10 @@ def type_validity_error(thing_type, collection):
     here went with SHARE and SWAP.
 
     RESERVE_THING is the one type with a rule of its own: it can *only* live in
-    a reservations collection (``allowed_thing_types == ["RESERVE_THING"]``), so
+    a reservations collection (a shed: ``is_reservations_collection()``), so
     a standalone RESERVE thing — or one aimed at any other collection — is
-    refused. The ``["RESERVE_THING"]`` allowlist already blocks the other four
-    types from a reservations collection; this closes the other direction.
+    refused. A shed's verb list (``["RESERVE_THING"]``) already blocks the other
+    verbs from it; this closes the other direction.
     """
     if thing_type == "RESERVE_THING":
         if collection is None or not collection.is_reservations_collection():
@@ -106,6 +106,9 @@ def type_validity_error(thing_type, collection):
         return None
     if collection is None:
         return None
+    # The list is never empty any more (it used to mean "no restriction"); the
+    # truthiness guard stays as defence against a row edited by hand, as in
+    # ``community_contribution_types``.
     if collection.allowed_thing_types and thing_type not in collection.allowed_thing_types:
         if thing_type in KIND_THING_TYPES[collection.kind][1:]:
             return Refusal("This group doesn't take prices.", "no_prices_here")

@@ -224,6 +224,8 @@ The `Procfile` release command runs migrations automatically on each deploy. If 
 heroku run python manage.py migrate -a your-app-name
 ```
 
+**A new required column needs a `db_default`.** While the release phase runs, the dynos of the previous version keep serving, and a Django `default` exists only in the new model: their `INSERT`s would leave the column out and fail. Give an `AddField` that is not nullable a `db_default` as well, and drop the column in a later release than the one that stops using it. `reservation_max_hours` is the example: it left the model in one release and its column, kept meanwhile with a database default, was dropped in the next.
+
 ### 7. Create a superuser (optional)
 
 Required to access the Django admin at `/oiueei-admin/`:
