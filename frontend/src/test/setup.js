@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { configure } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import nodeConsole from 'node:console';
 import './i18n-mock';
@@ -72,6 +72,10 @@ console.error = withoutKnownNoise(console.error);
 afterEach(() => {
   if (actWarnings.length === 0) return;
   const found = actWarnings.splice(0);
+  // A hook that throws stops the ones after it, and Testing Library's own cleanup is
+  // one of them: without this the failed test's DOM stays and breaks the next tests
+  // with causes that are not theirs.
+  cleanup();
   throw new Error(
     `${found.length} state update(s) outside act(...) — wait for the final state ` +
       `(findBy…, or \`settle\` from src/test/settle.js) before the test ends:\n` +
