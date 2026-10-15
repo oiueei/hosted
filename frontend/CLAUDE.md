@@ -123,7 +123,7 @@ OIUEEI follows the official [HDS breakpoint tokens](https://hds.hel.fi/foundatio
 
 The `page-container` and `form-hero-content` max-width is **1248px** (aligned with `breakpoint-xl`). The complementary `max-width: 767px` query (below `breakpoint-m`) is also valid for mobile-only overrides.
 
-**Wide content scrolls inside itself, never the page body.** `hds-react` ships `.Table-module_container { height: inherit }` and no `overflow-x`, so a native `<table>` sizes to its content and pushes the body past the 288px xs container. Every HDS `Table` therefore sits in a **`.table-wrap`** (`overflow-x: auto`, App.css) — `ManageInvitesPage`'s directly, and the request tables and "My groups" through `ResponsiveTable`, which adds it on a desktop. **Below 768px those last three stop being tables at all** and become a list of cards: at ~100px a column, names broke word by word, the status labels were cut off on the right and the ✓ ⊗ buttons sat beyond the screen's edge with nothing to say the table scrolls. Markdown pipe tables in a bio have their own `.markdown-table-wrap` for the same reason. No `tabindex` on either: the rows carry links and buttons, so a keyboard reaches the off-screen columns by tabbing in. Those three pages' **actions column** (the row's buttons, no visible heading) carries a screen-reader-only header, `common.colActions` ("Actions") in a `.sr-only` span — HDS renders a non-sortable `headerName` as the `<th>`'s child, so a node works; it was `''`, an empty `<th>` axe flags as `empty-table-header` (2026-09-18).
+**Wide content scrolls inside itself, never the page body.** Up to `hds-react@6.0.5` the `Table` container was `height: inherit` with no `overflow-x`, so a native `<table>` sized to its content and pushed the body past the 288px xs container; since 6.0.6 the container scrolls sideways by itself, with scroll shadows. Every HDS `Table` still sits in a **`.table-wrap`** (`overflow-x: auto`, App.css) — now a second container that never overflows, kept because it is the hook `ResponsiveTable` and `.responsive-table` hang from — — `ManageInvitesPage`'s directly, and the request tables and "My groups" through `ResponsiveTable`, which adds it on a desktop. **Below 768px those last three stop being tables at all** and become a list of cards: at ~100px a column, names broke word by word, the status labels were cut off on the right and the ✓ ⊗ buttons sat beyond the screen's edge with nothing to say the table scrolls. Markdown pipe tables in a bio have their own `.markdown-table-wrap` for the same reason. No `tabindex` on either: the rows carry links and buttons, so a keyboard reaches the off-screen columns by tabbing in. Those three pages' **actions column** (the row's buttons, no visible heading) carries a screen-reader-only header, `common.colActions` ("Actions") in a `.sr-only` span — HDS renders a non-sortable `headerName` as the `<th>`'s child, so a node works; it was `''`, an empty `<th>` axe flags as `empty-table-header` (2026-09-18).
 
 ---
 
@@ -662,9 +662,9 @@ Smoke tests and automated accessibility checks using vitest + testing-library + 
 - **React 19** + **Vite 7** + **React Router 8**
 
 **Import from `react-router`, never `react-router-dom`.** v8 consolidated the two packages — there is no `react-router-dom@8` — so the dependency is `react-router` alone and every `import { Link, useNavigate, … } from 'react-router'`. Test files that stub the router (`vi.mock`) must name the same specifier, or the mock silently applies to nothing. The upgrade came from a security audit: it is what closed GHSA-qwww-vcr4-c8h2 and let the audit gate's allowlist go back to empty. It also raised the React floor — react-router 8 peer-depends on `react >= 19.2.7`, so `react`/`react-dom` moved to `^19.2.8` with it.
-- **hds-react** — Helsinki Design System React components (npm `^6.0.5`)
-- **hds-design-tokens** — HDS CSS custom property tokens (npm `^6.0.5`)
-- **hds-core** — HDS core CSS and base styles (npm `^6.0.5`)
+- **hds-react** — Helsinki Design System React components (npm `^6.0.6`)
+- **hds-design-tokens** — HDS CSS custom property tokens (npm `^6.0.6`)
+- **hds-core** — HDS core CSS and base styles (npm `^6.0.6`)
 
 ### The dependency audit gate (`scripts/audit-gate.mjs`)
 
@@ -742,6 +742,8 @@ option), but the *look* is not testable in jsdom — on any `hds-react` bump,
 re-check the collection hero by eye: a 44px icon, no border/box, and the options
 list opening at a readable width anchored to the icon's right edge.
 
+The quirks in this section were last checked against `hds-react@6.0.6` (2026-10-15).
+
 ### HDS ToggleButton quirks (v5)
 
 Four non-obvious behaviours:
@@ -779,7 +781,7 @@ It also owns the vertical rhythm (`--spacing-row`, a grid `gap`), so per-option 
 
 ### HDS accessibility bugs we carry
 
-Found by keyboard testing on **2026-08-30**, all in `hds-react@6.0.5`, all verified
+Found by keyboard testing on **2026-08-30**, all in `hds-react` (first found in 6.0.5; the 6.0.6 release notes fix none of them, checked 2026-10-15), all verified
 against the shipped bundle rather than the docs. The decision each time was the
 same and it is deliberate: **stay on HDS, work around it only where the workaround
 is itself an HDS API, and wait for upstream on the rest.** Delete an entry here
@@ -794,7 +796,7 @@ is a deprecated React alias. HDS's own documentation site renders the identical
 markup, so this is theirs, not a misuse. **Not worked around** — the only fix is to
 stop using the component, which costs more than the defect. Affects the collection
 grids on `HomePage` and `UserPage` (`CollectionLinkbox`).
-Still the latest release on 2026-10-08 (6.0.5), so still carried. **One more thing the
+6.0.6 (2026-10-15) does not fix it, so still carried. **One more thing the
 same design does, which we do work around**: the region's own `onClick` answers any click
 inside it with `link.click()` — a fresh click with no modifier keys — so a ctrl/cmd/shift/alt
 click on a row would open the new tab *and* move the current one. `CollectionLinkbox`
@@ -906,7 +908,7 @@ The project consumes HDS directly from npm and applies three local overrides:
 - **Proxy** — `/api` requests forwarded to `http://localhost:8000`
 - **Dev server** on port 3000
 - **A file of `public/` cited from JS goes through `import.meta.env.BASE_URL`** (`` href={`${import.meta.env.BASE_URL}cocina-ejemplo.zip`} ``). Production builds with `base: '/static/'` and Vite rewrites the paths it can see in `index.html` and CSS `url()`, but **not a literal inside JS**: `"/cocina-ejemplo.zip"` fell through to the SPA catch-all and downloaded the app's `index.html` under a `.zip` name (measured on www, 2026-09-29), while in development, where the base is `/`, both spellings are the same URL. A component test cannot tell them apart either — `BASE_URL` is `/` under vitest — so `test/publicFileLiterals.test.js` sweeps the source instead: no non-test `.js`/`.jsx` under `src` may hold a literal that opens with `/` + a name found in `public/` (the directory is read, not listed).
-- **Code splitting** — every page is `React.lazy`-loaded in `App.jsx` (the `Routes` block is wrapped in a `Suspense` whose fallback is `LoadingSpinner`), so each route ships as its own chunk and page-only deps (papaparse, qrcode, jszip) load on demand. `build.rollupOptions.output.manualChunks` further splits `vendor-react` and `vendor-hds` from app code for long-term caching (`chunkSizeWarningLimit` is raised to **650 kB** because the shared `hds-react` chunk is **~622 kB raw / ~161 kB gzipped** — measured 2026-08-17, and it grows by a few kB each time a new HDS component is adopted: 585 → 614 on the 6.0.4 → 6.0.5 upgrade, 615 → 622 on taking `SelectionGroup`. Tree-shaking does work — `CookieConsent`, `Hero`, `Footer`, `Pagination`, `Stepper`, `Tabs` and `Breadcrumb` are absent from the built chunk — so the size is what we genuinely use).
+- **Code splitting** — every page is `React.lazy`-loaded in `App.jsx` (the `Routes` block is wrapped in a `Suspense` whose fallback is `LoadingSpinner`), so each route ships as its own chunk and page-only deps (papaparse, qrcode, jszip) load on demand. `build.rollupOptions.output.manualChunks` further splits `vendor-react` and `vendor-hds` from app code for long-term caching (`chunkSizeWarningLimit` is raised to **650 kB** because the shared `hds-react` chunk is **~633 kB raw / ~164 kB gzipped** — measured on 6.0.6, and it grows by a few kB each time a new HDS component is adopted: 585 → 614 on the 6.0.4 → 6.0.5 upgrade, 615 → 622 on taking `SelectionGroup`, 630 → 633 on 6.0.5 → 6.0.6. Tree-shaking does work — `CookieConsent`, `Hero`, `Footer`, `Pagination`, `Stepper`, `Tabs` and `Breadcrumb` are absent from the built chunk — so the size is what we genuinely use).
 - **A tab open across a deploy reloads once instead of dying** (`src/utils/reloadOnStaleChunk.js`, installed in `main.jsx` before the first render, 2026-09-29). A Heroku release ships only the *new* hashed chunks, so a tab opened before it asks, on its first visit to a page it had not loaded, for a chunk that is gone; `lazy()` rethrows and the top-level `ErrorBoundary` replaced the whole app with "Something went wrong" for a page that was fine a minute earlier. Vite dispatches a cancelable `vite:preloadError` on `window` when a dynamic import fails (present in the built `index-*.js`, checked); the listener records the time in `sessionStorage` under `staleChunkReloadAt`, calls `preventDefault()` and `location.reload()`, which fetches the current `index.html` and with it the current chunk names. **The reload only helps if `index.html` is fetched afresh**, so `spa_index` (`config/urls.py`) serves it with `Cache-Control: no-cache` (2026-09-29; `test_spa_index.py`) — without it a CDN in front, or a browser's heuristic, could hand the reload the very page that names the chunks that are gone. **One reload per 10 s, never a loop**: a second failure inside the window is *not* prevented and reaches the `ErrorBoundary` as before, so a chunk that is really gone (a broken release) cannot spin the page. And **when the mark cannot be read or written the page is not reloaded** — blocked storage, quota, private mode, even a `SecurityError` on merely touching `sessionStorage` (all in try/catch, the lookup lazy so installing can never stop the app rendering) — because reloading without being able to remember it is the loop being avoided. This is the app's only `sessionStorage` key, so README §Privacy's inventory now names it (it used to say "unused") and `test/browserStorage.test.jsx` pins both: one module may mention `sessionStorage`, its key is the one the README lists. The README half runs only in the standalone (`src/deployment/` exporting empty stubs): a deployment keeps every source file but replaces `README.md` and publishes its storage inventory in its own legal page, so it guards that inventory itself (reading the root README unconditionally failed the first deployment to merge this key, 2026-09-30). Unsaved input on a page that had *not yet* failed is not at risk (only unloaded chunks fail); tested in `reloadOnStaleChunk.test.js`, not in a browser.
 
 ## Authentication Flow
