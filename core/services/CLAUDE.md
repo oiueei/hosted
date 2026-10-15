@@ -8,7 +8,7 @@ Business logic and side effects extracted from views into `core/services/`. Keep
 
 ### `link_preview.py` — The `<head>` of a shared link
 
-WhatsApp, Telegram, Signal, iMessage and Slack read the HTML the server sends and run no JavaScript, and `spa_index` serves one `index.html` for every route, so a shared link used to show only "OIUEEI" and the icon. `spa_index` now asks `preview_for_path(path)` and, when it answers, serves `inject_preview(html, preview, absolute_url)`.
+WhatsApp, Telegram, Signal, iMessage and Slack read the HTML the server sends and run no JavaScript, and `spa_index` serves one `index.html` for every route, so a shared link used to show only "OIUEEI" and the icon. `spa_index` reads the route without touching the database (`route_for_preview`); only when the route is a candidate does it spend the visitor's share of `ANON_API_RATE`, and then it looks the target up (`preview_for_route`) and, when that answers, serves `inject_preview(html, preview, absolute_url)`.
 
 | Route (trailing `/` optional) | Previewed when | Filled in |
 |---|---|---|

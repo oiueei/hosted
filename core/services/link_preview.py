@@ -114,15 +114,6 @@ def preview_for_route(route):
     return _preview(collection, collection.language or None, with_image=False)
 
 
-def preview_for_path(path):
-    """``{"title", "description", "image"}`` for a path a stranger may preview, else ``None``.
-
-    No query at all unless the path is one of the routes in the module docstring.
-    """
-    route = route_for_preview(path)
-    return preview_for_route(route) if route else None
-
-
 def inject_preview(html, preview, url):
     """``html`` with the title and the Open Graph tags of ``preview`` filled in.
 
