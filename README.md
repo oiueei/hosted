@@ -180,7 +180,6 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/collections/{code}/` | View collection (owner, co-owner, or invited) |
 | PUT | `/api/v1/collections/{code}/` | Update collection (owner or co-owner) |
 | DELETE | `/api/v1/collections/{code}/` | Delete collection (owner only — never a co-owner) |
-| POST | `/api/v1/collections/{code}/remove-thing/` | Remove thing from collection (owner or co-owner; thing owner in COMMUNITY mode) |
 | POST | `/api/v1/collections/{code}/invite/` | Invite user (owner or co-owner, resend-safe) |
 | DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it |
 | POST | `/api/v1/collections/{code}/co-owners/` | Promote an existing member to co-curator — any curator, in either mode (rate limited: 30/h). Refused if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`, or when the collection already holds its ceiling of co-curators (`Collection.MAX_CO_OWNERS`, 5 — the abuse bound, not the design intent of 1–2; re-promoting an existing co-curator stays idempotent and never hits it) |

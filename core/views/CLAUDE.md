@@ -434,7 +434,6 @@ CSV/ZIP bulk-add (F-9). Each row's verb is derived from the collection's kind an
 | `update` | `PUT /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
 | `partial_update` | `PATCH /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionCurator` (owner or co-owner) |
 | `destroy` | `DELETE /api/v1/collections/{code}/` | `IsAuthenticated` + `IsCollectionOwner` — deliberately **not** curator-widened; deleting the collection stays the founding owner's alone. `perform_destroy` deletes the collection and the things that were only in it inside `deleting_as(request.user)`; the things deleted are those with no membership in any other collection (a query of their own: counting through the related manager reuses its filtered join and always said one); the `COLLECTION_DELETED` and one `THING_REMOVED` per deleted thing come from the delete receivers (`core/services/deletion_events.py`), not from the view |
-| `remove_thing` | `POST /api/v1/collections/{code}/remove-thing/` | `IsAuthenticated` + curator (owner or co-owner) or thing owner (COMMUNITY) |
 
 **Serializers:**
 - Create: `CollectionCreateSerializer`
@@ -446,8 +445,6 @@ CSV/ZIP bulk-add (F-9). Each row's verb is derived from the collection's kind an
 **Deployment policy (`CREATOR_POLICY`).** `perform_create` refuses a mode this deployment does not hand out with **403**, judging the **PROPRIETARY default** when the body names no mode, **and then the kind** (`collection_kind_denial`: a kind is open when any of its verbs is offered, so a policy that gives GIFT/SELL lets an account open a stall and nothing else; the kind is always present by then, named or deduced). The kind never changes, so creation is its only door. `perform_update` refuses switching an existing collection *into* a withheld mode — only on a real change, so a collection already in one stays editable by its owner. Both are no-ops under the standalone's open policy. See [`creator_policy`](../services/CLAUDE.md#creator_policypy--who-may-create-what-on-this-deployment).
 
 **Retrieve:** Uses `collection.can_view(user_code)` — owner, or invited user if collection is ACTIVE (INACTIVE collections are only visible to their owner). The `CollectionSerializer.things` field excludes INACTIVE things for non-owners.
-
-**Remove thing:** Owner or co-owner can remove any thing. In COMMUNITY mode, thing owners can remove their own things. Validates thing is in the collection, removes it from the M2M without deleting the thing itself.
 
 ### CollectionInviteView
 
