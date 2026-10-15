@@ -189,6 +189,49 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
 });
 
 describe('AddThingPage — what the form sends', () => {
+  test('a stall gift sends its condition, its place and its availability', async () => {
+    mockApi();
+    const { container } = renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue pan' } });
+    fireEvent.change(container.querySelector('#add-thing-location'), {
+      target: { value: '  Gràcia  ' },
+    });
+    fireEvent.click(container.querySelector('#add-thing-condition-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Good condition' }));
+    fireEvent.click(container.querySelector('#add-thing-availability-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Next week' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).toMatchObject({
+      condition: 'GOOD',
+      location: 'Gràcia',
+      availability: 'NEXT_WEEK',
+    });
+  });
+
+  test('a library rental sends its condition and place, and no availability: it has none to give', async () => {
+    mockApi({
+      coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
+    });
+    const { container } = renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Drill' } });
+    fireEvent.change(screen.getByLabelText(/Rental price/), { target: { value: '4' } });
+    fireEvent.change(container.querySelector('#add-thing-location'), {
+      target: { value: 'Sants' },
+    });
+    fireEvent.click(container.querySelector('#add-thing-condition-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Good condition' }));
+    expect(container.querySelector('#add-thing-availability-main-button')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).toMatchObject({ fee: '4', condition: 'GOOD', location: 'Sants' });
+    expect(postBody()).not.toHaveProperty('availability');
+  });
+
   test('a title is enough, and the collection travels with it', async () => {
     mockApi();
     renderPage();

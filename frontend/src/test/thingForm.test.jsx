@@ -667,6 +667,24 @@ describe('EditThingPage — what a save sends', () => {
     expect(patch()).not.toHaveProperty('is_endless');
   });
 
+  test('a thing that is endless is loaded as endless, and a save of another field keeps it so', async () => {
+    const { container } = renderEdit({ thing: { ...sale, is_endless: true } });
+    await waitFor(() => expect(container.querySelector('#edit-thing-is-endless')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-is-endless')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    fireEvent.change(container.querySelector('#edit-thing-headline'), {
+      target: { value: 'Bike, retitled' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patch()).toBeTruthy());
+    expect(patch().headline).toBe('Bike, retitled');
+    expect(patch().is_endless).toBe(true);
+  });
+
   test('a loan a mixed stall kept is edited as a loan: its deposit stays, the stall’s switch does not appear', async () => {
     const { container } = renderEdit({
       thing: {
