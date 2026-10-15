@@ -375,50 +375,59 @@ TEXTS = {
     "digest_mute_cta": "Deixar de rebre els resums d'aquest grup",
 }
 
-# Frases de creixement que s'afegeixen als correus sortints (sobre el peu de
-# preferències) per convertir convidats en creadors. Se'n tria una a l'atzar per
-# enviament. El CTA sempre apunta a {frontend_base}/new; ``cta`` és
-# només l'etiqueta de l'enllaç.
+
+# Frases de creixement que s'afegeixen als correus sortints (damunt del peu de
+# preferències) per convertir convidats en creadors. En surt una a l'atzar per
+# enviament. ``path`` és on porta el CTA, sota la URL base del frontend: el
+# formulari del tipus de què parla la frase, o el selector (`/new`) si no parla
+# de cap (una frase sense ``path`` hi porta també). Les mateixes destinacions en
+# tots els idiomes; ``cta`` és només l'etiqueta de l'enllaç.
 VIRAL_LINES = [
     {
         "text": (
-            "Renoves l'armari? Crea una col·lecció amb la roba que ja no uses "
-            "i ofereix-la als teus amics."
+            "Renoves l'armari? Obre una paradeta amb la roba que ja no uses i ofereix-la als "
+            "teus amics."
         ),
         "cta": "Comença aquí",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "Un trepant que uses dues vegades l'any? Crea una col·lecció amb les "
+            "Un trepant que uses dues vegades l'any? Obre una biblioteca de les coses amb les "
             "teves eines i deixa-les als teus veïns."
         ),
-        "cta": "Crea la teva col·lecció",
+        "cta": "Obre la teva biblioteca",
+        "path": "/library/new",
     },
     {
         "text": (
-            "Prestatgeries plenes de llibres ja llegits? Munta'ls una col·lecció "
-            "i dona'ls una segona vida."
+            "Prestatgeries plenes de llibres ja llegits? Posa'ls en una paradeta i dona'ls "
+            "una segona vida."
         ),
         "cta": "Així de fàcil",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "Joguines que ja han quedat petites? Crea una col·lecció i passa-les a altres famílies."
+            "Joguines que ja han quedat petites? Obre una paradeta i passa-les a altres famílies."
         ),
         "cta": "Crea la teva",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "Trasllat a la vista? Fes una col·lecció amb el que no t'enduus i "
-            "troba-li una nova casa."
+            "Trasllat a la vista? Obre una paradeta amb el que no t'enduus i troba-li una "
+            "nova casa."
         ),
         "cta": "Comença per aquí",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "Un grup d'amics, l'escala, l'AMPA? Creeu una col·lecció comunitària "
-            "i compartiu entre tots."
+            "Un grup d'amics, l'escala, l'AMPA? Obriu junts una paradeta, una biblioteca de "
+            "les coses o un taller, i compartiu entre tots."
         ),
         "cta": "Creeu el vostre grup",
+        "path": "/new",
     },
 ]

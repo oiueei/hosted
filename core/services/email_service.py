@@ -431,8 +431,8 @@ def _bottom(
     Viral-line eligibility: recipients who don't own a collection — the
     audience for "create your own" — including not-yet-registered invitees
     (``user`` is ``None``). Suppressed for collection owners and when
-    ``VIRAL_LINES`` is empty. Its CTA is the plain ``/new`` URL,
-    never tracking-wrapped (DESIGN §9).
+    ``VIRAL_LINES`` is empty. Its CTA is the plain URL of the line's ``path``
+    (the form of the kind it names, or ``/new``), never tracking-wrapped (DESIGN §9).
     """
     lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
     legal_url = f"{_frontend_base_url()}/legal"
@@ -469,7 +469,7 @@ def _bottom(
         )
         if lines and not curates_collection:
             line = random.choice(lines)
-            url = f"{_frontend_base_url()}/new"
+            url = f"{_frontend_base_url()}{line.get('path', '/new')}"
             plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
             # A highlighted callout, not plain footer prose:
             # a pale-yellow background + padding sets the growth line apart

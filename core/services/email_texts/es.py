@@ -363,50 +363,59 @@ TEXTS = {
     "digest_mute_cta": "Dejar de recibir los resúmenes de este grupo",
 }
 
+
 # Frases de crecimiento que se añaden a los correos salientes (encima del pie
 # de preferencias) para convertir invitados en creadores. Se elige una al azar
-# por envío. El CTA siempre apunta a {frontend_base}/new; ``cta``
-# es solo la etiqueta del enlace.
+# por envío. ``path`` es adonde lleva el CTA, bajo la URL base del frontend: el
+# formulario del tipo del que habla la frase, o el selector (`/new`) si no habla
+# de ninguno (una frase sin ``path`` lleva también ahí). Los mismos destinos en
+# todos los idiomas; ``cta`` es solo la etiqueta del enlace.
 VIRAL_LINES = [
     {
         "text": (
-            "¿Renuevas el armario? Crea una colección con la ropa que ya no usas "
-            "y ofrécela a tus amigos."
+            "¿Renuevas el armario? Abre un rastrillo con la ropa que ya no usas y ofrécela a "
+            "tus amigos."
         ),
         "cta": "Empieza aquí",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "¿Un taladro que usas dos veces al año? Crea una colección con tus "
+            "¿Un taladro que usas dos veces al año? Abre una biblioteca de las cosas con tus "
             "herramientas y préstalas a tus vecinos."
         ),
-        "cta": "Crea tu colección",
+        "cta": "Abre tu biblioteca",
+        "path": "/library/new",
     },
     {
         "text": (
-            "¿Estanterías llenas de libros ya leídos? Móntales una colección y "
-            "dales una segunda vida."
+            "¿Estanterías llenas de libros ya leídos? Ponlos en un rastrillo y dales una "
+            "segunda vida."
         ),
         "cta": "Así de fácil",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "¿Juguetes que se han quedado pequeños? Crea una colección y pásalos a otras familias."
+            "¿Juguetes que se han quedado pequeños? Abre un rastrillo y pásalos a otras familias."
         ),
-        "cta": "Crea la tuya",
+        "cta": "Crea el tuyo",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "¿Mudanza a la vista? Haz una colección con lo que no te llevas y "
-            "encuéntrale nueva casa."
+            "¿Mudanza a la vista? Abre un rastrillo con lo que no te llevas y encuéntrale "
+            "nueva casa."
         ),
         "cta": "Empieza por aquí",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "¿Un grupo de amigos, la escalera, el AMPA? Cread una colección "
-            "comunitaria y compartid entre todos."
+            "¿Un grupo de amigos, la escalera, el AMPA? Abrid juntos un rastrillo, una "
+            "biblioteca de las cosas o un taller, y compartid entre todos."
         ),
         "cta": "Crea vuestro grupo",
+        "path": "/new",
     },
 ]

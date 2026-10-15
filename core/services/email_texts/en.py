@@ -364,47 +364,52 @@ TEXTS = {
 }
 
 # Growth blurbs appended to outbound emails (above the preferences footer) to
-# turn guests into creators. One is chosen at random per send. The CTA always
-# points to {frontend_base}/new; ``cta`` is the link label only.
+# turn guests into creators. One is chosen at random per send. ``path`` is where
+# the CTA leads, under the frontend's base URL: the form of the kind the line
+# talks about, or the chooser (`/new`) for a line about no kind in particular (a
+# line with no ``path`` leads there too). The same destinations in every language;
+# ``cta`` is the link label only.
 VIRAL_LINES = [
     {
         "text": (
-            "Refreshing your wardrobe? Make a collection with the clothes you no "
-            "longer wear and offer them to your friends."
+            "Refreshing your wardrobe? Open a stall with the clothes you no longer wear and "
+            "offer them to your friends."
         ),
         "cta": "Start here",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "A drill you use twice a year? Make a collection with your tools and "
-            "lend them to your neighbours."
+            "A drill you use twice a year? Open a library of things with your tools and lend "
+            "them to your neighbours."
         ),
-        "cta": "Create your collection",
+        "cta": "Open your library",
+        "path": "/library/new",
     },
     {
         "text": (
-            "Shelves full of books you've already read? Turn them into a "
-            "collection and give them a second life."
+            "Shelves full of books you've already read? Put them on a stall and give them a "
+            "second life."
         ),
         "cta": "Easy as that",
+        "path": "/stall/new",
     },
     {
-        "text": (
-            "Toys the kids have outgrown? Make a collection and pass them on to other families."
-        ),
+        "text": ("Toys the kids have outgrown? Open a stall and pass them on to other families."),
         "cta": "Create yours",
+        "path": "/stall/new",
     },
     {
-        "text": (
-            "Moving soon? Make a collection with what you're not taking and find it a new home."
-        ),
+        "text": ("Moving soon? Open a stall with what you're not taking and find it a new home."),
         "cta": "Start here",
+        "path": "/stall/new",
     },
     {
         "text": (
-            "A group of friends, your building, the PTA? Create a community "
-            "collection and share among everyone."
+            "A group of friends, your building, the PTA? Open a stall, a library of things or "
+            "a shed together and share among everyone."
         ),
         "cta": "Create your group",
+        "path": "/new",
     },
 ]
