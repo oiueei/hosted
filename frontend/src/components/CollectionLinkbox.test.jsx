@@ -28,6 +28,36 @@ const info = (c) => {
   );
 };
 
+describe('CollectionLinkbox — the kind', () => {
+  test.each([
+    ['STALL', 'Stall'],
+    ['LIBRARY', 'Library'],
+    ['SHED', 'Shed'],
+  ])('a %s row starts with its short name, then the counts', (kind, name) => {
+    info({ ...counted(3, 5), kind });
+
+    expect(screen.getByText(`${name} · 3 things · 5 members`)).toBeInTheDocument();
+  });
+
+  test('the profile row has no counts and shows the kind alone', () => {
+    render(
+      <MemoryRouter>
+        <CollectionLinkbox collection={{ code: 'COL001', headline: 'Shared', kind: 'LIBRARY' }} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Library')).toBeInTheDocument();
+    expect(screen.queryByText(/things|members/)).toBeNull();
+  });
+
+  test('a collection that came without its kind shows the counts as before, nothing odd', () => {
+    info(counted(2, 1));
+
+    expect(screen.getByText('2 things · 1 member')).toBeInTheDocument();
+    expect(screen.queryByText(/undefined|kinds\./)).toBeNull();
+  });
+});
+
 describe('CollectionLinkbox — the counts', () => {
   test('one thing and one member are said in the singular', () => {
     info(counted(1, 1));

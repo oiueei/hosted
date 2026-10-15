@@ -14,14 +14,29 @@ import { collectionPath } from '../utils/collectionPath';
  * (`HeroPhoto`, see S7/S8).
  *
  * Props:
- *   collection – { code, headline, things?, invites? }
- *   showInfo   – show the "{N} things · {N} members" line (the Home grids pass
+ *   collection – { code, kind?, headline, things?, invites? }
+ *   showInfo   – show the "{N} things · {N} members" counts after the kind (the Home grids pass
  *                counts; the profile grid omits it). Requires things/invites.
  */
 export default function CollectionLinkbox({ collection, showInfo = false }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const headline = useLocalized()(collection.headline);
+  // What it is, then what it holds: "Library · 3 things · 5 members". The profile's
+  // row has no counts and names only the kind; a collection read without its kind
+  // (an older response) says what it always did.
+  const text =
+    [
+      collection.kind && t(`kinds.${collection.kind}.short`),
+      ...(showInfo
+        ? [
+            t('userPage.thingsCount', { count: collection.things.length }),
+            t('userPage.membersCount', { count: collection.invites.length }),
+          ]
+        : []),
+    ]
+      .filter(Boolean)
+      .join(' · ') || undefined;
   return (
     <Linkbox
       href={collectionPath(collection.code, collection.kind)}
@@ -40,14 +55,7 @@ export default function CollectionLinkbox({ collection, showInfo = false }) {
         navigate(collectionPath(collection.code, collection.kind));
       }}
       heading={headline}
-      text={
-        showInfo
-          ? [
-              t('userPage.thingsCount', { count: collection.things.length }),
-              t('userPage.membersCount', { count: collection.invites.length }),
-            ].join(' · ')
-          : undefined
-      }
+      text={text}
       linkAriaLabel={t('userPage.viewCollection', { headline })}
       linkboxAriaLabel={headline}
       border
