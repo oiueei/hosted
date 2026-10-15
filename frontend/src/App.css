@@ -2015,11 +2015,16 @@ main:focus {
 
 /* A <caption> whose only content is screen-reader-only exists to give the table a
    name — VoiceOver's table rotor lists tables by name, and every one of these was
-   nameless. It must not also reserve HDS's visible caption margin, or naming a
-   table would push it 16px down the page. The heading above each of them already
-   says the same thing on screen; this is for the reader who is not looking at it. */
-caption:has(> .sr-only:only-child) {
+   nameless. It must not also reserve HDS's visible caption room (a margin, then
+   padding and a white background once HDS wrapped the content in a div of its
+   own), or naming a table would push it down the page. The `sr-only` is matched as
+   a descendant for that reason: it is a direct child in one HDS version and one
+   level down in the next. The heading above each of them already says the same
+   thing on screen; this is for the reader who is not looking at it. */
+caption:has(.sr-only:only-child) {
   margin: 0;
+  padding: 0;
+  background: none;
   line-height: 0;
 }
 
