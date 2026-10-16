@@ -77,7 +77,7 @@ config/
   urls.py             # Root URL config (admin at /oiueei-admin/; mounts DEPLOYMENT_URLCONFS before the SPA catch-all)
   wsgi.py             # WSGI entry point (defaults to production)
 core/
-  models/             # User, Collection, Thing, FAQ, Theeeme, RSVP, BookingPeriod, Transfer, Notification, Report, Event / DailyActivity (first-party analytics)
+  models/             # User, Collection, Thing, FAQ, Theeeme, RSVP, BookingPeriod, Transfer, Notification, Report, Event / DailyActivity / DeviceDay (first-party analytics)
   views/              # Auth, collections, things, bookings, FAQ, users
   serializers/        # DRF serializers per model
   services/           # Business logic layer
@@ -98,6 +98,7 @@ core/
       close_transfers.py       # Close overdue loan transfers
       send_reminders.py        # Daily booking/delivery reminders
       send_digests.py          # Weekly/monthly digest emails
+      device_share.py          # Weekly share of mobile among people and form saves (reads DeviceDay)
       send_test_emails.py      # One sample of every email, sent to one address you choose
       purge_expired_data.py    # Retention sweep (GDPR art. 5.1.e) — dry-run unless --commit
       cleanup_orphan_images.py # Delete stored images no row references
@@ -129,6 +130,7 @@ core/
 | **BookingPeriod** | Unified booking model for all thing types (72h PENDING expiry). FKs to Thing, User (requester), User (owner). LEND/RENT/RESERVE carry dates; GIFT/SELL don't. `start_time`/`end_time` (`TimeField`, nullable) narrow a booking to a slot within one day: `NULL` means whole days, which is every LEND/RENT and every `DAY`-unit reservation; an `HOUR`-unit reservation stores `end_date = start_date + 1` and never crosses midnight. There is no `DateTimeField`: times are wall-clock, read in `DJANGO_TIME_ZONE`. **RESERVE_THING bookings are auto-confirmed** — created straight to ACCEPTED with no accept/reject step, no `ThingTransfer`, both parties emailed at once — and either the requester **or any curator** of the shed (owner or co-curator) may cancel one that hasn't started. `project_note` (RESERVE only) carries the requester's optional note about what the space is for. |
 | **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires — except deletions, which are logged by model receivers so every way a row can go (API, admin, account erasure, retention purge) leaves its event; read only by whatever reporting the deployment runs over it. Never exposed to users |
 | **DailyActivity** | One `(user, date)` row per user per active day, written by `DailyActivityMiddleware` (cache-gated to ≤1 DB write per user per day). Powers WAU/MAU and retention. Records less than the web-server logs already hold and never leaves our DB |
+| **DeviceDay** | A daily count, per kind of device (`MOBILE` / `OTHER`; a tablet is `OTHER`), of signed-in people and of collection/thing saves — `(date, device, metric, count)`, written by `DailyActivityMiddleware`. No user, no User-Agent; kept without a period because it holds nobody. Read with `device_share` |
 
 ## Key Relationships
 
