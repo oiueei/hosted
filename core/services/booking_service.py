@@ -619,9 +619,10 @@ def resolve_request_collection(thing, collection_code=None, requester=None):
 
     Feeds the notification payload (it deep-links there and the collection's own
     inbox filters by it) and the requester's emails, which carry that
-    collection's ``email_note``. A thing can live in several collections, so the
-    request's own context wins — ``collection_code`` is the collection the
-    requester was actually looking at when they asked. Without it (a request from
+    collection's ``email_note``. A thing lives in one collection, but a row from
+    before that rule can sit in more, so the request's own context wins —
+    ``collection_code`` is the collection the requester was actually looking at
+    when they asked. Without it (a request from
     the standalone /things/<code> page) this is an approximation: the collection
     whose rental rules govern the thing, else its first ACTIVE one.
 
@@ -795,8 +796,8 @@ def send_booking_request_notifications(requester, thing, booking, collection_cod
         )
     # Resolved before the requester's confirmation so that email can carry the
     # owner's email_note for the group the request was actually made through —
-    # with several collections on one thing, the one the member was browsing is
-    # the one whose note the request page showed them.
+    # the one the member was browsing is the one whose note the request page
+    # showed them.
     collection = resolve_request_collection(thing, collection_code, requester)
     send_booking_confirmation_email(requester, thing, booking, collection, informed=len(managers))
     payload = {

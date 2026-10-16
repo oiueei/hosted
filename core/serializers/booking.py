@@ -74,10 +74,9 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
         return obj.thing_code.can_manage(request.user.code) and obj.can_be_return_reminded()
 
     def _collection(self, obj):
-        # A thing can sit in several collections; this takes the first (the view
-        # prefetches `thing_code__collections`, so it costs no extra query). The
-        # rare multi-collection thing whose curated group isn't first is a known
-        # imprecision, not a correctness bug — the label is orientation only.
+        # A thing lives in one collection; the list is read (the view prefetches
+        # `thing_code__collections`, so it costs no extra query) and the first is
+        # taken, which also covers a row from before that rule that sits in more.
         cols = list(obj.thing_code.collections.all())
         return cols[0] if cols else None
 
