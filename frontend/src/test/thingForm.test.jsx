@@ -4,11 +4,13 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 window.scrollTo = vi.fn();
 
-vi.mock('../services/api', () => ({
+// The real `extractApiError`: the refused-save tests feed it response bodies shaped
+// as the server sends them and check what it makes of them reaches the toast.
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
   apiFetch: vi.fn(() =>
     Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
   ),
-  extractApiError: vi.fn(() => Promise.resolve('')),
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
@@ -23,9 +25,13 @@ function mockResponse(data, ok = true) {
 
 // `collection` feeds AddThingPage's collection fetch (drives type/field gating);
 // `thing` feeds EditThingPage's load fetch and PATCH save.
-function setApi({ collection = {}, thing = {} } = {}) {
+// `patch` stands in for the server's answer to a save: a response object, or an Error
+// the request rejects with.
+function setApi({ collection = {}, thing = {}, patch } = {}) {
   apiFetch.mockImplementation((url, opts = {}) => {
     const method = opts.method || 'GET';
+    if (patch && method === 'PATCH')
+      return patch instanceof Error ? Promise.reject(patch) : Promise.resolve(patch);
     if (url === '/api/v1/things/' && method === 'POST')
       return Promise.resolve(mockResponse({ code: 'NEW001' }));
     if (/\/collections\/[^/]+\//.test(url)) return Promise.resolve(mockResponse(collection));
@@ -724,6 +730,77 @@ describe('EditThingPage — what a save sends', () => {
     // A loan's availability is live, from the calendar: the static hint is cleared.
     expect(patch().availability).toBe('');
     expect(patch()).not.toHaveProperty('type');
+  });
+
+  describe('when the save is refused', () => {
+    const refusal = (status, body) => ({ ok: false, status, json: () => Promise.resolve(body) });
+
+    const typeNewTitle = async (patchAnswer) => {
+      const { container } = renderEdit({ thing: sale, patch: patchAnswer });
+      await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
+      const title = container.querySelector('#edit-thing-headline');
+      fireEvent.change(title, { target: { value: 'Red bike' } });
+      return title;
+    };
+
+    const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    const expectStayedWithWhatWasTyped = (title) => {
+      expect(screen.queryByTestId('navigated')).toBeNull();
+      expect(title).toHaveValue('Red bike');
+    };
+
+    test('a refusal the server coded is said in the reader’s language, not in its English', async () => {
+      const title = await typeNewTitle(
+        refusal(400, { type: ['This group doesn’t take prices.'], code: 'no_prices_here' })
+      );
+
+      save();
+
+      expect(await screen.findByText(en.requestErrors.no_prices_here)).toBeInTheDocument();
+      expect(screen.queryByText('This group doesn’t take prices.')).toBeNull();
+      expectStayedWithWhatWasTyped(title);
+    });
+
+    test('a refusal without a code shows the server’s reason', async () => {
+      const title = await typeNewTitle(refusal(400, { fee: ['Price must be positive.'] }));
+
+      save();
+
+      expect(await screen.findByText('Price must be positive.')).toBeInTheDocument();
+      expectStayedWithWhatWasTyped(title);
+    });
+
+    test('a rate-limited save says "too many attempts", not that the form is wrong', async () => {
+      const title = await typeNewTitle(refusal(429, {}));
+
+      save();
+
+      expect(await screen.findByText(en.common.tooManyAttempts)).toBeInTheDocument();
+      expectStayedWithWhatWasTyped(title);
+    });
+
+    test('a request that fails says the connection is down', async () => {
+      const title = await typeNewTitle(new Error('network down'));
+
+      save();
+
+      expect(await screen.findByText(en.common.connectionError)).toBeInTheDocument();
+      expectStayedWithWhatWasTyped(title);
+    });
+  });
+
+  test('a title of only spaces sends nothing and asks for one', async () => {
+    const { container } = renderEdit({ thing: sale });
+    await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
+    const title = container.querySelector('#edit-thing-headline');
+    fireEvent.change(title, { target: { value: '   ' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(en.addThing.titleRequired)).toBeInTheDocument();
+    expect(patch()).toBeUndefined();
+    expect(screen.queryByTestId('navigated')).toBeNull();
   });
 });
 
