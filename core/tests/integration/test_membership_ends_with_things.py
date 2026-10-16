@@ -13,7 +13,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import BookingPeriod, Collection, Event, Thing, User
+from core.models import BookingPeriod, Collection, Event, InAppNotification, Thing, User
 
 LEAVE = "/api/v1/collections/{code}/leave/"
 INVITE = "/api/v1/collections/{code}/invite/"
@@ -120,6 +120,20 @@ class TestAMemberWhoLeaves:
 
         assert response.status_code == 200
         assert response.data["things_deleted"] == 0
+
+    @pytest.mark.parametrize("how_many", [0, 2])
+    def test_the_founders_notice_carries_how_many_things_went(
+        self, group, founder, member, how_many
+    ):
+        for i in range(how_many):
+            make_thing(group, member, f"MINE0{i}")
+
+        client_for(member).post(LEAVE.format(code=group.code), format="json")
+
+        notice = InAppNotification.objects.get(
+            user=founder, type=InAppNotification.Type.MEMBER_LEFT
+        )
+        assert notice.payload["things_deleted"] == how_many
 
     def test_each_removed_thing_is_logged_with_the_member_as_actor(self, group, member):
         make_thing(group, member, "MINE01")

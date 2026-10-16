@@ -621,6 +621,7 @@ class CollectionLeaveView(APIView):
                 "collection_headline": collection.headline,
                 "member_name": request.user.display_name,
                 "collection_code": collection.code,
+                "things_deleted": things_deleted,
             },
         )
 

@@ -264,6 +264,8 @@
     "viewThing": "Ver publicación",
     "memberLeftLabel": "Alguien ha dejado el grupo",
     "memberLeftBody": "{{member_name}} ha dejado “{{collection_headline}}”.",
+    "memberLeftThings_one": "Su cosa en él se ha borrado con su salida.",
+    "memberLeftThings_other": "Sus {{count}} cosas en él se han borrado con su salida.",
     "proposedLabel": "Te recomiendan a alguien",
     "proposedBody": "{{proposer_name}} propone invitar a {{email}} a “{{collection_headline}}”. No se ha contactado con nadie: la decisión es tuya.",
     "proposalApprovedLabel": "Tu recomendación ha salido adelante",
