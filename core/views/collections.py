@@ -66,6 +66,7 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
+from core.services.membership_service import end_membership
 from core.services.team import drop_team_notices_of
 from core.utils import redact_email
 from core.validators import SafeHeadlineField
@@ -378,12 +379,7 @@ class CollectionInviteView(APIView):
 
         if invited_user:
             was_co_owner = collection.co_owners.filter(code=invited_user.code).exists()
-            collection.invites.remove(invited_user)
-            # co_owners is a subset of invites by construction (promotion, never
-            # a separate door in) — losing membership must never leave a stale
-            # co-owner row behind. Unconditional and idempotent: a no-op for
-            # anyone who was never promoted.
-            collection.co_owners.remove(invited_user)
+            things_deleted = end_membership(collection, invited_user, actor=request.user)
             if was_co_owner:
                 # They stopped running the group: the requests and reservations it
                 # sent them to decide are no longer theirs (same as a demotion).
@@ -408,6 +404,7 @@ class CollectionInviteView(APIView):
                 {
                     "message": "User removed from collection",
                     "user_code": user_code,
+                    "things_deleted": things_deleted,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -608,7 +605,7 @@ class CollectionLeaveView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        collection.invites.remove(request.user)
+        things_deleted = end_membership(collection, request.user, actor=request.user)
         Event.log(Event.Kind.MEMBER_LEFT, actor=request.user, collection=collection)
 
         # Let the owner know a member left (in-app; symmetric to the revoke notice).
@@ -623,7 +620,7 @@ class CollectionLeaveView(APIView):
         )
 
         return Response(
-            {"message": "You have left the collection"},
+            {"message": "You have left the collection", "things_deleted": things_deleted},
             status=status.HTTP_200_OK,
         )
 
