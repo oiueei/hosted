@@ -4,6 +4,7 @@ import { vi, describe, test, expect, afterEach } from 'vitest';
 import i18n from 'i18next';
 
 import '../testI18n';
+import { switchLanguage } from '../../test/settle';
 
 // Mock the shared join page down to just its children, so this test pins the
 // WIRING (PopInPage hands MagicLinkJoinPage a /faq link) independently of the
@@ -68,7 +69,7 @@ describe('PopInPage', () => {
 
 describe('PopInPage — the FAQ button reads as the question alone, in every language', () => {
   afterEach(async () => {
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
   });
 
   test.each([
@@ -76,7 +77,7 @@ describe('PopInPage — the FAQ button reads as the question alone, in every lan
     ['es', 'Preguntas frecuentes'],
     ['ca', 'Preguntes freqüents'],
   ])('in %s it reads "%s", with no arrow', async (language, label) => {
-    await i18n.changeLanguage(language);
+    await switchLanguage(i18n, language);
     render(
       <MemoryRouter>
         <PopInPage />

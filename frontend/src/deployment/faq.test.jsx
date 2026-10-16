@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import i18n from 'i18next';
 
 import './testI18n';
+import { settle, switchLanguage, press } from '../test/settle';
 import App from '../App';
 import { loadFaqEntries } from './faq';
 import faqEs from './faq/es';
@@ -65,7 +66,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  await i18n.changeLanguage('en');
+  await switchLanguage(i18n, 'en');
 });
 
 describe('the app serves the help page', () => {
@@ -74,15 +75,17 @@ describe('the app serves the help page', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: faqEn[0].q, level: 2 })).toBeInTheDocument();
+    await settle(globalThis.fetch);
     await waitFor(() => expect(document.title).toMatch(/frequently asked questions/i));
   });
 
   test('a Catalan reader gets the Catalan answers, not the English ones', async () => {
-    await i18n.changeLanguage('ca');
+    await switchLanguage(i18n, 'ca');
     window.history.pushState({}, '', '/faq');
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: faqCa[0].q, level: 2 })).toBeInTheDocument();
+    await settle(globalThis.fetch);
     expect(screen.queryByRole('heading', { name: faqEn[0].q, level: 2 })).toBeNull();
   });
 
@@ -91,6 +94,7 @@ describe('the app serves the help page', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: faqEn[0].q, level: 2 });
+    await settle(globalThis.fetch);
 
     for (const entry of faqEn) {
       const heading = document.getElementById(entry.id);
@@ -105,6 +109,7 @@ describe('the app serves the help page', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: faqEn[0].q, level: 2 });
+    await settle(globalThis.fetch);
 
     // `MarkdownText` opens every anchor it renders in a new tab, which is why
     // these live in their own field. If one ever migrates into the Markdown,
@@ -123,6 +128,7 @@ describe('the app serves the help page', () => {
     const { container } = render(<App />);
 
     await screen.findByRole('heading', { name: faqEn[0].q, level: 2 });
+    await settle(globalThis.fetch);
 
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -199,11 +205,12 @@ describe('the question about getting in touch', () => {
   test.each(LANGUAGES)(
     '%s: the page shows it as the next section after "reservas"',
     async (lang, entries) => {
-      await i18n.changeLanguage(lang);
+      await switchLanguage(i18n, lang);
       window.history.pushState({}, '', '/faq');
       render(<App />);
 
       await screen.findByRole('heading', { name: entries[0].q, level: 2 });
+      await settle(globalThis.fetch);
 
       const ids = Array.from(document.querySelectorAll('h2[id]')).map((heading) => heading.id);
       expect(ids.indexOf('contacto')).toBe(ids.indexOf('reservas') + 1);
@@ -225,6 +232,7 @@ describe('the ways in', () => {
     render(<App />);
 
     await waitFor(() => expect(document.querySelector('a[href="/faq"]')).not.toBeNull());
+    await settle(globalThis.fetch);
   });
 
   test('/welcome offers it, where somebody already inside asks', async () => {
@@ -232,6 +240,7 @@ describe('the ways in', () => {
     render(<App />);
 
     await waitFor(() => expect(document.querySelector('a[href="/faq"]')).not.toBeNull());
+    await settle(globalThis.fetch);
   });
 
   test('/legal offers it, and says which of the two is binding', async () => {
@@ -247,8 +256,10 @@ describe('the ways in', () => {
       return found;
     });
     expect(link.getAttribute('target')).toBeNull();
+    await settle(globalThis.fetch);
 
-    fireEvent.click(link);
+    await press(link);
+    await settle(globalThis.fetch);
     await waitFor(() => expect(window.location.pathname).toBe('/faq'));
   });
 });
