@@ -606,3 +606,64 @@ class TestTheMondayEmailReadsWhatTheSeriesReads:
         assert _row(sections, self.DOORS, "Owner invite") == "1 (1 in 30d)"
         # The phantom's and the character's joins, both through a share link, are out.
         assert _row(sections, self.DOORS, "Share link / QR") == "0 (0 in 30d)"
+
+
+DEVICES = "Devices (last week)"
+
+
+def _count(day, device, metric, count):
+    from core.models import DeviceDay
+
+    DeviceDay.objects.create(date=day, device=device, metric=metric, count=count)
+
+
+@pytest.mark.django_db
+class TestTheDevicesSection:
+    """The Monday email says how much of last week came from a phone."""
+
+    # Wednesday of ISO week 43: the last closed week is 42 (12–18 Oct).
+    NOW = "2026-10-21 12:00"
+
+    def test_last_closed_week_shows_its_sums_and_the_share_of_mobile(self):
+        _count(date(2026, 10, 13), "MOBILE", "PEOPLE", 30)
+        _count(date(2026, 10, 14), "MOBILE", "PEOPLE", 11)
+        _count(date(2026, 10, 14), "OTHER", "PEOPLE", 9)
+        _count(date(2026, 10, 15), "MOBILE", "FORM_SAVES", 3)
+        _count(date(2026, 10, 15), "OTHER", "FORM_SAVES", 11)
+        with time_machine.travel(self.NOW, tick=False):
+            sections = build_report()
+
+        assert _row(sections, DEVICES, "People (mobile / other)") == "41 / 9 (82 %)"
+        assert _row(sections, DEVICES, "Form saves (mobile / other)") == "3 / 11 (21 %)"
+        assert "2026-W42" in _section(sections, DEVICES)["note"]
+
+    def test_a_week_with_nothing_shows_zeros_and_a_dash(self):
+        with time_machine.travel(self.NOW, tick=False):
+            sections = build_report()
+
+        assert _row(sections, DEVICES, "People (mobile / other)") == "0 / 0 (—)"
+        assert _row(sections, DEVICES, "Form saves (mobile / other)") == "0 / 0 (—)"
+
+    def test_a_row_from_another_week_does_not_come_in(self):
+        _count(date(2026, 10, 7), "MOBILE", "PEOPLE", 99)  # W41
+        _count(date(2026, 10, 20), "MOBILE", "PEOPLE", 77)  # W43, still running
+        with time_machine.travel(self.NOW, tick=False):
+            sections = build_report()
+
+        assert _row(sections, DEVICES, "People (mobile / other)") == "0 / 0 (—)"
+
+    def test_it_sits_before_the_demo_funnel(self):
+        with time_machine.travel(self.NOW, tick=False):
+            titles = _titles(build_report())
+        assert titles.index(DEVICES) < titles.index("Demo funnel (NOT real metrics)")
+
+    def test_the_monday_email_carries_it_in_text_and_html(self, monkeypatch):
+        monkeypatch.setenv("STATS_EMAIL", "ops@your-domain.test")
+        _count(date(2026, 10, 14), "MOBILE", "PEOPLE", 4)
+        with time_machine.travel(self.NOW, tick=False):
+            call_command("stats_summary", "--email", stdout=StringIO())
+
+        message = mail.outbox[-1]
+        assert DEVICES in message.body
+        assert "4 / 0 (100 %)" in message.body
+        assert DEVICES in message.alternatives[0][0]

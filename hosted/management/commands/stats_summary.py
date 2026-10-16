@@ -25,6 +25,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Count, Min, Q
 from django.utils import timezone
 
+from core.management.commands.device_share import _cell, weekly_device_share
 from core.management.commands.seed_data.common import USERS as _SEED_USERS
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
 from hosted.emails import send_stats_summary_email
@@ -155,6 +156,7 @@ def build_report():
         _evolution_section(),
         _cycle_section(now),
         _phases_section(),
+        _devices_section(),
         _demo_section(demo, demo_collections),
     ]
     return sections
@@ -563,6 +565,24 @@ def _phases_section():
             )
         )
     return {"title": "By phase", "rows": rows}
+
+
+def _devices_section():
+    """How much of the last closed ISO week came from a phone — numbers only.
+
+    Reads ``DeviceDay`` through core's own ``weekly_device_share`` (the same sums and
+    percentages as ``manage.py device_share``). The question it answers is where
+    collections and things get saved, so form saves sit next to the people.
+    """
+    week = weekly_device_share(2)[0]  # [last closed week, the one running]
+    return {
+        "title": "Devices (last week)",
+        "rows": [
+            ("People (mobile / other)", _cell(week, "people")),
+            ("Form saves (mobile / other)", _cell(week, "form_saves")),
+        ],
+        "note": f"ISO week {week['week']}; a tablet counts as other",
+    }
 
 
 def _demo_section(demo, demo_collections):
