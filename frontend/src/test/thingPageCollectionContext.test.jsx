@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, act } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -93,7 +93,7 @@ describe('ThingPage reads a thing through the collection in its URL', () => {
     const router = mountAt('/collections/COL001/things/THG001');
     await waitFor(() => expect(calledUrls()).toContain('/api/v1/things/THG001/?collection=COL001'));
 
-    await router.navigate('/collections/COL002/things/THG001');
+    await act(() => router.navigate('/collections/COL002/things/THG001'));
 
     await waitFor(() => expect(calledUrls()).toContain('/api/v1/things/THG001/?collection=COL002'));
   });
@@ -101,7 +101,7 @@ describe('ThingPage reads a thing through the collection in its URL', () => {
   test('the transfers fetch never carries the parameter', async () => {
     const router = mountAt('/collections/COL001/things/THG001');
     await waitFor(() => expect(calledUrls()).toContain('/api/v1/things/THG001/?collection=COL001'));
-    await router.navigate('/collections/COL002/things/THG001');
+    await act(() => router.navigate('/collections/COL002/things/THG001'));
     await waitFor(() => expect(calledUrls()).toContain('/api/v1/things/THG001/?collection=COL002'));
 
     const transferUrls = calledUrls().filter((url) => url.includes('/transfers/'));

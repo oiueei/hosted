@@ -10,6 +10,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function DeleteCollectionPage() {
   const { t } = useTranslation();
@@ -37,11 +38,11 @@ export default function DeleteCollectionPage() {
   const error = failedCode === code;
   useCollectionLanguage(collection?.language, [collection?.headline]);
 
-  useEffect(() => {
-    document.title = collection
+  useDocumentTitle(
+    collection
       ? t('titles.deleteCollection', { headline: L(collection.headline) })
-      : t('titles.deleteCollectionDefault');
-  }, [collection, t, L]);
+      : t('titles.deleteCollectionDefault')
+  );
 
   useEffect(() => {
     if (!userCode) return;

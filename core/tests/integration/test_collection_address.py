@@ -102,7 +102,11 @@ class TestTheRedirect:
 
     @pytest.mark.parametrize("path", ["/new", "/stall", "/library", "/shed", "/stall/new"])
     def test_the_spas_own_routes_are_served(self, built, db, path):
-        assert _get(path).status_code == 200
+        res = _get(path)
+
+        assert res.status_code == 200
+        assert b"<title>OIUEEI</title>" in res.content
+        assert not res.has_header("Location")
 
     def test_a_redirect_does_not_need_the_frontend_built(self, tmp_path, owner):
         _group(owner, "LIBRARY")

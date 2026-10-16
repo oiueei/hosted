@@ -176,7 +176,7 @@
     "tryAnotherEmail": "Prova amb un altre correu",
     "magicLinkSent": "Si aquest correu està registrat, l'enllaç màgic ja és en camí — revisa la safata d'entrada i, per si de cas, la carpeta de correu brossa.",
     "errorSendingLink": "Error en enviar l'enllaç.",
-    "pitch": "Comparteix el que tens amb la gent que t'envolta. Crea una col·lecció de coses per regalar, vendre, llogar, deixar o reservar — i convida la gent a conèixer-les i demanar-les.",
+    "pitch": "Comparteix el que tens amb la gent que t'envolta: una paradeta per regalar o vendre, una biblioteca de les coses per prestar o llogar, un taller per reservar per dies o per hores. Després, convida la teva gent a demanar el que necessiti.",
     "nextNotice": "Entra i et portem directament a la pàgina que anaves a obrir.",
     "licence": "El codi d'OIUEEI és obert, sota la llicència EUPL-1.2, un copyleft fort. El projecte viu a <1>GitHub</1>: idees, propostes i col·laboració, allà.",
     "noBanner": "No veuràs cap bàner de galetes: no hi ha res a consentir. Ni publicitat, ni analítica, ni codi de tercers executant-se al teu navegador — i no cal que et refiïs de la meva paraula, <1>ho pots comprovar</1>.",
@@ -311,7 +311,9 @@
     "showMoreThings_other": "Veure {{count}} coses més",
     "visitorJoin": "Unir-me al grup",
     "visitorJoinError": "No hem pogut afegir-te al grup. Torna-ho a provar.",
-    "welcomeDoc": "Document de benvinguda del grup (PDF)"
+    "welcomeDoc": "Document de benvinguda del grup (PDF)",
+    "noOpeningHoursLabel": "Encara no es pot reservar",
+    "noOpeningHoursBody": "Aquest taller es reserva per hores i no té horari. Afegeix-lo a Editar col·lecció, a «Més opcions»."
   },
   "digestMute": {
     "pageTitle": "Resums per correu — OIUEEI",
@@ -331,7 +333,6 @@
     "availabilityLabel": "Disponibilitat.",
     "locationLabel": "Ubicació.",
     "conditionLabel": "Estat.",
-    "photos": "Fotos",
     "faqHeading": "Preguntes o comentaris?",
     "faqPlaceholder": "Escriu la teva pregunta aquí...",
     "faqLabel": "Pregunta",
@@ -677,7 +678,6 @@
     "myCollections": "Les meves col·leccions",
     "inactiveCollections": "Col·leccions inactives",
     "sharedWithMe": "Compartides amb mi",
-    "collectionInfo": "{{things}} coses · {{guests}} membres",
     "viewCollection": "Veure {{headline}}",
     "loadingCollections": "Carregant col·leccions...",
     "noCollections": "Encara no tens col·leccions actives.",
@@ -695,7 +695,11 @@
     "myGroupsIntro": "Tots els grups on ets, també els que dinamitzes. Si en deixes un, en perds l'accés.",
     "youRunIt": "El dinamitzes",
     "colGroup": "Grup",
-    "colTeam": "Dinamització"
+    "colTeam": "Dinamització",
+    "thingsCount_one": "{{count}} cosa",
+    "thingsCount_other": "{{count}} coses",
+    "membersCount_one": "{{count}} membre",
+    "membersCount_other": "{{count}} membres"
   },
   "koro": {
     "basic": "Bàsic",
@@ -787,7 +791,6 @@
     "newsLabel": "Notícies i anuncis (opcional)",
     "newsHelper": "Un resum de les novetats de cada grup on ets. Pots desactivar el d'un grup concret des de la pàgina de la col·lecció, o des del peu del mateix correu.",
     "saved": "Preferències desades.",
-    "errorLoading": "Error en carregar les preferències.",
     "errorSaving": "Error en desar.",
     "invalidLink": "Aquest enllaç no és vàlid o ha caducat. Inicia sessió per canviar les teves preferències."
   },
@@ -813,7 +816,9 @@
     "whatsapp": "WhatsApp",
     "emailSubject": "T'invito a {{headline}} a OIUEEI",
     "emailBody": "Hola,\n\nT'invito a \"{{headline}}\" a OIUEEI, on un grup comparteix les seves coses entre els seus membres.\n\nPots unir-t'hi aquí: {{url}}",
+    "emailBodyKind": "Hola,\n\nT'invito a \"{{headline}}\", {{kind}} a OIUEEI, on un grup comparteix les seves coses entre els seus membres.\n\nPots unir-t'hi aquí: {{url}}",
     "whatsappText": "T'invito a \"{{headline}}\" a OIUEEI, on un grup comparteix les seves coses entre els seus membres: {{url}}",
+    "whatsappTextKind": "T'invito a \"{{headline}}\", {{kind}} a OIUEEI, on un grup comparteix les seves coses entre els seus membres: {{url}}",
     "copied": "Enllaç copiat al porta-retalls.",
     "copyError": "No hem pogut copiar l'enllaç. Torna-ho a provar o fes servir una altra opció.",
     "linkError": "No hem pogut generar l'enllaç. Torna-ho a provar.",
@@ -1048,6 +1053,7 @@
     "helper": "En JSON: una clau per dia de la setmana (\"0\" dilluns … \"6\" diumenge), cadascuna amb una llista de trams [\"HH:MM\",\"HH:MM\"] — p. ex. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deixa un dia fora, o posa-hi una llista buida, perquè quedi tancat.",
     "invalidJson": "Això no és JSON vàlid — revisa les claus i les cometes.",
     "invalidOnSave": "No s'ha desat res: l'horari setmanal (a «Més opcions») no és JSON vàlid. Corregeix-lo i torna a desar.",
+    "noneOpen": "Sense horari, ningú no pot reservar: afegeix almenys un tram.",
     "previewLabel": "Es llegeix així:",
     "closed": "tancat"
   },
@@ -1075,9 +1081,11 @@
     "co_owners_full_one": "La dinamització d'aquest grup ja suma 1 persona a més de qui el va crear: és el màxim que permet.",
     "co_owners_full_other": "La dinamització d'aquest grup ja suma {{count}} persones a més de qui el va crear: és el màxim que permet.",
     "dates_taken": "Aquestes dates ja estan agafades.",
+    "no_prices_here": "Aquest grup no admet preus.",
     "not_a_member": "Has de ser membre d'aquest grup per reservar.",
     "not_available": "Ara mateix no està disponible.",
     "not_awaiting_return": "Això ja no està pendent de retorn.",
+    "priced_things_remain": "Algunes coses d'aquest grup tenen preu. Treu-los-el o retira-les abans de treure als membres l'opció de posar preu.",
     "rental_length_not_allowed": "Aquesta col·lecció només permet períodes de {{allowed}} dies.",
     "rental_pickup_weekday": "Aquest dia de la setmana no es pot recollir.",
     "rental_return_weekday": "Aquest dia de la setmana no es pot retornar.",
@@ -1113,22 +1121,26 @@
     "time_taken": "Aquesta hora ja està agafada."
   },
   "kinds": {
+    "chooseIntro": "Tria per a què són les teves coses. El tipus no es pot canviar després.",
     "STALL": {
       "short": "Paradeta",
       "long": "Paradeta",
-      "what": "Coses per vendre o regalar",
+      "what": "Coses per vendre o regalar: qui se l'emporta, se la queda.",
+      "withArticle": "una paradeta",
       "create": "Crear paradeta"
     },
     "LIBRARY": {
       "short": "Biblioteca",
       "long": "Biblioteca de les coses",
-      "what": "Coses per prestar o llogar",
+      "what": "Coses per prestar o llogar: se les emporten a casa i les tornen.",
+      "withArticle": "una biblioteca de les coses",
       "create": "Crear biblioteca"
     },
     "SHED": {
       "short": "Taller",
       "long": "Taller de màquines",
-      "what": "Coses per reservar per dies o per hores",
+      "what": "Màquines i espais que es fan servir on són, amb reserva per dies o per hores.",
+      "withArticle": "un taller de màquines",
       "create": "Crear taller"
     }
   },

@@ -30,6 +30,7 @@ import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useDigestPreference from '../hooks/useDigestPreference';
 import { useCanonicalCollectionPath } from '../hooks/useCollectionBase';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function ThingPage() {
   const { code, thingCode } = useParams();
@@ -46,9 +47,7 @@ export default function ThingPage() {
   const L = useLocalized();
   const headline = L(thing?.headline);
   useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
-  useEffect(() => {
-    document.title = thing ? t('titles.thing', { headline }) : t('titles.thingDefault');
-  }, [thing, headline, t]);
+  useDocumentTitle(thing ? t('titles.thing', { headline }) : t('titles.thingDefault'));
 
   // The collection menu of the corner, when this page is read through a collection:
   // the same one the collection's own page has — a curator's

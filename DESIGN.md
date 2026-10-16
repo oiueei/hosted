@@ -206,7 +206,7 @@ Note: the "columns" here are OIUEEI card-grid columns (`things-grid` and any fut
 
 - Write CSS **mobile-first**: start with the xs (1-column) layout as the default, then use `@media (min-width: ...)` to add columns progressively.
 - Use only these three `min-width` values in media queries: `768px`, `992px`, `1248px`. Never use `576px`, `480px`, `944px`, or any other ad-hoc value. `max-width: 767px` is also acceptable for mobile-only overrides.
-- Card grids (`things-grid` and any future card grid) follow the OIUEEI column progression: 1 → 2 → 3 → 4. `collections-grid` is the standing exception — see the note above the table.
+- Card grids (`things-grid` and any future card grid) follow the OIUEEI column progression: 1 → 2 → 3 → 4. `collections-grid` and `.kind-cards` are the two exceptions: the first for the reason in the note above the table, the second because it holds three cards — one column, then three in a row from 992px, with no two-column step, which would leave a single card alone on a second row.
 - The `page-container` and `form-hero-content` max-width is `1248px` (matching breakpoint-xl total width).
 
 **When writing a new layout:** start at 1 column, add `min-width: 768px` for 2 columns, `min-width: 992px` for 3, `min-width: 1248px` for 4. Never design desktop-first and collapse downward.

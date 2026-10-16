@@ -9,8 +9,10 @@ collection cannot be told from a code that does not exist.
 
 import pytest
 from django.test import Client, override_settings
+from django.utils.html import escape
 
 from core.models import Collection, Thing, User
+from core.services.email_texts import T
 from core.services.link_preview import inject_preview, plain_description
 
 HEAD = "<!doctype html><html><head><title>OIUEEI</title></head><body></body></html>"
@@ -52,6 +54,7 @@ def _body(path):
 
 
 def _neutral():
+    """The site's card: what a page with no preview of its own is answered with."""
     return _body("/me")
 
 
@@ -93,12 +96,30 @@ class TestACollection:
         assert "<title>The street — OIUEEI</title>" in _body("/stall/PUB001/join")
         assert "<title>The street — OIUEEI</title>" in _body("/stall/PUB001/join/")
 
-    def test_a_description_less_collection_has_no_description_tags(self, built, owner):
-        _collection(owner, description="")
+    @pytest.mark.parametrize("kind", ["STALL", "LIBRARY", "SHED"])
+    def test_a_description_less_collection_is_described_by_its_kind(self, built, owner, kind):
+        _collection(owner, description="", kind=kind)
+        sentence = T(f"kind_what_{kind}", "en")
 
-        body = _body("/stall/PUB001")
+        body = _body(f"/{kind.lower()}/PUB001")
 
-        assert "description" not in body
+        assert f'<meta property="og:description" content="{escape(sentence)}">' in body
+        assert f'<meta name="description" content="{escape(sentence)}">' in body
+
+    def test_the_sentence_of_the_kind_speaks_the_collections_language(self, built, owner):
+        _collection(owner, description="", kind="LIBRARY", language="es")
+
+        body = _body("/library/PUB001")
+
+        assert f'content="{escape(T("kind_what_LIBRARY", "es"))}"' in body
+
+    def test_with_a_description_of_its_own_the_kind_says_nothing(self, built, owner):
+        _collection(owner, kind="LIBRARY")
+
+        body = _body("/library/PUB001")
+
+        assert '<meta name="description" content="Things we share">' in body
+        assert T("kind_what_LIBRARY", "en") not in body
 
     @pytest.mark.parametrize(
         "language,expected",
@@ -110,19 +131,79 @@ class TestACollection:
         assert f"<title>{expected} — OIUEEI</title>" in _body("/stall/PUB001")
 
 
-class TestWhatAStrangerCannotSee:
-    def test_a_private_collection_is_the_untouched_page(self, built, owner):
+class TestAShareLinkWithNoDescription:
+    def test_it_is_described_by_its_kind_and_carries_no_photo(self, built, owner):
+        _collection(
+            owner, description="", kind="SHED", share_token=TOKEN, thumbnail="oiueei/u/cover.webp"
+        )
+
+        body = _body(f"/share/{TOKEN}")
+
+        assert f'<meta name="description" content="{escape(T("kind_what_SHED", "en"))}">' in body
+        assert "og:image" not in body
+
+
+class TestEveryOtherPageCarriesTheSitesCard:
+    """A page with no preview of its own is not left bare: whoever shares the
+    address of the instance (`/`, `/login`) gets a card that says what OIUEEI is."""
+
+    @pytest.mark.parametrize("path", ["/", "/login", "/me"])
+    def test_the_front_door_and_the_other_pages_say_what_oiueei_is(self, built, db, path):
+        body = _body(path)
+
+        pitch = escape(T("generic_parent_pitch", "en"))
+        assert f'<meta property="og:description" content="{pitch}">' in body
+        assert f'<meta name="description" content="{pitch}">' in body
+        assert '<meta property="og:title" content="OIUEEI">' in body
+        assert "<title>OIUEEI</title>" in body
+        assert "og:image" not in body
+
+    @override_settings(EMAIL_LANGUAGE="es")
+    def test_it_speaks_the_deployments_language(self, built, db):
+        body = _body("/login")
+
+        assert f'content="{escape(T("generic_parent_pitch", "es"))}"' in body
+
+    def test_it_asks_the_database_nothing(self, built, django_assert_num_queries):
+        with django_assert_num_queries(0):
+            Client().get("/login")
+
+    def test_a_private_collection_and_a_code_that_names_nothing_are_the_same_answer(
+        self, built, owner
+    ):
         _collection(owner, visibility=Collection.Visibility.PRIVATE)
 
-        assert _body("/stall/PUB001") == _neutral() == HEAD
-        assert _body("/stall/PUB001/join") == HEAD
+        assert _body("/stall/PUB001") == _body("/stall/NOPE00")
+        assert _body("/stall/PUB001").count("og:title") == 1
 
-    def test_an_inactive_public_collection_is_the_untouched_page(self, built, owner):
+    def test_a_private_thing_and_a_share_link_that_name_nothing_are_too(self, built, owner):
+        group = _collection(owner, visibility=Collection.Visibility.PRIVATE)
+        _thing(owner, group)
+
+        assert _body("/things/THG001") == _body("/things/NOPE00")
+        assert _body("/share/nope") == _body("/login")
+
+
+class TestWhatAStrangerCannotSee:
+    def test_a_private_collection_gets_the_same_page_as_a_code_that_names_nothing(
+        self, built, owner
+    ):
+        _collection(owner, visibility=Collection.Visibility.PRIVATE)
+
+        # The same bytes as a code that names nothing: not a hint of the group.
+        assert _body("/stall/PUB001") == _body("/stall/NOPE00") == _neutral()
+        assert _body("/stall/PUB001/join") == _body("/stall/NOPE00/join")
+        assert "The street" not in _body("/stall/PUB001")
+        assert "Things we share" not in _body("/stall/PUB001")
+
+    def test_an_inactive_public_collection_gets_the_same_page_as_a_neutral_route(
+        self, built, owner
+    ):
         _collection(owner, status=Collection.Status.INACTIVE)
 
         assert _body("/stall/PUB001") == _neutral()
 
-    def test_an_unknown_code_is_the_untouched_page(self, built, db):
+    def test_an_unknown_code_gets_the_sites_card(self, built, db):
         assert _body("/collections/NOPE00") == _neutral()
         assert _body("/things/NOPE00") == _neutral()
         assert _body("/share/nope") == _neutral()
@@ -142,7 +223,7 @@ class TestEveryKindHasItsOwnPrefix:
         assert "<title>Drill — OIUEEI</title>" in _body(f"/{prefix}/PUB001/things/THG001")
 
     @pytest.mark.parametrize("kind", ["STALL", "LIBRARY", "SHED"])
-    def test_a_private_one_is_the_untouched_page_under_every_prefix(self, built, owner, kind):
+    def test_a_private_one_gets_the_sites_card_under_every_prefix(self, built, owner, kind):
         _collection(owner, kind=kind, visibility=Collection.Visibility.PRIVATE)
 
         assert _body(f"/{kind.lower()}/PUB001") == _neutral()
@@ -164,13 +245,13 @@ class TestAThing:
             assert "<title>Trepant — OIUEEI</title>" in body, path
             assert '<meta property="og:title" content="Trepant">' in body, path
 
-    def test_an_inactive_thing_is_the_untouched_page(self, built, owner):
+    def test_an_inactive_thing_gets_the_sites_card(self, built, owner):
         _thing(owner, _collection(owner), status=Thing.Status.INACTIVE)
 
         assert _body("/things/THG001") == _neutral()
         assert _body("/stall/PUB001/things/THG001") == _neutral()
 
-    def test_a_thing_of_a_private_collection_is_the_untouched_page(self, built, owner):
+    def test_a_thing_of_a_private_collection_gets_the_sites_card(self, built, owner):
         _thing(owner, _collection(owner, visibility=Collection.Visibility.PRIVATE))
 
         assert _body("/things/THG001") == _neutral()
@@ -198,7 +279,7 @@ class TestAShareLink:
         assert "og:image" not in body
         assert "summary_large_image" not in body
 
-    def test_a_revoked_or_unknown_token_or_an_inactive_group_is_the_untouched_page(
+    def test_a_revoked_or_unknown_token_or_an_inactive_group_gets_the_sites_card(
         self, built, owner
     ):
         _collection(owner, code="REV001", share_token=None)

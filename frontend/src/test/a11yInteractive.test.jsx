@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import InfoPopover from '../components/InfoPopover';
 import InlineConfirm from '../components/InlineConfirm';
+import { settle } from './settle';
 
 expect.extend(toHaveNoViolations);
 window.scrollTo = vi.fn();
@@ -134,6 +135,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     const { container } = renderCollection();
     // Wait for the thing card to render (ThingLinkbox — never scanned by smoke).
     await screen.findByText('Test Thing');
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -180,6 +182,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send a message to members' }));
     await waitFor(() => expect(container.querySelector('#broadcast-message')).toBeTruthy());
 
+    await settle(apiFetch);
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 
@@ -190,8 +193,10 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     fireEvent.click(screen.getByRole('combobox', { name: /Share collection/ }));
     fireEvent.click(await screen.findByRole('option', { name: 'QR code' }));
 
-    // The Dialog renders in a portal on document.body.
-    await waitFor(() => expect(document.querySelector('.share-qr-code')).toBeTruthy());
+    // The Dialog renders in a portal on document.body, and the code itself is a
+    // lazy chunk: wait for the drawing, not for the box that will hold it.
+    await waitFor(() => expect(document.querySelector('.share-qr-code svg')).toBeTruthy());
+    await settle(apiFetch);
     expect(await axe(document.body, NO_REGION)).toHaveNoViolations();
   });
 
@@ -209,6 +214,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     // panel's mark of being open.
     await screen.findByRole('button', { name: /Download the stats/ });
 
+    await settle(apiFetch);
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 
@@ -237,6 +243,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
     await screen.findByRole('button', { name: 'Mute the summary' });
 
+    await settle(apiFetch);
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 
@@ -267,6 +274,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Invite someone' }));
       await screen.findByLabelText(/Their email/i);
 
+      await settle(apiFetch);
       expect(await axe(container, NO_REGION)).toHaveNoViolations();
     } finally {
       apiFetch.mockImplementation(original);
@@ -293,6 +301,7 @@ describe('shared disclosure widgets — opened-state a11y', () => {
     fireEvent.click(screen.getByRole('button', { name: 'CSV format' }));
     await screen.findByText('One row per thing.');
 
+    await settle(apiFetch);
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 
@@ -310,6 +319,7 @@ describe('shared disclosure widgets — opened-state a11y', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Report this listing' }));
     await screen.findByText('The owner is told, and a moderator reads it.');
 
+    await settle(apiFetch);
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
   });
 });
@@ -413,6 +423,7 @@ describe('RequestThingPage — interactive a11y', () => {
     const { container } = renderRequest('LND01');
     await screen.findByText('Request: Lent Bike');
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -421,6 +432,7 @@ describe('RequestThingPage — interactive a11y', () => {
     const { container } = renderRequest('RSV01');
     await screen.findByText('Reserve Sala polivalent');
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -435,6 +447,7 @@ describe('RequestThingPage — interactive a11y', () => {
     fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
     await screen.findByRole('radio', { name: '10:00' });
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -462,6 +475,7 @@ describe('RequestThingPage — interactive a11y', () => {
     fireEvent.click(await screen.findByRole('radio', { name: '2 hours' }));
     await screen.findByText('No times available');
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

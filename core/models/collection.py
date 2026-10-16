@@ -165,7 +165,7 @@ class Collection(models.Model):
     # booking can't span one at all. The serializer parses the owner's
     # comma-separated DD/MM/YYYY line into this. Empty = no closures.
     closed_dates = models.JSONField(default=list, blank=True)
-    # RESERVE_THING collections only (``allowed_thing_types == ["RESERVE_THING"]``).
+    # Reservations collections (sheds) only (``is_reservations_collection()``).
     # The longest a member may book the space for in one reservation, in days —
     # the renter picks any length from 1 to this. ``rental_weekdays`` above is
     # reused as "days reservations are allowed" (every day of the span must fall

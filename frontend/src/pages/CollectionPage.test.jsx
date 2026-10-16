@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import en from '../i18n/locales/en.json';
+import { settle, switchLanguage } from '../test/settle';
 
 expect.extend(toHaveNoViolations);
 
@@ -67,6 +68,7 @@ describe('CollectionPage with a collection thumbnail', () => {
       COLLECTION_WITH_PHOTO.thumbnail_url
     );
 
+    await settle(apiFetch);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
@@ -126,6 +128,7 @@ describe('CollectionPage with a collection thumbnail', () => {
 
       const levels = [...container.querySelectorAll('h1, h2, h3')].map((h) => h.tagName);
       expect(levels).toEqual(['H1', 'H2', 'H3']);
+      await settle(apiFetch);
       expect(await axe(container)).toHaveNoViolations();
     });
   });
@@ -708,6 +711,143 @@ describe('CollectionPage hero tags belong to the curators', () => {
     expect(title).toHaveTextContent(/^Kitchen Collection$/);
     expect(within(title).queryByText('Community')).toBeNull();
     expect(within(title).queryByText('Public')).toBeNull();
+  });
+});
+
+describe('CollectionPage — the kind is said under the name, to every reader', () => {
+  const LIBRARY = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    kind: 'LIBRARY',
+    mode: 'PROPRIETARY',
+    visibility: 'PUBLIC',
+    digest_frequency: 'NONE',
+    owner: 'OTHER1',
+    is_curator: false,
+    is_member: false,
+  };
+
+  async function renderAs(collection, { signedIn = true } = {}) {
+    if (!signedIn) localStorage.removeItem('userCode');
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    const view = render(
+      <MemoryRouter initialEntries={['/library/COL001']}>
+        <Routes>
+          <Route path="/library/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const title = await screen.findByRole('heading', { level: 1, name: /Kitchen Collection/ });
+    await settle(apiFetch);
+    return { title, view };
+  }
+
+  test.each([
+    ['an anonymous reader', { is_member: false }, { signedIn: false }],
+    ['a member', { is_member: true }, {}],
+    ['a curator', { is_curator: true, owner: 'ABC123' }, {}],
+  ])('%s reads what kind of collection it is', async (_who, over, opts) => {
+    await renderAs({ ...LIBRARY, ...over }, opts);
+
+    expect(screen.getByText(en.kinds.LIBRARY.long)).toBeInTheDocument();
+  });
+
+  test('the title is still the collection’s name and nothing else', async () => {
+    const { title } = await renderAs({ ...LIBRARY, is_member: true });
+
+    expect(title).toHaveTextContent(/^Kitchen Collection$/);
+    expect(within(title).queryByText(en.kinds.LIBRARY.long)).toBeNull();
+  });
+
+  test('a collection read without its kind says nothing of the sort', async () => {
+    await renderAs({ ...LIBRARY, kind: undefined });
+
+    expect(screen.queryByText(/kinds\./)).toBeNull();
+    expect(screen.queryByText(en.kinds.LIBRARY.long)).toBeNull();
+  });
+
+  test('has no accessibility violations', async () => {
+    const { view } = await renderAs({ ...LIBRARY, is_member: true });
+
+    expect(await axe(view.container)).toHaveNoViolations();
+  });
+});
+
+describe('CollectionPage — an hourly shed nobody can book yet', () => {
+  const SHED = {
+    ...COLLECTION_WITH_PHOTO,
+    thumbnail_url: '',
+    kind: 'SHED',
+    reservation_unit: 'HOUR',
+    opening_hours: {},
+    allowed_thing_types: ['RESERVE_THING'],
+    digest_frequency: 'NONE',
+  };
+  const NOTICE = en.collectionPage.noOpeningHoursBody;
+
+  async function renderAs(collection, { signedIn = true } = {}) {
+    if (!signedIn) localStorage.removeItem('userCode');
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    render(
+      <MemoryRouter initialEntries={['/shed/COL001']}>
+        <Routes>
+          <Route path="/shed/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { level: 1, name: /Kitchen Collection/ });
+    await settle(apiFetch);
+  }
+
+  test('the curator is told, and is given the way to Edit collection', async () => {
+    await renderAs(SHED);
+
+    expect(screen.getByText(en.collectionPage.noOpeningHoursLabel)).toBeInTheDocument();
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+    const links = screen.getAllByRole('link', { name: en.collectionPage.editCollection });
+    expect(links.some((a) => a.getAttribute('href') === '/shed/COL001/edit')).toBe(true);
+    expect(links).toHaveLength(2); // the hero's, and the notice's
+  });
+
+  test('a week of empty days is the same as none', async () => {
+    await renderAs({ ...SHED, opening_hours: { 0: [], 3: [] } });
+
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+  });
+
+  test.each([
+    ['a member', { is_curator: false, is_member: true, owner: 'OTHER1' }, {}],
+    [
+      'an anonymous reader',
+      { is_curator: false, owner: 'OTHER1', visibility: 'PUBLIC' },
+      { signedIn: false },
+    ],
+  ])('%s is not told: it is not theirs to fix', async (_who, over, opts) => {
+    await renderAs({ ...SHED, ...over }, opts);
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
+  test('a shed booked by the day has no opening hours to miss', async () => {
+    await renderAs({ ...SHED, reservation_unit: 'DAY' });
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
+  test('with a range on some day there is nothing to say', async () => {
+    await renderAs({ ...SHED, opening_hours: { 2: [['10:00', '14:00']] } });
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
+  test('a library, whatever its unit says, is never told it', async () => {
+    await renderAs({ ...SHED, kind: 'LIBRARY' });
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
   });
 });
 
@@ -1363,7 +1503,11 @@ describe('a join that does not take', () => {
 
   async function pressJoin() {
     renderPublic();
-    fireEvent.click(await screen.findByRole('button', { name: 'Join this group' }));
+    const join = await screen.findByRole('button', { name: 'Join this group' });
+    // The press starts a request whose answer sets state: keep it inside `act`.
+    await act(async () => {
+      fireEvent.click(join);
+    });
   }
 
   test('a refused join says so and leaves the door where it was', async () => {
@@ -1859,7 +2003,7 @@ describe('CollectionPage as a co-owner', () => {
       // `useCollectionLanguage` moves the whole UI to the collection's language;
       // put it back so the next test starts in English.
       const { default: i18n } = await import('../i18n');
-      await i18n.changeLanguage('en');
+      await switchLanguage(i18n, 'en');
       localStorage.removeItem('i18nextLng');
     });
 
@@ -2014,7 +2158,7 @@ describe('CollectionPage — the owner wrote in the visitor’s language', () =>
 
   afterEach(async () => {
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
@@ -2088,6 +2232,8 @@ describe('CollectionPage — the welcome document', () => {
     renderWith({ ...PUBLIC_COMMUNITY, is_member: true, welcome_doc_url: '' });
 
     fireEvent.click(await screen.findByRole('button', { name: 'Collection options' }));
+    // Opening the menu asks whether this reader receives requests; let it answer.
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: /welcome document/ })).not.toBeInTheDocument();
   });
 

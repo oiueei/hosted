@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { press } from './settle';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -146,6 +147,8 @@ function renderPage() {
     <MemoryRouter initialEntries={['/collections/COL001']}>
       <Routes>
         <Route path="/collections/:code" element={<CollectionPage />} />
+        {/* A collection that names its kind is moved to its own address. */}
+        <Route path="/:kind/:code" element={<CollectionPage />} />
       </Routes>
     </MemoryRouter>
   );
@@ -159,7 +162,7 @@ const CALENDAR = 'Download the calendar (ICS)';
 
 /** The menu's trigger, then the panel open — every test below starts here. */
 async function openMenu() {
-  fireEvent.click(await screen.findByRole('button', { name: TRIGGER }));
+  await press(await screen.findByRole('button', { name: TRIGGER }));
 }
 
 beforeEach(() => {
@@ -190,9 +193,9 @@ beforeEach(() => {
  * - WHO sees it: `is_curator` only — a member or an anonymous reader gets no
  *   trigger at all, so no entry either.
  * - The calendar entry additionally needs the group to hold date-based
- *   things — the allowlist says so when it exists, the things themselves say
- *   so for an old collection that never restricted anything (the rule the
- *   hero button always used, unchanged).
+ *   things: a library and a shed always do, a stall only when one of its
+ *   things is a loan, a rental or a reservation (one that a migrated mixed
+ *   collection kept).
  * - What a click does: each download's request, filename and outcome message
  *   (stats and JSON moved from `EditCollectionPage` as they were), the panel
  *   closing, and the focus landing back on the trigger — the pressed button
@@ -331,6 +334,44 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     await screen.findByText('Drill');
     expect(screen.queryByRole('button', { name: TRIGGER })).not.toBeInTheDocument();
+  });
+
+  test('a library with nothing in it yet still offers the calendar entry', async () => {
+    renderCollection({
+      ...COLLECTION,
+      kind: 'LIBRARY',
+      allowed_thing_types: ['LEND_THING', 'RENT_THING'],
+      things: [],
+    });
+
+    await openMenu();
+    expect(screen.getByRole('button', { name: CALENDAR })).toBeInTheDocument();
+  });
+
+  test('a stall with only gifts and sales offers no calendar entry', async () => {
+    renderCollection({
+      ...COLLECTION,
+      kind: 'STALL',
+      allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+      things: [{ ...LEND_THING, type: 'SELL_THING', headline: 'Record' }],
+    });
+
+    await screen.findByText('Record');
+    await openMenu();
+    expect(screen.queryByRole('button', { name: CALENDAR })).not.toBeInTheDocument();
+  });
+
+  test('a stall that kept a loan from before the kinds offers the calendar entry', async () => {
+    renderCollection({
+      ...COLLECTION,
+      kind: 'STALL',
+      allowed_thing_types: ['GIFT_THING', 'SELL_THING'],
+      things: [LEND_THING],
+    });
+
+    await screen.findByText('Drill');
+    await openMenu();
+    expect(screen.getByRole('button', { name: CALENDAR })).toBeInTheDocument();
   });
 
   test('an old collection with no allowlist: a RENT thing offers the calendar entry', async () => {
@@ -534,7 +575,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
     expect(await screen.findByText('3 event(s) — check your downloads.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     expect(await screen.findByText('Preparing the file…')).toBeInTheDocument();
@@ -559,7 +600,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
     expect(await screen.findByText("Couldn't download the stats.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     await waitFor(() =>
@@ -578,7 +619,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       await screen.findByText("Couldn't build the export. Please try again in a moment.")
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the whole collection (JSON)' }));
 
     await waitFor(() =>
@@ -611,7 +652,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     expect(await screen.findByText('Preparing the file…')).toBeInTheDocument();
     // And its menu entry is disabled until it lands.
-    fireEvent.click(screen.getByRole('button', { name: TRIGGER }));
+    await press(screen.getByRole('button', { name: TRIGGER }));
     expect(screen.getByRole('button', { name: 'Download the stats (CSV)' })).toBeDisabled();
 
     release();
@@ -634,7 +675,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     await openMenu();
     const trigger = screen.getByRole('button', { name: TRIGGER });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
+    await press(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     // The panel is gone at once (the file keeps fetching underneath)…
     expect(panel()).toBeNull();

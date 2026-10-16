@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { NumberInput } from 'hds-react';
+import { useCallback, useEffect, useState } from 'react';
+import { NumberInput, Notification } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import WeekdayChips from './WeekdayChips';
 import OpeningHoursField from './OpeningHoursField';
 import RadioOptionGroup from './RadioOptionGroup';
+import { hasOpeningHours } from '../utils/rental';
 
 /**
  * One bounded whole-number field. HDS `NumberInput` is controlled, so a field
@@ -93,6 +94,16 @@ export default function ReservationRulesFields({
   theeemeColor06,
 }) {
   const { t } = useTranslation();
+  // Whether the hours field can hand over what is on screen. While it cannot (the
+  // JSON does not parse) its own error speaks, and the warning below stays quiet.
+  const [hoursReadable, setHoursReadable] = useState(true);
+  const reportValidity = useCallback(
+    (valid) => {
+      setHoursReadable(valid);
+      setOpeningHoursValid?.(valid);
+    },
+    [setOpeningHoursValid]
+  );
 
   return (
     <>
@@ -153,8 +164,16 @@ export default function ReservationRulesFields({
             id={`${idPrefix}-opening-hours`}
             value={openingHours}
             onChange={setOpeningHours}
-            onValidityChange={setOpeningHoursValid}
+            onValidityChange={reportValidity}
           />
+          {/* An hourly space with no opening hours is closed every day, and nothing
+              else says so: the member sees an all-grey calendar. It does not block the
+              save — someone may be about to write the hours. */}
+          {hoursReadable && !hasOpeningHours(openingHours) && (
+            <Notification type="alert" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
+              {t('openingHours.noneOpen')}
+            </Notification>
+          )}
         </>
       ) : (
         <>

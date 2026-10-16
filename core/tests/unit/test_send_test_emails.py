@@ -134,7 +134,7 @@ def test_it_leaves_nothing_behind():
 
     assert (User.objects.count(), Collection.objects.count(), Thing.objects.count()) == before
     assert not User.objects.filter(email=TO).exists()
-    sample = ["lala@your-domain.test", "lele@your-domain.test", "lili@your-domain.test"]
+    sample = ["lala.sample@your-domain.test", "lele.sample@your-domain.test"]
     assert not User.objects.filter(email__in=sample).exists()
 
 
@@ -156,6 +156,50 @@ def test_an_address_that_is_a_real_account_is_used_then_put_back():
     account.refresh_from_db()
     assert (account.language, account.notify_activity, account.notify_news) == ("ca", False, False)
     assert account.name == "Real Person"
+
+
+@pytest.mark.django_db
+def test_it_runs_on_an_instance_seeded_with_the_demo_characters():
+    """`seed_demo` makes Lala and Lele at the default demo domain, and an address is
+    unique: the samples' own Lala and Lele must never collide with them, nor borrow
+    their accounts (a sample takes no language or switches from a real person)."""
+    demo = [
+        User.objects.create(
+            email=f"{name}@your-domain.test",
+            name=name.title(),
+            language="ca",
+            notify_activity=False,
+        )
+        for name in ("lala", "lele")
+    ]
+
+    sent = _run("--lang", "es", "--only", "booking_request")
+
+    assert len(sent) == 2
+    assert {recipient for m in sent for recipient in m.to} == {TO}
+    for account in demo:
+        account.refresh_from_db()
+        assert (account.language, account.notify_activity) == ("ca", False)
+
+
+@pytest.mark.django_db
+def test_the_address_of_a_demo_character_works_as_the_recipient_and_is_put_back():
+    """The docstring's own example, `--to lulu@…`, is a demo character on a seeded
+    instance: its account is used for the run and comes out as it went in."""
+    account = User.objects.create(
+        email=TO, name="Lulu", language="ca", notify_activity=False, notify_news=False
+    )
+
+    sent = _run("--lang", "es", "--only", "booking_request")
+
+    assert len(sent) == 2
+    account.refresh_from_db()
+    assert (account.name, account.language, account.notify_activity, account.notify_news) == (
+        "Lulu",
+        "ca",
+        False,
+        False,
+    )
 
 
 @pytest.mark.django_db

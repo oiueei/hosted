@@ -10,14 +10,17 @@ vi.mock('react-router', async () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock('../services/api', () => ({
+// The real `extractApiError`: the refusal tests feed it real response bodies and
+// check what it makes of them reaches the toast.
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
   apiFetch: vi.fn(),
-  extractApiError: vi.fn(async (res) => (await res.json())?.type?.[0] ?? null),
   getCsrfToken: () => 'tok',
 }));
 
 import { apiFetch } from '../services/api';
 import AddThingPage from './AddThingPage';
+import en from '../i18n/locales/en.json';
 
 // The form a member meets first in a COMMUNITY collection. There is no choice of
 // verb in it: the collection's kind and the price decide it, the server puts it, and
@@ -188,7 +191,81 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
   });
 });
 
+describe('AddThingPage — when the collection cannot be read', () => {
+  // The form of a stall is all there is until the collection is known, so the page
+  // says it could not read it; the server stays the gate, and "Create" stays usable.
+  test('a failed read says so and leaves the form usable', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+    );
+    renderPage();
+
+    expect(await screen.findByText('Error loading collection.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+  });
+
+  test('a dropped connection says so and leaves the form usable', async () => {
+    apiFetch.mockImplementation(() => Promise.reject(new Error('offline')));
+    renderPage();
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
+  });
+
+  test('a collection that reads fine shows no error', async () => {
+    mockApi();
+    renderPage();
+    await screen.findByLabelText(/Title/);
+
+    expect(screen.queryByText('Error loading collection.')).toBeNull();
+    expect(screen.queryByText('Connection error.')).toBeNull();
+  });
+});
+
 describe('AddThingPage — what the form sends', () => {
+  test('a stall gift sends its condition, its place and its availability', async () => {
+    mockApi();
+    const { container } = renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue pan' } });
+    fireEvent.change(container.querySelector('#add-thing-location'), {
+      target: { value: '  Gràcia  ' },
+    });
+    fireEvent.click(container.querySelector('#add-thing-condition-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Good condition' }));
+    fireEvent.click(container.querySelector('#add-thing-availability-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Next week' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).toMatchObject({
+      condition: 'GOOD',
+      location: 'Gràcia',
+      availability: 'NEXT_WEEK',
+    });
+  });
+
+  test('a library rental sends its condition and place, and no availability: it has none to give', async () => {
+    mockApi({
+      coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
+    });
+    const { container } = renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Drill' } });
+    fireEvent.change(screen.getByLabelText(/Rental price/), { target: { value: '4' } });
+    fireEvent.change(container.querySelector('#add-thing-location'), {
+      target: { value: 'Sants' },
+    });
+    fireEvent.click(container.querySelector('#add-thing-condition-main-button'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Good condition' }));
+    expect(container.querySelector('#add-thing-availability-main-button')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).toMatchObject({ fee: '4', condition: 'GOOD', location: 'Sants' });
+    expect(postBody()).not.toHaveProperty('availability');
+  });
+
   test('a title is enough, and the collection travels with it', async () => {
     mockApi();
     renderPage();
@@ -276,6 +353,23 @@ describe('AddThingPage — what the form sends', () => {
 
     expect(await screen.findByText('This group doesn’t take prices.')).toBeInTheDocument();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  test('a refusal the server coded is said in the reader’s language, not in its English', async () => {
+    mockApi({
+      post: {
+        ok: false,
+        status: 400,
+        body: { type: ['This group doesn’t take prices.'], code: 'no_prices_here' },
+      },
+    });
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText(en.requestErrors.no_prices_here)).toBeInTheDocument();
+    expect(screen.queryByText('This group doesn’t take prices.')).toBeNull();
   });
 
   test('a rate-limited create says "too many", not "error"', async () => {

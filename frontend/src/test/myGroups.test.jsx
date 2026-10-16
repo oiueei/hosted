@@ -15,6 +15,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import UserPage from '../pages/UserPage';
 import { mockMatchMedia, PHONE } from './matchMedia';
+import { settle } from './settle';
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
@@ -197,6 +198,7 @@ describe('UserPage — My groups', () => {
     const { container } = renderOwn();
     await screen.findByRole('table', { name: 'My groups' });
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -435,6 +437,7 @@ describe('UserPage — My groups: every group the account is in', () => {
     const { container } = renderOwn();
     await screen.findByRole('table', { name: 'My groups' });
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 });
@@ -580,6 +583,7 @@ describe('My groups on a phone', () => {
     const { container } = renderOwn();
     await screen.findByRole('list', { name: 'My groups' });
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -50,6 +50,13 @@ class CollectionAdmin(admin.ModelAdmin):
     # CollectionShareLinkView, which always mints a real one.
     readonly_fields = ["share_token"]
 
+    # The kind never changes after creation (the serializer refuses it too): editing
+    # it here would leave the verb list, the things' verbs and the links outside
+    # their kind. It stays choosable when a collection is added.
+    def get_readonly_fields(self, request, obj=None):
+        fields = super().get_readonly_fields(request, obj)
+        return [*fields, "kind"] if obj is not None else fields
+
     @admin.display(description="Things")
     def thing_count(self, obj):
         """The number the capacity guards compare against."""

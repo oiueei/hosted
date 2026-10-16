@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { TextInput, Button, Notification, Koros } from 'hds-react';
@@ -8,12 +8,11 @@ import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import { popInPath, faqPath } from '../deployment';
 import ButtonLink from '../components/ButtonLink';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  useEffect(() => {
-    document.title = t('titles.login');
-  }, [t]);
+  useDocumentTitle(t('titles.login'));
   // Where the reader was going when their session ran out (`?next=`, put there
   // by `apiFetch` / `RequireAuth`). Sent with the request so the magic link comes
   // back to it — even when it is opened in another browser, which is why the

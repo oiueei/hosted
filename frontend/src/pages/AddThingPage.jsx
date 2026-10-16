@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
-import { DETAIL_TYPES, KIND_THING_TYPES, deriveThingType } from '../constants/things';
+import { DETAIL_TYPES, deriveThingType } from '../constants/things';
+import { membersPriceFromVerbs } from '../utils/collectionKind';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import ThingForm from '../components/ThingForm';
@@ -13,6 +14,7 @@ import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function AddThingPage() {
   const { t } = useTranslation();
@@ -23,9 +25,7 @@ export default function AddThingPage() {
   const navigate = useNavigate();
 
   const userCode = localStorage.getItem('userCode');
-  useEffect(() => {
-    document.title = t('titles.addThing');
-  }, [t]);
+  useDocumentTitle(t('titles.addThing'));
 
   const [collectionHeadline, setCollectionHeadline] = useState('');
   // What the collection is, and so how its things take their verb. Until it has
@@ -50,11 +50,7 @@ export default function AddThingPage() {
   const [collectionTags, setCollectionTags] = useState([]);
   // A community group whose members may not set a price lists only its free verb: the
   // form has no price field there, since a price would only be refused.
-  const priceAllowed = !(
-    (kind === 'STALL' || kind === 'LIBRARY') &&
-    collectionAllowedTypes.length === 1 &&
-    collectionAllowedTypes[0] === KIND_THING_TYPES[kind][0]
-  );
+  const priceAllowed = membersPriceFromVerbs(kind, collectionAllowedTypes);
   // A member contributing to a COMMUNITY collection they were invited to may
   // offer any type its (vetted) owner allow-listed, whatever this deployment's
   // creator policy says about them personally — the same exception the backend
@@ -65,10 +61,27 @@ export default function AddThingPage() {
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
 
+  // The verb the price makes, in the collection's kind, and whether this account may
+  // offer it: the deployment's policy is asked about the verb the thing will take, not
+  // about one a form selector used to pick — a price in a stall is a sale, and a policy
+  // that does not give sales shows its notice here instead of letting it be sent.
+  // A member contributing to a COMMUNITY group may offer what its (vetted) owner
+  // allow-listed whatever the policy says of them personally.
+  const type = deriveThingType(kind, fee);
+  const notOffered =
+    !(contributingToCommunity && collectionAllowedTypes.includes(type)) &&
+    !isOfferable(capabilities, 'thing_types', type);
+
   useEffect(() => {
     if (!userCode) return;
     apiFetch(`/api/v1/collections/${code}/`)
-      .then((res) => (res.ok ? res.json() : {}))
+      .then((res) => {
+        if (res.ok) return res.json();
+        // The form stays (the server is the gate), but it is the form of a stall
+        // until the collection is read: say so rather than let it pass for the real one.
+        setToast({ type: 'error', messageKey: 'collectionPage.errorLoading' });
+        return {};
+      })
       .then((data) => {
         setCollectionHeadline(data.headline || '');
         const allowed = data.allowed_thing_types || [];
@@ -79,7 +92,7 @@ export default function AddThingPage() {
         setCollectionTags(data.tags || []);
         setCollectionLanguage(data.language || '');
       })
-      .catch(() => {});
+      .catch(() => setToast({ type: 'error', messageKey: 'common.connectionError' }));
   }, [userCode, code]);
 
   const computeErrors = () => {
@@ -157,17 +170,6 @@ export default function AddThingPage() {
 
   // Theeeme colors from localStorage (set by HomePage on login)
   const { tc, btnStyle } = useTheeeme();
-
-  // The verb the price makes, in the collection's kind, and whether this account may
-  // offer it: the deployment's policy is asked about the verb the thing will take, not
-  // about one a form selector used to pick — a price in a stall is a sale, and a policy
-  // that does not give sales shows its notice here instead of letting it be sent.
-  // A member contributing to a COMMUNITY group may offer what its (vetted) owner
-  // allow-listed whatever the policy says of them personally.
-  const type = deriveThingType(kind, fee);
-  const notOffered =
-    !(contributingToCommunity && collectionAllowedTypes.includes(type)) &&
-    !isOfferable(capabilities, 'thing_types', type);
 
   return (
     <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>

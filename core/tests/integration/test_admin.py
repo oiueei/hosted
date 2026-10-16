@@ -116,6 +116,21 @@ class TestCollectionAdminShareToken:
                 data[field.name] = json.dumps(data[field.name])
         return data
 
+    def test_the_kind_is_not_editable_on_a_collection_that_exists(self):
+        collection = self._collection()
+
+        form_class = self._form_class(obj=collection)
+        form = form_class(data=self._post_data(collection, kind="SHED"), instance=collection)
+        assert form.is_valid(), form.errors
+        form.save()
+
+        assert "kind" not in form_class.base_fields
+        collection.refresh_from_db()
+        assert collection.kind == "STALL"
+
+    def test_the_kind_can_be_chosen_when_a_collection_is_added(self):
+        assert "kind" in self._form_class(obj=None).base_fields
+
     def test_a_hand_typed_share_token_never_reaches_the_row(self):
         collection = self._collection()
 

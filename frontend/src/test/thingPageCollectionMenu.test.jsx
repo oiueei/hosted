@@ -17,6 +17,7 @@ vi.mock('../utils/downloadBlob', async (importOriginal) => ({
 import { apiFetch } from '../services/api';
 import downloadBlob from '../utils/downloadBlob';
 import ThingPage from '../pages/ThingPage';
+import { press } from './settle';
 
 /**
  * The thing's page, read through a collection, has the same corner menu as the
@@ -118,7 +119,7 @@ function renderThing(path = '/collections/COL001/things/THG001') {
 const TRIGGER = 'Collection options';
 const panel = () => document.getElementById('collection-menu-panel');
 const entries = () => [...panel().querySelectorAll('a, button')].map((e) => e.textContent.trim());
-const openMenu = async () => fireEvent.click(await screen.findByRole('button', { name: TRIGGER }));
+const openMenu = async () => press(await screen.findByRole('button', { name: TRIGGER }));
 const thingCalls = () =>
   apiFetch.mock.calls.filter(([url]) => /^\/api\/v1\/things\/THG001\/\?/.test(url));
 
@@ -150,7 +151,7 @@ describe('the thing page — who has the collection menu', () => {
     expect(container.querySelector('.hero-corners')).toContainElement(menu);
     expect(account.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
-    fireEvent.click(menu);
+    await press(menu);
     expect(entries()).toEqual([
       'Add thing',
       'Add several at once (CSV)',

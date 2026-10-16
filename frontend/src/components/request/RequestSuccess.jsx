@@ -1,0 +1,55 @@
+import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { Button, Notification } from 'hds-react';
+import useTheeeme from '../../hooks/useTheeeme';
+
+/** What the request page says once the request has gone, and the way back. */
+export default function RequestSuccess({
+  isReservation,
+  headline,
+  bookedWhen,
+  joinedGroup,
+  backPath,
+  backLabel,
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { btnSecondaryStyle } = useTheeeme();
+
+  return (
+    <>
+      <Notification
+        autofocus
+        label={isReservation ? t('reservation.successLabel') : t('request.successLabel')}
+        type="success"
+      >
+        {isReservation ? t('reservation.successMessage') : t('request.successMessage')}
+        {/* What and when, said back: a reservation confirms on the spot,
+            with no owner step to catch a wrong day or hour. */}
+        {bookedWhen && (
+          <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
+            <strong>{headline}</strong>
+            <br />
+            {bookedWhen}
+          </p>
+        )}
+        {joinedGroup && (
+          <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>
+            {t(isReservation ? 'reservation.joinedGroup' : 'request.joinedGroup', {
+              group: joinedGroup,
+            })}
+          </p>
+        )}
+      </Notification>
+      <div className="spacer-m" />
+      <Button
+        variant="secondary"
+        fullWidth
+        onClick={() => navigate(backPath)}
+        style={btnSecondaryStyle}
+      >
+        {t('request.backTo', { label: backLabel })}
+      </Button>
+    </>
+  );
+}

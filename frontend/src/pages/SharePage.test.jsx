@@ -13,6 +13,7 @@ vi.mock('../hooks/useCollectionLanguage', () => ({ default: vi.fn() }));
 import { apiFetch } from '../services/api';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import SharePage from './SharePage';
+import { settle } from '../test/settle';
 import en from '../i18n/locales/en.json';
 
 // A stand-in for the 22-char URL-safe share token; kept low-entropy so a
@@ -98,8 +99,8 @@ describe('SharePage — a reader who is already signed in', () => {
   });
 
   test('two presses in the same tick ask once, and the button is disabled while it waits', async () => {
-    let settle;
-    serve(() => new Promise((resolve) => (settle = resolve)));
+    let release;
+    serve(() => new Promise((resolve) => (release = resolve)));
     renderShare();
 
     const button = await screen.findByRole('button', { name: 'Join The Tool Library' });
@@ -112,7 +113,9 @@ describe('SharePage — a reader who is already signed in', () => {
 
     await waitFor(() => expect(posts()).toHaveLength(1));
     expect(screen.getByRole('button', { name: 'Join The Tool Library' })).toBeDisabled();
-    settle(await answer(200, { collection: 'COL001', joined: true }));
+    // Let the held request answer inside `act`, so the page's reply lands in the test.
+    release(await answer(200, { collection: 'COL001', joined: true }));
+    await settle(apiFetch);
   });
 
   test('"use another email instead" brings back the form, for a shared computer', async () => {

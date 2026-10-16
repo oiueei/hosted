@@ -53,6 +53,12 @@ export const openingHoursWeek = (hours, lang) =>
     return { day, name: weekdayShort(day, lang), ranges };
   });
 
+// Whether any day of the week has an opening range. `{}` — the value of a space
+// whose hours were never written — and a week of empty days are both closed all
+// week: nobody can book an hourly space that never opens.
+export const hasOpeningHours = (hours) =>
+  Object.values(hours || {}).some((ranges) => Array.isArray(ranges) && ranges.length > 0);
+
 // JS Date.getDay() (0=Sun … 6=Sat) → Python weekday (0=Mon … 6=Sun).
 export const jsToPyWeekday = (jsDay) => (jsDay + 6) % 7;
 
@@ -474,3 +480,21 @@ export const isHourlyPickupDisabled = (
   const earliest = earliestStartMinutes(isoDate, now);
   return freeStartTimes(blocks, minMinutes, bookings, minMinutes, earliest).length === 0;
 };
+
+/** Today at local midnight. Fresh on every call: a module-scope `new Date()` would
+ *  freeze "today" at app load and drift stale past midnight. */
+export const startOfToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+/** `days` after today, at local midnight. */
+export const daysFromToday = (days) => addDays(startOfToday(), days);
+
+/** The longest reservation a collection allows, in days (at least 1). */
+export const reservationMaxDays = (thing) => Math.max(1, thing?.reservation_max_days || 1);
+
+/** How far ahead a reservation may be booked, in days: the collection's own limit,
+ *  not the fixed 90 the rental picker uses. */
+export const reservationHorizonDays = (thing) => thing?.reservation_horizon_days || 90;

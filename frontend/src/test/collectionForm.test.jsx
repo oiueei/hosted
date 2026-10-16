@@ -19,6 +19,7 @@ import { apiFetch, extractApiError } from '../services/api';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
 import { dropHdsStyles } from './dropHdsStyles';
+import { settle } from './settle';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -44,9 +45,18 @@ function setApi({ collection = {} } = {}) {
 
 // A collection's form is the one for its kind, and the kind is in the address:
 // `/stall/new`, `/library/new`, `/shed/new`.
-function renderCreate(kind = 'stall') {
+// The create page asks the deployment what it allows before it shows anything, so the
+// form is there a moment after the render: the helper hands it back once it is.
+async function formShown(view) {
+  await waitFor(() =>
+    expect(view.container.querySelector('#create-collection-headline')).toBeInTheDocument()
+  );
+  return view;
+}
+
+async function renderCreate(kind = 'stall') {
   setApi();
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={[`/${kind}/new`]}>
       <Routes>
         <Route path="/:kind/new" element={<CreateCollectionPage />} />
@@ -54,6 +64,8 @@ function renderCreate(kind = 'stall') {
       </Routes>
     </MemoryRouter>
   );
+  // A prefix that is no kind has no form to wait for: it is sent to the chooser.
+  return kind === 'collections' ? view : formShown(view);
 }
 
 // What the server serves with a collection: its kind, which these older fixtures
@@ -107,16 +119,16 @@ beforeEach(() => {
 // CreateCollectionPage — mode-gated toggles + submit
 // ════════════════════════════════════════════════════════════════════════
 describe('CreateCollectionPage', () => {
-  test('PROPRIETARY (default): no album-mode toggle', () => {
-    renderCreate();
+  test('PROPRIETARY (default): no album-mode toggle', async () => {
+    await renderCreate();
 
     expect(screen.queryByRole('button', { name: /Album mode/ })).toBeNull();
   });
 
   // P1-5: the mode picker is a radio group with an inline description per option,
   // not a Select hidden behind an info icon.
-  test('mode radios render with inline descriptions', () => {
-    renderCreate();
+  test('mode radios render with inline descriptions', async () => {
+    await renderCreate();
 
     expect(screen.getByRole('radio', { name: 'Proprietary' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Community' })).toBeInTheDocument();
@@ -132,8 +144,8 @@ describe('CreateCollectionPage', () => {
   // contributes to a group is never shown whether it is public, so a group of
   // neighbours' families ended up readable by anyone without its members knowing.
   // Making a group public is now a deliberate act, in either mode.
-  test('choosing a mode leaves the group private: only the switch changes that', () => {
-    const { container } = renderCreate();
+  test('choosing a mode leaves the group private: only the switch changes that', async () => {
+    const { container } = await renderCreate();
     const visibility = () => container.querySelector('#create-collection-visibility');
 
     expect(visibility()).toHaveAttribute('aria-pressed', 'false');
@@ -157,7 +169,7 @@ describe('CreateCollectionPage', () => {
 
   // Public is a decision, and it has to survive to the POST.
   test('a Community group the curator switched to public ships as COMMUNITY and PUBLIC', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'An open community');
 
     fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
@@ -169,7 +181,7 @@ describe('CreateCollectionPage', () => {
   });
 
   test('a Community group whose switch was never touched ships as PRIVATE', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'A quiet community');
 
     fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
@@ -184,7 +196,7 @@ describe('CreateCollectionPage', () => {
   // just title + mode + who-can-add. Nothing inside it is required or can block
   // submit, so the form is still completable without ever opening it.
   test('optional fields stay hidden until "More options" is opened', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
 
     const thumb = () => container.querySelector('#create-collection-thumbnail');
     expect(thumb()).not.toBeVisible();
@@ -202,7 +214,7 @@ describe('CreateCollectionPage', () => {
   // moment it exists. The owner has to see — and be able to change — that at the
   // moment they create it, which is exactly what these two pin.
   test('the digest field is on the Create form, folded into "More options"', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
 
     const digest = () => container.querySelector('#create-collection-digest');
     expect(digest()).not.toBeVisible();
@@ -228,7 +240,7 @@ describe('CreateCollectionPage', () => {
   };
 
   test('a new collection is created subscribed to its own digest', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'The street');
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -240,7 +252,7 @@ describe('CreateCollectionPage', () => {
   });
 
   test('turning the digest off at creation time is honoured', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'Quiet group');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
@@ -254,7 +266,7 @@ describe('CreateCollectionPage', () => {
   // The toggle that decides whether members may recommend people at all: the
   // owner's answer to "am I willing to be asked". It has to reach the POST.
   test('the recommend-a-guest setting reaches the create request', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'Open group');
 
     fireEvent.click(container.querySelector('#create-collection-allow-proposals'));
@@ -266,7 +278,7 @@ describe('CreateCollectionPage', () => {
   // A new collection asks its owner nothing until the owner says
   // so (it used to start ticked). What the owner was shown is what ships.
   test('left alone, a new group does not ask to be asked: it starts off and ships off', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'Quiet group');
 
     expect(container.querySelector('#create-collection-allow-proposals')).not.toBeChecked();
@@ -276,7 +288,7 @@ describe('CreateCollectionPage', () => {
   });
 
   test('the home-page URL, folded into "More options", reaches the create request', async () => {
-    const { container } = renderCreate();
+    const { container } = await renderCreate();
     await fillTheRequiredFields(container, 'Ateneu');
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
@@ -298,18 +310,20 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
     return <div data-testid="landed">{useLocation().pathname}</div>;
   }
 
-  function renderCreateWith(postResponse) {
+  async function renderCreateWith(postResponse) {
     apiFetch.mockImplementation((url, opts = {}) => {
       if (url === '/api/v1/collections/' && opts.method === 'POST') return postResponse();
       return Promise.resolve(mockResponse({}));
     });
-    return render(
-      <MemoryRouter initialEntries={['/library/new']}>
-        <Routes>
-          <Route path="/library/new" element={<CreateCollectionPage />} />
-          <Route path="*" element={<Landed />} />
-        </Routes>
-      </MemoryRouter>
+    return formShown(
+      render(
+        <MemoryRouter initialEntries={['/library/new']}>
+          <Routes>
+            <Route path="/library/new" element={<CreateCollectionPage />} />
+            <Route path="*" element={<Landed />} />
+          </Routes>
+        </MemoryRouter>
+      )
     );
   }
 
@@ -322,7 +336,7 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
     apiFetch.mock.calls.filter(([u, o]) => u === '/api/v1/collections/' && o?.method === 'POST');
 
   test('a created collection opens on its own page', async () => {
-    const { container } = renderCreateWith(() =>
+    const { container } = await renderCreateWith(() =>
       Promise.resolve(mockResponse({ code: 'NEW001', kind: 'LIBRARY' }))
     );
     typeTheTitle(container, 'The street');
@@ -334,7 +348,9 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
   });
 
   test('a blank title sends nothing and says it is needed', async () => {
-    const { container } = renderCreateWith(() => Promise.resolve(mockResponse({ code: 'X' })));
+    const { container } = await renderCreateWith(() =>
+      Promise.resolve(mockResponse({ code: 'X' }))
+    );
     typeTheTitle(container, '   ');
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -373,7 +389,7 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
     ],
   ])('%s', async (_case, postResponse, serverReason, said) => {
     if (serverReason !== null) extractApiError.mockResolvedValueOnce(serverReason);
-    const { container } = renderCreateWith(postResponse);
+    const { container } = await renderCreateWith(postResponse);
     typeTheTitle(container, 'The street');
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -559,6 +575,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
     // nothing about ReservationRulesFields.
     expect(screen.getByRole('group', { name: 'Days open for reservations' })).toBeInTheDocument();
 
+    await settle(apiFetch);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -646,6 +663,68 @@ describe('CreateCollectionPage — collection_kinds capability', () => {
     }
   );
 
+  // What the deployment allows is asked for before the page decides what to show:
+  // the form first and the notice after would swap under the person's fingers and
+  // lose what they had typed.
+  describe('while the deployment has not answered', () => {
+    let release;
+    const holdMe = (capabilities) => {
+      const answer = new Promise((resolve) => {
+        release = () => resolve(mockResponse({ capabilities }));
+      });
+      apiFetch.mockImplementation((url) =>
+        url === '/api/v1/auth/me/' ? answer : Promise.resolve(mockResponse({}))
+      );
+    };
+
+    test('there is neither the form nor the notice, and a denied kind then gets only the notice', async () => {
+      localStorage.setItem('userCode', 'WAIT-denied');
+      holdMe(CAPS);
+
+      const { container } = open('library');
+      await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/v1/auth/me/', {}));
+
+      expect(container.querySelector('#create-collection-headline')).toBeNull();
+      expect(screen.queryByText(/need approval on this deployment/)).toBeNull();
+
+      release();
+
+      expect(await screen.findByText(/need approval on this deployment/)).toBeInTheDocument();
+      expect(container.querySelector('#create-collection-headline')).toBeNull();
+    });
+
+    test('a granted kind then gets its form', async () => {
+      localStorage.setItem('userCode', 'WAIT-granted');
+      holdMe(CAPS);
+
+      const { container } = open('stall');
+      await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/v1/auth/me/', {}));
+      expect(container.querySelector('#create-collection-headline')).toBeNull();
+
+      release();
+
+      await waitFor(() =>
+        expect(container.querySelector('#create-collection-headline')).toBeInTheDocument()
+      );
+    });
+  });
+
+  test('when the deployment cannot be asked the form shows: the server is the gate', async () => {
+    localStorage.setItem('userCode', 'WAIT-failed');
+    apiFetch.mockImplementation((url) =>
+      url === '/api/v1/auth/me/'
+        ? Promise.reject(new Error('offline'))
+        : Promise.resolve(mockResponse({}))
+    );
+
+    const { container } = open('shed');
+
+    await waitFor(() =>
+      expect(container.querySelector('#create-collection-headline')).toBeInTheDocument()
+    );
+    expect(screen.queryByText(/need approval on this deployment/)).toBeNull();
+  });
+
   test('the kind the policy hands out gets its form', async () => {
     localStorage.setItem('userCode', 'POPIN-stall');
     setApiWithCapabilities(CAPS);
@@ -683,7 +762,7 @@ describe('CreateCollectionPage — a shed', () => {
     });
 
   test('it has no mode to choose, and ships its kind, RESERVE and PROPRIETARY', async () => {
-    const { container } = renderShed();
+    const { container } = await renderShed();
     nameIt(container);
     // An operator runs the premises: there is no radio for a community shed.
     expect(screen.queryByRole('radio')).toBeNull();
@@ -704,7 +783,7 @@ describe('CreateCollectionPage — a shed', () => {
     // The field keeps the last good value ({} here), so creating anyway would
     // open an HOUR space with every day closed while the owner believes their
     // schedule went in.
-    const { container } = renderShed();
+    const { container } = await renderShed();
     nameIt(container);
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
@@ -723,7 +802,7 @@ describe('CreateCollectionPage — a shed', () => {
     // Nothing on the Create path sent an HOUR-unit collection before: the
     // owner's hours could have gone missing and the space opened with every
     // day closed, found only when a member saw nothing to book.
-    const { container } = renderShed();
+    const { container } = await renderShed();
     nameIt(container);
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
@@ -763,8 +842,8 @@ describe('CreateCollectionPage — a shed', () => {
 });
 
 describe('collection texts that open like a language map and are not one', () => {
-  test('the headline says it will read as plain text, and stops once it parses', () => {
-    renderCreate();
+  test('the headline says it will read as plain text, and stops once it parses', async () => {
+    await renderCreate();
     const headline = document.querySelector('#create-collection-headline');
     const warning = /Read as plain text/;
 
@@ -775,8 +854,8 @@ describe('collection texts that open like a language map and are not one', () =>
     expect(screen.queryByText(warning)).not.toBeInTheDocument();
   });
 
-  test('prose that starts some other way never trips it', () => {
-    renderCreate();
+  test('prose that starts some other way never trips it', async () => {
+    await renderCreate();
     fireEvent.change(document.querySelector('#create-collection-headline'), {
       target: { value: 'Herramientas {del taller}' },
     });

@@ -136,10 +136,12 @@ class TestUpdateWithAllowedTypes:
     def test_update_narrows_orphaning_existing_things_fails(
         self, authenticated_client, user, collection
     ):
-        """Cannot drop a type from the allowlist while things of that type sit in the collection."""
-        thing = Thing.objects.create(code="THNG10", type="LEND_THING", owner=user, headline="Drill")
+        """Cannot drop the paid verb while a sale of that verb sits in the group."""
+        collection.mode = "COMMUNITY"
+        collection.save()
+        thing = Thing.objects.create(code="THNG10", type="SELL_THING", owner=user, headline="Lamp")
         collection.things.add(thing)
-        # Restrict to GIFT only — the existing LEND_THING would be orphaned.
+        # Restrict to GIFT only — the existing SELL_THING would be orphaned.
         response = authenticated_client.patch(
             f"/api/v1/collections/{collection.code}/",
             {"allowed_thing_types": ["GIFT_THING"]},
@@ -147,7 +149,7 @@ class TestUpdateWithAllowedTypes:
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         # Error must name the offending type so the UI can guide the user.
-        assert "LEND_THING" in str(response.data)
+        assert "SELL_THING" in str(response.data)
 
 
 @pytest.mark.django_db

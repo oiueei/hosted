@@ -12,6 +12,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch } from '../services/api';
 import i18n from '../i18n';
 import InboxNotifications from '../components/InboxNotifications';
+import { switchLanguage } from './settle';
 
 /**
  * Past three notices about requests and reservations — the ones that go to whoever
@@ -136,7 +137,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 afterEach(async () => {
-  await i18n.changeLanguage('en');
+  await switchLanguage(i18n, 'en');
   localStorage.removeItem('i18nextLng');
 });
 
@@ -341,7 +342,7 @@ describe('in the reader’s language', () => {
     ['es', 'Tienes 2 solicitudes pendientes y 1 reserva próxima.', 'Solicitudes y reservas'],
     ['ca', 'Tens 2 sol·licituds pendents i 1 reserva propera.', 'Sol·licituds i reserves'],
   ])('%s joins the two figures with its own "and"', async (language, sentence, label) => {
-    await i18n.changeLanguage(language);
+    await switchLanguage(i18n, language);
     setApi({ pages: [[booking(), booking(), reservation()]] });
 
     renderInbox();

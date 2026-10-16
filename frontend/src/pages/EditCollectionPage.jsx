@@ -25,6 +25,7 @@ import hdsLang from '../utils/hdsLang';
 import EmailNoteTest from '../components/EmailNoteTest';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import { allowedVerbsFor, membersPriceFromVerbs } from '../utils/collectionKind';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function EditCollectionPage() {
   const { t, i18n } = useTranslation();
@@ -38,11 +39,11 @@ export default function EditCollectionPage() {
   const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [loading, setLoading] = useState(true);
   const [headline, setHeadline] = useState('');
-  useEffect(() => {
-    document.title = headline
+  useDocumentTitle(
+    headline
       ? t('titles.editCollection', { headline: L(headline) })
-      : t('titles.editCollectionDefault');
-  }, [headline, t, L]);
+      : t('titles.editCollectionDefault')
+  );
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [mode, setMode] = useState('PROPRIETARY');

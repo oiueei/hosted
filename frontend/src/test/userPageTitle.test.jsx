@@ -11,6 +11,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import UserPage from '../pages/UserPage';
+import { switchLanguage } from './settle';
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
@@ -54,21 +55,21 @@ const renderNameless = () =>
 describe('UserPage — the title of a profile with no name', () => {
   afterEach(async () => {
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
   });
 
   test('falls back to a translated word, not to an English literal', async () => {
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
 
     renderNameless();
     await waitFor(() => expect(document.title).toBe('Profile — OIUEEI'));
 
     // The assertion the literal survived: in English it read correctly all along.
-    await i18n.changeLanguage('es');
+    await switchLanguage(i18n, 'es');
     await waitFor(() => expect(document.title).toBe('Perfil — OIUEEI'));
 
-    await i18n.changeLanguage('ca');
+    await switchLanguage(i18n, 'ca');
     await waitFor(() => expect(document.title).toBe('Perfil — OIUEEI'));
   });
 });

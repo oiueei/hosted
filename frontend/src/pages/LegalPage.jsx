@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageLayout from '../components/PageLayout';
 import MarkdownText from '../components/MarkdownText';
 import legalEs from '../legal/es';
 import legalCa from '../legal/ca';
 import legalEn from '../legal/en';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const CONTENT = { es: legalEs, ca: legalCa, en: legalEn };
 
@@ -18,9 +18,7 @@ const CONTENT = { es: legalEs, ca: legalCa, en: legalEn };
  */
 export default function LegalPage() {
   const { t, i18n } = useTranslation();
-  useEffect(() => {
-    document.title = t('titles.legal');
-  }, [t]);
+  useDocumentTitle(t('titles.legal'));
   const lang = (i18n.language || 'en').split('-')[0];
   const content = CONTENT[lang] || CONTENT.en;
   const isLoggedIn = !!localStorage.getItem('userCode');

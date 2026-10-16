@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import App from '../App';
 import TooltipButton from '../components/TooltipButton';
@@ -83,7 +83,7 @@ describe('TooltipButton', () => {
     const button = screen.getByRole('button', { name: 'Need help' });
     const wrapper = button.parentElement;
     fireEvent.focusIn(wrapper);
-    button.focus();
+    act(() => button.focus());
     expect(screen.getByText('Need help')).toBeInTheDocument();
 
     // Dispatched on document, not the wrapper: a mouse user reading the bubble

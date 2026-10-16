@@ -22,6 +22,7 @@ vi.mock('../services/api', () => ({
 
 import en from '../i18n/locales/en.json';
 import { apiFetch } from '../services/api';
+import { settle } from './settle';
 import ThingLinkbox from '../components/ThingLinkbox';
 import ThingPage from '../pages/ThingPage';
 
@@ -380,11 +381,11 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
   });
 
   test('Decline request rejects it, and says so while it does', async () => {
-    let settle;
+    let release;
     setApi({
       thing: makeThing({ type: 'LEND_THING', status: 'ACTIVE' }),
       calendar: [{ code: 'BK1', status: 'PENDING', end_date: '2099-12-31' }],
-      booking: () => new Promise((resolve) => (settle = resolve)),
+      booking: () => new Promise((resolve) => (release = resolve)),
     });
     renderPage();
 
@@ -397,7 +398,9 @@ describe('ThingPage — the buttons of a date-based thing act on the pending hol
     expect(cancelling).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Confirm request' })).toBeDisabled();
     expect(postsTo(/\/bookings\/BK1\/reject\//)).toHaveLength(1);
-    settle(await respond({}));
+    // Let the held request answer inside `act`, so the page's reply lands in the test.
+    release(await respond({}));
+    await settle(apiFetch);
   });
 });
 
@@ -421,10 +424,10 @@ describe('ThingPage — a requested gift or sale', () => {
 
 describe('ThingPage — the rest of the owner’s and the guest’s buttons', () => {
   test('Reactivate says so while it works, and cannot be pressed twice', async () => {
-    let settle;
+    let release;
     setApi({
       thing: makeThing({ status: 'INACTIVE' }),
-      activate: () => new Promise((resolve) => (settle = resolve)),
+      activate: () => new Promise((resolve) => (release = resolve)),
     });
     renderPage();
 
@@ -433,7 +436,9 @@ describe('ThingPage — the rest of the owner’s and the guest’s buttons', ()
     const working = await screen.findByRole('button', { name: en.thingCard.reactivating });
     expect(working).toBeDisabled();
     expect(postsTo(/\/activate\//)).toHaveLength(1);
-    settle(await respond({}));
+    // Let the held request answer inside `act`, so the page's reply lands in the test.
+    release(await respond({}));
+    await settle(apiFetch);
   });
 
   test('a guest’s date-based verb opens the request page with the way back to this thing', async () => {

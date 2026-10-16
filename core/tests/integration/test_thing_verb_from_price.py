@@ -137,6 +137,7 @@ class TestACommunityThatTakesNoPrices:
 
         assert res.status_code == status.HTTP_400_BAD_REQUEST
         assert "This group doesn't take prices." in str(res.data)
+        assert res.data["code"] == "no_prices_here"
 
     def test_without_a_price_a_member_gives_freely(self, authenticated_client2, free_group):
         res = _create(authenticated_client2, free_group)

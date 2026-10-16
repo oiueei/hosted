@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import i18n from '../i18n';
 import MagicLinkJoinPage from './MagicLinkJoinPage';
+import { switchLanguage } from '../test/settle';
 
 // SharePage's real configuration — the variant that carries a share_token.
 function renderShareVariant() {
@@ -366,7 +367,7 @@ describe('MagicLinkJoinPage presentation (the door matches the front door)', () 
 
   describe('the sign-in button reads as the question alone, in every language', () => {
     afterEach(async () => {
-      await i18n.changeLanguage('en');
+      await switchLanguage(i18n, 'en');
       localStorage.removeItem('i18nextLng');
     });
 
@@ -376,7 +377,7 @@ describe('MagicLinkJoinPage presentation (the door matches the front door)', () 
       ['ca', 'Ja tens un compte?'],
     ])('in %s it reads "%s", with no "sign in" after it and no arrow', async (language, label) => {
       localStorage.clear();
-      await i18n.changeLanguage(language);
+      await switchLanguage(i18n, language);
       renderShareVariant();
 
       const link = screen.getByRole('link', { name: label });

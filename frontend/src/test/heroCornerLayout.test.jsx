@@ -31,6 +31,7 @@ vi.mock('../services/api', async (importOriginal) => ({
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionPage from '../pages/CollectionPage';
+import { press } from './settle';
 
 // ── App.css, as rules ──────────────────────────────────────────────────
 const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -249,7 +250,7 @@ describe('the collection menu panel anchors to the corner row like the account m
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole('button', { name: /collection options/i }));
+    await press(await screen.findByRole('button', { name: /collection options/i }));
 
     const panel = container.querySelector('.collection-menu-panel');
     expect(panel).not.toBeNull();

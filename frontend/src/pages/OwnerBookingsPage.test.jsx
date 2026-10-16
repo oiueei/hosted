@@ -19,6 +19,7 @@ import OwnerBookingsPage from './OwnerBookingsPage';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { mockMatchMedia, PHONE } from '../test/matchMedia';
 import en from '../i18n/locales/en.json';
+import { settle } from '../test/settle';
 
 expect.extend(toHaveNoViolations);
 
@@ -584,6 +585,7 @@ describe('OwnerBookingsPage on a phone', () => {
     const { container } = renderPage();
     await screen.findByRole('list', { name: 'Requests waiting for your answer' });
 
+    await settle(apiFetch);
     expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });
 });
@@ -1073,6 +1075,7 @@ describe('OwnerBookingsPage — reminding a late return', () => {
     const { container } = renderPage();
     await screen.findByText('Drill');
 
+    await settle(apiFetch);
     expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });
 
@@ -1123,6 +1126,7 @@ describe('OwnerBookingsPage — reminding a late return', () => {
       const { container } = renderPage();
       await screen.findByRole('list', { name: ANSWERED });
 
+      await settle(apiFetch);
       expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
     });
   });

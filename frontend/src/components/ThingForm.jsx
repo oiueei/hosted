@@ -30,6 +30,10 @@ import hdsLang from '../utils/hdsLang';
  * community group whose members may not set a price (there is no price field at all);
  * `approvalCatalogue` lists the verb the deployment's policy withholds from this
  * account for the price typed, so the notice says so instead of letting it be sent.
+ * `verbFollowsPrice` is false when the server will not change the verb with the price
+ * (a thing with no collection, or one a mixed collection kept from the other
+ * family): the line under the price ("No price, it's a gift") would promise what does
+ * not happen, so the label is the neutral one and the line is left out.
  * `idPrefix` is `add-thing` or `edit-thing`.
  */
 export default function ThingForm({
@@ -39,6 +43,7 @@ export default function ThingForm({
   kind,
   type,
   priceAllowed = true,
+  verbFollowsPrice = true,
   approvalCatalogue = [],
   isEndless,
   setIsEndless,
@@ -89,13 +94,14 @@ export default function ThingForm({
   // would never surface anywhere. Condition and location still matter for them.
   const showAvailability = showDetailFields && !DATE_TYPES.includes(type);
   const priceLabel =
-    kind === 'STALL'
+    verbFollowsPrice && kind === 'STALL'
       ? t('thingForm.priceStall')
-      : kind === 'LIBRARY'
+      : verbFollowsPrice && kind === 'LIBRARY'
         ? t('thingForm.priceLibrary')
         : t('addThing.priceOptionalLabel');
-  const priceHelper =
-    kind === 'STALL'
+  const priceHelper = !verbFollowsPrice
+    ? undefined
+    : kind === 'STALL'
       ? t('thingForm.priceStallHelp')
       : kind === 'LIBRARY'
         ? t('thingForm.priceLibraryHelp')

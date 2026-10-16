@@ -93,8 +93,8 @@ def health_check(request):
     outage that stops the limiter working: as a decorator it ran *before* the
     body, so a refused Postgres connection surfaced from the limiter as an
     unhandled exception and the monitor got a 500 with a traceback in the error tracker,
-    never the 503 below (production, 2026-09-16 23:33 CEST — UptimeRobot's HEAD
-    probe). A limiter that cannot reach its counter must not be able to veto the
+    never the 503 below (seen in production as a monitor's HEAD probe during a
+    database outage). A limiter that cannot reach its counter must not be able to veto the
     answer; the outage it failed on is the answer. Pinned by
     ``test_health.py::test_degraded_when_the_outage_takes_the_limiter_with_it``.
 

@@ -83,7 +83,7 @@ class TestHealthCheck:
 
         `test_degraded_when_the_database_is_down` fakes only the view's own
         cursor, leaving the limiter's cache — the same Postgres — answering
-        happily. Production on 2026-09-16 had neither: the @ratelimit decorator
+        happily. A production outage had neither: the @ratelimit decorator
         ran first, its DatabaseCache raised, and the monitor got an unhandled
         500 with an error-tracker traceback instead of this 503. Restore the decorator
         and this test errors out on that exception rather than asserting.
@@ -96,8 +96,8 @@ class TestHealthCheck:
 
     @_WHOLE_DATABASE_DOWN
     def test_head_degraded_when_the_outage_takes_the_limiter_with_it(self, api_client):
-        """HEAD is the verb that actually caught the outage — UptimeRobot probes
-        with it, and it is what the 2026-09-16 error report recorded."""
+        """HEAD is the verb that actually caught the outage — uptime monitors
+        usually probe with it."""
         with patch("core.urls.connection") as mock_connection:
             mock_connection.cursor.side_effect = OperationalError("Connection refused")
             response = api_client.head(HEALTH_URL)

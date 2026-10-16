@@ -14,6 +14,7 @@ import { markMixedVerbs } from '../utils/bookingRows';
 import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
 import ResponsiveTable from '../components/ResponsiveTable';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
 // green/red hex). The thing *type* stays a plain Tag (it's a category, not a state).
@@ -41,9 +42,7 @@ export default function MyBookingsPage() {
   // cancelled — see CancelReservationDialog. A pending request of their own
   // still withdraws on one press.
   const [cancelRow, setCancelRow] = useState(null);
-  useEffect(() => {
-    document.title = t('titles.myBookings');
-  }, [t]);
+  useDocumentTitle(t('titles.myBookings'));
 
   const STATUS_LABELS = {
     PENDING: t('myBookings.statusPending'),
