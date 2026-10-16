@@ -660,7 +660,10 @@
     "pageTitle": "Quitar: {{name}}",
     "warning": "Esto eliminará a <0>{{name}}</0> de la colección. Perderá el acceso de inmediato.",
     "guests": "Miembros",
-    "errorRemoving": "Error al quitar al miembro."
+    "errorRemoving": "Error al quitar al miembro.",
+    "thingsLabel": "Sus cosas se van con esa persona",
+    "thingsBody_one": "Al quitarle también se borra su cosa de este grupo: {{list}}. Se avisará a quien la haya pedido o la tenga ahora. No se puede deshacer.",
+    "thingsBody_other": "Al quitarle también se borran sus {{count}} cosas de este grupo: {{list}}. Se avisará a quien haya pedido alguna o la tenga ahora. No se puede deshacer."
   },
   "leaveCollection": {
     "pageTitle": "¿Salir de {{headline}}?",

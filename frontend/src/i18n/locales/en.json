@@ -666,7 +666,10 @@
     "pageTitle": "Remove: {{name}}",
     "warning": "This will remove <0>{{name}}</0> from the collection. They will lose access immediately.",
     "guests": "Members",
-    "errorRemoving": "Error removing member."
+    "errorRemoving": "Error removing member.",
+    "thingsLabel": "Their things go with them",
+    "thingsBody_one": "Removing them also deletes their thing in this group: {{list}}. Anyone who asked for it or has it now will be told. This can't be undone.",
+    "thingsBody_other": "Removing them also deletes their {{count}} things in this group: {{list}}. Anyone who asked for one or has one now will be told. This can't be undone."
   },
   "leaveCollection": {
     "pageTitle": "Leave {{headline}}?",

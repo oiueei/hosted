@@ -11,6 +11,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import LeaveCollectionPage from '../pages/LeaveCollectionPage';
+import RemoveGuestPage from '../pages/RemoveGuestPage';
 import { settle } from './settle';
 
 expect.extend(toHaveNoViolations);
@@ -131,6 +132,69 @@ describe('LeaveCollectionPage says which of the member’s things will be delete
     );
     const { container } = renderPage();
     await waitFor(() => expect(notice()).toBeInTheDocument());
+
+    expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
+  });
+});
+
+describe('RemoveGuestPage says which of their things will be deleted with the member', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('userCode', 'FOUND1');
+    vi.clearAllMocks();
+    apiFetch.mockImplementation(() => answer(200, {}));
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const renderPage = (state) =>
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/collections/COL001/invites/remove', state }]}>
+        <Routes>
+          <Route path="/collections/:code/invites/remove" element={<RemoveGuestPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  const removing = { guestCode: 'GST001', guestName: 'Ana' };
+  const aviso = () => screen.queryByRole('heading', { name: /Their things go with them/ });
+
+  test('with one thing it names it, in the singular', () => {
+    renderPage({ ...removing, thingTitles: ['Drill'] });
+
+    expect(
+      screen.getByText(/Removing them also deletes their thing in this group: Drill\./)
+    ).toBeInTheDocument();
+    expect(aviso()).toBeInTheDocument();
+  });
+
+  test('with several it counts them and lists them as a sentence', () => {
+    renderPage({ ...removing, thingTitles: ['Drill', 'Ladder', '{"es": "Sierra", "en": "Saw"}'] });
+
+    expect(
+      screen.getByText(
+        /Removing them also deletes their 3 things in this group: Drill, Ladder, and Saw\./
+      )
+    ).toBeInTheDocument();
+  });
+
+  test.each([
+    ['none', []],
+    ['not sent at all (a page reached by hand)', undefined],
+  ])('with their things %s there is no notice', (_case, thingTitles) => {
+    renderPage({ ...removing, thingTitles });
+
+    expect(aviso()).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
+  });
+
+  test('a co-curator with things is warned the same way', () => {
+    renderPage({ guestCode: 'COOW01', guestName: 'Lele', thingTitles: ['Catalogue entry'] });
+
+    expect(screen.getByText(/their thing in this group: Catalogue entry\./)).toBeInTheDocument();
+  });
+
+  test('the notice has no accessibility violations', async () => {
+    const { container } = renderPage({ ...removing, thingTitles: ['Drill', 'Saw'] });
 
     expect(await axe(container, { rules: { region: { enabled: false } } })).toHaveNoViolations();
   });

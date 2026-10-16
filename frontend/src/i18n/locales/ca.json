@@ -660,7 +660,10 @@
     "pageTitle": "Treure: {{name}}",
     "warning": "Això treurà a <0>{{name}}</0> de la col·lecció. Perdrà l'accés immediatament.",
     "guests": "Membres",
-    "errorRemoving": "Error en treure el membre."
+    "errorRemoving": "Error en treure el membre.",
+    "thingsLabel": "Les seves coses se'n van amb aquesta persona",
+    "thingsBody_one": "En treure'l també s'esborra la seva cosa d'aquest grup: {{list}}. S'avisarà qui l'hagi demanada o la tingui ara. No es pot desfer.",
+    "thingsBody_other": "En treure'l també s'esborren les seves {{count}} coses d'aquest grup: {{list}}. S'avisarà qui n'hagi demanat alguna o en tingui una ara. No es pot desfer."
   },
   "leaveCollection": {
     "pageTitle": "Sortir de {{headline}}?",
