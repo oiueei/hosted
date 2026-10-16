@@ -720,13 +720,14 @@ class TestThingViews:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 1
 
-    def test_create_thing(self, authenticated_client):
+    def test_create_thing(self, authenticated_client, collection):
         """Should create a new thing."""
         response = authenticated_client.post(
             "/api/v1/things/",
             {
                 "headline": "New Thing",
                 "type": "GIFT_THING",
+                "collection_code": collection.code,
             },
             format="json",
         )
@@ -749,13 +750,14 @@ class TestThingViews:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["headline"] == "Updated Thing"
 
-    def test_create_thing_with_detail_fields(self, authenticated_client):
+    def test_create_thing_with_detail_fields(self, authenticated_client, collection):
         """Should create a thing with availability, location, and condition."""
         response = authenticated_client.post(
             "/api/v1/things/",
             {
                 "headline": "Gift with details",
                 "type": "GIFT_THING",
+                "collection_code": collection.code,
                 "availability": "IMMEDIATE",
                 "location": "Helsinki",
                 "condition": "GOOD",

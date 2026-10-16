@@ -43,13 +43,15 @@ def test_rate_limited_endpoint_returns_429(db, api_client):
         }
     },
 )
-def test_single_thing_create_is_rate_limited(db, authenticated_client):
+def test_single_thing_create_is_rate_limited(db, authenticated_client, collection):
     # Single-thing create is capped at 60/h per user so the 10/h bulk limit can't
     # be bypassed one-by-one into unbounded rows. The 61st in the window blocks.
     caches["default"].clear()
     statuses = [
         authenticated_client.post(
-            "/api/v1/things/", {"headline": f"Thing {i}", "type": "GIFT_THING"}, format="json"
+            "/api/v1/things/",
+            {"headline": f"Thing {i}", "type": "GIFT_THING", "collection_code": collection.code},
+            format="json",
         ).status_code
         for i in range(61)
     ]
