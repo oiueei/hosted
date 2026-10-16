@@ -51,6 +51,7 @@ async function formShown(view) {
   await waitFor(() =>
     expect(view.container.querySelector('#create-collection-headline')).toBeInTheDocument()
   );
+  await settle(apiFetch);
   return view;
 }
 
@@ -82,10 +83,10 @@ const withKind = (collection) => ({
   ...collection,
 });
 
-function renderEdit(collection) {
+async function renderEdit(collection) {
   collection = withKind(collection);
   setApi({ collection });
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={['/collections/COL001/edit']}>
       <Routes>
         <Route path="/collections/:code/edit" element={<EditCollectionPage />} />
@@ -93,6 +94,8 @@ function renderEdit(collection) {
       </Routes>
     </MemoryRouter>
   );
+  await settle(apiFetch);
+  return view;
 }
 
 beforeEach(() => {
@@ -403,7 +406,7 @@ describe('CreateCollectionPage — what pressing "Create" leads to', () => {
 
 describe('EditCollectionPage — load + pause + submit', () => {
   test('pre-populates the headline from the loaded collection', async () => {
-    renderEdit({
+    await renderEdit({
       headline: 'Loaded Name',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['GIFT_THING'],
@@ -413,7 +416,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
   });
 
   test('pause section shows the message field + "Pause collection" when not paused', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Comm',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['GIFT_THING'],
@@ -427,7 +430,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
   });
 
   test('pause section shows the message + "Resume collection" when paused', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Comm',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['GIFT_THING'],
@@ -446,7 +449,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
   // visible. The digest select lives on BOTH forms now (see the Create suite
   // above) — it is folded here, not exclusive to here.
   test('the digest select is hidden until "More options" is opened', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Comm',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['GIFT_THING'],
@@ -462,7 +465,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
   });
 
   test('PATCHes /api/v1/collections/{code}/ with the edited fields', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Old Name',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['GIFT_THING'],
@@ -488,7 +491,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
   });
 
   test('loads the stored home page and PATCHes an edited one back', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Ateneu',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['GIFT_THING'],
@@ -526,7 +529,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
    * `fireEvent` moves no focus, so change → click here IS that path.
    */
   test('a number typed into a day field is saved even if the field never lost focus', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Ateneu spaces',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['RESERVE_THING'],
@@ -557,7 +560,7 @@ describe('EditCollectionPage — load + pause + submit', () => {
   // (ReservationRulesFields — two NumberInputs wrapped in role="group", the
   // WeekdayChips row) never reaches axe there. Sweep it here, opened.
   test('the reservations rules branch, opened, has no accessibility violations', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       headline: 'Ateneu spaces',
       mode: 'PROPRIETARY',
       allowed_thing_types: ['RESERVE_THING'],

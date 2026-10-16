@@ -18,6 +18,7 @@ import { apiFetch } from '../services/api';
 import AddThingPage from '../pages/AddThingPage';
 import EditThingPage from '../pages/EditThingPage';
 import en from '../i18n/locales/en.json';
+import { settle } from './settle';
 
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
@@ -40,9 +41,9 @@ function setApi({ collection = {}, thing = {}, patch } = {}) {
   });
 }
 
-function renderAdd(apiOpts) {
+async function renderAdd(apiOpts) {
   setApi(apiOpts);
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={['/collections/COL001/add']}>
       <Routes>
         <Route path="/collections/:code/add" element={<AddThingPage />} />
@@ -50,11 +51,13 @@ function renderAdd(apiOpts) {
       </Routes>
     </MemoryRouter>
   );
+  await settle(apiFetch);
+  return view;
 }
 
-function renderEdit(apiOpts) {
+async function renderEdit(apiOpts) {
   setApi(apiOpts);
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={['/things/THG001/edit']}>
       <Routes>
         <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
@@ -62,6 +65,8 @@ function renderEdit(apiOpts) {
       </Routes>
     </MemoryRouter>
   );
+  await settle(apiFetch);
+  return view;
 }
 
 beforeEach(() => {
@@ -91,7 +96,7 @@ beforeEach(() => {
 // ════════════════════════════════════════════════════════════════════════
 describe('AddThingPage — field visibility', () => {
   test('a stall: price, the endless switch, availability, condition, place, photos', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'STALL', headline: 'Plain', mode: 'PROPRIETARY' },
     });
 
@@ -107,7 +112,7 @@ describe('AddThingPage — field visibility', () => {
   });
 
   test('a library: rental price, deposit, condition and place — and no static availability', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'LIBRARY', mode: 'PROPRIETARY' },
     });
 
@@ -122,7 +127,7 @@ describe('AddThingPage — field visibility', () => {
   });
 
   test('a shed: an optional price and a place, nothing of a loan or a gift', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'SHED', mode: 'PROPRIETARY', allowed_thing_types: ['RESERVE_THING'] },
     });
 
@@ -139,7 +144,7 @@ describe('AddThingPage — field visibility', () => {
     ['STALL', 'Price (optional)', "No price, it's a gift."],
     ['LIBRARY', 'Rental price (optional)', "No price, it's lent for free."],
   ])('a %s says what no price means', async (kind, label, help) => {
-    const { container } = renderAdd({ collection: { kind, mode: 'PROPRIETARY' } });
+    const { container } = await renderAdd({ collection: { kind, mode: 'PROPRIETARY' } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-fee')).toBeTruthy());
     expect(container.querySelector('label[for="add-thing-fee"]')).toHaveTextContent(label);
@@ -152,7 +157,7 @@ describe('AddThingPage — field visibility', () => {
   ])(
     'a community %s whose members may not set a price has no price field',
     async (kind, allowed) => {
-      const { container } = renderAdd({
+      const { container } = await renderAdd({
         collection: { kind, mode: 'COMMUNITY', allowed_thing_types: allowed },
       });
 
@@ -162,7 +167,7 @@ describe('AddThingPage — field visibility', () => {
   );
 
   test('there is no selector of verbs, and nothing explaining them', async () => {
-    const { container } = renderAdd({ collection: { kind: 'STALL', mode: 'PROPRIETARY' } });
+    const { container } = await renderAdd({ collection: { kind: 'STALL', mode: 'PROPRIETARY' } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     expect(container.querySelector('#add-thing-type-main-button')).toBeNull();
@@ -175,7 +180,7 @@ describe('AddThingPage — field visibility', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('AddThingPage — submit', () => {
   test('POSTs to /api/v1/things/ with headline and collection_code, and no type', async () => {
-    const { container } = renderAdd({ collection: { kind: 'STALL', mode: 'PROPRIETARY' } });
+    const { container } = await renderAdd({ collection: { kind: 'STALL', mode: 'PROPRIETARY' } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     fireEvent.change(container.querySelector('#add-thing-headline'), {
@@ -201,7 +206,7 @@ describe('AddThingPage — submit', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('EditThingPage', () => {
   test('pre-populates the headline from the loaded thing', async () => {
-    renderEdit({
+    await renderEdit({
       thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Existing Thing', description: '' },
     });
 
@@ -209,7 +214,7 @@ describe('EditThingPage', () => {
   });
 
   test('PATCHes /api/v1/things/{code}/ with the edited fields', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'GIFT_THING',
@@ -267,21 +272,24 @@ describe('EditThingPage — the policy is asked about the verb the price makes',
     localStorage.setItem('userCode', `NARROW${Math.random()}`);
   });
 
-  const open = () =>
-    render(
+  const open = async () => {
+    const view = render(
       <MemoryRouter initialEntries={['/things/THG001/edit']}>
         <Routes>
           <Route path="/things/:thingCode/edit" element={<EditThingPage />} />
         </Routes>
       </MemoryRouter>
     );
+    await settle(apiFetch);
+    return view;
+  };
 
   test('a price that would make a sale the policy does not give shows the notice and blocks Save', async () => {
     apiWith(
       { code: 'THG001', type: 'GIFT_THING', collection_kind: 'STALL', headline: 'Vase', tags: [] },
       caps(['GIFT_THING'])
     );
-    const { container } = open();
+    const { container } = await open();
     await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
     // As it stands it is a gift, which is given: nothing to explain.
     expect(screen.queryByText(/need approval/)).toBeNull();
@@ -307,7 +315,7 @@ describe('EditThingPage — the policy is asked about the verb the price makes',
       },
       caps(['GIFT_THING', 'SELL_THING'])
     );
-    const { container } = open();
+    const { container } = await open();
     await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
 
     expect(screen.queryByText(/need approval/)).toBeNull();
@@ -328,7 +336,7 @@ describe('EditThingPage — the policy is asked about the verb the price makes',
       },
       caps(['GIFT_THING', 'SELL_THING'])
     );
-    const { container } = open();
+    const { container } = await open();
     await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
 
     expect(screen.queryByText(/need approval/)).toBeNull();
@@ -350,7 +358,7 @@ describe('AddThingPage — picking one of the collection’s tags', () => {
   const KITCHEN = '{"es":"Cocina","ca":"Cuina","en":"Kitchen"}';
 
   test('stores the tag’s own value, not the label it was read as', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { mode: 'PROPRIETARY', tags: [KITCHEN, 'garden'] },
     });
 
@@ -381,7 +389,7 @@ describe('AddThingPage — clearing a detail select', () => {
      this app means the whole add-a-thing form disappears — for someone whose
      only mistake was changing their mind about "Immediate". */
   test('changing your mind about availability empties it instead of breaking', async () => {
-    const { container } = renderAdd({ collection: { mode: 'PROPRIETARY' } });
+    const { container } = await renderAdd({ collection: { mode: 'PROPRIETARY' } });
 
     await waitFor(() => expect(container.querySelector('#add-thing-headline')).toBeTruthy());
     fireEvent.change(container.querySelector('#add-thing-headline'), {
@@ -416,7 +424,7 @@ describe('AddThingPage — clearing a detail select', () => {
 
 describe('AddThingPage — the deposit field only exists in a library', () => {
   test('a stall never has a deposit input', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'STALL', headline: 'Plain', mode: 'PROPRIETARY' },
     });
 
@@ -425,7 +433,7 @@ describe('AddThingPage — the deposit field only exists in a library', () => {
   });
 
   test('a library that only lends gets the field, with no default and never labelled as part of the price', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'LIBRARY', mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
     });
 
@@ -438,7 +446,7 @@ describe('AddThingPage — the deposit field only exists in a library', () => {
   });
 
   test('a library carries both fields, distinctly labelled', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'LIBRARY', mode: 'PROPRIETARY' },
     });
 
@@ -453,7 +461,7 @@ describe('AddThingPage — the deposit field only exists in a library', () => {
   });
 
   test('a deposit typed for a LEND thing reaches the POST body', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'LIBRARY', mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
     });
 
@@ -474,7 +482,7 @@ describe('AddThingPage — the deposit field only exists in a library', () => {
   });
 
   test('leaving it empty never sends the field at all — nothing to clear on a brand-new thing', async () => {
-    const { container } = renderAdd({
+    const { container } = await renderAdd({
       collection: { kind: 'LIBRARY', mode: 'COMMUNITY', allowed_thing_types: ['LEND_THING'] },
     });
 
@@ -496,7 +504,7 @@ describe('AddThingPage — the deposit field only exists in a library', () => {
 
 describe('EditThingPage — deposit follows the type, explicitly', () => {
   test('a stored deposit pre-fills the field', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'LEND_THING',
@@ -514,7 +522,7 @@ describe('EditThingPage — deposit follows the type, explicitly', () => {
     // The server judges the row that lands (core/serializers/CLAUDE.md): an untouched
     // field keeps its stored value, so a thing in a stall that somehow carries a
     // deposit has to clear it itself or the save 400s.
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'GIFT_THING',
@@ -538,7 +546,7 @@ describe('EditThingPage — deposit follows the type, explicitly', () => {
   });
 
   test('a library keeps sending the amount', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'LEND_THING',
@@ -566,7 +574,7 @@ describe('a text that opens like a language map and is not one', () => {
   // one counted like prose and then showed on the card with its braces, and nothing
   // on the form said so.
   test('the headline and description say they will read as plain text', async () => {
-    const { container } = renderAdd({ collection: { allowed_thing_types: ['GIFT_THING'] } });
+    const { container } = await renderAdd({ collection: { allowed_thing_types: ['GIFT_THING'] } });
     const headline = await waitFor(() => {
       const el = container.querySelector('input[id$="-headline"]');
       expect(el).not.toBeNull();
@@ -608,7 +616,7 @@ describe('EditThingPage — what a save sends', () => {
   };
 
   test('a price is sent as typed, and no verb with it', async () => {
-    const { container } = renderEdit({ thing: sale });
+    const { container } = await renderEdit({ thing: sale });
     await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
 
     fireEvent.change(container.querySelector('#edit-thing-fee'), { target: { value: '25' } });
@@ -620,7 +628,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('clearing the price is said, so the sale becomes a gift again', async () => {
-    const { container } = renderEdit({ thing: sale });
+    const { container } = await renderEdit({ thing: sale });
     await waitFor(() => expect(container.querySelector('#edit-thing-fee')).toBeTruthy());
 
     fireEvent.change(container.querySelector('#edit-thing-fee'), { target: { value: '' } });
@@ -631,7 +639,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('a community group whose members may not set a price has no price to edit or send', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         ...sale,
         type: 'GIFT_THING',
@@ -649,7 +657,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('the endless switch is a stall’s, and a library’s thing has none', async () => {
-    const stall = renderEdit({ thing: sale });
+    const stall = await renderEdit({ thing: sale });
     await waitFor(() =>
       expect(stall.container.querySelector('#edit-thing-is-endless')).toBeTruthy()
     );
@@ -658,7 +666,7 @@ describe('EditThingPage — what a save sends', () => {
     stall.unmount();
 
     apiFetch.mockClear();
-    const library = renderEdit({
+    const library = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'LEND_THING',
@@ -675,7 +683,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('a thing that is endless is loaded as endless, and a save of another field keeps it so', async () => {
-    const { container } = renderEdit({ thing: { ...sale, is_endless: true } });
+    const { container } = await renderEdit({ thing: { ...sale, is_endless: true } });
     await waitFor(() => expect(container.querySelector('#edit-thing-is-endless')).toBeTruthy());
     expect(container.querySelector('#edit-thing-is-endless')).toHaveAttribute(
       'aria-pressed',
@@ -693,7 +701,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('a sale a lending-only group kept has no price field: its collection decides, not its verb', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'SELL_THING',
@@ -709,7 +717,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('a loan a mixed stall kept is edited as a loan: its deposit stays, the stall’s switch does not appear', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'LEND_THING',
@@ -736,7 +744,7 @@ describe('EditThingPage — what a save sends', () => {
     const refusal = (status, body) => ({ ok: false, status, json: () => Promise.resolve(body) });
 
     const typeNewTitle = async (patchAnswer) => {
-      const { container } = renderEdit({ thing: sale, patch: patchAnswer });
+      const { container } = await renderEdit({ thing: sale, patch: patchAnswer });
       await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
       const title = container.querySelector('#edit-thing-headline');
       fireEvent.change(title, { target: { value: 'Red bike' } });
@@ -791,7 +799,7 @@ describe('EditThingPage — what a save sends', () => {
   });
 
   test('a title of only spaces sends nothing and asks for one', async () => {
-    const { container } = renderEdit({ thing: sale });
+    const { container } = await renderEdit({ thing: sale });
     await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
     const title = container.querySelector('#edit-thing-headline');
     fireEvent.change(title, { target: { value: '   ' } });
@@ -812,7 +820,7 @@ describe('EditThingPage — what no price means', () => {
   const LEND_HELP = en.thingForm.priceLibraryHelp;
 
   test('a thing of a stall says no price is a gift', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: { code: 'THG001', type: 'GIFT_THING', collection_kind: 'STALL', headline: 'Vase' },
     });
 
@@ -821,7 +829,7 @@ describe('EditThingPage — what no price means', () => {
   });
 
   test('a thing with no collection promises nothing about what no price makes it', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: { code: 'THG001', type: 'GIFT_THING', headline: 'Vase' },
     });
 
@@ -834,7 +842,7 @@ describe('EditThingPage — what no price means', () => {
   });
 
   test('a loan a stall kept promises neither help, and its label is the neutral one', async () => {
-    const { container } = renderEdit({
+    const { container } = await renderEdit({
       thing: {
         code: 'THG001',
         type: 'LEND_THING',

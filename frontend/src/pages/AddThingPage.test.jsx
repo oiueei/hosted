@@ -21,6 +21,7 @@ vi.mock('../services/api', async (importOriginal) => ({
 import { apiFetch } from '../services/api';
 import AddThingPage from './AddThingPage';
 import en from '../i18n/locales/en.json';
+import { settle } from '../test/settle';
 
 // The form a member meets first in a COMMUNITY collection. There is no choice of
 // verb in it: the collection's kind and the price decide it, the server puts it, and
@@ -50,14 +51,19 @@ function mockApi({ coll = collection(), post = { ok: true, body: {} } } = {}) {
   });
 }
 
-const renderPage = () =>
-  render(
+// The page asks the collection and the deployment's capabilities as it mounts: the
+// helper hands the view back once both have answered.
+const renderPage = async () => {
+  const view = render(
     <MemoryRouter initialEntries={['/collections/COL001/add']}>
       <Routes>
         <Route path="/collections/:code/add" element={<AddThingPage />} />
       </Routes>
     </MemoryRouter>
   );
+  await settle(apiFetch);
+  return view;
+};
 
 const postBody = () => {
   const call = apiFetch.mock.calls.find(([, o]) => o?.method === 'POST');
@@ -78,7 +84,7 @@ afterEach(() => vi.restoreAllMocks());
 describe('AddThingPage — no CSV import any more', () => {
   test('the page has no bulk section and no import heading', async () => {
     mockApi();
-    const { container } = renderPage();
+    const { container } = await renderPage();
     await screen.findByLabelText(/Title/);
 
     expect(container.querySelector('#bulk-add, .bulk-add-section')).toBeNull();
@@ -99,6 +105,7 @@ describe('AddThingPage — no CSV import any more', () => {
         </MemoryRouter>
       );
       await screen.findByLabelText(/Title/);
+      await settle(apiFetch);
 
       expect(scrollIntoView).not.toHaveBeenCalled();
     } finally {
@@ -110,7 +117,7 @@ describe('AddThingPage — no CSV import any more', () => {
 describe('AddThingPage — the price decides the verb, the server puts it', () => {
   test('a gift and a sale are the same form: a price, or none', async () => {
     mockApi();
-    renderPage();
+    await renderPage();
 
     const price = await screen.findByLabelText(/Price/);
     expect(price).toBeInTheDocument();
@@ -123,7 +130,7 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
 
   test('no verb is sent, with a price or without one', async () => {
     mockApi();
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Old bike' } });
     fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '30' } });
 
@@ -140,7 +147,7 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
 
   test('a price is optional: with none the thing is sent without a fee', async () => {
     mockApi();
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -155,7 +162,7 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
     ['LIBRARY', 'Rental price (optional)'],
   ])('a %s asks for its price in its own words', async (kind, label) => {
     mockApi({ coll: collection({ kind }) });
-    renderPage();
+    await renderPage();
 
     expect(
       await screen.findByLabelText(new RegExp(label.replace(/[()]/g, '\\$&')))
@@ -170,7 +177,7 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
         allowed_thing_types: ['GIFT_THING'],
       }),
     });
-    renderPage();
+    await renderPage();
     await screen.findByLabelText(/Title/);
 
     expect(screen.queryByLabelText(/Price/)).toBeNull();
@@ -180,12 +187,12 @@ describe('AddThingPage — the price decides the verb, the server puts it', () =
     mockApi({
       coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
     });
-    const { container, unmount } = renderPage();
+    const { container, unmount } = await renderPage();
     await waitFor(() => expect(container.querySelector('#add-thing-deposit')).toBeTruthy());
     unmount();
 
     mockApi();
-    const stall = renderPage();
+    const stall = await renderPage();
     await screen.findByLabelText(/Title/);
     expect(stall.container.querySelector('#add-thing-deposit')).toBeNull();
   });
@@ -198,7 +205,7 @@ describe('AddThingPage — when the collection cannot be read', () => {
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
     );
-    renderPage();
+    await renderPage();
 
     expect(await screen.findByText('Error loading collection.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
@@ -206,7 +213,7 @@ describe('AddThingPage — when the collection cannot be read', () => {
 
   test('a dropped connection says so and leaves the form usable', async () => {
     apiFetch.mockImplementation(() => Promise.reject(new Error('offline')));
-    renderPage();
+    await renderPage();
 
     expect(await screen.findByText('Connection error.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
@@ -214,7 +221,7 @@ describe('AddThingPage — when the collection cannot be read', () => {
 
   test('a collection that reads fine shows no error', async () => {
     mockApi();
-    renderPage();
+    await renderPage();
     await screen.findByLabelText(/Title/);
 
     expect(screen.queryByText('Error loading collection.')).toBeNull();
@@ -225,7 +232,7 @@ describe('AddThingPage — when the collection cannot be read', () => {
 describe('AddThingPage — what the form sends', () => {
   test('a stall gift sends its condition, its place and its availability', async () => {
     mockApi();
-    const { container } = renderPage();
+    const { container } = await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue pan' } });
     fireEvent.change(container.querySelector('#add-thing-location'), {
       target: { value: '  Gràcia  ' },
@@ -249,7 +256,7 @@ describe('AddThingPage — what the form sends', () => {
     mockApi({
       coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
     });
-    const { container } = renderPage();
+    const { container } = await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Drill' } });
     fireEvent.change(screen.getByLabelText(/Rental price/), { target: { value: '4' } });
     fireEvent.change(container.querySelector('#add-thing-location'), {
@@ -268,7 +275,7 @@ describe('AddThingPage — what the form sends', () => {
 
   test('a title is enough, and the collection travels with it', async () => {
     mockApi();
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -285,7 +292,7 @@ describe('AddThingPage — what the form sends', () => {
   // comes from the response of the POST, nowhere else.
   test('the new thing’s code, from the response, travels to the collection page', async () => {
     mockApi({ post: { ok: true, body: { code: 'NEW123', headline: 'Blue armchair' } } });
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -299,7 +306,7 @@ describe('AddThingPage — what the form sends', () => {
 
   test('a response with no code still goes to the collection, with no state to act on', async () => {
     mockApi({ post: { ok: true, body: {} } });
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -309,7 +316,7 @@ describe('AddThingPage — what the form sends', () => {
 
   test('a title of only spaces is not a title', async () => {
     mockApi();
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: '   ' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -322,7 +329,7 @@ describe('AddThingPage — what the form sends', () => {
     // `is_endless` is a gift-and-sale concept — a loan comes back by definition, so
     // sending the flag on one would be describing something that cannot happen.
     mockApi();
-    const stall = renderPage();
+    const stall = await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Seed packets' } });
     fireEvent.click(screen.getByRole('button', { name: /Endless|Sin límite/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -333,7 +340,7 @@ describe('AddThingPage — what the form sends', () => {
     mockApi({
       coll: collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
     });
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'A ladder' } });
     expect(screen.queryByRole('button', { name: /Endless|Sin límite/i })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -345,7 +352,7 @@ describe('AddThingPage — what the form sends', () => {
     mockApi({
       post: { ok: false, status: 400, body: { type: ['This group doesn’t take prices.'] } },
     });
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
     navigate.mockClear();
 
@@ -363,7 +370,7 @@ describe('AddThingPage — what the form sends', () => {
         body: { type: ['This group doesn’t take prices.'], code: 'no_prices_here' },
       },
     });
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -376,7 +383,7 @@ describe('AddThingPage — what the form sends', () => {
     // 429 means "try later"; a generic failure message would send the member
     // back to edit a form that was already correct.
     mockApi({ post: { ok: false, status: 429, body: {} } });
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Blue armchair' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -411,7 +418,7 @@ describe('AddThingPage — the deployment’s policy, asked about the verb the p
 
   test('a price in a stall whose policy does not give sales shows the notice and cannot be sent', async () => {
     mockPolicy(collection(), policy(['GIFT_THING']));
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Old bike' } });
     // No price: a gift, which is given — nothing to explain, and it can be sent.
     expect(screen.queryByText(/need approval/i)).toBeNull();
@@ -436,7 +443,7 @@ describe('AddThingPage — the deployment’s policy, asked about the verb the p
       }),
       policy(['GIFT_THING', 'SELL_THING'])
     );
-    renderPage();
+    await renderPage();
     fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'A ladder' } });
 
     // Neither the loan nor, with a price, the rental is withheld here.
@@ -451,7 +458,7 @@ describe('AddThingPage — the deployment’s policy, asked about the verb the p
       collection({ kind: 'LIBRARY', allowed_thing_types: ['LEND_THING', 'RENT_THING'] }),
       policy(['GIFT_THING', 'SELL_THING'])
     );
-    renderPage();
+    await renderPage();
     await screen.findByLabelText(/Title/);
 
     expect(await screen.findByText(/need approval on this deployment: Lend/)).toBeInTheDocument();

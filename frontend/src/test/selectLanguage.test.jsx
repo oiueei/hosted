@@ -12,7 +12,9 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
+import { apiFetch } from '../services/api';
 import AddThingPage from '../pages/AddThingPage';
+import { settle } from './settle';
 
 /**
  * HDS ships its own assistive wording for `Select` — "choose one", "2 selected
@@ -50,6 +52,7 @@ describe('no Select speaks Finnish', () => {
     await waitFor(() =>
       expect(container.querySelector('#add-thing-condition-main-button')).toBeTruthy()
     );
+    await settle(apiFetch);
 
     const labels = [...container.querySelectorAll('[aria-label]')].map((el) =>
       el.getAttribute('aria-label')
