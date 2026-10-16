@@ -106,13 +106,23 @@ class TestCreating:
         assert res.status_code == status.HTTP_400_BAD_REQUEST
         assert "deposit" in str(res.data)
 
-    def test_a_thing_with_no_collection_keeps_the_old_rules(self, authenticated_client):
+    def test_a_thing_with_no_collection_is_refused(self, authenticated_client):
+        """A thing lives in a collection from the start; there is no loose thing."""
         res = authenticated_client.post(
             THINGS, {"headline": "Loose", "type": SELL, "fee": "3.00"}, format="json"
         )
 
-        assert res.status_code == status.HTTP_201_CREATED, res.data
-        assert Thing.objects.get(code=res.data["code"]).type == SELL
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+        assert res.data == {"collection_code": ["A thing is created in a collection."]}
+        assert not Thing.objects.filter(headline="Loose").exists()
+
+    def test_a_blank_collection_code_is_refused_the_same_way(self, authenticated_client):
+        res = authenticated_client.post(
+            THINGS, {"headline": "Loose", "collection_code": ""}, format="json"
+        )
+
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+        assert "collection_code" in res.data
 
     def test_a_collection_that_is_not_theirs_is_not_answered_for(self, authenticated_client2, user):
         """A stranger told 'in a stall…' would learn the kind of a private group."""

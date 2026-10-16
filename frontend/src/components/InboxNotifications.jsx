@@ -300,11 +300,15 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         });
       case 'THING_REPORTED':
         return t('home.reportedBody', { thing_headline: p.thing_headline });
-      case 'MEMBER_LEFT':
-        return t('home.memberLeftBody', {
+      case 'MEMBER_LEFT': {
+        const left = t('home.memberLeftBody', {
           collection_headline: p.collection_headline,
           member_name: p.member_name,
         });
+        // A notice written before the count existed has no `things_deleted`: 0.
+        const things = p.things_deleted || 0;
+        return things > 0 ? `${left} ${t('home.memberLeftThings', { count: things })}` : left;
+      }
       case 'INVITE_PROPOSAL_APPROVED':
         return t('home.proposalApprovedBody', {
           collection_headline: p.collection_headline,

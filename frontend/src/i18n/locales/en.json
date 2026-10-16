@@ -270,6 +270,8 @@
     "viewThing": "View listing",
     "memberLeftLabel": "Someone left the group",
     "memberLeftBody": "{{member_name}} has left “{{collection_headline}}”.",
+    "memberLeftThings_one": "Their thing in it was deleted with them.",
+    "memberLeftThings_other": "Their {{count}} things in it were deleted with them.",
     "proposedLabel": "A guest has been recommended",
     "proposedBody": "{{proposer_name}} suggests inviting {{email}} to “{{collection_headline}}”. Nobody has been contacted — it's your call.",
     "proposalApprovedLabel": "Your recommendation went through",
@@ -666,7 +668,10 @@
     "pageTitle": "Remove: {{name}}",
     "warning": "This will remove <0>{{name}}</0> from the collection. They will lose access immediately.",
     "guests": "Members",
-    "errorRemoving": "Error removing member."
+    "errorRemoving": "Error removing member.",
+    "thingsLabel": "Their things go with them",
+    "thingsBody_one": "Removing them also deletes their thing in this group: {{list}}. Anyone who asked for it or has it now will be told. This can't be undone.",
+    "thingsBody_other": "Removing them also deletes their {{count}} things in this group: {{list}}. Anyone who asked for one or has one now will be told. This can't be undone."
   },
   "leaveCollection": {
     "pageTitle": "Leave {{headline}}?",
@@ -674,7 +679,10 @@
     "warning": "You'll be removed from <0>{{headline}}</0> and lose access to it, unless the owner invites you again.",
     "leave": "Leave the group",
     "leaving": "Leaving…",
-    "errorLeaving": "Couldn't leave the group. Please try again."
+    "errorLeaving": "Couldn't leave the group. Please try again.",
+    "thingsLabel": "Your things go with you",
+    "thingsBody_one": "Leaving deletes your thing in this group: {{list}}. Anyone who asked for it or has it now will be told. This can't be undone.",
+    "thingsBody_other": "Leaving deletes your {{count}} things in this group: {{list}}. Anyone who asked for one or has one now will be told. This can't be undone."
   },
   "userPage": {
     "memberSince": "Member since {{date}}",

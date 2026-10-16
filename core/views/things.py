@@ -151,6 +151,10 @@ class ThingViewSet(ModelViewSet):
         # / 400 ValidationError) and handled by the default exception handler —
         # no instance-state protocol, so create() stays a plain 201 path.
         collection_code = self.request.data.get("collection_code")
+        # A thing lives in a collection from the moment it exists, and its owner
+        # always has access to it: refused before any other check.
+        if not collection_code:
+            raise ValidationError({"collection_code": ["A thing is created in a collection."]})
         collection = (
             Collection.objects.filter(code=collection_code).first() if collection_code else None
         )
@@ -181,18 +185,6 @@ class ThingViewSet(ModelViewSet):
         denial = thing_type_denial(self.request.user, thing_type)
         if denial and thing_type not in community_contribution_types(collection, self.request.user):
             raise PermissionDenied(denial)
-
-        # A standalone RESERVE create (no collection_code) has no reservations
-        # collection to land in — refuse it here, with the same 400 a
-        # non-reservations collection gets. A named collection is checked below
-        # instead: a *missing* one is the 404, and a non-reservations one is the
-        # in-block 400 *after* the can-add 403 — so that 400 never doubles as a
-        # "does this code name a reservations collection?" probe for someone with
-        # no standing there.
-        if thing_type == Thing.Type.RESERVE_THING and not collection_code:
-            reserve_err = type_validity_error(thing_type, None)
-            if reserve_err:
-                raise ValidationError({"type": reserve_err})
 
         if collection_code:
             if collection is None:

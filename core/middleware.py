@@ -1,5 +1,5 @@
 """
-Middleware for OIUEEI: security headers + first-party daily-activity tracking.
+Middleware for OIUEEI: security headers + first-party daily-activity and device counts.
 """
 
 import logging
@@ -7,7 +7,10 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import F
 from django.utils import timezone
+
+from core.device import device_class
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +120,7 @@ class SecurityHeadersMiddleware:
 
 
 class DailyActivityMiddleware:
-    """Record that the authenticated user was active today — at most one row per day.
+    """Record that the authenticated user was active today, and count it by device.
 
     Runs *after* the view so it can read the DRF-authenticated user: this app has no
     Django session (auth is JWT-cookie via DRF authenticators), so ``request.user``
@@ -125,13 +128,35 @@ class DailyActivityMiddleware:
     the real user back onto the underlying request. Anonymous / non-DRF requests are
     skipped.
 
-    A cache key (``da:{user}:{date}``, TTL ~24h, on the shared DatabaseCache) gates
-    the write so it costs one DB write per user per day, not one per request. Any
-    failure here is swallowed — activity bookkeeping must never turn a successful
-    response into a 500 (DESIGN §9: this stays first-party, in our DB).
+    It does two independent things, each best-effort:
+
+    - **Daily activity**: a cache key (``da:{user}:{date}``, TTL ~24h, on the shared
+      DatabaseCache) gates the write so it costs one ``DailyActivity`` row per user
+      per day, not one per request.
+    - **Device counts** (``DeviceDay``, numbers only): ``PEOPLE`` once per person, day
+      and kind of device (cache key ``dd:{user}:{date}:{device}``), and ``FORM_SAVES``
+      for every successful create (``POST``) or edit (``PATCH``/``PUT``) of a
+      collection or a thing. The row holds the date, the device group, the metric and
+      a count: never the user and never the ``User-Agent``. It is counted whatever
+      the activity gate said, so a second device the same day still counts.
+
+    Any failure here is swallowed — bookkeeping must never turn a successful
+    response into a 500, and one count failing must not lose the other (DESIGN §9:
+    this stays first-party, in our DB).
     """
 
     CACHE_TTL = 60 * 60 * 24  # ~24h; the date is in the key, so it rolls over anyway.
+
+    # The router's own names: `things` / `collections`, creating (list, POST) or
+    # editing (detail, PATCH/PUT).
+    SAVE_ROUTES = {
+        ("collection-list", "POST"),
+        ("thing-list", "POST"),
+        ("collection-detail", "PATCH"),
+        ("collection-detail", "PUT"),
+        ("thing-detail", "PATCH"),
+        ("thing-detail", "PUT"),
+    }
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -142,13 +167,21 @@ class DailyActivityMiddleware:
             self._record(request)
         except Exception:  # noqa: BLE001 — never let tracking break the response.
             logger.warning("DailyActivity recording failed", exc_info=True)
+        try:
+            self._count_device(request, response)
+        except Exception:  # noqa: BLE001 — same: a count never breaks the response.
+            logger.warning("DeviceDay counting failed", exc_info=True)
         return response
 
-    def _record(self, request):
+    @staticmethod
+    def _user_code(request):
         user = getattr(request, "user", None)
         if user is None or not getattr(user, "is_authenticated", False):
-            return
-        user_code = getattr(user, "code", None)
+            return None
+        return getattr(user, "code", None) or None
+
+    def _record(self, request):
+        user_code = self._user_code(request)
         if not user_code:
             return
 
@@ -163,3 +196,33 @@ class DailyActivityMiddleware:
         # unique(user, date) constraint.
         DailyActivity.objects.get_or_create(user_id=user_code, date=today)
         cache.set(cache_key, 1, self.CACHE_TTL)
+
+    def _count_device(self, request, response):
+        user_code = self._user_code(request)
+        if not user_code:
+            return
+        device = device_class(request)
+        if device is None:
+            return
+
+        from core.models.activity import DeviceDay
+
+        today = timezone.localdate()
+        key = f"dd:{user_code}:{today.isoformat()}:{device}"
+        if not cache.get(key):
+            self._bump(DeviceDay, today, device, DeviceDay.PEOPLE)
+            cache.set(key, 1, self.CACHE_TTL)
+
+        match = getattr(request, "resolver_match", None)
+        if (
+            match is not None
+            and response.status_code in (200, 201)
+            and (match.url_name, request.method) in self.SAVE_ROUTES
+        ):
+            self._bump(DeviceDay, today, device, DeviceDay.FORM_SAVES)
+
+    @staticmethod
+    def _bump(model, day, device, metric):
+        """Add one to the day's count, in the database: never read, add and save."""
+        row, _ = model.objects.get_or_create(date=day, device=device, metric=metric)
+        model.objects.filter(pk=row.pk).update(count=F("count") + 1)

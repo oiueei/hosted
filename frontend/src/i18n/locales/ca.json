@@ -264,6 +264,8 @@
     "viewThing": "Mostra la publicació",
     "memberLeftLabel": "Algú ha deixat el grup",
     "memberLeftBody": "{{member_name}} ha deixat “{{collection_headline}}”.",
+    "memberLeftThings_one": "La seva cosa s'ha esborrat amb la seva sortida.",
+    "memberLeftThings_other": "Les seves {{count}} coses s'han esborrat amb la seva sortida.",
     "proposedLabel": "Et recomanen algú",
     "proposedBody": "{{proposer_name}} proposa convidar {{email}} a “{{collection_headline}}”. No s'ha contactat amb ningú: la decisió és teva.",
     "proposalApprovedLabel": "La teva recomanació ha tirat endavant",
@@ -660,7 +662,10 @@
     "pageTitle": "Treure: {{name}}",
     "warning": "Això treurà a <0>{{name}}</0> de la col·lecció. Perdrà l'accés immediatament.",
     "guests": "Membres",
-    "errorRemoving": "Error en treure el membre."
+    "errorRemoving": "Error en treure el membre.",
+    "thingsLabel": "Les seves coses se'n van amb aquesta persona",
+    "thingsBody_one": "En treure'l també s'esborra la seva cosa d'aquest grup: {{list}}. S'avisarà qui l'hagi demanada o la tingui ara. No es pot desfer.",
+    "thingsBody_other": "En treure'l també s'esborren les seves {{count}} coses d'aquest grup: {{list}}. S'avisarà qui n'hagi demanat alguna o en tingui una ara. No es pot desfer."
   },
   "leaveCollection": {
     "pageTitle": "Sortir de {{headline}}?",
@@ -668,7 +673,10 @@
     "warning": "Se't traurà de <0>{{headline}}</0> i en perdràs l'accés, tret que el propietari et torni a convidar.",
     "leave": "Sortir del grup",
     "leaving": "Sortint…",
-    "errorLeaving": "No s'ha pogut sortir del grup. Torna-ho a provar."
+    "errorLeaving": "No s'ha pogut sortir del grup. Torna-ho a provar.",
+    "thingsLabel": "Les teves coses se'n van amb tu",
+    "thingsBody_one": "En sortir s'esborra la teva cosa d'aquest grup: {{list}}. S'avisarà qui l'hagi demanada o la tingui ara. No es pot desfer.",
+    "thingsBody_other": "En sortir s'esborren les teves {{count}} coses d'aquest grup: {{list}}. S'avisarà qui n'hagi demanat alguna o en tingui una ara. No es pot desfer."
   },
   "userPage": {
     "memberSince": "Membre des de {{date}}",

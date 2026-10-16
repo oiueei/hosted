@@ -87,13 +87,14 @@ def type_validity_error(thing_type, collection):
     """Error message if ``thing_type`` isn't valid for ``collection``, else None.
 
     Shared by thing create/update so the owner's per-collection allowlist can't
-    be bypassed by any path. A thing with no collection has no allowlist to
-    answer to, so it is always valid — the type-vs-mode rules that used to live
-    here went with SHARE and SWAP.
+    be bypassed by any path. A thing is no longer created without a collection
+    (``ThingViewSet.perform_create`` refuses it), so the ``collection is None``
+    branches below are defence for rows from before that rule: a thing with no
+    collection has no allowlist to answer to and is valid, except RESERVE_THING.
 
     RESERVE_THING is the one type with a rule of its own: it can *only* live in
     a reservations collection (a shed: ``is_reservations_collection()``), so
-    a standalone RESERVE thing — or one aimed at any other collection — is
+    a RESERVE thing with no collection — or one aimed at any other collection — is
     refused. A shed's verb list (``["RESERVE_THING"]``) already blocks the other
     verbs from it; this closes the other direction.
     """

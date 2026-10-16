@@ -5,7 +5,7 @@ Django Admin configuration for OIUEEI.
 from django import forms
 from django.contrib import admin
 
-from core.models import FAQ, RSVP, Collection, Report, Theeeme, Thing, User
+from core.models import FAQ, RSVP, Collection, DeviceDay, Report, Theeeme, Thing, User
 from core.models.booking import BookingPeriod
 
 
@@ -118,3 +118,20 @@ class BookingPeriodAdmin(admin.ModelAdmin):
     ]
     search_fields = ["code", "requester_email"]
     list_filter = ["status", "thing_type"]
+
+
+@admin.register(DeviceDay)
+class DeviceDayAdmin(admin.ModelAdmin):
+    # A daily count with nobody in it: to be read, never edited by hand.
+    list_display = ["date", "device", "metric", "count"]
+    list_filter = ["device", "metric"]
+    date_hierarchy = "date"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

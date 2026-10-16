@@ -77,7 +77,7 @@ config/
   urls.py             # Root URL config (admin at /oiueei-admin/; mounts DEPLOYMENT_URLCONFS before the SPA catch-all)
   wsgi.py             # WSGI entry point (defaults to production)
 core/
-  models/             # User, Collection, Thing, FAQ, Theeeme, RSVP, BookingPeriod, Transfer, Notification, Report, Event / DailyActivity (first-party analytics)
+  models/             # User, Collection, Thing, FAQ, Theeeme, RSVP, BookingPeriod, Transfer, Notification, Report, Event / DailyActivity / DeviceDay (first-party analytics)
   views/              # Auth, collections, things, bookings, FAQ, users
   serializers/        # DRF serializers per model
   services/           # Business logic layer
@@ -98,6 +98,7 @@ core/
       close_transfers.py       # Close overdue loan transfers
       send_reminders.py        # Daily booking/delivery reminders
       send_digests.py          # Weekly/monthly digest emails
+      device_share.py          # Weekly share of mobile among people and form saves (reads DeviceDay)
       send_test_emails.py      # One sample of every email, sent to one address you choose
       purge_expired_data.py    # Retention sweep (GDPR art. 5.1.e) — dry-run unless --commit
       cleanup_orphan_images.py # Delete stored images no row references
@@ -129,6 +130,7 @@ core/
 | **BookingPeriod** | Unified booking model for all thing types (72h PENDING expiry). FKs to Thing, User (requester), User (owner). LEND/RENT/RESERVE carry dates; GIFT/SELL don't. `start_time`/`end_time` (`TimeField`, nullable) narrow a booking to a slot within one day: `NULL` means whole days, which is every LEND/RENT and every `DAY`-unit reservation; an `HOUR`-unit reservation stores `end_date = start_date + 1` and never crosses midnight. There is no `DateTimeField`: times are wall-clock, read in `DJANGO_TIME_ZONE`. **RESERVE_THING bookings are auto-confirmed** — created straight to ACCEPTED with no accept/reject step, no `ThingTransfer`, both parties emailed at once — and either the requester **or any curator** of the shed (owner or co-curator) may cancel one that hasn't started. `project_note` (RESERVE only) carries the requester's optional note about what the space is for. |
 | **Event** | Append-only first-party analytics log. Text **snapshots** (`actor_code`/`collection_code`/`thing_code`), not FKs, so rows outlive hard-deleted objects. `kind` covers the tracked actions (user joined, collection/thing added/removed, member joined/left, FAQ asked, hold requested/accepted). Written by one-line instrumentation next to the notification/email each action already fires — except deletions, which are logged by model receivers so every way a row can go (API, admin, account erasure, retention purge) leaves its event; read only by whatever reporting the deployment runs over it. Never exposed to users |
 | **DailyActivity** | One `(user, date)` row per user per active day, written by `DailyActivityMiddleware` (cache-gated to ≤1 DB write per user per day). Powers WAU/MAU and retention. Records less than the web-server logs already hold and never leaves our DB |
+| **DeviceDay** | A daily count, per kind of device (`MOBILE` / `OTHER`; a tablet is `OTHER`), of signed-in people and of collection/thing saves — `(date, device, metric, count)`, written by `DailyActivityMiddleware`. No user, no User-Agent; kept without a period because it holds nobody. Read with `device_share` |
 
 ## Key Relationships
 
@@ -181,7 +183,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | PUT | `/api/v1/collections/{code}/` | Update collection (owner or co-owner) |
 | DELETE | `/api/v1/collections/{code}/` | Delete collection (owner only — never a co-owner) |
 | POST | `/api/v1/collections/{code}/invite/` | Invite user (owner or co-owner, resend-safe) |
-| DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it |
+| DELETE | `/api/v1/collections/{code}/invite/` | Remove invitee (owner or co-owner). Also strips co-owner status if the removed user had it, and deletes that member's things in the group (`things_deleted` in the answer) |
 | POST | `/api/v1/collections/{code}/co-owners/` | Promote an existing member to co-curator — any curator, in either mode (rate limited: 30/h). Refused if this deployment's `CREATOR_POLICY` withholds `co_owners_enabled`, or when the collection already holds its ceiling of co-curators (`Collection.MAX_CO_OWNERS`, 5 — the abuse bound, not the design intent of 1–2; re-promoting an existing co-curator stays idempotent and never hits it) |
 | DELETE | `/api/v1/collections/{code}/co-owners/` | Demote a co-curator back to a plain member — any curator. Not gated by the deployment policy. The founding owner is an FK, not an `invites` row, so this endpoint cannot demote them |
 | POST | `/api/v1/collections/{code}/share-link/` | Generate or rotate the public share token (owner or co-owner). Returns `share_url` and `share_token`. Pass `{"rotate": true}` to force a fresh token. Rate limited: 30/h. |
@@ -191,7 +193,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | GET | `/api/v1/invited-collections/` | List collections where invited |
 | GET | `/api/v1/my-invitations/` | List my pending collection invitations |
 | POST | `/api/v1/collections/{code}/join/` | Join a PUBLIC collection you are browsing while signed in (self-join) — the half of login-to-act the anonymous `/auth/join/` can't serve, since a magic link is no use to a live session. Honours the same `COLLECTION_JOINS_PER_DAY` ceiling. Rate limited: 30/h |
-| POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) — refused for the owner and any co-owner |
+| POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) — refused for the owner and any co-owner. Deletes your things in that group (`things_deleted` in the answer) |
 | POST | `/api/v1/collections/{code}/invite/propose/` | Members only, not a curator: recommend a guest to the owner. Nothing reaches the proposed address until a curator approves. Rate limited: 30/day |
 | POST | `/api/v1/proposals/{code}/{approve\|reject}/` | A curator's answer to a member's recommendation (owner or co-owner) |
 | POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h. The bundled frontend no longer calls it — its members silence a group from the footer link of each digest |
@@ -207,7 +209,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/api/v1/things/` | List own things |
-| POST | `/api/v1/things/` | Create thing |
+| POST | `/api/v1/things/` | Create thing — in a collection: a body with no `collection_code` is a 400 |
 | GET | `/api/v1/things/{code}/` | View thing (owner or invited) |
 | PUT / PATCH | `/api/v1/things/{code}/` | Update thing — a **manager**: its owner, or a curator of a PROPRIETARY collection it's in (`IsThingManager`) |
 | DELETE | `/api/v1/things/{code}/` | Delete thing — any collection owner, a co-curator of a PROPRIETARY collection it's in, or its own owner while it has never changed hands |

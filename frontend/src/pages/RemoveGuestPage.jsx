@@ -5,6 +5,7 @@ import { Button, IconCrossCircle } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
+import ThingsGoNotice from '../components/ThingsGoNotice';
 import useTheeeme from '../hooks/useTheeeme';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -18,6 +19,8 @@ export default function RemoveGuestPage() {
   const backPath = `${base}/invites`;
   const backLabel = location.state?.backLabel || t('removeGuest.guests');
   const guestCode = location.state?.guestCode;
+  // Headlines of the member's things in this group, which are deleted with them.
+  const thingTitles = location.state?.thingTitles;
   // The same stand-in the rest of the app uses for a member with no name set
   // (`ThingLinkbox`, `InboxNotifications`, HomePage): the copy interpolates it
   // mid-sentence, so the sentence still needs a subject.
@@ -67,6 +70,11 @@ export default function RemoveGuestPage() {
           components={[<strong key="0" />]}
         />
       </p>
+      <ThingsGoNotice
+        titles={thingTitles}
+        label={t('removeGuest.thingsLabel')}
+        body={(count, list) => t('removeGuest.thingsBody', { count, list })}
+      />
       <div className="spacer-xs" />
       <div className="form-grid">
         <Button

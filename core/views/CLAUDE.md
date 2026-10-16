@@ -376,7 +376,7 @@ The one-click unsubscribe at the foot of every digest. The token signs `{user_co
 | Action | Endpoint | Permission |
 |--------|----------|------------|
 | `list` | `GET /api/v1/things/` | `IsAuthenticated` |
-| `create` | `POST /api/v1/things/` | `IsAuthenticated` |
+| `create` | `POST /api/v1/things/` | `IsAuthenticated` — **a thing is created in a collection**: no `collection_code` is a 400 `{"collection_code": ["A thing is created in a collection."]}`, before any other check |
 | `retrieve` | `GET /api/v1/things/{code}/` | `AllowAny` + `can_view()` — anonymous-safe: visible when the thing sits in a PUBLIC, ACTIVE collection |
 | `update` | `PUT /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
 | `partial_update` | `PATCH /api/v1/things/{code}/` | `IsAuthenticated` + `IsThingManager` |
@@ -468,7 +468,7 @@ Invites a user to a collection by email. Creates user if they don't exist (`get_
 | **Endpoint** | `DELETE /api/v1/collections/{collection_code}/invite/` |
 | **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 
-Removes a user from the collection's invite list. If the invite is still pending (user has not accepted yet), deletes the pending RSVPs instead of removing from M2M, and no revocation email is sent. If the invite was accepted (user is in M2M), removes from M2M and sends revocation notification email. **Also strips `co_owners`** if the removed user was promoted — `co_owners ⊆ invites` is enforced here, the one other place `invites` membership is revoked.
+Removes a user from the collection's invite list. If the invite is still pending (user has not accepted yet), deletes the pending RSVPs instead of removing from M2M, and no revocation email is sent. If the invite was accepted (user is in M2M), ends the membership through `membership_service.end_membership` — which removes the user from `invites` **and `co_owners`** (`co_owners ⊆ invites`) and **deletes every thing they own in this collection**, any status, with `THING_REMOVED` events naming the curator — and sends the revocation email, which lists those things when there were any. The answer carries `things_deleted`. Those who had a live request or reservation on a deleted thing are emailed once the transaction commits (see `membership_service`). Demoting a co-curator (`CollectionCoOwnerView` DELETE) is not a removal and deletes nothing.
 
 **Request body:**
 ```json
@@ -520,7 +520,7 @@ Answers **404** whenever `can_view()` says no, so a PRIVATE or INACTIVE collecti
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/leave/` |
 | **Permission** | `IsAuthenticated` + must be an invited member and not a curator |
 
-Lets an invited member remove **themselves** from a collection (self-unlink) — the inverse of the curator-only `CollectionInviteView` DELETE. Returns 400 if the requester is the collection **owner** ("The owner can't leave their own collection." — owners delete instead), a **co-owner** ("A co-owner can't leave — ask the owner to demote you first." — staff, not a rank-and-file member; the owner demotes them via the co-owners endpoint), or is **not a member** ("You are not a member of this collection."). On success removes the user from the `invites` M2M, creates a `MEMBER_LEFT` in-app notification for the owner (payload: `collection_headline`, `member_name`, `collection_code`), and returns `200 {"message": "You have left the collection"}`. The frontend shows the "Leave the group" button (hero, `CollectionSerializer.is_member` gate) → `LeaveCollectionPage` confirm → back to Home.
+Lets an invited member remove **themselves** from a collection (self-unlink) — the inverse of the curator-only `CollectionInviteView` DELETE. Returns 400 if the requester is the collection **owner** ("The owner can't leave their own collection." — owners delete instead), a **co-owner** ("A co-owner can't leave — ask the owner to demote you first." — staff, not a rank-and-file member; the owner demotes them via the co-owners endpoint), or is **not a member** ("You are not a member of this collection."). On success ends the membership through `membership_service.end_membership` (removes the user from `invites` and **deletes every thing they own in this collection**, any status, even with requests or loans running; the people who had asked are emailed), creates a `MEMBER_LEFT` in-app notification for the owner (payload: `collection_headline`, `member_name`, `collection_code`, `things_deleted`), and returns `200 {"message": "You have left the collection", "things_deleted": n}`. The frontend shows the "Leave the group" button (hero, `CollectionSerializer.is_member` gate) → `LeaveCollectionPage` confirm → back to Home.
 
 ### CollectionProposeInviteView
 
@@ -1006,7 +1006,7 @@ Creates a reservation/booking request. The view is **thin**: it runs the shared 
 - Thing status changes to `TAKEN` (blocks other requests).
 
 **Common behaviour:**
-0. Reads an optional **`collection_code`** from the body — the collection the requester was browsing. It already governed the rental rules (above); it now also decides which collection the managers' in-app notifications belong to, so the request shows up on the right collection's page (a thing can live in several — see `resolve_request_collection`). The SPA sends it from the card and the detail page whenever it has one; the standalone `/things/:code` page has none and the service approximates.
+0. Reads an optional **`collection_code`** from the body — the collection the requester was browsing. It already governed the rental rules (above); it now also decides which collection the managers' in-app notifications belong to, so the request shows up on the right collection's page (a thing lives in one, but a row from before that rule can sit in more — see `resolve_request_collection`). The SPA sends it from the card and the detail page whenever it has one; the standalone `/things/:code` page has none and the service approximates.
 1. Validates owner email in the parent `post()` method (shared across all type handlers).
 2. Creates `BookingPeriod` with status `PENDING`.
 3. Creates, for **each manager** of the thing (`Thing.managers()` minus the requester), two RSVPs (`BOOKING_ACCEPT` and `BOOKING_REJECT`) minted to that manager for their email action links, via `booking_service.send_booking_request_notifications()`.

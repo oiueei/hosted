@@ -15,8 +15,8 @@ has been dropped); what follows describes what it did.
 Per collection, **not** per curator: a PROPRIETARY collection's curators run
 its catalogue together, so once anyone has exported a reservation it is done
 for the group. It is also why the state lives here rather than as a flag on
-``BookingPeriod`` — a thing can sit in two collections, and each keeps its own
-watermark on the same booking.
+``BookingPeriod`` — the mark belongs to the collection the booking is exported
+from, not to the booking itself.
 
 The rows cascade with either side: deleting the collection or the booking
 takes its marks with it, which is the right behaviour — a booking that no

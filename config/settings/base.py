@@ -357,6 +357,14 @@ DEPLOYMENT_URLCONFS = [
 # UI can never offer what the API would refuse. See `core/services/creator_policy.py`.
 CREATOR_POLICY = os.environ.get("CREATOR_POLICY", "core.services.creator_policy.OpenCreatorPolicy")
 
+# Who gets which growth line in the footer of an email. Empty (the default) keeps
+# the catalogue in `core/services/email_texts/`: one random line for everybody. A
+# deployment whose recipients can do different things — one may open a kind of
+# collection and another has to ask first — points this at its own function,
+# `provider(user, lang) -> {"text", "cta", "path"} | None`, which picks the line
+# for that one recipient. See SELF_HOSTING.md.
+VIRAL_LINE_PROVIDER = os.environ.get("VIRAL_LINE_PROVIDER", "")
+
 
 # Retention periods (GDPR art. 5.1.e), in months unless the name says otherwise.
 #

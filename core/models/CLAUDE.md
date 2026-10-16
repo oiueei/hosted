@@ -489,7 +489,7 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `FAQ_ANSWERED` | Owner answers a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `FAQ_HIDDEN` | Owner hides a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `INVITE_REJECTED` | Invitee declines a collection invite | Collection owner | `collection_headline`, `invitee_name` |
-| `MEMBER_LEFT` | A member leaves a collection (self-unlink) | Collection owner | `collection_headline`, `member_name`, `collection_code` |
+| `MEMBER_LEFT` | A member leaves a collection (self-unlink); their things in it are deleted with them | Collection owner | `collection_headline`, `member_name`, `collection_code`, `things_deleted` (how many of their things went; absent in rows written before it existed, read as 0) |
 | `THING_REPORTED` | A member reports a thing | Thing owner | `thing_headline`, `thing_code` (no reporter identity — anonymous to the owner) |
 | `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | Collection owner | `collection_headline`, `collection_code`, `proposer_name`, `email`, `note` |
 | `INVITE_PROPOSAL_APPROVED` | The owner approves that recommendation | The proposer | `collection_headline`, `collection_code`, `email`, `approved: True` |
@@ -610,6 +610,30 @@ A `DailyActivity` is one `(user, date)` row per user per day they were active �
 
 ---
 
+## DeviceDay
+
+A `DeviceDay` is a daily count, per kind of device, of signed-in people and of collection/thing saves. It answers one question — how much of the use, above all how many saves, comes from a phone — and holds nobody to do it.
+
+### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `code` | CharField(6) | Auto | Primary key, 6-character alphanumeric ID |
+| `date` | DateField | **Yes** | The day (local date) |
+| `device` | CharField(8) | **Yes** | `MOBILE` or `OTHER` (a tablet is `OTHER`: an iPad presents itself as a desktop Safari, so a third group would not be reliable) |
+| `metric` | CharField(16) | **Yes** | `PEOPLE` (signed-in people per day and device) or `FORM_SAVES` (every successful create/edit of a collection or a thing) |
+| `count` | PositiveIntegerField | Auto | Default 0; raised in the database with `F("count") + 1`, never read-add-save |
+
+### Business Rules
+
+1. **No user, no `User-Agent`** — there is no column that could hold either, so the table is not personal data. It is left out of `purge_expired_data`, the data export and account erasure, and has **no retention period**.
+2. **One row per `(date, device, metric)`** — `UniqueConstraint` (`unique_device_day_metric`), index on `date`.
+3. **Written by `DailyActivityMiddleware`**, after the view, from headers the request already carries (`core.device.device_class`: `Sec-CH-UA-Mobile` when sent, else a `Mobi` in the `User-Agent`; no header at all counts nothing). `PEOPLE` is gated by a cache key `dd:{user}:{date}:{device}` of its own, so it does not depend on the `da:` gate of `DailyActivity` — one person on a phone and a laptop the same day counts once in each. `FORM_SAVES` counts `POST` to `collection-list`/`thing-list` and `PATCH`/`PUT` to `collection-detail`/`thing-detail` that answer 200/201, without deduplicating.
+4. **Best-effort** — a failure is swallowed and never turns a good response into a 500, nor loses the `DailyActivity` row.
+5. **Read** with `python manage.py device_share [--weeks N] [--csv]`; its admin is read-only.
+
+---
+
 ## InvitationProposal
 
 A member asking the owner to invite somebody. Members could not bring anyone in
@@ -660,6 +684,6 @@ The model and its table are kept **one release, dormant, then dropped** — the 
 ### Business Rules (historical — no longer enforced by any running code)
 
 1. **One mark per `(collection, booking)`** — `UniqueConstraint(collection, booking)` (`uniq_calendar_export_collection_booking`). `build_calendar_export` read the unmarked reservations and `bulk_create`d their marks inside a transaction that `select_for_update`d the collection row, so two curators pressing the button at once couldn't both carry — or both mark — the same reservation.
-2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exported a reservation it was done for the group. It also couldn't be a flag on `BookingPeriod`: a thing can sit in two collections and each kept its own watermark on the same booking.
+2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exported a reservation it was done for the group. It also couldn't be a flag on `BookingPeriod`: the mark belongs to the collection a booking is exported from, not to the booking itself.
 3. **Both FKs CASCADE** — a booking or collection that no longer exists can't be re-exported anyway.
 4. **No un-mark, no "export everything"** (superseded) — the download was purely forward. The `.ics` format is what made "export everything, every time" both correct and free of the earlier problem (losing a download used to mean those events never came back out).

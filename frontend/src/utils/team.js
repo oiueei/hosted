@@ -35,6 +35,14 @@ function listFormatter(language) {
 }
 
 /**
+ * Words written as the language writes a list: "A, B y C". The same browser
+ * formatter the team line uses (`Intl.ListFormat`), for any list of names.
+ */
+export function formatList(words, language) {
+  return listFormatter(language).format(words);
+}
+
+/**
  * The team as the pieces of one sentence, written as the language writes a list:
  * "Lala y Lele", "Lala, Lele y Lili" in Spanish, "A i B" / "A, B i C" in Catalan, "A and B" / "A, B, and C" in English.
  * The conjunction and the commas are the browser's own (`Intl.ListFormat`, in the

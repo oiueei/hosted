@@ -212,6 +212,51 @@ periodically reset); `.realNote` says what is not (the visitor's own collections
 are real and kept) — a demo warning that scared people off their own work would
 be worse than none.
 
+## 5. `VIRAL_LINE_PROVIDER` — which growth line each recipient gets
+
+Every email ends with one line inviting its reader to start something of their
+own, a highlighted callout above the preferences and legal links. Upstream picks
+one at random from a catalogue (`core/services/email_texts/`) for everybody,
+which is right when everybody can do everything. A deployment where recipients
+can do different things — one may open a kind of collection straight away and
+another has to ask first — points a setting at a function of its own, so each
+reader is sent to the place where *they* can act:
+
+```bash
+VIRAL_LINE_PROVIDER=deployment.viral.pick_line
+```
+
+```python
+# deployment/viral.py
+def pick_line(user, lang):
+    """`user` is the recipient's User, or None for an address with no account."""
+    if user is not None and can_open_libraries(user):
+        return {"text": "...", "cta": "...", "path": "/library/new"}
+    return {"text": "...", "cta": "...", "path": "/your-own-page"}
+```
+
+- **It receives** the recipient's `User` (`None` for an invitee with no account yet)
+  and the language the email is written in, already resolved (`es`, `ca` or `en`).
+- **It returns** `{"text": str, "cta": str, "path": str}` or `None`. `path` is a
+  path on this site: it has to start with `/` and not with `//` (nor `/\`), and the
+  email links to the frontend's address plus that path. The text and the label are
+  escaped; the link is plain, never routed through a redirect or a tracker.
+- **`None`, an incomplete answer or an unsafe `path` means no line** in that email;
+  the rest of the footer is untouched.
+- **If it raises, the email is still sent, without the line**, and a warning with
+  the setting's path (never the recipient) goes to the log. A deployment's bug
+  cannot cost anyone their sign-in link.
+- **It is asked once per email, for that one recipient, and never for someone who
+  runs a collection** (owner or co-curator): they already did what the line asks,
+  so they get no line at all, whatever the function would have said.
+- It is imported once per dotted path and shared across requests, so write it
+  stateless. If it looks something up, it is looked up once per email.
+- Empty (the default) keeps the catalogue, exactly as before.
+
+**A wrong path fails the deploy, not the first email.** A system check imports the
+setting at check time (`core.E006`), so a typo aborts the release phase instead of
+quietly switching the line off for everybody.
+
 ---
 
 ## What upstream deliberately does not have

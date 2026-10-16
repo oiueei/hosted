@@ -80,6 +80,14 @@ TEXTS = {
     "revoke_plain": "{owner} ha revocat el teu accés a '{collection}'.",
     "revoke_intro": "{owner} ha revocat el teu accés a aquest grup.",
     "revoke_outro": "Ja no podràs veure aquesta col·lecció.",
+    "revoke_things": "Les teves coses d'aquest grup s'han esborrat amb la teva sortida: {things}.",
+    "thing_left_subject": "«{thing}» ja no és a {group}",
+    "thing_left_intro": (
+        "Qui oferia «{thing}» ja no forma part de {group}, "
+        "i la cosa se n'ha anat amb aquesta persona. "
+        "La teva sol·licitud o reserva ja no és vigent."
+    ),
+    "thing_left_holding": "Si la tens tu, torna-la-hi com vau acordar.",
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Et donem la benvinguda a '{collection}'",
     "welcome_doc_plain": (
