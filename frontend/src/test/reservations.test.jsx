@@ -92,6 +92,9 @@ function typePickup(container, display) {
   fireEvent.blur(input);
 }
 
+const reservePosts = () =>
+  apiFetch.mock.calls.filter(([url, opts]) => /\/request\//.test(url) && opts?.method === 'POST');
+
 describe('RequestThingPage — RESERVE_THING', () => {
   test('with max 1 day there is no duration select, and a project note field is shown', async () => {
     setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
@@ -181,6 +184,32 @@ describe('RequestThingPage — RESERVE_THING', () => {
       project_note: 'A screen-printing workshop.',
       collection_code: 'COL001',
     });
+  });
+
+  test('Reserve with no pickup date says so and sends nothing', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+    expect(screen.queryByText('Start date is required.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(await screen.findByText('Start date is required.')).toBeInTheDocument();
+    expect(reservePosts()).toHaveLength(0);
+  });
+
+  test('Reserve with no length chosen says so, leaves the pickup closed and sends nothing', async () => {
+    // With a cap over one day the pickup picker waits for a length (the open days
+    // depend on it), so a missing length is reached with a missing date too.
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+    expect(screen.queryByText('Please choose a length')).toBeNull();
+    expect(container.querySelector('#reservation-pickup-date')).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
+
+    expect(await screen.findAllByText('Please choose a length')).not.toHaveLength(0);
+    expect(reservePosts()).toHaveLength(0);
   });
 
   test('the confirmation says back what was reserved and when — one day is one day', async () => {
