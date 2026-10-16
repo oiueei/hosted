@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { settle, press } from './settle';
 import en from '../i18n/locales/en.json';
 
 /**
@@ -62,6 +63,7 @@ const renderCreate = async (kind) => {
   await waitFor(() =>
     expect(view.container.querySelector('#create-collection-headline')).toBeInTheDocument()
   );
+  await settle(apiFetch);
   return view;
 };
 
@@ -182,7 +184,8 @@ describe('Create — the members-can-set-a-price switch', () => {
     const { container } = await renderCreate(kind);
     expect(sw(container)).toBeNull();
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
+    await press(screen.getByRole('radio', { name: 'Community' }));
+    await settle(apiFetch);
 
     expect(sw(container)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(label)).toBeInTheDocument();
