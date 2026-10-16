@@ -6,14 +6,10 @@ so without this a shared link shows "OIUEEI" and the icon, nothing else.
 
 **The rule: a preview shows only what a visitor with no account could already read
 on the page.** A collection or thing is previewed when its own ``can_view(None)``
-says so — the model's rule, not a copy of it. A private, inactive or unknown
-target gets ``None``, and the caller then serves the site's card, the same bytes
-whatever the page, so a private collection cannot be told apart from a code that
-does not exist.
-
-A page that is none of these — and a target a stranger may not see — gets the site's
-own card (``site_preview``) instead of a bare ``index.html``: the same bytes whatever
-the page, so a private collection still cannot be told from a code that names nothing.
+says so — the model's rule, not a copy of it. Every other page — one that is none of
+these routes, and a target that is private, inactive or unknown — gets the site's own
+card (``site_preview``; ``og:url`` is the site's root). It is the same bytes whatever
+the page, so a private collection cannot be told apart from a code that does not exist.
 
 A collection with no description of its own is described by its kind's sentence
 (``kind_what_<KIND>``, the app's own words for it): a card is never only a title.

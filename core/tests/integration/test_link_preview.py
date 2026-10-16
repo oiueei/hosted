@@ -54,6 +54,7 @@ def _body(path):
 
 
 def _neutral():
+    """The site's card: what a page with no preview of its own is answered with."""
     return _body("/me")
 
 
@@ -184,7 +185,9 @@ class TestEveryOtherPageCarriesTheSitesCard:
 
 
 class TestWhatAStrangerCannotSee:
-    def test_a_private_collection_is_the_untouched_page(self, built, owner):
+    def test_a_private_collection_gets_the_same_page_as_a_code_that_names_nothing(
+        self, built, owner
+    ):
         _collection(owner, visibility=Collection.Visibility.PRIVATE)
 
         # The same bytes as a code that names nothing: not a hint of the group.
@@ -193,12 +196,14 @@ class TestWhatAStrangerCannotSee:
         assert "The street" not in _body("/stall/PUB001")
         assert "Things we share" not in _body("/stall/PUB001")
 
-    def test_an_inactive_public_collection_is_the_untouched_page(self, built, owner):
+    def test_an_inactive_public_collection_gets_the_same_page_as_a_neutral_route(
+        self, built, owner
+    ):
         _collection(owner, status=Collection.Status.INACTIVE)
 
         assert _body("/stall/PUB001") == _neutral()
 
-    def test_an_unknown_code_is_the_untouched_page(self, built, db):
+    def test_an_unknown_code_gets_the_sites_card(self, built, db):
         assert _body("/collections/NOPE00") == _neutral()
         assert _body("/things/NOPE00") == _neutral()
         assert _body("/share/nope") == _neutral()
@@ -218,7 +223,7 @@ class TestEveryKindHasItsOwnPrefix:
         assert "<title>Drill — OIUEEI</title>" in _body(f"/{prefix}/PUB001/things/THG001")
 
     @pytest.mark.parametrize("kind", ["STALL", "LIBRARY", "SHED"])
-    def test_a_private_one_is_the_untouched_page_under_every_prefix(self, built, owner, kind):
+    def test_a_private_one_gets_the_sites_card_under_every_prefix(self, built, owner, kind):
         _collection(owner, kind=kind, visibility=Collection.Visibility.PRIVATE)
 
         assert _body(f"/{kind.lower()}/PUB001") == _neutral()
@@ -240,13 +245,13 @@ class TestAThing:
             assert "<title>Trepant — OIUEEI</title>" in body, path
             assert '<meta property="og:title" content="Trepant">' in body, path
 
-    def test_an_inactive_thing_is_the_untouched_page(self, built, owner):
+    def test_an_inactive_thing_gets_the_sites_card(self, built, owner):
         _thing(owner, _collection(owner), status=Thing.Status.INACTIVE)
 
         assert _body("/things/THG001") == _neutral()
         assert _body("/stall/PUB001/things/THG001") == _neutral()
 
-    def test_a_thing_of_a_private_collection_is_the_untouched_page(self, built, owner):
+    def test_a_thing_of_a_private_collection_gets_the_sites_card(self, built, owner):
         _thing(owner, _collection(owner, visibility=Collection.Visibility.PRIVATE))
 
         assert _body("/things/THG001") == _neutral()
@@ -274,7 +279,7 @@ class TestAShareLink:
         assert "og:image" not in body
         assert "summary_large_image" not in body
 
-    def test_a_revoked_or_unknown_token_or_an_inactive_group_is_the_untouched_page(
+    def test_a_revoked_or_unknown_token_or_an_inactive_group_gets_the_sites_card(
         self, built, owner
     ):
         _collection(owner, code="REV001", share_token=None)
